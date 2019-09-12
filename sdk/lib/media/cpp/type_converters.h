@@ -6,9 +6,8 @@
 #define LIB_MEDIA_CPP_TYPE_CONVERTERS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-
-#include "lib/fidl/cpp/type_converter.h"
-#include "lib/media/cpp/timeline_function.h"
+#include <lib/fidl/cpp/type_converter.h>
+#include <lib/media/cpp/timeline_function.h>
 
 namespace fidl {
 

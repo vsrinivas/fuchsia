@@ -18,7 +18,7 @@ namespace media {
 // values subject_delta / reference_delta. "subject" refers to the timeline
 // whose rate is being represented, and "reference" refers to the timeline
 // relative to which the rate is expressed.
-class TimelineRate {
+class TimelineRate final {
  public:
   // Used to indicate overflow of scaling operations.
   static constexpr int64_t kOverflow = std::numeric_limits<int64_t>::max();

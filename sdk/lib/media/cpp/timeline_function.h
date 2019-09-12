@@ -7,7 +7,7 @@
 
 #include <zircon/assert.h>
 
-#include "lib/media/cpp/timeline_rate.h"
+#include <lib/media/cpp/timeline_rate.h>
 
 namespace media {
 
@@ -20,7 +20,7 @@ namespace media {
 // int64_t time values (subject_time, reference_time), and the slope (rate) is
 // represented as a TimelineRate, the ratio of two uint32_t values
 // (subject_delta / reference_delta).
-class TimelineFunction {
+class TimelineFunction final {
  public:
   // Applies a timeline function.
   static int64_t Apply(int64_t subject_time, int64_t reference_time,
