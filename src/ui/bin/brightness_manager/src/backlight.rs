@@ -21,14 +21,18 @@ pub fn open_backlight() -> Result<BacklightProxy, Error> {
 }
 
 pub async fn get_brightness(backlight: &BacklightProxy) -> Result<u8, Error> {
-    let backlight_info = backlight.get_state().await?;
+    let result = backlight.get_state_normalized().await?;
+    let backlight_info =
+        result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
     Ok((backlight_info.brightness * 255.0) as u8)
 }
 
 pub fn set_brightness(backlight: &BacklightProxy, nits: u16) -> Result<(), Error> {
-    backlight.set_state(&mut BacklightState {
+    // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
+    // changing this to an async function, requiring further changes in main.rs.
+    let _result = backlight.set_state_normalized(&mut BacklightState {
         backlight_on: nits != 0,
         brightness: nits as f64 / 255.0,
-    })?;
+    });
     Ok(())
 }

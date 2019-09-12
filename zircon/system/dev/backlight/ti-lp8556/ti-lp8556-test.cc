@@ -49,6 +49,7 @@ class Lp8556DeviceTest : public zxtest::Test {
       }
     }
     EXPECT_OK(dev_->SetBacklightState(power, brightness));
+
     ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
   }
 

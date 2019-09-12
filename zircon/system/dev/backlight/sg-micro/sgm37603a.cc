@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
@@ -20,28 +21,6 @@ enum {
   COMPONENT_I2C,
   COMPONENT_GPIO,
   COMPONENT_COUNT,
-};
-
-}  // namespace
-
-namespace {
-
-constexpr uint8_t kEnable = 0x10;
-constexpr uint8_t kEnableDevice = 0x01;
-constexpr uint8_t kEnableLed1 = 0x02;
-
-constexpr uint8_t kBrightnessControl = 0x11;
-constexpr uint8_t kBrightnessControlRegisterOnly = 0x00;
-constexpr uint8_t kBrightnessControlRampDisabled = 0x00;
-
-constexpr uint8_t kBrightnessLsb = 0x1a;
-constexpr uint8_t kBrightnessMsb = 0x19;
-
-constexpr uint8_t kDefaultRegValues[][2] = {
-    {kEnable, kEnableDevice | kEnableLed1},
-    {kBrightnessControl, kBrightnessControlRegisterOnly | kBrightnessControlRampDisabled},
-    {kBrightnessLsb, 0},
-    {kBrightnessMsb, 0},
 };
 
 }  // namespace
@@ -131,21 +110,49 @@ zx_status_t Sgm37603a::DisableBacklight() {
   return ZX_OK;
 }
 
-zx_status_t Sgm37603a::GetState(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_backlight_State state;
-  auto& self = *static_cast<backlight::Sgm37603a*>(ctx);
-  self.GetBacklightState(&state.backlight_on, &state.brightness);
-  return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
+void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+  FidlBacklight::State state = {};
+  auto status = GetBacklightState(&state.backlight_on, &state.brightness);
+
+  FidlBacklight::Device_GetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_GetStateNormalized_Response{.state = state});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
 }
 
-zx_status_t Sgm37603a::SetState(void* ctx, const fuchsia_hardware_backlight_State* state) {
-  auto& self = *static_cast<backlight::Sgm37603a*>(ctx);
-  self.SetBacklightState(state->backlight_on, state->brightness);
-  return ZX_OK;
+void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
+                                   SetStateNormalizedCompleter::Sync _completer) {
+  auto status = SetBacklightState(state.backlight_on, state.brightness);
+
+  FidlBacklight::Device_SetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_SetStateNormalized_Response{});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
+}
+
+void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_GetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
+}
+
+void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
+                                 SetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_SetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
 }
 
 zx_status_t Sgm37603a::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_backlight_Device_dispatch(this, txn, msg, &fidl_ops_);
+  DdkTransaction transaction(txn);
+  FidlBacklight::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t Sgm37603a::GetBacklightState(bool* power, double* brightness) {
@@ -172,9 +179,10 @@ zx_status_t Sgm37603a::SetBacklightState(bool power, double brightness) {
   brightness = fbl::max(brightness, 0.0);
   brightness = fbl::min(brightness, 1.0);
 
+  uint16_t brightness_value = static_cast<uint16_t>(brightness * kMaxBrightnessRegValue);
   const uint8_t brightness_regs[][2] = {
-      {kBrightnessLsb, 0},
-      {kBrightnessMsb, static_cast<uint8_t>(brightness * kMaxBrightnessRegValue)},
+      {kBrightnessLsb, static_cast<uint8_t>(brightness_value & kBrightnessLsbMask)},
+      {kBrightnessMsb, static_cast<uint8_t>(brightness_value >> kBrightnessLsbBits)},
   };
 
   for (size_t i = 0; i < countof(brightness_regs); i++) {

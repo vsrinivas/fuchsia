@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/backlight/c/fidl.h>
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 
@@ -15,10 +15,12 @@
 
 namespace backlight {
 
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+
 class BacklightDevice {
  public:
-  BacklightDevice(zx::channel ch) : channel_(std::move(ch)) {
-    if (GetBrightness(&orig_brightness_) != ZX_OK) {
+  BacklightDevice(zx::channel ch) : client_(FidlBacklight::Device::SyncClient(std::move(ch))) {
+    if (GetBrightnessNormalized(&orig_brightness_) != ZX_OK) {
       printf("Error getting original brightness. Defaulting to 1.0\n");
       orig_brightness_ = 1.0;
     }
@@ -27,29 +29,59 @@ class BacklightDevice {
 
   ~BacklightDevice() {
     printf("Restoring original brightness...\n");
-    if (SetBrightness(orig_brightness_) != ZX_OK) {
+    if (SetBrightnessNormalized(orig_brightness_) != ZX_OK) {
       printf("Error setting brightness to %f\n", orig_brightness_);
     }
   }
 
-  zx_status_t GetBrightness(double* brightness) {
-    fuchsia_hardware_backlight_State state;
-    zx_status_t status = fuchsia_hardware_backlight_DeviceGetState(channel_.get(), &state);
-    if (status == ZX_OK) {
-      *brightness = state.brightness;
+  zx_status_t GetBrightnessNormalized(double* brightness) {
+    auto response = client_.GetStateNormalized();
+    zx_status_t status = response.ok()
+                             ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                             : response.status();
+    if (status != ZX_OK) {
+      return status;
     }
+    *brightness = response->result.response().state.brightness;
     return status;
   }
 
-  zx_status_t SetBrightness(double brightness) {
+  zx_status_t SetBrightnessNormalized(double brightness) {
+    FidlBacklight::State state = {.backlight_on = brightness > 0, .brightness = brightness};
+
     printf("Setting brightness to: %f\n", brightness);
-    fuchsia_hardware_backlight_State state = {.backlight_on = brightness > 0,
-                                              .brightness = brightness};
-    return fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
+    auto response = client_.SetStateNormalized(state);
+    zx_status_t status = response.ok()
+                             ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                             : response.status();
+    return status;
+  }
+
+  zx_status_t GetBrightnessAbsolute(double* brightness) {
+    auto response = client_.GetStateAbsolute();
+    zx_status_t status = response.ok()
+                             ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                             : response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    *brightness = response->result.response().state.brightness;
+    return status;
+  }
+
+  zx_status_t SetBrightnessAbsolute(double brightness) {
+    FidlBacklight::State state = {.backlight_on = brightness > 0, .brightness = brightness};
+
+    printf("Setting brightness to: %f nits\n", brightness);
+    auto response = client_.SetStateAbsolute(state);
+    zx_status_t status = response.ok()
+                             ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                             : response.status();
+    return status;
   }
 
  private:
-  zx::channel channel_;
+  FidlBacklight::Device::SyncClient client_;
   double orig_brightness_;
 };
 
@@ -60,7 +92,7 @@ class BacklightTest : public zxtest::Test {
     if (std::filesystem::exists(kDevicePath)) {
       for (const auto& entry : std::filesystem::directory_iterator(kDevicePath)) {
         printf("Found backlight device: %s\n", entry.path().c_str());
-        fbl::unique_fd fd(open(entry.path().c_str(), O_RDWR));
+        fbl::unique_fd fd(open(entry.path().c_str(), O_RDONLY));
         EXPECT_GE(fd.get(), 0);
 
         // Open service handle.
@@ -78,52 +110,55 @@ class BacklightTest : public zxtest::Test {
 
   void TestAllDevices() {
     for (auto& dev : devices_) {
-      EXPECT_OK(dev->SetBrightness(0));
+      EXPECT_OK(dev->SetBrightnessNormalized(0));
 
       double brightness;
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.25));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.25));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.25);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.5));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.5));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.5);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.75));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.75));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.75);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(1.0));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(1.0));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 1.0);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.75));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.75));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.75);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.5));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.5));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.5);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0.25));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0.25));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0.25);
       SleepIfDelayEnabled();
 
-      EXPECT_OK(dev->SetBrightness(0));
-      EXPECT_OK(dev->GetBrightness(&brightness));
+      EXPECT_OK(dev->SetBrightnessNormalized(0));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
       EXPECT_EQ(Approx(brightness), 0);
       SleepIfDelayEnabled();
+
+      EXPECT_EQ(dev->SetBrightnessAbsolute(0), ZX_ERR_NOT_SUPPORTED);
+      EXPECT_EQ(dev->GetBrightnessAbsolute(&brightness), ZX_ERR_NOT_SUPPORTED);
     }
   }
 

@@ -8,6 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
@@ -66,26 +67,49 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   return ZX_OK;
 }
 
-static zx_status_t GetState(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_backlight_State state;
-  auto& self = *static_cast<ti::Lp8556Device*>(ctx);
-  self.GetBacklightState(&state.backlight_on, &state.brightness);
-  return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
+void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+  FidlBacklight::State state = {};
+  auto status = GetBacklightState(&state.backlight_on, &state.brightness);
+
+  FidlBacklight::Device_GetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_GetStateNormalized_Response{.state = state});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
 }
 
-static zx_status_t SetState(void* ctx, const fuchsia_hardware_backlight_State* state) {
-  auto& self = *static_cast<ti::Lp8556Device*>(ctx);
-  self.SetBacklightState(state->backlight_on, state->brightness);
-  return ZX_OK;
+void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
+                                      SetStateNormalizedCompleter::Sync _completer) {
+  auto status = SetBacklightState(state.backlight_on, state.brightness);
+
+  FidlBacklight::Device_SetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_SetStateNormalized_Response{});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
 }
 
-static fuchsia_hardware_backlight_Device_ops_t fidl_ops = {
-    .GetState = GetState,
-    .SetState = SetState,
-};
+void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_GetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
+}
+
+void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
+                                    SetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_SetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
+}
 
 zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_backlight_Device_dispatch(this, txn, msg, &fidl_ops);
+  DdkTransaction transaction(txn);
+  FidlBacklight::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {

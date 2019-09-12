@@ -44,6 +44,18 @@ class MockSgm37603a : public Sgm37603a {
   MockSgm37603a(ddk::I2cChannel i2c)
       : Sgm37603a(nullptr, std::move(i2c), ddk::GpioProtocolClient()) {}
 
+  void VerifyGetBrightness(bool power, double brightness) {
+    bool pwr;
+    double brt;
+    EXPECT_OK(GetBacklightState(&pwr, &brt));
+    EXPECT_EQ(pwr, power);
+    EXPECT_EQ(brt, brightness);
+  }
+
+  void VerifySetBrightness(bool power, double brightness) {
+    EXPECT_OK(SetBacklightState(power, brightness));
+  }
+
   zx_status_t EnableBacklight() override {
     enable_called_ = true;
     return ZX_OK;
@@ -69,10 +81,9 @@ class MockSgm37603a : public Sgm37603a {
 
 TEST(BacklightTest, Enable) {
   mock_i2c::MockI2c mock_i2c;
-  mock_i2c.ExpectWriteStop({0x10, 0x03})
-      .ExpectWriteStop({0x11, 0x00})
-      .ExpectWriteStop({0x1a, 0x00})
-      .ExpectWriteStop({0x19, 0x00});
+  for (size_t i = 0; i < countof(kDefaultRegValues); i++) {
+    mock_i2c.ExpectWriteStop({kDefaultRegValues[i][0], kDefaultRegValues[i][1]});
+  }
 
   MockGpio mock_gpio;
 
@@ -101,44 +112,38 @@ TEST(BacklightTest, Brightness) {
   mock_i2c::MockI2c mock_i2c;
   MockSgm37603a test(ddk::I2cChannel(mock_i2c.GetProto()));
 
-  EXPECT_OK(test.SetBacklightState(false, 0.5));
+  test.VerifySetBrightness(false, 0.5);
   EXPECT_TRUE(test.disable_called());
 
   test.Reset();
   ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
-  bool power = true;
-  double brightness = 1.0;
+  test.VerifyGetBrightness(false, 0);
 
-  EXPECT_OK(test.GetBacklightState(&power, &brightness));
-  EXPECT_FALSE(power);
-  EXPECT_EQ(0, brightness);
+  double brightness = 0.5;
+  uint16_t brightness_value = static_cast<uint16_t>(brightness * kMaxBrightnessRegValue);
+  mock_i2c.ExpectWriteStop(
+      {kBrightnessLsb, static_cast<uint8_t>(brightness_value & kBrightnessLsbMask)});
+  mock_i2c.ExpectWriteStop(
+      {kBrightnessMsb, static_cast<uint8_t>(brightness_value >> kBrightnessLsbBits)});
 
-  brightness = 0.5;
-  uint8_t brightness_value = static_cast<uint8_t>(brightness * kMaxBrightnessRegValue);
-  mock_i2c.ExpectWriteStop({0x1a, 0}).ExpectWriteStop({0x19, brightness_value});
-
-  EXPECT_OK(test.SetBacklightState(true, brightness));
+  test.VerifySetBrightness(true, brightness);
   EXPECT_TRUE(test.enable_called());
 
   test.Reset();
   ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
-  EXPECT_OK(test.GetBacklightState(&power, &brightness));
-  EXPECT_TRUE(power);
-  EXPECT_EQ(0.5, brightness);
+  test.VerifyGetBrightness(true, brightness);
 
-  mock_i2c.ExpectWriteStop({0x1a, 0}).ExpectWriteStop({0x19, 0});
+  mock_i2c.ExpectWriteStop({kBrightnessLsb, 0}).ExpectWriteStop({kBrightnessMsb, 0});
 
-  EXPECT_OK(test.SetBacklightState(true, 0));
+  test.VerifySetBrightness(true, 0);
   EXPECT_FALSE(test.enable_called());
 
   test.Reset();
   ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
-  EXPECT_OK(test.GetBacklightState(&power, &brightness));
-  EXPECT_TRUE(power);
-  EXPECT_EQ(0, brightness);
+  test.VerifyGetBrightness(true, 0);
 }
 
 }  // namespace backlight

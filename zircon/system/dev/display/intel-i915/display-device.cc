@@ -5,9 +5,10 @@
 #include "display-device.h"
 
 #include <float.h>
-#include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
+
+#include <ddktl/fidl.h>
 
 #include "intel-i915.h"
 #include "macros.h"
@@ -18,31 +19,15 @@
 
 namespace {
 
-zx_status_t get_state(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_backlight_State state;
+zx_status_t backlight_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  i915::DisplayDevice* ptr;
   {
     fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
-    static_cast<i915::display_ref_t*>(ctx)->display_device->GetBacklightState(&state.backlight_on,
-                                                                              &state.brightness);
+    ptr = static_cast<i915::display_ref_t*>(ctx)->display_device;
   }
-  return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
-}
-
-zx_status_t set_state(void* ctx, const fuchsia_hardware_backlight_State* state) {
-  fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
-
-  static_cast<i915::display_ref_t*>(ctx)->display_device->SetBacklightState(state->backlight_on,
-                                                                            state->brightness);
-  return ZX_OK;
-}
-
-static fuchsia_hardware_backlight_Device_ops_t fidl_ops = {
-    .GetState = get_state,
-    .SetState = set_state,
-};
-
-zx_status_t backlight_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_backlight_Device_dispatch(ctx, txn, msg, &fidl_ops);
+  llcpp::fuchsia::hardware::backlight::Device::Dispatch(ptr, msg, &transaction);
+  return transaction.Status();
 }
 
 void backlight_release(void* ctx) { delete static_cast<i915::display_ref_t*>(ctx); }
@@ -274,6 +259,65 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
   }
 
   pipe_->ApplyConfiguration(config);
+}
+
+void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+  zx_status_t status = ZX_OK;
+  FidlBacklight::State state = {};
+
+  if (display_ref_ != nullptr) {
+    fbl::AutoLock lock(&display_ref_->mtx);
+    if (display_ref_->display_device != nullptr) {
+      status =
+          display_ref_->display_device->GetBacklightState(&state.backlight_on, &state.brightness);
+    }
+  } else {
+    status = ZX_ERR_BAD_STATE;
+  }
+
+  FidlBacklight::Device_GetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_GetStateNormalized_Response{.state = state});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
+}
+
+void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
+                                       SetStateNormalizedCompleter::Sync _completer) {
+  zx_status_t status = ZX_OK;
+
+  if (display_ref_ != nullptr) {
+    fbl::AutoLock lock(&display_ref_->mtx);
+    if (display_ref_->display_device != nullptr) {
+      status =
+          display_ref_->display_device->SetBacklightState(state.backlight_on, state.brightness);
+    }
+  } else {
+    status = ZX_ERR_BAD_STATE;
+  }
+
+  FidlBacklight::Device_SetStateNormalized_Result result;
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_SetStateNormalized_Response{});
+  } else {
+    result.set_err(status);
+  }
+  _completer.Reply(std::move(result));
+}
+
+void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_GetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
+}
+
+void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
+                                     SetStateAbsoluteCompleter::Sync _completer) {
+  FidlBacklight::Device_SetStateAbsolute_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  _completer.Reply(std::move(result));
 }
 
 }  // namespace i915

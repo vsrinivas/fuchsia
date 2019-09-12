@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
 
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
@@ -23,6 +24,7 @@ namespace i915 {
 
 class Controller;
 class DisplayDevice;
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 
 // Thread safe weak-ref to the DisplayDevice, because the backlight device
 // lifecycle is managed by devmgr but the DisplayDevice lifecycle is managed
@@ -32,7 +34,7 @@ typedef struct display_ref {
   DisplayDevice* display_device __TA_GUARDED(mtx);
 } display_ref_t;
 
-class DisplayDevice {
+class DisplayDevice : public FidlBacklight::Device::Interface {
  public:
   DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
   virtual ~DisplayDevice();
@@ -68,10 +70,22 @@ class DisplayDevice {
   void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
 
   virtual bool HasBacklight() { return false; }
-  virtual void SetBacklightState(bool power, double brightness) {}
-  virtual void GetBacklightState(bool* power, double* brightness) {}
+  virtual zx_status_t SetBacklightState(bool power, double brightness) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual zx_status_t GetBacklightState(bool* power, double* brightness) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
+
+  // FIDL calls
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void SetStateNormalized(FidlBacklight::State state,
+                          SetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+  void SetStateAbsolute(FidlBacklight::State state,
+                        SetStateAbsoluteCompleter::Sync _completer) override;
 
  protected:
   // Attempts to initialize the ddi.

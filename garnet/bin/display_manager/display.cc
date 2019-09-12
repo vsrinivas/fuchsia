@@ -5,7 +5,6 @@
 #include "display.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -16,7 +15,8 @@ namespace display {
 
 #define DEVICE_PATH "/dev/class/backlight/000"
 
-Display::Display(zx::channel channel) : channel_(std::move(channel)) {}
+Display::Display(zx::channel channel)
+    : client_(FidlBacklight::Device::SyncClient(std::move(channel))) {}
 
 Display::~Display() {}
 
@@ -38,28 +38,26 @@ Display* Display::GetDisplay() {
 }
 
 bool Display::GetBrightness(double* brightness) {
-  fuchsia_hardware_backlight_State state;
-  zx_status_t status = fuchsia_hardware_backlight_DeviceGetState(channel_.get(), &state);
-
+  auto response = client_.GetStateNormalized();
+  zx_status_t status = response.ok() ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                                     : response.status();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Getting backlight state failed";
+    FXL_LOG(ERROR) << "Getting backlight state failed with " << status;
     return false;
   }
-
-  *brightness = state.brightness;
+  *brightness = response->result.response().state.brightness;
   return true;
 }
 
 bool Display::SetBrightness(double brightness) {
-  fuchsia_hardware_backlight_State state = {.backlight_on = brightness > 0,
-                                            .brightness = brightness};
-  zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
-
+  FidlBacklight::State state = {.backlight_on = brightness > 0, .brightness = brightness};
+  auto response = client_.SetStateNormalized(state);
+  zx_status_t status = response.ok() ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                                     : response.status();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Setting backlight state failed";
+    FXL_LOG(ERROR) << "Setting backlight state failed with " << status;
     return false;
   }
-
   return true;
 }
 

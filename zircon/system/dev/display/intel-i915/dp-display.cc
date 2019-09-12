@@ -1318,20 +1318,26 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return controller()->igd_opregion().IsEdp(ddi()); }
 
-void DpDisplay::SetBacklightState(bool power, double brightness) {
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+
+zx_status_t DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
   brightness = fbl::max(brightness, 0.0);
   brightness = fbl::min(brightness, 1.0);
 
   double range = 1.0f - controller()->igd_opregion().GetMinBacklightBrightness();
-  SetBacklightBrightness((range * brightness) +
-                         controller()->igd_opregion().GetMinBacklightBrightness());
+  if (!SetBacklightBrightness((range * brightness) +
+                              controller()->igd_opregion().GetMinBacklightBrightness())) {
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
 }
 
-void DpDisplay::GetBacklightState(bool* power, double* brightness) {
+zx_status_t DpDisplay::GetBacklightState(bool* power, double* brightness) {
   *power = IsBacklightOn();
   *brightness = GetBacklightBrightness();
+  return ZX_OK;
 }
 
 bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {

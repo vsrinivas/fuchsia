@@ -16,7 +16,7 @@ test("backlight-test") {
     "backlight-test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-backlight:c",
+    "$zx/system/fidl/fuchsia-hardware-backlight:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]

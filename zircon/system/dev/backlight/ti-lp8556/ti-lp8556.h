@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_BACKLIGHT_TI_LP8556_TI_LP8556_H_
 #define ZIRCON_SYSTEM_DEV_BACKLIGHT_TI_LP8556_TI_LP8556_H_
 
-#include <fuchsia/hardware/backlight/c/fidl.h>
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
 
 #include <ddktl/device.h>
@@ -30,8 +30,11 @@ constexpr uint8_t kMaxBrightnessRegValue = 0xFF;
 
 class Lp8556Device;
 using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 
-class Lp8556Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT> {
+class Lp8556Device : public DeviceType,
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
+                     public FidlBacklight::Device::Interface {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c)
       : DeviceType(parent), i2c_(std::move(i2c)) {}
@@ -47,11 +50,22 @@ class Lp8556Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BA
   double GetDeviceBrightness() { return brightness_; }
   bool GetDevicePower() { return power_; }
 
+  // FIDL calls
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void SetStateNormalized(FidlBacklight::State state,
+                          SetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+  void SetStateAbsolute(FidlBacklight::State state,
+                        SetStateAbsoluteCompleter::Sync _completer) override;
+
  private:
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
   // Needs a PWM driver.
   ddk::I2cChannel i2c_;
+
   // brightness is set to maximum from bootloader.
+  // TODO(rashaeqbal): Once we also support brightness in nits, consider renaming this to accurately
+  // reflect normalized units.
   double brightness_ = 1.0;
   bool power_ = true;
 };

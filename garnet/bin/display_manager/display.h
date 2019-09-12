@@ -5,11 +5,16 @@
 #ifndef GARNET_BIN_DISPLAY_MANAGER_DISPLAY_H_
 #define GARNET_BIN_DISPLAY_MANAGER_DISPLAY_H_
 
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+
 #include <memory>
+
 #include "display.h"
 
 namespace display {
+
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 
 // The Display class is responsible for exposing display control. It
 // encapsulates interacting with the driver in the Zircon layer.
@@ -34,7 +39,7 @@ class Display {
   bool SetBrightness(double brightness);
 
  private:
-  zx::channel channel_;
+  FidlBacklight::Device::SyncClient client_;
 };
 }  // namespace display
 

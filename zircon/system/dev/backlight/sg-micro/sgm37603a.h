@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
 #define ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
 
-#include <fuchsia/hardware/backlight/c/fidl.h>
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
 
 #include <ddktl/device.h>
@@ -14,14 +14,35 @@
 
 namespace backlight {
 
-// TODO(rashaeqbal): We can set a 12-bit brightness value with I2C. Bump up this max and change the
-// I2C writes accordingly.
-constexpr uint8_t kMaxBrightnessRegValue = 0xFF;
+constexpr uint8_t kEnable = 0x10;
+constexpr uint8_t kEnableDevice = 0x01;
+constexpr uint8_t kEnableLed1 = 0x02;
+
+constexpr uint8_t kBrightnessControl = 0x11;
+constexpr uint8_t kBrightnessControlRegisterOnly = 0x00;
+constexpr uint8_t kBrightnessControlRampDisabled = 0x00;
+
+constexpr uint8_t kBrightnessLsb = 0x1a;
+constexpr uint8_t kBrightnessMsb = 0x19;
+
+constexpr uint8_t kDefaultRegValues[][2] = {
+    {kEnable, kEnableDevice | kEnableLed1},
+    {kBrightnessControl, kBrightnessControlRegisterOnly | kBrightnessControlRampDisabled},
+    {kBrightnessLsb, 0},
+    {kBrightnessMsb, 0},
+};
+
+constexpr uint16_t kMaxBrightnessRegValue = 0xFFF;
+constexpr uint16_t kBrightnessLsbBits = 4;
+constexpr uint16_t kBrightnessLsbMask = (0x1 << kBrightnessLsbBits) - 1;
 
 class Sgm37603a;
 using DeviceType = ddk::Device<Sgm37603a, ddk::Messageable>;
+namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 
-class Sgm37603a : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT> {
+class Sgm37603a : public DeviceType,
+                  public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
+                  public FidlBacklight::Device::Interface {
  public:
   virtual ~Sgm37603a() = default;
 
@@ -41,18 +62,20 @@ class Sgm37603a : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKL
   zx_status_t GetBacklightState(bool* power, double* brightness);
   zx_status_t SetBacklightState(bool power, double brightness);
 
+  // FIDL calls
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void SetStateNormalized(FidlBacklight::State state,
+                          SetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+  void SetStateAbsolute(FidlBacklight::State state,
+                        SetStateAbsoluteCompleter::Sync _completer) override;
+
  private:
-  static zx_status_t GetState(void* ctx, fidl_txn_t* txn);
-  static zx_status_t SetState(void* ctx, const fuchsia_hardware_backlight_State* state);
-
-  static constexpr fuchsia_hardware_backlight_Device_ops_t fidl_ops_ = {
-      .GetState = GetState,
-      .SetState = SetState,
-  };
-
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient reset_gpio_;
   bool enabled_ = false;
+  // TODO(rashaeqbal): Once we also support brightness in nits, consider renaming this to accurately
+  // reflect normalized units.
   double brightness_ = 0.0;
 };
 
