@@ -131,17 +131,15 @@ async fn main() -> Result<(), Error> {
     )));
 
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
+    suggestions_manager.register_suggestions_provider(Box::new(
+        ContextualSuggestionsProvider::new(actions_arc.clone()),
+    ));
+    suggestions_manager
+        .register_suggestions_provider(Box::new(ActionSuggestionsProvider::new(actions_arc)));
     suggestions_manager.register_suggestions_provider(Box::new(StorySuggestionsProvider::new(
         story_manager.clone(),
     )));
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
-
-    suggestions_manager.register_suggestions_provider(Box::new(
-        ContextualSuggestionsProvider::new(actions_arc.clone()),
-    ));
-
-    suggestions_manager
-        .register_suggestions_provider(Box::new(ActionSuggestionsProvider::new(actions_arc)));
 
     let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
 

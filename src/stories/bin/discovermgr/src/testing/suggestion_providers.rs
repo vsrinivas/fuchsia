@@ -15,7 +15,7 @@ use {
 };
 
 pub struct TestSuggestionsProvider {
-    suggestions: Vec<Suggestion>,
+    pub suggestions: Vec<Suggestion>,
 }
 
 impl TestSuggestionsProvider {

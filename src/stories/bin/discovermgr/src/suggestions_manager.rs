@@ -221,4 +221,54 @@ mod tests {
 
         Ok(())
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn provider_order_is_reflected() -> Result<(), Error> {
+        // Set up the fake puppet master client that is dependency. Even if we
+        // don't using it in this test.
+        let (puppet_master_client, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let mut puppet_master_fake = PuppetMasterFake::new();
+        puppet_master_fake.set_on_execute("story_name", |_commands| {
+            // Puppet master shouldn't be called.
+            assert!(false);
+        });
+        puppet_master_fake.spawn(request_stream);
+
+        // Set up our test suggestions provider.
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
+        let (_, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
+        let mut suggestions_manager = SuggestionsManager::new(mod_manager);
+
+        let mut provider1 = TestSuggestionsProvider::new();
+        provider1.suggestions = vec![
+            suggestion!(action = "A", title = "a", parameters = [], story = "story"),
+            suggestion!(action = "B", title = "b", parameters = [], story = "story"),
+        ];
+        let mut provider2 = TestSuggestionsProvider::new();
+        provider2.suggestions = vec![
+            suggestion!(action = "C", title = "c", parameters = [], story = "story"),
+            suggestion!(action = "D", title = "d", parameters = [], story = "story"),
+        ];
+
+        suggestions_manager.register_suggestions_provider(Box::new(provider1));
+        suggestions_manager.register_suggestions_provider(Box::new(provider2));
+
+        // Get suggestions and ensure the right ones are received.
+        let context = vec![];
+        let suggestions =
+            suggestions_manager.get_suggestions("", &context).await.collect::<Vec<&Suggestion>>();
+        assert_eq!(suggestions.len(), 4);
+        let titles = suggestions
+            .iter()
+            .map(|s| s.display_info().title.as_ref().unwrap().as_ref())
+            .collect::<Vec<&str>>();
+
+        // In lack of actual ranking we respect the order in which the providers
+        // were registered.
+        assert_eq!(titles, vec!["a", "b", "c", "d"]);
+
+        Ok(())
+    }
 }
