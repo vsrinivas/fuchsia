@@ -47,7 +47,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     // reasonable timeout.
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, zx::Duration::from_seconds(10)).await?;
     let _ = emulator.publish(settings).await?;
-    let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;;
+    let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 
     // Open a host channel using a fidl call and check the device is responsive
     let handle = host::open_host_channel(bthost.file())?;

@@ -14,7 +14,7 @@ extern crate log;
 
 mod mdns;
 
-use core::{
+use overnet_core::{
     LinkDescription, LinkId, MessageReceiver, NodeDescription, NodeId, NodeLinkId,
     NodeStateCallback, NodeTable, Router, RouterOptions, RouterTime, SendHandle, StreamId,
     VersionCounter,

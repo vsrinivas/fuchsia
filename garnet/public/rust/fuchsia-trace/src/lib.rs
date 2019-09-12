@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(cramertj): Remove once mem::uninitialized is gone
+#![allow(deprecated)]
+
 pub use cstr::cstr;
 
 use {

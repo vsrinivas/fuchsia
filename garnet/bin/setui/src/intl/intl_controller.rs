@@ -94,7 +94,7 @@ impl IntlController {
             .service_context_handle
             .write()
             .unwrap()
-            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();;
+            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();
 
         if service_result.is_err() {
             responder.send(Err(format_err!("get time zone failed"))).ok();

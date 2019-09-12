@@ -212,7 +212,7 @@ impl FrameManager {
     {
         if let Some(image_id) = self.frame_set.get_available_image() {
             let mut frame =
-                self.frames.get_mut(&image_id).expect("available frame to be in frame map");;
+                self.frames.get_mut(&image_id).expect("available frame to be in frame map");
             f(&mut frame);
             self.frame_set.mark_prepared(image_id);
         } else {

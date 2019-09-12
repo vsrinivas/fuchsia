@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn fixed_to_float() {
-        let fixed: Fixed = 256.into();;
+        let fixed: Fixed = 256.into();
         assert_eq!(1.0, fixed.to_float());
 
         let fixed: Fixed = 257.into();

@@ -205,7 +205,7 @@ where
 
     fn schedule_packet(&self, signals: usize) {
         unsafe {
-            let (mut raw_handle, mut raw_signals) = mem::uninitialized();
+            let (mut raw_handle, mut raw_signals) = (0, 0);
             syscall::fdio_unsafe_wait_begin(
                 self.fdio,
                 signals as u32,

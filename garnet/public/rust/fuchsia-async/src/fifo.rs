@@ -145,6 +145,8 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
         self.handle.poll_read(cx)
     }
 
+    // TODO(tmandry): Remove this once mem::uninitialized() is gone
+    #[allow(deprecated)]
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     pub fn try_read(&self, cx: &mut Context<'_>) -> Poll<Result<Option<R>, zx::Status>> {

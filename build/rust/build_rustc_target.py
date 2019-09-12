@@ -163,6 +163,8 @@ def main():
     call_args = [
         args.rustc,
         args.crate_root,
+        # TODO(tmandry): Remove once #![feature(async_await)] is gone.
+        "-Astable_features",
         "-Dwarnings",
         "--cap-lints",
         args.cap_lints,

@@ -32,7 +32,7 @@ use {
         file::simple::read_only,
     },
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, prelude::*, StreamExt, TryStreamExt},
+    futures::{lock::Mutex, prelude::*, TryStreamExt},
     std::{collections::HashMap, iter, path::PathBuf, sync::Arc},
 };
 

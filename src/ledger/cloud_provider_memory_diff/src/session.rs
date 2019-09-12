@@ -9,7 +9,7 @@ use fidl_fuchsia_ledger_cloud::{
     PageCloudWatcherProxy, Status,
 };
 use futures::future;
-use futures::future::{FutureExt, LocalFutureObj};
+use futures::future::LocalFutureObj;
 use futures::prelude::*;
 use futures::select;
 use futures::stream::FuturesUnordered;

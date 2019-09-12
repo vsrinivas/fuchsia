@@ -270,6 +270,8 @@ pub fn object_get_info<Q: ObjectQuery>(
     ok(status).map(|_| (actual, avail - actual))
 }
 
+// TODO(tmandry): Remove once mem::uninitialized() is gone
+#[allow(deprecated)]
 /// Get a property on a zircon object
 pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.

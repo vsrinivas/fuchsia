@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use core::NodeId;
+use overnet_core::NodeId;
 use failure::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_net_mdns::{

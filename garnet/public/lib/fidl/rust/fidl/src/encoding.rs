@@ -641,6 +641,8 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Decodable> Decodable for [T; $len] {
+        // TODO(tmandry): Remove once mem::uninitialized() is gone
+        #[allow(deprecated)]
         fn new_empty() -> Self {
             unsafe {
                 // We wrap the `arr` in a `ManuallyDrop` to prevent it from
