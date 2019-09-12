@@ -22,10 +22,36 @@
 
 namespace {
 
+VkImageCreateInfo GetDefaultImageConstraints(bool use_protected_memory, VkFormat format,
+                                             uint32_t width, bool linear) {
+  VkImageCreateInfo image_create_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = use_protected_memory ? VK_IMAGE_CREATE_PROTECTED_BIT : 0u,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = format,
+      .extent = VkExtent3D{width, 64, 1},
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = linear ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
+      // Only use sampled, because on Mali some other usages (like color attachment) aren't
+      // supported for NV12, and some others (implementation-dependent) aren't supported with
+      // AFBC.
+      .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .queueFamilyIndexCount = 0,      // not used since not sharing
+      .pQueueFamilyIndices = nullptr,  // not used since not sharing
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+  };
+  return image_create_info;
+}
+
 class VulkanTest {
  public:
   bool Initialize();
-  bool Exec(VkFormat format, uint32_t width, bool direct, bool linear);
+  bool Exec(VkFormat format, uint32_t width, bool direct, bool linear,
+            bool repeat_constraints_as_non_protected);
   bool ExecBuffer(uint32_t size);
 
   void set_use_protected_memory(bool use) { use_protected_memory_ = use; }
@@ -228,7 +254,8 @@ bool VulkanTest::InitVulkan() {
   return true;
 }
 
-bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear) {
+bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear,
+                      bool repeat_constraints_as_non_protected) {
   VkResult result;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
@@ -252,27 +279,42 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
     return DRETF(false, "Sync failed: %d", status);
   }
 
-  VkImageCreateInfo image_create_info = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = use_protected_memory_ ? VK_IMAGE_CREATE_PROTECTED_BIT : 0u,
-      .imageType = VK_IMAGE_TYPE_2D,
-      .format = format,
-      .extent = VkExtent3D{width, 64, 1},
-      .mipLevels = 1,
-      .arrayLayers = 1,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
-      .tiling = linear ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
-      // Only use sampled, because on Mali some other usages (like color attachment) aren't
-      // supported for NV12, and some others (implementation-dependent) aren't supported with
-      // AFBC.
-      .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,      // not used since not sharing
-      .pQueueFamilyIndices = nullptr,  // not used since not sharing
-      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-  };
+  // This bool suggests that we dup another token to set the same constraints, skipping protected
+  // memory requirements. This emulates another participant which does not require protected memory.
+  if (repeat_constraints_as_non_protected) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr repeat_token;
+    status =
+        vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), repeat_token.NewRequest());
+    if (status != ZX_OK) {
+      return DRETF(false, "Duplicate failed: %d", status);
+    }
+    status = vulkan_token->Sync();
+    if (status != ZX_OK) {
+      return DRETF(false, "Sync failed: %d", status);
+    }
 
+    VkImageCreateInfo image_create_info =
+        GetDefaultImageConstraints(/*use_protected_memory=*/false, format, width, linear);
+    VkBufferCollectionCreateInfoFUCHSIA import_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
+        .pNext = nullptr,
+        .collectionToken = repeat_token.Unbind().TakeChannel().release(),
+    };
+    VkBufferCollectionFUCHSIA collection;
+    result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+      return false;
+    }
+    result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, collection, &image_create_info);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "Failed to set buffer constraints: %d\n", result);
+      return false;
+    }
+  }
+
+  VkImageCreateInfo image_create_info =
+      GetDefaultImageConstraints(use_protected_memory_, format, width, linear);
   VkBufferCollectionCreateInfoFUCHSIA import_info = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
@@ -690,37 +732,37 @@ class VulkanImageExtensionTest : public ::testing::TestWithParam<bool> {};
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, false, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, false, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, false, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1025) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, false, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, false, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(VK_FORMAT_UNDEFINED, 64, true, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_UNDEFINED, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
@@ -731,7 +773,18 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
     DLOG("No protected memory support, skipping test");
     return;
   }
-  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam()));
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), false));
+}
+
+TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
+  VulkanTest test;
+  test.set_use_protected_memory(true);
+  ASSERT_TRUE(test.Initialize());
+  if (!test.device_supports_protected_memory()) {
+    DLOG("No protected memory support, skipping test");
+    return;
+  }
+  ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), true));
 }
 
 INSTANTIATE_TEST_SUITE_P(, VulkanImageExtensionTest, ::testing::Bool());

@@ -131,8 +131,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     // are for whether this memory should be protected (e.g. usable for DRM content, the precise
     // definition depending on the system).
     constraints_.buffer_memory_constraints.secure_required = constraints->secure_required;
-    constraints_.buffer_memory_constraints.inaccessible_domain_supported =
-        constraints->secure_required;
+    constraints_.buffer_memory_constraints.inaccessible_domain_supported = true;
 
     constraints_.buffer_memory_constraints.ram_domain_supported = constraints->ram_domain_supported;
     constraints_.buffer_memory_constraints.cpu_domain_supported = constraints->cpu_domain_supported;
@@ -288,9 +287,9 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     constraints.min_buffer_count_for_camping = 1;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.min_size_bytes = size;
+    constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
       constraints.buffer_memory_constraints.secure_required = true;
-      constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
     }
     constraints.image_format_constraints_count = 0;
 
