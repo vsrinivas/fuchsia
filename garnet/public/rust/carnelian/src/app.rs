@@ -156,15 +156,15 @@ impl AppStrategy for FrameBufferAppStrategy {
 }
 
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
-fn create_app_strategy(executor: &mut fasync::Executor) -> Result<AppStrategyPtr, Error> {
+async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
-    let fb = FrameBuffer::new(None, executor, Some(sender));
+    let fb = FrameBuffer::new(None, Some(sender)).await;
     if fb.is_err() {
         let scenic = connect_to_service::<ScenicMarker>()?;
-        Ok(Box::new(ScenicAppStrategy { scenic }))
+        Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();
-        let frame = fb.new_frame(executor)?;
+        let frame = Frame::new(&fb).await?;
         // TODO: improve scheduling of updates
         fasync::spawn(
             async move {
@@ -178,7 +178,7 @@ fn create_app_strategy(executor: &mut fasync::Executor) -> Result<AppStrategyPtr
                 }),
         );
         frame.present(&fb, None)?;
-        Ok(Box::new(FrameBufferAppStrategy { frame_buffer: fb, frame }))
+        Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy { frame_buffer: fb, frame }))
     }
 }
 
@@ -265,7 +265,8 @@ impl App {
         executor: &mut fasync::Executor,
         app: &mut App,
     ) -> Result<bool, Error> {
-        let strat = create_app_strategy(executor)?;
+        let strat_future = create_app_strategy();
+        let strat = executor.run_singlethreaded(strat_future)?;
         let supports_scenic = strat.supports_scenic();
         if assistant.get_mode() != ViewMode::Canvas && !supports_scenic {
             bail!("This application requires Scenic but this Fuchsia system doesn't have it.");

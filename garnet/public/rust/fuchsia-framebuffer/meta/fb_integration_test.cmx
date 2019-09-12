@@ -1,13 +1,13 @@
 {
-    "program": {
-        "binary": "test/fb_integration_test"
-    },
     "facets": {
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
             }
         }
+    },
+    "program": {
+        "binary": "test/fb_integration_test"
     },
     "sandbox": {
         "dev": [

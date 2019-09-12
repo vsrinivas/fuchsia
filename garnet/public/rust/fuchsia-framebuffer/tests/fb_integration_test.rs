@@ -6,7 +6,7 @@
 
 use failure::{Error, ResultExt};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
-use fuchsia_framebuffer::{FrameBuffer, PixelFormat, VSyncMessage};
+use fuchsia_framebuffer::{Frame, FrameBuffer, PixelFormat, VSyncMessage};
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, StreamExt};
 
@@ -30,34 +30,35 @@ fn test_main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
 
-    let (test_sender, mut test_receiver) = unbounded::<TestResult>();
-    let timeout_sender = test_sender.clone();
+    executor.run_singlethreaded(async {
+        let (test_sender, mut test_receiver) = unbounded::<TestResult>();
+        let timeout_sender = test_sender.clone();
 
-    let (sender, mut receiver) = unbounded::<VSyncMessage>();
+        let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
-    let mut fb = FrameBuffer::new(None, &mut executor, Some(sender))
-        .context("Failed to create framebuffer, perhaps a root presenter is already running")?;
+        let mut fb = FrameBuffer::new(None, Some(sender))
+            .await
+            .context("Failed to create framebuffer, perhaps a root presenter is already running")?;
 
-    let config = fb.get_config();
+        let config = fb.get_config();
 
-    let (image_sender, mut image_receiver) = unbounded::<u64>();
+        let (image_sender, mut image_receiver) = unbounded::<u64>();
 
-    let mut frame = fb.new_frame(&mut executor)?;
+        let mut frame = Frame::new(&fb).await?;
 
-    let grey = [0x80, 0x80, 0x80, 0xFF];
-    if config.format == PixelFormat::Argb8888 {
-        frame.fill_rectangle(0, 0, config.width, config.height, &grey);
-    } else {
-        frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&grey));
-    }
+        let grey = [0x80, 0x80, 0x80, 0xFF];
+        if config.format == PixelFormat::Argb8888 {
+            frame.fill_rectangle(0, 0, config.width, config.height, &grey);
+        } else {
+            frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&grey));
+        }
 
-    frame.present(&mut fb, Some(image_sender))?;
+        frame.present(&mut fb, Some(image_sender))?;
 
-    let mut frame2 = fb.new_frame(&mut executor)?;
+        let mut frame2 = Frame::new(&fb).await?;
 
-    // Listen for vsync messages to schedule an update of the displayed image
-    fasync::spawn_local(
-        async move {
+        // Listen for vsync messages to schedule an update of the displayed image
+        fasync::spawn_local(async move {
             receiver.next().await;
             let white = [0x0ff, 0xff, 0xff, 0xFF];
             if config.format == PixelFormat::Argb8888 {
@@ -68,21 +69,20 @@ fn test_main() -> Result<(), Error> {
             frame2.present(&mut fb, None).expect("frame2 present to succeed");
             image_receiver.next().await;
             test_sender.unbounded_send(TestResult::TestPassed).unwrap();
-        },
-    );
+        });
 
-    let timeout = Timer::new(5_i64.second().after_now());
-    fasync::spawn_local(
-        async move {
+        let timeout = Timer::new(5_i64.second().after_now());
+        fasync::spawn_local(async move {
             timeout.await;
             timeout_sender
                 .unbounded_send(TestResult::TimeoutFired)
                 .expect("test_sender.send expected to work");
-        },
-    );
+        });
 
-    let r = executor.run_singlethreaded(test_receiver.next());
-    assert_eq!(r.unwrap(), TestResult::TestPassed);
+        let r = test_receiver.next().await;
+        assert_eq!(r.unwrap(), TestResult::TestPassed);
+        Ok::<(), Error>(())
+    })?;
     Ok(())
 }
 

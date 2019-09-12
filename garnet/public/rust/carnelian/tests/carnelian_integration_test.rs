@@ -63,5 +63,4 @@ mod test {
         let assistant = IntegrationTestAppAssistant {};
         App::test(Box::new(assistant))
     }
-
 }

@@ -4,25 +4,23 @@
 
 #![feature(async_await)]
 
-use failure::{format_err, Error, ResultExt};
+use failure::{bail, format_err, Error, ResultExt};
 use fdio::watch_directory;
 use fidl::endpoints;
 use fidl_fuchsia_hardware_display::{
     ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ImagePlane,
     ProviderSynchronousProxy,
 };
-use fuchsia_async::{self as fasync, OnSignals};
+use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
 use fuchsia_zircon::{
     self as zx,
     sys::{zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, ZX_TIME_INFINITE},
-    AsHandleRef, Event, HandleBased, Rights, Signals, Vmo,
+    AsHandleRef, DurationNum, Event, HandleBased, Rights, Signals, Vmo,
 };
-use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
-use std::cell::RefCell;
 use std::fs::OpenOptions;
-use std::rc::Rc;
-use std::{sync::Arc, thread, time};
+use std::sync::Arc;
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -118,8 +116,6 @@ impl Config {
 
 pub struct Frame {
     config: Config,
-    #[allow(unused)]
-    vmo: Vmo, // TODO: check to see if this reference is actually needed.
     pub image_id: u64,
     pub event: Event,
     signal_event_id: u64,
@@ -127,35 +123,13 @@ pub struct Frame {
 }
 
 impl Frame {
-    fn allocate_image_vmo(
-        framebuffer: &FrameBuffer,
-        executor: &mut fasync::Executor,
-    ) -> Result<Vmo, Error> {
-        let vmo: Rc<RefCell<Option<Vmo>>> = Rc::new(RefCell::new(None));
-        let vmo_response = framebuffer
-            .controller
-            .allocate_vmo(framebuffer.byte_size() as u64)
-            .map_ok(|(status, allocated_vmo)| {
-                if status == zx::sys::ZX_OK {
-                    vmo.replace(allocated_vmo);
-                }
-            });
-        executor
-            .run_singlethreaded(vmo_response)
-            .context("allocate_image_vmo - run_singlethreaded")?;
-        let vmo = vmo.replace(None);
-        if let Some(vmo) = vmo {
-            Ok(vmo)
-        } else {
-            Err(format_err!("Could not allocate image vmo"))
-        }
+    async fn allocate_image_vmo(framebuffer: &FrameBuffer) -> Result<Vmo, Error> {
+        let (_status, vmo) =
+            framebuffer.controller.allocate_vmo(framebuffer.byte_size() as u64).await?;
+        Ok(vmo.unwrap())
     }
 
-    fn import_image_vmo(
-        framebuffer: &FrameBuffer,
-        executor: &mut fasync::Executor,
-        image_vmo: Vmo,
-    ) -> Result<u64, Error> {
+    async fn import_image_vmo(framebuffer: &FrameBuffer, image_vmo: Vmo) -> Result<u64, Error> {
         let pixel_format: u32 = framebuffer.config.format.into();
         let plane = ImagePlane {
             byte_offset: 0,
@@ -174,31 +148,14 @@ impl Frame {
             ],
         };
 
-        let image_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
-        let import_response = framebuffer
-            .controller
-            .import_vmo_image(&mut image_config, image_vmo, 0)
-            .map_ok(|(status, id)| {
-                if status == zx::sys::ZX_OK {
-                    image_id.replace(Some(id));
-                }
-            });
+        let (_, image_id) =
+            framebuffer.controller.import_vmo_image(&mut image_config, image_vmo, 0).await?;
 
-        executor
-            .run_singlethreaded(import_response)
-            .context("import_image_vmo - run_singlethreaded")?;
-
-        let image_id = image_id.replace(None);
-        if let Some(image_id) = image_id {
-            Ok(image_id)
-        } else {
-            Err(format_err!("Could not import image vmo"))
-        }
+        Ok(image_id)
     }
 
-    pub fn new(framebuffer: &FrameBuffer, executor: &mut fasync::Executor) -> Result<Frame, Error> {
-        let image_vmo = Self::allocate_image_vmo(framebuffer, executor)
-            .context("Frame::new() allocate_image_vmo")?;
+    pub async fn new(framebuffer: &FrameBuffer) -> Result<Frame, Error> {
+        let image_vmo = Self::allocate_image_vmo(framebuffer).await?;
         image_vmo
             .set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)
             .unwrap_or_else(|_err| println!("set_cache_policy failed"));
@@ -215,7 +172,8 @@ impl Frame {
 
         // import image VMO
         let imported_image_vmo = image_vmo.duplicate_handle(Rights::SAME_RIGHTS)?;
-        let image_id = Self::import_image_vmo(framebuffer, executor, imported_image_vmo)
+        let image_id = Self::import_image_vmo(framebuffer, imported_image_vmo)
+            .await
             .context("Frame::new() import_image_vmo")?;
 
         let my_event = Event::create()?;
@@ -229,7 +187,6 @@ impl Frame {
         Ok(Frame {
             config: framebuffer.get_config(),
             image_id: image_id,
-            vmo: image_vmo,
             event: my_event,
             signal_event_id: signal_event_id,
             mapping: Arc::new(mapping),
@@ -308,109 +265,68 @@ pub struct FrameBuffer {
 }
 
 impl FrameBuffer {
-    fn create_config_from_event_stream(
+    async fn create_config_from_event_stream(
         proxy: &ControllerProxy,
         stream: &mut fidl_fuchsia_hardware_display::ControllerEventStream,
-        executor: &mut fasync::Executor,
     ) -> Result<Config, Error> {
-        let display_info: Rc<RefCell<Option<(u64, u32, u32, u32)>>> = Rc::new(RefCell::new(None));
-        let mut event_listener = stream.filter(|event| {
-            if let Ok(ControllerEvent::DisplaysChanged { added, .. }) = event {
-                if added.len() > 0 {
+        let display_id;
+        let pixel_format;
+        let width;
+        let height;
+
+        loop {
+            let timeout = 2_i64.seconds().after_now();
+            let event = stream.next().on_timeout(timeout, || None).await;
+            if let Some(event) = event {
+                if let Ok(ControllerEvent::DisplaysChanged { added, .. }) = event {
                     let first_added = &added[0];
-                    if first_added.pixel_format.len() > 0 && first_added.modes.len() > 0 {
-                        let display_id = first_added.id;
-                        let pixel_format = first_added.pixel_format[0];
-                        let width = first_added.modes[0].horizontal_resolution;
-                        let height = first_added.modes[0].vertical_resolution;
-                        display_info.replace(Some((display_id, pixel_format, width, height)));
-                    }
+                    display_id = first_added.id;
+                    pixel_format = first_added.pixel_format[0];
+                    width = first_added.modes[0].horizontal_resolution;
+                    height = first_added.modes[0].vertical_resolution;
+                    break;
                 }
-            }
-            future::ready(true)
-        });
-
-        // run for two seconds waiting for a ControllerEvent::DisplaysChanged event,
-        // needed since other events may come in first
-        let delay = time::Duration::from_millis(100);
-        let timeout = time::Duration::from_millis(2000);
-        let now = time::Instant::now();
-        while display_info.borrow().is_none() && now.elapsed() < timeout {
-            executor.run_singlethreaded(event_listener.try_next())?;
-            thread::sleep(delay);
-        }
-
-        let display_info = display_info.replace(None);
-        if let Some((display_id, pixel_format, width, height)) = display_info {
-            let stride: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
-            let stride_response =
-                proxy.compute_linear_image_stride(width, pixel_format).map_ok(|px_stride| {
-                    stride.replace(px_stride);
-                });
-
-            executor.run_singlethreaded(stride_response).context("")?;
-
-            let stride = stride.replace(0);
-            if 0 == stride {
-                Err(format_err!("Could not calculate stride"))
             } else {
-                Ok(Config {
-                    display_id: display_id,
-                    width: width,
-                    height: height,
-                    linear_stride_pixels: stride,
-                    format: pixel_format.into(),
-                    pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
-                })
+                bail!("Timed out waiting for display controller to send a DisplaysChanged event");
             }
-        } else {
-            Err(format_err!("Could not find display"))
         }
+        let stride = proxy.compute_linear_image_stride(width, pixel_format).await?;
+        Ok(Config {
+            display_id: display_id,
+            width: width,
+            height: height,
+            linear_stride_pixels: stride,
+            format: pixel_format.into(),
+            pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
+        })
     }
 
-    fn configure_layer(
-        config: Config,
-        proxy: &ControllerProxy,
-        executor: &mut fasync::Executor,
-    ) -> Result<u64, Error> {
-        let layer_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
-        let layer_id_response = proxy.create_layer().map_ok(|(status, id)| {
-            if status == zx::sys::ZX_OK {
-                layer_id.replace(Some(id));
-            }
-        });
+    async fn configure_layer(config: Config, proxy: &ControllerProxy) -> Result<u64, Error> {
+        let (_status, layer_id) = proxy.create_layer().await?;
+        let pixel_format: u32 = config.format.into();
+        let plane =
+            ImagePlane { byte_offset: 0, bytes_per_row: config.linear_stride_bytes() as u32 };
+        let mut image_config = ImageConfig {
+            width: config.width,
+            height: config.height,
+            pixel_format: pixel_format as u32,
+            type_: 0,
+            planes: [
+                plane,
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+            ],
+        };
+        proxy.set_layer_primary_config(layer_id, &mut image_config)?;
 
-        executor.run_singlethreaded(layer_id_response)?;
-        let layer_id = layer_id.replace(None);
-        if let Some(id) = layer_id {
-            let pixel_format: u32 = config.format.into();
-            let plane =
-                ImagePlane { byte_offset: 0, bytes_per_row: config.linear_stride_bytes() as u32 };
-            let mut image_config = ImageConfig {
-                width: config.width,
-                height: config.height,
-                pixel_format: pixel_format as u32,
-                type_: 0,
-                planes: [
-                    plane,
-                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ],
-            };
-            proxy.set_layer_primary_config(id, &mut image_config)?;
-
-            let mut layers = std::iter::once(id);
-            proxy.set_display_layers(config.display_id, &mut layers)?;
-            Ok(id)
-        } else {
-            Err(format_err!("Failed to create layer"))
-        }
+        let mut layers = std::iter::once(layer_id);
+        proxy.set_display_layers(config.display_id, &mut layers)?;
+        Ok(layer_id)
     }
 
-    pub fn new(
+    pub async fn new(
         display_index: Option<usize>,
-        executor: &mut fasync::Executor,
         vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
     ) -> Result<FrameBuffer, Error> {
         let device_path = if let Some(index) = display_index {
@@ -440,9 +356,10 @@ impl FrameBuffer {
 
         let proxy = dc_client.into_proxy()?;
         proxy.enable_vsync(true).context("enable_vsync failed")?;
+
         let mut stream = proxy.take_event_stream();
-        let config = Self::create_config_from_event_stream(&proxy, &mut stream, executor)?;
-        let layer = Self::configure_layer(config, &proxy, executor)?;
+        let config = Self::create_config_from_event_stream(&proxy, &mut stream).await?;
+        let layer_id = Self::configure_layer(config, &proxy).await?;
 
         if let Some(vsync_sender) = vsync_sender {
             fasync::spawn_local(
@@ -460,16 +377,7 @@ impl FrameBuffer {
             );
         }
 
-        Ok(FrameBuffer {
-            display_controller: device_client,
-            controller: proxy,
-            config: config,
-            layer_id: layer,
-        })
-    }
-
-    pub fn new_frame(&self, executor: &mut fasync::Executor) -> Result<Frame, Error> {
-        Frame::new(&self, executor)
+        Ok(FrameBuffer { display_controller: device_client, controller: proxy, config, layer_id })
     }
 
     pub fn get_config(&self) -> Config {
@@ -483,4 +391,18 @@ impl FrameBuffer {
 
 impl Drop for FrameBuffer {
     fn drop(&mut self) {}
+}
+
+#[cfg(test)]
+mod test {
+    use crate::FrameBuffer;
+    use fuchsia_async::{self as fasync};
+
+    #[test]
+    fn test_async_new() -> std::result::Result<(), failure::Error> {
+        let mut executor = fasync::Executor::new()?;
+        let fb_future = FrameBuffer::new(None, None);
+        executor.run_singlethreaded(fb_future)?;
+        Ok(())
+    }
 }

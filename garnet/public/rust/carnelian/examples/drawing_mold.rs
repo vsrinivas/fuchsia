@@ -3,27 +3,24 @@
 // found in the LICENSE file.
 
 #![feature(async_await)]
-
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
 use carnelian::{
-    AnimationMode, App, AppAssistant, PixelSink, Point,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    AnimationMode, App, AppAssistant, PixelSink, Point, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey, ViewMode, Size,
 };
 use failure::Error;
 use fuchsia_zircon::{ClockId, Time};
 use mold::{
+    tile::{ColorBuffer, Layer, Map, PixelFormat, TileOp},
     Path, Raster,
-    tile::{ColorBuffer, Layer, Map, PixelFormat, TileOp}
 };
 use rusttype::{Contour, Font, Scale, Segment};
 use std::{
-    env,
-    f32,
+    env, f32,
     io::{self, Read},
-    slice,
-    thread,
+    slice, thread,
 };
 
 static FONT_DATA: &'static [u8] =
@@ -74,7 +71,9 @@ impl RoundedRect {
         let cl = Point::new(-control_dist, 0.0).to_vector();
 
         macro_rules! c {
-            ( $v:expr ) => (mold::Point::new($v.x, $v.y));
+            ( $v:expr ) => {
+                mold::Point::new($v.x, $v.y)
+            };
         }
 
         let mut path = Path::new();
@@ -114,14 +113,14 @@ impl Glyph {
                             flip_scale(line.p[1].x, line.p[1].y),
                             flip_scale(line.p[0].x, line.p[0].y),
                         );
-                    },
+                    }
                     Segment::Curve(curve) => {
                         path.quad(
                             flip_scale(curve.p[2].x, curve.p[2].y),
                             flip_scale(curve.p[1].x, curve.p[1].y),
                             flip_scale(curve.p[0].x, curve.p[0].y),
                         );
-                    },
+                    }
                 }
             }
         }
@@ -151,22 +150,20 @@ struct DrawingViewAssistant {
     glyph: Vec<Contour>,
     start: Time,
     map: Option<Map>,
+    size: Size,
 }
 
 impl DrawingViewAssistant {
     pub fn new() -> Self {
-        let rounded_rect = RoundedRect::new(
-            Point::new(200.0, 700.0),
-            Point::new(300.0, 200.0),
-            20.0,
-        );
+        let rounded_rect =
+            RoundedRect::new(Point::new(200.0, 700.0), Point::new(300.0, 200.0), 20.0);
 
         let rect = Raster::new(&rounded_rect.path);
 
         let font: Font<'static> = Font::from_bytes(FONT_DATA).unwrap();
         let glyph = font.glyph('a').scaled(Scale::uniform(1.0)).shape().unwrap();
 
-        Self { rect, glyph, start: Time::get(ClockId::Monotonic), map: None }
+        Self { rect, glyph, start: Time::get(ClockId::Monotonic), map: None, size: Size::zero() }
     }
 }
 
@@ -181,11 +178,7 @@ impl<P: PixelSink> PixelSinkWrapper<P> {
     pub fn new(pixel_sink: P, col_stride: u32, row_stride: u32) -> Self {
         Self {
             pixel_sink,
-            format: if col_stride == 2 {
-                PixelFormat::RGB565
-            } else {
-                PixelFormat::BGRA8888
-            },
+            format: if col_stride == 2 { PixelFormat::RGB565 } else { PixelFormat::BGRA8888 },
             stride: (row_stride / col_stride) as usize,
         }
     }
@@ -211,7 +204,8 @@ impl ViewAssistant for DrawingViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        if self.map.is_none() {
+        if self.map.is_none() || context.size != self.size {
+            self.size = context.size;
             let mut map = Map::new(context.size.width as usize, context.size.height as usize);
             map.global(0, vec![TileOp::ColorAccZero]);
 
@@ -229,9 +223,7 @@ impl ViewAssistant for DrawingViewAssistant {
                 },
             );
 
-            map.global(3, vec![
-                TileOp::ColorAccBackground(0xEBD5_B3FF),
-            ]);
+            map.global(3, vec![TileOp::ColorAccBackground(0xEBD5_B3FF)]);
             self.map = Some(map);
         }
 

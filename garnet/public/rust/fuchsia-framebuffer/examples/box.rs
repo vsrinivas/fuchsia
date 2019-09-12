@@ -164,10 +164,7 @@ struct FrameManager {
 }
 
 impl FrameManager {
-    pub fn new(
-        fb: &mut FrameBuffer,
-        executor: &mut fasync::Executor,
-    ) -> Result<FrameManager, Error> {
+    pub async fn new(fb: &mut FrameBuffer) -> Result<FrameManager, Error> {
         // this buffering approach will only work with two images, since
         // as soon as it is released by the display controller it is prepared
         // for use again and their can only be one prepared image.
@@ -176,7 +173,7 @@ impl FrameManager {
         let mut available = BTreeSet::new();
         let config = fb.get_config();
         for _ in 0..BUFFER_COUNT {
-            let mut frame = fb.new_frame(executor)?;
+            let mut frame = Frame::new(fb).await?;
             let black = [0x00, 0x00, 0x00, 0xFF];
             if config.format == PixelFormat::Argb8888 {
                 frame.fill_rectangle(0, 0, config.width, config.height, &black);
@@ -260,107 +257,107 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
 
-    // create async channel sender/receiver pair to receive vsync messages
-    let (sender, mut receiver) = unbounded::<VSyncMessage>();
+    executor.run_singlethreaded(async {
+        // create async channel sender/receiver pair to receive vsync messages
+        let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
-    // create a framebuffer
-    let mut fb = FrameBuffer::new(None, &mut executor, Some(sender))
-        .context("Failed to create framebuffer, perhaps a root presenter is already running")?;
+        // create a framebuffer
+        let mut fb = FrameBuffer::new(None, Some(sender)).await?;
 
-    // Find out the details of the display this frame buffer targets
-    let config = fb.get_config();
+        // Find out the details of the display this frame buffer targets
+        let config = fb.get_config();
 
-    // Create our sample frame manager, which will create and manage the frames
-    // and the display controller images they use.
-    let frame_manager = Rc::new(RefCell::new(FrameManager::new(&mut fb, &mut executor)?));
+        // Create our sample frame manager, which will create and manage the frames
+        // and the display controller images they use.
+        let frame_manager = Rc::new(RefCell::new(FrameManager::new(&mut fb).await?));
 
-    // prepare the first frame
-    frame_manager.borrow_mut().prepare_frame(|frame| {
-        update(&config, frame, 0).expect("update to work");
-    });
+        // prepare the first frame
+        frame_manager.borrow_mut().prepare_frame(|frame| {
+            update(&config, frame, 0).expect("update to work");
+        });
 
-    // create an async channel sender/receiver pair to receive messages when
-    // the image managed by a frame is no longer being displayed.
-    let (image_sender, mut image_receiver) = unbounded::<u64>();
+        // create an async channel sender/receiver pair to receive messages when
+        // the image managed by a frame is no longer being displayed.
+        let (image_sender, mut image_receiver) = unbounded::<u64>();
 
-    // Present the first image. Without this present, the display controller
-    // will not send vsync messages.
-    frame_manager
-        .borrow_mut()
-        .present_prepared(&mut fb, Some(image_sender.clone()))
-        .expect("present to work");
+        // Present the first image. Without this present, the display controller
+        // will not send vsync messages.
+        frame_manager
+            .borrow_mut()
+            .present_prepared(&mut fb, Some(image_sender.clone()))
+            .expect("present to work");
 
-    // Prepare a second image. There always wants to be a prepared image
-    // to present at a fixed time after vsync.
-    frame_manager.borrow_mut().prepare_frame(|frame| {
-        update(&config, frame, 0).expect("update to work");
-    });
+        // Prepare a second image. There always wants to be a prepared image
+        // to present at a fixed time after vsync.
+        frame_manager.borrow_mut().prepare_frame(|frame| {
+            update(&config, frame, 0).expect("update to work");
+        });
 
-    // keep track of the start time to use to animate the horizontal and
-    // vertical lines.
-    let start_time = Instant::now();
+        // keep track of the start time to use to animate the horizontal and
+        // vertical lines.
+        let start_time = Instant::now();
 
-    // Create a clone of the Rc holding the frame manager to move into
-    // the async block that receives messages about images being no longer
-    // in use.
-    let frame_manager_image = frame_manager.clone();
+        // Create a clone of the Rc holding the frame manager to move into
+        // the async block that receives messages about images being no longer
+        // in use.
+        let frame_manager_image = frame_manager.clone();
 
-    // wait for events from the image freed fence to know when an
-    // image can prepared.
-    fasync::spawn_local(
-        async move {
-            while let Some(image_id) = image_receiver.next().await {
-                // Grab a mutable reference. This is guaranteed to work
-                // since only one of this closure or the vsync closure can
-                // be in scope at once.
-                let mut frame_manager = frame_manager_image.borrow_mut();
+        // wait for events from the image freed fence to know when an
+        // image can prepared.
+        fasync::spawn_local(
+            async move {
+                while let Some(image_id) = image_receiver.next().await {
+                    // Grab a mutable reference. This is guaranteed to work
+                    // since only one of this closure or the vsync closure can
+                    // be in scope at once.
+                    let mut frame_manager = frame_manager_image.borrow_mut();
 
-                // Note the freed image and immediately prepare it. Since there
-                // are only two frames we are guaranteed that at most one can
-                // be free at one time.
-                frame_manager.frame_done_presenting(image_id);
+                    // Note the freed image and immediately prepare it. Since there
+                    // are only two frames we are guaranteed that at most one can
+                    // be free at one time.
+                    frame_manager.frame_done_presenting(image_id);
 
-                // Use elapsed time to animate the horizontal and vertical
-                // lines
-                let time = Instant::now().duration_since(start_time).as_nanos() as u64;
-                frame_manager.prepare_frame(|frame| {
-                    update(&config, frame, time).expect("update to work");
-                });
+                    // Use elapsed time to animate the horizontal and vertical
+                    // lines
+                    let time = Instant::now().duration_since(start_time).as_nanos() as u64;
+                    frame_manager.prepare_frame(|frame| {
+                        update(&config, frame, time).expect("update to work");
+                    });
+                }
+                Ok(())
             }
-            Ok(())
-        }
-            .unwrap_or_else(|e: failure::Error| {
-                println!("error {:#?}", e);
-            }),
-    );
+                .unwrap_or_else(|e: failure::Error| {
+                    println!("error {:#?}", e);
+                }),
+        );
 
-    // Listen for vsync messages to schedule an update of the displayed image
-    fasync::spawn_local(
-        async move {
-            while let Some(_vsync_message) = receiver.next().await {
-                // Wait an arbitrary 10 milliseconds after vsync to present the
-                // next prepared image.
-                Timer::new(10_i64.millis().after_now()).await;
+        // Listen for vsync messages to schedule an update of the displayed image
+        fasync::spawn_local(
+            async move {
+                while let Some(_vsync_message) = receiver.next().await {
+                    // Wait an arbitrary 10 milliseconds after vsync to present the
+                    // next prepared image.
+                    Timer::new(10_i64.millis().after_now()).await;
 
-                // Grab a mutable reference. This is guaranteed to work
-                // since only one of this closure or the vsync closure can
-                // be in scope at once.
-                let mut frame_manager = frame_manager.borrow_mut();
+                    // Grab a mutable reference. This is guaranteed to work
+                    // since only one of this closure or the vsync closure can
+                    // be in scope at once.
+                    let mut frame_manager = frame_manager.borrow_mut();
 
-                // Present the previously prepared image. As a side effect,
-                // the currently presented image will be eventually freed.
-                frame_manager
-                    .present_prepared(&mut fb, Some(image_sender.clone()))
-                    .expect("FrameManager::present_prepared to work");
+                    // Present the previously prepared image. As a side effect,
+                    // the currently presented image will be eventually freed.
+                    frame_manager
+                        .present_prepared(&mut fb, Some(image_sender.clone()))
+                        .expect("FrameManager::present_prepared to work");
+                }
+                Ok(())
             }
-            Ok(())
-        }
-            .unwrap_or_else(|e: failure::Error| {
-                println!("error {:#?}", e);
-            }),
-    );
-
-    // Run the executor forever.
+                .unwrap_or_else(|e: failure::Error| {
+                    println!("error {:#?}", e);
+                }),
+        );
+        Ok::<(), Error>(())
+    })?;
     executor.run_singlethreaded(future::pending::<()>());
     unreachable!();
 }

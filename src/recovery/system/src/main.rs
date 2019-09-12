@@ -10,7 +10,7 @@ use carnelian::{
 };
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
-use fuchsia_framebuffer::{Config, FrameBuffer, PixelFormat};
+use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
 use futures::StreamExt;
 
 mod setup;
@@ -78,33 +78,37 @@ async fn run<'a>(ui: &'a mut RecoveryUI<'a, MappingPixelSink>) -> Result<(), Err
 
 fn main() -> Result<(), Error> {
     println!("recovery: started");
+
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
-    let fb = FrameBuffer::new(None, &mut executor, None).context("Failed to create framebuffer")?;
-    let config = fb.get_config();
-    if config.format != PixelFormat::Argb8888
-        && config.format != PixelFormat::Rgb565
-        && config.format != PixelFormat::RgbX888
-    {
-        bail!("Unsupported pixel format {:#?}", config.format);
-    }
 
-    let display_size = IntSize::new(config.width as i32, config.height as i32);
+    executor.run_singlethreaded(async {
+        let fb = FrameBuffer::new(None, None).await.context("Failed to create framebuffer")?;
+        let config = fb.get_config();
+        if config.format != PixelFormat::Argb8888
+            && config.format != PixelFormat::Rgb565
+            && config.format != PixelFormat::RgbX888
+        {
+            bail!("Unsupported pixel format {:#?}", config.format);
+        }
 
-    let frame = fb.new_frame(&mut executor)?;
-    frame.present(&fb, None)?;
+        let display_size = IntSize::new(config.width as i32, config.height as i32);
 
-    let face = FontFace::new(FONT_DATA).unwrap();
+        let frame = Frame::new(&fb).await?;
+        frame.present(&fb, None)?;
 
-    let canvas = Canvas::new(
-        display_size,
-        MappingPixelSink::new(&frame.mapping),
-        config.linear_stride_bytes() as u32,
-        config.pixel_size_bytes,
-    );
+        let face = FontFace::new(FONT_DATA).unwrap();
 
-    let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
+        let canvas = Canvas::new(
+            display_size,
+            MappingPixelSink::new(&frame.mapping),
+            config.linear_stride_bytes() as u32,
+            config.pixel_size_bytes,
+        );
+        let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
+        run(&mut ui).await?;
+        Ok::<(), Error>(())
+    })?;
 
-    executor.run_singlethreaded(run(&mut ui))?;
     unreachable!();
 }
 
