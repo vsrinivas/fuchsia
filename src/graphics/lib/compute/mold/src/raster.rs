@@ -161,7 +161,9 @@ impl Raster {
     }
 
     pub(crate) fn edges(&self) -> Ref<[Edge<i32>]> {
-        self.inner.borrow_mut().new_edges = false;
+        if self.inner.borrow().new_edges {
+            self.inner.borrow_mut().new_edges = false;
+        }
         Ref::map(self.inner.borrow(), |inner| &inner.edges[..])
     }
 

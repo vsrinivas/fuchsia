@@ -690,4 +690,29 @@ mod tests {
         let mut bitmap = vec![0u32; STRIDE * HEIGHT];
         map.render(BitMap::new(bitmap.as_mut_ptr() as *mut u8, STRIDE));
     }
+
+    #[test]
+    fn same_raster_multiple_layers() {
+        let mut map = Map::new(1, 1);
+
+        let path = Path::new();
+        let raster = Raster::new(&path);
+
+        map.print(
+            0,
+            Layer {
+                raster: raster.clone(),
+                ops: vec![TileOp::CoverWipNonZero],
+            },
+        );
+        map.print(
+            1,
+            Layer {
+                raster: raster.clone(),
+                ops: vec![TileOp::CoverWipNonZero],
+            },
+        );
+
+        map.render_to_bitmap();
+    }
 }
