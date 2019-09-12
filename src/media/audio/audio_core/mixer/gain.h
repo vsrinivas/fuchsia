@@ -11,10 +11,11 @@
 #include <atomic>
 #include <cmath>
 
+#include <fbl/algorithm.h>
+
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/mixer/usage_gain_settings.h"
 
 namespace media::audio {
 
@@ -23,6 +24,7 @@ constexpr bool kVerboseMuteDebug = false;
 constexpr bool kVerboseRampDebug = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
+// TODO(36445): Remove mutes and gain value clamping
 class Gain {
  public:
   // Audio gains for AudioRenderers/AudioCapturers and output devices are
@@ -53,6 +55,13 @@ class Gain {
   static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
   // Higher-precision (but slower) version currently used only by fidelity tests
   static double DoubleToDb(double val) { return std::log10(val) * 20.0; }
+  static inline float CombineGains(float gain_db_a, float gain_db_b) {
+    if (gain_db_a <= kMinGainDb || gain_db_b <= kMinGainDb) {
+      return kMinGainDb;
+    }
+
+    return fbl::clamp(gain_db_a + gain_db_b, kMinGainDb, kMaxGainDb);
+  }
 
   // Helper constant values in the gain-scale domain.
   //
@@ -143,7 +152,7 @@ class Gain {
 
   // Calculate the stream's gain-scale, from cached source and dest values.
   AScale GetGainScale() {
-    return GetGainScale(target_src_gain_db_.load(), GetUsageGain(), target_dest_gain_db_.load());
+    return GetGainScale(target_src_gain_db_.load(), target_dest_gain_db_.load());
   }
 
   void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
@@ -155,7 +164,7 @@ class Gain {
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() {
-    float temp_db = target_src_gain_db_.load() + GetUsageGain() + target_dest_gain_db_.load();
+    float temp_db = target_src_gain_db_.load() + target_dest_gain_db_.load();
 
     return (temp_db == 0) && !src_mute_ && !dest_mute_ && !IsRamping();
   }
@@ -170,40 +179,27 @@ class Gain {
   // TODO(perley/mpuryear): Handle usage ramping.
   bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
 
-  void SetUsage(fuchsia::media::Usage usage);
-
-  static UsageGainSettings& Settings() { return usage_gain_settings_; }
-
  private:
-  static UsageGainSettings usage_gain_settings_;
-
   // Called by the above GetGainScale variants. For performance reasons, this
   // implementation caches values and recomputes the result only as needed.
-  AScale GetGainScale(float src_gain_db, float usage_gain_db, float dest_gain_db);
+  AScale GetGainScale(float src_gain_db, float dest_gain_db);
 
   // Used internally only -- the instananeous gain state
   bool IsSilentNow() {
     return (target_src_gain_db_.load() <= kMinGainDb) ||
-           (target_dest_gain_db_.load() <= kMinGainDb) || (GetUsageGain() <= kMinGainDb) ||
-           (target_src_gain_db_.load() + target_dest_gain_db_.load() + GetUsageGain() <=
-            kMinGainDb);
-  }
-
-  float GetUsageGain() {
-    return usage_.has_value() ? usage_gain_settings_.GetUsageGain(*usage_) : kUnityGainDb;
+           (target_dest_gain_db_.load() <= kMinGainDb) ||
+           (target_src_gain_db_.load() + target_dest_gain_db_.load() <= kMinGainDb);
   }
 
   // TODO(mpuryear): at some point, examine whether using a lock provides better
   // performance and scalability than using these two atomics.
   std::atomic<float> target_src_gain_db_;
   std::atomic<float> target_dest_gain_db_;
-  std::optional<fuchsia::media::Usage> usage_;
 
   float current_src_gain_db_ = kUnityGainDb;
   bool src_mute_ = false;
   float current_dest_gain_db_ = kUnityGainDb;
   bool dest_mute_ = false;
-  float current_usage_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
 
   float start_src_scale_ = kUnityScale;

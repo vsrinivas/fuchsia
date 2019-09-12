@@ -18,6 +18,7 @@
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
@@ -31,7 +32,8 @@ class AudioCoreImpl;
 class AudioRendererImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
                           public fuchsia::media::AudioRenderer,
-                          public fuchsia::media::audio::GainControl {
+                          public fuchsia::media::audio::GainControl,
+                          public StreamGain {
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -138,7 +140,8 @@ class AudioRendererImpl : public AudioObject,
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                     async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
-                    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar);
+                    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar,
+                    StreamVolumeManager* volume_manager);
 
   ~AudioRendererImpl() override;
 
@@ -150,10 +153,20 @@ class AudioRendererImpl : public AudioObject,
   void ReportStart();
   void ReportStop();
 
+  // AudioObject overrides.
+  void OnLinkAdded() override;
+
+  // StreamGain interface.
+  float GetStreamGain() const final;
+  bool GetStreamMute() const final;
+  fuchsia::media::Usage GetStreamUsage() const final;
+  void RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) final;
+
   async_dispatcher_t* dispatcher_;
   AudioDeviceManager& device_manager_;
   AudioAdmin& admin_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
+  StreamVolumeManager& volume_manager_;
 
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>

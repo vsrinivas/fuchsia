@@ -50,18 +50,20 @@ fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
     AudioCoreImpl* owner) {
   return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
                                              owner->dispatcher(), &owner->device_manager(),
-                                             &owner->audio_admin()));
+                                             &owner->audio_admin(), &owner->volume_manager()));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin)
+    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin,
+    StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioCapturer),
       usage_(fuchsia::media::AudioCaptureUsage::FOREGROUND),
       binding_(this, std::move(audio_capturer_request)),
       dispatcher_(dispatcher),
       device_manager_(*device_manager),
       admin_(*admin),
+      volume_manager_(*volume_manager),
       state_(State::WaitingForVmo),
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
@@ -78,6 +80,8 @@ AudioCapturerImpl::AudioCapturerImpl(
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::COMMUNICATION);
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
   allowed_usages_ = std::move(allowed_usages);
+
+  volume_manager_.AddStream(this);
 
   zx::profile profile;
   zx_status_t res = AcquireHighPriorityProfile(&profile);
@@ -103,12 +107,38 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   FXL_DCHECK(payload_buf_virt_ == nullptr);
   FXL_DCHECK(payload_buf_size_ == 0);
   ReportStop();
+  volume_manager_.RemoveStream(this);
   REP(RemovingCapturer(*this));
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
 
 void AudioCapturerImpl::ReportStop() { admin_.UpdateCapturerState(usage_, false, this); }
+
+void AudioCapturerImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
+
+float AudioCapturerImpl::GetStreamGain() const { return stream_gain_db_.load(); }
+
+bool AudioCapturerImpl::GetStreamMute() const { return mute_; }
+
+fuchsia::media::Usage AudioCapturerImpl::GetStreamUsage() const {
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(usage_);
+  return usage;
+}
+
+void AudioCapturerImpl::RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) {
+  if (ramp.has_value()) {
+    FXL_LOG(WARNING)
+        << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
+  }
+
+  ForEachSourceLink([gain_db](auto& link) {
+    // Gain objects contain multiple stages. In capture, device gain is
+    // the "source" stage and stream gain is the "dest" stage.
+    link.bookkeeping()->gain.SetDestGain(gain_db);
+  });
+}
 
 void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
   TRACE_DURATION("audio", "AudioCapturerImpl::SetInitialFormat");
@@ -121,10 +151,10 @@ void AudioCapturerImpl::Shutdown() {
   auto self_ref = fbl::WrapRefPtr(this);
 
   ReportStop();
-  // Disconnect from everything we were connected to.
   // TODO(mpuryear): Considering eliminating this; it may not be needed.
-
   PreventNewLinks();
+
+  // Disconnect from everything we were connected to.
   Unlink();
 
   // Close any client connections.
@@ -165,9 +195,6 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>
 
   // Allocate our bookkeeping for our link.
   std::unique_ptr<Bookkeeping> info(new Bookkeeping());
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(usage_);
-  info->gain.SetUsage(std::move(usage));
   link->set_bookkeeping(std::move(info));
 
   // Choose a mixer
@@ -254,6 +281,8 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
   UpdateFormat(stream_type.sample_format, stream_type.channels, stream_type.frames_per_second);
 
   cleanup.cancel();
+
+  volume_manager_.NotifyStreamChanged(this);
 }
 
 void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
@@ -915,11 +944,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     if (allowed == usage) {
       ReportStop();
       usage_ = usage;
-      ForEachSourceLink([usage](auto& link) {
-        fuchsia::media::Usage new_usage;
-        new_usage.set_capture_usage(usage);
-        link.bookkeeping()->gain.SetUsage(std::move(new_usage));
-      });
+      volume_manager_.NotifyStreamChanged(this);
       State state = state_.load();
       if (state == State::OperatingAsync) {
         ReportStart();
@@ -1615,13 +1640,6 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   // Else (if device is an Audio Output), use default SourceGain (Unity). Device
   // gain has already been applied "on the way down" during the render mix.
 
-  // Second, set the destination gain -- based on stream gain/mute settings.
-  info.gain.SetDestMute(mute_);
-  info.gain.SetDestGain(stream_gain_db_.load());
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(usage_);
-  info.gain.SetUsage(std::move(usage));
-
   return ZX_OK;
 }
 
@@ -1650,12 +1668,7 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   REP(SettingCapturerGain(*this, gain_db));
 
   stream_gain_db_.store(gain_db);
-
-  ForEachSourceLink([gain_db](auto& link) {
-    // Gain objects contain multiple stages. In capture, device/master gain is
-    // the "source" stage and stream gain is the "dest" stage.
-    link.bookkeeping()->gain.SetDestGain(gain_db);
-  });
+  volume_manager_.NotifyStreamChanged(this);
 
   NotifyGainMuteChanged();
 }
@@ -1671,8 +1684,7 @@ void AudioCapturerImpl::SetMute(bool mute) {
 
   mute_ = mute;
 
-  ForEachSourceLink([mute](auto& link) { link.bookkeeping()->gain.SetDestMute(mute); });
-
+  volume_manager_.NotifyStreamChanged(this);
   NotifyGainMuteChanged();
 }
 

@@ -44,19 +44,20 @@ fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     AudioCoreImpl* owner) {
   return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), owner->dispatcher(),
                                              &owner->device_manager(), &owner->audio_admin(),
-                                             owner->vmar()));
+                                             owner->vmar(), &owner->volume_manager()));
 }
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar)
+    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioRenderer),
       usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       dispatcher_(dispatcher),
       device_manager_(*device_manager),
       admin_(*admin),
       vmar_(std::move(vmar)),
+      volume_manager_(*volume_manager),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}),
@@ -76,6 +77,8 @@ AudioRendererImpl::AudioRendererImpl(
   allowed_usages.push_back(fuchsia::media::AudioRenderUsage::INTERRUPTION);
   allowed_usages_ = std::move(allowed_usages);
 
+  volume_manager_.AddStream(this);
+
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     audio_renderer_binding_.Unbind();
     Shutdown();
@@ -91,6 +94,7 @@ AudioRendererImpl::~AudioRendererImpl() {
   FXL_DCHECK(gain_control_bindings_.size() == 0);
   ReportStop();
 
+  volume_manager_.RemoveStream(this);
   REP(RemovingRenderer(*this));
 }
 
@@ -179,13 +183,7 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
     if (allowed == usage) {
       ReportStop();
       usage_ = usage;
-      ForEachDestLink([throttle_ptr = throttle_output_link_.get(), usage](auto& link) {
-        if (&link != throttle_ptr) {
-          fuchsia::media::Usage new_usage;
-          new_usage.set_render_usage(usage);
-          link.bookkeeping()->gain.SetUsage(std::move(new_usage));
-        }
-      });
+      volume_manager_.NotifyStreamChanged(this);
       if (IsOperating())
         ReportStart();
       return;
@@ -438,6 +436,8 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   // have to be revalidated as we move into the operational phase of our life.
   config_validated_ = false;
   cleanup.cancel();
+
+  volume_manager_.NotifyStreamChanged(this);
 }
 
 void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
@@ -896,6 +896,30 @@ void AudioRendererImpl::PauseNoReply() {
   Pause(nullptr);
 }
 
+void AudioRendererImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
+
+float AudioRendererImpl::GetStreamGain() const { return stream_gain_db_; }
+bool AudioRendererImpl::GetStreamMute() const { return mute_; }
+
+fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(usage_);
+  return usage;
+}
+
+void AudioRendererImpl::RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) {
+  // Set this gain with every link (except the link to throttle output)
+  ForEachDestLink([gain_db, throttle_ptr = throttle_output_link_.get(), &ramp](auto& link) {
+    if (&link != throttle_ptr) {
+      if (ramp.has_value()) {
+        link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, ramp->duration_ns, ramp->ramp_type);
+      } else {
+        link.bookkeeping()->gain.SetSourceGain(gain_db);
+      }
+    }
+  });
+}
+
 // Set the stream gain, in each Renderer -> Output audio path. The Gain object contains multiple
 // stages. In playback, renderer gain is pre-mix and hence is "source" gain; the Output device (or
 // master) gain is "dest" gain.
@@ -918,13 +942,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   REP(SettingRendererGain(*this, gain_db));
 
   stream_gain_db_ = gain_db;
-
-  // Set this gain with every link (except the link to throttle output)
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db](auto& link) {
-    if (&link != throttle_ptr) {
-      link.bookkeeping()->gain.SetSourceGain(gain_db);
-    }
-  });
+  volume_manager_.NotifyStreamChanged(this);
 
   NotifyGainMuteChanged();
 }
@@ -945,14 +963,9 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, zx_duration_t duration_ns
 
   REP(SettingRendererGainWithRamp(*this, gain_db, duration_ns, ramp_type));
 
-  ForEachDestLink(
-      [throttle_ptr = throttle_output_link_.get(), gain_db, duration_ns, ramp_type](auto& link) {
-        if (&link != throttle_ptr) {
-          link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns, ramp_type);
-        }
-      });
+  volume_manager_.NotifyStreamChanged(this, Ramp{duration_ns, ramp_type});
 
-  // TODO(mpuryear): implement notifications for gain ramps.
+  // TODO(mpuryear): implement GainControl notifications for gain ramps.
 }
 
 // Set a stream mute, in each Renderer -> Output audio path. For now, mute is handled by setting
@@ -969,12 +982,7 @@ void AudioRendererImpl::SetMute(bool mute) {
   REP(SettingRendererMute(*this, mute));
   mute_ = mute;
 
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(), mute](auto& link) {
-    if (&link != throttle_ptr) {
-      link.bookkeeping()->gain.SetSourceMute(mute);
-    }
-  });
-
+  volume_manager_.NotifyStreamChanged(this);
   NotifyGainMuteChanged();
 }
 

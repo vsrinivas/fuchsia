@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/command_line_options.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
 
 namespace media::audio {
 
@@ -51,6 +52,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   AudioDeviceManager& device_manager() { return device_manager_; }
   AudioAdmin& audio_admin() { return audio_admin_; }
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
+  StreamVolumeManager& volume_manager() { return volume_manager_; }
 
  private:
   // |fuchsia::media::AudioCore|
@@ -99,6 +101,9 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   AudioDeviceSettingsPersistence device_settings_persistence_;
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
+
+  // Router for volume changes.
+  StreamVolumeManager volume_manager_;
 
   // Audio usage manager
   AudioAdmin audio_admin_;

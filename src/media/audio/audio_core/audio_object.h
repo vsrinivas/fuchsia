@@ -91,6 +91,9 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   virtual zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link);
   virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link);
 
+  // Called immediately after a new link is added to the object.
+  virtual void OnLinkAdded();
+
   fbl::Mutex links_lock_;
 
   // The set of links which this audio device is acting as a source for (eg; the

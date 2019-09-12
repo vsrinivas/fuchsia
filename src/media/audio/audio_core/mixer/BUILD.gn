@@ -28,12 +28,12 @@ source_set("mixer") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//src/media/audio/lib/logging",
+    "//zircon/public/lib/fbl",
   ]
 
   deps = [
     "//sdk/lib/media/cpp:no_converters",
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace",
   ]
 }

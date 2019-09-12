@@ -68,8 +68,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
     }
   }
 
-  // TODO(johngro): if we must poke the destination, in case it needs to wake and do specific work
-  // because of this new source, this where to do it.
+  source->OnLinkAdded();
+  dest->OnLinkAdded();
 
   return link;
 }
@@ -169,6 +169,8 @@ void AudioObject::UnlinkDestinations() {
 zx_status_t AudioObject::InitializeSourceLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
 
 zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
+
+void AudioObject::OnLinkAdded() {}
 
 template <typename TagType>
 void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {

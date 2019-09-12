@@ -25,6 +25,7 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -35,7 +36,8 @@ class AudioAdmin;
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
                           public fuchsia::media::audio::GainControl,
-                          public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
+                          public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>>,
+                          public StreamGain {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
@@ -150,7 +152,7 @@ class AudioCapturerImpl : public AudioObject,
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                     async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
-                    AudioAdmin* admin);
+                    AudioAdmin* admin, StreamVolumeManager* volume_manager);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -178,6 +180,15 @@ class AudioCapturerImpl : public AudioObject,
 
   void ReportStart();
   void ReportStop();
+
+  // AudioObject overrides.
+  void OnLinkAdded() override;
+
+  // StreamGain interface.
+  float GetStreamGain() const final;
+  bool GetStreamMute() const final;
+  fuchsia::media::Usage GetStreamUsage() const final;
+  void RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) final;
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -209,6 +220,7 @@ class AudioCapturerImpl : public AudioObject,
   async_dispatcher_t* dispatcher_;
   AudioDeviceManager& device_manager_;
   AudioAdmin& admin_;
+  StreamVolumeManager& volume_manager_;
   std::atomic<State> state_;
   const bool loopback_;
 

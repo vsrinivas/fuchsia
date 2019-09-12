@@ -9,6 +9,8 @@
 
 namespace media::audio::test {
 
+// TODO(36446): Move unittests into audio_mixer_unittests
+
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
 
@@ -24,16 +26,6 @@ class GainTest : public testing::Test {
  protected:
   void SetUp() override {
     testing::Test::SetUp();
-
-    // Setup a render usage for the gain object during test.
-    fuchsia::media::Usage usage;
-    usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
-    gain_.SetUsage(std::move(usage));
-    Gain::Settings().SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA),
-                                  Gain::kUnityGainDb);
-    Gain::Settings().SetUsageGainAdjustment(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA),
-                                            Gain::kUnityGainDb);
-
     rate_1khz_output_ = TimelineRate(1000, ZX_SEC(1));
   }
 
@@ -46,27 +38,14 @@ class GainTest : public testing::Test {
     EXPECT_TRUE(gain_.IsUnity());
   }
 
-  void TestMinMuteGain(float source_gain_db, float dest_gain_db, float usage_gain_db,
-                       float usage_gain_adjustment_db) {
+  void TestMinMuteGain(float source_gain_db, float dest_gain_db) {
     gain_.SetSourceGain(source_gain_db);
     gain_.SetDestGain(dest_gain_db);
-    Gain::Settings().SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA),
-                                  usage_gain_db);
-    Gain::Settings().SetUsageGainAdjustment(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA),
-                                            usage_gain_adjustment_db);
 
     EXPECT_FLOAT_EQ(Gain::kMuteScale, gain_.GetGainScale());
 
     EXPECT_FALSE(gain_.IsUnity());
     EXPECT_TRUE(gain_.IsSilent());
-  }
-
-  void TestMinMuteGain(float source_gain_db, float dest_gain_db, float usage_gain_db) {
-    TestMinMuteGain(source_gain_db, dest_gain_db, usage_gain_db, 0.0);
-  }
-
-  void TestMinMuteGain(float source_gain_db, float dest_gain_db) {
-    TestMinMuteGain(source_gain_db, dest_gain_db, 0.0, 0.0);
   }
 
   // Used for debugging purposes.
@@ -180,11 +159,6 @@ TEST_F(GainTest, SourceGainCaching) {
 // We independently limit stream and device gains to kMaxGainDb/0, respectively.
 // MTWN-70 concerns Gain's statefulness. Does it need this complexity?
 TEST_F(GainTest, MaxClamp) {
-  // Verify that Usage gain is clamped to 0.0db
-  Gain::Settings().SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA),
-                                Gain::kMaxGainDb);
-  EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
-
   // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain_.SetSourceGain(Gain::kMaxGainDb * 2);
   gain_.SetDestGain(Gain::kUnityGainDb);
@@ -227,57 +201,16 @@ TEST_F(GainTest, MinMute) {
   // Output gain is just slightly above MinGain; renderer takes us below it.
   TestMinMuteGain(-2.0f, Gain::kMinGainDb + 1.0f);
 
-  // Next, test for source/usage/dest interactions.
+  // Next, test for source/dest interactions.
   // Check if source alone mutes.
-  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb + 1, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb + 1);
+  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb);
+  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb + 1);
   // Check if dest alone mutes.
-  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kMinGainDb, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb + 1);
-  // Check if usage alone mutes.
-  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kUnityGainDb, Gain::kMinGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kUnityGainDb + 1, Gain::kMinGainDb);
+  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kMinGainDb);
+  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb);
 
-  // Check if usage + source mutes.
-  TestMinMuteGain(Gain::kMinGainDb / 2, Gain::kUnityGainDb, Gain::kMinGainDb / 2);
-
-  // Check if usage + dest mutes.
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
-
-  // Check if all three adding up to mute mutes.
-  TestMinMuteGain(Gain::kMinGainDb / 4, Gain::kMinGainDb / 4, Gain::kMinGainDb / 2);
-
-  // Next test for source/usage/usage_adjustment/dest interactions.
-  // Check if source alone mutes.
-  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb + 1, Gain::kUnityGainDb, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb + 1, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb + 1);
-
-  // Check if dest alone mutes.
-  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb + 1, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb + 1);
-
-  // Check if usage alone mutes.
-  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kUnityGainDb + 1, Gain::kMinGainDb, Gain::kUnityGainDb);
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb + 1);
-
-  // Check if usage adjustment + source mutes.
-  TestMinMuteGain(Gain::kMinGainDb / 2, Gain::kUnityGainDb, Gain::kUnityGainDb,
-                  Gain::kMinGainDb / 2);
-
-  // Check if usage adjustment + dest mutes.
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb / 2, Gain::kUnityGainDb,
-                  Gain::kMinGainDb / 2);
-
-  // Check if usage + usage adjustment mutes.
-  TestMinMuteGain(Gain::kUnityGainDb, Gain::kUnityGainDb, Gain::kMinGainDb / 2,
-                  Gain::kMinGainDb / 2);
-
-  // Check if all four adding up to mute mutes.
-  TestMinMuteGain(Gain::kMinGainDb / 4, Gain::kMinGainDb / 4, Gain::kMinGainDb / 4,
-                  Gain::kMinGainDb / 4);
+  // Check if the combination mutes.
+  TestMinMuteGain(Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
 }
 
 // Mute-related tests
@@ -880,5 +813,14 @@ TEST(MixGain, Accumulator_Clear_Point) { TestAccumulatorClear(Resampler::SampleA
 
 // Validate the same assertions, with LinearInterpolation interpolator.
 TEST(MixGain, Accumulator_Clear_Linear) { TestAccumulatorClear(Resampler::LinearInterpolation); }
+
+TEST(MixGain, CombineGains) {
+  static_assert(-90.0 < Gain::kMinGainDb / 2);
+  static_assert(15.0 > Gain::kMaxGainDb / 2);
+
+  EXPECT_EQ(Gain::CombineGains(-90, -90), Gain::kMinGainDb);
+  EXPECT_EQ(Gain::CombineGains(15, 15), Gain::kMaxGainDb);
+  EXPECT_EQ(Gain::CombineGains(-20, 5), -15);
+}
 
 }  // namespace media::audio::test
