@@ -1,0 +1,22 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+[Discoverable]
+protocol Device {
+    /// Notifies of a change in information about the device.
+    ///
+    /// On a given connection, the first call will return the current `settings` value while
+    /// subsequent calls will only return the new `settings` value upon a value change. This
+    /// follows the hanging get pattern.
+    Watch() -> (DeviceSettings device_settings);
+};
+
+/// Information about the device.
+table DeviceSettings {
+    /// The identifier representing the specific build that the device
+    /// is currently running. Read-only field, cannot be set by client.
+    1: string:50 build_tag;
+};
