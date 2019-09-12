@@ -5,6 +5,7 @@
 #![feature(async_await)]
 
 use {
+    argh::FromArgs,
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
@@ -13,7 +14,6 @@ use {
     fuchsia_syslog::fx_log_info,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
-    structopt::StructOpt,
 };
 
 const BUS_NAME: &str = "test-bus";
@@ -120,11 +120,14 @@ async fn test_gateway(gw_addr: fidl_fuchsia_net::IpAddress) -> Result<(), Error>
     }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(FromArgs, Debug)]
+/// Easy netstack configuration test.
 struct Opt {
-    #[structopt(short = "c")]
+    /// whether the test is run as a child
+    #[argh(switch, short = 'c')]
     is_child: bool,
-    #[structopt(short = "g")]
+    /// an optional gateway to test
+    #[argh(option, short = 'g')]
     gateway: Option<String>,
 }
 
@@ -132,7 +135,7 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["easy-netstack-cfg"])?;
     fx_log_info!("Started");
 
-    let opt = Opt::from_args();
+    let opt: Opt = argh::from_env();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     executor.run_singlethreaded(async {
         if opt.is_child {
