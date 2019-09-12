@@ -268,11 +268,9 @@ TEST(DebuggedThread, FillThreadRecord) {
 
 // Ref-counted Suspension --------------------------------------------------------------------------
 
-TEST(DebuggedThread, RefCountedSuspension) {
+TEST(DebuggedThread, NormalSuspension) {
   constexpr zx_koid_t kProcessKoid = 0x8723456;
   FakeProcess fake_process(kProcessKoid);
-
-
   std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
 
   // Create the event for coordination.
@@ -301,38 +299,113 @@ TEST(DebuggedThread, RefCountedSuspension) {
   // Wait until the test is ready.
   ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr), ZX_OK);
 
-  ASSERT_FALSE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_FALSE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
+
+  // First suspension should be marked as such.
+  ASSERT_TRUE(debugged_thread->Suspend(true));
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
+
+  // Suspending again should not add suspension.
+  ASSERT_FALSE(debugged_thread->Suspend(true));
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
+
+  debugged_thread->ResumeSuspension();
+  ASSERT_FALSE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
+
+  // Another firwst suspension should be marked as such.
+  ASSERT_TRUE(debugged_thread->Suspend(true));
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
+
+  debugged_thread->ResumeSuspension();
+  ASSERT_FALSE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
+
+  // Tell the other thread we're done.
+  ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);
+  other_thread.join();
+}
+
+TEST(DebuggedThread, RefCountedSuspension) {
+  constexpr zx_koid_t kProcessKoid = 0x8723456;
+  FakeProcess fake_process(kProcessKoid);
+  std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
+
+  // Create the event for coordination.
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+
+  std::unique_ptr<DebuggedThread> debugged_thread;
+
+  std::thread other_thread([&]() mutable {
+    // Create a debugged thread for this other thread.
+    zx::thread current_thread;
+    zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
+    zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
+
+    debugged_thread = std::make_unique<DebuggedThread>(
+        &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
+        ThreadCreationOption::kRunningKeepRunning, provider);
+
+    // Let the test know it can continue.
+    ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+
+    // Wait until the test tells us we're ready.
+    ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_1, zx::time::infinite(), nullptr), ZX_OK);
+  });
+
+  // Wait until the test is ready.
+  ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr), ZX_OK);
+
+  ASSERT_FALSE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
 
   auto token1 = debugged_thread->RefCountedSuspend();
-  ASSERT_TRUE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_TRUE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
 
   token1.reset();
-  ASSERT_FALSE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_FALSE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
 
   token1 = debugged_thread->RefCountedSuspend();
   auto token2 = debugged_thread->RefCountedSuspend();
   auto token3 = debugged_thread->RefCountedSuspend();
-  ASSERT_TRUE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_TRUE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 3);
 
   token3.reset();
-  ASSERT_TRUE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_TRUE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 2);
 
   token2.reset();
-  ASSERT_TRUE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
+
+  // Adding a normal suspension should add a ref counted token.
+  ASSERT_FALSE(debugged_thread->Suspend(true));
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 2);
+
+  // Suspending again should not add a token.
+  ASSERT_FALSE(debugged_thread->Suspend(true));
+  ASSERT_TRUE(debugged_thread->IsSuspended());
+  ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 2);
+
+  debugged_thread->ResumeSuspension();
+  ASSERT_TRUE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 1);
 
   token1.reset();
-  ASSERT_FALSE(debugged_thread->is_ref_counted_suspended());
+  ASSERT_FALSE(debugged_thread->IsSuspended());
   ASSERT_EQ(debugged_thread->ref_counted_suspend_count(), 0);
 
   // Tell the other thread we're done.
   ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);
-
   other_thread.join();
 }
 

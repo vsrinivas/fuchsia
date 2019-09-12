@@ -151,14 +151,13 @@ class DebuggedThread {
 
   bool running() const { return !IsSuspended() && !IsInException(); }
 
-  virtual bool IsSuspended() const { return suspend_token_.is_valid(); }
+  virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
   virtual bool IsInException() const { return exception_token_.is_valid(); }
 
   bool stepping_over_breakpoint() const { return stepping_over_breakpoint_; }
   void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
 
   int ref_counted_suspend_count() const { return suspend_count_; }
-  bool is_ref_counted_suspended() const { return ref_counted_suspend_token_.is_valid(); }
 
  private:
   enum class OnStop {
@@ -231,10 +230,10 @@ class DebuggedThread {
   // for internal suspension the agent can do.
   ClientState client_state_ = ClientState::kRunning;
 
-  // Active if the thread is suspended (by the debugger).
-  zx::suspend_token suspend_token_;
-
   int suspend_count_ = 0;
+  // This permits users to simply call Suspend/Resume without having to worry about having to
+  // track a suspend token. They could if they so wanted.
+  std::unique_ptr<SuspendToken> local_suspend_token_;
   zx::suspend_token ref_counted_suspend_token_;
 
   // Active if the thread is currently on an exception.

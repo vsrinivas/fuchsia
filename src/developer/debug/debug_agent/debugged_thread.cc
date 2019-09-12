@@ -320,32 +320,19 @@ void DebuggedThread::ResumeException() {
 }
 
 void DebuggedThread::ResumeSuspension() {
-  if (suspend_token_.is_valid()) {
+  if (local_suspend_token_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming suspend token.";
   }
-  suspend_token_.reset();
+  local_suspend_token_.reset();
 }
 
 bool DebuggedThread::Suspend(bool synchronous) {
-  // Subsequent suspend calls should return immediately. Note that this does
-  // not mean that the thread is in that state, but rather that that operation
-  // was sent to the kernel.
-  if (IsSuspended() || IsInException())
+  if (local_suspend_token_)
     return false;
+  local_suspend_token_ = RefCountedSuspend(synchronous);
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Suspending thread.";
-
-  zx_status_t status;
-  status = thread_.suspend(&suspend_token_);
-  if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ThreadPreamble(this)
-                     << "Could not suspend: " << zx_status_get_string(status);
-    return false;
-  }
-
-  if (synchronous)
-    return WaitForSuspension(DefaultSuspendDeadline());
-  return true;
+  // If there is only one count, we know that this was the token that did the suspension.
+  return suspend_count_ == 1;
 }
 
 std::unique_ptr<DebuggedThread::SuspendToken> DebuggedThread::RefCountedSuspend(bool synchronous) {
