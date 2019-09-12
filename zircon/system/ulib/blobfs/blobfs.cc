@@ -66,7 +66,7 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
   zx_status_t status = BlockingRingBuffer::Create(registry, journal_entry_blocks, kBlobfsBlockSize,
                                                   "journal-writeback-buffer", &journal_buffer);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create journal buffer\n");
+    FS_TRACE_ERROR("blobfs: Cannot create journal buffer: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -74,7 +74,7 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
   status = BlockingRingBuffer::Create(registry, WriteBufferSize(), kBlobfsBlockSize,
                                       "data-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create journal buffer\n");
+    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -92,7 +92,7 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
   zx_status_t status = BlockingRingBuffer::Create(registry, WriteBufferSize(), kBlobfsBlockSize,
                                                   "data-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create journal buffer\n");
+    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
     return status;
   }
 
