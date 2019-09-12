@@ -130,6 +130,8 @@ There are various flags for `fx run` to control QEMU's configuration:
 
 Use `fx run -h` to see all available options.
 
+Note: Before you can run any commands, you will need to follow the instructions in the [Explore Fuchsia](#explore-fuchsia) section below.
+
 #### QEMU tips
 
 * `ctrl+a x` will exit QEMU in text mode.
@@ -146,9 +148,10 @@ To enable graphics under QEMU, add the `-g` flag to `fx run`:
 fx run -g
 ```
 
+
 #### Enabling Network
 
-First, [configure](/docs/zircon/qemu.md#Enabling-Networking-under-QEMU) a
+First, [configure](/docs/zircon/qemu.md#enabling_networking_under_qemu) a
 virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
@@ -160,7 +163,7 @@ fx run -N -u scripts/start-dhcp-server.sh
 The `-u` flag runs a script that sets up a local DHCP server and NAT to
 configure the IPv4 interface and routing.
 
-## Explore Fuchsia
+## Explore Fuchsia {#explore-fuchsia}
 
 In a separate shell, start the development update server, if it isn't already
 running:
@@ -223,14 +226,14 @@ Note: to select tabs, you may need to enter "console mode". See the next section
 
 ### Launch a graphical component
 
-QEMU does not support Vulkan and therefore cannot run our graphics stack.
+Warning: QEMU does not support Vulkan and therefore cannot run our graphics stack. Commands in this section will not work on QEMU.
 
 Most graphical components in Fuchsia use the [Scenic](/garnet/bin/ui/) system
 compositor. You can launch such components, commonly found in `/system/apps`,
 like this:
 
 ```
-launch spinning_square_view
+present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
 ```
 
 Source code for Scenic example apps is [here](/garnet/examples/ui).
