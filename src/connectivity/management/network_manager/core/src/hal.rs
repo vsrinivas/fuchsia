@@ -9,6 +9,7 @@ use crate::lifmgr::{self, LIFProperties, LifIpAddr};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net;
 use fidl_fuchsia_net_stack::{InterfaceInfo, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_component::client::connect_to_service;
 use std::collections::HashSet;
@@ -159,7 +160,7 @@ impl NetCfg {
 
     pub async fn get_interface(&mut self, port: u64) -> Option<Interface> {
         match self.stack.get_interface_info(port).await {
-            Ok((Some(info), _)) => Some((&(*info)).into()),
+            Ok(Ok(info)) => Some((&info).into()),
             _ => None,
         }
     }
@@ -222,16 +223,9 @@ impl NetCfg {
                 &mut addr.to_fidl_interface_address(),
             )
             .await;
-        match r {
-            Err(_) => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
-            Ok(r) => match r {
-                None => Ok(()),
-                Some(e) => {
-                    println!("could not set interface address: ${:?}", e);
-                    Err(error::NetworkManager::HAL(error::Hal::OperationFailed))
-                }
-            },
-        }
+        r.squash_result()
+            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+            .map(|_| ())
     }
 
     /// `unset_ip_address` removes an IP address from the interface configuration.
@@ -273,14 +267,24 @@ impl NetCfg {
     }
 
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
-        let r = self.netstack.set_dhcp_client_status(StackPortId::from(pid).to_u32(), enable).await;
-        match r {
-            Ok(fidl_fuchsia_netstack::NetErr {
-                status: fidl_fuchsia_netstack::Status::Ok,
-                message: _,
-            }) => Ok(()),
-            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
+        let (dhcp_client, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
+                .context("dhcp client: failed to create fidl endpoints")?;
+        if let Err(e) = self.netstack.get_dhcp_client(pid.to_u32(), server_end).await {
+            warn!("failed to create fidl endpoint for dhch client: {:?}", e);
+            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
         }
+        let r = if enable {
+            dhcp_client.start().await.context("failed to start dhcp client")?
+        } else {
+            dhcp_client.stop().await.context("failed to stop dhcp client")?
+        };
+        if let Err(e) = r {
+            warn!("failed to start dhcp client: {:?}", e);
+            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
+        }
+        info!("DHCP client on nicid: {}, enabled: {}", pid.to_u32(), enable);
+        Ok(())
     }
 
     // apply_manual_address updates the configured IP address.

@@ -82,7 +82,6 @@ pub enum Event {
 pub struct EventLoop {
     event_recv: Option<mpsc::UnboundedReceiver<Event>>,
     device: DeviceState,
-    packet_filter: PacketFilter,
 }
 
 impl EventLoop {
@@ -96,10 +95,10 @@ impl EventLoop {
         let packet_filter = PacketFilter::start()
             .context("network_manager failed to start packet filter!")
             .unwrap();
+
         Ok(EventLoop {
             event_recv: Some(event_recv),
-            device: DeviceState::new(netcfg),
-            packet_filter,
+            device: DeviceState::new(netcfg, packet_filter),
         })
     }
 
@@ -109,6 +108,7 @@ impl EventLoop {
             self.event_recv.take().unwrap(),
             self.device.take_event_stream().map(|e| Event::StackObservable(e)),
         );
+
         loop {
             match select_stream.next().await {
                 Some(Event::FidlRouterAdminEvent(req)) => {
@@ -277,7 +277,7 @@ impl EventLoop {
             }
             RouterAdminRequest::SetFilter { rule, responder } => {
                 let r = self
-                    .packet_filter
+                    .device
                     .set_filter(rule)
                     .await
                     .context("Error installing new packet filter rule");
@@ -553,8 +553,7 @@ impl EventLoop {
                 responder.send(None, not_supported!())
             }
             RouterStateRequest::GetFilters { responder } => {
-                let result =
-                    self.packet_filter.get_filters().await.context("Error getting filters");
+                let result = self.device.get_filters().await.context("Error getting filters");
                 let mut filter_rules = Vec::new();
                 match result {
                     Ok(f) => {

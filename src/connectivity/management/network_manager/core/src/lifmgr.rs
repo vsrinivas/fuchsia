@@ -231,6 +231,26 @@ impl LifIpAddr {
             },
         }
     }
+    pub fn to_fidl_subnet(&self) -> fidl_fuchsia_net::Subnet {
+        match self.address {
+            IpAddr::V4(a) => fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: (u32::from_be_bytes(a.octets()) >> (32 - self.prefix)
+                        << (32 - self.prefix))
+                        .to_be_bytes(),
+                }),
+                prefix_len: self.prefix,
+            },
+            IpAddr::V6(a) => fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: (u128::from_be_bytes(a.octets()) >> (128 - self.prefix)
+                        << (128 - self.prefix))
+                        .to_be_bytes(),
+                }),
+                prefix_len: self.prefix,
+            },
+        }
+    }
     pub fn to_fidl_interface_address(&self) -> fidl_fuchsia_net_stack::InterfaceAddress {
         match self.address {
             IpAddr::V4(a) => fidl_fuchsia_net_stack::InterfaceAddress {
@@ -367,6 +387,7 @@ mod tests {
     #![allow(unused)]
     use super::*;
     use crate::portmgr::{Port, PortManager};
+    use fidl_fuchsia_net::Ipv4Address;
 
     fn create_ports() -> PortManager {
         let mut pm = PortManager::new();
@@ -739,5 +760,46 @@ mod tests {
                 enabled: false,
             }
         );
+    }
+
+    fn build_lif_subnet(
+        lifip_addr: &str,
+        expected_addr: &str,
+        prefix_len: u8,
+    ) -> (LifIpAddr, fidl_fuchsia_net::Subnet) {
+        let lifip = LifIpAddr { address: lifip_addr.parse().unwrap(), prefix: prefix_len };
+
+        let ip: IpAddr = expected_addr.parse().unwrap();
+        let expected_subnet = fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(Ipv4Address {
+                addr: match ip {
+                    std::net::IpAddr::V4(v4addr) => v4addr.octets(),
+                    std::net::IpAddr::V6(_) => panic!("unexpected ipv6 address"),
+                },
+            }),
+            prefix_len,
+        };
+        (lifip, expected_subnet)
+    }
+
+    #[test]
+    fn test_fidl_subnet_math() {
+        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.10", 32);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+
+        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.0", 24);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+
+        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.0.0", 16);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+
+        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.0.0.0", 8);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+
+        let (lifip, expected_subnet) = build_lif_subnet("169.254.127.254", "169.254.124.0", 22);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+
+        let (lifip, expected_subnet) = build_lif_subnet("16.25.12.25", "16.16.0.0", 12);
+        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
     }
 }

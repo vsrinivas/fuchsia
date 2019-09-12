@@ -4,7 +4,8 @@
 
 //! Custom error types for the network manager.
 
-use failure::Fail;
+use core::fmt::{self, Display};
+use failure::{Context, Fail};
 
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
@@ -23,6 +24,9 @@ pub enum NetworkManager {
     /// Errors related to HAL layer.
     #[fail(display = "{}", _0)]
     HAL(#[cause] Hal),
+    /// Errors with a detail string attached.
+    #[fail(display = "An error occurred.")]
+    INTERNAL(ErrorWithDetail),
     // Add error types here.
 }
 
@@ -39,6 +43,23 @@ impl From<Port> for NetworkManager {
 impl From<Hal> for NetworkManager {
     fn from(e: Hal) -> Self {
         NetworkManager::HAL(e)
+    }
+}
+impl From<Context<&'static str>> for NetworkManager {
+    fn from(inner: Context<&'static str>) -> Self {
+        NetworkManager::INTERNAL(ErrorWithDetail { inner: Context::new(inner.to_string()) })
+    }
+}
+
+#[derive(Fail, Debug)]
+pub struct ErrorWithDetail {
+    #[cause]
+    inner: Context<String>,
+}
+
+impl Display for ErrorWithDetail {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.inner, f)
     }
 }
 
@@ -79,6 +100,12 @@ pub enum Service {
     NotEnabled,
     #[fail(display = "Could not disable service")]
     NotDisabled,
+    #[fail(display = "Failed to add new packet filter rules")]
+    ErrorAddingPacketFilterRules,
+    #[fail(display = "Failed to get packet filter rules")]
+    ErrorGettingPacketFilterRules,
+    #[fail(display = "Failed to enable NAT")]
+    ErrorFailedEnableNat,
     #[fail(display = "Service is not supported")]
     NotSupported,
 }

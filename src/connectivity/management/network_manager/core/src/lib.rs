@@ -32,18 +32,20 @@ pub struct DeviceState {
     port_manager: portmgr::PortManager,
     lif_manager: lifmgr::LIFManager,
     service_manager: servicemgr::Manager,
+    packet_filter: packet_filter::PacketFilter,
     hal: hal::NetCfg,
 }
 
 impl DeviceState {
     //! Create an empty DeviceState.
-    pub fn new(hal: hal::NetCfg) -> Self {
+    pub fn new(hal: hal::NetCfg, packet_filter: packet_filter::PacketFilter) -> Self {
         let v = 0;
         DeviceState {
             version: v,
             port_manager: portmgr::PortManager::new(),
             lif_manager: lifmgr::LIFManager::new(),
             service_manager: servicemgr::Manager::new(),
+            packet_filter: packet_filter,
             hal,
         }
     }
@@ -285,6 +287,7 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
+                        // The WAN IPv4 address is changing.
                         if lp.dhcp {
                             warn!(
                                 "Setting a static ip is not allowed when \
@@ -293,8 +296,9 @@ impl DeviceState {
                             return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                         }
                         info!("setting ip to {:?} {:?}", address, prefix_length);
-                        let a = LifIpAddr::from(p.address_v4.as_ref().unwrap());
-                        lp.address = Some(a);
+                        let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                        self.service_manager.set_global_ip_nat(v4addr.clone(), lif.pid());
+                        lp.address = Some(v4addr);
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
@@ -321,6 +325,7 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
+                        // WAN IPv6 address is changing.
                         if lp.dhcp {
                             warn!(
                                 "Setting a static ip is not allowed when \
@@ -376,9 +381,11 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
+                        // LAN IPv4 address is changing.
                         info!("setting ip to {:?} {:?}", address, prefix_length);
-                        let a = LifIpAddr::from(p.address_v4.as_ref().unwrap());
-                        lp.address = Some(a);
+                        let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                        self.service_manager.set_local_subnet_nat(v4addr.clone());
+                        lp.address = Some(v4addr);
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
@@ -391,6 +398,7 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
+                        // LAN IPv6 address is changing.
                         info!("setting ip to {:?} {:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
                         lp.address = Some(a);
@@ -407,8 +415,19 @@ impl DeviceState {
                         lp.enabled = *enable
                     }
                 };
+
                 self.hal.apply_properties(lif.pid(), &old, &lp).await?;
                 lif.set_properties(self.version, lp)?;
+                if self.service_manager.is_nat_enabled() {
+                    if let Err(e) =
+                        self.packet_filter.update_nat(self.service_manager.get_nat_config()).await
+                    {
+                        warn!("Failed to enable nat: {:?}", e);
+                        return Err(error::NetworkManager::SERVICE(
+                            error::Service::ErrorFailedEnableNat,
+                        ));
+                    }
+                }
                 self.version += 1;
                 Ok(())
             }
@@ -433,6 +452,28 @@ impl DeviceState {
     /// change.
     pub fn version(&self) -> Version {
         self.version
+    }
+
+    /// `set_filter` installs a new packet filter rule.
+    pub async fn set_filter(
+        &self,
+        rule: fidl_fuchsia_router_config::FilterRule,
+    ) -> error::Result<()> {
+        match self.packet_filter.set_filter(rule).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                warn!("Failed to set new filter rules: {:?}", e);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorAddingPacketFilterRules))
+            }
+        }
+    }
+
+    /// `get_filters` returns the currently installed packet filter rules.
+    pub async fn get_filters(&self) -> error::Result<Vec<fidl_fuchsia_router_config::FilterRule>> {
+        self.packet_filter.get_filters().await.map_err(|e| {
+            warn!("Failed to get filter rules: {:?}", e);
+            error::NetworkManager::SERVICE(error::Service::ErrorGettingPacketFilterRules)
+        })
     }
 }
 
@@ -473,7 +514,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_new_device_state() {
-        let d = DeviceState::new(hal::NetCfg::new().unwrap());
+        let d = DeviceState::new(
+            hal::NetCfg::new().unwrap(),
+            packet_filter::PacketFilter::start().unwrap(),
+        );
 
         assert_eq!(d.version, 0);
         assert_eq!(d.port_manager.ports().count(), 0);

@@ -4,10 +4,12 @@
 
 //! Handles packet filtering requests for Network Manager.
 
+use crate::servicemgr::NatConfig;
 use failure::{format_err, Error};
 use fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status};
 use fidl_fuchsia_router_config as router_config;
 use fuchsia_component::client::connect_to_service;
+use std::net::IpAddr;
 
 /// Storage for this PacketFilter's attributes.
 pub struct PacketFilter {
@@ -183,6 +185,30 @@ fn from_cidr_address(
     Ok(Some(Box::new(fidl_fuchsia_net::Subnet { addr, prefix_len })))
 }
 
+/// Parses a [`servicemgr::NatConfig`] and extracts the required fields.
+fn from_nat_config(
+    nat_config: &NatConfig,
+) -> Result<(fidl_fuchsia_net::Subnet, fidl_fuchsia_net::IpAddress, u32), Error> {
+    let src_subnet = match &nat_config.local_subnet {
+        Some(subnet) => subnet.clone().to_fidl_subnet(),
+        None => return Err(format_err!("NatConfig must have a local_subnet set")),
+    };
+    let wan_ip = match nat_config.global_ip.clone() {
+        Some(lif) => match lif.address {
+            IpAddr::V4(a) => fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: a.octets(),
+            }),
+            IpAddr::V6(_) => return Err(format_err!("IPv6 is not supported")),
+        },
+        None => return Err(format_err!("NatConfig must have a global_ip set")),
+    };
+    let nicid = match nat_config.pid {
+        Some(pid) => pid.to_u32(),
+        None => return Err(format_err!("NatConfig must have a pid set")),
+    };
+    Ok((src_subnet, wan_ip, nicid))
+}
+
 /// Manages a Packet Filter connection to netstack filter service (netfilter).
 ///
 /// Mainly serves as a wrapper around the netfilter service. Converts Network Manager FIDL APIs into
@@ -232,6 +258,7 @@ impl PacketFilter {
     /// include in the request.
     ///
     /// # Error
+    ///
     /// If we fail to get the generation number from the netfilter service, or the result of the
     /// request to netfilter is anything other than [`netfilter::Status::Ok`] then produce an error
     /// result. Failure to convert the [`router_config::FilterRule`] to a [`netfilter::Rule`] will
@@ -255,12 +282,79 @@ impl PacketFilter {
             Err(e) => Err(format_err!("fidl error: {:?}", e)),
         }
     }
+
+    /// Installs a Network Address Translation (NAT) rule.
+    ///
+    /// This method calls the netfilter API to install a rule that rewrites source addresses on the
+    /// LAN side with a publicly routable IP address (SNAT). Reverse translation (DNAT) is handled
+    /// by netstack's connection state tracker.
+    ///
+    /// # Error
+    ///
+    /// If we fail to get the generation number from the netfilter service, or fail to update the
+    /// the NAT ruleset, then we'll return an error result to the caller.
+    ///
+    /// A complete [`servicemgr::NatConfig`] is required at this point. If any fields are missing,
+    /// then an appropriate error will be returned to the caller.
+    // TODO(cgibson): Currently there is no way for this to be called. Add a method to the CLI
+    // to actually enable NAT, which would allow this method to run: fxb/35788.
+    pub async fn update_nat(&self, nat_config: &mut NatConfig) -> Result<(), Error> {
+        info!("Received request to enable NAT");
+        let (src_subnet, wan_ip, nicid) = from_nat_config(nat_config)
+            .map_err(|e| format_err!("Failed to parse NAT config: {:?}", e))?;
+
+        // TODO(cgibson): NAT should work on IP packets, we shouldn't need to provide a proto field
+        // here. This is a bug: fxb/35950.
+        //
+        // Ultimately this should all collapse into a single rule.
+        let mut nat_rules = vec![
+            netfilter::Nat {
+                proto: netfilter::SocketProtocol::Tcp,
+                src_subnet: src_subnet.clone(),
+                new_src_addr: wan_ip.clone(),
+                nic: nicid,
+            },
+            netfilter::Nat {
+                proto: netfilter::SocketProtocol::Udp,
+                src_subnet: src_subnet.clone(),
+                new_src_addr: wan_ip.clone(),
+                nic: nicid,
+            },
+            netfilter::Nat {
+                proto: netfilter::SocketProtocol::Icmp,
+                src_subnet: src_subnet.clone(),
+                new_src_addr: wan_ip.clone(),
+                nic: nicid,
+            },
+        ];
+
+        // Since we discard any existing NAT rules here, this is a pure "update-only" situation.
+        let generation: u32 = match self.filter_svc.get_nat_rules().await {
+            Ok((_, generation, Status::Ok)) => generation,
+            Ok((_, _, status)) => {
+                return Err(format_err!(
+                    "Failed to get generation number! Status was: {:?}",
+                    status
+                ))
+            }
+            Err(e) => return Err(format_err!("fidl error: {:?}", e)),
+        };
+        // TODO(cgibson): When we add the CLI command to enable/disable NAT, we will be able to use
+        // our CLI integration framework to test this.
+        match self.filter_svc.update_nat_rules(&mut nat_rules.iter_mut(), generation).await {
+            Ok(Status::Ok) => Ok(()),
+            Ok(status) => Err(format_err!("failed to set NAT state: {:?}", status)),
+            Err(e) => Err(format_err!("fidl error: {:?}", e)),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use crate::hal;
+    use crate::lifmgr::LifIpAddr;
     use fidl_fuchsia_net::IpAddress::Ipv4;
     use fidl_fuchsia_net::Ipv4Address;
     use fidl_fuchsia_router_config::{
@@ -429,5 +523,86 @@ mod tests {
 
         let both = from_protocol(Some(router_config::Protocol::Both));
         assert_eq!(both.is_none(), true);
+    }
+
+    #[test]
+    fn test_from_nat_config() {
+        let expected_subnet_lifip =
+            LifIpAddr { address: "192.168.0.0".parse().unwrap(), prefix: 24 };
+        let expected_lifip = LifIpAddr { address: "17.0.0.1".parse().unwrap(), prefix: 32 };
+        let ip: IpAddr = "192.168.0.0".parse().unwrap();
+        let expected_subnet = fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(Ipv4Address {
+                addr: match ip {
+                    std::net::IpAddr::V4(v4addr) => v4addr.octets(),
+                    std::net::IpAddr::V6(_) => panic!("unexpected ipv6 address"),
+                },
+            }),
+            prefix_len: 24,
+        };
+        let expected_pid = hal::PortId::from(1);
+
+        // should fail if all fields are set to None.
+        let mut nat_config = NatConfig {
+            enable: true, // not being validated, so we don't care what this is set to.
+            local_subnet: None,
+            global_ip: None,
+            pid: None,
+        };
+        let result = from_nat_config(&mut nat_config);
+        assert_eq!(result.is_err(), true);
+
+        // should fail if local_subnet is missing.
+        let mut nat_config = NatConfig {
+            enable: true, // not being validated, so we don't care what this is set to.
+            local_subnet: None,
+            global_ip: Some(expected_lifip.clone()),
+            pid: Some(expected_pid),
+        };
+        let result = from_nat_config(&mut nat_config);
+        assert_eq!(result.is_err(), true);
+
+        // should fail if global_ip is missing.
+        let mut nat_config = NatConfig {
+            enable: true, // not being validated, so we don't care what this is set to.
+            local_subnet: Some(expected_subnet_lifip.clone()),
+            global_ip: None,
+            pid: Some(expected_pid),
+        };
+        let result = from_nat_config(&mut nat_config);
+        assert_eq!(result.is_err(), true);
+
+        // should fail if pid is missing.
+        let mut nat_config = NatConfig {
+            enable: true, // not being validated, so we don't care what this is set to.
+            local_subnet: Some(expected_subnet_lifip.clone()),
+            global_ip: Some(expected_lifip.clone()),
+            pid: None,
+        };
+        let result = from_nat_config(&mut nat_config);
+        assert_eq!(result.is_err(), true);
+
+        // should pass when all fields are present.
+        let expected_wan_ip = fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+            addr: match expected_lifip.clone().address {
+                IpAddr::V4(v4addr) => v4addr.octets(),
+                IpAddr::V6(_) => panic!("unexpected ipv6 address"),
+            },
+        });
+        let mut nat_config = NatConfig {
+            enable: true, // not being validated, so we don't care what this is set to.
+            local_subnet: Some(expected_subnet_lifip.clone()),
+            global_ip: Some(expected_lifip.clone()),
+            pid: Some(expected_pid),
+        };
+        let result = from_nat_config(&mut nat_config);
+        assert_eq!(result.is_ok(), true);
+        let (actual_subnet, actual_wan_ip, actual_nicid) = match result {
+            Ok((s, w, n)) => (s, w, n),
+            Err(e) => panic!("NatConfig test failed: {:?}", e),
+        };
+        assert_eq!(expected_subnet, actual_subnet);
+        assert_eq!(expected_wan_ip, actual_wan_ip);
+        assert_eq!(expected_pid.to_u32(), actual_nicid);
     }
 }
