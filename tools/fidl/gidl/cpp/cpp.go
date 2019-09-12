@@ -211,13 +211,33 @@ func (b *cppValueBuilder) OnBool(value bool) {
 
 func (b *cppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", numberName(typ), newVar, value))
+	if value == -9223372036854775808 {
+		// There are no negative integer literals in C++, so need to use arithmatic to create the minimum value.
+		b.Builder.WriteString(fmt.Sprintf("%s %s = -9223372036854775807ll - 1;\n", numberName(typ), newVar))
+	} else {
+		b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", numberName(typ), newVar, value))
+	}
 	b.lastVar = newVar
 }
 
 func (b *cppValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("%s %s = %dull;\n", numberName(typ), newVar, value))
+	b.lastVar = newVar
+}
+
+func (b *cppValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
+	var typename string
+	switch typ {
+	case fidlir.Float32:
+		typename = "float"
+	case fidlir.Float64:
+		typename = "double"
+	default:
+		panic("unknown floating point type")
+	}
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("%s %s = %f;\n", typename, newVar, value))
 	b.lastVar = newVar
 }
 
@@ -332,6 +352,8 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.BoolDecl:
 		return "bool"
 	case *gidlmixer.NumberDecl:
+		return numberName(decl.Typ)
+	case *gidlmixer.FloatDecl:
 		return numberName(decl.Typ)
 	case *gidlmixer.StringDecl:
 		return "std::string"

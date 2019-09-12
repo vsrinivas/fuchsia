@@ -882,6 +882,519 @@ TEST(Conformance, Vectors_Encode) {
   }
 }
 
+TEST(Conformance, BoolTrue_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
+    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
+    bool v3 = true;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, BoolFalse_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
+    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
+    bool v3 = false;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, ByteZero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
+    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
+    uint8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Byte255_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
+    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
+    uint8_t v3 = 255ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Min_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = -128ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = 127ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Min_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = -32768ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = 32767ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Min_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = -2147483648ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = 2147483647ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Min_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = -9223372036854775807ll - 1;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = 9223372036854775807ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint8Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
+    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
+    uint8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint8Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
+    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
+    uint8_t v3 = 255ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint16Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
+    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
+    uint16_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint16Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
+    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
+    uint16_t v3 = 65535ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint32Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
+    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
+    uint32_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint32Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
+    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
+    uint32_t v3 = 4294967295ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint64Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
+    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
+    uint64_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint64Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
+    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
+    uint64_t v3 = 18446744073709551615ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 0.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32One_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32MinusOne_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = -1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 340282346638528859811704183484516925440.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64Zero_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = 0.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64One_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = 1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64MinusOne_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = -1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64Max_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 =
+        179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   const auto expected = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -1745,6 +2258,519 @@ TEST(Conformance, Vectors_Decode) {
     auto v24 = fidl::Array<fidl::VectorView<int32_t>, 2>{v20, v23};
     auto v25 = fidl::VectorView<fidl::VectorView<int32_t>>(v24.data(), 2);
     v1->vec_vec_int = std::move(v25);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, BoolTrue_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
+    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
+    bool v3 = true;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, BoolFalse_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
+    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
+    bool v3 = false;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, ByteZero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
+    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
+    uint8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Byte255_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
+    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
+    uint8_t v3 = 255ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Min_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = -128ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int8Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
+    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
+    int8_t v3 = 127ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Min_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = -32768ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int16Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
+    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
+    int16_t v3 = 32767ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Min_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = -2147483648ll;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int32Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
+    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
+    int32_t v3 = 2147483647ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Min_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = -9223372036854775807ll - 1;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Int64Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
+    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
+    int64_t v3 = 9223372036854775807ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint8Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
+    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
+    uint8_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint8Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
+    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
+    uint8_t v3 = 255ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint16Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
+    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
+    uint16_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint16Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
+    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
+    uint16_t v3 = 65535ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint32Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
+    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
+    uint32_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint32Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
+    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
+    uint32_t v3 = 4294967295ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint64Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
+    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
+    uint64_t v3 = 0ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Uint64Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
+    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
+    uint64_t v3 = 18446744073709551615ull;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 0.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32One_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32MinusOne_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = -1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float32Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
+    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
+    float v3 = 340282346638528859811704183484516925440.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64Zero_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = 0.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64One_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = 1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64MinusOne_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 = -1.000000;
+    v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, Float64Max_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
+    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
+    double v3 =
+        179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+    v1->value = std::move(v3);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
   }

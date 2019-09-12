@@ -277,6 +277,13 @@ func (b *goValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
 	b.lastVar = newVar
 }
 
+func (b *goValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s = %f\n", newVar, typ, value))
+	b.lastVar = newVar
+}
+
 func (b *goValueBuilder) OnString(value string) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
@@ -352,6 +359,8 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.BoolDecl:
 		return "bool"
 	case *gidlmixer.NumberDecl:
+		return string(decl.Typ)
+	case *gidlmixer.FloatDecl:
 		return string(decl.Typ)
 	case *gidlmixer.StringDecl:
 		return "string"

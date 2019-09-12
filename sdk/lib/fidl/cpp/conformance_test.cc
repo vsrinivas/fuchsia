@@ -855,6 +855,455 @@ TEST(Conformance, Vectors_Encode) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
+TEST(Conformance, BoolTrue_Encode) {
+  conformance::MyBool v1;
+
+  bool v2 = true;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, BoolFalse_Encode) {
+  conformance::MyBool v1;
+
+  bool v2 = false;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, ByteZero_Encode) {
+  conformance::MyByte v1;
+
+  uint8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Byte255_Encode) {
+  conformance::MyByte v1;
+
+  uint8_t v2 = 255ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int8Min_Encode) {
+  conformance::MyInt8 v1;
+
+  int8_t v2 = -128ll;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int8Zero_Encode) {
+  conformance::MyInt8 v1;
+
+  int8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int8Max_Encode) {
+  conformance::MyInt8 v1;
+
+  int8_t v2 = 127ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int16Min_Encode) {
+  conformance::MyInt16 v1;
+
+  int16_t v2 = -32768ll;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int16Zero_Encode) {
+  conformance::MyInt16 v1;
+
+  int16_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int16Max_Encode) {
+  conformance::MyInt16 v1;
+
+  int16_t v2 = 32767ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int32Min_Encode) {
+  conformance::MyInt32 v1;
+
+  int32_t v2 = -2147483648ll;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int32Zero_Encode) {
+  conformance::MyInt32 v1;
+
+  int32_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int32Max_Encode) {
+  conformance::MyInt32 v1;
+
+  int32_t v2 = 2147483647ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int64Min_Encode) {
+  conformance::MyInt64 v1;
+
+  int64_t v2 = -9223372036854775807ll - 1;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int64Zero_Encode) {
+  conformance::MyInt64 v1;
+
+  int64_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Int64Max_Encode) {
+  conformance::MyInt64 v1;
+
+  int64_t v2 = 9223372036854775807ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint8Zero_Encode) {
+  conformance::MyUint8 v1;
+
+  uint8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint8Max_Encode) {
+  conformance::MyUint8 v1;
+
+  uint8_t v2 = 255ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint16Zero_Encode) {
+  conformance::MyUint16 v1;
+
+  uint16_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint16Max_Encode) {
+  conformance::MyUint16 v1;
+
+  uint16_t v2 = 65535ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint32Zero_Encode) {
+  conformance::MyUint32 v1;
+
+  uint32_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint32Max_Encode) {
+  conformance::MyUint32 v1;
+
+  uint32_t v2 = 4294967295ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint64Zero_Encode) {
+  conformance::MyUint64 v1;
+
+  uint64_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Uint64Max_Encode) {
+  conformance::MyUint64 v1;
+
+  uint64_t v2 = 18446744073709551615ull;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float32Zero_Encode) {
+  conformance::MyFloat32 v1;
+
+  float v2 = 0.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float32One_Encode) {
+  conformance::MyFloat32 v1;
+
+  float v2 = 1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float32MinusOne_Encode) {
+  conformance::MyFloat32 v1;
+
+  float v2 = -1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float32Max_Encode) {
+  conformance::MyFloat32 v1;
+
+  float v2 = 340282346638528859811704183484516925440.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float64Zero_Encode) {
+  conformance::MyFloat64 v1;
+
+  double v2 = 0.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float64One_Encode) {
+  conformance::MyFloat64 v1;
+
+  double v2 = 1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float64MinusOne_Encode) {
+  conformance::MyFloat64 v1;
+
+  double v2 = -1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, Float64Max_Encode) {
+  conformance::MyFloat64 v1;
+
+  double v2 =
+      179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+  v1.value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -1722,6 +2171,487 @@ TEST(Conformance, Vectors_Decode) {
   auto v16 = std::vector<int32_t>{v15};
   auto v17 = std::vector<std::vector<int32_t>>{v14, v16};
   v1.vec_vec_int = std::move(v17);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, BoolTrue_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyBool v1;
+
+  bool v2 = true;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, BoolFalse_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyBool v1;
+
+  bool v2 = false;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, ByteZero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyByte v1;
+
+  uint8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Byte255_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyByte v1;
+
+  uint8_t v2 = 255ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int8Min_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt8 v1;
+
+  int8_t v2 = -128ll;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int8Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt8 v1;
+
+  int8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int8Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt8 v1;
+
+  int8_t v2 = 127ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int16Min_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt16 v1;
+
+  int16_t v2 = -32768ll;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int16Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt16 v1;
+
+  int16_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int16Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt16 v1;
+
+  int16_t v2 = 32767ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int32Min_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt32 v1;
+
+  int32_t v2 = -2147483648ll;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int32Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt32 v1;
+
+  int32_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int32Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt32 v1;
+
+  int32_t v2 = 2147483647ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int64Min_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+
+  };
+
+  conformance::MyInt64 v1;
+
+  int64_t v2 = -9223372036854775807ll - 1;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int64Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyInt64 v1;
+
+  int64_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Int64Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+
+  };
+
+  conformance::MyInt64 v1;
+
+  int64_t v2 = 9223372036854775807ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint8Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint8 v1;
+
+  uint8_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint8Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint8 v1;
+
+  uint8_t v2 = 255ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint16Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint16 v1;
+
+  uint16_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint16Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint16 v1;
+
+  uint16_t v2 = 65535ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint32Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint32 v1;
+
+  uint32_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint32Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint32 v1;
+
+  uint32_t v2 = 4294967295ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint64Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyUint64 v1;
+
+  uint64_t v2 = 0ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Uint64Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+  };
+
+  conformance::MyUint64 v1;
+
+  uint64_t v2 = 18446744073709551615ull;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float32Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyFloat32 v1;
+
+  float v2 = 0.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float32One_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyFloat32 v1;
+
+  float v2 = 1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float32MinusOne_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyFloat32 v1;
+
+  float v2 = -1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float32Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyFloat32 v1;
+
+  float v2 = 340282346638528859811704183484516925440.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float64Zero_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::MyFloat64 v1;
+
+  double v2 = 0.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float64One_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+
+  };
+
+  conformance::MyFloat64 v1;
+
+  double v2 = 1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float64MinusOne_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,
+
+  };
+
+  conformance::MyFloat64 v1;
+
+  double v2 = -1.000000;
+  v1.value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Float64Max_Decode) {
+  auto input = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,
+
+  };
+
+  conformance::MyFloat64 v1;
+
+  double v2 =
+      179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+  v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));

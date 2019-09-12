@@ -237,9 +237,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case bool:
 		return strconv.FormatBool(value)
 	case int64:
-		return fmt.Sprintf("0x%x", value)
+		return fmt.Sprintf("%d", value)
 	case uint64:
 		return fmt.Sprintf("0x%x", value)
+	case float64:
+		return strconv.FormatFloat(value, 'g', -1, 64)
 	case string:
 		return fidlcommon.SingleQuote(value)
 	case gidlir.Object:

@@ -1,0 +1,53 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+struct MyBool {
+    bool value;
+};
+
+struct MyByte {
+    byte value;
+};
+
+struct MyInt8 {
+    int8 value;
+};
+
+struct MyInt16 {
+    int16 value;
+};
+
+struct MyInt32 {
+    int32 value;
+};
+
+struct MyInt64 {
+    int64 value;
+};
+
+struct MyUint8 {
+    uint8 value;
+};
+
+struct MyUint16 {
+    uint16 value;
+};
+
+struct MyUint32 {
+    uint32 value;
+};
+
+struct MyUint64 {
+    uint64 value;
+};
+
+struct MyFloat32 {
+    float32 value;
+};
+
+struct MyFloat64 {
+    float64 value;
+};

@@ -16,6 +16,7 @@ fidl("conformance_fidl") {
     "//tools/fidl/gidl-conformance-suite/arrays_and_vectors.test.fidl",
     "//tools/fidl/gidl-conformance-suite/mix_and_match.test.fidl",
     "//tools/fidl/gidl-conformance-suite/optionals.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/primitives.test.fidl",
     "//tools/fidl/gidl-conformance-suite/strings.test.fidl",
     "//tools/fidl/gidl-conformance-suite/structs.test.fidl",
     "//tools/fidl/gidl-conformance-suite/tables.test.fidl",

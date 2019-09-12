@@ -47,6 +47,7 @@ type ValueVisitor interface {
 	OnBool(value bool)
 	OnInt64(value int64, typ fidlir.PrimitiveSubtype)
 	OnUint64(value uint64, typ fidlir.PrimitiveSubtype)
+	OnFloat64(value float64, typ fidlir.PrimitiveSubtype)
 	OnString(value string)
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
@@ -66,6 +67,8 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		visitor.OnInt64(value, extractSubtype(decl))
 	case uint64:
 		visitor.OnUint64(value, extractSubtype(decl))
+	case float64:
+		visitor.OnFloat64(value, extractSubtype(decl))
 	case string:
 		visitor.OnString(value)
 	case gidlir.Object:
@@ -99,6 +102,8 @@ func extractSubtype(decl Declaration) fidlir.PrimitiveSubtype {
 	switch decl := decl.(type) {
 	case *NumberDecl:
 		return decl.Typ
+	case *FloatDecl:
+		return decl.Typ
 	default:
 		panic("should not be reachable, there must be a bug somewhere")
 	}
@@ -114,6 +119,7 @@ type Declaration interface {
 var _ = []Declaration{
 	&BoolDecl{},
 	&NumberDecl{},
+	&FloatDecl{},
 	&StringDecl{},
 	&StructDecl{},
 	&TableDecl{},
@@ -188,6 +194,14 @@ func (decl *NumberDecl) conforms(value interface{}) error {
 		}
 		return nil
 	}
+}
+
+type FloatDecl struct {
+	Typ fidlir.PrimitiveSubtype
+}
+
+func (decl *FloatDecl) conforms(value interface{}) error {
+	return nil
 }
 
 type StringDecl struct {
@@ -509,6 +523,10 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint32}, true
 		case fidlir.Uint64:
 			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint64}, true
+		case fidlir.Float32:
+			return &FloatDecl{Typ: typ.PrimitiveSubtype}, true
+		case fidlir.Float64:
+			return &FloatDecl{Typ: typ.PrimitiveSubtype}, true
 		default:
 			panic(fmt.Sprintf("unsupported primitive subtype: %s", typ.PrimitiveSubtype))
 		}

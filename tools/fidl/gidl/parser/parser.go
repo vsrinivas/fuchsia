@@ -386,7 +386,7 @@ func (p *Parser) parseValue() (interface{}, error) {
 			return true, nil
 		}
 		if tok.value == "false" {
-			return true, nil
+			return false, nil
 		}
 		return p.parseObject(tok.value)
 	case tLsquare:
