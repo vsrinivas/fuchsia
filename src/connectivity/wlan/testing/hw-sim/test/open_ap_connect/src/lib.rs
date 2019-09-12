@@ -6,12 +6,12 @@
 
 use {
     fidl_fuchsia_wlan_device_service::{
-        DeviceServiceMarker, DeviceServiceProxy, DeviceWatcherEvent, DeviceWatcherEventStream,
+        DeviceServiceMarker, DeviceWatcherEvent, DeviceWatcherEventStream,
     },
-    fidl_fuchsia_wlan_sme::{ApConfig, ApSmeProxy, StartApResultCode},
+    fidl_fuchsia_wlan_sme::{ApConfig, StartApResultCode},
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon::{sys::ZX_OK, DurationNum},
+    fuchsia_zircon::DurationNum,
     futures::{channel::oneshot, StreamExt},
     hex,
     std::panic,
@@ -24,8 +24,6 @@ use {
     },
     wlan_hw_sim::*,
 };
-
-const HW_MAC_ADDR: [u8; 6] = [0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f];
 
 /// Test WLAN AP implementation by simulating a client that sends out authentication and
 /// association *request* frames. Verify AP responds correctly with authentication and
@@ -52,8 +50,7 @@ async fn open_ap_connect() {
     wlan_service.watch_devices(watcher_server_end).expect("wlan watch_devices call fails");
 
     // Create wlantap PHY
-    let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_ap("ap-open", HW_MAC_ADDR)).await;
+    let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_ap()).await;
 
     // Wait until iface is created from wlantap PHY
     let mut watcher_event_stream = watcher_proxy.take_event_stream();
@@ -173,13 +170,4 @@ async fn get_new_added_iface(device_watch_stream: &mut DeviceWatcherEventStream)
             }
         );
     }
-}
-
-async fn get_ap_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ApSmeProxy {
-    let (proxy, remote) = fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-    let status = wlan_service.get_ap_sme(iface_id, remote).await.expect("fail get_ap_sme");
-    if status != ZX_OK {
-        panic!("fail getting ap sme; status: {}", status);
-    }
-    proxy
 }

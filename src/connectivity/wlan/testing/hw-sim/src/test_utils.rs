@@ -141,6 +141,10 @@ impl RetryWithBackoff {
         }
     }
 
+    pub fn infinite() -> Self {
+        Self { deadline: Time::INFINITE, ..Self::new(0.nanos()) }
+    }
+
     /// Sleep (in async term) a little longer (following Fibonacci series) after each call until
     /// timeout is reached.
     /// Return whether it has run past the deadline.

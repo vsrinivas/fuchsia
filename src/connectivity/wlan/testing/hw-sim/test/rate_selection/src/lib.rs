@@ -93,15 +93,15 @@ async fn eth_and_beacon_sender<'a>(
     receiver: &'a mut mpsc::Receiver<bool>,
     phy: &'a WlantapPhyProxy,
 ) -> Result<(), Error> {
-    let mut client = create_eth_client(&HW_MAC_ADDR)
+    let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await
         .expect("cannot create ethernet client")
-        .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
+        .expect(&format!("ethernet client not found {:?}", &CLIENT_MAC_ADDR));
 
     let mut buf: Vec<u8> = vec![];
     buf.append_value(&mac::EthernetIIHdr {
         da: ETH_DST_MAC,
-        sa: HW_MAC_ADDR,
+        sa: CLIENT_MAC_ADDR,
         ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
     })
     .expect("error creating fake ethernet header");
@@ -144,7 +144,7 @@ async fn rate_selection() {
         connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(WlantapPhyConfig {
         quiet: true,
-        ..create_wlantap_config_client("minstrel", HW_MAC_ADDR)
+        ..default_wlantap_config_client()
     })
     .await;
     let () = loop_until_iface_is_found().await;

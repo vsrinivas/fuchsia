@@ -11,26 +11,24 @@ use {fuchsia_zircon::DurationNum, wlan_hw_sim::*};
 #[fuchsia_async::run_singlethreaded(test)]
 async fn verify_ethernet() {
     // Make sure there is no existing ethernet device.
-    let client = create_eth_client(&HW_MAC_ADDR)
+    let client = create_eth_client(&CLIENT_MAC_ADDR)
         .await
-        .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
+        .expect(&format!("creating ethernet client: {:?}", &CLIENT_MAC_ADDR));
     assert!(client.is_none());
 
     // Create wlan_tap device which will in turn create ethernet device.
-    let _helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client("eth-dev", HW_MAC_ADDR))
-            .await;
+    let _helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
     let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
     loop {
-        let client = create_eth_client(&HW_MAC_ADDR)
+        let client = create_eth_client(&CLIENT_MAC_ADDR)
             .await
-            .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
+            .expect(&format!("creating ethernet client: {:?}", &CLIENT_MAC_ADDR));
         if client.is_some() {
             break;
         }
         let slept = retry.sleep_unless_timed_out().await;
-        assert!(slept, "No ethernet client with mac_addr {:?} found in time", &HW_MAC_ADDR);
+        assert!(slept, "No ethernet client with mac_addr {:?} found in time", &CLIENT_MAC_ADDR);
     }
 }

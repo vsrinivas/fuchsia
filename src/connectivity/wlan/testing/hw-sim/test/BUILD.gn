@@ -13,6 +13,7 @@ test_package("wlan-hw-sim-test") {
     "open_ap_connect",
     "rate_selection",
     "set_country",
+    "sim_client_vs_sim_ap",
     "simulate_scan",
     "verify_ethernet",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
@@ -41,6 +42,10 @@ test_package("wlan-hw-sim-test") {
     },
     {
       name = "set_country"
+      environments = basic_envs
+    },
+    {
+      name = "sim_client_vs_sim_ap"
       environments = basic_envs
     },
     {

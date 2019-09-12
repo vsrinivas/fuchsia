@@ -12,9 +12,7 @@ use {
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     pin_utils::pin_mut,
-    wlan_common::{
-        appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
-    },
+    wlan_common::{buffer_reader::BufferReader, mac},
     wlan_hw_sim::*,
 };
 
@@ -26,13 +24,13 @@ fn handle_eth_tx(event: WlantapPhyEvent, actual: &mut Vec<u8>, phy: &WlantapPhyP
     if let WlantapPhyEvent::Tx { args } = event {
         if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false) {
             for mac::Msdu { dst_addr, src_addr, llc_frame } in msdus {
-                if dst_addr == ETH_DST_MAC && src_addr == HW_MAC_ADDR {
+                if dst_addr == ETH_DST_MAC && src_addr == CLIENT_MAC_ADDR {
                     assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
                     actual.clear();
                     actual.extend_from_slice(llc_frame.body);
                     rx_wlan_data_frame(
                         &CHANNEL,
-                        &HW_MAC_ADDR,
+                        &CLIENT_MAC_ADDR,
                         &BSS,
                         &ETH_DST_MAC,
                         &PAYLOAD,
@@ -75,13 +73,7 @@ async fn send_and_receive<'a>(
 
 async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils::TestHelper) {
     let mut buf: Vec<u8> = Vec::new();
-    buf.append_value(&mac::EthernetIIHdr {
-        da: ETH_DST_MAC,
-        sa: HW_MAC_ADDR,
-        ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
-    })
-    .expect("error creating fake ethernet header");
-    buf.append_bytes(PAYLOAD).expect("buffer too small for ethernet payload");
+    write_fake_eth_frame(ETH_DST_MAC, CLIENT_MAC_ADDR, PAYLOAD, &mut buf);
 
     let eth_tx_rx_fut = send_and_receive(client, &buf);
     pin_mut!(eth_tx_rx_fut);
@@ -100,7 +92,7 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
         .await
         .expect("send and receive eth");
     assert_eq!(&actual[..], PAYLOAD);
-    assert_eq!(header.da, HW_MAC_ADDR);
+    assert_eq!(header.da, CLIENT_MAC_ADDR);
     assert_eq!(header.sa, ETH_DST_MAC);
     assert_eq!(header.ether_type.to_native(), mac::ETHER_TYPE_IPV4);
     assert_eq!(&payload[..], PAYLOAD);
@@ -110,9 +102,7 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
 /// frames are delivered without any change in both directions.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn ethernet_tx_rx() {
-    let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client("eth-pkt", HW_MAC_ADDR))
-            .await;
+    let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
     let wlan_service =
@@ -121,10 +111,10 @@ async fn ethernet_tx_rx() {
     let proxy = helper.proxy();
     connect(&wlan_service, &proxy, &mut helper, SSID, &BSS, None).await;
 
-    let mut client = create_eth_client(&HW_MAC_ADDR)
+    let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await
         .expect("cannot create ethernet client")
-        .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
+        .expect(&format!("ethernet client not found {:?}", &CLIENT_MAC_ADDR));
 
     verify_tx_and_rx(&mut client, &mut helper).await;
 }

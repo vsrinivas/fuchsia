@@ -15,21 +15,24 @@ use {
 };
 
 pub mod test_utils;
-pub use eth_helper::create_eth_client;
+pub use eth_helper::*;
+pub use wlanstack_helper::*;
 
 mod config;
 mod eth_helper;
+mod wlanstack_helper;
 
-pub const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
+pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
+pub const AP_MAC_ADDR: [u8; 6] = [0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f];
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 
-pub fn create_wlantap_config_client<S: ToString>(name: S, mac: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name.to_string(), mac, MacRole::Client)
+pub fn default_wlantap_config_client() -> WlantapPhyConfig {
+    config::create_wlantap_config(format!("wlantap-client"), CLIENT_MAC_ADDR, MacRole::Client)
 }
 
-pub fn create_wlantap_config_ap<S: ToString>(name: S, mac: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name.to_string(), mac, MacRole::Ap)
+pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
+    config::create_wlantap_config(format!("wlantap-ap"), AP_MAC_ADDR, MacRole::Ap)
 }
 
 pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {
@@ -107,7 +110,7 @@ fn send_authentication(
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
     mgmt_writer::write_mgmt_hdr(
         frame_buf,
-        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, HW_MAC_ADDR, *bss_id, seq_ctrl),
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, CLIENT_MAC_ADDR, *bss_id, seq_ctrl),
         None,
     )?;
 
@@ -135,7 +138,7 @@ fn send_association_response(
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
     mgmt_writer::write_mgmt_hdr(
         frame_buf,
-        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, HW_MAC_ADDR, *bss_id, seq_ctrl),
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, CLIENT_MAC_ADDR, *bss_id, seq_ctrl),
         None,
     )?;
 
@@ -166,7 +169,7 @@ fn create_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
     rsne
 }
 
-fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> ConnectConfig {
+pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> ConnectConfig {
     ConnectConfig {
         ssid: String::from_utf8_lossy(ssid).to_string(),
         pass_phrase: passphrase.to_string(),
@@ -191,7 +194,7 @@ fn create_wpa2_psk_authenticator(
         nonce_rdr,
         std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
         psk,
-        HW_MAC_ADDR,
+        CLIENT_MAC_ADDR,
         s_rsne,
         *bssid,
         a_rsne,
@@ -210,7 +213,7 @@ fn process_auth_update(
         if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
             rx_wlan_data_frame(
                 channel,
-                &HW_MAC_ADDR,
+                &CLIENT_MAC_ADDR,
                 bssid,
                 bssid,
                 &frame[..],
