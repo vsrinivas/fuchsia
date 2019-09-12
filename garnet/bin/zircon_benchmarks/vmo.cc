@@ -36,16 +36,23 @@ bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, bool d
   return true;
 }
 
-// Measure the time taken to write or read a chunk of data to/from a VMO
-// by using map/memcpy.
+// Measure the time taken to write or read a chunk of data to/from a mapped VMO. The writing/reading
+// is either done from userland using memcpy() (when user_memcpy=true) or by the kernel using
+// zx_vmo_read()/zx_vmo_write() (when user_memcpy=false).
 bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size, bool do_write,
-                               int flags) {
+                               int flags, bool user_memcpy) {
   state->SetBytesProcessedPerRun(copy_size);
 
   zx::vmo vmo;
   ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
   std::vector<char> buffer(copy_size);
   zx_vaddr_t mapped_addr;
+
+  zx::vmo vmo_buf;
+  if (!user_memcpy) {
+    // Create a temporary VMO that we can use to get the kernel to read/write our mapped memory.
+    ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo_buf) == ZX_OK);
+  }
 
   // Write the buffer so that the pages are pre-committed. This matters
   // more for the read case.
@@ -56,7 +63,12 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
       ZX_ASSERT(zx::vmar::root_self()->map(0, vmo, 0, copy_size,
                                            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags,
                                            &mapped_addr) == ZX_OK);
-      std::memcpy(reinterpret_cast<void*>(mapped_addr), buffer.data(), copy_size);
+      if (user_memcpy) {
+        std::memcpy(reinterpret_cast<void*>(mapped_addr), buffer.data(), copy_size);
+      } else {
+        // To write to the mapped in portion we *read* from the temporary VMO.
+        ZX_ASSERT(vmo_buf.read(reinterpret_cast<void*>(mapped_addr), 0, copy_size) == ZX_OK);
+      }
       ZX_ASSERT(zx::vmar::root_self()->unmap(mapped_addr, copy_size) == ZX_OK);
     }
   } else {  // read
@@ -64,19 +76,26 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
       ZX_ASSERT(zx::vmar::root_self()->map(0, vmo, 0, copy_size,
                                            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags,
                                            &mapped_addr) == ZX_OK);
-      std::memcpy(buffer.data(), reinterpret_cast<void*>(mapped_addr), copy_size);
+      if (user_memcpy) {
+        std::memcpy(buffer.data(), reinterpret_cast<void*>(mapped_addr), copy_size);
+      } else {
+        // To read from the mapped in portion we *write* it to the temporary VMO.
+        ZX_ASSERT(vmo_buf.write(reinterpret_cast<void*>(mapped_addr), 0, copy_size) == ZX_OK);
+      }
       ZX_ASSERT(zx::vmar::root_self()->unmap(mapped_addr, copy_size) == ZX_OK);
     }
   }
   return true;
 }
 
-bool VmoReadOrWriteMapTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write) {
-  return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, 0);
+bool VmoReadOrWriteMapTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write,
+                           bool user_memcpy) {
+  return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, 0, user_memcpy);
 }
 
-bool VmoReadOrWriteMapRangeTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write) {
-  return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, ZX_VM_MAP_RANGE);
+bool VmoReadOrWriteMapRangeTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write,
+                                bool user_memcpy) {
+  return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, ZX_VM_MAP_RANGE, user_memcpy);
 }
 
 // Measure the time taken to clone a vmo and destroy it. If do_map=true, then
@@ -191,12 +210,15 @@ void RegisterTests() {
   }
 
   for (bool do_write : {false, true}) {
-    const char* rw = do_write ? "Write" : "Read";
-    auto rw_name = fbl::StringPrintf("VmoMap/%s", rw);
-    RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteMapTest, do_write);
+    for (bool user_memcpy : {false, true}) {
+      const char* rw = do_write ? "Write" : "Read";
+      const char* user_kernel = user_memcpy ? "" : "/Kernel";
+      auto rw_name = fbl::StringPrintf("VmoMap/%s%s", rw, user_kernel);
+      RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteMapTest, do_write, user_memcpy);
 
-    rw_name = fbl::StringPrintf("VmoMapRange/%s", rw);
-    RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteMapRangeTest, do_write);
+      rw_name = fbl::StringPrintf("VmoMapRange/%s%s", rw, user_kernel);
+      RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteMapRangeTest, do_write, user_memcpy);
+    }
   }
 
   for (bool map : {false, true}) {
