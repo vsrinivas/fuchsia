@@ -15,6 +15,7 @@ static_library("common") {
     "err_or.h",
     "file_util.h",
     "host_util.h",
+    "inet_util.h",
     "ref_ptr_to.h",
     "scoped_temp_file.h",
     "string_util.h",
@@ -26,6 +27,7 @@ static_library("common") {
     "err.cc",
     "file_util.cc",
     "host_util.cc",
+    "inet_util.cc",
     "scoped_temp_file.cc",
     "string_util.cc",
   ]
@@ -56,6 +58,7 @@ source_set("tests") {
     "completion_callback_unittest.cc",
     "err_or_unittest.cc",
     "file_util_unittest.cc",
+    "inet_util_unittest.cc",
   ]
 
   deps = [

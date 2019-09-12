@@ -21,7 +21,7 @@
 #undef __TA_REQUIRES
 
 #include "lib/fidl/cpp/message.h"
-#include "src/developer/debug/zxdb/console/command_utils.h"
+#include "src/developer/debug/zxdb/common/inet_util.h"
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"

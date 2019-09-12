@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/inet_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
@@ -215,7 +216,14 @@ Err DoConnect(ConsoleContext* context, const Command& cmd, CommandCallback callb
 
   // 0 args means pass empty string and 0 port to try to reconnect.
   if (cmd.args().size() == 1) {
-    Err err = ParseHostPort(cmd.args()[0], &host, &port);
+    const std::string& host_port = cmd.args()[0];
+    // Provide an additional assist to users if they forget to wrap an IPv6 address in [].
+    if (Ipv6HostPortIsMissingBrackets(host_port)) {
+      return Err(ErrType::kInput,
+                 "For IPv6 addresses use either: \"[::1]:1234\"\n"
+                 "or the two-parameter form: \"::1 1234.");
+    }
+    Err err = ParseHostPort(host_port, &host, &port);
     if (err.has_error())
       return err;
   } else if (cmd.args().size() == 2) {
