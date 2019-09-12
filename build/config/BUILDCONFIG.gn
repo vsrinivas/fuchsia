@@ -54,6 +54,11 @@ if (host_os == "linux" || host_os == "mac") {
   assert(false, "Host OS not supported")
 }
 
+is_host = current_os == "linux" || current_os == "mac"
+
+linux_x64_toolchain = "//build/toolchain:linux_x64"
+linux_arm64_toolchain = "//build/toolchain:linux_arm64"
+
 set_default_toolchain(target_toolchain)
 
 # Some projects expect a default value for sources_assignment_filter.

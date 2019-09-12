@@ -236,7 +236,7 @@ template("go_build") {
 
       # Record metadata for the //:tool_paths build API for all non-test,
       # host binaries.
-      if (current_toolchain == host_toolchain && !is_test) {
+      if (is_host && !is_test) {
         tool_paths = [
           {
             name = output_name

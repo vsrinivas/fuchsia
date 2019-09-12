@@ -19,15 +19,25 @@ group("tools") {
 
 group("infratools") {
   testonly = true
+  toolchains = [ host_toolchain ]
 
-  public_deps = [
-    "//tools/botanist($host_toolchain)",
-    "//tools/build/ninjatrace($host_toolchain)",
-    "//tools/debug:tools($host_toolchain)",
-    "//tools/integration:tools($host_toolchain)",
-    "//tools/size_checker/cmd:size_checker($host_toolchain)",
-    "//tools/testing:tools($host_toolchain)",
-  ]
+  # When building for linux, the infrastructure requires tooling across
+  # both architectures.
+  if (host_os == "linux") {
+    toolchains += [ linux_arm64_toolchain ]
+  }
+
+  public_deps = []
+  foreach(tc, toolchains) {
+    public_deps += [
+      "//tools/botanist($tc)",
+      "//tools/build/ninjatrace($tc)",
+      "//tools/debug:tools($tc)",
+      "//tools/integration:tools($tc)",
+      "//tools/size_checker/cmd:size_checker($tc)",
+      "//tools/testing:tools($tc)",
+    ]
+  }
 }
 
 group("tests") {
