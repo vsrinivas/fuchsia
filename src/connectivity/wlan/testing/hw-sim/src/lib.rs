@@ -11,7 +11,19 @@ use {
     fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
-    wlan_common::{appendable::Appendable, bss::Protection, data_writer, ie, mac, mgmt_writer},
+    wlan_common::{
+        appendable::Appendable,
+        bss::Protection,
+        data_writer,
+        ie::{
+            self,
+            rsn::{akm, cipher, rsne},
+            wpa::WpaIe,
+        },
+        mac, mgmt_writer,
+        organization::Oui,
+    },
+    wlan_rsn::rsna::SecAssocUpdate,
 };
 
 pub mod test_utils;
@@ -84,12 +96,16 @@ pub fn send_beacon(
     ie::write_ssid(frame_buf, ssid)?;
     ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
     ie::write_dsss_param_set(frame_buf, &ie::DsssParamSet { current_chan: channel.primary })?;
-    // TODO(eyw): Add implementations for remaining protection types.
     match protection {
         Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-        Protection::Open => (),
-        Protection::Wpa2Personal => create_wpa2_psk_rsne().write_into(frame_buf)?,
-        _ => unimplemented!(),
+        Protection::Open | Protection::Wep => (),
+        Protection::Wpa1 => ie::write_wpa1_ie(frame_buf, &default_wpa1_vendor_ie())?,
+        Protection::Wpa1Wpa2Personal => {
+            default_wpa2_psk_rsne().write_into(frame_buf)?;
+            ie::write_wpa1_ie(frame_buf, &default_wpa1_vendor_ie())?;
+        }
+        Protection::Wpa2Personal => default_wpa2_psk_rsne().write_into(frame_buf)?,
+        _ => panic!("unsupported fake beacon: {:?}", protection),
     };
 
     proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
@@ -159,14 +175,21 @@ fn send_association_response(
     Ok(())
 }
 
-fn create_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
-    use wlan_common::ie::rsn::{akm, cipher, rsne};
+fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
     let mut rsne = rsne::Rsne::new();
     rsne.group_data_cipher_suite = Some(cipher::Cipher::new_dot11(cipher::CCMP_128));
     rsne.pairwise_cipher_suites = vec![cipher::Cipher::new_dot11(cipher::CCMP_128)];
     rsne.akm_suites = vec![akm::Akm::new_dot11(akm::PSK)];
     rsne.rsn_capabilities = Some(rsne::RsnCapabilities(0));
     rsne
+}
+
+fn default_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
+    WpaIe {
+        unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::CCMP_128 }],
+        akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
+        ..Default::default()
+    }
 }
 
 pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> ConnectConfig {
@@ -183,13 +206,12 @@ fn create_wpa2_psk_authenticator(
     ssid: &[u8],
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
-    use wlan_common::ie::rsn::cipher;
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(bssid).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
         .expect("creating gtk provider");
     let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
-    let s_rsne = wlan_rsn::ProtectionInfo::Rsne(create_wpa2_psk_rsne());
-    let a_rsne = wlan_rsn::ProtectionInfo::Rsne(create_wpa2_psk_rsne());
+    let s_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
+    let a_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
     wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
         nonce_rdr,
         std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
@@ -208,7 +230,6 @@ fn process_auth_update(
     bssid: &[u8; 6],
     phy: &WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
-    use wlan_rsn::rsna::SecAssocUpdate;
     for update in updates {
         if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
             rx_wlan_data_frame(

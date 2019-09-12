@@ -27,3 +27,7 @@ wlan_service_config("default") {
 wlan_service_config("wep") {
   config = "wep.config"
 }
+
+wlan_service_config("legacy-privacy") {
+  config = "legacy-privacy.config"
+}

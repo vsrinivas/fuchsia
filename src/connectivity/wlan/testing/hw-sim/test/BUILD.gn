@@ -7,6 +7,8 @@ import("//build/testing/environments.gni")
 
 test_package("wlan-hw-sim-test") {
   deps = [
+    "configure_legacy_privacy_off",
+    "configure_legacy_privacy_on",
     "connect_to_open_network",
     "connect_to_wpa2_network",
     "ethernet_tx_rx",
@@ -20,6 +22,14 @@ test_package("wlan-hw-sim-test") {
   ]
 
   tests = [
+    {
+      name = "configure_legacy_privacy_on"
+      environments = basic_envs
+    },
+    {
+      name = "configure_legacy_privacy_off"
+      environments = basic_envs
+    },
     {
       name = "connect_to_open_network"
       environments = basic_envs

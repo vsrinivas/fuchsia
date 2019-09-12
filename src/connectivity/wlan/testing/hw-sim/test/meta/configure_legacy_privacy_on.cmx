@@ -1,0 +1,33 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.wlan.device.service.DeviceService": [
+                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
+                    "--isolated_devmgr",
+                    "--wpa1_supported",
+                    "--wep_supported"
+                ],
+                "fuchsia.wlan.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
+                ],
+                "fuchsia.wlan.service.Wlan": [
+                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/configure_legacy_privacy_on"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.wlan.devmgr.IsolatedDevmgr",
+            "fuchsia.wlan.service.Wlan",
+            "fuchsia.wlan.device.service.DeviceService"
+        ]
+    }
+}

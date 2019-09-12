@@ -26,6 +26,14 @@ group("service-wep") {
   ]
 }
 
+group("service-legacy-privacy") {
+  testonly = true
+  deps = [
+    ":bin",
+    "config:legacy-privacy",
+  ]
+}
+
 group("bin") {
   testonly = true
   public_deps = [
