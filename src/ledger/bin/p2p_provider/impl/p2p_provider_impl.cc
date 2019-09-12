@@ -35,6 +35,17 @@ bool ValidateHandshake(const Envelope* envelope, const Handshake** message) {
   return true;
 }
 
+std::unique_ptr<flatbuffers::FlatBufferBuilder> BuildBufferContainingHandshake(
+    const P2PClientId& client_id) {
+  auto buffer = std::make_unique<flatbuffers::FlatBufferBuilder>();
+  flatbuffers::Offset<Handshake> request = CreateHandshake(
+      *buffer, kCurrentVersion, convert::ToFlatBufferVector(buffer.get(), client_id.GetData()));
+  flatbuffers::Offset<Envelope> envelope =
+      CreateEnvelope(*buffer, EnvelopeMessage_Handshake, request.Union());
+  buffer->Finish(envelope);
+  return buffer;
+}
+
 }  // namespace
 
 P2PProviderImpl::P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
@@ -142,14 +153,10 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection, std::vector
   if (should_send_handshake) {
     // We send an handshake to signal to the other side the connection is
     // indeed established.
-    flatbuffers::FlatBufferBuilder buffer;
-    flatbuffers::Offset<Handshake> request = CreateHandshake(
-        buffer, kCurrentVersion, convert::ToFlatBufferVector(&buffer, self_client_id_->GetData()));
-    flatbuffers::Offset<Envelope> envelope =
-        CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
-    buffer.Finish(envelope);
-    char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-    size_t size = buffer.GetSize();
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> buffer =
+        BuildBufferContainingHandshake(self_client_id_.value());
+    char* buf = reinterpret_cast<char*>(buffer->GetBufferPointer());
+    size_t size = buffer->GetSize();
 
     // SendMessage may detect that the pipe is disconnected. We detect this case to exit early and
     // avoid a use-after-free.
@@ -221,22 +228,16 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
 
       overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
 
-      flatbuffers::FlatBufferBuilder buffer;
-      flatbuffers::Offset<Handshake> request =
-          CreateHandshake(buffer, kCurrentVersion,
-                          convert::ToFlatBufferVector(&buffer, self_client_id_->GetData()));
-      flatbuffers::Offset<Envelope> envelope =
-          CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
-      buffer.Finish(envelope);
-
       RemoteConnection& connection = connections_.emplace();
       connection.set_on_message([this, &connection, node_id = peer.id](std::vector<uint8_t> data) {
         ProcessHandshake(&connection, std::move(data), false, MakeP2PClientId(node_id));
       });
       connection.Start(std::move(local));
 
-      char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-      size_t size = buffer.GetSize();
+      std::unique_ptr<flatbuffers::FlatBufferBuilder> buffer =
+          BuildBufferContainingHandshake(self_client_id_.value());
+      char* buf = reinterpret_cast<char*>(buffer->GetBufferPointer());
+      size_t size = buffer->GetSize();
       connection.SendMessage(fxl::StringView(buf, size));
       contacted_hosts_.insert(MakeP2PClientId(peer.id));
     }
