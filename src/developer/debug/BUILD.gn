@@ -4,9 +4,19 @@
 
 group("debug") {
   testonly = true
+
   deps = [
     "debug_agent",
     "ipc",
     "shared",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "debug_agent:tests",
+    "zxdb:tests",
   ]
 }

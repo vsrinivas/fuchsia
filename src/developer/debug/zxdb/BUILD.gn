@@ -75,3 +75,24 @@ install_host_tools("zxdb_host") {
     "zxdb",
   ]
 }
+
+# This group of tests is run in CQ/CI.
+# [It is referenced by ../BUILD.gn's "tests".]
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":zxdb_tests($host_toolchain)",
+  ]
+}
+
+# Utility rule to build all zxdb tests.
+group("all_tests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+    ":zxdb_e2e_tests($host_toolchain)",
+    ":zxdb_perftests($host_toolchain)",
+  ]
+}
