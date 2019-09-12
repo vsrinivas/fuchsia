@@ -15,7 +15,6 @@ test("inspect") {
     "health_unittest.cc",
     "heap_unittest.cc",
     "inspect_unittest.cc",
-    "reader_unittest.cc",
     "scanner_unittest.cc",
     "snapshot_unittest.cc",
     "state_unittest.cc",

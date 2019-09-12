@@ -470,7 +470,6 @@ group("libc") {
 group("inspect_tests") {
   testonly = true
   public_deps = [
-    ":inspect_contrib_cpp_tests",
     ":inspect_health_unittests",
     ":inspect_query_unittests",
     ":inspect_unittests",
@@ -485,13 +484,6 @@ group("inspect_unittests") {
   public_deps = [
     "//garnet/public/lib/inspect_deprecated/tests:inspect_unittests",
     "//garnet/public/rust/fuchsia-inspect:tests",
-  ]
-}
-
-group("inspect_contrib_cpp_tests") {
-  testonly = true
-  public_deps = [
-    "//sdk/lib/inspect/contrib/cpp:inspect_contrib_cpp_tests",
   ]
 }
 

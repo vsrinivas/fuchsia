@@ -5,7 +5,6 @@
 #ifndef LIB_INSPECT_CPP_HIERARCHY_H_
 #define LIB_INSPECT_CPP_HIERARCHY_H_
 
-#include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 #include <lib/fit/variant.h>
 
@@ -69,12 +68,6 @@ class Array final : public Value<std::vector<T>, FormatIndex> {
 
     HistogramBucket(T floor, T upper_limit, T count)
         : floor(floor), upper_limit(upper_limit), count(count) {}
-
-    bool operator==(const HistogramBucket& other) const {
-      return floor == other.floor && upper_limit == other.upper_limit && count == other.count;
-    }
-
-    bool operator!=(const HistogramBucket& other) const { return !((*this) == other); }
   };
 
   // Constructs an array consisting of values and a display format.
