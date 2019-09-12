@@ -560,6 +560,9 @@ pub const fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int
     ((kind & 0xF) << 20) | ((family & 0xFF) << 8) | (number & 0xFF)
 }
 
+/// Gets a read-only VMO containing the whole contents of the file. This function
+/// creates a clone of the underlying VMO when possible, falling back to eagerly
+/// reading the contents into a freshly-created VMO.
 pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
     unsafe {
         let mut vmo_handle: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
