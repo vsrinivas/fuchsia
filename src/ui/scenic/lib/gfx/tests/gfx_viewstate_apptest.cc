@@ -98,20 +98,4 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
       [&view_state_changed_observed] { return view_state_changed_observed; }, zx::sec(10)));
 }
 
-TEST_F(ViewEmbedderTest, BouncingBallRs) {
-  auto info = scenic::LaunchComponentAndCreateView(
-      environment_->launcher_ptr(),
-      "fuchsia-pkg://fuchsia.com/bouncing_ball_rs#meta/bouncing_ball_rs.cmx", {});
-
-  scenic::EmbedderView embedder_view(CreatePresentationContext());
-
-  bool view_state_changed_observed = false;
-  embedder_view.EmbedView(std::move(info), [&view_state_changed_observed](auto) {
-    view_state_changed_observed = true;
-  });
-
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&view_state_changed_observed] { return view_state_changed_observed; }, zx::sec(10)));
-}
-
 }  // namespace

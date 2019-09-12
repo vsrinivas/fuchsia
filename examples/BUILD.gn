@@ -15,7 +15,6 @@ group("examples") {
     "media",
     "rolldice",
     "speech",
-    "//examples/ui/bouncing_ball_rs",
     "//examples/components/basic:components_basic_example",
     "//examples/components/routing:components_routing_example",
   ]
