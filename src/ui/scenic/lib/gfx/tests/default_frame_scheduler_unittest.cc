@@ -469,6 +469,7 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, gpu_render_time_finish);
   mock_renderer_->SignalFramePresented(/* frame number */ 0, Now());
+  mock_renderer_->SignalFrameRetired(/* frame number */ 0, Now());
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);

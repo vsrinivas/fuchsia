@@ -106,7 +106,8 @@ class Engine : public FrameRenderer {
   // |FrameRenderer|
   //
   // Renders a new frame. Returns true if successful, false otherwise.
-  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame, zx::time presentation_time) override;
+  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame, zx::time presentation_time,
+                                zx::event frame_retired) override;
 
  private:
   // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.

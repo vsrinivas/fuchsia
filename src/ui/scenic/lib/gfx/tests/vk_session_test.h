@@ -28,6 +28,8 @@ class VkSessionTest : public SessionTest {
   void TearDown() override;
 
   escher::Escher* escher() { return escher_.get(); }
+  Sysmem* sysmem() { return sysmem_.get(); }
+  DisplayManager* display_manager() { return display_manager_.get(); }
 
  protected:
   // |SessionTest|

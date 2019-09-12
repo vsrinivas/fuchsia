@@ -149,7 +149,8 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   // |FrameRenderer|
-  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time);
+  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time,
+                                zx::event frame_retired);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
@@ -164,6 +165,9 @@ class MockFrameRenderer : public FrameRenderer {
 
   // Signal frame |frame_index| that it has been presented.
   void SignalFramePresented(uint64_t frame_number, zx::time time_done);
+
+  // Signal frame |frame_index| that it has been retired.
+  void SignalFrameRetired(uint64_t frame_number, zx::time time_done);
 
   // Signal frame |frame_index| that it has been dropped.
   void SignalFrameDropped(uint64_t frame_number);
@@ -185,10 +189,12 @@ class MockFrameRenderer : public FrameRenderer {
 
   struct Timings {
     FrameTimingsPtr frame_timings;
+    zx::event frame_retired_event;
     size_t swapchain_index = -1;
     uint32_t frame_rendered = false;
     uint32_t frame_cpu_rendered = false;
     uint32_t frame_presented = false;
+    uint32_t frame_retired = false;
   };
   std::unordered_map<uint64_t, Timings> frames_;
 
