@@ -11,6 +11,11 @@ protocol Display {
     /// subsequent calls return when the value changes.
     Watch() -> (DisplaySettings settings) error Error;
 
+    /// Obtains the current data from the light sensor. Returns immediately on
+    /// first call; subsequent calls return when the light sensor value changes
+    ///  by a certain amount measured in lux.
+    WatchLightSensor(float32 delta) -> (LightSensorData light_sensor_data) error Error;
+
     /// Sets display settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.
     Set(DisplaySettings settings) -> () error Error;
@@ -19,4 +24,9 @@ protocol Display {
 table DisplaySettings {
     1: bool auto_brightness;
     2: float32 brightness_value;
+};
+
+table LightSensorData {
+    /// Brightness from the light sensor measured in lux
+    1: float32 illuminance_lux;
 };
