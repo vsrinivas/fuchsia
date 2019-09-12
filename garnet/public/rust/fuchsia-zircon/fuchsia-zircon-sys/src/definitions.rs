@@ -166,6 +166,15 @@ extern {
         num_handles: u32
         ) -> zx_status_t;
 
+    pub fn zx_channel_write_etc(
+        handle: zx_handle_t,
+        options: u32,
+        bytes: *const u8,
+        num_bytes: u32,
+        handles: *mut zx_handle_disposition_t,
+        num_handles: u32,
+        ) -> zx_status_t;
+
     pub fn zx_channel_call(
         handle: zx_handle_t,
         options: u32,

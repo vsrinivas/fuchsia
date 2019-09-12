@@ -11,6 +11,7 @@ pub type zx_futex_t = i32;
 pub type zx_gpaddr_t = usize;
 pub type zx_guest_trap_t = u32;
 pub type zx_handle_t = u32;
+pub type zx_handle_op_t = u32;
 pub type zx_koid_t = u64;
 pub type zx_obj_props_t = u32;
 pub type zx_obj_type_t = u32;
@@ -47,6 +48,11 @@ macro_rules! multiconst {
 
 multiconst!(zx_handle_t, [
     ZX_HANDLE_INVALID = 0;
+]);
+
+multiconst!(zx_handle_op_t, [
+    ZX_HANDLE_OP_MOVE = 0;
+    ZX_HANDLE_OP_DUPLICATE = 1;
 ]);
 
 multiconst!(zx_koid_t, [
@@ -417,6 +423,16 @@ pub struct zx_channel_call_args_t {
     pub wr_num_handles: u32,
     pub rd_num_bytes: u32,
     pub rd_num_handles: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_handle_disposition_t {
+    pub operation: zx_handle_op_t,
+    pub handle: zx_handle_t,
+    pub rights: zx_rights_t,
+    pub type_: zx_obj_type_t,
+    pub result: zx_status_t,
 }
 
 pub type zx_pci_irq_swizzle_lut_t = [[[u32; 4]; 8]; 32];
