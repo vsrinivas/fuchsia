@@ -232,4 +232,38 @@ template("library") {
     deps = target_deps
     public_deps = target_public_deps
   }
+
+  if (!is_shared) {
+    # Some of the source libraries are depended on by Rust binaries, which
+    # cannot depend on .o files. For every source library, we generate a
+    # matching static library tagged with the config and metadata needed by the
+    # Rust build to identify and use that library.
+
+    out_dir = rebase_path(target_out_dir)
+
+    config("$main_target_name.static_config") {
+      if (is_fuchsia) {
+        libs = [ "zircon" ]
+
+        rustflags = [
+          "-Lnative=$out_dir",
+          "-l$main_target_name",
+        ]
+      }
+    }
+
+    static_library("$main_target_name.static") {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      output_name = main_target_name
+
+      public_configs = [ ":$main_target_name.static_config" ]
+
+      public_deps = [ ":$main_target_name" ]
+
+      metadata = {
+        zircon_lib_dirs = [ out_dir ]
+      }
+    }
+  }
 }

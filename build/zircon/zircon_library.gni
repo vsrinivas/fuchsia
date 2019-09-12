@@ -90,9 +90,11 @@ template("zircon_library") {
     library_libs += [ "zircon" ]
   }
 
+  is_prebuilt = defined(invoker.libs)
+
   zx_lib_dirs = []
   zx_libs = []
-  if (defined(invoker.libs)) {
+  if (is_prebuilt) {
     # A prebuilt binary (either static .a or shared .so, doesn't matter)
     # has nothing to do but bring in the config() for its `libs`.
     type = "group"
@@ -120,21 +122,25 @@ template("zircon_library") {
   } else {
     if (zircon_public_lib_aliases) {
       # Forward to the version of the library under //zircon/system/ulib.
+      # Furthermore, use the static library version of the library to allow
+      # proper compilation of Rust binaries.
       type = "group"
       library_deps = []
       library_public_deps = []
       if (library == "async-cpp" || library == "async-default") {
-        library_public_deps += [ "//zircon/system/ulib/async:$library" ]
+        library_public_deps += [ "//zircon/system/ulib/async:$library.static" ]
       } else if (library == "async-loop-cpp" ||
                  library == "async-loop-default") {
-        library_public_deps += [ "//zircon/system/ulib/async-loop:$library" ]
+        library_public_deps +=
+            [ "//zircon/system/ulib/async-loop:$library.static" ]
       } else if (library == "trace-provider-with-fdio") {
         library_public_deps +=
-            [ "//zircon/system/ulib/trace-provider:$library" ]
+            [ "//zircon/system/ulib/trace-provider:$library.static" ]
       } else if (library == "fidl_base" || library == "fidl-llcpp") {
-        library_public_deps += [ "//zircon/system/ulib/fidl:$library" ]
+        library_public_deps +=
+             [ "//zircon/system/ulib/fidl:$library.static" ]
       } else {
-        library_public_deps += [ invoker.dir ]
+        library_public_deps += [ "${invoker.dir}:$library.static" ]
       }
       not_needed(invoker, [ "sources" ])
     } else {
@@ -191,14 +197,19 @@ template("zircon_library") {
                              "publishable",
                              "source_dir",
                            ])
-    public_configs = [ ":$library.config" ]
+    if (!zircon_public_lib_aliases || is_prebuilt) {
+      # This config is not necessary for aliases to source libraries.
+      public_configs = [ ":$library.config" ]
+    }
     deps = library_deps
     public_deps = library_public_deps
     if (!is_fuchsia) {
       public_deps += [ "//zircon/system/public" ]
     }
-    metadata = {
-      zircon_lib_dirs = zx_lib_dirs
+    if (zx_lib_dirs != []) {
+      metadata = {
+        zircon_lib_dirs = zx_lib_dirs
+      }
     }
   }
 
