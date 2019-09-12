@@ -41,6 +41,59 @@ struct VirtualStreamConfig;
 struct VirtualCameraConfig;
 class VirtualCameraFactory;
 
+extern "C" const fidl_type_t fuchsia_camera_common_VirtualStreamConfigTable;
+
+// Configuration for the stream.
+// The Configuration must be either artificial or real
+// TODO(eweeks): Replace this stand-in with the full design.
+struct VirtualStreamConfig {
+  VirtualStreamConfig() : ordinal_(Tag::kUnknown), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    kArtificialConfig = 1033488457,  // 0x3d99c849
+    kRealWorldConfig = 308976604,  // 0x126a9bdc
+  };
+
+  bool is_artificial_config() const { return ordinal_ == Tag::kArtificialConfig; }
+
+  void set_artificial_config(ArtificialStreamConfig* elem) {
+    ordinal_ = Tag::kArtificialConfig;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ArtificialStreamConfig& artificial_config() const {
+    ZX_ASSERT(ordinal_ == Tag::kArtificialConfig);
+    return *static_cast<ArtificialStreamConfig*>(envelope_.data);
+  }
+
+  bool is_real_world_config() const { return ordinal_ == Tag::kRealWorldConfig; }
+
+  void set_real_world_config(RealWorldStreamConfig* elem) {
+    ordinal_ = Tag::kRealWorldConfig;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  RealWorldStreamConfig& real_world_config() const {
+    ZX_ASSERT(ordinal_ == Tag::kRealWorldConfig);
+    return *static_cast<RealWorldStreamConfig*>(envelope_.data);
+  }
+
+  Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &fuchsia_camera_common_VirtualStreamConfigTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+
+ private:
+  static void SizeAndOffsetAssertionHelper();
+  Tag ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 
 
 // Configuration for a stream generated from stored frames.
@@ -454,59 +507,6 @@ struct ArtificialStreamConfig {
 
   // Numeric identifier for the stream being configured.
   int16_t stream_id = {};
-};
-
-extern "C" const fidl_type_t fuchsia_camera_common_VirtualStreamConfigTable;
-
-// Configuration for the stream.
-// The Configuration must be either artificial or real
-// TODO(eweeks): Replace this stand-in with the full design.
-struct VirtualStreamConfig {
-  VirtualStreamConfig() : ordinal_(Tag::kUnknown), envelope_{} {}
-
-  enum class Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
-    kArtificialConfig = 1033488457,  // 0x3d99c849
-    kRealWorldConfig = 308976604,  // 0x126a9bdc
-  };
-
-  bool is_artificial_config() const { return ordinal_ == Tag::kArtificialConfig; }
-
-  void set_artificial_config(ArtificialStreamConfig* elem) {
-    ordinal_ = Tag::kArtificialConfig;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ArtificialStreamConfig& artificial_config() const {
-    ZX_ASSERT(ordinal_ == Tag::kArtificialConfig);
-    return *static_cast<ArtificialStreamConfig*>(envelope_.data);
-  }
-
-  bool is_real_world_config() const { return ordinal_ == Tag::kRealWorldConfig; }
-
-  void set_real_world_config(RealWorldStreamConfig* elem) {
-    ordinal_ = Tag::kRealWorldConfig;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  RealWorldStreamConfig& real_world_config() const {
-    ZX_ASSERT(ordinal_ == Tag::kRealWorldConfig);
-    return *static_cast<RealWorldStreamConfig*>(envelope_.data);
-  }
-
-  Tag which() const;
-
-  static constexpr const fidl_type_t* Type = &fuchsia_camera_common_VirtualStreamConfigTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
-
- private:
-  static void SizeAndOffsetAssertionHelper();
-  Tag ordinal_;
-  FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraConfigTable;

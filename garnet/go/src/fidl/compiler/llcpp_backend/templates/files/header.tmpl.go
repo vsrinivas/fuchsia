@@ -47,13 +47,19 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionForwardDeclaration" . }}{{- end }}
 {{- end }}
 
+{{- /* Declare tables and xunions first, since they store their members
+    out-of-line and so they only need forward declarations.
+    See fxb/7919 formore context. */}}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDeclaration" . }}{{- end }}
+{{- end }}
+
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDeclaration" . }}{{- end }}
 {{- end }}
 {{ "" }}
 

@@ -74,6 +74,38 @@ xunion Foo {
 };
 )FIDL"));
 
+  // Recursion is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Value {
+  bool bool_value;
+  vector<Value?> list_value;
+};
+)FIDL"));
+
+  // Mutual recursion is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+  Bar bar;
+};
+
+struct Bar {
+  Foo? foo;
+};
+)FIDL"));
+
+  // Infinite recursion is not allowed.
+  EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Value {
+  Value value;
+};
+)FIDL"));
+
   END_TEST;
 }
 

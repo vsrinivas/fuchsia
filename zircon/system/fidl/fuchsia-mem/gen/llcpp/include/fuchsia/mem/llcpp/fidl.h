@@ -23,65 +23,6 @@ struct Range;
 struct Buffer;
 struct Data;
 
-extern "C" const fidl_type_t fuchsia_mem_RangeTable;
-
-// A range of bytes within a VMO.
-struct Range {
-  static constexpr const fidl_type_t* Type = &fuchsia_mem_RangeTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  // The vmo that contains the bytes.
-  ::zx::vmo vmo = {};
-
-  // The offset of the first byte within the range relative to the start of
-  // the VMO.
-  //
-  // For example, if `offset` is zero, then the first byte in the range is
-  // the first byte in the VMO.
-  uint64_t offset = {};
-
-  // The number of bytes in the range.
-  //
-  // For example, if the offset is 3 and the size is 2, and the VMO starts
-  // with "abcdefg...", then the range contains "de".
-  //
-  // The sum of the offset and the size must not be greater than the
-  // physical size of the VMO.
-  uint64_t size = {};
-};
-
-extern "C" const fidl_type_t fuchsia_mem_BufferTable;
-
-// A buffer for data whose size is not necessarily a multiple of the page
-// size.
-//
-// VMO objects have a physical size that is always a multiple of the page
-// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
-// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
-// and its size.
-struct Buffer {
-  static constexpr const fidl_type_t* Type = &fuchsia_mem_BufferTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  // The vmo that contains the buffer.
-  ::zx::vmo vmo = {};
-
-  // The number of bytes in the buffer.
-  //
-  // The content of the buffer begin at the start of the VMO and continue
-  // for `size` bytes. To specify a range of bytes that do not start at
-  // the beginning of the VMO, use `Range` rather than buffer.
-  //
-  // This size must not be greater than the physical size of the VMO.
-  uint64_t size = {};
-};
-
 extern "C" const fidl_type_t fuchsia_mem_DataTable;
 
 // Binary data that might be stored inline or in a VMO.
@@ -140,6 +81,65 @@ struct Data {
   Tag ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_mem_RangeTable;
+
+// A range of bytes within a VMO.
+struct Range {
+  static constexpr const fidl_type_t* Type = &fuchsia_mem_RangeTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // The vmo that contains the bytes.
+  ::zx::vmo vmo = {};
+
+  // The offset of the first byte within the range relative to the start of
+  // the VMO.
+  //
+  // For example, if `offset` is zero, then the first byte in the range is
+  // the first byte in the VMO.
+  uint64_t offset = {};
+
+  // The number of bytes in the range.
+  //
+  // For example, if the offset is 3 and the size is 2, and the VMO starts
+  // with "abcdefg...", then the range contains "de".
+  //
+  // The sum of the offset and the size must not be greater than the
+  // physical size of the VMO.
+  uint64_t size = {};
+};
+
+extern "C" const fidl_type_t fuchsia_mem_BufferTable;
+
+// A buffer for data whose size is not necessarily a multiple of the page
+// size.
+//
+// VMO objects have a physical size that is always a multiple of the page
+// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
+// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
+// and its size.
+struct Buffer {
+  static constexpr const fidl_type_t* Type = &fuchsia_mem_BufferTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // The vmo that contains the buffer.
+  ::zx::vmo vmo = {};
+
+  // The number of bytes in the buffer.
+  //
+  // The content of the buffer begin at the start of the VMO and continue
+  // for `size` bytes. To specify a range of bytes that do not start at
+  // the beginning of the VMO, use `Range` rather than buffer.
+  //
+  // This size must not be greater than the physical size of the VMO.
+  uint64_t size = {};
 };
 
 }  // namespace mem

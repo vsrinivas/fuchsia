@@ -2514,8 +2514,6 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
 // Notes:
 // - Nullable structs do not require dependency edges since they are boxed via a
 // pointer indirection, and their content placed out-of-line.
-// - However, xunions always require dependency edges since nullability does not affect
-// their layout.
 bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
   std::set<Decl*> edges;
   auto maybe_add_decl = [this, &edges](const TypeConstructor* type_ctor) {
@@ -2526,9 +2524,6 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       } else if (type_ctor->maybe_arg_type_ctor) {
         type_ctor = type_ctor->maybe_arg_type_ctor.get();
       } else if (type_ctor->nullability == types::Nullability::kNullable) {
-        if (auto decl = LookupDeclByName(name); decl && decl->kind == Decl::Kind::kXUnion) {
-          edges.insert(decl);
-        }
         return;
       } else {
         if (auto decl = LookupDeclByName(name); decl && decl->kind != Decl::Kind::kProtocol) {

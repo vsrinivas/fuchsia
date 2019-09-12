@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <chrono>
+#include <map>
+#include <random>
+#include <string>
+
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
-
-#include <algorithm>
-#include <chrono>
-#include <map>
-#include <random>
-#include <string>
 
 #include "test_library.h"
 
@@ -191,7 +191,6 @@ protocol #Protocol# {
   END_TEST;
 }
 
-// A xunion has the same effect dependency-wise, be it nullable or nonnullable.
 bool nonnullable_xunion() {
   BEGIN_TEST;
 
@@ -253,10 +252,26 @@ struct #Payload# {
     ASSERT_TRUE(library.Compile());
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
-    ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
-    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
-    ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
+
+    // Since the Xunion argument is nullable, Protocol does not have any
+    // dependencies, and we therefore have two independent declaration
+    // sub-graphs:
+    //   a. Payload <- Xunion
+    //   b. SomeLongAnonymousPrefix0 <- Protocol
+    // Because of random prefixes, either (a) or (b) will be selected to
+    // be first in the declaration order.
+    bool payload_is_first = strcmp(DECL_NAME(decl_order[0]), namer.of("Payload")) == 0;
+    if (payload_is_first) {
+      ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
+      ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
+      ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+      ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
+    } else {
+      ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix0");
+      ASSERT_DECL_NAME(decl_order[1], namer.of("Protocol"));
+      ASSERT_DECL_NAME(decl_order[2], namer.of("Payload"));
+      ASSERT_DECL_NAME(decl_order[3], namer.of("Xunion"));
+    }
   }
 
   END_TEST;
@@ -330,11 +345,28 @@ xunion #Xunion# {
     ASSERT_TRUE(library.Compile());
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
-    ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
-    ASSERT_DECL_NAME(decl_order[2], namer.of("Request"));
-    ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix0");
-    ASSERT_DECL_NAME(decl_order[4], namer.of("Protocol"));
+
+    // Since the Xunion field is nullable, Request does not have any
+    // dependencies, and we therefore have two independent declaration
+    // sub-graphs:
+    //   a. Payload <- Xunion
+    //   b. Request <- SomeLongAnonymousPrefix0 <- Protocol
+    // Because of random prefixes, either (a) or (b) will be selected to
+    // be first in the declaration order.
+    bool payload_is_first = strcmp(DECL_NAME(decl_order[0]), namer.of("Payload")) == 0;
+    if (payload_is_first) {
+      ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
+      ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
+      ASSERT_DECL_NAME(decl_order[2], namer.of("Request"));
+      ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix0");
+      ASSERT_DECL_NAME(decl_order[4], namer.of("Protocol"));
+    } else {
+      ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
+      ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+      ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
+      ASSERT_DECL_NAME(decl_order[3], namer.of("Payload"));
+      ASSERT_DECL_NAME(decl_order[4], namer.of("Xunion"));
+    }
   }
 
   END_TEST;
