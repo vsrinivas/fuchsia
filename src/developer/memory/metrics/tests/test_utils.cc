@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/memory/metrics/capture.h"
+
 namespace memory {
 
 const zx_handle_t TestUtils::kRootHandle = 1;
@@ -78,9 +80,12 @@ class MockOS : public OS {
 };
 
 // static.
-void TestUtils::CreateCapture(Capture* capture, const CaptureTemplate& t) {
+void TestUtils::CreateCapture(Capture* capture, const CaptureTemplate& t, CaptureLevel level) {
   capture->time_ = t.time;
   capture->kmem_ = t.kmem;
+  if (level != VMO) {
+    return;
+  }
   for (const auto& vmo : t.vmos) {
     capture->koid_to_vmo_.emplace(vmo.koid, vmo);
   }
@@ -108,7 +113,7 @@ zx_status_t TestUtils::GetCapture(Capture* capture, CaptureLevel level, const Os
 zx_status_t CaptureSupplier::GetCapture(Capture* capture, CaptureLevel level) {
   auto& t = templates_.at(index_);
   t.time = index_++;
-  TestUtils::CreateCapture(capture, t);
+  TestUtils::CreateCapture(capture, t, level);
   return ZX_OK;
 }
 

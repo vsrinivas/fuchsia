@@ -73,7 +73,7 @@ class TestUtils {
   const static zx_handle_t kSelfHandle;
   const static zx_koid_t kSelfKoid;
 
-  static void CreateCapture(Capture* capture, const CaptureTemplate& t);
+  static void CreateCapture(Capture* capture, const CaptureTemplate& t, CaptureLevel level = VMO);
   static zx_status_t GetCapture(Capture* capture, CaptureLevel level, const OsResponses& r);
 
   // Sorted by koid.

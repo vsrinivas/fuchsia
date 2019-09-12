@@ -52,7 +52,7 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
 void Metrics::CollectMetrics() {
   TRACE_DURATION("memory_monitor", "Watcher::Metrics::CollectMetrics");
   Capture capture;
-  capture_cb_(&capture, KMEM);
+  capture_cb_(&capture, VMO);
   Digest digest(capture);
 
   std::vector<fuchsia::cobalt::CobaltEvent> events;
@@ -75,7 +75,7 @@ void Metrics::CollectMetrics() {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status == fuchsia::cobalt::Status::INVALID_ARGUMENTS) {
-    FX_LOGS(ERROR) << "CollectMetrics() returned status INVALID_ARGUMENTS";
+    FX_LOGS(ERROR) << "LogCobaltEvents() returned status INVALID_ARGUMENTS";
   }
   task_.PostDelayed(dispatcher_, poll_frequency_);
 }

@@ -147,7 +147,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       FXL_LOG(ERROR) << "Unable to get Logger from factory";
       return;
     }
-    std::cerr << "Creating Metrics()()\n";
     metrics_ = std::make_unique<Metrics>(
         kMetricsPollFrequency, dispatcher, logger_.get(),
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
