@@ -64,24 +64,37 @@ pub fn open_file<'a>(
 }
 
 pub fn create_sub_directories(
-    mut dir: DirectoryProxy,
+    root_dir: &DirectoryProxy,
     path: &Path,
 ) -> Result<DirectoryProxy, Error> {
+    if path.components().next().is_none() {
+        return Err(err_msg("path must not be empty"));
+    }
+    let mut dir = None;
     for part in path.components() {
         if let Component::Normal(part) = part {
-            let (sub_dir_proxy, local_server_end) = create_proxy::<DirectoryMarker>()?;
-            dir.open(
-                OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
-                MODE_TYPE_DIRECTORY,
-                part.to_str().unwrap(),
-                ServerEnd::new(local_server_end.into_channel()),
-            )?;
-            dir = sub_dir_proxy;
+            dir = Some({
+                let dir_ref = match dir.as_ref() {
+                    Some(r) => r,
+                    None => root_dir,
+                };
+                let (subdir, local_server_end) = create_proxy::<DirectoryMarker>()?;
+                dir_ref.open(
+                    OPEN_FLAG_DIRECTORY
+                        | OPEN_RIGHT_READABLE
+                        | OPEN_RIGHT_WRITABLE
+                        | OPEN_FLAG_CREATE,
+                    MODE_TYPE_DIRECTORY,
+                    part.to_str().unwrap(),
+                    ServerEnd::new(local_server_end.into_channel()),
+                )?;
+                subdir
+            });
         } else {
             return Err(format_err!("invalid item in path: {:?}", part));
         }
     }
-    Ok(dir)
+    Ok(dir.unwrap())
 }
 
 // TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
@@ -303,10 +316,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )?;
 
-        let sub_dir = create_sub_directories(
-            clone_directory(&root_dir, fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS)?,
-            &path,
-        )?;
+        let sub_dir = create_sub_directories(&root_dir, &path)?;
         let file = open_file(
             &sub_dir,
             &file_name,

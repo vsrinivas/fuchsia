@@ -271,7 +271,7 @@ pub async fn route_and_open_storage_capability<'a>(
         _ => panic!("non-storage capability"),
     };
     let sub_dir_proxy = io_util::create_sub_directories(
-        dir_proxy,
+        &dir_proxy,
         &generate_storage_path(storage_type, relative_moniker),
     )
     .map_err(|e| {

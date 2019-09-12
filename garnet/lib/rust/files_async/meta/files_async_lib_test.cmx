@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/files_async_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

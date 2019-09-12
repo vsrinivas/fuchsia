@@ -3,32 +3,37 @@
 // found in the LICENSE file.
 
 #![feature(async_await)]
+#![recursion_limit = "256"]
 
 ///! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
-    failure::{Error, Fail},
+    failure::{self, Fail},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_BUF},
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
     fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     std::{collections::VecDeque, mem, str::Utf8Error},
 };
 
-/// An error encountered while querying and parsing directory entries from a directory proxy.
+/// Error returned by files_async library.
 #[derive(Debug, Fail)]
-pub enum ReadDirError {
+pub enum Error {
     #[fail(display = "a directory entry could not be decoded: {:?}", _0)]
-    Decode(#[cause] DirentDecodeError),
+    DecodeDirent(#[cause] DecodeDirentError),
 
-    #[fail(display = "fidl error during read_dirents: {:?}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[fail(display = "fidl error during {}: {:?}", _0, _1)]
+    Fidl(&'static str, #[cause] fidl::Error),
 
-    #[fail(display = "read_dirents failed with status {:?}", _0)]
+    #[fail(display = "`read_dirents` failed with status {:?}", _0)]
     ReadDir(#[cause] zx::Status),
+
+    #[fail(display = "`unlink` failed with status {:?}", _0)]
+    Unlink(#[cause] zx::Status),
 }
 
 /// An error encountered while decoding a single directory entry.
 #[derive(Debug, PartialEq, Eq, Fail)]
-pub enum DirentDecodeError {
+pub enum DecodeDirentError {
     #[fail(display = "an entry extended past the end of the buffer")]
     BufferOverrun,
 
@@ -82,7 +87,7 @@ impl DirEntry {
 
 /// Returns a Vec of all non-directory nodes and all empty directory nodes in the given directory
 /// proxy. The returned entries will not include ".".
-pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, failure::Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
 
@@ -100,9 +105,15 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
     // Handle a single directory at a time, emitting leaf nodes and queueing up subdirectories for
     // later iterations.
     while let Some(entry) = directories.pop_front() {
-        let (subdir, subdir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (subdir, subdir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-        dir.open(flags, 0, &entry.name, ServerEnd::new(subdir_server_end.into_channel()))?;
+        dir.open(
+            flags,
+            MODE_TYPE_DIRECTORY,
+            &entry.name,
+            ServerEnd::new(subdir_server.into_channel()),
+        )
+        .map_err(|e| Error::Fidl("open", e))?;
 
         let subentries = readdir(&subdir).await?;
 
@@ -127,19 +138,22 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
 
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
 /// returned entries will not include "." or nodes from any subdirectories.
-pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, ReadDirError> {
+pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let mut entries = vec![];
 
     loop {
-        let (status, buf) = dir.read_dirents(MAX_BUF).await.map_err(ReadDirError::Fidl)?;
-        zx::Status::ok(status).map_err(ReadDirError::ReadDir)?;
+        let (status, buf) = dir
+            .read_dirents(MAX_BUF)
+            .await
+            .map_err(|e| Error::Fidl("read_dirents", e))?;
+        zx::Status::ok(status).map_err(Error::ReadDir)?;
 
         if buf.is_empty() {
             break;
         }
 
         for entry in parse_dir_entries(&buf) {
-            let entry = entry.map_err(ReadDirError::Decode)?;
+            let entry = entry.map_err(Error::DecodeDirent)?;
             if entry.name != "." {
                 entries.push(entry);
             }
@@ -151,7 +165,7 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, ReadDirError
     Ok(entries)
 }
 
-fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>> {
+fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentError>> {
     #[repr(C, packed)]
     struct Dirent {
         /// The inode number of the entry.
@@ -170,7 +184,7 @@ fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>>
     while !buf.is_empty() {
         // Don't read past the end of the buffer.
         if DIRENT_SIZE > buf.len() {
-            entries.push(Err(DirentDecodeError::BufferOverrun));
+            entries.push(Err(DecodeDirentError::BufferOverrun));
             return entries;
         }
 
@@ -187,7 +201,7 @@ fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>>
 
             // Don't read past the end of the buffer.
             if size > rest.len() {
-                entries.push(Err(DirentDecodeError::BufferOverrun));
+                entries.push(Err(DecodeDirentError::BufferOverrun));
                 return entries;
             }
 
@@ -195,7 +209,7 @@ fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>>
             buf = &rest[size..];
             match String::from_utf8(rest[..size].to_vec()) {
                 Ok(name) => Ok(DirEntry { name, kind: kind.into() }),
-                Err(err) => Err(DirentDecodeError::InvalidUtf8(err.utf8_error())),
+                Err(err) => Err(DecodeDirentError::InvalidUtf8(err.utf8_error())),
             }
         };
 
@@ -203,6 +217,54 @@ fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>>
     }
 
     entries
+}
+
+const DIR_FLAGS: u32 = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+    | fidl_fuchsia_io::OPEN_RIGHT_READABLE
+    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+
+/// Removes a directory and all of its children. `name` must be a subdirectory of `root_dir`.
+///
+/// The async analogue of `std::fs::remove_dir_all`.
+pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Result<(), Error> {
+    let (dir, dir_server) =
+        fidl::endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+    root_dir
+        .open(DIR_FLAGS, MODE_TYPE_DIRECTORY, name, ServerEnd::new(dir_server.into_channel()))
+        .map_err(|e| Error::Fidl("open", e))?;
+    remove_dir_contents(dir).await?;
+    let s = root_dir.unlink(name).await.map_err(|e| Error::Fidl("unlink", e))?;
+    zx::Status::ok(s).map_err(Error::Unlink)?;
+    Ok(())
+}
+
+// Returns a `BoxFuture` instead of being async because async doesn't support recursion.
+fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Error>> {
+    let fut = async move {
+        for dirent in readdir(&dir).await? {
+            match dirent.kind {
+                DirentKind::Directory => {
+                    let (subdir, subdir_server) =
+                        fidl::endpoints::create_proxy::<DirectoryMarker>()
+                            .expect("failed to create proxy");
+                    dir.open(
+                        DIR_FLAGS,
+                        MODE_TYPE_DIRECTORY,
+                        &dirent.name,
+                        ServerEnd::new(subdir_server.into_channel()),
+                    )
+                    .map_err(|e| Error::Fidl("open", e))?;
+                    remove_dir_contents(subdir).await?;
+                }
+                _ => {}
+            }
+            let s =
+                dir.unlink(&dirent.name).await.map_err(|e| Error::Fidl("unlink", e))?;
+            zx::Status::ok(s).map_err(Error::Unlink)?;
+        }
+        Ok(())
+    };
+    Box::pin(fut)
 }
 
 #[cfg(test)]
@@ -213,7 +275,10 @@ mod tests {
         fuchsia_vfs_pseudo_fs::{
             directory::entry::DirectoryEntry, file::simple::read_only_str, pseudo_directory,
         },
+        io_util,
         proptest::prelude::*,
+        std::path::Path,
+        tempfile::TempDir,
     };
 
     proptest! {
@@ -272,7 +337,7 @@ mod tests {
         assert_eq!(
             parse_dir_entries(buf),
             vec![
-                Err(DirentDecodeError::InvalidUtf8(expected_err)),
+                Err(DecodeDirentError::InvalidUtf8(expected_err)),
                 Ok(DirEntry { name: "okay".to_string(), kind: DirentKind::File })
             ]
         );
@@ -292,7 +357,7 @@ mod tests {
             't' as u8, 'e' as u8, 's' as u8, 't' as u8,
         ];
 
-        assert_eq!(parse_dir_entries(buf), vec![Err(DirentDecodeError::BufferOverrun)]);
+        assert_eq!(parse_dir_entries(buf), vec![Err(DecodeDirentError::BufferOverrun)]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -329,29 +394,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir_recursive() {
-        let (dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        fasync::spawn(async move {
-            let mut dir = pseudo_directory! {
-                "a" => read_only_str(|| Ok("".into())),
-                "b" => read_only_str(|| Ok("".into())),
-                "emptydir" => pseudo_directory! { },
-                "subdir" => pseudo_directory! {
-                    "subsubdir" => pseudo_directory! {
-                        "a" => read_only_str(|| Ok("".into())),
-                        "emptydir" => pseudo_directory! { },
-                    },
-                },
-            };
-            dir.open(
-                fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-                0,
-                &mut std::iter::empty(),
-                ServerEnd::new(server_end.into_channel()),
-            );
-            dir.await;
-            unreachable!();
-        });
-
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let dir = create_nested_dir(&tempdir).await;
         let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
         assert_eq!(
             entries,
@@ -359,10 +403,142 @@ mod tests {
                 build_direntry("a", DirentKind::File),
                 build_direntry("b", DirentKind::File),
                 build_direntry("emptydir", DirentKind::Directory),
+                build_direntry("subdir/a", DirentKind::File),
                 build_direntry("subdir/subsubdir/a", DirentKind::File),
                 build_direntry("subdir/subsubdir/emptydir", DirentKind::Directory),
             ]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_remove_dir_recursive() {
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            remove_dir_recursive(&dir, "emptydir").await.expect("remove_dir_recursive to succeed");
+            let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("a", DirentKind::File),
+                    build_direntry("b", DirentKind::File),
+                    build_direntry("subdir/a", DirentKind::File),
+                    build_direntry("subdir/subsubdir/a", DirentKind::File),
+                    build_direntry("subdir/subsubdir/emptydir", DirentKind::Directory),
+                ]
+            );
+        }
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            remove_dir_recursive(&dir, "subdir").await.expect("remove_dir_recursive to succeed");
+            let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("a", DirentKind::File),
+                    build_direntry("b", DirentKind::File),
+                    build_direntry("emptydir", DirentKind::Directory),
+                ]
+            );
+        }
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            let subdir = io_util::open_directory(
+                &dir,
+                &Path::new("subdir"),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            )
+            .expect("could not open subdir");
+            remove_dir_recursive(&subdir, "subsubdir")
+                .await
+                .expect("remove_dir_recursive to succeed");
+            let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("a", DirentKind::File),
+                    build_direntry("b", DirentKind::File),
+                    build_direntry("emptydir", DirentKind::Directory),
+                    build_direntry("subdir/a", DirentKind::File),
+                ]
+            );
+        }
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            let subsubdir = io_util::open_directory(
+                &dir,
+                &Path::new("subdir/subsubdir"),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            )
+            .expect("could not open subsubdir");
+            remove_dir_recursive(&subsubdir, "emptydir")
+                .await
+                .expect("remove_dir_recursive to succeed");
+            let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("a", DirentKind::File),
+                    build_direntry("b", DirentKind::File),
+                    build_direntry("emptydir", DirentKind::Directory),
+                    build_direntry("subdir/a", DirentKind::File),
+                    build_direntry("subdir/subsubdir/a", DirentKind::File),
+                ]
+            );
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_remove_dir_recursive_errors() {
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            let res = remove_dir_recursive(&dir, "baddir").await;
+            let res = res.expect_err("remove_dir did not fail");
+            match res {
+                Error::Fidl("read_dirents", fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
+                | Error::Fidl("read_dirents", fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {}
+                _ => panic!("unexpected error {:?}", res),
+            }
+        }
+        {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            let res = remove_dir_recursive(&dir, ".").await;
+            let expected: Result<(), Error> = Err(Error::Unlink(zx::Status::UNAVAILABLE));
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected));
+        }
+    }
+
+    async fn create_nested_dir(tempdir: &TempDir) -> DirectoryProxy {
+        let dir = io_util::open_directory_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open tmp dir");
+        io_util::create_sub_directories(&dir, Path::new("emptydir"))
+            .expect("failed to create emptydir");
+        io_util::create_sub_directories(&dir, Path::new("subdir/subsubdir/emptydir"))
+            .expect("failed to create subdir/subsubdir/emptydir");
+        create_file(&dir, "a").await;
+        create_file(&dir, "b").await;
+        create_file(&dir, "subdir/a").await;
+        create_file(&dir, "subdir/subsubdir/a").await;
+        dir
+    }
+
+    async fn create_file(dir: &DirectoryProxy, path: &str) {
+        io_util::open_file(
+            dir,
+            Path::new(path),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+        )
+        .expect(&format!("failed to create {}", path));
     }
 
     fn build_direntry(name: &str, kind: DirentKind) -> DirEntry {

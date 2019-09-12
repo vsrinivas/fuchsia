@@ -254,7 +254,7 @@ pub enum ListNeedsError {
     Io(#[cause] FuchsiaIoError),
 
     #[fail(display = "could not read needs dir: {}", _0)]
-    ReadDir(#[cause] files_async::ReadDirError),
+    ReadDir(#[cause] files_async::Error),
 
     #[fail(display = "unable to parse a need blob id: {}", _0)]
     ParseError(#[cause] BlobIdParseError),
