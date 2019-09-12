@@ -1087,7 +1087,7 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
 
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                           sb_->Info().integrity_start_block);
+                                           JournalStartBlock(sb_->Info()));
   return ZX_OK;
 }
 
