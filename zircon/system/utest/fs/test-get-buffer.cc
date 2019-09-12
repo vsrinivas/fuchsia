@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fs/connection.h>
 #include <fs/managed-vfs.h>
 #include <fuchsia/io/c/fidl.h>
@@ -11,9 +13,74 @@
 #include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 
+#include <atomic>
+
 #include "filesystems.h"
 
 namespace {
+
+class ThreadSafeManagedVfs : public fs::Vfs {
+ public:
+  ThreadSafeManagedVfs(async_dispatcher_t* dispatcher) :
+    Vfs(dispatcher), is_shutting_down_(false) {
+  }
+  ~ThreadSafeManagedVfs() {}
+  void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_) {
+    zx_status_t status =
+        async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
+          fbl::AutoLock<fbl::Mutex> lock(&lock_);
+          ZX_DEBUG_ASSERT(!shutdown_handler_);
+          shutdown_handler_ = std::move(closure);
+          is_shutting_down_.store(true);
+
+          UninstallAll(ZX_TIME_INFINITE);
+
+          // Signal the teardown on channels in a way that doesn't potentially
+          // pull them out from underneath async callbacks.
+          for (auto& c : connections_) {
+            c.AsyncTeardown();
+          }
+          CheckForShutdownComplete();
+        });
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+  }
+ private:
+  // Must be called with lock_ held.
+  void CheckForShutdownComplete() __TA_REQUIRES(lock_) {
+    if (is_shutting_down_.load() && connections_.is_empty()) {
+      shutdown_task_.Post(dispatcher());
+    }
+  }
+
+  void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status) __TA_EXCLUDES(lock_) {
+    fbl::AutoLock<fbl::Mutex> lock(&lock_);
+    auto handler = std::move(shutdown_handler_);
+    handler(status);
+  }
+
+  void RegisterConnection(fbl::unique_ptr<fs::Connection> connection) override __TA_EXCLUDES(lock_) {
+    fbl::AutoLock<fbl::Mutex> lock(&lock_);
+    connections_.push_back(std::move(connection));
+  }
+  void UnregisterConnection(fs::Connection* connection) override __TA_EXCLUDES(lock_) {
+    fbl::AutoLock<fbl::Mutex> lock(&lock_);
+    connections_.erase(*connection);
+    CheckForShutdownComplete();
+  }
+
+  // This has to be const, per fs::Vfs's signature, so we use an atomic
+  // boolean so reading it is still both const and serialized.
+  virtual bool IsTerminating() const override {
+    return is_shutting_down_.load();
+  }
+
+  std::atomic_bool is_shutting_down_;
+  fbl::Mutex lock_;
+
+  fbl::DoublyLinkedList<fbl::unique_ptr<fs::Connection>> connections_ __TA_GUARDED(lock_);
+  async::TaskMethod<ThreadSafeManagedVfs, &ThreadSafeManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_) {this};
+  ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);
+};
 
 bool TestConnectionRights() {
   BEGIN_TEST;
@@ -21,7 +88,7 @@ bool TestConnectionRights() {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  fbl::unique_ptr<fs::ManagedVfs> vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
+  fbl::unique_ptr<ThreadSafeManagedVfs> vfs = std::make_unique<ThreadSafeManagedVfs>(loop.dispatcher());
 
   // Set up a vnode for the root directory
   class TestVNode : public fs::Vnode {
@@ -101,7 +168,7 @@ bool TestConnectionRights() {
     EXPECT_EQ(status, ZX_OK);
     sync_completion_signal(&completion);
   });
-  sync_completion_wait(&completion, zx::sec(5).get());
+  sync_completion_wait(&completion, zx::time::infinite().get());
   loop.Shutdown();
 
   END_TEST;
