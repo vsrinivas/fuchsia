@@ -76,6 +76,10 @@ class DisplayManager {
   // Enables display vsync events and sets the callback which handles them.
   bool EnableVsync(VsyncCallback vsync_cb);
 
+  static void SetDisplayColorConversion(
+      Display* display, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+      const ColorTransform& transform);
+
  private:
   void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                const zx_packet_signal_t* signal);

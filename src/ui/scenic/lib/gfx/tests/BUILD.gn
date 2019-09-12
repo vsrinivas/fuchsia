@@ -19,6 +19,7 @@ source_set("mocks") {
   sources = [
     "frame_scheduler_mocks.cc",
     "frame_scheduler_mocks.h",
+    "mock_display_controller.h",
     "mocks.cc",
     "mocks.h",
   ]

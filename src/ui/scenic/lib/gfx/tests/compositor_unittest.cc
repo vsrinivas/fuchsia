@@ -6,15 +6,27 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <zircon/syscalls.h>
 
+#include <thread>
+
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/gfx/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
+struct ChannelPair {
+  zx::channel server;
+  zx::channel client;
+};
 
+ChannelPair CreateChannelPair() {
+  ChannelPair c;
+  FXL_CHECK(ZX_OK == zx::channel::create(0, &c.server, &c.client));
+  return c;
+}
 class CompositorTest : public SessionTest {
  public:
   CompositorTest() {}
@@ -54,6 +66,14 @@ class CompositorTest : public SessionTest {
     resource_linker_ = std::make_unique<ResourceLinker>();
     view_linker_ = std::make_unique<ViewLinker>();
 
+    ChannelPair device_channel = CreateChannelPair();
+    ChannelPair controller_channel = CreateChannelPair();
+
+    mock_display_controller_.Bind(std::move(device_channel.server),
+                                  std::move(controller_channel.server));
+
+    display_controller_.Bind(std::move(controller_channel.client));
+
     // Apply to the session context;
     session_context.view_linker = view_linker_.get();
     session_context.resource_linker = resource_linker_.get();
@@ -71,6 +91,11 @@ class CompositorTest : public SessionTest {
   }
 
   DisplayManager* display_manager() const { return display_manager_.get(); }
+
+ protected:
+  fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller;
+  MockDisplayController mock_display_controller_;
+  fuchsia::hardware::display::ControllerSyncPtr display_controller_;
 
  private:
   std::unique_ptr<Sysmem> sysmem_;
@@ -103,6 +128,47 @@ TEST_F(CompositorTest, Validation) {
   ASSERT_TRUE(transform.postoffsets == postoffsets);
 }
 
+TEST_F(CompositorTest, ColorConversionConfigChecking) {
+  ColorTransform transform;
+  Display* display = display_manager()->default_display();
+
+  uint32_t check_config_call_count = 0;
+  bool should_discard_config = false;
+  auto check_config_fn = [&](bool discard, fuchsia::hardware::display::ConfigResult* result,
+                            std::vector<fuchsia::hardware::display::ClientCompositionOp>* ops) {
+    *result = fuchsia::hardware::display::ConfigResult::UNSUPPORTED_CONFIG;
+
+    fuchsia::hardware::display::ClientCompositionOp op;
+    op.opcode = fuchsia::hardware::display::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION;
+    ops->push_back(op);
+    check_config_call_count++;
+    if (discard) {
+      should_discard_config = true;
+    }
+  };
+  mock_display_controller_.set_check_config_fn(check_config_fn);
+
+  std::thread client([display_controller = std::move(display_controller_), display,
+                      transform]() mutable {
+    DisplayManager::SetDisplayColorConversion(display, display_controller, transform);
+  });
+
+  // Wait for |SetDisplayColorConversion|.
+  mock_display_controller_.WaitForMessage();
+  
+  // Wait for |CheckConfig|.
+  mock_display_controller_.WaitForMessage();
+  
+  // Wait for |CheckConfig|.
+  mock_display_controller_.WaitForMessage();
+
+  client.join();
+
+  // The function check_config_fn should be called twice, once for the
+  // initial config check, and once with the |discard| variable set to true.
+  EXPECT_EQ(check_config_call_count, 2U);
+  EXPECT_TRUE(should_discard_config);
+}
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

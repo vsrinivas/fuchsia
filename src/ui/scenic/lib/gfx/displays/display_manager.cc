@@ -224,19 +224,50 @@ void DisplayManager::Flip(Display* display, uint64_t buffer, uint64_t render_fin
   FXL_CHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 }
 
-void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTransform& transform) {
+void DisplayManager::SetDisplayColorConversion(
+    Display* display, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+    const ColorTransform& transform) {
   FXL_CHECK(display);
   uint64_t display_id = display->display_id();
 
-  // For testing purposes, display_controller_ can be null
-  if (display_controller_) {
-    zx_status_t status = display_controller_->SetDisplayColorConversion(
+  // For testing purposes, display_controller can be null
+  if (display_controller) {
+    // Attempt to apply color conversion.
+    zx_status_t status = display_controller->SetDisplayColorConversion(
         display_id, transform.preoffsets, transform.matrix, transform.postoffsets);
-    FXL_CHECK(status == ZX_OK) << "SetDisplayColorConversion failed";
+    FXL_CHECK(status == ZX_OK) << "DisplayManager:SetDisplayColorConversion failed";
+
+    // Now check the config.
+    fuchsia::hardware::display::ConfigResult result;
+    std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+    display_controller->CheckConfig(/*discard=*/false, &result, &ops);
+
+    bool client_color_conversion_required = false;
+    if (result != fuchsia::hardware::display::ConfigResult::OK) {
+      client_color_conversion_required = true;
+    }
+
+    for (const auto& op : ops) {
+      if (op.opcode ==
+          fuchsia::hardware::display::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION) {
+        client_color_conversion_required = true;
+        break;
+      }
+    }
+
+    if (client_color_conversion_required) {
+      // Clear config by calling |CheckConfig| once more with "discard" set to true.
+      display_controller->CheckConfig(/*discard=*/true, &result, &ops);
+      // TODO (24591): Implement scenic software fallback for color correction.
+    }
   }
 
   // For testing and future-proofing purposes.
   display->set_color_transform(transform);
+}
+
+void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTransform& transform) {
+  SetDisplayColorConversion(display, display_controller_, transform);
 }
 
 bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
