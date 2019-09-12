@@ -170,6 +170,7 @@ sdk_molecule("core_lib") {
   visibility = [ ":*" ]
   deps = [
     "//sdk/lib/fidl/cpp:cpp_sdk",
+    "//sdk/lib/media/cpp:cpp_sdk",
     "//sdk/lib/svc:svc_sdk",
     "//sdk/lib/sys/cpp:cpp_sdk",
     "//sdk/lib/sys/cpp/testing:unit_sdk",
