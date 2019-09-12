@@ -19,6 +19,7 @@ namespace ledger {
 HeadsChildrenManager::HeadsChildrenManager(inspect_deprecated::Node* heads_node,
                                            InspectablePage* inspectable_page)
     : heads_node_(heads_node), inspectable_page_(inspectable_page) {
+  token_manager_.set_on_empty([this] { CheckEmpty(); });
   inspected_heads_.set_on_empty([this] { CheckEmpty(); });
 }
 
@@ -28,7 +29,9 @@ void HeadsChildrenManager::set_on_empty(fit::closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
 }
 
-bool HeadsChildrenManager::IsEmpty() { return inspected_heads_.empty(); }
+bool HeadsChildrenManager::IsEmpty() {
+  return token_manager_.IsEmpty() && inspected_heads_.empty();
+}
 
 void HeadsChildrenManager::CheckEmpty() {
   if (on_empty_callback_ && IsEmpty()) {
@@ -39,14 +42,16 @@ void HeadsChildrenManager::CheckEmpty() {
 void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
   fit::function<void(std::set<std::string>)> call_ensured_callback =
       callback::EnsureCalled(std::move(callback), std::set<std::string>());
+  ExpiringToken token = token_manager_.CreateToken();
   inspectable_page_->NewInspection(
-      [callback = std::move(call_ensured_callback)](storage::Status status, ExpiringToken token,
+      [heads_children_manager_token = std::move(token),
+       callback = std::move(call_ensured_callback)](storage::Status status, ExpiringToken token,
                                                     ActivePageManager* active_inspectable_page) {
         if (status != storage::Status::OK) {
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
           FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
-          callback({});
+          callback(std::set<std::string>{});
           return;
         }
         FXL_DCHECK(active_inspectable_page);
@@ -56,7 +61,7 @@ void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> c
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
           FXL_LOG(WARNING) << "GetHeads returned non-OK status: " << status;
-          callback({});
+          callback(std::set<std::string>{});
           return;
         }
         std::set<std::string> head_display_names;
@@ -71,7 +76,7 @@ void HeadsChildrenManager::Attach(std::string name, fit::function<void(fit::clos
   storage::CommitId head;
   if (!CommitDisplayNameToCommitId(name, &head)) {
     FXL_LOG(WARNING) << "Inspect passed invalid head display name: " << name;
-    callback({});
+    callback([] {});
     return;
   }
   auto it = inspected_heads_.find(head);

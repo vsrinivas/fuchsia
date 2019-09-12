@@ -202,6 +202,7 @@ source_set("unittests") {
     "delaying_facade_unittest.cc",
     "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",
+    "heads_children_manager_unittest.cc",
     "inspected_commit_unittest.cc",
     "ledger_manager_unittest.cc",
     "ledger_repository_factory_impl_unittest.cc",
