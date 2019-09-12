@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
-#define GARNET_LIB_MEDIA_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
+#ifndef SRC_MEDIA_LIB_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
+#define SRC_MEDIA_LIB_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
 
 #include "src/lib/files/unique_fd.h"
 
@@ -165,4 +165,4 @@ class RawVideoWriter<false> {
 
 }  // namespace media
 
-#endif  // GARNET_LIB_MEDIA_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
+#endif  // SRC_MEDIA_LIB_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_

@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <fake_codec_adapter.h>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/drm/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/time.h>
+
+#include <gtest/gtest.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
 
@@ -44,7 +44,8 @@ auto CreateDecryptorParams() {
 class CodecImplLifetime : public gtest::RealLoopFixture {
  protected:
   CodecImplLifetime()
-      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToCurrentThread), admission_control_(dispatcher()) {
+      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        admission_control_(dispatcher()) {
     // nothing else to do here
   }
 

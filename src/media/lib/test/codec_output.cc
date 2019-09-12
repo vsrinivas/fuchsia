@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/media/test/codec_output.h>
-
 #include <stdint.h>
+
 #include <memory>
 
 CodecOutput::CodecOutput(uint64_t stream_lifetime_ordinal,

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_OUTPUT_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_OUTPUT_H_
+#ifndef SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_OUTPUT_H_
+#define SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_OUTPUT_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-#include <src/lib/fxl/macros.h>
 #include <memory>
+
+#include <src/lib/fxl/macros.h>
 
 // Each CodecOutput represents a Packet, and the correct associated
 // StreamOutputConstraints for that packet.  Since the CodecClient takes care of
@@ -66,4 +67,4 @@ class CodecOutput {
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecOutput);
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_OUTPUT_H_
+#endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_OUTPUT_H_

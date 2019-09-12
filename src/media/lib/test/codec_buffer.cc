@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/media/test/codec_buffer.h>
-
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-
 #include <stdio.h>
+
+#include <src/lib/fxl/logging.h>
 
 CodecBuffer::CodecBuffer(uint32_t buffer_index, size_t size_bytes)
     : buffer_index_(buffer_index), size_bytes_(size_bytes) {}

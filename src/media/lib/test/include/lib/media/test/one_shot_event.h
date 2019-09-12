@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_ONE_SHOT_EVENT_H_
+#define SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_ONE_SHOT_EVENT_H_
 
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 
 class OneShotEvent {
-public:
+ public:
   OneShotEvent();
 
   // Signal any current or future callers of Wait().  Cannot be undone.
@@ -21,6 +22,9 @@ public:
   // Passing zx::time::infinite() isn't recommended for tests, since timing out
   // at infra level is more difficult to diagnose.
   void Wait(zx::time just_fail_deadline = zx::time::infinite());
-private:
+
+ private:
   zx::event event_;
 };
+
+#endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_ONE_SHOT_EVENT_H_

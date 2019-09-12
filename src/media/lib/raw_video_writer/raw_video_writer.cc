@@ -4,13 +4,14 @@
 
 #include "raw_video_writer.h"
 
-#include <atomic>
 #include <endian.h>
 #include <fcntl.h>
+#include <unistd.h>
+
+#include <atomic>
 #include <iomanip>
 #include <optional>
 #include <string>
-#include <unistd.h>
 
 namespace media {
 

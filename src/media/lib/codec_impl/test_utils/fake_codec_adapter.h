@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_
-#define GARNET_LIB_MEDIA_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_
+#ifndef SRC_MEDIA_LIB_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_
+#define SRC_MEDIA_LIB_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_
 
 #include <lib/media/codec_impl/codec_adapter.h>
 
@@ -52,4 +52,4 @@ class FakeCodecAdapter : public CodecAdapter {
       buffer_collection_constraints_[kPortCount];
 };
 
-#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_
+#endif  // SRC_MEDIA_LIB_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_

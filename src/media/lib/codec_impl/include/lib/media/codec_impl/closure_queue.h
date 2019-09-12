@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
-#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/synchronization/thread_annotations.h>
+#include <threads.h>
 
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <threads.h>
+
+#include <src/lib/fxl/synchronization/thread_annotations.h>
 
 class ClosureQueue {
  public:
@@ -78,4 +79,4 @@ class ClosureQueue {
   std::shared_ptr<Impl> impl_;
 };
 
-#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_

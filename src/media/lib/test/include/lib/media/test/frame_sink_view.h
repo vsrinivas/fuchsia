@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_
-#define GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_
+#ifndef SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_
+#define SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -56,4 +56,4 @@ class FrameSinkView : public scenic::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameSinkView);
 };
 
-#endif  // GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_
+#endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_VIEW_H_

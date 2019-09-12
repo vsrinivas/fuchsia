@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_
+#ifndef SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_BUFFER_H_
+#define SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_BUFFER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-
-#include <stddef.h>
-#include <stdint.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include <memory>
 
 class CodecBuffer {
@@ -61,4 +61,4 @@ class CodecBuffer {
   uint8_t* base_ = nullptr;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_
+#endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_BUFFER_H_

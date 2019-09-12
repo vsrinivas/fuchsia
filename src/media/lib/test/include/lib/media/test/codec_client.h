@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
-#define GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
-
-#include "codec_buffer.h"
-#include "codec_output.h"
+#ifndef SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
+#define SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <list>
+
+#include "codec_buffer.h"
+#include "codec_output.h"
 
 // This class is just _a_ codec client, and should be read as an example only,
 // and probably not a fully complete example either.  This class is just here
@@ -43,7 +42,8 @@ class CodecClient {
   // we want to be very sure that we'll be posting to the correct loop to send
   // messages using that loop's single thread, as ProxyController doesn't have
   // a lock_ in it.
-  CodecClient(async::Loop* loop, thrd_t loop_thread, fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem);
+  CodecClient(async::Loop* loop, thrd_t loop_thread,
+              fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem);
   ~CodecClient();
 
   // Separate from Start() because we don't wan this class to handle the Codec
@@ -303,4 +303,4 @@ class CodecClient {
   CodecClient& operator=(CodecClient&&) = delete;
 };
 
-#endif  // GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
+#endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_
