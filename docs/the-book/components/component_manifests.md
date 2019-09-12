@@ -1,4 +1,4 @@
-# Component manifests
+# Component manifests {#component-manifests}
 
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document
@@ -14,23 +14,23 @@ Component declarations contain:
 - [Freeform data ("facets")](#facet-metadata) which is ignored by the component
   framework but can be interpreted by third parties.
 
-## Manifests and declarations
+## Manifests and declarations {#manifests-and-declarations}
 
 This section explains the distinction between component manifests, component
 manifest sources, and component declarations.
 
-### Component manifest
+### Component manifest {#component-manifest}
 
-A *component manifest* is a file that encodes a [component
-declaration](#component-declaration), usually distributed as part of a
-[package](/sdk/docs/packages.md). The binary format is a JSON file mapping
-one-to-one onto the component declaration, by convention ending in a `.cm`
+A *component manifest* is a file that encodes a
+ [component declaration](#component-declaration), usually distributed as part of a
+[package](/docs/development/sdk/documentation/packages.md). The binary format is a JSON file mapping
+one-to-one onto the component declaration, by convention ending in a `.cmx`
 extension.
 
 A [fuchsia-pkg URL](/docs/the-book/package_url.md) with a component manifest
 fragment identifies a component in a package.
 
-### Component manifest source
+### Component manifest source {#component-manifest-source}
 
 A *component manifest source* is a file that encodes part of a component
 manifest. Component manifest sources are written in *CML* (*component manifest
@@ -42,7 +42,7 @@ examples of the CML syntax are contained in this document: see
 Component manifest sources are compiled to [component
 manifests](#component-manifest) by the [`cmc`](/src/sys/cmc) tool.
 
-### Component declaration
+### Component declaration {#component-declaration}
 
 The [`ComponentDecl`](/sdk/fidl/fuchsia.sys2/decls/component_decl.fidl) FIDL
 table is a *component declaration*. Component declarations are used by the
@@ -61,13 +61,13 @@ omitted.
 
 See also: [ELF Runner](elf_runner.md)
 
-### Capability routing
+### Capability routing {#capability-routing}
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
 routing, see [_Life of a service open_](life_of_a_service_open.md)
 
-#### Capability types
+#### Capability types {#capability-types}
 
 The following capabilities can be routed:
 
@@ -76,7 +76,7 @@ The following capabilities can be routed:
 - `directory`: A filesystem directory.
 - `storage`: A filesystem directory that is isolated to the component using it.
 
-#### Routing terminology
+#### Routing terminology {#routing-terminology}
 
 Component manifests declare how capabilities are routed between components. The
 language of capability routing consists of the following three keywords:
@@ -109,7 +109,7 @@ component instance's namespace:
   capability that was `exposed` to it by its child. This restriction exists to
   prevent dependency cycles between parent and child.
 
-#### Framework services
+#### Framework services {#framework-services}
 
 A *framework service* is a service provided by the component framework. Because
 the component framework itself is the provider of the service, any component may
@@ -119,7 +119,7 @@ services:
 - [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component
   to manage and bind to its children. Scoped to the component's realm.
 
-#### Capability paths
+#### Capability paths {#capability-paths}
 
 Service and directory capabilities are identified by paths.  A path consists of
 a sequence of path components, starting with and separated by `/`, where each
@@ -135,7 +135,7 @@ context:
   the path by which the capability is being `offered` or `exposed` to another
   component.
 
-#### Storage capabilities
+#### Storage capabilities {#storage-capabilities}
 
 Storage capabilities are not directly provided from a component instance's
 [outgoing directory](/docs/development/abi/system.md#outgoing-directory), but
@@ -146,7 +146,7 @@ offering storage capabilities.
 
 Storage capabilities cannot be [exposed](#expose).
 
-#### Storage types
+#### Storage types {#storage-types}
 
 Storage capabilities are identified by types. Valid storage types are `data`,
 `cache`, and `meta`, each having different semantics:
@@ -188,7 +188,7 @@ The routing sequence is:
 A working example of capability routing can be found at
 [//examples/components/routing](/examples/components/routing).
 
-### Facet metadata
+### Facet metadata {#facet-metadata}
 
 *Facets* are metadata that is ignored by the component framework itself, but may
 be interpreted by interested components. For example, a module component might

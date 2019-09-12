@@ -14,15 +14,15 @@ tools.
 
 ## Packaging a tool with the core SDK
 
-The core SDK will not contain only:
+The core SDK will contain:
 
   * The tool binary itself.
 
-  * The [dev_finder](/sdk/docs/device_discovery.md)
+  * The [dev_finder](/docs/development/sdk/documentation/device_discovery.md)
     tool which can enumerate Fuchsia devices to get their names.
 
   * A document in
-    [//sdk/docs](/sdk/docs/)
+    [//docs/development/sdk/documentation](/docs/development/sdk/documentation)
     describing the contract of this tool and how to connect it to the target
     system. The target audience of this document is people writing integration
     scripts rather than being an end-user-friendly “how-to” (debugger example).
@@ -55,7 +55,7 @@ launch scripts can be removed.
 Tool authors are responsible for:
 
   * Writing the tool with the appropriate interface.
-  * Providing documentation on this interface in //sdk/docs.
+  * Providing documentation on this interface in //docs/development/sdk/documentation.
   * Currently please reach out to get bugs filed on individual SDKs. We are
     working on a better process for this (DX-1066).
 
