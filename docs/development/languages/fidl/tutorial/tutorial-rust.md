@@ -23,12 +23,7 @@ introduction section, by opening
 
 
 ```fidl
-library fidl.examples.echo;
-
-[Discoverable]
-protocol Echo {
-    EchoString(string? value) -> (string? response);
-};
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/services/echo.fidl" adjust_indentation="auto" %}
 ```
 
 ## Build
@@ -86,11 +81,7 @@ Now let's go through the code and see how this works.
 Here are the import declarations in the Rust server implementation:
 
 ```rust
-use failure::{Error, ResultExt};
-use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_async as fasync;
-use futures::prelude::*;
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/echo_server_rust/src/main.rs" region_tag="import_declarations" adjust_indentation="auto" %}
 ```
 
 -   `failure` provides conveniences for error handling, including a standard
@@ -131,25 +122,7 @@ use futures::prelude::*;
 Everything starts with main():
 
 ```rust
-#[fasync::run_singlethreaded]
-fn main() -> Result<(), Error> {
-    let quiet = std::env::args().any(|arg| arg == "-q");
-
-    let mut fs = ServiceFs::new_local()
-    fs.dir("svc")
-      .add_fidl_service(IncomingService::Echo);
-
-    fs.take_and_serve_directory_handle()?;
-
-    const MAX_CONCURRENT: usize = 10_000;
-    let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Echo(stream)| {
-        run_echo_server(stream, quiet)
-            .unwrap_or_else(|e| println!("{:?}", e))
-    });
-
-    await!(fut);
-    Ok(())
-}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/echo_server_rust/src/main.rs" region_tag="main" adjust_indentation="auto" %}
 ```
 
 `main` creates a `ServiceFs` and asynchronously runs it to completion.
@@ -202,20 +175,7 @@ multiple client connections concurrently.
 ### `fn run_echo_server`
 
 ```rust
-fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
-    while let Some(EchoRequest::EchoString { value, responder }) =
-        await!(stream.try_next()).context("error running echo server")?
-    {
-        if !quiet {
-            println!("Received echo request for string {:?}", value);
-        }
-        responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-        if !quiet {
-            println!("echo response sent successfully");
-        }
-    }
-    Ok(())
-}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/echo_server_rust/src/main.rs" region_tag="run_echo_server" adjust_indentation="auto" %}
 ```
 
 In `run_echo_server`, we serve all requests for a particular client connection
@@ -291,30 +251,7 @@ Here is the summary of how the client makes a connection to the echo service.
 1.  **Run:** We run the future to completion on an asynchronous task executor.
 
 ```rust
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    #[derive(StructOpt, Debug)]
-    #[structopt(name = "echo_client_rust")]
-    struct Opt {
-        #[structopt(long = "server", help = "URL of echo server",
-                    default_value = "fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx")]
-        server_url: String,
-    }
-
-    // Launch the server and connect to the echo service.
-    let Opt { server_url } = Opt::from_args();
-
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let app = launch(&launcher, server_url, None)
-                      .context("Failed to launch echo service")?;
-
-    let echo = app.connect_to_service::<EchoMarker>()
-       .context("Failed to connect to echo service")?;
-
-    let res = await!(echo.echo_string(Some("hello world!")))?;
-    println!("response: {:?}", res);
-    Ok(())
-}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/echo_client_rust/src/main.rs" region_tag="main" adjust_indentation="auto" %}
 ```
 
 ### Run the sample

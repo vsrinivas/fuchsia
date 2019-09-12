@@ -10,6 +10,7 @@ use fidl_fidl_examples_echo::EchoMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launcher, launch};
 
+// [START main]
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     #[allow(dead_code)] // FIXME(cramertj) this shouldn't be required
@@ -40,3 +41,4 @@ async fn main() -> Result<(), Error> {
     println!("response: {:?}", res);
     Ok(())
 }
+// [END main]

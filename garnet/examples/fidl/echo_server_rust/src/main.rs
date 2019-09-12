@@ -4,12 +4,15 @@
 
 #![feature(async_await)]
 
+// [START import_declarations]
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_async as fasync;
 use futures::prelude::*;
+// [END import_declarations]
 
+// [START run_echo_server]
 async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
     while let Some(EchoRequest::EchoString { value, responder }) =
         stream.try_next().await.context("error running echo server")?
@@ -24,12 +27,14 @@ async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(
     }
     Ok(())
 }
+// [END run_echo_server]
 
 enum IncomingService {
     Echo(EchoRequestStream),
     // ... more services here
 }
 
+// [START main]
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let quiet = std::env::args().any(|arg| arg == "-q");
@@ -49,3 +54,4 @@ async fn main() -> Result<(), Error> {
     fut.await;
     Ok(())
 }
+// [END main]
