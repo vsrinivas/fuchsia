@@ -7,9 +7,7 @@
 use {
     crate::{
         cloud_action_provider::get_cloud_actions,
-        local_action_provider::get_local_actions,
         mod_manager::ModManager,
-        models::Action,
         story_context_store::StoryContextStore,
         story_manager::StoryManager,
         story_storage::{LedgerStorage, MemoryStorage, StoryStorage},
@@ -33,8 +31,6 @@ use {
     fuchsia_syslog::{self as syslog, macros::*},
     futures::prelude::*,
     parking_lot::Mutex,
-    std::collections::HashSet,
-    std::iter::FromIterator,
     std::sync::Arc,
 };
 
@@ -119,16 +115,7 @@ async fn main() -> Result<(), Error> {
         fx_log_err!("Error fetching cloud actions index: {}", e);
         vec![]
     });
-    let local_actions = get_local_actions().await.unwrap_or_else(|e| {
-        fx_log_err!("Error fetching local actions index: {}", e);
-        vec![]
-    });
-    // Remove duplicates by moving both collections through a HashSet
-    let actions_arc = Arc::new(
-        HashSet::<Action>::from_iter(cloud_actions.into_iter().chain(local_actions.into_iter()))
-            .into_iter()
-            .collect::<Vec<Action>>(),
-    );
+    let actions_arc = Arc::new(cloud_actions);
 
     let storage =
         LedgerStorage::new().map(|s| Box::new(s) as Box<dyn StoryStorage>).unwrap_or_else(|_| {
@@ -185,7 +172,12 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, fuchsia_async as fasync};
+    use {
+        super::*,
+        crate::models::Action,
+        fuchsia_async as fasync,
+        std::{collections::HashSet, iter::FromIterator},
+    };
 
     // Verify the logic for removing duplicates
     #[fasync::run_singlethreaded(test)]

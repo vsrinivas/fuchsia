@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(dead_code)]
+
 use crate::indexing::load_module_facet;
 use crate::models::{Action, FuchsiaFulfillment, Parameter};
 use failure::Error;
