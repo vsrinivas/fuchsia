@@ -251,23 +251,7 @@ void SyscallDecoder::StepToReturnAddress() {
   }
 
   thread_observer_->Register(thread_->GetKoid(), this);
-
-  zxdb::BreakpointSettings settings;
-  settings.enabled = true;
-  settings.name = syscall_->name() + "-return";
-  settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
-  settings.type = debug_ipc::BreakpointType::kSoftware;
-  settings.location.address = return_address_;
-  settings.location.type = zxdb::InputLocation::Type::kAddress;
-  settings.scope = zxdb::BreakpointSettings::Scope::kThread;
-  settings.scope_thread = thread_.get();
-  settings.scope_target = thread_->GetProcess()->GetTarget();
-  settings.one_shot = true;
-
-  // Registers a one time breakpoint for this decoder.
-  FXL_VLOG(2) << "Thread " << thread_->GetKoid() << ": creating return value breakpoint for "
-              << syscall_->name() << " at address " << std::hex << return_address_ << std::dec;
-  thread_observer_->CreateNewBreakpoint(settings);
+  thread_observer_->AddExitBreakpoint(thread_.get(), syscall_->name(), return_address_);
 
   // Restarts the stopped thread. When the breakpoint will be reached (at the
   // end of the syscall), LoadSyscallReturnValue will be called.

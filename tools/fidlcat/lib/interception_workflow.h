@@ -48,13 +48,18 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
   virtual ~InterceptingThreadObserver() {}
 
   void Register(int64_t koid, SyscallDecoder* decoder);
+  void AddExitBreakpoint(zxdb::Thread* thread, const std::string& syscall_name, uint64_t address);
 
   void CreateNewBreakpoint(zxdb::BreakpointSettings& settings);
 
  private:
   InterceptionWorkflow* workflow_;
+  std::unordered_set<uint64_t> exit_breakpoints_;
   std::map<int64_t, SyscallDecoder*> breakpoint_map_;
   std::unordered_set<int64_t> threads_in_error_;
+  // By default, the breakpoints at the end of a syscall are put permanently.
+  // To test zxdb one shot breakpoints, you can change this value to true.
+  bool one_shot_breakpoints_ = false;
 };
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {

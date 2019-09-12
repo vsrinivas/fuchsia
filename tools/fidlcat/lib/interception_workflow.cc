@@ -93,12 +93,50 @@ void InterceptingThreadObserver::OnThreadStopped(
     FXL_LOG(INFO) << "Internal error: Thread " << thread->GetKoid()
                   << " stopped on exception with no breakpoint set";
     threads_in_error_.emplace(thread->GetKoid());
+    return;
   }
   thread->Continue();
 }
 
 void InterceptingThreadObserver::Register(int64_t koid, SyscallDecoder* decoder) {
   breakpoint_map_[koid] = decoder;
+}
+
+void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
+                                                   const std::string& syscall_name,
+                                                   uint64_t address) {
+  zxdb::BreakpointSettings settings;
+  if (one_shot_breakpoints_) {
+    settings.enabled = true;
+    settings.name = syscall_name + "-return";
+    settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+    settings.type = debug_ipc::BreakpointType::kSoftware;
+    settings.location.address = address;
+    settings.location.type = zxdb::InputLocation::Type::kAddress;
+    settings.scope = zxdb::BreakpointSettings::Scope::kThread;
+    settings.scope_thread = thread;
+    settings.scope_target = thread->GetProcess()->GetTarget();
+    settings.one_shot = true;
+  } else {
+    if (exit_breakpoints_.find(address) != exit_breakpoints_.end()) {
+      return;
+    }
+
+    exit_breakpoints_.emplace(address);
+
+    settings.enabled = true;
+    settings.name = syscall_name + "-return";
+    settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+    settings.type = debug_ipc::BreakpointType::kSoftware;
+    settings.location.address = address;
+    settings.location.type = zxdb::InputLocation::Type::kAddress;
+    settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
+    settings.scope_target = thread->GetProcess()->GetTarget();
+  }
+
+  FXL_VLOG(2) << "Thread " << thread->GetKoid() << ": creating return value breakpoint for "
+              << syscall_name << " at address " << std::hex << address << std::dec;
+  CreateNewBreakpoint(settings);
 }
 
 void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& settings) {
