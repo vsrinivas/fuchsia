@@ -34,7 +34,7 @@ ObjectHierarchy GetHierarchy(const inspect_deprecated::Tree& tree) {
 }
 
 TEST(Hierarchy, Sorting) {
-  auto tree = inspect_deprecated::Inspector().CreateTree();
+  auto tree = inspect_deprecated::Inspector().CreateTree("test");
   auto& root = tree.GetRoot();
 
   auto string_sort_node = root.CreateChild("string_sort_node");

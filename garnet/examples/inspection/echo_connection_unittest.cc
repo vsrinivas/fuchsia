@@ -21,7 +21,7 @@ class EchoConnectionTest : public gtest::RealLoopFixture {
  public:
   EchoConnectionTest()
       : inspector_(),
-        inspect_tree_(inspector_.CreateTree()),
+        inspect_tree_(inspector_.CreateTree("root")),
         connection_(inspect_tree_.GetRoot().CreateChild("connection"), stats_),
         echo_(),
         binding_(&connection_, echo_.NewRequest().TakeChannel()) {}

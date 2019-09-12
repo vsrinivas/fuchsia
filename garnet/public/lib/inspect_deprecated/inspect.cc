@@ -373,7 +373,8 @@ fit::deferred_callback Node::SetChildrenManager(ChildrenManager* children_manage
 const TreeSettings kDefaultTreeSettings = {.initial_size = 4096, .maximum_size = 256 * 1024};
 
 Tree::Tree()
-    : inspector_(::inspect::Inspector()), root_(std::make_unique<Node>(&inspector_.GetRoot())) {}
+    : inspector_(::inspect::Inspector("root")),
+      root_(std::make_unique<Node>(&inspector_.GetRoot())) {}
 
 Tree::Tree(::inspect::Inspector inspector)
     : inspector_(std::move(inspector)), root_(std::make_unique<Node>(&inspector_.GetRoot())) {}
@@ -382,11 +383,13 @@ zx::vmo Tree::DuplicateVmo() const { return inspector_.DuplicateVmo(); }
 
 Node& Tree::GetRoot() const { return *root_; }
 
-Tree Inspector::CreateTree() { return CreateTree(kDefaultTreeSettings); }
+Tree Inspector::CreateTree(std::string name) {
+  return CreateTree(std::move(name), kDefaultTreeSettings);
+}
 
-Tree Inspector::CreateTree(TreeSettings settings) {
+Tree Inspector::CreateTree(std::string name, TreeSettings settings) {
   auto inspector =
-      ::inspect::Inspector(::inspect::InspectSettings{.maximum_size = settings.maximum_size});
+      ::inspect::Inspector(name, ::inspect::InspectSettings{.maximum_size = settings.maximum_size});
 
   return Tree(std::move(inspector));
 }

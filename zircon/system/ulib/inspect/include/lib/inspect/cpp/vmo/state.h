@@ -98,11 +98,6 @@ class State final {
   // node remain valid until all such values values are destroyed.
   Node CreateNode(const std::string& name, BlockIndex parent);
 
-  // Create a special root |Node| in the Inspect VMO. This node is not backed by any storage, rather
-  // it allows clients to use the |Node| iterface to add properties and children directly to the
-  // root of the VMO.
-  Node CreateRootNode();
-
   // Setters for various property types
   void SetIntProperty(IntProperty* property, int64_t value);
   void SetUintProperty(UintProperty* property, uint64_t value);

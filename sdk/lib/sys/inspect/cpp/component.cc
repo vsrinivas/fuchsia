@@ -11,7 +11,8 @@ using inspect::NodeHealth;
 
 namespace sys {
 
-ComponentInspector::ComponentInspector(sys::ComponentContext* startup_context) : inspector_() {
+ComponentInspector::ComponentInspector(sys::ComponentContext* startup_context)
+    : inspector_("root") {
   zx::vmo read_only_vmo = inspector_.DuplicateVmo();
   if (read_only_vmo.get() != ZX_HANDLE_INVALID) {
     auto vmo_file = std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);

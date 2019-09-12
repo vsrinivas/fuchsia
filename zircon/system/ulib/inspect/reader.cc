@@ -136,11 +136,6 @@ fit::result<Hierarchy> Reader::Read() {
     return fit::error();
   }
 
-  // Initialize the implicit root node, which uses index 0.
-  ParsedNode root;
-  root.InitializeNode("root", 0);
-  parsed_nodes_.emplace(0, std::move(root));
-
   // Scan blocks into the parsed_node map. This creates ParsedNodes with
   // properties and an accurate count of the number of expected
   // children. ParsedNodes with a valid OBJECT_VALUE block are initialized
@@ -163,11 +158,6 @@ fit::result<Hierarchy> Reader::Read() {
     }
 
     if (it->second.is_complete()) {
-      if (it->first == 0) {
-        // The root is complete, return it.
-        return fit::ok(std::move(it->second.hierarchy));
-      }
-
       // The node is valid and complete, push it onto the stack.
       complete_nodes.push(std::make_pair(std::move(it->second.hierarchy), it->second.parent));
       it = parsed_nodes_.erase(it);
@@ -184,18 +174,20 @@ fit::result<Hierarchy> Reader::Read() {
     auto obj = std::move(complete_nodes.top());
     complete_nodes.pop();
 
+    if (obj.second == 0) {
+      // We stop once we find a complete node with parent 0. This is assumed
+      // to be the root, so we return it.
+      // TODO(crjohns): Deal with the case of multiple roots, if we decide to
+      // support it.
+      return fit::ok(std::move(obj.first));
+    }
+
     // Get the parent node, which was created during block scanning.
     auto it = parsed_nodes_.find(obj.second);
     ZX_ASSERT(it != parsed_nodes_.end());
     auto* parent = &it->second;
     parent->hierarchy.add_child(std::move(obj.first));
     if (parent->is_complete()) {
-      if (obj.second == 0) {
-        // This was the last node that needed to be added to the root to complete it.
-        // Return the root.
-        return fit::ok(std::move(parent->hierarchy));
-      }
-
       // The parent node is now complete, push it onto the stack.
       complete_nodes.push(std::make_pair(std::move(parent->hierarchy), parent->parent));
       parsed_nodes_.erase(it);
@@ -326,7 +318,7 @@ void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
   auto* parsed_node = GetOrCreate(index);
   auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
   parsed_node->InitializeNode(std::move(name), parent_index);
-  if (parent_index != index) {
+  if (parent_index && parent_index != index) {
     // Only link to a parent if the parent can be valid (not index 0).
     auto* parent = GetOrCreate(parent_index);
     parent->children_count += 1;

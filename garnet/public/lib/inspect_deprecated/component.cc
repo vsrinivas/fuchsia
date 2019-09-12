@@ -12,7 +12,8 @@ namespace inspect_deprecated {
 
 std::weak_ptr<ComponentInspector> ComponentInspector::singleton_;
 
-ComponentInspector::ComponentInspector() : inspector_(), root_tree_(inspector_.CreateTree()) {}
+ComponentInspector::ComponentInspector()
+    : inspector_(), root_tree_(inspector_.CreateTree("root")) {}
 
 std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
     sys::ComponentContext* startup_context) {

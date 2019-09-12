@@ -32,7 +32,7 @@ bool ContainsProperty(const inspect::NodeValue& node, const std::string& name) {
 }
 
 TEST(InspectHealth, Default) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
@@ -47,7 +47,7 @@ TEST(InspectHealth, Default) {
 }
 
 TEST(InspectHealth, Ok) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Ok();
 
@@ -63,7 +63,7 @@ TEST(InspectHealth, Ok) {
 }
 
 TEST(InspectHealth, UnhealthyToStartingUp) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Unhealthy("test");
   health.StartingUp();
@@ -80,7 +80,7 @@ TEST(InspectHealth, UnhealthyToStartingUp) {
 }
 
 TEST(InspectHealth, Unhealthy) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Unhealthy("test");
 
@@ -98,7 +98,7 @@ TEST(InspectHealth, Unhealthy) {
 }
 
 TEST(InspectHealth, StartingUpReason) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.StartingUp("test");
 
@@ -116,7 +116,7 @@ TEST(InspectHealth, StartingUpReason) {
 }
 
 TEST(InspectHealth, CustomMessage) {
-  auto inspector = inspect::Inspector();
+  auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.SetStatus("BAD CONFIG", "test");
 

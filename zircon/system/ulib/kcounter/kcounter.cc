@@ -45,7 +45,7 @@ std::vector<fbl::String> SplitString(fbl::String input, char delimiter) {
 
 namespace kcounter {
 
-VmoToInspectMapper::VmoToInspectMapper() : inspector_() {
+VmoToInspectMapper::VmoToInspectMapper() : inspector_("kcounter") {
   fbl::unique_fd dir_fd(open(kVmoFileDir, O_RDONLY | O_DIRECTORY));
   if (!dir_fd) {
     initialization_status_ = ZX_ERR_IO;

@@ -49,7 +49,7 @@ class TestDataWrapper {
 class ReadTest : public TestFixture {
  public:
   ReadTest()
-      : tree_(inspector_.CreateTree()),
+      : tree_(inspector_.CreateTree("root")),
         fidl_dir_(component::ObjectDir::Make("root")),
         fidl_test_data_(inspect_deprecated::Node(fidl_dir_)),
         vmo_test_data_(std::move(tree_.GetRoot())) {
