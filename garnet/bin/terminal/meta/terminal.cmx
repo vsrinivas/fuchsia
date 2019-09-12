@@ -3,19 +3,33 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "boot": [
+            "bin"
+        ],
         "dev": [
             "misc/ptmx"
         ],
         "features": [
+            "hub",
             "shell-commands"
         ],
-        "boot": [ "bin" ],
+        "pkgfs": [
+            "versions",
+            "packages"
+        ],
         "services": [
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.sys.Environment",
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.logger.Log",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
-            "fuchsia.process.Resolver"
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.index.FuzzySearch",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }
