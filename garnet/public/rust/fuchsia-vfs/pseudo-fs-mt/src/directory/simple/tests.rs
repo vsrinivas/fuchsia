@@ -40,12 +40,20 @@ use {
     fuchsia_zircon::{sys::ZX_OK, Status},
     futures::future,
     libc::{S_IRUSR, S_IWUSR},
+    proc_macro_hack::proc_macro_hack,
     static_assertions::assert_eq_size,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
 };
+
+// Create level import of this macro does not affect nested modules.  And as attributes can
+// only be applied to the whole "use" directive, this need to be present here and need to be
+// separate form the above.  "use crate::pseudo_directory" generates a warning referring to
+// "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
+#[proc_macro_hack(support_nested)]
+use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
 
 #[test]
 fn empty_directory() {
@@ -112,12 +120,9 @@ fn open_empty_directory_with_describe() {
 
 #[test]
 fn clone() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
         async move {
@@ -148,12 +153,9 @@ fn clone() {
 fn clone_inherit_access() {
     use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
 
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
         async move {
@@ -182,12 +184,9 @@ fn clone_inherit_access() {
 
 #[test]
 fn clone_cannot_increase_access() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -216,12 +215,9 @@ fn clone_cannot_increase_access() {
 fn clone_cannot_use_same_rights_flag_with_any_specific_right() {
     use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
 
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -244,12 +240,9 @@ fn clone_cannot_use_same_rights_flag_with_any_specific_right() {
 
 #[test]
 fn one_file_open_existing() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -266,12 +259,9 @@ fn one_file_open_existing() {
 
 #[test]
 fn one_file_open_missing() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -285,32 +275,15 @@ fn one_file_open_missing() {
 
 #[test]
 fn small_tree_traversal() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "uname" => read_only_static(b"Fuchsia"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-    root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "uname" => read_only_static(b"Fuchsia"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -345,54 +318,27 @@ fn small_tree_traversal() {
 #[test]
 fn open_writable_in_subdir() {
     let write_count = Arc::new(AtomicUsize::new(0));
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_write(
-    //                 || Ok(b"# Empty".to_vec()),
-    //                 100,
-    //                 |content| {
-    //                     let count = write_count.fetch_add(1, Ordering::Relaxed);
-    //                     assert_eq!(*&content, format!("Port {}", 22 + count).as_bytes());
-    //                     Ok(())
-    //                 }
-    //             )
-    //         }
-    //     }
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone()
-                        .add_entry(
-                            "sshd_config",
-                            read_write(|| future::ready(Ok(b"# Empty".to_vec())), 100, {
-                                let write_count = write_count.clone();
-                                move |content| {
-                                    let write_count = write_count.clone();
-                                    async move {
-                                        let count = write_count.fetch_add(1, Ordering::Relaxed);
-                                        assert_eq!(
-                                            *&content,
-                                            format!("Port {}", 22 + count).as_bytes()
-                                        );
-                                        Ok(())
-                                    }
-                                }
-                            }),
-                        )
-                        .unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
+    let root = {
+        let write_count = write_count.clone();
+        pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_write(
+                        || future::ready(Ok(b"# Empty".to_vec())),
+                        100,
+                        move |content| {
+                            let write_count = write_count.clone();
+                            async move {
+                                let count = write_count.fetch_add(1, Ordering::Relaxed);
+                                assert_eq!(*&content, format!("Port {}", 22 + count).as_bytes());
+                                Ok(())
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    };
 
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
         async move {
@@ -447,45 +393,24 @@ fn open_writable_in_subdir() {
 #[test]
 fn open_write_only() {
     let write_count = Arc::new(AtomicUsize::new(0));
-    // let root = pseudo_directory! {
-    //     "dev" => pseudo_directory! {
-    //         "output" => write_only(
-    //             100,
-    //             move |content| {
-    //                 let write_count = write_count.clone();
-    //                 async move {
-    //                     let count = write_count.fetch_add(1, Ordering::Relaxed);
-    //                     assert_eq!(*&content, format!("Message {}", 1 + count).as_bytes());
-    //                     Ok(())
-    //                 }
-    //             }
-    //         )
-    //     }
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dev", {
-            let dev = simple();
-            dev.clone()
-                .add_entry(
-                    "output",
-                    write_only(100, {
+    let root = {
+        let write_count = write_count.clone();
+        pseudo_directory! {
+            "dev" => pseudo_directory! {
+                "output" => write_only(
+                    100,
+                    move |content| {
                         let write_count = write_count.clone();
-                        move |content| {
-                            let write_count = write_count.clone();
-                            async move {
-                                let count = write_count.fetch_add(1, Ordering::Relaxed);
-                                assert_eq!(*&content, format!("Message {}", 1 + count).as_bytes());
-                                Ok(())
-                            }
+                        async move {
+                            let count = write_count.fetch_add(1, Ordering::Relaxed);
+                            assert_eq!(*&content, format!("Message {}", 1 + count).as_bytes());
+                            Ok(())
                         }
-                    }),
+                    }
                 )
-                .unwrap();
-            dev
-        })
-        .unwrap();
+            }
+        }
+    };
 
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
         async move {
@@ -513,22 +438,12 @@ fn open_write_only() {
 
 #[test]
 fn open_non_existing_path() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "file1" => read_only_static(b"Content 1"),
-    //     },
-    //     "file2" => read_only_static(b"Content 2"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("file1", read_only_static(b"Content 1")).unwrap();
-            dir
-        })
-        .unwrap();
-    root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "file1" => read_only_static(b"Content 1"),
+        },
+        "file2" => read_only_static(b"Content 2"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -545,12 +460,9 @@ fn open_non_existing_path() {
 
 #[test]
 fn open_empty_path() {
-    // let root = pseudo_directory! {
-    //     "file_foo" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file_foo", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file_foo" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -564,22 +476,12 @@ fn open_empty_path() {
 
 #[test]
 fn open_path_within_a_file() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "file1" => read_only_static(b"Content 1"),
-    //     },
-    //     "file2" => read_only_static(b"Content 2"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("file1", read_only_static(b"Content 1")).unwrap();
-            dir
-        })
-        .unwrap();
-    root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "file1" => read_only_static(b"Content 1"),
+        },
+        "file2" => read_only_static(b"Content 2"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -594,22 +496,12 @@ fn open_path_within_a_file() {
 
 #[test]
 fn open_file_as_directory() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "file1" => read_only_static(b"Content 1"),
-    //     },
-    //     "file2" => read_only_static(b"Content 2"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("file1", read_only_static(b"Content 1")).unwrap();
-            dir
-        })
-        .unwrap();
-    root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "file1" => read_only_static(b"Content 1"),
+        },
+        "file2" => read_only_static(b"Content 2"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -637,20 +529,11 @@ fn open_file_as_directory() {
 
 #[test]
 fn open_directory_as_file() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "dir2" => pseudo_directory! {},
-    //     },
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("dir2", simple()).unwrap();
-            dir
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "dir2" => pseudo_directory! {},
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -678,14 +561,10 @@ fn open_directory_as_file() {
 
 #[test]
 fn trailing_slash_means_directory() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    //     "dir" => pseudo_directory! {},
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content2")).unwrap();
-    root.clone().add_entry("dir", simple()).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+        "dir" => pseudo_directory! {},
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -711,22 +590,12 @@ fn trailing_slash_means_directory() {
 
 #[test]
 fn no_dots_in_open() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    //     "dir" => pseudo_directory! {
-    //         "dir2" => pseudo_directory! {},
-    //     },
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("dir2", simple()).unwrap();
-            dir
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+        "dir" => pseudo_directory! {
+            "dir2" => pseudo_directory! {},
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -742,20 +611,11 @@ fn no_dots_in_open() {
 
 #[test]
 fn no_consequtive_slashes_in_open() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "dir2" => pseudo_directory! {},
-    //     },
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("dir2", simple()).unwrap();
-            dir
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "dir2" => pseudo_directory! {},
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -774,20 +634,11 @@ fn no_consequtive_slashes_in_open() {
 
 #[test]
 fn directories_restrict_nested_read_permissions() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "file" => read_only_static(b"Content"),
-    //     },
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("file", read_only_static(b"Content")).unwrap();
-            dir
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "file" => read_only_static(b"Content"),
+        },
+    };
 
     run_server_client(0, root, |root| {
         async move {
@@ -805,31 +656,15 @@ fn directories_restrict_nested_read_permissions() {
 
 #[test]
 fn directories_restrict_nested_write_permissions() {
-    // let root = pseudo_directory! {
-    //     "dir" => pseudo_directory! {
-    //         "file" => write_only(100, |_content| {
-    //             panic!("Access permissions should not allow this file to be written");
-    //         }),
-    //     },
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone()
-                .add_entry(
-                    "file",
-                    write_only(100, |_content| {
-                        async move {
-                            panic!("Access permissions should not allow this file to be written");
-                        }
-                    }),
-                )
-                .unwrap();
-            dir
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "file" => write_only(100, |_content| {
+                async move {
+                    panic!("Access permissions should not allow this file to be written");
+                }
+            }),
+        },
+    };
 
     run_server_client(0, root, |root| {
         async move {
@@ -849,42 +684,25 @@ fn directories_restrict_nested_write_permissions() {
 fn flag_posix_means_writable() {
     let write_count = Arc::new(AtomicUsize::new(0));
 
-    // let root = pseudo_directory! {
-    //     "nested" => pseudo_directory! {
-    //         "file" => read_write(
-    //             || Ok(b"Content".to_vec()),
-    //             20,
-    //             |content| {
-    //                 assert_eq!(*&content, b"New content");
-    //                 Ok(())
-    //             }),
-    //     },
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("nested", {
-            let nested = simple();
-            nested
-                .clone()
-                .add_entry(
-                    "file",
-                    read_write(|| future::ready(Ok(b"Content".to_vec())), 20, {
+    let root = {
+        let write_count = write_count.clone();
+        pseudo_directory! {
+            "nested" => pseudo_directory! {
+                "file" => read_write(
+                    || future::ready(Ok(b"Content".to_vec())),
+                    20,
+                    move |content| {
                         let write_count = write_count.clone();
-                        move |content| {
-                            let write_count = write_count.clone();
-                            async move {
-                                write_count.fetch_add(1, Ordering::Relaxed);
-                                assert_eq!(*&content, b"New content");
-                                Ok(())
-                            }
+                        async move {
+                            write_count.fetch_add(1, Ordering::Relaxed);
+                            assert_eq!(*&content, b"New content");
+                            Ok(())
                         }
-                    }),
-                )
-                .unwrap();
-            nested
-        })
-        .unwrap();
+                    }
+                ),
+            },
+        }
+    };
 
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
         async move {
@@ -920,32 +738,16 @@ fn flag_posix_means_writable() {
 
 #[test]
 fn flag_posix_does_not_add_writable_to_read_only() {
-    // let root = pseudo_directory! {
-    //     "nested" => pseudo_directory! {
-    //         "file" => read_write(
-    //             || Ok(b"Content".to_vec()),
-    //             100,
-    //             |_content| {
-    //                 panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
-    //             }),
-    //     },
-    // };
-
-    let root = simple();
-    root.clone().add_entry("nested", {
-        let nested = simple();
-        nested.clone().add_entry(
-                "file",
-                read_write(
-                    || future::ready(Ok(b"Content".to_vec())),
-                    20,
-                    |_content| async move {
-                        panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
-                    },
-                )
-        ).unwrap();
-        nested
-    }).unwrap();
+    let root = pseudo_directory! {
+        "nested" => pseudo_directory! {
+            "file" => read_write(
+                || future::ready(Ok(b"Content".to_vec())),
+                100,
+                |_content| async move {
+                    panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
+                }),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -982,41 +784,19 @@ fn flag_posix_does_not_add_writable_to_read_only() {
 
 #[test]
 fn read_dirents_large_buffer() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //         "shells" => read_only_static(b"/bin/bash"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "files" => read_only_static(b"Content"),
-    //     "more" => read_only_static(b"Content"),
-    //     "uname" => read_only_static(b"Fuchsia"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone().add_entry("shells", read_only_static(b"/bin/bash")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "passwd" => read_only_static(b"[redacted]"),
+            "shells" => read_only_static(b"/bin/bash"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "files" => read_only_static(b"Content"),
+        "more" => read_only_static(b"Content"),
+        "uname" => read_only_static(b"Fuchsia"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1066,18 +846,12 @@ fn read_dirents_large_buffer() {
 
 #[test]
 fn read_dirents_small_buffer() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! { },
-    //     "files" => read_only_static(b"Content"),
-    //     "more" => read_only_static(b"Content"),
-    //     "uname" => read_only_static(b"Fuchsia"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("etc", simple()).unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! { },
+        "files" => read_only_static(b"Content"),
+        "more" => read_only_static(b"Content"),
+        "uname" => read_only_static(b"Fuchsia"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1113,12 +887,9 @@ fn read_dirents_small_buffer() {
 
 #[test]
 fn read_dirents_very_small_buffer() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1131,18 +902,12 @@ fn read_dirents_very_small_buffer() {
 
 #[test]
 fn read_dirents_rewind() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! { },
-    //     "files" => read_only_static(b"Content"),
-    //     "more" => read_only_static(b"Content"),
-    //     "uname" => read_only_static(b"Fuchsia"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("etc", simple()).unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
-    root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! { },
+        "files" => read_only_static(b"Content"),
+        "more" => read_only_static(b"Content"),
+        "uname" => read_only_static(b"Fuchsia"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1240,12 +1005,9 @@ fn add_entry_too_long_error() {
 
 #[test]
 fn node_reference_ignores_read_access() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1269,12 +1031,9 @@ fn node_reference_ignores_read_access() {
 
 #[test]
 fn node_reference_ignores_write_access() {
-    // let root = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, root, |root| {
         async move {
@@ -1298,32 +1057,15 @@ fn node_reference_ignores_write_access() {
 
 #[test]
 fn node_reference_allows_read_dirents() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "files" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "files" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| {
         async move {
@@ -1387,20 +1129,12 @@ fn simple_add_file() {
 
 #[test]
 fn add_file_to_empty() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {etc -> {}},
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc -> /* empty */
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |proxy| {
         async move {
@@ -1421,32 +1155,15 @@ fn add_file_to_empty() {
 
 #[test]
 fn in_tree_open() {
-    // let ssh;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "ssh" => pseudo_directory! {
-    //             ssh ->
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    // };
-
-    let root = simple();
     let ssh;
-
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh.clone()
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
+    let _root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "ssh" => pseudo_directory! {
+                ssh ->
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+    };
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new(Box::new(exec.ehandle()));
@@ -1468,32 +1185,15 @@ fn in_tree_open() {
 
 #[test]
 fn in_tree_open_path_one_component() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let _root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+    };
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new(Box::new(exec.ehandle()));
@@ -1516,32 +1216,15 @@ fn in_tree_open_path_one_component() {
 
 #[test]
 fn in_tree_open_path_two_components() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let _root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+    };
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new(Box::new(exec.ehandle()));
@@ -1563,34 +1246,16 @@ fn in_tree_open_path_two_components() {
 
 #[test]
 fn in_tree_add_file() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+            "passwd" => read_only_static(b"[redacted]"),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1614,26 +1279,14 @@ fn in_tree_add_file() {
 
 #[test]
 fn in_tree_remove_file() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "passwd" => read_only_static(b"[redacted]"),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1661,24 +1314,13 @@ fn in_tree_remove_file() {
 
 #[test]
 fn in_tree_move_file() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "fstab" => read_only_static(b"/dev/fs /"),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1722,32 +1364,15 @@ fn watch_empty() {
 
 #[test]
 fn watch_non_empty() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "files" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "files" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1771,32 +1396,15 @@ fn watch_non_empty() {
 
 #[test]
 fn watch_two_watchers() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "files" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "files" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1831,34 +1439,16 @@ fn watch_two_watchers() {
 
 #[test]
 fn watch_addition() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+            "passwd" => read_only_static(b"[redacted]"),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1899,26 +1489,14 @@ fn watch_addition() {
 
 #[test]
 fn watch_removal() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "passwd" => read_only_static(b"[redacted]"),
+        },
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -1963,32 +1541,15 @@ fn watch_removal() {
 
 #[test]
 fn watch_with_mask() {
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         "fstab" => read_only_static(b"/dev/fs /"),
-    //         "ssh" => pseudo_directory! {
-    //             "sshd_config" => read_only_static(b"# Empty"),
-    //         },
-    //     },
-    //     "files" => read_only_static(b"Content"),
-    // };
-
-    let root = simple();
-    root.clone()
-        .add_entry("etc", {
-            let etc = simple();
-            etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-            etc.clone()
-                .add_entry("ssh", {
-                    let ssh = simple();
-                    ssh.clone().add_entry("sshd_config", read_only_static(b"# Empty")).unwrap();
-                    ssh
-                })
-                .unwrap();
-            etc
-        })
-        .unwrap();
-    root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+            "ssh" => pseudo_directory! {
+                "sshd_config" => read_only_static(b"# Empty"),
+            },
+        },
+        "files" => read_only_static(b"Content"),
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| {
         async move {
@@ -2005,24 +1566,13 @@ fn watch_with_mask() {
 
 #[test]
 fn watch_addition_with_two_scopes() {
-    // let etc;
-    // let root = pseudo_directory! {
-    //     "etc" => pseudo_directory! {
-    //         etc ->
-    //         "passwd" => read_only_static(b"[redacted]"),
-    //     },
-    // };
-
-    let root = simple();
     let etc;
-
-    root.clone()
-        .add_entry("etc", {
-            etc = simple();
-            etc.clone().add_entry("passwd", read_only_static(b"[redacted]")).unwrap();
-            etc.clone()
-        })
-        .unwrap();
+    let root = pseudo_directory! {
+        "etc" => pseudo_directory! {
+            etc ->
+            "passwd" => read_only_static(b"[redacted]"),
+        },
+    };
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope1 = ExecutionScope::new(Box::new(exec.ehandle()));
@@ -2101,25 +1651,15 @@ fn watch_addition_with_two_scopes() {
 
 #[test]
 fn test_recursive_directory() {
-    // let dir = pseudo_directory! {
-    //     "file" => read_only_static(b"Content"),
-    // }
-    //
-    // dir.clone().add_entry("dir", dir.clone()).unwrap();
-    //
-    // let root = pseudo_directory! {
-    //     "dir" => dir,
-    // }
+    let dir = pseudo_directory! {
+        "file" => read_only_static(b"Content"),
+    };
 
-    let root = simple();
-    root.clone()
-        .add_entry("dir", {
-            let dir = simple();
-            dir.clone().add_entry("file", read_only_static(b"Content")).unwrap();
-            dir.clone().add_entry("dir", dir.clone()).unwrap();
-            dir
-        })
-        .unwrap();
+    dir.clone().add_entry("dir", dir.clone()).unwrap();
+
+    let root = pseudo_directory! {
+        "dir" => dir,
+    };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |proxy| {
         async move {

@@ -17,7 +17,6 @@ use crate::{
     directory::{
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        simple::simple,
         test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
         traversal_position::AlphabeticalTraversal,
     },
@@ -38,11 +37,19 @@ use {
         future::{self, BoxFuture},
         lock::Mutex,
     },
+    proc_macro_hack::proc_macro_hack,
     std::sync::{
         atomic::{AtomicU8, Ordering},
         Arc,
     },
 };
+
+// Create level import of this macro does not affect nested modules.  And as attributes can
+// only be applied to the whole "use" directive, this need to be present here and need to be
+// separate form the above.  "use crate::pseudo_directory" generates a warning referring to
+// "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
+#[proc_macro_hack(support_nested)]
+use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
 
 type AsyncGetEntryNames = BoxFuture<'static, Result<Box<dyn dirents_sink::Sealed>, Status>>;
 
@@ -225,23 +232,12 @@ fn static_entries_with_traversal() {
         Box::pin(async move {
             match &*name {
                 "etc" => {
-                    // pseudo_directory! {
-                    //     "fstab" => read_only_static(b"/dev/fs /",
-                    //     "ssh" => pseudo_directory! {
-                    //         "sshd_config" => read_only_static(b"# Empty"),
-                    //     },
-                    // }
-                    let etc = simple();
-                    etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
-                    etc.clone()
-                        .add_entry("ssh", {
-                            let ssh = simple();
-                            ssh.clone()
-                                .add_entry("sshd_config", read_only_static(b"# Empty"))
-                                .unwrap();
-                            ssh
-                        })
-                        .unwrap();
+                    let etc = pseudo_directory! {
+                        "fstab" => read_only_static(b"/dev/fs /"),
+                        "ssh" => pseudo_directory! {
+                            "sshd_config" => read_only_static(b"# Empty"),
+                        },
+                    };
                     Ok(etc as Arc<dyn DirectoryEntry>)
                 }
                 "files" => Ok(read_only_static(b"Content") as Arc<dyn DirectoryEntry>),
