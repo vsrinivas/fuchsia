@@ -76,6 +76,10 @@ type devFinderCmd struct {
 	// established a connection to the Fuchsia device (rather than the address of the
 	// Fuchsia device on its own).
 	localResolve bool
+	// Determines whether to accept incoming unicast mDNS responses. This can happen if the
+	// receiving device is on a different subnet, or the receiving device's listener port
+	// has been forwarded to from a non-standard port.
+	acceptUnicast bool
 	// The limit of devices to discover. If this number of devices has been discovered before
 	// the timeout has been reached the program will exit successfully.
 	deviceLimit int
@@ -98,6 +102,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.mdnsPorts, "port", "5353,5356", "Comma separated list of ports to issue mDNS queries to.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
+	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", false, "Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 }
 
@@ -133,6 +138,7 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 		m.EnableIPv6()
 	}
 	m.SetAddress(address)
+	m.SetAcceptUnicastResponses(cmd.acceptUnicast)
 	return m
 }
 
@@ -205,10 +211,14 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		case err := <-errChan:
 			return nil, err
 		case device := <-devChan:
-			// Creates a hashable string to remove duplicate devices,
-			// as no two devices on this network should have the same
-			// IP and domain.
-			devices[fmt.Sprintf("%s|%s", string(device.addr), device.domain)] = device
+			// Creates a hashable string to remove duplicate devices.
+			//
+			// There should only be one of each domain on the network, but given how
+			// mcast is sent on each interface, multiple responses with different IP
+			// addresses can be returned for a single device in the case of a device
+			// running on the host in an emulator (this is a special case). Each
+			// IP would be point to the localhost in this case.
+			devices[fmt.Sprintf("%s", device.domain)] = device
 			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
 				return sortDeviceMap(devices), nil
 			}

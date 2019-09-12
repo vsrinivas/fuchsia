@@ -8,9 +8,232 @@ import (
 	"bytes"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+var (
+	fakeInterface = &net.Interface{
+		Index:        1,
+		MTU:          1800,
+		Name:         "faketh0",
+		HardwareAddr: []byte{0, 0, 0, 0, 0, 0},
+		Flags:        net.FlagMulticast | net.FlagUp,
+	}
+)
+
+type fakeAddr struct{}
+
+func (f *fakeAddr) Network() string {
+	return "udp"
+}
+
+func (f *fakeAddr) String() string {
+	return "192.168.2.2"
+}
+
+type fakePacketConn struct {
+	packetCh chan []byte
+}
+
+func (f *fakePacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	buf := <-f.packetCh
+	for i, b := range buf {
+		p[i] = b
+	}
+	n = len(buf)
+	addr = &fakeAddr{}
+	err = nil
+	return
+}
+
+func (f *fakePacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	f.packetCh <- p
+	n = len(p)
+	err = nil
+	return
+}
+
+func (f *fakePacketConn) Close() error {
+	return nil
+}
+
+func (f *fakePacketConn) LocalAddr() net.Addr {
+	return &fakeAddr{}
+}
+
+func (f *fakePacketConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (f *fakePacketConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (f *fakePacketConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+type fakeNetFactory struct {
+	packetCh chan []byte
+}
+
+func (f *fakeNetFactory) MakeUDPSocket(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
+	return &fakePacketConn{packetCh: f.packetCh}, nil
+}
+
+func (f *fakeNetFactory) MakePacketReceiver(conn net.PacketConn, ipv6 bool) packetReceiver {
+	return &fakePacketReceiver{packetConn: conn}
+}
+
+type fakePacketReceiver struct {
+	packetConn net.PacketConn
+}
+
+func (f *fakePacketReceiver) ReadPacket(buf []byte) (size int, iface *net.Interface, src net.Addr, err error) {
+	size, _, err = f.packetConn.ReadFrom(buf)
+	src = &fakeAddr{}
+	iface = fakeInterface
+	err = nil
+	return
+}
+
+func (f *fakePacketReceiver) JoinGroup(*net.Interface, net.Addr) error {
+	return nil
+}
+
+func (f *fakePacketReceiver) Close() error {
+	return nil
+}
+
+// Returns a fake mDNS connection, a multicast packet channel, and a unicast
+// packet channel, respectively.
+//
+// Keep in mind if running multiple ConnectTo's it will simply add multiple
+// readers to ONE channel. This doesn't support something like mapping ports to
+// specific channels or the like.
+func makeFakeMDNSConn(v6 bool) (mDNSConn, chan []byte, chan []byte) {
+	ucast := make(chan []byte, 1)
+	mcast := make(chan []byte, 1)
+	if v6 {
+		// TODO(awdavies): Should this be a dep injection from a function rather
+		// than constructed purely for tests?
+		c := &mDNSConn6{mDNSConnBase{netFactory: &fakeNetFactory{packetCh: ucast}}}
+		// This needs to be initialized, which happens in the |InitReceiver|
+		// function inside of the MDNS |Start| function.
+		c.receiver = &fakePacketReceiver{&fakePacketConn{packetCh: mcast}}
+		return c, mcast, ucast
+	} else {
+		c := &mDNSConn4{mDNSConnBase{netFactory: &fakeNetFactory{packetCh: ucast}}}
+		c.receiver = &fakePacketReceiver{&fakePacketConn{packetCh: mcast}}
+		return c, mcast, ucast
+	}
+}
+
+func TestUCast4(t *testing.T) {
+	c, _, ucast := makeFakeMDNSConn(false)
+	c.SetAcceptUnicastResponses(true)
+	ip := net.ParseIP("192.168.2.2")
+	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+
+	rpChan := c.Listen()
+
+	want := []byte{0, 1, 2, 3, 4}
+	// "Write" packet to the unicast listeners.
+	ucast <- want
+	got := <-rpChan
+	// Compare a subsection, as this will by default return a kilobyte buffer.
+	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
+		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
+	}
+}
+
+func TestUCast6(t *testing.T) {
+	c, _, ucast := makeFakeMDNSConn(true)
+	c.SetAcceptUnicastResponses(true)
+	ip := net.ParseIP("2001:db8::1")
+	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+
+	rpChan := c.Listen()
+
+	want := []byte{0, 9, 2, 9, 2}
+	// "Write" packets to the listeners.
+	ucast <- want
+	got := <-rpChan
+	// Compare a subsection, as this will by default return a kilobyte buffer.
+	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
+		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
+	}
+}
+
+func TestMCast6(t *testing.T) {
+	c, mcast, ucast := makeFakeMDNSConn(true)
+	ip := net.ParseIP("2001:db8::1")
+	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+
+	rpChan := c.Listen()
+
+	doNotWant := []byte{1, 2, 3, 1, 2, 3, 4, 5}
+	want := []byte{0, 9, 2, 9, 2}
+	// "Write" packets to the listeners. Ucast should always be ignored since
+	// accepting unicast hasn't been set to true.
+	ucast <- doNotWant
+	mcast <- want
+	got := <-rpChan
+	// Compare a subsection, as this will by default return a kilobyte buffer.
+	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
+		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
+	}
+}
+
+func TestMCast4(t *testing.T) {
+	c, mcast, ucast := makeFakeMDNSConn(false)
+	ip := net.ParseIP("192.168.10.10")
+	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
+		t.Errorf("Unable to connect to port: %v", err)
+		return
+	}
+
+	rpChan := c.Listen()
+
+	doNotWant := []byte{1, 2, 3, 1, 2, 3, 4, 5}
+	want := []byte{0, 9, 2, 9, 2}
+	// "Write" packets to the listeners. Ucast should always be ignored since
+	// accepting unicast hasn't been set to true.
+	ucast <- doNotWant
+	mcast <- want
+	got := <-rpChan
+	// Compare a subsection, as this will by default return a kilobyte buffer.
+	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
+		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
+	}
+}
+
+func TestConnectToRejectedMDNS4(t *testing.T) {
+	c, _, _ := makeFakeMDNSConn(false)
+	ip := net.ParseIP("2001:db8::1")
+	if err := c.ConnectTo(12345, ip, fakeInterface); err == nil {
+		t.Errorf("ConnectTo expected error when connecting to IPv6 addr")
+	}
+}
 
 func TestUint16(t *testing.T) {
 	var buf bytes.Buffer
