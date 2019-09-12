@@ -29,7 +29,7 @@ void main() {
     final brightness = Brightness(control);
 
     // Should receive brightness spec.
-    Spec spec = await brightness.getSpec(null);
+    Spec spec = await brightness.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 
@@ -49,7 +49,7 @@ void main() {
 
     // Should receive brightness spec.
     final brightness = Brightness(control);
-    Spec spec = await brightness.getSpec(null);
+    Spec spec = await brightness.getSpec();
 
     // Now change the brightness.
     brightness.update(Value.withProgress(ProgressValue(
@@ -60,7 +60,7 @@ void main() {
     verify(control.setManualBrightness(0.3));
 
     // Should follow immediately by brightness spec.
-    spec = await brightness.getSpec(null);
+    spec = await brightness.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 
@@ -80,7 +80,7 @@ void main() {
 
     // Should receive brightness spec.
     final brightness = Brightness(control);
-    Spec spec = await brightness.getSpec(null);
+    Spec spec = await brightness.getSpec();
 
     // Now set brightness to auto.
     brightness.update(Value.withButton(ButtonValue(
@@ -91,7 +91,7 @@ void main() {
     verify(control.setAutoBrightness());
 
     // Should follow immediately by brightness spec.
-    spec = await brightness.getSpec(null);
+    spec = await brightness.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 

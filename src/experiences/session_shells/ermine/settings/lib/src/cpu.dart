@@ -16,7 +16,7 @@ class Cpu extends UiSpec {
 
   _CpuModel _model;
 
-  Cpu() : super(null) {
+  Cpu() {
     _model = _CpuModel(onChange: _onChange);
   }
 

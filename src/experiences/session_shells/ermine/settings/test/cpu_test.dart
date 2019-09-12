@@ -18,7 +18,7 @@ void main() {
   });
 
   test('Cpu', () async {
-    Spec spec = await cpu.getSpec(null);
+    Spec spec = await cpu.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 
@@ -35,7 +35,7 @@ void main() {
 
   test('Verify Cpu Updates', () async {
     // Should receive cpu spec.
-    Spec spec = await cpu.getSpec(null);
+    Spec spec = await cpu.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 
@@ -51,7 +51,7 @@ void main() {
     await Future.delayed(Duration(seconds: 1));
 
     // Should follow immediately by cpu spec.
-    spec = await cpu.getSpec(null);
+    spec = await cpu.getSpec();
     expect(spec.groups.first.title, isNotNull);
     expect(spec.groups.first.values.isEmpty, false);
 

@@ -18,7 +18,7 @@ abstract class UiSpec extends QuickUi {
   Completer<Spec> _completer = Completer<Spec>();
 
   // Constructor.
-  UiSpec(Spec spec) {
+  UiSpec([Spec spec]) {
     if (spec != null) {
       _completer.complete(spec);
     }
@@ -39,7 +39,7 @@ abstract class UiSpec extends QuickUi {
   void dispose();
 
   @override
-  Future<Spec> getSpec(Value value) async {
+  Future<Spec> getSpec([Value value]) async {
     if (value != null) {
       update(value);
     }

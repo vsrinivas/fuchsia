@@ -32,7 +32,7 @@ class Brightness extends UiSpec {
 
   _BrightnessModel _model;
 
-  Brightness(ControlProxy control) : super(null) {
+  Brightness(ControlProxy control) {
     _model = _BrightnessModel(control: control, onChange: _onChange);
   }
 
