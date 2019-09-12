@@ -16,12 +16,26 @@
 
 #include <map>
 
-#include "src/ui/bin/activity/activity_state_machine.h"
-#include "src/ui/bin/activity/common.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
+#include "src/ui/bin/activity/common.h"
 
 namespace activity {
+
+zx_status_t StateMachineDriver::RegisterObserver(ObserverId id, StateChangedCallback callback) {
+  observers_.emplace(id, std::move(callback));
+  return ZX_OK;
+}
+
+zx_status_t StateMachineDriver::UnregisterObserver(ObserverId id) {
+  auto entry = observers_.find(id);
+  if (entry == observers_.end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  observers_.erase(entry);
+  return ZX_OK;
+}
 
 zx_status_t StateMachineDriver::ReceiveDiscreteActivity(
     const fuchsia::ui::activity::DiscreteActivity& activity, zx::time time) {
@@ -80,9 +94,7 @@ void StateMachineDriver::ProcessEvent(const Event& event, zx::time time) {
     FXL_LOG(INFO) << "activity-service: '" << state << "' -> '" << new_state << "' due to '"
                   << event << "'";
     last_transition_time_ = time;
-    if (state_changed_callback_) {
-      state_changed_callback_(new_state, time);
-    }
+    NotifyObservers(new_state, time);
   }
 
   timeout_task_.Cancel();
@@ -136,6 +148,12 @@ void StateMachineDriver::HandleTimeout() {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "activity-service: Failed to queue timeout event: "
                    << zx_status_get_string(status);
+  }
+}
+
+void StateMachineDriver::NotifyObservers(fuchsia::ui::activity::State state, zx::time time) const {
+  for (const auto& observer : observers_) {
+    observer.second(state, time);
   }
 }
 

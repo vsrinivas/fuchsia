@@ -11,6 +11,8 @@ source_set("lib") {
   sources = [
     "activity_app.cc",
     "activity_app.h",
+    "activity_provider_connection.cc",
+    "activity_provider_connection.h",
     "activity_state_machine.cc",
     "activity_state_machine.h",
     "activity_tracker_connection.cc",
@@ -75,8 +77,10 @@ executable("activity_test_bin") {
 
   sources = [
     "activity_app_test.cc",
+    "activity_provider_connection_test.cc",
     "activity_state_machine_test.cc",
     "activity_tracker_connection_test.cc",
+    "fake_listener.h",
     "state_machine_driver_test.cc",
   ]
   deps = [

@@ -14,17 +14,25 @@
 
 #include <src/lib/fxl/macros.h>
 
+#include "src/ui/bin/activity/activity_provider_connection.h"
 #include "src/ui/bin/activity/activity_tracker_connection.h"
 
 namespace activity {
 
 class ActivityApp {
  public:
-  explicit ActivityApp(std::unique_ptr<StateMachineDriver> state_machine_driver,
-                       async_dispatcher_t* dispatcher)
+  ActivityApp(std::unique_ptr<StateMachineDriver> state_machine_driver,
+              async_dispatcher_t* dispatcher)
       : state_machine_driver_(std::move(state_machine_driver)), dispatcher_(dispatcher) {}
 
+  // Registers a new Tracker client and stores a binding created from |request|.
+  // The binding is automatically cleaned up when the client terminates, or when a channel
+  // error occurs.
   void AddTrackerBinding(fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request);
+  // Registers a new Provider client and stores a binding created from |request|.
+  // The binding is automatically cleaned up when the client terminates, or when a channel
+  // error occurs.
+  void AddProviderBinding(fidl::InterfaceRequest<fuchsia::ui::activity::Provider> request);
 
   // Exposed for testing.
   std::vector<const ActivityTrackerConnection*> tracker_bindings() const {
@@ -36,11 +44,24 @@ class ActivityApp {
     return vec;
   }
 
+  // Exposed for testing.
+  std::vector<const ActivityProviderConnection*> provider_bindings() const {
+    std::vector<const ActivityProviderConnection*> vec;
+    vec.reserve(provider_bindings_.size());
+    for (const auto& entry : provider_bindings_) {
+      vec.push_back(entry.second.get());
+    }
+    return vec;
+  }
+
  private:
   std::unique_ptr<StateMachineDriver> state_machine_driver_;
   async_dispatcher_t* dispatcher_;
 
   std::map<zx::unowned_channel, std::unique_ptr<ActivityTrackerConnection>> tracker_bindings_;
+  std::map<zx::unowned_channel, std::unique_ptr<ActivityProviderConnection>> provider_bindings_;
+
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ActivityApp);
 };
 
 }  // namespace activity

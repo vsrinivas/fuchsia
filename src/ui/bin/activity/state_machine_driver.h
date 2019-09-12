@@ -43,9 +43,10 @@ class StateMachineDriver {
   fuchsia::ui::activity::State state() const { return state_machine_.state(); };
   const ActivityStateMachine& state_machine() const { return state_machine_; };
 
-  void SetStateChangedCallback(StateChangedCallback callback) {
-    state_changed_callback_ = std::move(callback);
-  }
+  zx_status_t RegisterObserver(ObserverId id, StateChangedCallback callback);
+  zx_status_t UnregisterObserver(ObserverId id);
+  // Exposed for testing
+  size_t num_observers() const { return observers_.size(); }
 
   // Inputs to the state machine. These methods enqueue a work item onto the driver's async loop to
   // handle the given activity, scheduling the work item to run at |time|.
@@ -64,6 +65,8 @@ class StateMachineDriver {
   void StartTimer(zx::duration delay);
   void HandleTimeout();
 
+  void NotifyObservers(fuchsia::ui::activity::State state, zx::time time) const;
+
   // Underlying state machine.
   ActivityStateMachine state_machine_;
 
@@ -73,8 +76,8 @@ class StateMachineDriver {
   // Dispatcher to run operations on.
   async_dispatcher_t* dispatcher_;
 
-  // A callback which is invoked whenever a state transition occurs.
-  StateChangedCallback state_changed_callback_;
+  // Observers to be notified whenever a state transition occurs.
+  std::map<ObserverId, StateChangedCallback> observers_;
 
   // Set of ongoing activities. Activity IDs are added to this set by ProcessActivityStart() and
   // are removed by ProcessActivityEnd().

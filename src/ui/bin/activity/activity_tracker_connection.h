@@ -31,13 +31,8 @@ class ActivityTrackerConnection : public fuchsia::ui::activity::Tracker {
   ActivityTrackerConnection(StateMachineDriver* state_machine_driver,
                             async_dispatcher_t* dispatcher,
                             fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request,
-                            uint32_t random_seed)
-      : state_machine_driver_(state_machine_driver),
-        dispatcher_(dispatcher),
-        random_(random_seed),
-        binding_(this, std::move(request), dispatcher) {}
-
-  ~ActivityTrackerConnection() { Stop(); }
+                            uint32_t random_seed);
+  ~ActivityTrackerConnection();
 
   // Cleans up any resources owned by the instance, including terminating all ongoing activities.
   void Stop();
@@ -66,7 +61,7 @@ class ActivityTrackerConnection : public fuchsia::ui::activity::Tracker {
 
   fidl::Binding<fuchsia::ui::activity::Tracker> binding_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ActivityTrackerConnection);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ActivityTrackerConnection);
 };
 
 }  // namespace activity

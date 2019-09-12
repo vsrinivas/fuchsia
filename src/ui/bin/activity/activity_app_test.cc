@@ -8,8 +8,9 @@
 
 #include <memory>
 
-#include "src/ui/bin/activity/state_machine_driver.h"
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
+#include "src/ui/bin/activity/fake_listener.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 
 namespace {
 
@@ -25,27 +26,6 @@ fuchsia::ui::activity::OngoingActivity OngoingActivity() {
   fuchsia::ui::activity::OngoingActivity activity;
   activity.set_generic(std::move(generic));
   return activity;
-};
-
-class FakeListener : public fuchsia::ui::activity::Listener {
- public:
-  FakeListener() = default;
-
-  virtual void OnStateChanged(fuchsia::ui::activity::State state, zx_time_t transition_time,
-                              OnStateChangedCallback callback) {
-    state_changes_.emplace_back(state, transition_time);
-    callback();
-  }
-
-  struct StateChange {
-    StateChange(fuchsia::ui::activity::State state, zx_time_t time) : state(state), time(time) {}
-    fuchsia::ui::activity::State state;
-    zx::time time;
-  };
-  const std::vector<StateChange>& StateChanges() const { return state_changes_; }
-
- private:
-  std::vector<StateChange> state_changes_;
 };
 
 }  // namespace
@@ -122,6 +102,97 @@ TEST_F(ActivityAppTest, Tracker_OngoingActivity) {
   tracker->EndOngoingActivity(id, Now().get());
   RunLoopFor(*timeout);
   EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(ActivityAppTest, Provider_ConnectDisconnect) {
+  {
+    fuchsia::ui::activity::ProviderPtr provider;
+    app_->AddProviderBinding(provider.NewRequest(dispatcher()));
+
+    testing::FakeListener listener;
+    provider->WatchState(listener.NewHandle(dispatcher()));
+  }
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(app_->provider_bindings().size(), 0u);
+}
+
+TEST_F(ActivityAppTest, Provider_ReceivesInitialState) {
+  fuchsia::ui::activity::ProviderPtr provider;
+  app_->AddProviderBinding(provider.NewRequest(dispatcher()));
+
+  testing::FakeListener listener;
+  provider->WatchState(listener.NewHandle(dispatcher()));
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(listener.StateChanges().size(), 1u);
+  EXPECT_EQ(listener.StateChanges().front().state, fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(ActivityAppTest, Provider_ReceivesSubsequentStates) {
+  fuchsia::ui::activity::ProviderPtr provider;
+  app_->AddProviderBinding(provider.NewRequest(dispatcher()));
+  fuchsia::ui::activity::TrackerPtr tracker;
+  app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
+
+  testing::FakeListener listener;
+  provider->WatchState(listener.NewHandle(dispatcher()));
+  RunLoopUntilIdle();
+
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+
+  ASSERT_EQ(listener.StateChanges().size(), 3u);
+  EXPECT_EQ(listener.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(listener.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(ActivityAppTest, Provider_MultipleProviders_ConnectDisconnect) {
+  {
+    fuchsia::ui::activity::ProviderPtr provider1, provider2;
+    app_->AddProviderBinding(provider1.NewRequest(dispatcher()));
+    app_->AddProviderBinding(provider2.NewRequest(dispatcher()));
+
+    testing::FakeListener listener1, listener2;
+    provider1->WatchState(listener1.NewHandle(dispatcher()));
+    provider2->WatchState(listener2.NewHandle(dispatcher()));
+    RunLoopUntilIdle();
+    EXPECT_EQ(app_->provider_bindings().size(), 2u);
+  }
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(app_->provider_bindings().size(), 0u);
+}
+
+TEST_F(ActivityAppTest, Provider_MultipleProviders_AllReceiveState) {
+  fuchsia::ui::activity::ProviderPtr provider1, provider2;
+  app_->AddProviderBinding(provider1.NewRequest(dispatcher()));
+  app_->AddProviderBinding(provider2.NewRequest(dispatcher()));
+  fuchsia::ui::activity::TrackerPtr tracker;
+  app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
+
+  testing::FakeListener listener1, listener2;
+  provider1->WatchState(listener1.NewHandle(dispatcher()));
+  provider2->WatchState(listener2.NewHandle(dispatcher()));
+  RunLoopUntilIdle();
+
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+
+  ASSERT_EQ(listener1.StateChanges().size(), 3u);
+  EXPECT_EQ(listener1.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener1.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(listener1.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
+
+  ASSERT_EQ(listener2.StateChanges().size(), 3u);
+  EXPECT_EQ(listener2.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener2.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(listener2.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
 }
 
 }  // namespace

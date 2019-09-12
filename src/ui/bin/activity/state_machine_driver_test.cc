@@ -6,8 +6,8 @@
 #include <memory>
 #include <optional>
 
-#include "src/ui/bin/activity/activity_state_machine.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
 
 namespace {
 
@@ -160,7 +160,7 @@ TEST_F(StateMachineDriverTest, HandlesTimeoutsIfActivitySpuriouslyEnded) {
   EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::IDLE);
 }
 
-TEST_F(StateMachineDriverTest, InvokesCallbackOnStateChanges) {
+TEST_F(StateMachineDriverTest, NotifiesSingleObserverOnStateChanges) {
   int calls = 0;
   fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
   StateChangedCallback callback{
@@ -168,7 +168,7 @@ TEST_F(StateMachineDriverTest, InvokesCallbackOnStateChanges) {
         calls++;
         observed_state = state;
       }};
-  state_machine_driver_->SetStateChangedCallback(std::move(callback));
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
 
   ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
   RunLoopUntilIdle();
@@ -182,6 +182,47 @@ TEST_F(StateMachineDriverTest, InvokesCallbackOnStateChanges) {
   EXPECT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
 }
 
+TEST_F(StateMachineDriverTest, NotifiesMultipleObserversOnStateChanage) {
+  int call1_calls = 0;
+  int call2_calls = 0;
+  StateChangedCallback callback1{[&call1_calls](__UNUSED fuchsia::ui::activity::State state,
+                                                __UNUSED zx::time time) { call1_calls++; }};
+  StateChangedCallback callback2{[&call2_calls](__UNUSED fuchsia::ui::activity::State state,
+                                                __UNUSED zx::time time) { call2_calls++; }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback1)), ZX_OK);
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(2u, std::move(callback2)), ZX_OK);
+
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  RunLoopUntilIdle();
+  EXPECT_EQ(call1_calls, 1);
+  EXPECT_EQ(call2_calls, 1);
+
+  auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+  EXPECT_EQ(call1_calls, 2);
+  EXPECT_EQ(call2_calls, 2);
+}
+
+TEST_F(StateMachineDriverTest, StopsNotifyingUnregisteredObservers) {
+  int calls = 0;
+  StateChangedCallback callback{
+      [&calls](__UNUSED fuchsia::ui::activity::State state, __UNUSED zx::time time) { calls++; }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
+
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 1);
+
+  EXPECT_EQ(state_machine_driver_->UnregisterObserver(1u), ZX_OK);
+
+  auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+  // |calls| should not have incremented
+  EXPECT_EQ(calls, 1);
+}
+
 TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
   int calls = 0;
   StateChangedCallback callback{
@@ -192,7 +233,7 @@ TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
     RunLoopUntilIdle();
     ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
 
-    driver.SetStateChangedCallback(std::move(callback));
+    EXPECT_EQ(driver.RegisterObserver(1u, std::move(callback)), ZX_OK);
   }
   auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);

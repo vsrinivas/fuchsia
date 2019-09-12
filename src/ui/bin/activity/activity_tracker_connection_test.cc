@@ -8,8 +8,8 @@
 
 #include <memory>
 
-#include "src/ui/bin/activity/state_machine_driver.h"
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 
 namespace {
 
@@ -38,7 +38,7 @@ class ActivityTrackerConnectionTest : public ::gtest::TestLoopFixture {
   void SetUp() override {
     conn_ = std::make_unique<ActivityTrackerConnection>(
         &driver_, dispatcher(), client_.NewRequest(dispatcher()),
-        testing::UnitTest::GetInstance()->random_seed());
+        ::testing::UnitTest::GetInstance()->random_seed());
   }
 
  protected:

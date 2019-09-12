@@ -14,6 +14,16 @@
 
 namespace activity {
 
+ActivityTrackerConnection::ActivityTrackerConnection(
+    StateMachineDriver* state_machine_driver, async_dispatcher_t* dispatcher,
+    fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request, uint32_t random_seed)
+    : state_machine_driver_(state_machine_driver),
+      dispatcher_(dispatcher),
+      random_(random_seed),
+      binding_(this, std::move(request), dispatcher) {}
+
+ActivityTrackerConnection::~ActivityTrackerConnection() { Stop(); }
+
 void ActivityTrackerConnection::Stop() {
   for (const auto& id : ongoing_activities_) {
     zx_status_t status = state_machine_driver_->EndOngoingActivity(id, async::Now(dispatcher_));
