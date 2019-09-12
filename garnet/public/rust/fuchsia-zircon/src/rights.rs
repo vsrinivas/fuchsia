@@ -42,5 +42,7 @@ bitflags! {
         const IO             = sys::ZX_RIGHT_READ | sys::ZX_RIGHT_WRITE;
         const PROPERTY       = sys::ZX_RIGHT_GET_PROPERTY | sys::ZX_RIGHT_SET_PROPERTY;
         const POLICY         = sys::ZX_RIGHT_GET_POLICY | sys::ZX_RIGHT_SET_POLICY;
+        const RESOURCE_BASIC = sys::ZX_RIGHT_TRANSFER | sys::ZX_RIGHT_DUPLICATE |
+                               sys::ZX_RIGHT_WRITE | sys::ZX_RIGHT_INSPECT;
     }
 }
