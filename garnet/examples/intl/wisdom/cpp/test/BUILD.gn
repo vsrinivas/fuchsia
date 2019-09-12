@@ -42,3 +42,10 @@ test_package("intl_wisdom_test") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":intl_wisdom_test",
+  ]
+}

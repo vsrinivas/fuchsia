@@ -1,35 +1,14 @@
 # Internationalization Example: Intl Wisdom
 
 Simple example of using `fuchsia.intl.Profile` (from `intl.fidl`) for conveying
-internationalization properties to services. Eventually, this might become a
-polyglot version of `fortune`.
+internationalization properties to services.
 
-Run using
+# C++ example
 
-```
-run fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_client.cmx
-```
+Please see the [C++ README file](cpp/README.md) for details on the C++ example.
 
-You can optionally specify a timestamp in ISO-8601 format, to be used in
-generating bits of wisdom:
+# Rust example
 
-```
---timestamp=2018-11-01T12:34:56Z
-```
+Please see the [Rust README file](rust/README.md) for details on the Rust
+example.
 
-You can also override the timezone that will be set in the `Profile`, by using
-an
-[IANA Time Zone ID](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List):
-
-```
---timezone=America/Los_Angeles
-```
-
-********************************************************************************
-
-The client command above will automatically start the server. If you'd like to
-start the server _directly_, execute
-
-```
-run fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_server.cmx
-```

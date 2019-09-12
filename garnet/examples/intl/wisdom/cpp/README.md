@@ -25,7 +25,7 @@ an
 --timezone=America/Los_Angeles
 ```
 
-********************************************************************************
+----
 
 The client command above will automatically start the server. If you'd like to
 start the server _directly_, execute
