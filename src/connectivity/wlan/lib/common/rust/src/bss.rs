@@ -63,7 +63,7 @@ pub trait BssDescriptionExt {
 
 impl BssDescriptionExt for fidl_mlme::BssDescription {
     fn get_protection(&self) -> Protection {
-        let has_valid_wpa1_vendor_ie = self
+        let supports_wpa_1 = self
             .get_wpa_ie()
             .map(|wpa_ie| {
                 let mut rsne = ie::rsn::rsne::Rsne::new();
@@ -81,7 +81,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             },
             None if !self.cap.privacy => return Protection::Open,
             None if self.find_wpa_ie().is_some() => {
-                if has_valid_wpa1_vendor_ie {
+                if supports_wpa_1 {
                     return Protection::Wpa1;
                 } else {
                     return Protection::Unknown;
@@ -90,8 +90,6 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             None => return Protection::Wep,
         };
 
-        let supports_wpa_1 =
-            has_valid_wpa1_vendor_ie || suite_filter::WPA1_PERSONAL.is_satisfied(&rsne);
         let rsn_caps = rsne.rsn_capabilities.as_ref().unwrap_or(&ie::rsn::rsne::RsnCapabilities(0));
         let mfp_req = rsn_caps.mgmt_frame_protection_req();
         let mfp_cap = rsn_caps.mgmt_frame_protection_cap();
@@ -105,7 +103,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
                 return Protection::Wpa3Personal;
             }
         } else if suite_filter::WPA2_PERSONAL.is_satisfied(&rsne) {
-            if supports_wpa_1 {
+            if supports_wpa_1 || suite_filter::WPA2_LEGACY.is_satisfied(&rsne) {
                 return Protection::Wpa1Wpa2Personal;
             } else {
                 return Protection::Wpa2Personal;
@@ -191,9 +189,9 @@ mod tests {
         crate::test_utils::{
             fake_frames::{
                 fake_unknown_rsne, fake_wpa1_ie, fake_wpa1_ie_body, fake_wpa2_enterprise_rsne,
-                fake_wpa2_rsne, fake_wpa2_wpa3_rsne, fake_wpa3_enterprise_192_bit_rsne,
-                fake_wpa3_rsne, invalid_wpa2_wpa3_rsne, invalid_wpa3_enterprise_192_bit_rsne,
-                invalid_wpa3_rsne,
+                fake_wpa2_legacy_rsne, fake_wpa2_mixed_rsne, fake_wpa2_rsne, fake_wpa2_wpa3_rsne,
+                fake_wpa3_enterprise_192_bit_rsne, fake_wpa3_rsne, invalid_wpa2_wpa3_rsne,
+                invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
             },
             fake_stas::{
                 fake_ht_capabilities, fake_ht_operation, fake_unprotected_bss_description,
@@ -206,8 +204,10 @@ mod tests {
         Open,
         Wep,
         Wpa1,
+        Wpa1Enhanced,
         Wpa1Wpa2,
         Wpa2,
+        Wpa2Mixed,
         Wpa2Wpa3,
         Wpa3,
         Wpa2Enterprise,
@@ -219,7 +219,9 @@ mod tests {
         assert_eq!(Protection::Open, bss(ProtectionCfg::Open).get_protection());
         assert_eq!(Protection::Wep, bss(ProtectionCfg::Wep).get_protection());
         assert_eq!(Protection::Wpa1, bss(ProtectionCfg::Wpa1).get_protection());
+        assert_eq!(Protection::Wpa1, bss(ProtectionCfg::Wpa1Enhanced).get_protection());
         assert_eq!(Protection::Wpa1Wpa2Personal, bss(ProtectionCfg::Wpa1Wpa2).get_protection());
+        assert_eq!(Protection::Wpa1Wpa2Personal, bss(ProtectionCfg::Wpa2Mixed).get_protection());
         assert_eq!(Protection::Wpa2Personal, bss(ProtectionCfg::Wpa2).get_protection());
         assert_eq!(Protection::Wpa2Wpa3Personal, bss(ProtectionCfg::Wpa2Wpa3).get_protection());
         assert_eq!(Protection::Wpa3Personal, bss(ProtectionCfg::Wpa3).get_protection());
@@ -241,6 +243,9 @@ mod tests {
 
         bss.rsn = Some(invalid_wpa3_enterprise_192_bit_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
+
+        bss.rsn = Some(fake_wpa2_legacy_rsne());
+        assert_eq!(Protection::Unknown, bss.get_protection());
     }
 
     #[test]
@@ -260,7 +265,7 @@ mod tests {
             .expect("failed to find WPA1 IE")
             .write_into(&mut buf)
             .expect("failed to serialize WPA1 IE");
-        assert_eq!(fake_wpa1_ie_body(), buf);
+        assert_eq!(fake_wpa1_ie_body(false), buf);
         bss(ProtectionCfg::Wpa2).get_wpa_ie().expect_err("found unexpected WPA1 IE");
     }
 
@@ -319,10 +324,12 @@ mod tests {
                 ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
                 ProtectionCfg::Wpa2Wpa3 => Some(fake_wpa2_wpa3_rsne()),
                 ProtectionCfg::Wpa2 | ProtectionCfg::Wpa1Wpa2 => Some(fake_wpa2_rsne()),
+                ProtectionCfg::Wpa2Mixed => Some(fake_wpa2_mixed_rsne()),
                 _ => None,
             },
             vendor_ies: match protection {
-                ProtectionCfg::Wpa1 | ProtectionCfg::Wpa1Wpa2 => Some(fake_wpa1_ie()),
+                ProtectionCfg::Wpa1 | ProtectionCfg::Wpa1Wpa2 => Some(fake_wpa1_ie(false)),
+                ProtectionCfg::Wpa1Enhanced => Some(fake_wpa1_ie(true)),
                 _ => None,
             },
             ..bss

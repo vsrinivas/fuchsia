@@ -231,21 +231,22 @@ pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
     amsdu_data_frame
 }
 
-pub fn fake_wpa1_ie_body() -> Vec<u8> {
+pub fn fake_wpa1_ie_body(enhanced: bool) -> Vec<u8> {
+    let cipher = if enhanced { 0x4 } else { 0x2 }; // unicast cipher is TKIP or CCMP-128
     vec![
         0x01, 0x00, // WPA version
-        0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
-        0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+        0x00, 0x50, 0xf2, 0x02, // multicast cipher: TKIP
+        0x01, 0x00, 0x00, 0x50, 0xf2, cipher, // 1 unicast cipher
         0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
     ]
 }
 
-pub fn fake_wpa1_ie() -> Vec<u8> {
+pub fn fake_wpa1_ie(enhanced: bool) -> Vec<u8> {
     let mut ie = vec![
         0xdd, 0x16, 0x00, 0x50, 0xf2, // IE header
         0x01, // MSFT specific IE type (WPA)
     ];
-    ie.append(&mut fake_wpa1_ie_body());
+    ie.append(&mut fake_wpa1_ie_body(enhanced));
     ie
 }
 
@@ -255,6 +256,26 @@ pub fn fake_wpa2_rsne() -> Vec<u8> {
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+    ]
+}
+
+pub fn fake_wpa2_legacy_rsne() -> Vec<u8> {
+    vec![
+        48, 18, // Element header
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
+        1, 0, 0x00, 0x0F, 0xAC, 2, // 1 Pairwise Cipher: TKIP
+        1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+    ]
+}
+
+pub fn fake_wpa2_mixed_rsne() -> Vec<u8> {
+    vec![
+        48, 18, // Element header
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
+        2, 0, 0x00, 0x0F, 0xAC, 2, 0x00, 0x0F, 0xAC, 4, // 2 Pairwise Ciphers: TKIP, CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
     ]
 }

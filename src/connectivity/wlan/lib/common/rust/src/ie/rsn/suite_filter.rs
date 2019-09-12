@@ -67,6 +67,13 @@ impl<'a> SuiteFilter<'a> {
 
 /// WFA, WPA1 Spec. 3.1, Chapter 2.1
 pub const WPA1_PERSONAL: SuiteFilter = SuiteFilter {
+    known_group_data_ciphers: &[cipher::TKIP, cipher::CCMP_128],
+    known_akms: &[akm::PSK],
+    known_pairwise_ciphers: &[cipher::TKIP, cipher::CCMP_128],
+    required_group_mgmt_cipher: None,
+};
+
+pub const WPA2_LEGACY: SuiteFilter = SuiteFilter {
     known_group_data_ciphers: &[cipher::TKIP],
     known_akms: &[akm::PSK],
     known_pairwise_ciphers: &[cipher::TKIP],
