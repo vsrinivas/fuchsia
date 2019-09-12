@@ -526,9 +526,6 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd co
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 
-  auto event_reporter = command_dispatcher_context()->session()->event_reporter().get();
-  FXL_DCHECK(event_reporter);
-
   if (command.delivery_request) {
     // Take this opportunity to remove dead sessions.
     //
@@ -542,7 +539,9 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd co
 
     // This code assumes one event reporter per session id.
     FXL_DCHECK(input_system_->hard_keyboard_requested().count(session_id) == 0);
-    input_system_->hard_keyboard_requested().insert({session_id, event_reporter->GetWeakPtr()});
+    auto reporter = command_dispatcher_context()->session()->event_reporter().get();
+    if (reporter)
+      input_system_->hard_keyboard_requested().insert({session_id, reporter->GetWeakPtr()});
   } else {
     input_system_->hard_keyboard_requested().erase(session_id);
   }
@@ -555,6 +554,8 @@ void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd comman
 }
 
 void InputCommandDispatcher::ReportFocusEvent(EventReporter* reporter, FocusEvent focus) {
+  FXL_DCHECK(reporter) << "precondition";
+
   InputEvent event;
   event.set_focus(std::move(focus));
   reporter->EnqueueEvent(std::move(event));
@@ -562,6 +563,9 @@ void InputCommandDispatcher::ReportFocusEvent(EventReporter* reporter, FocusEven
 
 void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_info,
                                                 PointerEvent pointer) {
+  if (!view_info.reporter)
+    return;  // Session's event reporter no longer available. Bail quietly.
+
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
@@ -574,6 +578,8 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
 }
 
 void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter, KeyboardEvent keyboard) {
+  FXL_DCHECK(reporter) << "precondition";
+
   InputEvent event;
   event.set_keyboard(std::move(keyboard));
   reporter->EnqueueEvent(std::move(event));
