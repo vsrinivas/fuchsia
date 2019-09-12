@@ -312,17 +312,26 @@ impl Map {
         }
     }
 
+    fn touch_tiles(&mut self, raster: Raster) {
+        raster.tile_contour().for_each_tile(self, |tile| tile.needs_render = true);
+    }
+
     pub fn print(&mut self, id: u32, layer: Layer) {
         if !layer.ops.is_empty() && self.layers.get(&id) != Some(&layer) {
+            if let Some(old_layer) = self.layers.get(&id) {
+                let raster = old_layer.raster.clone();
+                self.touch_tiles(raster);
+            }
+
             self.layers.insert(id, layer.clone());
-            layer.raster.tile_contour().for_each_tile(self, |tile| tile.needs_render = true);
+            self.touch_tiles(layer.raster);
         }
     }
 
     pub fn remove(&mut self, id: u32) {
         if let Some(layer) = self.layers.get(&id) {
             let raster = layer.raster.clone();
-            raster.tile_contour().for_each_tile(self, |tile| tile.needs_render = true);
+            self.touch_tiles(raster);
             self.layers.remove(&id);
         }
     }
@@ -349,10 +358,6 @@ impl Map {
             .filter_map(|(id, layer)| if layer.raster.new_edges() { Some(*id) } else { None })
             .collect();
 
-        if complete_reprints.is_empty() {
-            return;
-        }
-
         let mut partial_reprints = HashSet::new();
 
         for id in &complete_reprints {
@@ -361,7 +366,7 @@ impl Map {
         }
 
         for tile in &mut self.tiles {
-            let mut needs_render = false;
+            let mut needs_render = tile.needs_render;
 
             for node in &tile.layers {
                 if let LayerNode::Layer(id) = node {
@@ -568,6 +573,10 @@ mod tests {
         }
     }
 
+    fn print(map: &mut Map, id: u32, raster: Raster) {
+        map.print(id, Layer { raster, ops: vec![TileOp::CoverWipNonZero] });
+    }
+
     #[test]
     fn tile_edges_and_rasters() {
         let mut map = Map::new(TILE_SIZE * 3, TILE_SIZE * 3);
@@ -575,12 +584,12 @@ mod tests {
         let mut path = Path::new();
         polygon(&mut path, &[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]);
 
-        map.print(0, Layer { raster: Raster::new(&path), ops: vec![TileOp::CoverWipNonZero] });
+        print(&mut map, 0, Raster::new(&path));
 
         let mut translated = Raster::new(&path);
         translated.translate(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
 
-        map.print(1, Layer { raster: translated, ops: vec![TileOp::CoverWipNonZero] });
+        print(&mut map, 1, translated);
         map.reprint_all();
 
         assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0), LayerNode::Edges(0..HALF)],);
@@ -627,6 +636,10 @@ mod tests {
 
     #[test]
     fn reprint() {
+        fn need_render(map: &Map) -> Vec<bool> {
+            map.tiles.iter().map(|tile| tile.needs_render).collect()
+        }
+
         let mut map = Map::new(TILE_SIZE * 4, TILE_SIZE * 4);
 
         let mut path = Path::new();
@@ -636,37 +649,31 @@ mod tests {
 
         map.global(0, vec![TileOp::ColorAccZero]);
 
-        map.print(1, Layer { raster: raster.clone(), ops: vec![TileOp::CoverWipNonZero] });
+        print(&mut map, 1, raster.clone());
 
-        assert_eq!(
-            map.tiles.iter().map(|tile| tile.needs_render).collect::<Vec<_>>(),
-            vec![true; 16],
-        );
+        assert_eq!(need_render(&map), vec![true; 16]);
 
         map.render_to_bitmap();
 
-        assert_eq!(
-            map.tiles.iter().map(|tile| tile.needs_render).collect::<Vec<_>>(),
-            vec![false; 16],
-        );
+        assert_eq!(need_render(&map), vec![false; 16]);
 
         raster.translate(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
 
         map.reprint_all();
 
         assert_eq!(
-            map.tiles.iter().map(|tile| tile.needs_render).collect::<Vec<_>>(),
+            need_render(&map),
             vec![
                 true, true, false, false, true, true, true, false, false, true, true, false, false,
                 false, false, false,
             ],
         );
 
-        assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0)],);
+        assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0)]);
 
         assert_eq!(
             map.tiles[5].layers,
-            vec![LayerNode::Layer(0), LayerNode::Layer(1), LayerNode::Edges(0..HALF)],
+            vec![LayerNode::Layer(0), LayerNode::Layer(1), LayerNode::Edges(0..HALF),],
         );
     }
 
@@ -698,21 +705,58 @@ mod tests {
         let path = Path::new();
         let raster = Raster::new(&path);
 
-        map.print(
-            0,
-            Layer {
-                raster: raster.clone(),
-                ops: vec![TileOp::CoverWipNonZero],
-            },
-        );
-        map.print(
-            1,
-            Layer {
-                raster: raster.clone(),
-                ops: vec![TileOp::CoverWipNonZero],
-            },
-        );
+        print(&mut map, 0, raster.clone());
+        print(&mut map, 1, raster.clone());
 
         map.render_to_bitmap();
+    }
+
+    #[test]
+    fn replace_remove_layer() {
+        let mut map = Map::new(TILE_SIZE * 2, TILE_SIZE);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(0.0, 0.0), (0.0, 0.5), (0.5, 0.5), (0.5, 0.0)]);
+
+        let raster = Raster::new(&path);
+
+        map.global(0, vec![TileOp::ColorAccZero]);
+
+        print(&mut map, 1, raster);
+
+        map.reprint_all();
+
+        assert_eq!(
+            map.tiles[0].layers,
+            vec![LayerNode::Layer(0), LayerNode::Layer(1), LayerNode::Edges(0..TILE_SIZE),],
+        );
+
+        assert_eq!(map.tiles[1].layers, vec![LayerNode::Layer(0)]);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(1.0, 0.0), (1.0, 0.5), (1.5, 0.5), (1.5, 0.0)]);
+
+        let raster = Raster::new(&path);
+
+        // Replace.
+        print(&mut map, 1, raster);
+
+        map.reprint_all();
+
+        assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0)]);
+
+        assert_eq!(
+            map.tiles[1].layers,
+            vec![LayerNode::Layer(0), LayerNode::Layer(1), LayerNode::Edges(0..TILE_SIZE),],
+        );
+
+        // Remove.
+        map.remove(1);
+
+        map.reprint_all();
+
+        assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0)]);
+
+        assert_eq!(map.tiles[1].layers, vec![LayerNode::Layer(0)]);
     }
 }
