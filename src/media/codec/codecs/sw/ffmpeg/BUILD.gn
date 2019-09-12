@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/environments.gni")
+
+group("ffmpeg") {
+  testonly = true
+  deps = [
+    ":codec_runner_sw_ffmpeg",
+  ]
+}
+
+executable("codec_runner_sw_ffmpeg") {
+  visibility = [
+    "//src/media/codec/codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec:codec_runner_sw_ffmpeg.manifest",
+    "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
+  ]
+
+  sources = [
+    "avcodec_context.cc",
+    "avcodec_context.h",
+    "codec_adapter_ffmpeg_decoder.cc",
+    "codec_adapter_ffmpeg_decoder.h",
+    "codec_adapter_ffmpeg_encoder.cc",
+    "codec_adapter_ffmpeg_encoder.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/media/codec_impl",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//src/media/codec/codecs/sw:codec_adapter_sw",
+    "//src/media/codec/codecs/sw:codec_runner_sw",
+    "//src/media/lib/ffmpeg",
+  ]
+}

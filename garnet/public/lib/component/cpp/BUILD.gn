@@ -36,7 +36,7 @@ source_set("cpp") {
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
-    "//garnet/bin/media/codec_factory:codec_factory",
+    "//src/media/codec/codec_factory:codec_factory",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:bin",
     "//garnet/bin/ui/gltf_export:gltf_export",
     "//garnet/bin/ui/present_view:present_view",

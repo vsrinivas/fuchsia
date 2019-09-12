@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/environments.gni")
+
+group("sbc") {
+  deps = [
+    ":codec_runner_sw_sbc",
+  ]
+}
+
+executable("codec_runner_sw_sbc") {
+  visibility = [
+    "//src/media/codec/codec_factory",
+    "//src/media/codec:codec_runner_sw_sbc",
+    "//src/media/codec:codec_runner_sw_sbc.manifest",
+    "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
+  ]
+
+  sources = [
+    "codec_adapter_sbc_encoder.cc",
+    "codec_adapter_sbc_encoder.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/media/codec_impl",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//src/media/codec/codecs:chunk_input_stream",
+    "//src/media/codec/codecs:timestamp_extrapolator",
+    "//src/media/codec/codecs/sw:codec_adapter_sw",
+    "//src/media/codec/codecs/sw:codec_runner_sw",
+    "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
+  ]
+}

@@ -1,0 +1,13 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("public_include_dirs") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+source_set("codec_android_pal") {
+  visibility = [ "//src/media/codec/codecs/sw/low_layer/*" ]
+  public_configs = [ ":public_include_dirs" ]
+}

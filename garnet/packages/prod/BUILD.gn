@@ -503,10 +503,10 @@ group("cobalt_client") {
 group("media_codec") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media:codec_factory",
-    "//garnet/bin/media:codec_runner_sw_aac",
-    "//garnet/bin/media:codec_runner_sw_ffmpeg",
-    "//garnet/bin/media:codec_runner_sw_sbc",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_aac",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec:codec_runner_sw_sbc",
   ]
 }
 

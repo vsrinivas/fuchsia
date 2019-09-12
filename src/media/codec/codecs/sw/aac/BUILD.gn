@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+
+group("aac") {
+  testonly = true
+  deps = [
+    ":codec_runner_sw_aac",
+  ]
+}
+
+executable("codec_runner_sw_aac") {
+  visibility = [
+    "//src/media/codec/codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec:codec_runner_sw_ffmpeg.manifest",
+    "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
+  ]
+
+  sources = [
+    "codec_adapter_aac_encoder.cc",
+    "codec_adapter_aac_encoder.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/media/codec_impl",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//src/media/codec/codecs:chunk_input_stream",
+    "//src/media/codec/codecs:output_sink",
+    "//src/media/codec/codecs/sw:codec_runner_sw",
+    "//src/media/codec/codecs/sw/low_layer/aac:libFraunhoferAAC",
+    "//zircon/public/lib/fit",
+  ]
+}
