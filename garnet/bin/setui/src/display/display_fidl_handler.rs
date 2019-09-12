@@ -5,6 +5,7 @@ use {
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     futures::lock::Mutex,
@@ -14,7 +15,7 @@ use {
 
 impl Sender<DisplaySettings> for DisplayWatchResponder {
     fn send_response(self, data: DisplaySettings) {
-        self.send(&mut Ok(data)).unwrap();
+        self.send(&mut Ok(data)).log_fidl_response_error(DisplayMarker::DEBUG_NAME);
     }
 }
 
@@ -69,11 +70,17 @@ pub fn spawn_display_fidl_handler(
                             switchboard.request(SettingType::Display, request, response_tx);
 
                         match result {
-                            Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                            Err(_err) => responder.send(&mut Err(Error::Unsupported)).unwrap(),
+                            Ok(_) => responder
+                                .send(&mut Ok(()))
+                                .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
+                            Err(_err) => responder
+                                .send(&mut Err(Error::Unsupported))
+                                .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
                         }
                     } else {
-                        responder.send(&mut Err(Error::Unsupported)).unwrap();
+                        responder
+                            .send(&mut Err(Error::Unsupported))
+                            .log_fidl_response_error(DisplayMarker::DEBUG_NAME);
                     }
                 }
                 DisplayRequest::Watch { responder } => {

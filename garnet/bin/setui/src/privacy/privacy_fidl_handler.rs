@@ -7,14 +7,16 @@ use std::sync::{Arc, RwLock};
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    Error, PrivacyRequest, PrivacyRequestStream, PrivacySetResponder, PrivacySettings,
-    PrivacyWatchResponder,
+    Error, PrivacyMarker, PrivacyRequest, PrivacyRequestStream, PrivacySetResponder,
+    PrivacySettings, PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 
 use crate::switchboard::base::{
-    SettingRequest, SettingResponse, SettingResponseResult, SettingType, Switchboard,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
+    Switchboard,
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 
@@ -23,7 +25,7 @@ type PrivacyHangingGetHandler =
 
 impl Sender<PrivacySettings> for PrivacyWatchResponder {
     fn send_response(self, data: PrivacySettings) {
-        self.send(&mut Ok(data)).unwrap();
+        self.send(&mut Ok(data)).log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
     }
 }
 
@@ -89,17 +91,20 @@ impl PrivacyFidlHandler {
         ) {
             Ok(_) => {
                 fasync::spawn(async move {
-                    let _ = match response_rx.await {
+                    let result = match response_rx.await {
                         Ok(_) => responder.send(&mut Ok(())),
                         Err(_) => responder.send(&mut Err(Error::Failed)),
                     };
+                    result.log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
                 });
             }
             Err(_) => {
                 // Report back an error immediately if we could not successfully make the privacy
                 // set request. The return result can be ignored as there is no actionable steps
                 // that can be taken.
-                let _ = responder.send(&mut Err(Error::Failed));
+                responder
+                    .send(&mut Err(Error::Failed))
+                    .log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
             }
         }
     }

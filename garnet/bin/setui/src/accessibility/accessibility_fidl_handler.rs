@@ -7,15 +7,16 @@ use std::sync::{Arc, RwLock};
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    AccessibilityRequest, AccessibilityRequestStream, AccessibilitySetResponder,
-    AccessibilitySettings, AccessibilityWatchResponder, Error,
+    AccessibilityMarker, AccessibilityRequest, AccessibilityRequestStream,
+    AccessibilitySetResponder, AccessibilitySettings, AccessibilityWatchResponder, Error,
 };
 use fuchsia_async as fasync;
 
 use crate::switchboard::base::{
-    AccessibilityInfo, CaptionsSettings, ColorBlindnessType, SettingRequest, SettingResponse,
-    SettingResponseResult, SettingType, Switchboard,
+    AccessibilityInfo, CaptionsSettings, ColorBlindnessType, FidlResponseErrorLogger,
+    SettingRequest, SettingResponse, SettingResponseResult, SettingType, Switchboard,
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::switchboard::switchboard_impl::SwitchboardImpl;
@@ -25,7 +26,7 @@ type AccessibilityHangingGetHandler =
 
 impl Sender<AccessibilitySettings> for AccessibilityWatchResponder {
     fn send_response(self, data: AccessibilitySettings) {
-        self.send(&mut Ok(data)).unwrap();
+        self.send(&mut Ok(data)).log_fidl_response_error(AccessibilityMarker::DEBUG_NAME);
     }
 }
 
@@ -112,15 +113,21 @@ fn set_accessibility(
     {
         fasync::spawn(async move {
             match response_rx.await {
-                Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                Err(_) => responder.send(&mut Err(Error::Failed)).unwrap(),
+                Ok(_) => responder
+                    .send(&mut Ok(()))
+                    .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME),
+                Err(_) => responder
+                    .send(&mut Err(Error::Failed))
+                    .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME),
             }
         });
     } else {
         // report back an error immediately if we could not successfully
         // make the time zone set request. The return result can be ignored
         // as there is no actionable steps that can be taken.
-        responder.send(&mut Err(Error::Failed)).ok();
+        responder
+            .send(&mut Err(Error::Failed))
+            .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME);
     }
 }
 

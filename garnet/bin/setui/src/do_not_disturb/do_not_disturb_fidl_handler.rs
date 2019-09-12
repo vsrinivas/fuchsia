@@ -2,8 +2,9 @@ use {
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
-        DoNotDisturbRequest, DoNotDisturbRequestStream, DoNotDisturbSettings,
+        DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbRequestStream, DoNotDisturbSettings,
         DoNotDisturbWatchResponder, Error,
     },
     fuchsia_async as fasync,
@@ -15,10 +16,7 @@ use {
 
 impl Sender<DoNotDisturbSettings> for DoNotDisturbWatchResponder {
     fn send_response(self, data: DoNotDisturbSettings) {
-        match self.send(data) {
-            Ok(_) => {}
-            Err(e) => fx_log_err!("failed to send do_not_disturb, {:#?}", e),
-        }
+        self.send(data).log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
     }
 }
 
@@ -73,15 +71,23 @@ pub fn spawn_do_not_disturb_fidl_handler(
                         {
                             fasync::spawn(async move {
                                 match response_rx.await {
-                                    Ok(_) => responder.send(&mut Ok(())).ok(),
-                                    Err(_) => responder.send(&mut Err(Error::Failed)).ok(),
+                                    Ok(_) => responder
+                                        .send(&mut Ok(()))
+                                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
+                                    Err(_) => responder
+                                        .send(&mut Err(Error::Failed))
+                                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
                                 };
                             });
                         } else {
-                            responder.send(&mut Err(Error::Failed)).ok();
+                            responder
+                                .send(&mut Err(Error::Failed))
+                                .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
                         }
                     } else {
-                        responder.send(&mut Err(Error::Failed)).ok();
+                        responder
+                            .send(&mut Err(Error::Failed))
+                            .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
                     }
                 }
                 DoNotDisturbRequest::Watch { responder } => {

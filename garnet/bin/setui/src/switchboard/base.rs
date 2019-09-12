@@ -4,6 +4,7 @@
 
 use bitflags::bitflags;
 use failure::Error;
+use fuchsia_syslog::fx_log_warn;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use serde_derive::{Deserialize, Serialize};
@@ -509,4 +510,53 @@ pub trait Switchboard {
         setting_type: SettingType,
         listener: UnboundedSender<SettingType>,
     ) -> Result<Box<dyn ListenSession + Send + Sync>, Error>;
+}
+
+/// Custom trait used to handle results from responding to FIDL calls.
+pub trait FidlResponseErrorLogger {
+    fn log_fidl_response_error(&self, client_name: &str);
+}
+
+/// In order to not crash when a client dies, logs but doesn't crash for the specific case of
+/// being unable to write to the client. Crashes if other types of errors occur.
+impl FidlResponseErrorLogger for Result<(), fidl::Error> {
+    fn log_fidl_response_error(&self, client_name: &str) {
+        if let Some(error) = self.as_ref().err() {
+            match error {
+                fidl::Error::ServerResponseWrite(_) => {
+                    fx_log_warn!("Failed to respond to client {:?} : {:?}", client_name, error);
+                }
+                _ => {
+                    panic!(
+                        "Unexpected client response error from client {:?} : {:?}",
+                        client_name, error
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_zircon as zx;
+
+    /// Should succeed either when responding was successful or there was an error on the client side.
+    #[test]
+    fn test_error_logger_succeeds() {
+        let result = Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED));
+        result.log_fidl_response_error("");
+
+        let result = Ok(());
+        result.log_fidl_response_error("");
+    }
+
+    /// Should fail at all other times.
+    #[should_panic]
+    #[test]
+    fn test_error_logger_fails() {
+        let result = Err(fidl::Error::ServerRequestRead(zx::Status::PEER_CLOSED));
+        result.log_fidl_response_error("");
+    }
 }

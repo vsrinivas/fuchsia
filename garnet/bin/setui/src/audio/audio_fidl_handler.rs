@@ -5,6 +5,7 @@ use {
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
@@ -15,7 +16,7 @@ use {
 
 impl Sender<AudioSettings> for AudioWatchResponder {
     fn send_response(self, data: AudioSettings) {
-        self.send(&mut Ok(data)).unwrap();
+        self.send(&mut Ok(data)).log_fidl_response_error(AudioMarker::DEBUG_NAME);
     }
 }
 
@@ -136,7 +137,9 @@ pub fn spawn_audio_fidl_handler(
                     if let Some(request) = to_request(settings) {
                         set_volume(switchboard_lock.clone(), request, responder)
                     } else {
-                        responder.send(&mut Err(Error::Unsupported)).unwrap();
+                        responder
+                            .send(&mut Err(Error::Unsupported))
+                            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
                     }
                 }
                 AudioRequest::Watch { responder } => {
@@ -160,12 +163,16 @@ fn set_volume(
             // Return success if we get a Ok result from the
             // switchboard.
             if let Ok(Ok(_)) = response_rx.await {
-                responder.send(&mut Ok(())).ok();
+                responder.send(&mut Ok(())).log_fidl_response_error(AudioMarker::DEBUG_NAME);
             } else {
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+                responder
+                    .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
+                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
             }
         });
     } else {
-        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+        responder
+            .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
+            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
     }
 }

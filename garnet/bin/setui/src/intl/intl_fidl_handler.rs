@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 use crate::switchboard::base::{
-    SettingRequest, SettingResponse, SettingResponseResult, SettingType, Switchboard,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
+    Switchboard,
 };
 
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_intl::TimeZoneId;
-use fidl_fuchsia_settings::{IntlRequest, IntlRequestStream, IntlSetResponder, IntlSettings};
+use fidl_fuchsia_settings::{
+    IntlMarker, IntlRequest, IntlRequestStream, IntlSetResponder, IntlSettings,
+};
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use std::sync::{Arc, RwLock};
@@ -60,7 +64,9 @@ impl IntlFidlHandler {
                             let mut intl_settings = IntlSettings::empty();
                             intl_settings.time_zone_id = Some(TimeZoneId { id: info.time_zone_id });
 
-                            responder.send(&mut Ok(intl_settings)).unwrap();
+                            responder
+                                .send(&mut Ok(intl_settings))
+                                .log_fidl_response_error(IntlMarker::DEBUG_NAME);
                         }
                     }
                     _ => {}
