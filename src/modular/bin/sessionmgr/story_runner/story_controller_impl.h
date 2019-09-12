@@ -196,6 +196,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     std::optional<fuchsia::modular::SurfaceInfo2> surface_info;
 
     inspect::Node mod_inspect_node;
+    inspect::StringProperty is_embedded;
   };
 
   // A module's story shell-related information that we pend until we are able

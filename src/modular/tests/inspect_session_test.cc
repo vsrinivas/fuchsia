@@ -33,6 +33,7 @@ using inspect::testing::IntIs;
 using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
+using inspect::testing::StringIs;
 using testing::IsNull;
 using testing::Not;
 
@@ -203,6 +204,9 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   EXPECT_THAT(grandchild.size(), 1);
   EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
+  EXPECT_THAT(
+      grandchild.at(0),
+      NodeMatches(AllOf(PropertyList(UnorderedElementsAre(StringIs("is_embedded", "False"))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
