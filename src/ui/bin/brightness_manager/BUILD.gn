@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

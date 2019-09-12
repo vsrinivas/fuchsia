@@ -12,15 +12,17 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 
 // Include Brightness Control FIDL bindings
-use fidl_fuchsia_hardware_backlight::DeviceProxy as BacklightProxy;
 use fidl_fuchsia_hardware_input::DeviceProxy as SensorProxy;
 use fidl_fuchsia_ui_brightness::{
     ControlRequest as BrightnessControlRequest, ControlRequestStream,
 };
+
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, DurationNum};
+
+use backlight::{Backlight, BacklightControl};
 
 mod backlight;
 mod sensor;
@@ -36,7 +38,7 @@ const LARGE_CHANGE_THRESHOLD_NITS: i16 = 2;
 async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), Error> {
     // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
     // that you can ensure it continues serving clients correctly."
-    let backlight = backlight::open_backlight()?;
+    let backlight = Backlight::new()?;
     let sensor = sensor::open_sensor().await?;
 
     let backlight = Arc::new(Mutex::new(backlight));
@@ -70,8 +72,9 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 let adjusted_value = convert_to_old_backlight_value(value);
                 let nits = num_traits::clamp(adjusted_value, 0, 255);
                 let backlight_clone = backlight.clone();
-                let backlight = backlight_clone.lock().await;
-                backlight::set_brightness(&backlight, nits)
+                let mut backlight = backlight_clone.lock().await;
+                backlight
+                    .set_brightness(nits)
                     .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
@@ -80,7 +83,7 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 fx_log_info!("Received get current brightness request");
                 let backlight_clone = backlight.clone();
                 let backlight = backlight_clone.lock().await;
-                let brightness = backlight::get_brightness(&backlight).await?;
+                let brightness = backlight.get_brightness().await?;
                 // TODO(b/138455663): remove this when the driver changes.
                 let brightness = convert_from_old_backlight_value(brightness);
                 responder.send(brightness).context("error sending response")?;
@@ -100,7 +103,7 @@ fn convert_to_old_backlight_value(value: f32) -> u16 {
 
 /// Converts from backlight's 0-255 value to our FIDL's 0.0-1.0 value
 /// This will be removed when backlight uses 0.0-1.0
-fn convert_from_old_backlight_value(value: u8) -> f32 {
+fn convert_from_old_backlight_value(value: u16) -> f32 {
     let value = num_traits::clamp(value, 0, 255);
     value as f32 / 255.0
 }
@@ -109,7 +112,7 @@ fn convert_from_old_backlight_value(value: u8) -> f32 {
 /// This task monitors its running boolean and terminates if it goes false.
 fn start_auto_brightness_task(
     sensor: Arc<Mutex<SensorProxy>>,
-    backlight: Arc<Mutex<BacklightProxy>>,
+    backlight: Arc<Mutex<dyn BacklightControl>>,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
@@ -127,8 +130,8 @@ fn start_auto_brightness_task(
                         report.illuminance
                     };
                     let nits = brightness_curve_lux_to_nits(lux);
-                    let backlight_clone = backlight.clone();
-                    let large_change = set_brightness(nits, backlight_clone)
+                    let backlight = backlight.clone();
+                    let large_change = set_brightness(nits, backlight)
                         .await
                         .expect("Could not set the brightness");
                     let delay_timeout =
@@ -162,17 +165,21 @@ fn brightness_curve_lux_to_nits(lux: u16) -> u16 {
 
 /// Sets the brightness of the backlight to a specific value.
 /// Returns true if the change is considered to be large.
-async fn set_brightness(nits: u16, backlight: Arc<Mutex<BacklightProxy>>) -> Result<bool, Error> {
-    let backlight = backlight.lock().await;
-    let current_nits = backlight::get_brightness(&backlight).await.unwrap_or_else(|e| {
+async fn set_brightness(
+    nits: u16,
+    backlight: Arc<Mutex<dyn BacklightControl>>,
+) -> Result<bool, Error> {
+    let mut backlight = backlight.lock().await;
+    let current_nits = backlight.get_brightness().await.unwrap_or_else(|e| {
         fx_log_err!("Failed to get backlight: {}. assuming 200", e);
         200
-    }) as u16;
+    });
     let set_brightness = |nits| {
-        backlight::set_brightness(&backlight, nits)
+        backlight
+            .set_brightness(nits)
             .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
     };
-    set_brightness_slowly(current_nits, nits, &set_brightness, 10.millis()).await?;
+    set_brightness_slowly(current_nits, nits, set_brightness, 10.millis()).await?;
     Ok((nits as i16 - current_nits as i16).abs() > LARGE_CHANGE_THRESHOLD_NITS)
 }
 
