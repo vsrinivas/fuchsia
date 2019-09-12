@@ -5,9 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.shortcut") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "invalid-case-for-decl-member" ]
-
   sdk_category = "partner"
 
   sources = [

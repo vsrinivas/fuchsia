@@ -175,11 +175,21 @@ template("fidl_library") {
     } else {
       args += [ rebase_path(host_executable, root_build_dir) ]
 
-      foreach(excluded_check, excluded_checks) {
-        args += [
-          "-e",
-          excluded_check,
-        ]
+      if (excluded_checks != []) {
+        # Add path to fidl-lint executable, and --must-find-excluded-checks option, so fidl-lint will
+        # return an error if any excluded check is no longer required. Excluded checks are only
+        # allowed if the target |fidl_to_lint| files still violate those checks. After updating
+        # the FIDL files to resolve a lint error, remove the check-id from the list of excluded
+        # checks in the fidl() target to prevent the same lint errors from creeping back in, in
+        # the future.
+        args += [ "--must-find-excluded-checks" ]
+
+        foreach(excluded_check, excluded_checks) {
+          args += [
+            "-e",
+            excluded_check,
+          ]
+        }
       }
 
       args += fidl_to_lint
