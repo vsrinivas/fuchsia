@@ -266,16 +266,35 @@ impl Streams {
     }
 }
 
+// Determines if Peer profile version is newer (>= 1.3) or older (< 1.3)
+fn a2dp_version_check(profile: ProfileDescriptor) -> bool {
+    (profile.major_version == 1 && profile.minor_version >= 3) || profile.major_version > 1
+}
+
 /// Discovers any remote streams and reports their information to the log.
 async fn discover_remote_streams(
     peer: Arc<avdtp::Peer>,
     remote_capabilities_inspect: RemoteCapabilitiesInspect,
+    profile: Option<ProfileDescriptor>,
 ) {
     let mut cobalt = get_cobalt_logger();
     let streams = peer.discover().await.expect("Failed to discover source streams");
     fx_log_info!("Discovered {} streams", streams.len());
     for info in streams {
-        match peer.get_all_capabilities(info.id()).await {
+        if profile.is_none() {
+            fx_log_info!("No profile information available.");
+            return;
+        }
+
+        let profile = profile.expect("is not none");
+        // Query get_all_capabilities if the A2DP version is >= 1.3
+        let capabilities_fut = if a2dp_version_check(profile) {
+            peer.get_all_capabilities(info.id()).await
+        } else {
+            peer.get_capabilities(info.id()).await
+        };
+
+        match capabilities_fut {
             Ok(capabilities) => {
                 remote_capabilities_inspect.append(info.id(), &capabilities).await;
                 fx_log_info!("Stream {:?}", info);
@@ -323,6 +342,9 @@ struct RemotePeer {
 
 type RemotesMap = HashMap<String, RemotePeer>;
 
+// Profiles of AVDTP peers that have been discovered & connected
+type ProfilesMap = HashMap<String, Option<ProfileDescriptor>>;
+
 impl RemotePeer {
     fn new(peer: avdtp::Peer, mut streams: Streams, inspect: inspect::Node) -> RemotePeer {
         // Setup inspect nodes for the remote peer and for each of the streams that it holds
@@ -367,7 +389,12 @@ impl RemotePeer {
     /// This remote peer should be active in the `remotes` map with an id of `device_id`.
     /// When the signaling connection is closed, the task deactivates the remote, removing it
     /// from the `remotes` map.
-    fn start_requests_task(&mut self, remotes: Arc<RwLock<RemotesMap>>, device_id: String) {
+    fn start_requests_task(
+        &mut self,
+        remotes: Arc<RwLock<RemotesMap>>,
+        device_id: String,
+        profiles: Arc<RwLock<ProfilesMap>>,
+    ) {
         let mut request_stream = self.peer.take_request_stream();
         fuchsia_async::spawn(async move {
             while let Some(r) = request_stream.next().await {
@@ -389,6 +416,7 @@ impl RemotePeer {
                 }
             }
             remotes.write().remove(&device_id);
+            profiles.write().remove(&device_id);
             fx_log_info!("Peer {} disconnected", device_id);
         });
     }
@@ -625,6 +653,7 @@ async fn main() -> Result<(), Error> {
     }
 
     let remotes: Arc<RwLock<RemotesMap>> = Arc::new(RwLock::new(HashMap::new()));
+    let profiles: Arc<RwLock<ProfilesMap>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut evt_stream = profile_svc.take_event_stream();
     while let Some(evt) = evt_stream.next().await {
@@ -637,6 +666,21 @@ async fn main() -> Result<(), Error> {
                     profile,
                     attributes
                 );
+                let prof_desc: ProfileDescriptor = profile.clone();
+
+                // Update the profile for the peer that is found
+                // If the peer already exists, also run discovery for capabilities
+                // Otherwise, only insert profile
+                if let Some(_) = profiles.write().insert(peer_id.clone(), Some(prof_desc)) {
+                    if let Entry::Occupied(mut entry) = remotes.write().entry(peer_id.clone()) {
+                        let remote = entry.get_mut();
+                        fuchsia_async::spawn(discover_remote_streams(
+                            remote.peer(),
+                            remote.remote_capabilities_inspect(),
+                            Some(prof_desc.clone()),
+                        ));
+                    }
+                }
             }
             Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
                 fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
@@ -658,11 +702,29 @@ async fn main() -> Result<(), Error> {
                         let inspect = inspect.root().create_child(format!("peer {}", device_id));
                         let remote = entry.insert(RemotePeer::new(peer, streams.clone(), inspect));
                         // Spawn tasks to handle this remote
-                        remote.start_requests_task(remotes.clone(), device_id);
-                        fuchsia_async::spawn(discover_remote_streams(
-                            remote.peer(),
-                            remote.remote_capabilities_inspect(),
-                        ));
+                        remote.start_requests_task(
+                            remotes.clone(),
+                            device_id.clone(),
+                            profiles.clone(),
+                        );
+
+                        // Remote discovery only if profile information exists for the device_id
+                        match profiles.write().entry(device_id.clone()) {
+                            Entry::Occupied(entry) => {
+                                if let Some(prof) = entry.get() {
+                                    fuchsia_async::spawn(discover_remote_streams(
+                                        remote.peer(),
+                                        remote.remote_capabilities_inspect(),
+                                        Some(prof.clone()),
+                                    ));
+                                }
+                            }
+                            // Otherwise just insert the device ID with no profile
+                            // Run discovery when profile is updated
+                            Entry::Vacant(entry) => {
+                                entry.insert(None);
+                            }
+                        }
                     }
                 }
             }
@@ -729,5 +791,54 @@ mod tests {
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
         assert!(streams.is_err(), "Stream building should fail when it can't reach MediaPlayer");
+    }
+
+    #[test]
+    /// Test if the version check correctly returns the flag
+    fn test_a2dp_version_check() {
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 3,
+        };
+        let res = a2dp_version_check(p1);
+
+        assert_eq!(true, res);
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 2,
+            minor_version: 10,
+        };
+        let res = a2dp_version_check(p1);
+
+        assert_eq!(true, res);
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 0,
+        };
+        let res = a2dp_version_check(p1);
+
+        assert_eq!(false, res);
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 0,
+            minor_version: 9,
+        };
+        let res = a2dp_version_check(p1);
+
+        assert_eq!(false, res);
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 2,
+            minor_version: 2,
+        };
+        let res = a2dp_version_check(p1);
+
+        assert_eq!(true, res);
     }
 }
