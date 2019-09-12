@@ -55,7 +55,7 @@ func newSSHConfig(privateKey ssh.Signer) (*ssh.ClientConfig, error) {
 			ssh.PublicKeys(privateKey),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         1 * time.Second,
+		Timeout:         30 * time.Second,
 	}
 
 	return config, nil
