@@ -352,10 +352,12 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void TriggerSyscallBreakpoint(uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
-  void PerformExceptionDisplayTest(const char* expected);
+  void PerformExceptionDisplayTest(debug_ipc::NotifyException::Type type, const char* expected);
   void PerformExceptionTest(ProcessController* controller,
-                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
-  void TriggerException(uint64_t process_koid, uint64_t thread_koid);
+                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
+                            debug_ipc::NotifyException::Type type);
+  void TriggerException(uint64_t process_koid, uint64_t thread_koid,
+                        debug_ipc::NotifyException::Type type);
 
  protected:
   DataForSyscallTest data_;

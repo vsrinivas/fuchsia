@@ -257,28 +257,32 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
   debug_ipc::MessageLoop::Current()->Run();
 }
 
-void InterceptionWorkflowTest::PerformExceptionDisplayTest(const char* expected) {
+void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::NotifyException::Type type,
+                                                           const char* expected) {
   ProcessController controller(this, session(), loop());
 
   PerformExceptionTest(&controller,
                        std::make_unique<SyscallDisplayDispatcherTest>(
-                           nullptr, decode_options_, display_options_, result_, &controller));
+                           nullptr, decode_options_, display_options_, result_, &controller),
+                       type);
   ASSERT_EQ(result_.str(), expected);
 }
 
 void InterceptionWorkflowTest::PerformExceptionTest(
-    ProcessController* controller, std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
+    ProcessController* controller, std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
+    debug_ipc::NotifyException::Type type) {
   controller->Initialize(session(), std::move(dispatcher), "");
 
-  TriggerException(kFirstPid, kFirstThreadKoid);
+  TriggerException(kFirstPid, kFirstThreadKoid, type);
 
   debug_ipc::MessageLoop::Current()->Run();
 }
 
-void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t thread_koid) {
+void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t thread_koid,
+                                                debug_ipc::NotifyException::Type type) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kGeneral;
+  notification.type = type;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

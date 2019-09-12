@@ -32,7 +32,7 @@ void InterceptingThreadObserver::OnThreadStopped(
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
   FXL_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
 
-  if (type == debug_ipc::NotifyException::Type::kGeneral) {
+  if (type != debug_ipc::NotifyException::Type::kSoftware) {
     FXL_CHECK(hit_breakpoints.empty());
     if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
       threads_in_error_.emplace(thread->GetKoid());
