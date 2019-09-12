@@ -302,6 +302,10 @@ where
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
     }
+
+    fn can_hardlink(&self) -> bool {
+        false
+    }
 }
 
 impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
