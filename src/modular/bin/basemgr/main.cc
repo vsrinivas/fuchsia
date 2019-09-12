@@ -190,7 +190,7 @@ class LifecycleImpl : public fuchsia::modular::Lifecycle {
     }
   }
 
-  modular::BasemgrImpl* basemgr_;
+  modular::BasemgrImpl* basemgr_ = nullptr;
   async::Loop* loop_;
   fidl::BindingSet<fuchsia::modular::Lifecycle> bindings_;
 };
