@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "astro.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,8 +19,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-
-#include "astro.h"
 
 namespace astro {
 
@@ -143,6 +143,10 @@ int Astro::Thread() {
 
   if ((status = AudioInit()) != ZX_OK) {
     zxlogf(ERROR, "AudioInit failed: %d\n", status);
+  }
+
+  if ((status = SecureMemInit()) != ZX_OK) {
+    zxlogf(ERROR, "SecureMemInit failed: %d\n", status);
   }
 
   // This function includes some non-trivial delays, so lets run this last

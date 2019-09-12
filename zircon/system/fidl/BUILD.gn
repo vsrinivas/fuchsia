@@ -52,6 +52,7 @@ group("fidl") {
     "fuchsia-hardware-pty",
     "fuchsia-hardware-ramdisk",
     "fuchsia-hardware-rtc",
+    "fuchsia-hardware-securemem",
     "fuchsia-hardware-skipblock",
     "fuchsia-hardware-spi",
     "fuchsia-hardware-tee",

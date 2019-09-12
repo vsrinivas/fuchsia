@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("aml-securemem") {
+  sources = []
+  deps = [
+    ":common",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "device.cc",
+    "device.h",
+  ]
+
+  deps = [
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/fidl/fuchsia-hardware-securemem:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fit",
+  ]
+}
+
+test("aml-securemem-test") {
+  output_name = "aml-securemem-test"
+  sources = [
+    "test/aml-securemem-test.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <threads.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
@@ -30,6 +31,7 @@ enum {
   BTI_AUDIO_OUT,
   BTI_TEE,
   BTI_SYSMEM,
+  BTI_AML_SECURE_MEM,
 };
 
 // MAC address metadata indices
@@ -106,6 +108,7 @@ class Astro : public AstroType {
   zx_status_t RawNandInit();
   zx_status_t SdioInit();
   zx_status_t Start();
+  zx_status_t SecureMemInit();
   zx_status_t SysmemInit();
   zx_status_t TeeInit();
   zx_status_t ThermalInit();

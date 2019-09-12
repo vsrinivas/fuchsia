@@ -130,6 +130,7 @@ DDK_PROTOCOL_DEF(MLG,            'pMLG', "mlg", 0)
 DDK_PROTOCOL_DEF(ZXCRYPT,        'pZXC', "zxcrypt", 0)
 DDK_PROTOCOL_DEF(SPI,            'pSPI', "spi", 0)
 DDK_PROTOCOL_DEF(SPI_IMPL,       'pSIP', "spi-impl", 0)
+DDK_PROTOCOL_DEF(SECURE_MEM,     'pScM', "securemem", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

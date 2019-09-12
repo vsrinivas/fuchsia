@@ -16,6 +16,7 @@ driver("astro") {
     "astro-mali.cc",
     "astro-rawnand.cc",
     "astro-sdio.cc",
+    "astro-securemem.cc",
     "astro-sysmem.cc",
     "astro-tee.cc",
     "astro-thermal.cc",

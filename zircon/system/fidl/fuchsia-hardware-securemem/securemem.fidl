@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.securemem;
+
+using zx;
+
+/// This protocol currently is a temporary measure to allow for services to get the physical address
+/// of a previously pinned VMO until trusted services can be handed BTI handles.
+protocol Device {
+    /// Gets the physical address of a previously pinned VMO.
+    ///
+    /// Note:
+    ///  * The VMO must be contiguous.
+    ///  * |secure_mem| is expected to have a stable physical address that is pinned by some other
+    ///    entity. The protocol implementation should not be expected to keep the VMO pinned.
+    ///  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
+    ///    address of the VMO being pinned must be stable.
+    GetSecureMemoryPhysicalAddress(handle<vmo> secure_mem) -> (zx.status s, zx.paddr paddr);
+};
