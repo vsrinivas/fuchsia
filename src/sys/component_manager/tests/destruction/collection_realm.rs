@@ -18,11 +18,11 @@ use {
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&[]).context("could not initialize logging")?;
+async fn main() {
+    syslog::init_with_tags(&[]).expect("could not initialize logging");
     info!("Started collection realm");
     let realm = client::connect_to_service::<fsys::RealmMarker>()
-        .context("could not connect to Realm service")?;
+        .expect("could not connect to Realm service");
 
     // Create a "trigger realm" child component.
     info!("Creating child");
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
         realm
             .create_child(&mut collection_ref, child_decl)
             .await
-            .context(format!("create_child failed"))?
+            .expect(&format!("create_child failed"))
             .expect(&format!("failed to create child"));
     }
 
@@ -52,10 +52,10 @@ async fn main() -> Result<(), Error> {
         realm
             .bind_child(&mut child_ref, server_end)
             .await
-            .context(format!("bind_child failed"))?
+            .expect(&format!("bind_child failed"))
             .expect(&format!("failed to bind to child"));
-        let trigger = open_trigger_svc(&dir)?;
-        trigger.run().await.context("trigger a failed")?;
+        let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
+        trigger.run().await.expect("trigger failed");
     }
 
     // Destroy the child.
@@ -66,12 +66,11 @@ async fn main() -> Result<(), Error> {
         realm
             .destroy_child(&mut child_ref)
             .await
-            .context("destroy_child a failed")?
+            .expect("destroy_child failed")
             .expect("failed to destroy child");
     }
 
     info!("Done");
-    Ok(())
 }
 
 fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
@@ -82,6 +81,5 @@ fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> 
         MODE_TYPE_SERVICE,
     )
     .context("failed to open trigger service")?;
-    let trigger = ftest::TriggerProxy::new(node_proxy.into_channel().unwrap());
-    Ok(trigger)
+    Ok(ftest::TriggerProxy::new(node_proxy.into_channel().unwrap()))
 }

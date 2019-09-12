@@ -5,15 +5,14 @@
 #![feature(async_await)]
 
 use {
-    failure::{format_err, Error, ResultExt},
+    failure::format_err,
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let echo = connect_to_service::<fecho::EchoMarker>().context("error connecting to echo")?;
-    let out = echo.echo_string(Some("Hippos rule!")).await.context("echo_string failed")?;
-    println!("{}", out.ok_or(format_err!("empty result"))?);
-    Ok(())
+async fn main() {
+    let echo = connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
+    let out = echo.echo_string(Some("Hippos rule!")).await.expect("echo_string failed");
+    println!("{}", out.ok_or(format_err!("empty result")).expect("echo_string got empty result"));
 }
