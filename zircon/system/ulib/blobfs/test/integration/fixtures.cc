@@ -12,7 +12,6 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
@@ -20,39 +19,17 @@ namespace {
 
 constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
 
-bool GetFsInfo(fuchsia_io_FilesystemInfo* info) {
-  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
-  if (!fd) {
-    return false;
-  }
-
-  zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
-  zx_status_t io_status =
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info);
-  if (io_status != ZX_OK) {
-    status = io_status;
-  }
-
-  if (status != ZX_OK) {
-    printf("Could not query block FS info: %s\n", zx_status_get_string(status));
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
 
-BlobfsTest::BlobfsTest(FsTestType type)
+FilesystemTest::FilesystemTest(FsTestType type)
     : type_(type), environment_(g_environment), device_path_(environment_->device_path()) {}
 
-void BlobfsTest::SetUp() {
-  ASSERT_OK(
-      mkfs(device_path_.c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
+void FilesystemTest::SetUp() {
+  ASSERT_OK(mkfs(device_path_.c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
   Mount();
 }
 
-void BlobfsTest::TearDown() {
+void FilesystemTest::TearDown() {
   if (environment_->ramdisk()) {
     environment_->ramdisk()->WakeUp();
   }
@@ -61,13 +38,13 @@ void BlobfsTest::TearDown() {
   ASSERT_OK(CheckFs());
 }
 
-void BlobfsTest::Remount() {
+void FilesystemTest::Remount() {
   ASSERT_NO_FAILURES(Unmount());
   ASSERT_OK(CheckFs());
   Mount();
 }
 
-void BlobfsTest::Mount() {
+void FilesystemTest::Mount() {
   ASSERT_FALSE(mounted_);
   int flags = read_only_ ? O_RDONLY : O_RDWR;
 
@@ -87,7 +64,7 @@ void BlobfsTest::Mount() {
   mounted_ = true;
 }
 
-void BlobfsTest::Unmount() {
+void FilesystemTest::Unmount() {
   if (!mounted_) {
     return;
   }
@@ -99,7 +76,7 @@ void BlobfsTest::Unmount() {
   mounted_ = false;
 }
 
-zx_status_t BlobfsTest::CheckFs() {
+zx_status_t FilesystemTest::CheckFs() {
   fsck_options_t test_fsck_options = {
       .verbose = false,
       .never_modify = true,
@@ -110,40 +87,25 @@ zx_status_t BlobfsTest::CheckFs() {
   return fsck(device_path_.c_str(), format_type(), &test_fsck_options, launch_stdio_sync);
 }
 
-void BlobfsTest::CheckInfo() {
-  fuchsia_io_FilesystemInfo info;
-  ASSERT_TRUE(GetFsInfo(&info));
-
-  const char kFsName[] = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name);
-  ASSERT_STR_EQ(kFsName, name);
-  ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
-  ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
-}
-
-void BlobfsTestWithFvm::SetUp() {
+void FilesystemTestWithFvm::SetUp() {
   fvm_path_.assign(device_path_);
   fvm_path_.append("/fvm");
 
-  // Minimum size required by ResizePartition test:
-  const size_t kMinDataSize = 507 * kTestFvmSliceSize;
-  const size_t kMinFvmSize =
-      fvm::MetadataSize(kMinDataSize, kTestFvmSliceSize) * 2 + kMinDataSize;  // ~8.5mb
-  ASSERT_GE(environment_->disk_size(), kMinFvmSize, "Insufficient disk space for FVM tests");
+  ASSERT_NO_FAILURES(CheckPartitionSize());
 
   CreatePartition();
-  BlobfsTest::SetUp();
+  FilesystemTest::SetUp();
 }
 
-void BlobfsTestWithFvm::TearDown() {
-  BlobfsTest::TearDown();
+void FilesystemTestWithFvm::TearDown() {
+  FilesystemTest::TearDown();
   ASSERT_OK(fvm_destroy(partition_path_.c_str()));
 }
 
-void BlobfsTestWithFvm::BindFvm() {
+void FilesystemTestWithFvm::BindFvm() {
   fbl::unique_fd fd(open(device_path_.c_str(), O_RDWR));
   ASSERT_TRUE(fd, "Could not open test disk");
-  ASSERT_OK(fvm_init(fd.get(), kTestFvmSliceSize));
+  ASSERT_OK(fvm_init(fd.get(), GetSliceSize()));
 
   fzl::FdioCaller caller(std::move(fd));
   zx_status_t status;
@@ -154,8 +116,7 @@ void BlobfsTestWithFvm::BindFvm() {
   ASSERT_OK(wait_for_device(fvm_path_.c_str(), zx::sec(10).get()));
 }
 
-void BlobfsTestWithFvm::CreatePartition() {
-  ASSERT_EQ(kTestFvmSliceSize % blobfs::kBlobfsBlockSize, 0);
+void FilesystemTestWithFvm::CreatePartition() {
   ASSERT_NO_FAILURES(BindFvm());
 
   fbl::unique_fd fd(open(fvm_path_.c_str(), O_RDWR));
@@ -177,13 +138,4 @@ void BlobfsTestWithFvm::CreatePartition() {
   // The base test must see the FVM volume as the device to work with.
   partition_path_.swap(device_path_);
   device_path_.assign(path);
-}
-
-void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
-  fd->reset(open(info->path, O_CREAT | O_RDWR));
-  ASSERT_TRUE(*fd, "Failed to create blob");
-  ASSERT_EQ(ftruncate(fd->get(), info->size_data), 0);
-  ASSERT_EQ(fs_test_utils::StreamAll(write, fd->get(), info->data.get(), info->size_data), 0,
-            "Failed to write Data");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd->get(), info->data.get(), info->size_data));
 }

@@ -22,7 +22,7 @@
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
-#include "fixtures.h"
+#include "blobfs_fixtures.h"
 #include "test_support.h"
 
 namespace {
@@ -176,7 +176,7 @@ TEST_F(BlobfsTest, NullBlobCreateUnlink) { RunNullBlobCreateUnlinkTest(); }
 
 TEST_F(BlobfsTestWithFvm, NullBlobCreateUnlink) { RunNullBlobCreateUnlinkTest(); }
 
-void RunNullBlobCreateRemountTest(BlobfsTest* test) {
+void RunNullBlobCreateRemountTest(FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
 
@@ -216,7 +216,7 @@ TEST_F(BlobfsTest, ExclusiveCreate) { RunExclusiveCreateTest(); }
 
 TEST_F(BlobfsTestWithFvm, ExclusiveCreate) { RunExclusiveCreateTest(); }
 
-void RunCompressibleBlobTest(BlobfsTest* test) {
+void RunCompressibleBlobTest(FilesystemTest* test) {
   for (size_t i = 10; i < 22; i++) {
     std::unique_ptr<fs_test_utils::BlobInfo> info;
 
@@ -778,7 +778,7 @@ TEST_F(BlobfsTest, EdgeAllocation) { RunEdgeAllocationTest(); }
 
 TEST_F(BlobfsTestWithFvm, EdgeAllocation) { RunEdgeAllocationTest(); }
 
-void RunUmountWithOpenFileTest(BlobfsTest* test) {
+void RunUmountWithOpenFileTest(FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
   fbl::unique_fd fd;
@@ -804,7 +804,7 @@ TEST_F(BlobfsTest, UmountWithOpenFile) { RunUmountWithOpenFileTest(this); }
 
 TEST_F(BlobfsTestWithFvm, UmountWithOpenFile) { RunUmountWithOpenFileTest(this); }
 
-void RunUmountWithMappedFileTest(BlobfsTest* test) {
+void RunUmountWithMappedFileTest(FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
   fbl::unique_fd fd;
@@ -828,7 +828,7 @@ TEST_F(BlobfsTest, UmountWithMappedFile) { RunUmountWithMappedFileTest(this); }
 
 TEST_F(BlobfsTestWithFvm, UmountWithMappedFile) { RunUmountWithMappedFileTest(this); }
 
-void RunUmountWithOpenMappedFileTest(BlobfsTest* test) {
+void RunUmountWithOpenMappedFileTest(FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
   fbl::unique_fd fd;
@@ -856,7 +856,7 @@ TEST_F(BlobfsTest, UmountWithOpenMappedFile) { RunUmountWithOpenMappedFileTest(t
 
 TEST_F(BlobfsTestWithFvm, UmountWithOpenMappedFile) { RunUmountWithOpenMappedFileTest(this); }
 
-void RunCreateUmountRemountSmallTest(BlobfsTest* test) {
+void RunCreateUmountRemountSmallTest(FilesystemTest* test) {
   for (size_t i = 10; i < 16; i++) {
     std::unique_ptr<fs_test_utils::BlobInfo> info;
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
@@ -1570,7 +1570,7 @@ TEST_F(BlobfsTestWithFvm, QueryDevicePath) {
   RunQueryDevicePathTest(GetTopologicalPath(device_path()));
 }
 
-void RunReadOnlyTest(BlobfsTest* test) {
+void RunReadOnlyTest(FilesystemTest* test) {
   // Mount the filesystem as read-write. We can create new blobs.
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));

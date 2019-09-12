@@ -6,17 +6,12 @@
 
 #include <string>
 
-#include <blobfs/format.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/zxtest.h>
 
 #include "environment.h"
-
-// FVM slice size used for tests.
-constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize;  // 8kb.
 
 constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
@@ -24,16 +19,14 @@ constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                                      0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
-constexpr char kMountPath[] = "/blobfs-tmp/zircon-blobfs-test";
-
 enum class FsTestType {
   kGeneric,  // Use a generic block device.
   kFvm       // Use an FVM device.
 };
 
-class BlobfsTest : public zxtest::Test {
+class FilesystemTest : public zxtest::Test {
  public:
-  explicit BlobfsTest(FsTestType type = FsTestType::kGeneric);
+  explicit FilesystemTest(FsTestType type = FsTestType::kGeneric);
 
   // zxtest::Test interface:
   void SetUp() override;
@@ -47,13 +40,13 @@ class BlobfsTest : public zxtest::Test {
   disk_format_type format_type() const { return environment_->format_type(); }
   const char* mount_path() const { return environment_->mount_path(); }
 
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FilesystemTest);
 
  protected:
   void Mount();
   void Unmount();
   zx_status_t CheckFs();
-  void CheckInfo();
+  virtual void CheckInfo() {}
 
   FsTestType type_;
   Environment* environment_;
@@ -62,9 +55,9 @@ class BlobfsTest : public zxtest::Test {
   bool mounted_ = false;
 };
 
-class BlobfsTestWithFvm : public BlobfsTest {
+class FilesystemTestWithFvm : public FilesystemTest {
  public:
-  BlobfsTestWithFvm() : BlobfsTest(FsTestType::kFvm) {}
+  FilesystemTestWithFvm() : FilesystemTest(FsTestType::kFvm) {}
 
   // zxtest::Test interface:
   void SetUp() override;
@@ -72,16 +65,16 @@ class BlobfsTestWithFvm : public BlobfsTest {
 
   const std::string& partition_path() const { return partition_path_; }
 
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTestWithFvm);
+  // Derived fixtures can define any slice size.
+  virtual size_t GetSliceSize() const { return 1 << 16; }
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FilesystemTestWithFvm);
 
  private:
   void BindFvm();
   void CreatePartition();
+  virtual void CheckPartitionSize() {}
 
   std::string fvm_path_;
   std::string partition_path_;
 };
-
-// Creates an open blob with the provided Merkle tree + Data, and reads back to
-// verify the data.
-void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd);

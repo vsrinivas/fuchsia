@@ -59,6 +59,7 @@ test("blobfs-integration") {
   test_group = "fs"
   sources = [
     "integration/blobfs_integration_test.cc",
+    "integration/blobfs_fixtures.cc",
     "integration/environment.cc",
     "integration/fixtures.cc",
     "integration/integration_main.cc",
