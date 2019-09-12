@@ -490,8 +490,8 @@ mod tests {
             testing::mocks,
             testing::{
                 test_helpers::*,
-                test_hook::HubInjectionTestHook,
                 test_helpers::{dir_contains, list_directory, list_directory_recursive, read_file},
+                test_hook::HubInjectionTestHook,
             },
         },
         crate::startup,

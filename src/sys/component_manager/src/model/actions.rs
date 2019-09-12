@@ -635,12 +635,7 @@ mod tests {
             ];
             assert_eq!(next, expected);
 
-            assert_eq!(
-                events,
-                vec![
-                    Lifecycle::Stop(vec!["container:0"].into()),
-                ]
-            );
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["container:0"].into()),]);
         }
     }
 

@@ -124,7 +124,7 @@ impl DirTree {
 mod tests {
     use {
         super::*,
-        crate::model::testing::{mocks, test_helpers::*, test_helpers},
+        crate::model::testing::{mocks, test_helpers, test_helpers::*},
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource,
             ExposeTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
@@ -258,7 +258,10 @@ mod tests {
 
         // Expect that calls on the directory nodes reach the mock directory/service.
         assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
-        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "in/data/hippo/hello").await);
+        assert_eq!(
+            "friend",
+            test_helpers::read_file(&expose_dir_proxy, "in/data/hippo/hello").await
+        );
         assert_eq!(
             "hippos".to_string(),
             test_helpers::call_echo(&expose_dir_proxy, "in/svc/hippo").await
