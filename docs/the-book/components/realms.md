@@ -16,9 +16,9 @@ Realms play a special role in the component framework. A realm is an
 *encapsulation boundary* for component instances. This means:
 
 * Realms act as a capability boundary. It's up to the realm to decide whether a
-  capability originating in the realm can be routed component instances outside
-  of the realm. This is accomplished through an [`expose`][expose] declaration
-  in a [component manifest][component-manifests].
+  capability originating in the realm can be routed to component instances
+  outside of the realm. This is accomplished through an [`expose`][expose]
+  declaration in a [component manifest][component-manifests].
 * The internal structure of a [sub-realm](#definitions) is opaque to the parent
   component instance. For example, the sub-realm could be structured either as
   one or multiple component instances, and from the perspective of the parent
