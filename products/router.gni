@@ -33,6 +33,8 @@ base_package_labels += [
   "//garnet/packages/prod:wlanphy",
   "//garnet/packages/tools:boringssl",
   "//garnet/packages/tools:netstack",
+  "//src/connectivity/management/network_manager",
+  "//src/connectivity/management/network_manager_cli",
   "//src/connectivity/network/dhcp:dhcpd",
   "//src/connectivity/network/mdns/bundles:utils",
   "//src/connectivity/network/net-cli",
