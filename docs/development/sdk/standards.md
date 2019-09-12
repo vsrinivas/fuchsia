@@ -29,17 +29,12 @@ The Fuchsia SDK does not depend on the _Google Test_ library because the
 for the _Google Test_ library are not compatible with the model used by the
 Fuchsia SDK.
 
-## FIDL interfaces and libzircon are the system ABI
+## Fuchsia System Interface
 
-Broadly speaking, the binary interface to the system is defined by the FIDL
-wireformat used by programs to communicate with the rest of the system and the
-syscalls exposed in `libzircon`. In particular, the system should not rely upon
-programs using any specific client libraries, including `libc`.
-
-The Fuchsia SDK contains a number of client libraries (i.e., libraries that
-clients of the SDK can link into their programs), but all of these libraries are
-optional and provided for the convenience of clients, not for the convenience of
-the system.
+The Fuchsia System Interface is defined in [Fuchsia System
+Interface](/docs/development/abi/system.md). Generally speaking, the binary interface to the system
+is only the FIDL wireformat used by programs to communicate with the system and the syscalls exposed
+in `libzircon`.
 
 ## FIDL Protocol Definitions
 
@@ -75,27 +70,33 @@ FIDL definitions in the SDK should follow the [FIDL API style rubric].
 
 ## Client Libraries
 
-### Stability
+The Fuchsia SDK contains a number of "client libraries" (libraries that clients of the SDK can link
+into their programs). All of these client libraries are optional and provided for the convenience of
+clients, not for the convenience of the system. The system must not rely upon programs using any
+specific client libraries. Note that `libc` is a client library (not a system library).
 
-Client libraries are neither source nor binary stable. Clients that wish to use
-these libraries should link them into their programs, either statically or
-dynamically.
+### Stability and Packaging
 
-Programs load dynamic libraries from their own package, which means different
-programs on the system might be using different versions of the same dynamic
-library concurrently. Programs that wish to use dynamic libraries (including
-`libc`) should include those libraries in the `lib` directory of their package.
+Only the [Fuchsia System Interface](#fuchsia_system_interface) is ABI stable. Client libraries are
+neither API nor ABI stable. Binaries and libraries must be built against the same SDK version as the
+client libraries they are linked with.
+
+All libraries a program links beyond the [Fuchsia System Interface](#fuchsia_system_interface),
+including client libraries, must be included inside the program's package. Dynamic libraries should
+be placed in the `lib` directory of the program's package.
+
+Packages are the unit of software mobility, delivery, and linkage. Different packages can contain
+different versions of the same library.  When running a program, the system provides that program
+the libraries from its own package, preventing the different libraries used by different packages
+from conflicting in the same program.
+
+
 
 ### Precompiled libraries
 
-The Fuchsia SDK does not require clients to use a specific toolchain. For this
-reason, precompiled libraries that clients link against must have C linkage. For
-example, a precompiled library cannot export C++ symbols because C++ does not
-have a standard ABI across toolchains (or even toolchain versions).
-
-The SDK can also contain precompiled shared libraries with C++ linkage that are
-linked by other precompiled libraries in the SDK. Clients are not expected to
-link against these libraries directly.
+The Fuchsia SDK does not require clients to use a specific toolchain. For this reason, precompiled
+client libraries must have C linkage. For example, a precompiled client library cannot export C++
+symbols because C++ does not have a standard ABI across toolchains (or even toolchain versions).
 
 ### Dependencies
 
