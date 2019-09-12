@@ -33,17 +33,43 @@ class Linter {
   // state is to exclude all checks EXCEPT those specifically indicated.
   void set_exclude_by_default(bool exclude_by_default) { exclude_by_default_ = exclude_by_default; }
 
-  void ExcludeCheckId(std::string check_id) { excluded_check_ids_.insert(check_id); }
+  // Copies the given list of check-ids to be included, if otherwise excluded or disabled.
+  // By default, all checks are included unless explicitly disabled (see linter/main.cc), excluded
+  // by command line option, or if |excluded_by_default| is set to true.
+  void set_included_checks(const std::set<std::string>& included_check_ids) {
+    included_check_ids_ = included_check_ids;
+  }
 
-  void IncludeCheckId(std::string check_id) { included_check_ids_.insert(check_id); }
+  // Copies the given list of check-ids to be excluded, unless |exclude_by_default| is true, in
+  // which case, all checks are excluded if not explicitly included.
+  void set_excluded_checks(const std::set<std::string>& excluded_check_ids) {
+    excluded_check_ids_ = excluded_check_ids;
+  }
 
   // Calling Lint() invokes the callbacks for elements
   // of the given |SourceFile|. If a check fails, the callback generates a
   // |Finding| and adds it to the given Findings (vector of Finding).
   // Lint() is single-threaded, and modifies state of the |Linter| class
   // as it evaluates a single file at a time.
+  //
+  // * parsed_source - The abstract syntax tree (AST) returned from the FIDL Parser.
+  // * findings - a std::list of Finding objects (ordered by filename and location) to add
+  //   additional Finding objects to, if triggered for a check. The list may or may not be
+  //   empty.
+  // * excluded_checks_not_found (optional) - If not nullptr, excluded_checks_not_found is a
+  //   pointer to the caller's std::set of check-ids that were
+  //   excluded and have not yet been removed via a pevious invocation of Lint() (if any). If this
+  //   set is not empty, and a matching check-id is triggered, remove the check-id. An error
+  //   status will be returned by the linter program, after all files have been linted, if any
+  //   excluded check IDs remain in this set.
+  //
   // Returns true if no new findings were generated.
-  bool Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* findings);
+  bool Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* findings,
+            std::set<std::string>* excluded_checks_not_found);
+
+  bool Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* findings) {
+    return Lint(parsed_source, findings, nullptr);
+  }
 
  private:
   // Holds function pointers for an identify case type. For example,

@@ -92,7 +92,9 @@ class TestLibrary final {
   }
 
   // TODO(pascallouis): remove, this does not use a library.
-  bool Lint(fidl::Findings* findings) {
+  bool Lint(fidl::Findings* findings, const std::set<std::string>& included_check_ids = {},
+            const std::set<std::string>& excluded_check_ids = {}, bool exclude_by_default = false,
+            std::set<std::string>* excluded_checks_not_found = nullptr) {
     assert(all_sources_.size() == 1 && "lint can only be used with one source");
     auto source_file = all_sources_.at(0);
     fidl::Lexer lexer(*source_file, error_reporter_);
@@ -105,7 +107,14 @@ class TestLibrary final {
       return false;
     }
     fidl::linter::Linter linter;
-    return linter.Lint(ast, findings);
+    if (!included_check_ids.empty()) {
+      linter.set_included_checks(included_check_ids);
+    }
+    if (!excluded_check_ids.empty()) {
+      linter.set_excluded_checks(excluded_check_ids);
+    }
+    linter.set_exclude_by_default(exclude_by_default);
+    return linter.Lint(ast, findings, excluded_checks_not_found);
   }
 
   bool Lint() {

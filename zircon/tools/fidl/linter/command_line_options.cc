@@ -19,17 +19,25 @@ const char kIntro[] = R"(
 Options:
 )";
 
-const char kIncludeCheck[] = R"(  --include-check
+const char kIncludeCheck[] = R"(  --include-check=<check-id>
    -i A check ID to check, excluding all others not explicitly included. By
       default, all checks are performed, if not explicitly excluded (with
       the --exclude-check option). Multiple check IDs can be included with:
         fidl-lint -i some-check -i another-check)";
-const char kExcludeCheck[] = R"(  --exclude-check
+const char kExcludeCheck[] = R"(  --exclude-check=<check-id>
    -e A check ID to exclude from checking. All others will be included unless
       an --included-check option is present. --include-check overrides any
       --exclude-check. Option order is ignored. Multiple check IDs can be
       excluded with:
         fidl-lint -e some-check -e another-check)";
+const char kMustFindExcludedChecks[] = R"(  --must-find-excluded-checks
+   -m If this flag is set, at least one --exclude-check option is required.
+      After lint checking all given FIDL files, if an excluded check is
+      not encountered, output an error message and exit with an error
+      status code. This can be used to temporarily excluded checks,
+      resolve them over time, and once resolved, the error will force
+      the developer to remove the unnecessary exclude, preventing the
+      same lint error from being reintroduced in the future.)";
 const char kFormat[] = R"(  --format=[text|json]
    -f Lint output format (text or json))";
 const char kHelp[] = R"(  --help
@@ -38,7 +46,11 @@ const char kHelp[] = R"(  --help
 }  // namespace help
 
 std::string Usage(std::string argv0) {
-  return argv0 + " " + help::kArgSpec + "\n(--help for more details))";
+  return argv0 + " " + help::kArgSpec +
+         "\n(--help for more details))\n"
+         "\n"
+         "Returns exit status 0 if no lint issues were found, 1 if lint tests were\n"
+         "successful but some lint issues were found, or 2 for all other errors.";
 }
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
@@ -53,6 +65,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   parser.AddSwitch("include-check", 'i', help::kIncludeCheck, &CommandLineOptions::included_checks);
   parser.AddSwitch("exclude-check", 'e', help::kExcludeCheck, &CommandLineOptions::excluded_checks);
+  parser.AddSwitch("must-find-excluded-checks", 'm', help::kMustFindExcludedChecks,
+                   &CommandLineOptions::must_find_excluded_checks);
   parser.AddSwitch("format", 'f', help::kFormat, &CommandLineOptions::format,
                    [](const std::string& format) -> cmdline::Status {
                      if (format == "text" || format == "json") {
@@ -73,6 +87,12 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   // Handle --help switch since we're the one that knows about the switches.
   if (requested_help) {
     return cmdline::Status::Error(Usage(argv[0]) + "\n" + help::kIntro + parser.GetHelp());
+  }
+
+  if (options->must_find_excluded_checks && options->excluded_checks.empty()) {
+    return cmdline::Status::Error(
+        "--must-find-excluded-checks (-m) flag is only valid if at least"
+        "one check is excluded, with --exclude-check.");
   }
 
   if (params->size() > 0) {

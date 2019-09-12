@@ -28,7 +28,8 @@ class LintTest {
 
   // Adds a Finding to the back of the list of Findings.
   LintTest& AddFinding(std::string check_id, std::string message,
-                       std::string violation_string = "${TEST}") {
+                       std::string violation_string = "${TEST}", std::string suggestion = "",
+                       std::string replacement = "") {
     assert(!source_template_.str().empty() &&
            "source_template() must be called before AddFinding()");
     std::string template_string = source_template_.str();
@@ -47,11 +48,17 @@ class LintTest {
     auto location = library().SourceLocation(start, expanded_violation_string.size());
     auto& finding = expected_findings_.emplace_back(location, check_id, message);
 
-    if (!default_suggestion_.empty()) {
-      if (default_replacement_.empty()) {
-        finding.SetSuggestion(default_suggestion_);
+    if (suggestion.empty()) {
+      suggestion = default_suggestion_;
+    }
+    if (replacement.empty()) {
+      replacement = default_replacement_;
+    }
+    if (!suggestion.empty()) {
+      if (replacement.empty()) {
+        finding.SetSuggestion(suggestion);
       } else {
-        finding.SetSuggestion(default_suggestion_, default_replacement_);
+        finding.SetSuggestion(suggestion, replacement);
       }
     }
 
@@ -125,6 +132,29 @@ class LintTest {
     return substitute({{var_name, value}});
   }
 
+  LintTest& include_checks(std::vector<std::string> included_check_ids) {
+    included_check_ids_ =
+        std::set<std::string>(included_check_ids.begin(), included_check_ids.end());
+    return *this;
+  }
+
+  LintTest& exclude_checks(std::vector<std::string> excluded_check_ids) {
+    excluded_check_ids_ =
+        std::set<std::string>(excluded_check_ids.begin(), excluded_check_ids.end());
+    return *this;
+  }
+
+  LintTest& excluded_checks_to_confirm(std::vector<std::string> excluded_check_ids_to_confirm) {
+    excluded_check_ids_to_confirm_ = std::set<std::string>(excluded_check_ids_to_confirm.begin(),
+                                                           excluded_check_ids_to_confirm.end());
+    return *this;
+  }
+
+  LintTest& exclude_by_default(bool exclude_by_default) {
+    exclude_by_default_ = exclude_by_default;
+    return *this;
+  }
+
   bool ExpectNoFindings() { return execute(/*expect_findings=*/false); }
 
   bool ExpectFindings() { return execute(/*expect_findings=*/true); }
@@ -140,7 +170,11 @@ class LintTest {
     BEGIN_HELPER;
 
     std::ostringstream ss;
-    ss << std::endl << "Failed test for check '" << default_check_id_ << "'";
+    if (default_check_id_.empty()) {
+      ss << std::endl << "Failed test";
+    } else {
+      ss << std::endl << "Failed test for check '" << default_check_id_ << "'";
+    }
     if (!that_.empty()) {
       ss << std::endl << "that " << that_;
     }
@@ -161,7 +195,19 @@ class LintTest {
     // The test looks good, so run the linter, and update the context
     // value by replacing "Bad test!" with the FIDL source code.
     Findings findings;
-    library().Lint(&findings);
+    bool passed = library().Lint(&findings, included_check_ids_, excluded_check_ids_,
+                                 exclude_by_default_, &excluded_check_ids_to_confirm_);
+
+    EXPECT_TRUE(passed == (findings.empty()));
+
+    if (!excluded_check_ids_to_confirm_.empty()) {
+      ss << "Excluded check-ids not found: " << std::endl;
+      for (auto& check_id : excluded_check_ids_to_confirm_) {
+        ss << "  * " << check_id << std::endl;
+      }
+      context = ss.str();
+      EXPECT_TRUE(excluded_check_ids_to_confirm_.empty(), context.c_str());
+    }
 
     std::string source_code = std::string(library().source_file().data());
     if (source_code.back() == '\0') {
@@ -198,6 +244,10 @@ class LintTest {
   void Reset() {
     library_.reset();
     expected_findings_.clear();
+    included_check_ids_.clear();
+    excluded_check_ids_.clear();
+    excluded_check_ids_to_confirm_.clear();
+    exclude_by_default_ = false;
     that_ = "";
   }
 
@@ -284,6 +334,10 @@ class LintTest {
   std::string default_message_;
   std::string default_suggestion_;
   std::string default_replacement_;
+  std::set<std::string> included_check_ids_;
+  std::set<std::string> excluded_check_ids_;
+  std::set<std::string> excluded_check_ids_to_confirm_;
+  bool exclude_by_default_ = false;
   Findings expected_findings_;
   TemplateString source_template_;
   Substitutions substitutions_;
@@ -2284,6 +2338,100 @@ library ${TEST}.subcomponent;
   END_TEST;
 }
 
+bool include_and_exclude_checks() {
+  BEGIN_TEST;
+
+  LintTest test;
+  test.check_id("multiple checks").source_template(R"FIDL(
+library ${LIBRARY};
+
+struct ${STRUCT_NAME} {
+  ${COMMENT_STYLE} TODO: Replace the placeholder
+  string:64 placeholder;
+};
+)FIDL");
+
+  test.substitute({
+                      {"LIBRARY", "fuchsia.foo.bar.baz"},
+                      {"COMMENT_STYLE", "///"},
+                      {"STRUCT_NAME", "my_struct"},
+                  })
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than two dots",
+                  "${LIBRARY}")
+      .AddFinding("invalid-case-for-decl-name", "structs must be named in UpperCamelCase",
+                  "${STRUCT_NAME}", "change 'my_struct' to 'MyStruct'", "MyStruct")
+      .AddFinding("todo-should-not-be-doc-comment",
+                  "TODO comment should use a non-flow-through comment marker", "${COMMENT_STYLE}",
+                  "change '///' to '//'", "//");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  test.exclude_checks({
+      "too-many-nested-libraries",
+      "invalid-case-for-decl-name",
+      "todo-should-not-be-doc-comment",
+  });
+  ASSERT_NO_FINDINGS(test);
+
+  test.exclude_by_default(true);
+  ASSERT_NO_FINDINGS(test);
+
+  test.exclude_by_default(true)
+      .include_checks({
+          "invalid-case-for-decl-name",
+      })
+      .AddFinding("invalid-case-for-decl-name", "structs must be named in UpperCamelCase",
+                  "${STRUCT_NAME}", "change 'my_struct' to 'MyStruct'", "MyStruct");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  test.exclude_checks({
+                          "invalid-case-for-decl-name",
+                          "todo-should-not-be-doc-comment",
+                      })
+      .include_checks({
+          "todo-should-not-be-doc-comment",
+      })
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than two dots",
+                  "${LIBRARY}")
+      .AddFinding("todo-should-not-be-doc-comment",
+                  "TODO comment should use a non-flow-through comment marker", "${COMMENT_STYLE}",
+                  "change '///' to '//'", "//");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  test.exclude_checks({
+                          "invalid-case-for-decl-name",
+                          "todo-should-not-be-doc-comment",
+                      })
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than two dots",
+                  "${LIBRARY}");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  test.exclude_checks({
+                          "invalid-case-for-decl-name",
+                          "wrong-prefix-for-platform-source-library",
+                          "todo-should-not-be-doc-comment",
+                          "vector-bounds-not-specified",
+                      })
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than two dots",
+                  "${LIBRARY}");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  test.exclude_checks({
+                          "invalid-case-for-decl-name",
+                          "wrong-prefix-for-platform-source-library",
+                          "todo-should-not-be-doc-comment",
+                          "vector-bounds-not-specified",
+                      })
+      .excluded_checks_to_confirm({
+          "invalid-case-for-decl-name",
+          "todo-should-not-be-doc-comment",
+      })
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than two dots",
+                  "${LIBRARY}");
+  ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(lint_findings_tests)
 
 RUN_TEST(constant_repeats_enclosing_type_name)
@@ -2328,6 +2476,8 @@ RUN_TEST(unexpected_type_for_well_known_socket_handle_concept_please_implement_m
 RUN_TEST(unexpected_type_for_well_known_string_concept_please_implement_me)
 RUN_TEST(vector_bounds_not_specified)
 RUN_TEST(wrong_prefix_for_platform_source_library)
+
+RUN_TEST(include_and_exclude_checks)
 
 END_TEST_CASE(lint_findings_tests)
 

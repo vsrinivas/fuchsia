@@ -5,6 +5,7 @@
 #ifndef ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 #define ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,7 @@ namespace linter {
 struct CommandLineOptions {
   std::vector<std::string> included_checks;
   std::vector<std::string> excluded_checks;
+  bool must_find_excluded_checks = false;
   std::string format = "text";
 };
 

@@ -107,12 +107,6 @@ const fidl::raw::SourceElement& GetElementAsRef(
 // This function is const because the Findings (TreeVisitor) object
 // is not modified. It's Findings object (not owned) is updated.
 Finding* Linter::AddFinding(SourceLocation location, std::string check_id, std::string message) {
-  bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
-  bool is_excluded =
-      exclude_by_default_ || excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
-  if (is_excluded && !is_included)
-    return nullptr;
-
   auto result = current_findings_.emplace(new Finding(location, check_id, message));
   // Future checks may need to allow multiple findings of the
   // same check ID at the same location.
@@ -157,16 +151,24 @@ CheckDef Linter::DefineCheck(std::string check_id, std::string message_template)
 }
 
 // Returns true if no new findings were generated
-bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* findings) {
+bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* findings,
+                  std::set<std::string>* excluded_checks_not_found) {
+  auto initial_findings_size = findings->size();
   callbacks_.Visit(parsed_source);
-  if (current_findings_.empty()) {
-    return true;
-  }
   for (auto& finding_ptr : current_findings_) {
-    findings->emplace_back(std::move(*finding_ptr));
+    auto check_id = finding_ptr->subcategory();
+    if (excluded_checks_not_found && !excluded_checks_not_found->empty()) {
+      excluded_checks_not_found->erase(check_id);
+    }
+    bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
+    bool is_excluded =
+        exclude_by_default_ || excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
+    if (!is_excluded || is_included) {
+      findings->emplace_back(std::move(*finding_ptr));
+    }
   }
   current_findings_.clear();
-  return false;
+  return findings->size() == initial_findings_size;
 }
 
 void Linter::NewFile(const raw::File& element) {
