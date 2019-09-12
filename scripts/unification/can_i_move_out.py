@@ -9,6 +9,45 @@ import subprocess
 import sys
 
 
+class Finder(object):
+
+    def __init__(self, gn_binary, zircon_dir, build_dir):
+        self._zircon_dir = zircon_dir
+        self._command = [gn_binary, '--root=' + zircon_dir, 'refs', build_dir,
+                         '--all-toolchains']
+
+    def find_references(self, type, name):
+        category_label = '//system/' + type
+        base_label = '//system/' + type + '/' + name
+
+        command = self._command + [base_label + ':*']
+        try:
+            output = subprocess.check_output(command)
+        except subprocess.CalledProcessError:
+            return None
+
+        references = set()
+        for line in output.splitlines():
+            line = line.strip()
+            if line.startswith(base_label):
+                continue
+            # Remove target name and toolchain.
+            line = line[0:line.find(':')]
+            if line == category_label:
+                continue
+            # Insert 'zircon' directory at the start.
+            line = '//zircon' + line[1:]
+            references.add(line)
+
+        return references
+
+
+    def find_libraries(self, type):
+        base = os.path.join(self._zircon_dir, 'system', type)
+        for _, dirs, _ in os.walk(base):
+            return dirs
+
+
 def main():
     parser = argparse.ArgumentParser('Determines whether libraries can be '
                                      'moved out of the ZN build')
@@ -20,17 +59,18 @@ def main():
                         required=True)
     type = parser.add_mutually_exclusive_group(required=True)
     type.add_argument('--banjo',
-                      help='The target is a Banjo library',
+                      help='Inspect Banjo libraries',
                       action='store_true')
     type.add_argument('--fidl',
-                      help='The target is a FIDL library',
+                      help='Inspect FIDL libraries',
                       action='store_true')
     type.add_argument('--ulib',
-                      help='The target is a C/C++ library',
+                      help='Inspect C/C++ libraries',
                       action='store_true')
     parser.add_argument('name',
-                        help='Name of the library to inspect',
-                        nargs=1)
+                        help='Name of the library to inspect; if empty, scan '
+                             'all libraries of the given type',
+                        nargs='?')
     args = parser.parse_args()
 
     source_dir = os.path.abspath(args.source_dir)
@@ -47,40 +87,51 @@ def main():
     gn_binary = os.path.join(source_dir, 'prebuilt', 'third_party', 'gn',
                              platform, 'gn')
 
-    name = args.name[0]
+    finder = Finder(gn_binary, zircon_dir, build_dir)
+
     if args.fidl:
         type = 'fidl'
-        name = name.replace('.', '-')
     elif args.banjo:
         type = 'banjo'
     elif args.ulib:
         type = 'ulib'
-    category_label = '//system/' + type
-    base_label = '//system/' + type + '/' + name
 
-    gn_command = [gn_binary, '--root=' + zircon_dir, 'refs', build_dir,
-                  base_label + ':*', '--all-toolchains']
-    output = subprocess.check_output(gn_command)
+    # Case 1: a library name is given.
+    if args.name:
+        name = args.name
+        if args.fidl:
+            # FIDL library names use the dot separator, but folders use an
+            # hyphen: be nice to users and support both forms.
+            name = name.replace('.', '-')
 
-    references = set()
-    for line in output.splitlines():
-        line = line.strip()
-        if line.startswith(base_label):
-            continue
-        # Remove target name and toolchain.
-        line = line[0:line.find(':')]
-        if line == category_label:
-            continue
-        # Insert 'zircon' directory at the start.
-        line = '//zircon' + line[1:]
-        references.add(line)
+        references = finder.find_references(type, name)
 
-    if references:
-        print('Nope, there are still references in the ZN build:')
-        for ref in sorted(references):
-            print('  ' + ref)
+        if references is None:
+            print('Could not find "%s", please check spelling!' % args.name)
+            return 1
+        elif references:
+            print('Nope, there are still references in the ZN build:')
+            for ref in sorted(references):
+                print('  ' + ref)
+        else:
+            print('Yes you can!')
+
+        return 0
+
+    # Case 2: no library name given.
+    print('Warning: this operation can take a while!')
+    names = finder.find_libraries(type)
+    movable = set()
+    for name in names:
+        references = finder.find_references(type, name)
+        if not references:
+            movable.add(name)
+    if movable:
+        print('These libraries are free to go:')
+        for name in sorted(movable):
+            print('  ' + name)
     else:
-        print('Yes you can!')
+        print('No library may be moved')
 
     return 0
 
