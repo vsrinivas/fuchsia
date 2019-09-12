@@ -201,6 +201,24 @@ This section explains the syntax for each section of the component manifest, in
 CML format. For the full schema, see
 [cml_schema.json](/garnet/lib/rust/cm_json/cml_schema.json).
 
+### References {#references}
+
+A *reference* is a string of the form `#<reference-name>`, where
+`<reference-name>` is a string of one or more of the following characters:
+`a-z`, `0-9`, `_`, `.`, `-`.
+
+A reference may refer to:
+
+- A [static child instance][static-children] whose name is
+  `<reference-name>`.
+- A [collection][collections] whose name is `<reference-name>`.
+- A [storage declaration](#storage) whose name is `<reference-name>`.
+
+[children]: ./realms.md#child-component-instances
+[collections]: ./realms.md#collections
+[realm-definitions]: ./realms.md#definitions
+[static-children]: ./realms.md#static-children
+
 ### program
 
 `program` varies depending on how the component is run. If the component
@@ -441,21 +459,3 @@ component framework enforces no schema for this section, but third parties may
 expect their facets to adhere to a particular schema.
 
 This section may be omitted.
-
-### References
-
-A *reference* is a string of the form `#<reference-name>`, where
-`<reference-name>` is a string of one or more of the following characters:
-`a-z`, `0-9`, `_`, `.`, `-`.
-
-A reference may refer to:
-
-- A [static child instance][static-children] whose name is
-  `<reference-name>`.
-- A [collection][collections] whose name is `<reference-name>`.
-- A [storage declaration](#storage) whose name is `<reference-name>`.
-
-[children]: ./realms.md#child-component-instances
-[collections]: ./realms.md#collections
-[realm-definitions]: ./realms.md#definitions
-[static-children]: ./realms.md#static-children
