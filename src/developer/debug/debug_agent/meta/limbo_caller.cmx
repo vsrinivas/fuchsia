@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/limbo_caller"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootJob",
+            "fuchsia.process.Launcher",
+            "fuchsia.exception.ProcessLimbo"
+        ]
+    }
+}

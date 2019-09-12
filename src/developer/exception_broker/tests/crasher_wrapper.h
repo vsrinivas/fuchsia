@@ -8,28 +8,36 @@
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
+#include <string>
+
 namespace fuchsia {
 namespace exception {
 
 // This struct represents all the state needed to keep correct track of an exception.
 // It has the owning job and process from the exception.
 // The thread can be obtained from the exception if needed.
-struct ProcessException {
+struct ExceptionContext {
   zx::job job;
   zx::port port;
   zx::channel exception_channel;
 
-  zx::process process;
-
   zx::exception exception;
   zx_exception_info_t exception_info;
+
+  zx::process process;
+  zx_koid_t process_koid;
+  std::string process_name;
+
+  zx::thread thread;
+  zx_koid_t thread_koid;
+  std::string thread_name;
 };
 
 // Spawns a process that will crash and waits for the exception.
 // Returns |true| if the process was crashed and the exception was retrieved successfully.
-bool SpawnCrasher(ProcessException* pe);
+bool SpawnCrasher(ExceptionContext* pe);
 
-bool MarkExceptionAsHandled(ProcessException* pe);
+bool MarkExceptionAsHandled(ExceptionContext* pe);
 
 }  // namespace exception
 }  // namespace fuchsia

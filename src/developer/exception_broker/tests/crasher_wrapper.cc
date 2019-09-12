@@ -7,10 +7,12 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
+#include <lib/fsl/handles/object_info.h>
+
 namespace fuchsia {
 namespace exception {
 
-bool SpawnCrasher(ProcessException* pe) {
+bool SpawnCrasher(ExceptionContext* pe) {
   zx::unowned_job current_job(zx_job_default());
   if (zx_status_t res = zx::job::create(*current_job, 0, &pe->job); res != ZX_OK) {
     FX_PLOGS(ERROR, res);
@@ -64,14 +66,28 @@ bool SpawnCrasher(ProcessException* pe) {
           pe->exception_channel.read(0, &pe->exception_info, pe->exception.reset_and_get_address(),
                                      sizeof(pe->exception_info), 1, nullptr, nullptr);
       res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Could not read exception.";
     return false;
   }
+
+  if (zx_status_t res = pe->exception.get_process(&pe->process); res != ZX_OK) {
+    FX_PLOGS(ERROR, res) << "Could not get process for exception.";
+    return false;
+  }
+  pe->process_koid = fsl::GetKoid(pe->process.get());
+  pe->process_name = fsl::GetObjectName(pe->process.get());
+
+  if (zx_status_t res = pe->exception.get_thread(&pe->thread); res != ZX_OK) {
+    FX_PLOGS(ERROR, res) << "Could not get thread for exception.";
+    return false;
+  }
+  pe->thread_koid = fsl::GetKoid(pe->thread.get());
+  pe->thread_name = fsl::GetObjectName(pe->thread.get());
 
   return true;
 }
 
-bool MarkExceptionAsHandled(ProcessException* pe) {
+bool MarkExceptionAsHandled(ExceptionContext* pe) {
   uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
   if (zx_status_t res = pe->exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
       res != ZX_OK) {

@@ -37,6 +37,21 @@ struct ExceptionInfo {
   ExceptionType type;
 };
 
+/// Generic wrapper over a thread exception. Mirrors closely the information
+/// given by an exception channel.
+table ProcessException {
+  // |exception| is guaranteed to be valid.
+  1: handle<exception> exception;
+  2: ExceptionInfo info;
+
+  // Both |process| and |thread| will be valid if present.
+  3: handle<process> process;
+
+  // The thread that generated the exception.
+  // The process may have other threads that are not reflected here.
+  4: handle<thread> thread;
+};
+
 /// What type of exception was triggered.
 /// Maps to the types defined in `zx_excp_type_t`.
 /// If zircon/syscalls/exception.h changes, this needs to be updates as well to

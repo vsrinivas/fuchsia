@@ -19,12 +19,18 @@ namespace exception {
 // crash reporting will occur, but the broker can be used to make other systems handle exceptions,
 // such as debuggers.
 
-class ExceptionBroker : public Handler {
+class ExceptionBroker : public Handler, public ProcessLimbo {
  public:
   static std::unique_ptr<ExceptionBroker> Create(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services);
 
+  // fuchsia.exception.Handler implementation.
+
   void OnException(zx::exception exception, ExceptionInfo info, OnExceptionCallback) override;
+
+  // fuchsia.exception.ProcessLimbo implementation.
+
+  void GetProcessesWaitingOnException(GetProcessesWaitingOnExceptionCallback) override;
 
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
@@ -32,7 +38,13 @@ class ExceptionBroker : public Handler {
     return connections_;
   }
 
+  bool use_limbo() const { return use_limbo_; }
+  void set_use_limbo(bool use_limbo) { use_limbo_ = use_limbo; }
+
  private:
+  void FileCrashReport(ProcessException);     // |use_limbo_| == false.
+  void AddToLimbo(ProcessException);          // |use_limbo_| == true.
+
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 
   std::shared_ptr<sys::ServiceDirectory> services_;
@@ -42,6 +54,18 @@ class ExceptionBroker : public Handler {
   // These will be deleted as soon as the call returns or fails.
   std::map<uint64_t, fuchsia::feedback::CrashReporterPtr> connections_;
   uint64_t next_connection_id_ = 1;
+
+  // TODO(donosoc): This is an extremely naive approach.
+  //                There are several policies to make this more robust:
+  //                - Put a ceiling on the amount of exceptions to be held.
+  //                - Define an eviction policy (FIFO probably).
+  //                - Set a timeout for exceptions (configurable).
+  //                - Decide on a throttle mechanism (if the same process is crashing continously).
+  std::vector<ProcessException> limbo_;
+
+  // TODO(donosoc): This should be moved into reading a config file at startup.
+  //                Exposed for testing purposes.
+  bool use_limbo_ = false;
 
   fxl::WeakPtrFactory<ExceptionBroker> weak_factory_;
 };

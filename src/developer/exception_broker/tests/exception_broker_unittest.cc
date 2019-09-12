@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
@@ -16,11 +17,18 @@
 #include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
 #include <third_party/crashpad/util/file/string_file.h>
 
+#include <garnet/public/lib/fostr/fidl/fuchsia/exception/formatting.h>
+
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace fuchsia {
 namespace exception {
+
+void ToString(const ExceptionType& value, std::ostream* os) {
+  *os << value;
+}
+
 namespace {
 
 // ExceptionBroker unit test -----------------------------------------------------------------------
@@ -85,7 +93,7 @@ void RunUntil(TestContext* context, fit::function<bool()> condition,
   }
 }
 
-bool GetProcessException(ProcessException* pe) {
+bool GetExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
   // By the time |SpawnCrasher| has returned, the process has already thrown an exception.
   if (!SpawnCrasher(pe))
@@ -97,7 +105,7 @@ bool GetProcessException(ProcessException* pe) {
   return MarkExceptionAsHandled(pe);
 }
 
-ExceptionInfo ProcessExceptionToExceptionInfo(const ProcessException& pe) {
+ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
   // Translate the exception to the fidl format.
   ExceptionInfo exception_info;
   exception_info.process_koid = pe.exception_info.pid;
@@ -147,9 +155,28 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report, bool va
   ASSERT_TRUE(minidump_snapshot.Initialize(&string_file));
 }
 
+void ValidateException(const ExceptionContext& context, const ProcessException& process_exception) {
+  ASSERT_TRUE(process_exception.has_exception());
+  ASSERT_TRUE(process_exception.has_info());
+  ASSERT_TRUE(process_exception.has_process());
+  ASSERT_TRUE(process_exception.has_thread());
+
+  const zx::process& process = process_exception.process();
+  ASSERT_EQ(context.process_koid, fsl::GetKoid(process.get()));
+  ASSERT_EQ(context.process_koid, process_exception.info().process_koid);
+  ASSERT_EQ(context.process_name, fsl::GetObjectName(process.get()));
+
+  const zx::thread& thread = process_exception.thread();
+  ASSERT_EQ(context.thread_koid, fsl::GetKoid(thread.get()));
+  ASSERT_EQ(context.thread_koid, process_exception.info().thread_koid);
+  ASSERT_EQ(context.thread_name, fsl::GetObjectName(thread.get()));
+
+  ASSERT_EQ(process_exception.info().type, ExceptionType::FATAL_PAGE_FAULT);
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(ExceptionBrokerUnittest, CallingMultipleExceptions) {
+TEST(ExceptionBroker, CallingMultipleExceptions) {
   auto test_context = CreateTestContext();
 
   // We add the service we're injecting.
@@ -160,16 +187,16 @@ TEST(ExceptionBrokerUnittest, CallingMultipleExceptions) {
   ASSERT_TRUE(broker);
 
   // We create multiple exceptions.
-  ProcessException excps[3];
-  ASSERT_TRUE(GetProcessException(excps + 0));
-  ASSERT_TRUE(GetProcessException(excps + 1));
-  ASSERT_TRUE(GetProcessException(excps + 2));
+  ExceptionContext excps[3];
+  ASSERT_TRUE(GetExceptionContext(excps + 0));
+  ASSERT_TRUE(GetExceptionContext(excps + 1));
+  ASSERT_TRUE(GetExceptionContext(excps + 2));
 
   // Get the fidl representation of the exception.
   ExceptionInfo infos[3];
-  infos[0] = ProcessExceptionToExceptionInfo(excps[0]);
-  infos[1] = ProcessExceptionToExceptionInfo(excps[1]);
-  infos[2] = ProcessExceptionToExceptionInfo(excps[2]);
+  infos[0] = ExceptionContextToExceptionInfo(excps[0]);
+  infos[1] = ExceptionContextToExceptionInfo(excps[1]);
+  infos[2] = ExceptionContextToExceptionInfo(excps[2]);
 
   // It's not easy to pass array references to lambdas.
   bool cb_call0 = false;
@@ -194,7 +221,6 @@ TEST(ExceptionBrokerUnittest, CallingMultipleExceptions) {
   EXPECT_EQ(broker->connections().size(), 0u);
 
   auto& reports = test_context->crash_reporter->reports();
-
   ValidateReport(reports[0], true);
   ValidateReport(reports[1], true);
   ValidateReport(reports[2], true);
@@ -206,9 +232,21 @@ TEST(ExceptionBrokerUnittest, CallingMultipleExceptions) {
   excps[0].job.kill();
   excps[1].job.kill();
   excps[2].job.kill();
+
+  // Process limbo should be empty.
+  bool called = false;
+  std::vector<ProcessException> exceptions;
+  broker->GetProcessesWaitingOnException(
+      [&called, &exceptions](std::vector<ProcessException> limbo) {
+        called = true;
+        exceptions = std::move(limbo);
+      });
+
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(exceptions.empty());
 }
 
-TEST(ExceptionBrokerUnittest, NoConnection) {
+TEST(ExceptionBroker, NoConnection) {
   // We don't inject a stub service. This will make connecting to the service fail.
   auto test_context = CreateTestContext();
 
@@ -217,9 +255,9 @@ TEST(ExceptionBrokerUnittest, NoConnection) {
   ASSERT_TRUE(broker);
 
   // Create the exception.
-  ProcessException exception;
-  ASSERT_TRUE(GetProcessException(&exception));
-  ExceptionInfo info = ProcessExceptionToExceptionInfo(exception);
+  ExceptionContext exception;
+  ASSERT_TRUE(GetExceptionContext(&exception));
+  ExceptionInfo info = ExceptionContextToExceptionInfo(exception);
 
   bool called = false;
   broker->OnException(std::move(exception.exception), info, [&called]() { called = true; });
@@ -237,9 +275,21 @@ TEST(ExceptionBrokerUnittest, NoConnection) {
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
   exception.job.kill();
+
+  // Process limbo should be empty.
+  called = false;
+  std::vector<ProcessException> exceptions;
+  broker->GetProcessesWaitingOnException(
+      [&called, &exceptions](std::vector<ProcessException> limbo) {
+        called = true;
+        exceptions = std::move(limbo);
+      });
+
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(exceptions.empty());
 }
 
-TEST(ExceptionBrokerUnittest, GettingInvalidVMO) {
+TEST(ExceptionBroker, GettingInvalidVMO) {
   auto test_context = CreateTestContext();
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
 
@@ -260,6 +310,61 @@ TEST(ExceptionBrokerUnittest, GettingInvalidVMO) {
   auto& report = test_context->crash_reporter->reports().front();
 
   ValidateReport(report, false);
+}
+
+TEST(ExceptionBroker, ProcessLimbo) {
+  auto test_context = CreateTestContext();
+  test_context->services.AddService(test_context->crash_reporter->GetHandler());
+
+  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
+                                        test_context->services.service_directory());
+  ASSERT_TRUE(broker);
+  broker->set_use_limbo(true);
+
+  // We create multiple exceptions.
+  ExceptionContext excps[3];
+  ASSERT_TRUE(GetExceptionContext(excps + 0));
+  ASSERT_TRUE(GetExceptionContext(excps + 1));
+  ASSERT_TRUE(GetExceptionContext(excps + 2));
+
+  // Get the fidl representation of the exception.
+  ExceptionInfo infos[3];
+  infos[0] = ExceptionContextToExceptionInfo(excps[0]);
+  infos[1] = ExceptionContextToExceptionInfo(excps[1]);
+  infos[2] = ExceptionContextToExceptionInfo(excps[2]);
+
+  // It's not easy to pass array references to lambdas.
+  bool cb_call0 = false;
+  bool cb_call1 = false;
+  bool cb_call2 = false;
+  broker->OnException(std::move(excps[0].exception), infos[0], [&cb_call0]() { cb_call0 = true; });
+  broker->OnException(std::move(excps[1].exception), infos[1], [&cb_call1]() { cb_call1 = true; });
+  broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
+
+  // There should not be an outgoing connection and no reports generated.
+  ASSERT_TRUE(broker->connections().empty());
+  ASSERT_TRUE(test_context->crash_reporter->reports().empty());
+
+  // Process limbo should have the exceptions.
+  bool called = false;
+  std::vector<ProcessException> exceptions;
+  broker->GetProcessesWaitingOnException([&called, &exceptions](std::vector<ProcessException> limbo) {
+    called = true;
+    exceptions = std::move(limbo);
+  });
+
+  ASSERT_TRUE(called);
+  ASSERT_EQ(exceptions.size(), 3u);
+  ValidateException(excps[0], exceptions[0]);
+  ValidateException(excps[1], exceptions[1]);
+  ValidateException(excps[2], exceptions[2]);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  excps[0].job.kill();
+  excps[1].job.kill();
+  excps[2].job.kill();
 }
 
 }  // namespace

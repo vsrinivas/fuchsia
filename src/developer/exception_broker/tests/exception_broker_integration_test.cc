@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
@@ -13,7 +14,7 @@ namespace fuchsia {
 namespace exception {
 namespace {
 
-bool GetProcessException(ProcessException* pe) {
+bool GetExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
   // By the time |SpawnCrasher| has returned, the process has already thrown an exception.
   if (!SpawnCrasher(pe))
@@ -32,7 +33,7 @@ bool GetProcessException(ProcessException* pe) {
   return true;
 }
 
-ExceptionInfo ProcessExceptionToExceptionInfo(const ProcessException& pe) {
+ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
   // Translate the exception to the fidl format.
   ExceptionInfo exception_info;
   exception_info.process_koid = pe.exception_info.pid;
@@ -42,9 +43,9 @@ ExceptionInfo ProcessExceptionToExceptionInfo(const ProcessException& pe) {
   return exception_info;
 }
 
-TEST(ExceptionBrokerIntegrationTest, SmokeTest) {
-  ProcessException pe;
-  ASSERT_TRUE(GetProcessException(&pe));
+TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
+  ExceptionContext pe;
+  ASSERT_TRUE(GetExceptionContext(&pe));
 
   fuchsia::exception::HandlerSyncPtr exception_handler;
 
@@ -52,8 +53,23 @@ TEST(ExceptionBrokerIntegrationTest, SmokeTest) {
   environment_services->Connect(exception_handler.NewRequest());
 
   ASSERT_EQ(
-      exception_handler->OnException(std::move(pe.exception), ProcessExceptionToExceptionInfo(pe)),
+      exception_handler->OnException(std::move(pe.exception), ExceptionContextToExceptionInfo(pe)),
       ZX_OK);
+}
+
+TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
+  ExceptionContext pe;
+  ASSERT_TRUE(GetExceptionContext(&pe));
+
+  fuchsia::exception::ProcessLimboSyncPtr limbo;
+
+  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
+  environment_services->Connect(limbo.NewRequest());
+
+  std::vector<ProcessException> exceptions;
+  zx_status_t status = limbo->GetProcessesWaitingOnException(&exceptions);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_TRUE(exceptions.empty());
 }
 
 }  // namespace

@@ -3,4 +3,8 @@
 
 // Simple program that throws an exception.
 
-int main() { __builtin_trap(); }
+int main() {
+  volatile char *segfault = 0;
+  *segfault = 1;
+  return *segfault;
+}

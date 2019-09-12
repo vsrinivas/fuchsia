@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+library fuchsia.exception;
+
+/// Protocol meant for clients interested in obtaining processes that are
+/// suspended waiting for an exception handler (in limbo). This is the core
+/// feature that enables Just In Time (JIT) debugging.
+[Discoverable]
+protocol ProcessLimbo {
+    /// Returns all the processes currently waiting on an exception.
+    GetProcessesWaitingOnException() -> (vector<ProcessException> process_exceptions);
+};

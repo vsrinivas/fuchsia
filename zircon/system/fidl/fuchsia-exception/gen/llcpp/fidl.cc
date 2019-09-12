@@ -127,6 +127,190 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
 }
 
 
+::llcpp::fuchsia::exception::ProcessException::Builder ProcessException::Build() {
+  return ProcessException::Builder();
+}
+
+auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_exception(::zx::exception* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_info(ExceptionInfo* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_process(::zx::process* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_thread(::zx::thread* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_GetProcessesWaitingOnException_Ordinal = 0x22e8743d00000000lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetProcessesWaitingOnExceptionResponseTable;
+
+}  // namespace
+template <>
+ProcessLimbo::ResultOf::GetProcessesWaitingOnException_Impl<ProcessLimbo::GetProcessesWaitingOnExceptionResponse>::GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProcessesWaitingOnExceptionRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetProcessesWaitingOnExceptionRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetProcessesWaitingOnExceptionRequest));
+  ::fidl::DecodedMessage<GetProcessesWaitingOnExceptionRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      ProcessLimbo::InPlace::GetProcessesWaitingOnException(std::move(_client_end), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::GetProcessesWaitingOnException ProcessLimbo::SyncClient::GetProcessesWaitingOnException() {
+  return ResultOf::GetProcessesWaitingOnException(zx::unowned_channel(this->channel_));
+}
+
+ProcessLimbo::ResultOf::GetProcessesWaitingOnException ProcessLimbo::Call::GetProcessesWaitingOnException(zx::unowned_channel _client_end) {
+  return ResultOf::GetProcessesWaitingOnException(std::move(_client_end));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::GetProcessesWaitingOnException_Impl<ProcessLimbo::GetProcessesWaitingOnExceptionResponse>::GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetProcessesWaitingOnExceptionRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetProcessesWaitingOnExceptionRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetProcessesWaitingOnExceptionRequest));
+  ::fidl::DecodedMessage<GetProcessesWaitingOnExceptionRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      ProcessLimbo::InPlace::GetProcessesWaitingOnException(std::move(_client_end), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::GetProcessesWaitingOnException ProcessLimbo::SyncClient::GetProcessesWaitingOnException(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProcessesWaitingOnException(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::GetProcessesWaitingOnException ProcessLimbo::Call::GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProcessesWaitingOnException(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::GetProcessesWaitingOnExceptionResponse> ProcessLimbo::InPlace::GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetProcessesWaitingOnExceptionRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetProcessesWaitingOnExceptionRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kProcessLimbo_GetProcessesWaitingOnException_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::GetProcessesWaitingOnExceptionResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetProcessesWaitingOnExceptionRequest, GetProcessesWaitingOnExceptionResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::GetProcessesWaitingOnExceptionResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kProcessLimbo_GetProcessesWaitingOnException_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetProcessesWaitingOnExceptionRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetProcessesWaitingOnException(
+        Interface::GetProcessesWaitingOnExceptionCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool ProcessLimbo::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void ProcessLimbo::Interface::GetProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::VectorView<ProcessException> process_exceptions) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProcessesWaitingOnExceptionResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetProcessesWaitingOnExceptionResponse _response = {};
+  _response._hdr.ordinal = kProcessLimbo_GetProcessesWaitingOnException_Ordinal;
+  _response.process_exceptions = std::move(process_exceptions);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void ProcessLimbo::Interface::GetProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessException> process_exceptions) {
+  if (_buffer.capacity() < GetProcessesWaitingOnExceptionResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetProcessesWaitingOnExceptionResponse _response = {};
+  _response._hdr.ordinal = kProcessLimbo_GetProcessesWaitingOnException_Ordinal;
+  _response.process_exceptions = std::move(process_exceptions);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void ProcessLimbo::Interface::GetProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::DecodedMessage<GetProcessesWaitingOnExceptionResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kProcessLimbo_GetProcessesWaitingOnException_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 }  // namespace exception
 }  // namespace fuchsia
 }  // namespace llcpp

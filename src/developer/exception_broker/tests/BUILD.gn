@@ -53,6 +53,7 @@ source_set("test_lib") {
     "//garnet/public/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.exception",
   ]
 }
 

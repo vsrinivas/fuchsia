@@ -13,6 +13,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
@@ -36,6 +38,107 @@ enum class ExceptionType : uint32_t {
 
 struct ExceptionInfo;
 class Handler;
+struct ProcessException;
+class ProcessLimbo;
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionTable;
+
+// Generic wrapper over a thread exception. Mirrors closely the information
+// given by an exception channel.
+struct ProcessException final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const ::zx::exception& exception() const {
+    ZX_ASSERT(has_exception());
+    return *reinterpret_cast<const ::zx::exception*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::zx::exception& exception() {
+    ZX_ASSERT(has_exception());
+    return *reinterpret_cast<::zx::exception*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_exception() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const ExceptionInfo& info() const {
+    ZX_ASSERT(has_info());
+    return *reinterpret_cast<const ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
+  }
+  ExceptionInfo& info() {
+    ZX_ASSERT(has_info());
+    return *reinterpret_cast<ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_info() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  const ::zx::process& process() const {
+    ZX_ASSERT(has_process());
+    return *reinterpret_cast<const ::zx::process*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::zx::process& process() {
+    ZX_ASSERT(has_process());
+    return *reinterpret_cast<::zx::process*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_process() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  const ::zx::thread& thread() const {
+    ZX_ASSERT(has_thread());
+    return *reinterpret_cast<const ::zx::thread*>(EnvelopesView::at(4 - 1).data);
+  }
+  ::zx::thread& thread() {
+    ZX_ASSERT(has_thread());
+    return *reinterpret_cast<::zx::thread*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_thread() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  ProcessException() = default;
+  ~ProcessException() = default;
+  ProcessException(ProcessException&& other) noexcept = default;
+  ProcessException& operator=(ProcessException&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessExceptionTable;
+  static constexpr uint32_t MaxNumHandles = 3;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 112;
+
+ private:
+  ProcessException(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class ProcessException::Builder {
+ public:
+  ProcessException view() { return ProcessException(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_exception(::zx::exception* elem);
+
+  Builder&& set_info(ExceptionInfo* elem);
+
+  Builder&& set_process(::zx::process* elem);
+
+  Builder&& set_thread(::zx::thread* elem);
+
+ private:
+  Builder() = default;
+  friend Builder ProcessException::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+};
 
 extern "C" const fidl_type_t fuchsia_exception_ExceptionInfoTable;
 
@@ -268,6 +371,176 @@ class Handler final {
 
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetProcessesWaitingOnExceptionResponseTable;
+
+// Protocol meant for clients interested in obtaining processes that are
+// suspended waiting for an exception handler (in limbo). This is the core
+// feature that enables Just In Time (JIT) debugging.
+class ProcessLimbo final {
+  ProcessLimbo() = delete;
+ public:
+  static constexpr char Name[] = "fuchsia.exception.ProcessLimbo";
+
+  struct GetProcessesWaitingOnExceptionResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::VectorView<ProcessException> process_exceptions;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboGetProcessesWaitingOnExceptionResponseTable;
+    static constexpr uint32_t MaxNumHandles = 4294967295;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetProcessesWaitingOnExceptionRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
+      ~GetProcessesWaitingOnException_Impl() = default;
+      GetProcessesWaitingOnException_Impl(GetProcessesWaitingOnException_Impl&& other) = default;
+      GetProcessesWaitingOnException_Impl& operator=(GetProcessesWaitingOnException_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetProcessesWaitingOnException = GetProcessesWaitingOnException_Impl<GetProcessesWaitingOnExceptionResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetProcessesWaitingOnException_Impl() = default;
+      GetProcessesWaitingOnException_Impl(GetProcessesWaitingOnException_Impl&& other) = default;
+      GetProcessesWaitingOnException_Impl& operator=(GetProcessesWaitingOnException_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetProcessesWaitingOnException = GetProcessesWaitingOnException_Impl<GetProcessesWaitingOnExceptionResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Returns all the processes currently waiting on an exception.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException();
+
+    // Returns all the processes currently waiting on an exception.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Returns all the processes currently waiting on an exception.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(zx::unowned_channel _client_end);
+
+    // Returns all the processes currently waiting on an exception.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Returns all the processes currently waiting on an exception.
+    static ::fidl::DecodeResult<GetProcessesWaitingOnExceptionResponse> GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = ProcessLimbo;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetProcessesWaitingOnExceptionCompleterBase : public _Base {
+     public:
+      void Reply(::fidl::VectorView<ProcessException> process_exceptions);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessException> process_exceptions);
+      void Reply(::fidl::DecodedMessage<GetProcessesWaitingOnExceptionResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetProcessesWaitingOnExceptionCompleter = ::fidl::Completer<GetProcessesWaitingOnExceptionCompleterBase>;
+
+    virtual void GetProcessesWaitingOnException(GetProcessesWaitingOnExceptionCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 }  // namespace exception
 }  // namespace fuchsia
 }  // namespace llcpp
@@ -290,5 +563,17 @@ static_assert(sizeof(::llcpp::fuchsia::exception::Handler::OnExceptionRequest)
     == ::llcpp::fuchsia::exception::Handler::OnExceptionRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::exception::Handler::OnExceptionRequest, exception) == 16);
 static_assert(offsetof(::llcpp::fuchsia::exception::Handler::OnExceptionRequest, info) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessException> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessException>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse, process_exceptions) == 16);
 
 }  // namespace fidl

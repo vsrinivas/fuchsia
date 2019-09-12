@@ -38,14 +38,14 @@ TEST(CrashReportGeneration, GenerateVMOFromStringFile) {
 }
 
 TEST(CrashReportGeneration, GenerateMinidump) {
-  ProcessException pe;
-  if (!SpawnCrasher(&pe)) {
+  ExceptionContext ec;
+  if (!SpawnCrasher(&ec)) {
     FAIL() << "Could not initialize exception.";
     return;
   }
 
   std::string process_name;
-  zx::vmo minidump_vmo = GenerateMinidumpVMO(pe.exception, &process_name);
+  zx::vmo minidump_vmo = GenerateMinidumpVMO(ec.exception, &process_name);
   ASSERT_TRUE(minidump_vmo.is_valid());
   ASSERT_FALSE(process_name.empty());
 
@@ -69,7 +69,7 @@ TEST(CrashReportGeneration, GenerateMinidump) {
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
-  pe.job.kill();
+  ec.job.kill();
 }
 
 }  // namespace

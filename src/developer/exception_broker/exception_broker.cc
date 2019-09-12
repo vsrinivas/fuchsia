@@ -60,8 +60,46 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
   // Always call the callback when we're done.
   auto defer_cb = fit::defer([cb = std::move(cb)]() { cb(); });
 
+  ProcessException process_exception = {};
+  process_exception.set_exception(std::move(exception));
+  process_exception.set_info(std::move(info));
+
+  zx_status_t status;
+  zx::process process;
+  status = process_exception.exception().get_process(&process);
+  if (status != ZX_OK) {
+    FX_PLOGS(WARNING, status) << "Could not obtain process handle for exception.";
+  } else {
+    process_exception.set_process(std::move(process));
+
+  }
+
+  zx::thread thread;
+  status = process_exception.exception().get_thread(&thread);
+  if (status != ZX_OK) {
+    FX_PLOGS(WARNING, status) << "Could not obtain thread handle for exception.";
+  } else {
+    process_exception.set_thread(std::move(thread));
+  }
+
+  if (!use_limbo_) {
+    FileCrashReport(std::move(process_exception));
+  } else {
+    AddToLimbo(std::move(process_exception));
+  }
+}
+
+// fuchsia.exception.ProcessLimbo ------------------------------------------------------------------
+
+void ExceptionBroker::GetProcessesWaitingOnException(GetProcessesWaitingOnExceptionCallback cb) {
+  cb(std::move(limbo_));
+}
+
+// ExceptionBroker implementation ------------------------------------------------------------------
+
+void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
   std::string process_name;
-  zx::vmo minidump_vmo = GenerateMinidumpVMO(exception, &process_name);
+  zx::vmo minidump_vmo = GenerateMinidumpVMO(process_exception.exception(), &process_name);
 
   // Create a new connection to the crash reporter and keep track of it.
   uint64_t id = next_connection_id_++;
@@ -95,6 +133,10 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
     // Remove the connection.
     broker->connections_.erase(id);
   });
+}
+
+void ExceptionBroker::AddToLimbo(ProcessException process_exception) {
+  limbo_.push_back(std::move(process_exception));
 }
 
 }  // namespace exception

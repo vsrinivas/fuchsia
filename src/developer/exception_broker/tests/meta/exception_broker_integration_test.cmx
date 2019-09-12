@@ -3,6 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
+                "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/crashpad_agent#meta/crashpad_agent.cmx"
             }
         }
@@ -16,6 +17,7 @@
         ],
         "services": [
             "fuchsia.exception.Handler",
+            "fuchsia.exception.ProcessLimbo",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]

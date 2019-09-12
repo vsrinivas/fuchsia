@@ -298,6 +298,16 @@ test_package("debug_agent_tests") {
     {
       name = "thread_signals"
     },
+    {
+      name = "limbo_caller"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/limbo_caller.cmx"
+      dest = "limbo_caller.cmx"
+    },
   ]
 
   if (include_test_app) {

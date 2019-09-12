@@ -19,8 +19,12 @@ int main() {
   if (!broker)
     return EXIT_FAILURE;
 
-  fidl::BindingSet<fuchsia::exception::Handler> bindings;
-  context->outgoing()->AddPublicService(bindings.GetHandler(broker.get()));
+  // Create the bindings for the protocols.
+  fidl::BindingSet<fuchsia::exception::Handler> handler_bindings;
+  context->outgoing()->AddPublicService(handler_bindings.GetHandler(broker.get()));
+
+  fidl::BindingSet<fuchsia::exception::ProcessLimbo> limbo_bindings;
+  context->outgoing()->AddPublicService(limbo_bindings.GetHandler(broker.get()));
 
   loop.Run();
 
