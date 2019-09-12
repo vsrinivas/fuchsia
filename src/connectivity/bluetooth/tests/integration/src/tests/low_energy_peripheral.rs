@@ -8,11 +8,11 @@ use {
     fidl_fuchsia_bluetooth::{ConnectionRole, Uuid},
     fidl_fuchsia_bluetooth_le::{
         AdvertisingData, AdvertisingHandleMarker, AdvertisingModeHint, AdvertisingParameters,
-        PeripheralStartAdvertisingResult as AdvertisingResult,
+        PeripheralError, PeripheralStartAdvertisingResult as AdvertisingResult,
     },
     fidl_fuchsia_bluetooth_test::{
         ConnectionState, HciEmulatorProxy, LegacyAdvertisingType, LowEnergyPeerParameters,
-        PeerProxy,
+        PeerProxy, MAX_LEGACY_ADVERTISING_DATA_LENGTH,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
@@ -21,10 +21,14 @@ use {
     },
     fuchsia_zircon::{Duration, DurationNum},
     futures::{Future, Stream, TryFutureExt, TryStream, TryStreamExt},
-    std::mem::drop,
+    std::{iter::repeat, mem::drop},
 };
 
-use crate::harness::{emulator, expect::expect_ok, low_energy_peripheral::PeripheralHarness};
+use crate::harness::{
+    emulator,
+    expect::{expect_eq, expect_ok},
+    low_energy_peripheral::PeripheralHarness,
+};
 
 mod expectation {
     use {
@@ -120,6 +124,36 @@ async fn test_advertising_handle_closed_while_pending(
             test_timeout(),
         )
         .await?;
+    Ok(())
+}
+
+async fn test_advertising_data_too_long(harness: PeripheralHarness) -> Result<(), Error> {
+    const LENGTH: usize = (MAX_LEGACY_ADVERTISING_DATA_LENGTH + 1) as usize;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+
+    // Assign a very long name.
+    let mut params = default_parameters();
+    params.data = Some(AdvertisingData {
+        name: Some(repeat("x").take(LENGTH).collect::<String>()),
+        ..empty_advertising_data()
+    });
+    let result = start_advertising(&harness, params, handle_remote).await?;
+    expect_eq!(Err(PeripheralError::AdvertisingDataTooLong), result)?;
+    Ok(())
+}
+
+async fn test_scan_response_data_too_long(harness: PeripheralHarness) -> Result<(), Error> {
+    const LENGTH: usize = (MAX_LEGACY_ADVERTISING_DATA_LENGTH + 1) as usize;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+
+    // Assign a very long name.
+    let mut params = default_parameters();
+    params.scan_response = Some(AdvertisingData {
+        name: Some(repeat("x").take(LENGTH).collect::<String>()),
+        ..empty_advertising_data()
+    });
+    let result = start_advertising(&harness, params, handle_remote).await?;
+    expect_eq!(Err(PeripheralError::ScanResponseDataTooLong), result)?;
     Ok(())
 }
 
@@ -558,6 +592,8 @@ pub fn run_all() -> Result<(), Error> {
             test_enable_advertising,
             test_enable_and_disable_advertising,
             test_advertising_handle_closed_while_pending,
+            test_advertising_data_too_long,
+            test_scan_response_data_too_long,
             test_update_advertising,
             test_advertising_types,
             test_advertising_modes,
