@@ -8,19 +8,6 @@ import("//src/modular/build/tests_package.gni")
 group("story") {
   testonly = true
   deps = [
-    ":system",
     "model",
-    "systems",
-  ]
-}
-
-source_set("system") {
-  sources = [
-    "system.cc",
-    "system.h",
-  ]
-
-  public_deps = [
-    "//src/lib/fxl",
   ]
 }

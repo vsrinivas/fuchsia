@@ -6,7 +6,6 @@ source_set("operation_calls") {
   public_deps = [
     ":add_mod_call",
     ":find_modules_call",
-    ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
   ]
@@ -20,7 +19,6 @@ source_set("add_mod_call") {
 
   deps = [
     ":find_modules_call",
-    ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
     "//garnet/public/lib/fsl",
@@ -45,7 +43,6 @@ source_set("find_modules_call") {
   ]
 
   deps = [
-    ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
@@ -54,20 +51,6 @@ source_set("find_modules_call") {
     "//src/modular/bin/sessionmgr/storage:story_storage",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/entity/cpp:json",
-    "//src/modular/lib/fidl:clone",
-  ]
-}
-
-source_set("get_link_path_for_parameter_name_call") {
-  sources = [
-    "get_link_path_for_parameter_name_call.cc",
-    "get_link_path_for_parameter_name_call.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//src/modular/bin/sessionmgr/storage:story_storage",
-    "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:clone",
   ]
 }

@@ -24,7 +24,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
   SimpleModule(modular::ModuleHost* const module_host) : view_provider_binding_(this) {
     // Get the component context from the module context.
     fuchsia::modular::ComponentContextPtr component_context;
-    module_host->module_context()->GetComponentContext(component_context.NewRequest());
+    module_host->component_context()->svc()->Connect(component_context.NewRequest());
 
     // Connect to the agent to retrieve it's outgoing services.
     fuchsia::modular::AgentControllerPtr agent_controller;

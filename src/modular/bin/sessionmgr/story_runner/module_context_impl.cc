@@ -10,7 +10,6 @@
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
-#include "src/modular/bin/sessionmgr/story/systems/story_visibility_system.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 
@@ -21,7 +20,6 @@ ModuleContextImpl::ModuleContextImpl(
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
-      story_visibility_system_(info.story_visibility_system),
       component_context_impl_(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
@@ -100,37 +98,13 @@ void ModuleContextImpl::AddModuleToStory(
                                            std::move(callback));
 }
 
-void ModuleContextImpl::StartContainerInShell(
-    std::string name, fuchsia::modular::SurfaceRelation parent_relation,
-    std::vector<fuchsia::modular::ContainerLayout> layout,
-    std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
-    std::vector<fuchsia::modular::ContainerNode> nodes) {
-  FXL_LOG(ERROR) << "ModuleContext.StartContainerInShell() not implemented.";
-}
-
-void ModuleContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> context_request) {
-  component_context_impl_.Connect(std::move(context_request));
-}
-
-void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {
-  callback(story_controller_impl_->GetStoryId().value_or(""));
-}
-
 void ModuleContextImpl::RequestFocus() {
   story_controller_impl_->FocusModule(module_data_->module_path());
   story_controller_impl_->RequestStoryFocus();
 }
 
-void ModuleContextImpl::Active() {}
-
 void ModuleContextImpl::RemoveSelfFromStory() {
   story_controller_impl_->RemoveModuleFromStory(module_data_->module_path());
-}
-
-void ModuleContextImpl::RequestStoryVisibilityState(
-    fuchsia::modular::StoryVisibilityState visibility_state) {
-  story_visibility_system_->RequestStoryVisibilityStateChange(visibility_state);
 }
 
 void ModuleContextImpl::StartOngoingActivity(

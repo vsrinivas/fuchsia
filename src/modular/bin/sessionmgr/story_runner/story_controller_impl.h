@@ -63,7 +63,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   StoryControllerImpl(SessionStorage* session_storage, StoryStorage* story_storage,
                       std::unique_ptr<StoryMutator> story_mutator,
                       std::unique_ptr<StoryObserver> story_observer,
-                      StoryVisibilitySystem* story_visibility_system,
                       StoryProviderImpl* story_provider_impl, inspect::Node* story_inspect_node);
   ~StoryControllerImpl() override;
 
@@ -280,7 +279,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   std::unique_ptr<StoryMutator> story_mutator_;
   std::unique_ptr<StoryObserver> story_observer_;
-  StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
 
   // The application environment (which abstracts a zx::job) in which the
   // modules within this story run. This environment is only valid (not null) if

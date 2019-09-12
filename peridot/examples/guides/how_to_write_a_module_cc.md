@@ -58,7 +58,7 @@ needs to connect to the agent via its `fuchsia::modular::ComponentContext`.
 ```c++
 // Get the component context from the module context.
 modular::fuchsia::modular::ComponentContextPtr component_context;
-module_host->module_context()->GetComponentContext(
+module_host->component_context()->svc()->Connect(
     component_context.NewRequest());
 
 // Connect to the agent to retrieve it's outgoing services.

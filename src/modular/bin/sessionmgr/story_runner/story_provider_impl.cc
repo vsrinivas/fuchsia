@@ -27,7 +27,6 @@
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
-#include "src/modular/bin/sessionmgr/story/systems/story_visibility_system.h"
 #include "src/modular/bin/sessionmgr/story_runner/link_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
@@ -150,19 +149,12 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
           container.last_focus_time = container.story_node->CreateInt(
               "last_focus_time", container.current_data->story_info().last_focus_time());
 
-          // Create systems that are part of this story.
-          auto story_visibility_system =
-              std::make_unique<StoryVisibilitySystem>(container.model_owner->NewMutator());
-
           container.controller_impl = std::make_unique<StoryControllerImpl>(
               session_storage_, container.storage.get(), container.model_owner->NewMutator(),
-              container.model_owner->NewObserver(), story_visibility_system.get(),
-              story_provider_impl_, container.story_node.get());
+              container.model_owner->NewObserver(), story_provider_impl_,
+              container.story_node.get());
           container.entity_provider =
               std::make_unique<StoryEntityProvider>(container.storage.get());
-
-          // Hand ownership of systems over to |container|.
-          container.systems.push_back(std::move(story_visibility_system));
 
           // Register a listener on the StoryModel so that we can signal
           // our watchers when relevant data changes.

@@ -35,7 +35,6 @@
 #include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "src/modular/bin/sessionmgr/story/model/noop_story_model_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_owner.h"
-#include "src/modular/bin/sessionmgr/story/system.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -283,10 +282,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     // StoryRuntime itself contains a StoryModelOwner and manages systems with
     // asynchronous initialization and teardown operations.
     std::unique_ptr<StoryModelOwner> model_owner;
-
-    // For ease of memory management, we store all runtime systems in
-    // |systems|.
-    std::vector<std::unique_ptr<System>> systems;
 
     // This allows us to observe changes to the StoryModel owned by |runtime|.
     std::unique_ptr<StoryObserver> model_observer;

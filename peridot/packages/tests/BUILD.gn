@@ -110,7 +110,6 @@ group("modular_unittests") {
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
     "//src/modular/bin/sessionmgr/storage:storage_unittests",
     "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
-    "//src/modular/bin/sessionmgr/story/systems:story_systems_unittests",
     "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
   ]
 }

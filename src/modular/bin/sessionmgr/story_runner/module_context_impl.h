@@ -23,13 +23,11 @@
 namespace modular {
 
 class StoryControllerImpl;
-class StoryVisibilitySystem;
 
 // The dependencies of ModuleContextImpl common to all instances.
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  StoryVisibilitySystem* const story_visibility_system;
   fuchsia::app::discover::DiscoverRegistry* const discover_registry;
 };
 
@@ -72,30 +70,10 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
       AddModuleToStoryCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
-  void StartContainerInShell(std::string name, fuchsia::modular::SurfaceRelation parent_relation,
-                             std::vector<fuchsia::modular::ContainerLayout> layout,
-                             std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
-                             std::vector<fuchsia::modular::ContainerNode> nodes) override;
-
-  // |fuchsia::modular::ModuleContext|
-  void GetComponentContext(
-      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> context_request) override;
-
-  // |fuchsia::modular::ModuleContext|
-  void GetStoryId(GetStoryIdCallback callback) override;
-
-  // |fuchsia::modular::ModuleContext|
   void RequestFocus() override;
 
   // |fuchsia::modular::ModuleContext|
-  void Active() override;
-
-  // |fuchsia::modular::ModuleContext|
   void RemoveSelfFromStory() override;
-
-  // |fuchsia::modular::ModuleContext|
-  void RequestStoryVisibilityState(
-      fuchsia::modular::StoryVisibilityState visibility_state) override;
 
   // |fuchsia::modular::ModuleContext|
   void StartOngoingActivity(
@@ -114,8 +92,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   // Not owned. The StoryControllerImpl for the Story in which this Module
   // lives.
   StoryControllerImpl* const story_controller_impl_;
-
-  StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
 
   ComponentContextImpl component_context_impl_;
 

@@ -221,7 +221,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
         story_controller_impl_,
-        story_controller_impl_->story_visibility_system_,
         story_controller_impl_->story_provider_impl_->discover_registry(),
     };
 
@@ -991,7 +990,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
                                          StoryStorage* const story_storage,
                                          std::unique_ptr<StoryMutator> story_mutator,
                                          std::unique_ptr<StoryObserver> story_observer,
-                                         StoryVisibilitySystem* const story_visibility_system,
                                          StoryProviderImpl* const story_provider_impl,
                                          inspect::Node* story_inspect_node)
     : story_id_(story_observer->model().name()),
@@ -1001,7 +999,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_inspect_node_(story_inspect_node),
       story_mutator_(std::move(story_mutator)),
       story_observer_(std::move(story_observer)),
-      story_visibility_system_(story_visibility_system),
       story_shell_context_impl_{story_id_, story_provider_impl, this},
       weak_factory_(this) {
   story_storage_->set_on_module_data_updated([this](fuchsia::modular::ModuleData module_data) {
