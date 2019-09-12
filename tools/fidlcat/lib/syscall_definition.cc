@@ -3201,6 +3201,177 @@ void SyscallDecoderDispatcher::Populate() {
     zx_timer_cancel->Input<zx_handle_t>("handle",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
   }
+
+  {
+    Syscall* zx_debuglog_create = Add("zx_debuglog_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_debuglog_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_debuglog_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_debuglog_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_debuglog_create->Input<zx_handle_t>("resource",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_debuglog_create->Input<uint32_t>("options",
+                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_debuglog_create->Output<zx_handle_t>(ZX_OK, "out",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_debuglog_write = Add("zx_debuglog_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_debuglog_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_debuglog_write->Argument<uint32_t>(SyscallType::kUint32);
+    auto buffer = zx_debuglog_write->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_debuglog_write->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_debuglog_write->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_debuglog_write->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_debuglog_write->InputBuffer<uint8_t, uint8_t>(
+        "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_debuglog_read = Add("zx_debuglog_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_debuglog_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_debuglog_read->Argument<uint32_t>(SyscallType::kUint32);
+    auto buffer = zx_debuglog_read->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_debuglog_read->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_debuglog_read->Input<zx_handle_t>("handle",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_debuglog_read->Input<uint32_t>("options",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_debuglog_read->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_ktrace_read = Add("zx_ktrace_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_ktrace_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_ktrace_read->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto offset = zx_ktrace_read->Argument<uint32_t>(SyscallType::kUint32);
+    auto data_size = zx_ktrace_read->Argument<size_t>(SyscallType::kSize);
+    auto actual = zx_ktrace_read->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_ktrace_read->Input<zx_handle_t>("handle",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_ktrace_read->Input<uint32_t>("offset", std::make_unique<ArgumentAccess<uint32_t>>(offset));
+    // Outputs
+    zx_ktrace_read->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
+        std::make_unique<ArgumentAccess<size_t>>(data_size));
+    zx_ktrace_read->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
+        std::make_unique<ArgumentAccess<size_t>>(actual));
+  }
+
+  {
+    Syscall* zx_ktrace_control = Add("zx_ktrace_control", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_ktrace_control->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto action = zx_ktrace_control->Argument<uint32_t>(SyscallType::kKtraceControlAction);
+    auto options = zx_ktrace_control->Argument<uint32_t>(SyscallType::kUint32);
+    auto ptr = zx_ktrace_control->PointerArgument<char>(SyscallType::kChar);
+    // Inputs
+    zx_ktrace_control->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_ktrace_control->Input<uint32_t>("action",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(action));
+    zx_ktrace_control->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    constexpr uint32_t KTRACE_ACTION_NEW_PROBE = 4;
+    zx_ktrace_control
+        ->InputFixedSizeString("ptr", std::make_unique<ArgumentAccess<char>>(ptr), ZX_MAX_NAME_LEN)
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(action),
+                                   KTRACE_ACTION_NEW_PROBE);
+  }
+
+  {
+    Syscall* zx_ktrace_write = Add("zx_ktrace_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_ktrace_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto id = zx_ktrace_write->Argument<uint32_t>(SyscallType::kUint32);
+    auto arg0 = zx_ktrace_write->Argument<uint32_t>(SyscallType::kUint32);
+    auto arg1 = zx_ktrace_write->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_ktrace_write->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_ktrace_write->Input<uint32_t>("id", std::make_unique<ArgumentAccess<uint32_t>>(id));
+    zx_ktrace_write->Input<uint32_t>("arg0", std::make_unique<ArgumentAccess<uint32_t>>(arg0));
+    zx_ktrace_write->Input<uint32_t>("arg1", std::make_unique<ArgumentAccess<uint32_t>>(arg1));
+  }
+
+  {
+    Syscall* zx_mtrace_control = Add("zx_mtrace_control", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_mtrace_control->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_mtrace_control->Argument<uint32_t>(SyscallType::kUint32);
+    auto action = zx_mtrace_control->Argument<uint32_t>(SyscallType::kUint32);
+    auto options = zx_mtrace_control->Argument<uint32_t>(SyscallType::kUint32);
+    auto ptr = zx_mtrace_control->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto ptr_size = zx_mtrace_control->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_mtrace_control->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_mtrace_control->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    zx_mtrace_control->Input<uint32_t>("action",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(action));
+    zx_mtrace_control->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_mtrace_control->InputBuffer<uint8_t, uint8_t>(
+        "ptr", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(ptr),
+        std::make_unique<ArgumentAccess<size_t>>(ptr_size));
+  }
+
+  {
+    Syscall* zx_debug_read = Add("zx_debug_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_debug_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto buffer = zx_debug_read->PointerArgument<char>(SyscallType::kChar);
+    auto buffer_size = zx_debug_read->Argument<size_t>(SyscallType::kSize);
+    auto actual = zx_debug_read->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_debug_read->Input<zx_handle_t>("handle",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_debug_read->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    zx_debug_read->OutputString(ZX_OK, "buffer", std::make_unique<ArgumentAccess<char>>(buffer),
+                                std::make_unique<ArgumentAccess<size_t>>(actual));
+  }
+
+  {
+    Syscall* zx_debug_write = Add("zx_debug_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto buffer = zx_debug_write->PointerArgument<char>(SyscallType::kChar);
+    auto buffer_size = zx_debug_write->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_debug_write->InputString("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
+                                std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_debug_send_command = Add("zx_debug_send_command", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_debug_send_command->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto buffer = zx_debug_send_command->PointerArgument<char>(SyscallType::kChar);
+    auto buffer_size = zx_debug_send_command->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_debug_send_command->Input<zx_handle_t>(
+        "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_debug_send_command->InputString("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
+                                       std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
 }
 
 }  // namespace fidlcat

@@ -54,22 +54,15 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
   os << dispatcher->colors().reset << '\n';
 }
 
-const char* SyscallInputOutputString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
-                                                    SyscallDecoder* decoder, Stage stage,
-                                                    const char* separator, std::ostream& os) const {
-  os << separator;
-  os << name() << ":string: ";
-  const char* string = string_->Content(decoder, stage);
+void DisplayString(const Colors& colors, const char* string, size_t size, std::ostream& os) {
   if (string == nullptr) {
     os << "nullptr\n";
   } else {
-    size_t string_size = string_size_->Value(decoder, stage);
-    if (string_size == 0) {
+    if (size == 0) {
       os << "empty\n";
     } else {
-      const Colors& colors = dispatcher->colors();
       os << colors.red << '"';
-      for (size_t i = 0; i < string_size; ++i) {
+      for (size_t i = 0; i < size; ++i) {
         char value = string[i];
         switch (value) {
           case 0:
@@ -88,6 +81,28 @@ const char* SyscallInputOutputString::DisplayInline(SyscallDisplayDispatcher* di
       os << '"' << colors.reset << '\n';
     }
   }
+}
+
+const char* SyscallInputOutputString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
+                                                    SyscallDecoder* decoder, Stage stage,
+                                                    const char* separator, std::ostream& os) const {
+  os << separator;
+  os << name() << ":string: ";
+  const char* string = string_->Content(decoder, stage);
+  size_t string_size = string_size_->Value(decoder, stage);
+  DisplayString(dispatcher->colors(), string, string_size, os);
+  return ", ";
+}
+
+const char* SyscallInputOutputFixedSizeString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
+                                                             SyscallDecoder* decoder, Stage stage,
+                                                             const char* separator,
+                                                             std::ostream& os) const {
+  os << separator;
+  os << name() << ":string: ";
+  const char* string = string_->Content(decoder, stage);
+  size_t string_size = (string == nullptr) ? 0 : strnlen(string, string_size_);
+  DisplayString(dispatcher->colors(), string, string_size, os);
   return ", ";
 }
 

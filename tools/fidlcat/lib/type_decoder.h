@@ -59,6 +59,7 @@ enum class SyscallType {
   kHandle,
   kInfoMapsType,
   kKoid,
+  kKtraceControlAction,
   kMonotonicTime,
   kObjectInfoTopic,
   kObjProps,
@@ -118,6 +119,7 @@ void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
 void FeatureKindName(uint32_t feature_kind, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
+void KtraceControlActionName(uint32_t action, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);

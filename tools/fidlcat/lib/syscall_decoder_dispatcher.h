@@ -256,6 +256,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       InfoMapsTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kKtraceControlAction:
+      os << colors.blue;
+      KtraceControlActionName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kObjectInfoTopic:
       os << colors.blue;
       TopicName(value, os);
@@ -1338,6 +1343,28 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
   const std::unique_ptr<Access<size_t>> string_size_;
 };
 
+// An input/output which is a string of fixed size. This is always displayed inline.
+class SyscallInputOutputFixedSizeString : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputFixedSizeString(int64_t error_code, std::string_view name,
+                                    std::unique_ptr<Access<char>> string, size_t string_size)
+      : SyscallInputOutputBase(error_code, name),
+        string_(std::move(string)),
+        string_size_(string_size) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    string_->LoadArray(decoder, stage, string_size_);
+  }
+
+  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                            Stage stage, const char* separator, std::ostream& os) const override;
+
+ private:
+  const std::unique_ptr<Access<char>> string_;
+  size_t string_size_;
+};
+
 // An input/output which is an object. This is always displayed outline.
 template <typename ClassType>
 class SyscallInputOutputObject : public SyscallInputOutputBase {
@@ -1562,6 +1589,17 @@ class Syscall {
                    std::unique_ptr<Access<size_t>> string_size) {
     inputs_.push_back(std::make_unique<SyscallInputOutputString>(0, name, std::move(string),
                                                                  std::move(string_size)));
+  }
+
+  // Adds a fixed size input string to display.
+  SyscallInputOutputFixedSizeString* InputFixedSizeString(std::string_view name,
+                                                          std::unique_ptr<Access<char>> string,
+                                                          size_t string_size) {
+    auto object = std::make_unique<SyscallInputOutputFixedSizeString>(0, name, std::move(string),
+                                                                      std::move(string_size));
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
   }
 
   // Adds an object input to display.

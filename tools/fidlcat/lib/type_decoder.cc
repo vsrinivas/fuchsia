@@ -103,6 +103,27 @@ void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os) {
   }
 }
 
+#define KtraceControlActionNameCase(name) \
+  case name:                              \
+    os << #name;                          \
+    return
+
+void KtraceControlActionName(uint32_t action, std::ostream& os) {
+  constexpr uint32_t KTRACE_ACTION_START = 1;
+  constexpr uint32_t KTRACE_ACTION_STOP = 2;
+  constexpr uint32_t KTRACE_ACTION_REWIND = 3;
+  constexpr uint32_t KTRACE_ACTION_NEW_PROBE = 4;
+  switch (action) {
+    KtraceControlActionNameCase(KTRACE_ACTION_START);
+    KtraceControlActionNameCase(KTRACE_ACTION_STOP);
+    KtraceControlActionNameCase(KTRACE_ACTION_REWIND);
+    KtraceControlActionNameCase(KTRACE_ACTION_NEW_PROBE);
+    default:
+      os << action;
+      return;
+  }
+}
+
 #define ObjPropsNameCase(name) \
   case name:                   \
     os << #name;               \
@@ -727,6 +748,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kKoid:
       os << ":" << colors.green << "zx_koid_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kKtraceControlAction:
+      os << ":" << colors.green << "zx_ktrace_control_action_t" << colors.reset << ": ";
       break;
     case SyscallType::kMonotonicTime:
       os << ":" << colors.green << "zx_time_t" << colors.reset << ": ";
