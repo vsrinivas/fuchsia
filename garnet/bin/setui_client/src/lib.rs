@@ -1,5 +1,4 @@
 #![feature(async_await)]
-#![allow(dead_code)]
 
 use {
     failure::{Error, ResultExt},
@@ -15,6 +14,7 @@ use {
 mod accessibility;
 mod audio;
 mod client;
+mod device;
 mod display;
 mod do_not_disturb;
 mod intl;
@@ -83,6 +83,10 @@ pub enum SettingClient {
         #[structopt(flatten)]
         input: AudioInput,
     },
+
+    // Operations that use the Device interface.
+    #[structopt(name = "device")]
+    Device { build_tag: Option<String> },
 
     // Operations that use the new interfaces.
     #[structopt(name = "display")]
@@ -188,6 +192,16 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = system::command(system_service, login_mode).await?;
             println!("System: {}", output);
         }
+        SettingClient::Device { build_tag } => {
+            let _build_tag = build_tag.clone();
+            if let Some(_build_tag_val) = build_tag {
+                panic!("Cannot set device settings");
+            }
+            let device_service = connect_to_service::<fidl_fuchsia_settings::DeviceMarker>()
+                .context("Failed to connect to device service")?;
+            let output = device::command(device_service).await?;
+            println!("Device: {}", output);
+        }
         SettingClient::Display { brightness, auto_brightness } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
@@ -198,7 +212,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()
                 .context("Failed to connect to do_not_disturb service")?;
             let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
-            println!("Display: {}", output);
+            println!("DoNotDisturb: {}", output);
         }
         SettingClient::Intl { time_zone, temperature_unit, locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()

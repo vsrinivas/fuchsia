@@ -16,6 +16,7 @@ use {
 mod accessibility;
 mod audio;
 mod client;
+mod device;
 mod display;
 mod do_not_disturb;
 mod intl;
@@ -27,6 +28,7 @@ enum Services {
     SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
     Accessibility(AccessibilityRequestStream),
     Audio(AudioRequestStream),
+    Device(DeviceRequestStream),
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
     Intl(IntlRequestStream),
@@ -44,6 +46,7 @@ struct ExpectedStreamSettingsStruct {
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
+const TEST_BUILD_TAG: &str = "0.20190909.1.0";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -153,6 +156,10 @@ async fn main() -> Result<(), Error> {
         input_muted: Some(true),
     })
     .await?;
+
+    println!("device service tests");
+    println!("  client calls device watch");
+    validate_device().await?;
 
     println!("display service tests");
     println!("  client calls display watch");
@@ -284,6 +291,23 @@ async fn validate_temperature_unit() -> Result<(), Error> {
 
     intl::command(intl_service, None, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius), vec![])
         .await?;
+
+    Ok(())
+}
+
+async fn validate_device() -> Result<(), Error> {
+    let env = create_service!(Services::Device,
+        DeviceRequest::Watch { responder } => {
+            responder.send(DeviceSettings {
+                build_tag: Some(TEST_BUILD_TAG.to_string()),
+            })?;
+        }
+    );
+
+    let device_service =
+        env.connect_to_service::<DeviceMarker>().context("Failed to connect to device service")?;
+
+    device::command(device_service).await?;
 
     Ok(())
 }
