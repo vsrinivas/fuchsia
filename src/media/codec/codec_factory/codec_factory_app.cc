@@ -29,9 +29,9 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   trace::TraceProviderWithFdio trace_provider(loop_->dispatcher());
 
   // We pump |loop| in here, so it's important that
-  // component::StartupContext::CreateFromStartupInfo() happen after
+  // sys::ComponentContext::Create() happen after
   // DiscoverMediaCodecDrivers(), else the pumping of the loop will drop the
-  // incoming request for CodecFactory before AddServiceForName() below has had
+  // incoming request for CodecFactory before AddPublicService() below has had
   // a chance to register for it.
   DiscoverMediaCodecDriversAndListenForMoreAsync();
 
@@ -50,20 +50,19 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   }
 
   // We delay doing this until we're completely ready to add services, because
-  // CreateFromStartupInfo() binds to |loop| implicitly, so we don't want any
+  // Create() binds to |loop| implicitly, so we don't want any
   // pumping of |loop| up to this point to drop service connection requests.
   //
-  // It's fine that AddServiceForName() happens after CreateFromStartupInfo()
+  // It's fine that AddPublicService() happens after Create()
   // only because |loop| doesn't have a separate thread, and the current thread
-  // won't pump |loop| until after AddServiceForName() is also done.
-  startup_context_ = component::StartupContext::CreateFromStartupInfo();
-  startup_context_->outgoing().deprecated_services()->AddServiceForName(
-      [this](zx::channel request) {
+  // won't pump |loop| until after AddPublicService() is also done.
+  startup_context_ = sys::ComponentContext::Create();
+  startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
+      [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
         // The CodecFactoryImpl is self-owned and will self-delete when the
         // channel closes or an error occurs.
         CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
-      },
-      fuchsia::mediacodec::CodecFactory::Name_);
+      });
 }
 
 const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwDecoder(

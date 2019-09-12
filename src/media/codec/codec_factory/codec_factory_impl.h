@@ -6,8 +6,8 @@
 #define SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "codec_factory_app.h"
 
@@ -17,8 +17,8 @@ namespace codec_factory {
 // implementation of this class to be stateful.
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
-  static void CreateSelfOwned(CodecFactoryApp* app, component::StartupContext* startup_context,
-                              zx::channel request);
+  static void CreateSelfOwned(CodecFactoryApp* app, sys::ComponentContext* component_context,
+                              fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
 
   // See .fidl file comments.
   void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
@@ -29,8 +29,8 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override;
 
  private:
-  CodecFactoryImpl(CodecFactoryApp* app, component::StartupContext* startup_context,
-                   zx::channel channel);
+  CodecFactoryImpl(CodecFactoryApp* app, sys::ComponentContext* component_context,
+                   fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
   void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
 
   // We don't have a lock_ in here - we rely on FIDL message dispatch being
@@ -39,10 +39,10 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   // This class doesn't own these pointers - the creator of CodecFactoryImpl
   // must ensure these outlast this instance of CodecFactoryImpl.
   CodecFactoryApp* app_ = nullptr;
-  component::StartupContext* startup_context_ = nullptr;
+  sys::ComponentContext* component_context_ = nullptr;
   // This is only holding the underlying channel between construction and
   // OwnSelf(), at which point the channel moves into the binding.
-  zx::channel channel_temp_;
+  fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request_temp_;
 
   // The CodecFactoryImpl is essentially self-owned via this member.  If we need
   // to self-destruct we can reset this binding_ unique_ptr which will delete
@@ -52,8 +52,8 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   //
   // TODO(dustingreen): Cover both cases mentioned above.  May have to punt a
   // stage of deletion to the async::Loop perhaps if this doesn't work.
-  typedef fidl::Binding<fuchsia::mediacodec::CodecFactory, std::unique_ptr<CodecFactoryImpl>>
-      BindingType;
+  using BindingType =
+      fidl::Binding<fuchsia::mediacodec::CodecFactory, std::unique_ptr<CodecFactoryImpl>>;
   std::unique_ptr<BindingType> binding_;
 };
 

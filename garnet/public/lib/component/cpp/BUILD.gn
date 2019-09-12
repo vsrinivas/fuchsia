@@ -22,10 +22,10 @@ source_set("cpp") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
-    "//zircon/system/fidl/fuchsia-inspect",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-inspect",
   ]
 
   public_configs = [ "//garnet/public:config" ]
@@ -36,7 +36,6 @@ source_set("cpp") {
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
-    "//src/media/codec/codec_factory:codec_factory",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:bin",
     "//garnet/bin/ui/gltf_export:gltf_export",
     "//garnet/bin/ui/present_view:present_view",
@@ -116,8 +115,6 @@ source_set("environment_services") {
     "//garnet/bin/appmgr:*",
     "//src/connectivity/wlan/drivers/wlan:*",
 
-    # TODO(CF-664): move playback to lib/sys.
-    "//src/media/playback/*",
     "testing",
   ]
 }

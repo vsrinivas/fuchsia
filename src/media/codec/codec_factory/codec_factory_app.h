@@ -7,9 +7,9 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fsl/io/device_watcher.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <list>
 #include <memory>
@@ -52,7 +52,7 @@ class CodecFactoryApp {
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> startup_context_;
 
   async::Loop* loop_;
 

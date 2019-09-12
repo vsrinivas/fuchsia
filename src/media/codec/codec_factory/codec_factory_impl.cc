@@ -4,9 +4,10 @@
 
 #include "codec_factory_impl.h"
 
-#include <algorithm>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 
-#include "lib/svc/cpp/services.h"
+#include <algorithm>
 
 namespace {
 
@@ -82,24 +83,26 @@ std::optional<std::string> FindEncoder(const std::string& mime_type,
   return {encoder->isolate_url};
 }
 
-void ForwardToIsolate(std::string component_url, component::StartupContext* startup_context,
+void ForwardToIsolate(std::string component_url, sys::ComponentContext* component_context,
                       std::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func) {
   fuchsia::sys::ComponentControllerPtr component_controller;
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{};
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = component_url;
-  launch_info.directory_request = services.NewRequest();
-  startup_context->launcher()->CreateComponent(std::move(launch_info),
-                                               component_controller.NewRequest());
+  launch_info.directory_request = directory.NewRequest().TakeChannel();
+  fuchsia::sys::LauncherPtr launcher;
+  component_context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
+  sys::ServiceDirectory services(std::move(directory));
   component_controller.set_error_handler([component_url](zx_status_t status) {
     FXL_LOG(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of " << component_url;
   });
   fuchsia::mediacodec::CodecFactoryPtr factory_delegate;
-  services.ConnectToService(factory_delegate.NewRequest().TakeChannel(),
-                            // TODO(dustingreen): Might be helpful (for debugging maybe) to change
-                            // this name to distinguish these delegate CodecFactory(s) from the main
-                            // CodecFactory service.
-                            fuchsia::mediacodec::CodecFactory::Name_);
+  services.Connect(factory_delegate.NewRequest(),
+                   // TODO(dustingreen): Might be helpful (for debugging maybe) to change
+                   // this name to distinguish these delegate CodecFactory(s) from the main
+                   // CodecFactory service.
+                   fuchsia::mediacodec::CodecFactory::Name_);
 
   // Forward the request to the factory_delegate_ as-is.  This avoids conversion
   // to command-line parameters and back, and avoids creating a separate
@@ -133,9 +136,9 @@ namespace codec_factory {
 // of CodecFactory won't spam CodecFactory channel creation.  Rather than trying
 // to mitigate that problem locally in this class, it seems better to intergrate
 // with a more general-purpose request spam mitigation mechanism.
-void CodecFactoryImpl::CreateSelfOwned(CodecFactoryApp* app,
-                                       component::StartupContext* startup_context,
-                                       zx::channel request) {
+void CodecFactoryImpl::CreateSelfOwned(
+    CodecFactoryApp* app, sys::ComponentContext* component_context,
+    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
   // I considered just doing "new CodecFactoryImpl(...)" here and declaring that
   // it always inherently owns itself (and implementing it that way), but that
   // seems less flexible for testing purposes and also not necessarily as safe
@@ -145,20 +148,21 @@ void CodecFactoryImpl::CreateSelfOwned(CodecFactoryApp* app,
   // As usual, can't use std::make_unique<> here since making it a friend would
   // break the point of making the constructor private.
   std::unique_ptr<CodecFactoryImpl> self(
-      new CodecFactoryImpl(app, startup_context, std::move(request)));
+      new CodecFactoryImpl(app, component_context, std::move(request)));
   auto* self_ptr = self.get();
   self_ptr->OwnSelf(std::move(self));
   assert(!self);
 }
 
-CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app, component::StartupContext* startup_context,
-                                   zx::channel channel)
-    : app_(app), startup_context_(startup_context), channel_temp_(std::move(channel)) {}
+CodecFactoryImpl::CodecFactoryImpl(
+    CodecFactoryApp* app, sys::ComponentContext* component_context,
+    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request)
+    : app_(app), component_context_(component_context), request_temp_(std::move(request)) {}
 
-// TODO(dustingreen): Seems simpler to avoid channel_temp_ and OwnSelf() and
+// TODO(dustingreen): Seems simpler to avoid request_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
 void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
-  binding_ = std::make_unique<BindingType>(std::move(self), std::move(channel_temp_),
+  binding_ = std::make_unique<BindingType>(std::move(self), std::move(request_temp_),
                                            app_->loop()->dispatcher());
   binding_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
@@ -218,7 +222,7 @@ void CodecFactoryImpl::CreateDecoder(
   }
 
   ForwardToIsolate(
-      url, startup_context_,
+      url, component_context_,
       [&params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         // Forward the request to the factory_delegate_ as-is. This
         // avoids conversion to command-line parameters and back,
@@ -264,7 +268,7 @@ void CodecFactoryImpl::CreateEncoder(
   }
 
   ForwardToIsolate(
-      *maybe_encoder_isolate_url, startup_context_,
+      *maybe_encoder_isolate_url, component_context_,
       [&encoder_params,
        &encoder_request](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         factory_delegate->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
