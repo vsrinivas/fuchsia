@@ -1223,16 +1223,22 @@ class Paver final {
     UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteAsset WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1249,10 +1255,18 @@ class Paver final {
     UnownedResultOf::WriteVolumes WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer);
 
     // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteBootloader WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::WriteBootloader WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
@@ -1372,16 +1386,22 @@ class Paver final {
     static UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1398,10 +1418,18 @@ class Paver final {
     static UnownedResultOf::WriteVolumes WriteVolumes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer);
 
     // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteBootloader WriteBootloader(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::WriteBootloader WriteBootloader(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
@@ -1501,8 +1529,11 @@ class Paver final {
     static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
@@ -1512,6 +1543,10 @@ class Paver final {
     static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
     static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.

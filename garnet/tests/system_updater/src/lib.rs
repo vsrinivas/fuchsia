@@ -15,7 +15,7 @@ use {
         client::AppBuilder,
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
     parking_lot::Mutex,
     std::{
@@ -278,13 +278,19 @@ impl MockPaverService {
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             match request {
-                paver::PaverRequest::WriteAsset { configuration, asset, payload, responder } => {
+                paver::PaverRequest::WriteAsset {
+                    configuration,
+                    asset,
+                    mut payload,
+                    responder,
+                } => {
                     let status = match *self.mode.lock() {
                         PaverMode::Record => {
+                            let payload = verify_and_read_buffer(&mut payload);
                             self.events.lock().push(PaverEvent::WriteAsset {
                                 configuration,
                                 asset,
-                                payload: read_mem_buffer(&payload),
+                                payload,
                             });
                             Status::OK
                         }
@@ -293,12 +299,11 @@ impl MockPaverService {
 
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::PaverRequest::WriteBootloader { payload, responder } => {
+                paver::PaverRequest::WriteBootloader { mut payload, responder } => {
                     let status = match *self.mode.lock() {
                         PaverMode::Record => {
-                            self.events
-                                .lock()
-                                .push(PaverEvent::WriteBootloader(read_mem_buffer(&payload)));
+                            let payload = verify_and_read_buffer(&mut payload);
+                            self.events.lock().push(PaverEvent::WriteBootloader(payload));
                             Status::OK
                         }
                         PaverMode::Fail => Status::INTERNAL,
@@ -312,6 +317,18 @@ impl MockPaverService {
 
         Ok(())
     }
+}
+
+fn verify_and_read_buffer(buffer: &mut fidl_fuchsia_mem::Buffer) -> Vec<u8> {
+    // The paver service requires VMOs to be resizable. Assert that the buffer provided by the
+    // system updater can be resized without error.
+    resize_vmo(&mut buffer.vmo);
+    read_mem_buffer(buffer)
+}
+
+fn resize_vmo(vmo: &mut Vmo) {
+    let size = vmo.get_size().expect("vmo size query to succeed");
+    vmo.set_size(size * 2).expect("vmo must be resizable");
 }
 
 fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {

@@ -74,8 +74,11 @@ protocol Paver {
     MarkActiveConfigurationSuccessful() -> (zx.status status);
 
     /// Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    /// Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    /// being written.
+    /// `payload` may need to be resized to the partition size, so the provided vmo must have
+    /// been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    /// `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    /// than the size of the partition being written.
+    ///
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload) -> (zx.status status);
@@ -85,6 +88,10 @@ protocol Paver {
     WriteVolumes(request<PayloadStream> payload) -> (zx.status status);
 
     /// Writes bootloader partition with data from `payload`.
+    ///
+    /// `payload` may need to be resized to the partition size, so the provided vmo must have
+    /// been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    /// `ZX_VMO_CHILD_RESIZABLE`.
     WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
