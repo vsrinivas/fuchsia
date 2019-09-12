@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("types") {
+  visibility = [ "//src/lib/fsl/*" ]
+
+  sources = [
+    "type_converters.cc",
+    "type_converters.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}

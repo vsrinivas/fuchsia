@@ -1,21 +1,12 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef LIB_FSL_IO_FD_H_
 #define LIB_FSL_IO_FD_H_
 
-#include <lib/zx/channel.h>
+// Do not use this header directly, instead use src/lib/fsl/io/fd.h.
 
-#include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fsl/io/fd.h"
 
-namespace fsl {
-
-FXL_EXPORT zx::channel CloneChannelFromFileDescriptor(int fd);
-
-FXL_EXPORT fbl::unique_fd OpenChannelAsFileDescriptor(zx::channel channel);
-
-}  // namespace fsl
-
-#endif  // LIB_FSL_IO_REDIRECTION_H_
+#endif  // LIB_FSL_IO_FD_H_

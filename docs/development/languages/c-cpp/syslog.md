@@ -120,4 +120,4 @@ FX_LOGST(INFO, "tag") << "my message";
 
 [C++ APIs](/garnet/public/lib/syslog/cpp/logger.h)
 <br/>
-[FSL initialization API](/garnet/public/lib/fsl/syslogger/init.h)
+[FSL initialization API](/src/lib/fsl/syslogger/init.h)

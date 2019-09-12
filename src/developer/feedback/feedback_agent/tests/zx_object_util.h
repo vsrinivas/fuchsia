@@ -14,7 +14,7 @@
 
 namespace feedback {
 
-// TODO(frousseau): these should move to //garnet/public/lib/fsl with unit tests.
+// TODO(frousseau): these should move to //src/lib/fsl with unit tests.
 
 std::vector<zx::job> GetChildJobs(zx_handle_t job);
 
