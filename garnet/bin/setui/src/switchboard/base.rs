@@ -21,6 +21,7 @@ pub enum SettingType {
     Unknown,
     Accessibility,
     Audio,
+    Device,
     Display,
     DoNotDisturb,
     Intl,
@@ -35,6 +36,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
     set.insert(SettingType::Accessibility);
     set.insert(SettingType::Audio);
+    set.insert(SettingType::Device);
     set.insert(SettingType::Display);
     set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
@@ -136,6 +138,17 @@ impl From<ColorBlindnessType> for fidl_fuchsia_settings::ColorBlindnessType {
                 fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly
             }
         }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceInfo {
+    pub build_tag: String,
+}
+
+impl DeviceInfo {
+    pub const fn new(build_tag: String) -> DeviceInfo {
+        DeviceInfo { build_tag }
     }
 }
 
@@ -445,6 +458,7 @@ pub enum SettingResponse {
     Audio(AudioInfo),
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(DisplayInfo),
+    Device(DeviceInfo),
     DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
     Privacy(PrivacyInfo),

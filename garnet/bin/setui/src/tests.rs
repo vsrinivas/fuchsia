@@ -1,5 +1,6 @@
 mod accessibility_tests;
 mod audio_tests;
+mod device_tests;
 mod display_tests;
 mod do_not_disturb_tests;
 mod intl_tests;

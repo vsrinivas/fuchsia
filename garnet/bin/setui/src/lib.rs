@@ -9,6 +9,8 @@ use {
     crate::audio::spawn_audio_controller,
     crate::audio::spawn_audio_fidl_handler,
     crate::default_store::DefaultStore,
+    crate::device::spawn_device_controller,
+    crate::device::spawn_device_fidl_handler,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
     crate::do_not_disturb::spawn_do_not_disturb_controller,
@@ -44,6 +46,7 @@ mod accessibility;
 mod audio;
 mod common;
 mod default_store;
+mod device;
 mod display;
 mod do_not_disturb;
 mod fidl_clone;
@@ -147,6 +150,19 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: AudioRequestStream| {
             spawn_audio_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::Device) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(switchboard::base::SettingType::Device, spawn_device_controller())
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: DeviceRequestStream| {
+            spawn_device_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 
