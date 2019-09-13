@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -50,15 +51,19 @@ func TestOTA(t *testing.T) {
 		doPaveDevice(t, device)
 	}
 
-	doTestOTAs(t, device)
+	if c.LongevityTest {
+		doTestLongevityOTAs(t, device)
+	} else {
+		repo, err := c.GetUpgradeRepository()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		doTestOTAs(t, device, repo)
+	}
 }
 
-func doTestOTAs(t *testing.T, device *device.Client) {
-	repo, err := c.GetUpgradeRepository()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func doTestOTAs(t *testing.T, device *device.Client, repo *packages.Repository) {
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
 	if err != nil {
@@ -78,6 +83,50 @@ func doTestOTAs(t *testing.T, device *device.Client) {
 	log.Printf("starting OTA N' -> N test")
 	doSystemOTA(t, device, repo)
 	log.Printf("OTA from N' -> N successful")
+}
+
+func doTestLongevityOTAs(t *testing.T, device *device.Client) {
+	builder, err := c.GetUpgradeBuilder()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lastBuildID := ""
+	for {
+		log.Printf("Lookup up latest build for builder %s", builder)
+
+		build, err := builder.GetLatestBuild()
+		if err != nil {
+			t.Fatalf("error getting latest build for builder %s: %s", builder, err)
+		}
+
+		if build.ID == lastBuildID {
+			log.Printf("already updated to %s, sleeping", build)
+			time.Sleep(60 * time.Second)
+			continue
+		}
+		log.Printf("upgrading to build %s", build)
+
+		repo, err := build.GetPackageRepository()
+		if err != nil {
+			t.Fatalf("failed to get repo for build: %s", err)
+		}
+
+		expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+			log.Printf("device is up to date, sleeping")
+			time.Sleep(60 * time.Second)
+		} else {
+			log.Printf("OTAing from %s to %s", lastBuildID, build)
+			doSystemOTA(t, device, repo)
+		}
+
+		lastBuildID = build.ID
+	}
 }
 
 func doPaveDevice(t *testing.T, device *device.Client) {
@@ -143,7 +192,7 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Reposi
 	defer server.Shutdown(context.Background())
 
 	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
-	err = device.Run("rmdir /pkgfs/ctl/garbage", os.Stdout, os.Stderr)
+	err = device.Run("PATH= rm /pkgfs/ctl/garbage", os.Stdout, os.Stderr)
 	if err != nil {
 		t.Fatalf("error running GC: %v", err)
 	}

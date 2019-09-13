@@ -31,7 +31,7 @@ Then, login to luci by running:
 Now, you should be able to run the tests with:
 
 ```
-~/fuchsia/out/default/host_x64/system_ota_tests_upgrade \
+% ~/fuchsia/out/default/host_x64/system_ota_tests_upgrade \
   -ssh-private-key ~/fuchsia/.ssh/pkey \
   -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
   -upgrade-amber-files $FUCHSIA_BUILD_DIR/amber-files
@@ -90,3 +90,23 @@ output to the terminal:
 With all that setup, you now should be able to test your OTAs.
 
 [OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
+
+## Longevity Testing
+
+The system OTA tests support running longevity tests, where a device is
+continuously updated to the latest available version, or errs out if a problem
+occurs. This can be done by running:
+
+```
+% ~/fuchsia/out/default/host_x64/system_ota_tests_upgrade \
+  -ssh-private-key ~/fuchsia/.ssh/pkey \
+  -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
+  -upgrade-builder-name fuchsia/ci/fuchsia-x64-release
+  -longevity-test
+```
+
+The `-downgrade-build*` argument is optional, and only necessary if you want to
+start the longevity test from a known zero state.
+
+Note that at the moment the only supported upgrade mode is
+`-upgrade-builder-name $BUILDER_NAME`.

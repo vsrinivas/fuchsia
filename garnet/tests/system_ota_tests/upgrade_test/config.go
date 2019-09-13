@@ -38,6 +38,7 @@ type Config struct {
 	upgradeBuilderName     string
 	upgradeBuildID         string
 	upgradeAmberFilesDir   string
+	LongevityTest          bool
 	cleanupOutputDir       bool
 	archive                *artifacts.Archive
 	sshPrivateKey          ssh.Signer
@@ -63,6 +64,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
+	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
 
 	if c.OutputDir == "" {
 		outputDir, err := ioutil.TempDir("", "system_ota_tests")
@@ -83,8 +85,8 @@ func (c *Config) Validate() error {
 			defined += 1
 		}
 	}
-	if defined != 1 {
-		return fmt.Errorf("exactly one of -downgrade-builder-name, -downgrade-build-id, or -downgrade-amber-files must be specified")
+	if defined > 1 {
+		return fmt.Errorf("-downgrade-builder-name, -downgrade-build-id, and -downgrade-amber-files are mutually exclusive")
 	}
 
 	defined = 0
@@ -95,6 +97,10 @@ func (c *Config) Validate() error {
 	}
 	if defined != 1 {
 		return fmt.Errorf("exactly one of -upgrade-builder-name, -upgrade-build-id, or -upgrade-amber-files must be specified")
+	}
+
+	if c.LongevityTest && c.upgradeBuilderName == "" {
+		return fmt.Errorf("-longevity-test requires -upgrade-builder-name to be specified")
 	}
 
 	return nil
@@ -206,7 +212,11 @@ func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
 		return build.GetPackageRepository()
 	}
 
-	return packages.NewRepository(c.downgradeAmberFilesDir)
+	if c.downgradeAmberFilesDir != "" {
+		return packages.NewRepository(c.downgradeAmberFilesDir)
+	}
+
+	return nil, fmt.Errorf("downgrade repository not specified")
 }
 
 func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
@@ -224,7 +234,11 @@ func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
 		return build.GetPackageRepository()
 	}
 
-	return packages.NewRepository(c.upgradeAmberFilesDir)
+	if c.upgradeAmberFilesDir != "" {
+		return packages.NewRepository(c.upgradeAmberFilesDir)
+	}
+
+	return nil, fmt.Errorf("upgrade repository not specified")
 }
 
 func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
@@ -248,7 +262,11 @@ func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
 		return build.GetPaver(sshPublicKey)
 	}
 
-	return paver.NewPaver(c.downgradePaver, sshPublicKey), nil
+	if c.downgradePaver != "" {
+		return paver.NewPaver(c.downgradePaver, sshPublicKey), nil
+	}
+
+	return nil, fmt.Errorf("downgrade paver not specified")
 }
 
 func (c *Config) DeviceHostname() (string, error) {
