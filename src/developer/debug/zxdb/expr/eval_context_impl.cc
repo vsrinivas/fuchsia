@@ -33,6 +33,9 @@ debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug_ipc::RegisterID::kUnknown;
+  if (!str->empty() && (*str)[0] == '$') {
+    return debug_ipc::StringToRegisterID(str->substr(1));
+  }
   return debug_ipc::StringToRegisterID(*str);
 }
 

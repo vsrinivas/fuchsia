@@ -79,38 +79,29 @@ struct ValueResult {
   fxl::RefPtr<Symbol> symbol;
 };
 
-// Indicates whether GetNamedValue should exit the message loop when the callback is issued.
-// Synchronous results don't need this.
-enum GetValueAsync { kQuitLoop, kSynchronous };
-
 // Wrapper around eval_context->GetNamedValue that places the callback parameters into a struct. It
 // makes the callsites cleaner.
 void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context, const std::string& name,
-                   GetValueAsync async, ValueResult* result) {
+                   ValueResult* result) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   ASSERT_FALSE(err.has_error());
 
-  eval_context->GetNamedValue(ident, [result, async](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+  eval_context->GetNamedValue(ident, [result](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
     result->called = true;
     result->value = std::move(value);
     result->symbol = std::move(symbol);
-    if (async == kQuitLoop)
-      debug_ipc::MessageLoop::Current()->QuitNow();
   });
 }
 
 // Sync wrapper around GetVariableValue().
 void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context, fxl::RefPtr<Variable> variable,
-                      GetValueAsync async, ValueResult* result) {
-  eval_context->GetVariableValue(variable,
-                                 [result, async](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
-                                   result->called = true;
-                                   result->value = std::move(value);
-                                   result->symbol = std::move(symbol);
-                                   if (async == kQuitLoop)
-                                     debug_ipc::MessageLoop::Current()->QuitNow();
-                                 });
+                      ValueResult* result) {
+  eval_context->GetVariableValue(variable, [result](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+    result->called = true;
+    result->value = std::move(value);
+    result->symbol = std::move(symbol);
+  });
 }
 
 const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
@@ -124,7 +115,7 @@ TEST_F(EvalContextImplTest, NotFoundSynchronous) {
   auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(context, "not_present", kSynchronous, &result);
+  GetNamedValue(context, "not_present", &result);
 
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.value.has_error());
@@ -139,7 +130,7 @@ TEST_F(EvalContextImplTest, FoundSynchronous) {
   auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(context, kPresentVarName, kSynchronous, &result);
+  GetNamedValue(context, kPresentVarName, &result);
 
   EXPECT_TRUE(result.called);
   EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
@@ -160,13 +151,13 @@ TEST_F(EvalContextImplTest, FoundAsynchronous) {
   auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(context, kPresentVarName, kQuitLoop, &result);
+  GetNamedValue(context, kPresentVarName, &result);
 
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(result.called);
 
   // Running the message loop should complete the callback.
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(result.called);
   EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
   EXPECT_EQ(ExprValue(kValue), result.value.value());
@@ -186,7 +177,7 @@ TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
   auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(context, kPresentVarName, kSynchronous, &result);
+  GetNamedValue(context, kPresentVarName, &result);
 
   // The value should be not found and this should be known synchronously.
   EXPECT_TRUE(result.called);
@@ -200,8 +191,7 @@ TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
 
   // Prevent leak by processing pending messages. The symbol eval context currently deletes the
   // DwarfExprEval on a PostTask().
-  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
-  loop().Run();
+  loop().RunUntilNoTasks();
 }
 
 // Tests finding variables on |this| and subclasses of |this|.
@@ -240,13 +230,13 @@ TEST_F(EvalContextImplTest, FoundThis) {
 
   // First get d2 on the derived class. "this" should be implicit.
   ValueResult result_d2;
-  GetNamedValue(context, "d2", kQuitLoop, &result_d2);
+  GetNamedValue(context, "d2", &result_d2);
 
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(result_d2.called);
 
   // Running the message loop should complete the callback.
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(result_d2.called);
   EXPECT_FALSE(result_d2.value.has_error()) << result_d2.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(kD2)), result_d2.value.value());
@@ -254,10 +244,10 @@ TEST_F(EvalContextImplTest, FoundThis) {
   // Now get b2 on the base class, it should implicitly find it on "this" and then check the base
   // class.
   ValueResult result_b2;
-  GetNamedValue(context, "b2", kQuitLoop, &result_b2);
+  GetNamedValue(context, "b2", &result_b2);
 
   EXPECT_FALSE(result_b2.called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(result_b2.called);
   EXPECT_FALSE(result_b2.value.has_error()) << result_b2.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), result_b2.value.value());
@@ -278,7 +268,7 @@ TEST_F(EvalContextImplTest, RangeMiss) {
   provider()->set_ip(kEndValidRange + 0x10);
 
   ValueResult result;
-  GetNamedValue(MakeEvalContext(), kPresentVarName, kSynchronous, &result);
+  GetNamedValue(MakeEvalContext(), kPresentVarName, &result);
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.value.has_error());
   EXPECT_EQ(ErrType::kOptimizedOut, result.value.err().type());
@@ -295,7 +285,7 @@ TEST_F(EvalContextImplTest, DwarfEvalFailure) {
   block->set_variables({LazySymbol(std::move(var))});
 
   ValueResult result;
-  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, kSynchronous, &result);
+  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, &result);
   EXPECT_TRUE(result.called);
   ASSERT_TRUE(result.value.has_error());
   EXPECT_EQ("DWARF expression produced no results.", result.value.err().msg());
@@ -321,7 +311,7 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   auto context = MakeEvalContext();
 
   ValueResult result1;
-  GetVariableValue(context, var, kQuitLoop, &result1);
+  GetVariableValue(context, var, &result1);
 
   // Should be run async since it requests memory.
   EXPECT_FALSE(result1.called);
@@ -332,13 +322,13 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   auto rangemiss =
       MakeUint64VariableForTest("rangemiss", 0x6000, 0x7000, {llvm::dwarf::DW_OP_reg0});
   ValueResult result2;
-  GetVariableValue(context, rangemiss, kSynchronous, &result2);
+  GetVariableValue(context, rangemiss, &result2);
   EXPECT_TRUE(result2.called);
   EXPECT_TRUE(result2.value.err().has_error());
   EXPECT_EQ(ErrType::kOptimizedOut, result2.value.err().type());
 
   // Now let the first request complete.
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(result1.called);
   ASSERT_FALSE(result1.value.has_error()) << result1.value.err().msg();
   EXPECT_EQ(ExprValue(kValue), result1.value.value());
@@ -383,8 +373,8 @@ TEST_F(EvalContextImplTest, ExternVariable) {
 
   // Resolving the extern variable should give the value that the non-extern one points to.
   ValueResult result;
-  GetVariableValue(context, extern_variable, GetValueAsync::kQuitLoop, &result);
-  loop().Run();
+  GetVariableValue(context, extern_variable, &result);
+  loop().RunUntilNoTasks();
   ASSERT_TRUE(result.called);
   ASSERT_TRUE(result.value.ok());
   EXPECT_EQ(ExprValue(kValValue), result.value.value());
@@ -407,12 +397,11 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
     called = true;
     EXPECT_FALSE(value.has_error());
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(called);
 
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
   EXPECT_EQ(ExprValue(kValue), out_value);
 }
@@ -427,13 +416,24 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   // We've defined no variables*, so this should fall back and give us the register by name.
   // *(Except kPresentVarName which MakeCodeBlock defines).
   ValueResult reg;
-  GetNamedValue(context, "x0", kQuitLoop, &reg);
+  GetNamedValue(context, "x0", &reg);
 
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(reg.called);
 
   // Running the message loop should complete the callback.
-  loop().Run();
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(reg.called);
+  EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
+
+  // Test again, this time with $ prefix
+  reg.called = false;
+  GetNamedValue(context, "$x0", &reg);
+
+  EXPECT_FALSE(reg.called);
+
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(reg.called);
   EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
@@ -458,16 +458,27 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
   // This should just look up our variable, x0, which is in the register x1. If It looks up the
   // register x0 something has gone very wrong.
   ValueResult val;
-  GetNamedValue(context, "x0", kQuitLoop, &val);
+  GetNamedValue(context, "x0", &val);
 
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(val.called);
 
   // Running the message loop should complete the callback.
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(val.called);
   ASSERT_FALSE(val.value.has_error()) << val.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kVarValue)), val.value.value());
+
+  // $ prefix should make the register show through.
+  val.called = false;
+  GetNamedValue(context, "$x0", &val);
+
+  EXPECT_FALSE(val.called);
+
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(val.called);
+  EXPECT_FALSE(val.value.has_error()) << val.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), val.value.value());
 }
 
 // Also tests ResolveForwardDefinition().

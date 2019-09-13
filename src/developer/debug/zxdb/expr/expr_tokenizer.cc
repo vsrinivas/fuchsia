@@ -23,7 +23,10 @@ bool IsNameFirstChar(char c) {
   //  - "@main" special location for the program entrypoint.
   //    can be changed in the future if we have a better way of identifying
   //    these.
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '@';
+  //
+  // "$" is used to disambiguate register names.
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '@' ||
+         c == '$';
 }
 
 bool IsNameContinuingChar(char c) { return IsNameFirstChar(c) || (c >= '0' && c <= '9'); }
