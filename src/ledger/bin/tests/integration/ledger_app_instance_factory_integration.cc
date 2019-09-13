@@ -382,11 +382,13 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
 
   std::vector<const LedgerAppInstanceFactoryBuilder*> builders;
 
-  for (const auto& builder : static_sync_builders) {
-    builders.push_back(builder.get());
+  if (sync_state != EnableSynchronization::OFFLINE_ONLY) {
+    for (const auto& builder : static_sync_builders) {
+      builders.push_back(builder.get());
+    }
   }
 
-  if (sync_state == EnableSynchronization::SYNC_OR_OFFLINE) {
+  if (sync_state != EnableSynchronization::SYNC_ONLY) {
     for (const auto& builder : static_offline_builders) {
       builders.push_back(builder.get());
     }

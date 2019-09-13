@@ -99,6 +99,7 @@ class LedgerAppInstanceFactory {
 // offline/disconnected cases should be considered too.
 enum class EnableSynchronization {
   SYNC_ONLY,
+  OFFLINE_ONLY,
   SYNC_OR_OFFLINE,
 };
 

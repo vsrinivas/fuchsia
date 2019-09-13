@@ -399,9 +399,12 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
                   })})})}));
 }
 
-INSTANTIATE_TEST_SUITE_P(InspectTest, InspectTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
-                         PrintLedgerAppInstanceFactoryBuilder());
+// Disable cloud synchronization for Inspect tests to avoid garbage-collection of synchronized
+// content, which would make it disappear before it can be inspected.
+INSTANTIATE_TEST_SUITE_P(
+    InspectTest, InspectTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::OFFLINE_ONLY)),
+    PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger
