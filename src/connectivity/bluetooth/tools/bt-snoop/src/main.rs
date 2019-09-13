@@ -6,6 +6,7 @@
 #![recursion_limit = "256"]
 
 use {
+    argh::FromArgs,
     failure::{err_msg, Error, ResultExt},
     fidl::Error as FidlError,
     fidl_fuchsia_bluetooth_snoop::{SnoopPacket, SnoopRequest, SnoopRequestStream},
@@ -26,7 +27,6 @@ use {
         path::{Path, PathBuf},
         time::Duration,
     },
-    structopt::StructOpt,
 };
 
 use crate::{packet_logs::PacketLogs, snooper::Snooper, subscription_manager::SubscriptionManager};
@@ -254,15 +254,15 @@ struct SnoopConfig {
 
 impl SnoopConfig {
     /// Creates a strongly typed `SnoopConfig` out of primitives parsed from the command line
-    fn from_opt(opt: Opt, config_inspect: inspect::Node) -> SnoopConfig {
-        let log_size_bytes = opt.log_size_kib * 1024;
-        let log_time = Duration::from_secs(opt.log_time_seconds);
+    fn from_args(args: Args, config_inspect: inspect::Node) -> SnoopConfig {
+        let log_size_bytes = args.log_size_kib * 1024;
+        let log_time = Duration::from_secs(args.log_time_seconds);
         let _log_size_bytes_metric =
             config_inspect.create_uint("log_size_bytes", log_size_bytes as u64);
         let _log_time_metric = config_inspect.create_uint("log_time", log_time.as_secs());
         let _max_device_count_metric =
-            config_inspect.create_uint("max_device_count", opt.max_device_count as u64);
-        let truncate = opt
+            config_inspect.create_uint("max_device_count", args.max_device_count as u64);
+        let truncate = args
             .truncate_payload
             .as_ref()
             .map(|n| format!("{} bytes", n))
@@ -274,8 +274,8 @@ impl SnoopConfig {
         SnoopConfig {
             log_size_bytes,
             log_time,
-            max_device_count: opt.max_device_count,
-            truncate_payload: opt.truncate_payload,
+            max_device_count: args.max_device_count,
+            truncate_payload: args.truncate_payload,
             _config_inspect: config_inspect,
             _log_size_bytes_metric,
             _log_time_metric,
@@ -286,44 +286,23 @@ impl SnoopConfig {
     }
 }
 
-#[derive(StructOpt)]
-#[structopt(
-    version = "0.1.0",
-    author = "Fuchsia Bluetooth Team",
-    about = "Log bluetooth snoop packets and provide them to clients."
-)]
-struct Opt {
-    #[structopt(
-        long = "log-size",
-        default_value = "256",
-        help = "Size in KiB of the buffer to store packets in."
-    )]
+#[derive(FromArgs)]
+/// Log bluetooth snoop packets and provide them to clients.
+struct Args {
+    #[argh(option, default = "256")]
+    /// size in KiB of the buffer to store packets in.
     log_size_kib: usize,
-    #[structopt(
-        long = "min-log-time",
-        default_value = "60",
-        help = "Minimum time to store packets in a snoop log in seconds"
-    )]
+    #[argh(option, default = "60")]
+    /// minimum time to store packets in a snoop log in seconds.
     log_time_seconds: u64,
-    #[structopt(
-        long = "max-device-count",
-        default_value = "8",
-        help = "Maximum number of devices for which to store logs."
-    )]
+    #[argh(option, default = "8")]
+    /// maximum number of devices for which to store logs.
     max_device_count: usize,
-    #[structopt(
-        long = "max-payload-size",
-        help = "Maximum number of bytes to keep in the payload of incoming packets. \
-                Defaults to no limit"
-    )]
+    #[argh(option)]
+    /// maximum number of bytes to keep in the payload of incoming packets. Defaults to no limit.
     truncate_payload: Option<usize>,
-    #[structopt(
-        parse(from_occurrences),
-        short = "v",
-        long = "verbose",
-        help = "Enable verbose log output. Additional occurrences of the flag will \
-                raise verbosity."
-    )]
+    #[argh(option, short = 'v')]
+    /// enable verbose log output. Additional occurrences of the flag will raise verbosity.
     verbosity: u16,
 }
 
@@ -335,7 +314,8 @@ async fn run(
 ) -> Result<(), Error> {
     let mut id_gen = IdGenerator::new();
     let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
-    let mut hci_device_events = Watcher::new(&hci_dir).await.context("Cannot create device watcher")?;
+    let mut hci_device_events =
+        Watcher::new(&hci_dir).await.context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
@@ -403,9 +383,9 @@ fn init_logging(verbosity: u16) {
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
 #[fasync::run_singlethreaded]
 async fn main() {
-    let opt = Opt::from_args();
+    let args: Args = argh::from_env();
 
-    init_logging(opt.verbosity);
+    init_logging(args.verbosity);
 
     let mut fs = ServiceFs::new();
 
@@ -415,7 +395,7 @@ async fn main() {
     let config_inspect = inspector.root().create_child("configuration");
     let runtime_inspect = inspector.root().create_child("runtime_metrics");
 
-    let config = SnoopConfig::from_opt(opt, config_inspect);
+    let config = SnoopConfig::from_args(args, config_inspect);
 
     fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
 

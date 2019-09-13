@@ -72,7 +72,7 @@ fn unwrap_response<T, E>(response: Poll<Result<T, E>>) -> T {
 
 #[test]
 fn test_snoop_config_inspect() {
-    let opt = Opt {
+    let args = Args {
         log_size_kib: 1,
         log_time_seconds: 2,
         max_device_count: 3,
@@ -81,7 +81,7 @@ fn test_snoop_config_inspect() {
     };
     let inspect = Inspector::new();
     let snoop_config_node = inspect.root().create_child("configuration");
-    let config = SnoopConfig::from_opt(opt, snoop_config_node);
+    let config = SnoopConfig::from_args(args, snoop_config_node);
     assert_inspect_tree!(inspect, root: {
         configuration: {
             log_size_bytes: 1024u64,
