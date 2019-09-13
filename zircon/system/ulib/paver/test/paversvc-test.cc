@@ -195,6 +195,19 @@ class PaverServiceTest : public zxtest::Test {
     }
   }
 
+  void ValidateUnwrittenPages(uint32_t page, size_t num_pages) {
+    const uint8_t* start =
+        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    for (size_t i = 0; i < kPageSize * num_pages; i++) {
+      ASSERT_EQ(start[i], 0xff, "i = %zu", i);
+    }
+  }
+
+  void WriteData(uint32_t page, size_t num_pages, uint8_t data) {
+    uint8_t* start =
+        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    memset(start, data, kPageSize * num_pages);
+  }
 
   void* provider_ctx_ = nullptr;
   fbl::unique_ptr<SkipBlockDevice> device_;
@@ -324,6 +337,23 @@ TEST_F(PaverServiceTest, WriteBootloader) {
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ValidateWritten(4, 4);
+}
+
+// We prefill the bootloader partition with the expected data, leaving the last block as 0xFF.
+// Normally the last page would be overwritten with 0s, but because the actual payload is identical,
+// we don't actually pave the image, so the extra page stays as 0xFF.
+TEST_F(PaverServiceTest, WriteBootloaderNotAligned) {
+  SpawnIsolatedDevmgr();
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(4 * kPagesPerBlock, &payload);
+  payload.size = 4 * kPagesPerBlock - 1;
+  WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
+  WriteData(8 * kPagesPerBlock - 1 , 1, 0xff);
+  auto result = client_->WriteBootloader(std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+  ValidateWrittenPages(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1);
+  ValidateUnwrittenPages(8 * kPagesPerBlock - 1, 1);
 }
 
 TEST_F(PaverServiceTest, WriteDataFile) {

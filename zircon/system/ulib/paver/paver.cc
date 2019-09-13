@@ -69,15 +69,17 @@ Partition PartitionType(Configuration configuration, Asset asset) {
 
 // Best effort attempt to see if payload contents match what is already inside
 // of the partition.
-bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t vmo_size) {
+bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_size,
+                 size_t block_size) {
+  const size_t payload_size_aligned = fbl::round_up(payload_size, block_size);
   zx::vmo read_vmo;
-  auto status = zx::vmo::create(fbl::round_up(vmo_size, ZX_PAGE_SIZE), 0, &read_vmo);
+  auto status = zx::vmo::create(fbl::round_up(payload_size_aligned, ZX_PAGE_SIZE), 0, &read_vmo);
   if (status != ZX_OK) {
     ERROR("Failed to create VMO: %s\n", zx_status_get_string(status));
     return false;
   }
 
-  if ((status = partition->Read(read_vmo, vmo_size)) != ZX_OK) {
+  if ((status = partition->Read(read_vmo, payload_size_aligned)) != ZX_OK) {
     return false;
   }
 
@@ -96,7 +98,7 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t vmo_size
     return false;
   }
 
-  return memcmp(first_mapper.start(), second_mapper.start(), vmo_size) == 0;
+  return memcmp(first_mapper.start(), second_mapper.start(), payload_size) == 0;
 }
 
 #if 0
@@ -231,36 +233,35 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
     return status;
   }
 
-  // Pad payload with 0s to make it block size aligned.
-  if (payload_size % block_size_bytes != 0) {
-    const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
-    size_t vmo_size;
-    if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
-      ERROR("Couldn't get vmo size\n");
-      return status;
-    }
-    // Grow VMO if it's too small.
-    if (vmo_size < payload_size + remaining_bytes) {
-      const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
-      status = payload_vmo.set_size(new_size);
-      if (status != ZX_OK) {
-        ERROR("Couldn't grow vmo\n");
-        return status;
-      }
-    }
-    auto buffer = std::make_unique<uint8_t[]>(remaining_bytes);
-    memset(buffer.get(), 0, remaining_bytes);
-    status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
-    if (status != ZX_OK) {
-      ERROR("Failed to write padding to vmo\n");
-      return status;
-    }
-    payload_size += remaining_bytes;
-  }
-
-  if (CheckIfSame(partition.get(), payload_vmo, payload_size)) {
+  if (CheckIfSame(partition.get(), payload_vmo, payload_size, block_size_bytes)) {
     LOG("Skipping write as partition contents match payload.\n");
   } else {
+    // Pad payload with 0s to make it block size aligned.
+    if (payload_size % block_size_bytes != 0) {
+      const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
+      size_t vmo_size;
+      if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
+        ERROR("Couldn't get vmo size\n");
+        return status;
+      }
+      // Grow VMO if it's too small.
+      if (vmo_size < payload_size + remaining_bytes) {
+        const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
+        status = payload_vmo.set_size(new_size);
+        if (status != ZX_OK) {
+          ERROR("Couldn't grow vmo\n");
+          return status;
+        }
+      }
+      auto buffer = std::make_unique<uint8_t[]>(remaining_bytes);
+      memset(buffer.get(), 0, remaining_bytes);
+      status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
+      if (status != ZX_OK) {
+        ERROR("Failed to write padding to vmo\n");
+        return status;
+      }
+      payload_size += remaining_bytes;
+    }
     if ((status = partition->Write(payload_vmo, payload_size)) != ZX_OK) {
       ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
       return status;
