@@ -24,7 +24,7 @@ manifest sources, and component declarations.
 A *component manifest* is a file that encodes a
  [component declaration](#component-declaration), usually distributed as part of a
 [package](/docs/development/sdk/documentation/packages.md). The binary format is a JSON file mapping
-one-to-one onto the component declaration, by convention ending in a `.cmx`
+one-to-one onto the component declaration, by convention ending in a `.cm`
 extension.
 
 A [fuchsia-pkg URL](/docs/the-book/package_url.md) with a component manifest
