@@ -598,6 +598,11 @@
             "package_name": "indoc"
         },
         {
+            "crate_name": "itertools",
+            "crate_type": "lib",
+            "package_name": "itertools"
+        },
+        {
             "crate_name": "json5",
             "crate_type": "lib",
             "package_name": "json5"
@@ -641,6 +646,11 @@
             "crate_name": "parking_lot",
             "crate_type": "lib",
             "package_name": "parking_lot"
+        },
+        {
+            "crate_name": "paste",
+            "crate_type": "lib",
+            "package_name": "paste"
         },
         {
             "crate_name": "pest",
@@ -776,6 +786,11 @@
             "crate_name": "unic_ucd_block",
             "crate_type": "lib",
             "package_name": "unic-ucd-block"
+        },
+        {
+            "crate_name": "unicase",
+            "crate_type": "lib",
+            "package_name": "unicase"
         },
         {
             "crate_name": "url",
