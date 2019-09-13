@@ -74,6 +74,8 @@ class _StoryWidgetState extends State<StoryWidget> {
     _isEditing = widget.editing;
     oldWidget.confirmEdit.removeListener(_confirmEditListener);
     widget.confirmEdit.addListener(_confirmEditListener);
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => updateLayoutSuggestionsOverlayVisibility());
     if (oldWidget.presenter != widget.presenter) {
       _resetTilerModel();
       _tilerUpdateListener.cancel();
