@@ -86,6 +86,7 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
                         }
                     }
                 }
+                self.story_context_store.lock().withdraw_all(&self.story_id, &self.module_id);
                 Ok(())
             }
                 .unwrap_or_else(|e: Error| fx_log_err!("error serving module output {}", e)),
@@ -191,7 +192,13 @@ mod tests {
         let mut fake_entity_resolver = FakeEntityResolver::new();
         fake_entity_resolver
             .register_entity("foo", FakeEntityData::new(vec!["some-type".into()], ""));
+        fake_entity_resolver
+            .register_entity("bar", FakeEntityData::new(vec!["some-type-bar".into()], ""));
         fake_entity_resolver.spawn(request_stream);
+
+        let (puppet_master_client, _) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
 
         // Initialize service client and server.
         let (client, request_stream) =
@@ -200,35 +207,40 @@ mod tests {
             story_id: Some("story1".to_string()),
             module_path: Some(vec!["mod-a".to_string()]),
         };
-        let (puppet_master_client, _) =
-            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
 
         StoryModuleService::new(state.clone(), mod_manager, module).unwrap().spawn(request_stream);
 
         // Write a module output.
         assert!(client.write_output("param-foo", Some("foo")).await.is_ok());
+        assert!(client.write_output("param-bar", Some("bar")).await.is_ok());
 
-        // Verify we have one entity with the right contributor.
+        // Verify we have two entities with the right contributor.
         {
             let context_store = state.lock();
             let result = context_store.current().collect::<Vec<&ContextEntity>>();
-            let expected_entity = ContextEntity::new_test(
-                "foo",
-                hashset!("some-type".into()),
-                hashset!(Contributor::module_new("story1", "mod-a", "param-foo",)),
-            );
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0], &expected_entity);
+            let expected_entities = vec![
+                ContextEntity::new_test(
+                    "bar",
+                    hashset!("some-type-bar".into()),
+                    hashset!(Contributor::module_new("story1", "mod-a", "param-bar",)),
+                ),
+                ContextEntity::new_test(
+                    "foo",
+                    hashset!("some-type".into()),
+                    hashset!(Contributor::module_new("story1", "mod-a", "param-foo",)),
+                ),
+            ];
+            assert_eq!(result.len(), 2);
+            assert!(result.iter().all(|r| expected_entities.iter().any(|e| e == *r)))
         }
 
         // Write no entity to the same output. This should withdraw the entity.
         assert!(client.write_output("param-foo", None).await.is_ok());
 
-        // Verify we have no values.
+        // Verify we have only one entity.
         let context_store = state.lock();
         let result = context_store.current().collect::<Vec<&ContextEntity>>();
-        assert_eq!(result.len(), 0);
+        assert_eq!(result.len(), 1);
     }
 
     #[fasync::run_singlethreaded(test)]

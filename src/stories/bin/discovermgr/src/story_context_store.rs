@@ -46,7 +46,6 @@ pub trait ContextWriter {
 
     fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str);
 
-    #[cfg(test)] // Will be used through the ContextManager
     fn withdraw_all(&mut self, story_id: &str, module_id: &str);
 
     fn clear_contributor(&mut self, contributor: &Contributor);
@@ -275,7 +274,6 @@ impl ContextWriter for StoryContextStore {
         self.clear_contributor(&contributor);
     }
 
-    #[cfg(test)]
     fn withdraw_all(&mut self, story_id: &str, module_id: &str) {
         let contributors: Vec<Contributor> = self
             .contributor_to_refs
