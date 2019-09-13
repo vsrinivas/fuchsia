@@ -14,5 +14,6 @@ group("tests") {
     "factory_store_providers:tests",
     "factoryctl:factoryctl_tests",
     "fake_factory_items:fake_factory_items_tests",
+    "fake_factory_store_providers:tests",
   ]
 }
