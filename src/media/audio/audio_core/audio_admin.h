@@ -15,6 +15,8 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/policy_loader.h"
 
@@ -49,17 +51,20 @@ class AudioAdmin {
   //
   // |gain_adjustment| must be non-null.
   AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
-             PolicyActionReporter* policy_action_reporter);
+             PolicyActionReporter* policy_action_reporter, async_dispatcher_t* fidl_dispatcher);
 
   // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
-  AudioAdmin(UsageGainAdjustment* gain_adjustment);
+  AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher);
 
   // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                       fuchsia::media::Behavior behavior);
 
   // Clears all configured behaviors.
-  void ResetInteractions() { active_rules_.ResetInteractions(); };
+  void ResetInteractions() {
+    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    active_rules_.ResetInteractions();
+  };
 
   // Clears all configured behaviors and then applies the rules in the provided AudioPolicy.
   void SetInteractionsFromAudioPolicy(AudioPolicy policy);
@@ -71,9 +76,14 @@ class AudioAdmin {
                            fuchsia::media::AudioCapturer* capturer);
 
  private:
-  BehaviorGain behavior_gain_;
-  UsageGainAdjustment& gain_adjustment_;
-  PolicyActionReporter& policy_action_reporter_;
+  const BehaviorGain behavior_gain_;
+  UsageGainAdjustment& gain_adjustment_ FXL_GUARDED_BY(fidl_thread_checker_);
+  PolicyActionReporter& policy_action_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
+
+  // Ensures we are always on the thread on which the class was constructed, which should
+  // be the FIDL thread.
+  fxl::ThreadChecker fidl_thread_checker_;
+  async_dispatcher_t* fidl_dispatcher_;
 
   void UpdatePolicy();
 
@@ -121,12 +131,14 @@ class AudioAdmin {
         active_affected_[fuchsia::media::RENDER_USAGE_COUNT + fuchsia::media::CAPTURE_USAGE_COUNT]
                         [fuchsia::media::RENDER_USAGE_COUNT + fuchsia::media::CAPTURE_USAGE_COUNT];
   };
-  PolicyRules active_rules_;
+  PolicyRules active_rules_ FXL_GUARDED_BY(fidl_thread_checker_);
 
   std::unordered_set<fuchsia::media::AudioRenderer*>
-      active_streams_playback_[fuchsia::media::RENDER_USAGE_COUNT];
+      active_streams_playback_[fuchsia::media::RENDER_USAGE_COUNT] FXL_GUARDED_BY(
+          fidl_thread_checker_);
   std::unordered_set<fuchsia::media::AudioCapturer*>
-      active_streams_capture_[fuchsia::media::CAPTURE_USAGE_COUNT];
+      active_streams_capture_[fuchsia::media::CAPTURE_USAGE_COUNT] FXL_GUARDED_BY(
+          fidl_thread_checker_);
 };
 
 }  // namespace audio

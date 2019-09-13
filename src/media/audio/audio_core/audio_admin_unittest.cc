@@ -107,16 +107,18 @@ class AudioAdminTest : public gtest::TestLoopFixture {};
 TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
   FakeUsageGainAdjustment g;
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
-  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter);
+  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter, dispatcher());
   test::NullAudioRenderer r1, r2;
 
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  RunLoopUntilIdle();
   // TODO: we should probably simplify this so we don't make 9 gain adjustments to keep the gain
   // for all usages at 0.
   EXPECT_EQ(9u, g.take_gain_adjustments().size());
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
 
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  RunLoopUntilIdle();
   EXPECT_EQ(9u, g.take_gain_adjustments().size());
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::COMMUNICATION));
@@ -125,7 +127,7 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
 TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
   FakeUsageGainAdjustment g;
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
-  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter);
+  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter, dispatcher());
   test::NullAudioRenderer r1, r2;
 
   // Media should duck when comms is active.
@@ -135,15 +137,18 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
 
   // create media active stream.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
 
   // communications renderer becomes active; media should duck.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  RunLoopUntilIdle();
   EXPECT_EQ(kDuckGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::COMMUNICATION));
 
   // comms becomes inactive; ducking should stop.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r2);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::COMMUNICATION));
 }
@@ -151,7 +156,7 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
 TEST_F(AudioAdminTest, CapturerDucksRenderer) {
   FakeUsageGainAdjustment g;
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
-  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter);
+  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter, dispatcher());
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -162,15 +167,18 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
 
   // Create active media stream.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
 
   // Create active comms capturer; media output should duck.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, true, &c1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kDuckGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioCaptureUsage::COMMUNICATION));
 
   // Comms becomes inactive; ducking should stop.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, false, &c1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioCaptureUsage::COMMUNICATION));
 }
@@ -178,7 +186,7 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
 TEST_F(AudioAdminTest, RendererDucksCapturer) {
   FakeUsageGainAdjustment g;
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
-  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter);
+  AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter, dispatcher());
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -189,21 +197,24 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
 
   // Create active capturer stream.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::FOREGROUND, true, &c1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioCaptureUsage::FOREGROUND));
 
   // Create active comms renderer; foreground capturer should duck.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kDuckGain, g.GetUsageGainAdjustment(fuchsia::media::AudioCaptureUsage::FOREGROUND));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::COMMUNICATION));
 
   // Comms becomes inactive; ducking should stop.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r1);
+  RunLoopUntilIdle();
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioCaptureUsage::FOREGROUND));
   EXPECT_EQ(kNoneGain, g.GetUsageGainAdjustment(fuchsia::media::AudioRenderUsage::COMMUNICATION));
 }
 
 TEST_F(AudioAdminTest, PolicyActionsReported) {
-  auto test_policy_action = [](auto expected_action) {
+  auto test_policy_action = [this](auto expected_action) {
     const auto target_usage = Usage(fuchsia::media::AudioCaptureUsage::FOREGROUND);
     fuchsia::media::Behavior policy_action_taken;
     // Record any actions taken on our target_usage (AudioCaptureUsage::FOREGROUND)
@@ -215,7 +226,7 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
         });
 
     FakeUsageGainAdjustment g;
-    AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter);
+    AudioAdmin admin(kTestBehaviorGain, &g, &policy_action_reporter, dispatcher());
     test::NullAudioRenderer r1;
     test::NullAudioCapturer c1;
 
@@ -225,13 +236,14 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
 
     // Create active capturer stream.
     admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::FOREGROUND, true, &c1);
-
     // Create active comms renderer; foreground capturer should receive policy action.
     admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r1);
+    RunLoopUntilIdle();
     EXPECT_EQ(policy_action_taken, expected_action);
 
     // Comms becomes inactive; action should stop.
     admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r1);
+    RunLoopUntilIdle();
     EXPECT_EQ(policy_action_taken, fuchsia::media::Behavior::NONE);
   };
 

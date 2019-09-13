@@ -40,93 +40,110 @@ NoOpPolicyActionReporter kNoOpPolicyActionReporter;
 
 }  // namespace
 
-AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment)
+AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher)
     : AudioAdmin(
           BehaviorGain{
               .none_gain_db = 0.0f,
               .duck_gain_db = -14.0f,
               .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
           },
-          gain_adjustment, &kNoOpPolicyActionReporter) {}
+          gain_adjustment, &kNoOpPolicyActionReporter, fidl_dispatcher) {}
 
 AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
-                       PolicyActionReporter* policy_action_reporter)
+                       PolicyActionReporter* policy_action_reporter,
+                       async_dispatcher_t* fidl_dispatcher)
     : behavior_gain_(behavior_gain),
       gain_adjustment_(*gain_adjustment),
-      policy_action_reporter_(*policy_action_reporter) {
+      policy_action_reporter_(*policy_action_reporter),
+      fidl_dispatcher_(fidl_dispatcher) {
   FXL_DCHECK(gain_adjustment);
+  FXL_DCHECK(policy_action_reporter);
+  FXL_DCHECK(fidl_dispatcher);
 }
 
 void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                 fuchsia::media::Behavior behavior) {
-  TRACE_DURATION("audio", "AudioAdmin::SetInteraction");
-  if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
-      affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
-    active_rules_.SetRule(active.capture_usage(), affected.capture_usage(), behavior);
-  } else if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
-             affected.Which() == fuchsia::media::Usage::Tag::kRenderUsage) {
-    active_rules_.SetRule(active.capture_usage(), affected.render_usage(), behavior);
+  async::PostTask(fidl_dispatcher_, [this, active = std::move(active),
+                                     affected = std::move(affected), behavior = behavior]() {
+    TRACE_DURATION("audio", "AudioAdmin::SetInteraction");
+    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
+        affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
+      active_rules_.SetRule(active.capture_usage(), affected.capture_usage(), behavior);
+    } else if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
+               affected.Which() == fuchsia::media::Usage::Tag::kRenderUsage) {
+      active_rules_.SetRule(active.capture_usage(), affected.render_usage(), behavior);
 
-  } else if (active.Which() == fuchsia::media::Usage::Tag::kRenderUsage &&
-             affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
-    active_rules_.SetRule(active.render_usage(), affected.capture_usage(), behavior);
+    } else if (active.Which() == fuchsia::media::Usage::Tag::kRenderUsage &&
+               affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
+      active_rules_.SetRule(active.render_usage(), affected.capture_usage(), behavior);
 
-  } else if (active.Which() == fuchsia::media::Usage::Tag::kRenderUsage &&
-             affected.Which() == fuchsia::media::Usage::Tag::kRenderUsage) {
-    active_rules_.SetRule(active.render_usage(), affected.render_usage(), behavior);
-  }
+    } else if (active.Which() == fuchsia::media::Usage::Tag::kRenderUsage &&
+               affected.Which() == fuchsia::media::Usage::Tag::kRenderUsage) {
+      active_rules_.SetRule(active.render_usage(), affected.render_usage(), behavior);
+    }
+  });
 }
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Render)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_playback_[usage_index].size() > 0;
 }
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Capture)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_capture_[usage_index].size() > 0;
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Render)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Capture)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Render)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Capture)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Render)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Capture)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
 }
 
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
   TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Capture)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
@@ -159,6 +176,7 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
 
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
   TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Render)");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
@@ -218,30 +236,36 @@ void AudioAdmin::UpdatePolicy() {
 
 void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
                                      fuchsia::media::AudioRenderer* renderer) {
-  TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
-  auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
-  if (active) {
-    active_streams_playback_[usage_index].insert(renderer);
-  } else {
-    active_streams_playback_[usage_index].erase(renderer);
-  }
+  async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, renderer = renderer] {
+    TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
+    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
+    if (active) {
+      active_streams_playback_[usage_index].insert(renderer);
+    } else {
+      active_streams_playback_[usage_index].erase(renderer);
+    }
 
-  UpdatePolicy();
+    UpdatePolicy();
+  });
 }
 
 void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
                                      fuchsia::media::AudioCapturer* capturer) {
-  TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
-  auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
-  if (active) {
-    active_streams_capture_[usage_index].insert(capturer);
-  } else {
-    active_streams_capture_[usage_index].erase(capturer);
-  }
+  async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, capturer = capturer] {
+    TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
+    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
+    if (active) {
+      active_streams_capture_[usage_index].insert(capturer);
+    } else {
+      active_streams_capture_[usage_index].erase(capturer);
+    }
 
-  UpdatePolicy();
+    UpdatePolicy();
+  });
 }
 
 void AudioAdmin::PolicyRules::ResetInteractions() {
@@ -271,10 +295,12 @@ void AudioAdmin::PolicyRules::ResetInteractions() {
 }
 
 void AudioAdmin::SetInteractionsFromAudioPolicy(AudioPolicy policy) {
-  ResetInteractions();
-  for (auto& rule : policy.rules()) {
-    SetInteraction(fidl::Clone(rule.active), fidl::Clone(rule.affected), rule.behavior);
-  }
+  async::PostTask(fidl_dispatcher_, [this, policy = std::move(policy)] {
+    ResetInteractions();
+    for (auto& rule : policy.rules()) {
+      SetInteraction(fidl::Clone(rule.active), fidl::Clone(rule.affected), rule.behavior);
+    }
+  });
 }
 
 }  // namespace media::audio
