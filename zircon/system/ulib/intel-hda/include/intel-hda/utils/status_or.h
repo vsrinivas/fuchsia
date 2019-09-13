@@ -32,11 +32,12 @@ class [[nodiscard]] StatusOr {
   // Allow implicit conversion from Status objects.
   StatusOr(const Status& err)  // NOLINT(google-explicit-constructor)
       : value_(std::in_place_index_t<0>{}, err) {
-    ZX_DEBUG_ASSERT(!err.ok());
+    ZX_DEBUG_ASSERT_MSG(!err.ok(), "Attempted to create StatusOr from Status with 'ok' value.");
   }
-  StatusOr(Status && err)  // NOLINT(google-explicit-constructor)
+  __attribute__((noinline)) StatusOr(Status && err)  // NOLINT(google-explicit-constructor)
       : value_(std::in_place_index_t<0>{}, std::move(err)) {
-    ZX_DEBUG_ASSERT(!std::get<0>(value_).ok());
+    ZX_DEBUG_ASSERT_MSG(!std::get<0>(value_).ok(),
+                        "Attempted to create StatusOr from Status with 'ok' value.");
   }
 
   // Create a StatusOr object with with given value T.
