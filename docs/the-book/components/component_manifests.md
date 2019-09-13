@@ -1,3 +1,8 @@
+Note: This document describes manifests for the new Component Manager.
+If your component launches with [appmgr](/docs/glossary.md#appmgr), indicated
+for instance by your manifest file ending in a `.cmx` extension, then please
+refer to [legacy documentation](/docs/the-book/package_metadata.md).
+
 # Component manifests {#component-manifests}
 
 A [component manifest](#component-manifest) is a file that defines a component
