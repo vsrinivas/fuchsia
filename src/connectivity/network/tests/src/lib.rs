@@ -149,6 +149,30 @@ where
     async_fn(netstack_proxy, device).await
 }
 
+async fn read_stat_counter(
+    file_proxy: fidl_fuchsia_io::FileProxy,
+) -> std::result::Result<u64, failure::Error> {
+    let expected_len = std::mem::size_of::<u64>(); // 8 bytes
+
+    // Ask for one byte more than expected to ensure the content is exactly the right size.
+    let (status, content) = file_proxy
+        .read(expected_len as u64 + 1)
+        .await
+        .context("failed to call fuchsia.io.File.Read")?;
+    let () = fuchsia_zircon::Status::ok(status).context("failed to read file")?;
+
+    // try_into() will fail if content.len() != expected_len;
+    let content: [u8; 8] =
+        content[..].try_into().with_context(|std::array::TryFromSliceError { .. }| {
+            format!(
+                "expected {}-byte counter value, observed {} bytes",
+                expected_len,
+                content.len()
+            )
+        })?;
+    Ok(u64::from_le_bytes(content))
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn get_aggregate_stats() -> Result {
     let name = stringify!(get_aggregate_stats);
@@ -174,6 +198,25 @@ async fn get_aggregate_stats() -> Result {
     // TODO(tamird): use into_iter after
     // https://github.com/rust-lang/rust/issues/25725.
     assert_eq!(path_segments, [1, 2, 3].iter().cloned().collect());
+
+    {
+        // Aggregate stats' initial values should be zero, before any packet can be exchanged.
+        for e in &dir_entries {
+            let file_proxy = io_util::open_file(
+                &client,
+                &std::path::Path::new(&e.name),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            )?;
+            assert_eq!(0, read_stat_counter(file_proxy).await.context("failed to read stats")?);
+        }
+
+        // Make sure interesting stats exist.
+        assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsReceived"));
+        assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsSent"));
+        assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsReceived/Echo"));
+        assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsSent/Echo"));
+    }
+
     Ok(())
 }
 
