@@ -248,7 +248,7 @@ const mount_options_t default_mount_options = {
     .collect_metrics = false,
     .wait_until_ready = true,
     .create_mountpoint = false,
-    .enable_journal = false,
+    .enable_journal = true,
 };
 
 const mkfs_options_t default_mkfs_options = {

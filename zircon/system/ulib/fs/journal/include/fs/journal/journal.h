@@ -55,6 +55,10 @@ class Journal final : public fit::executor {
 
   // Constructs a Journal with journaling enabled. This is the traditional constructor
   // of Journals, where data and metadata are treated separately.
+  //
+  // |journal_superblock| represents the journal info block.
+  // |journal_buffer| must be the size of the entries (not including the info block).
+  // |journal_start_block| must point to the start of the journal info block.
   Journal(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
           std::unique_ptr<fs::BlockingRingBuffer> journal_buffer,
           std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block);

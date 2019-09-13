@@ -1069,8 +1069,9 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
   }
 
   std::unique_ptr<fs::BlockingRingBuffer> journal_buffer;
+  const uint64_t journal_entry_blocks = JournalBlocks(sb_->Info()) - fs::kJournalMetadataBlocks;
   zx_status_t status = fs::BlockingRingBuffer::Create(
-      GetMutableBcache(), JournalBlocks(sb_->Info()), kMinfsBlockSize, "minfs-journal-buffer",
+      GetMutableBcache(), journal_entry_blocks, kMinfsBlockSize, "minfs-journal-buffer",
       &journal_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create journal buffer\n");
