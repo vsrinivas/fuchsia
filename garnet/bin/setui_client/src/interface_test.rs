@@ -11,18 +11,18 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
+    setui_client_lib::accessibility,
+    setui_client_lib::audio,
+    setui_client_lib::client,
+    setui_client_lib::device,
+    setui_client_lib::display,
+    setui_client_lib::do_not_disturb,
+    setui_client_lib::intl,
+    setui_client_lib::privacy,
+    setui_client_lib::setup,
+    setui_client_lib::system,
+    setui_client_lib::{AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions},
 };
-
-mod accessibility;
-mod audio;
-mod client;
-mod device;
-mod display;
-mod do_not_disturb;
-mod intl;
-mod privacy;
-mod setup;
-mod system;
 
 enum Services {
     SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
@@ -61,30 +61,11 @@ async fn main() -> Result<(), Error> {
     validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None).await?;
 
     println!("accessibility service tests");
-    println!("  client calls set accessibility watch");
-    validate_accessibility(None, None, None, None, None).await?;
+    println!("  client calls set");
+    validate_accessibility_set().await?;
 
-    println!("  client calls set audio_description");
-    validate_accessibility(Some(true), None, None, None, None).await?;
-
-    println!("  client calls set screen_reader");
-    validate_accessibility(None, Some(true), None, None, None).await?;
-
-    println!("  client calls set color_inversion");
-    validate_accessibility(None, None, Some(true), None, None).await?;
-
-    println!("  client calls set enable_magnification");
-    validate_accessibility(None, None, None, Some(true), None).await?;
-
-    println!("  client calls set color_correction");
-    validate_accessibility(
-        None,
-        None,
-        None,
-        None,
-        Some(fidl_fuchsia_settings::ColorBlindnessType::Protanomaly),
-    )
-    .await?;
+    println!("  client calls watch");
+    validate_accessibility_watch().await?;
 
     println!("audio service tests");
     println!("  client calls audio watch");
@@ -348,38 +329,62 @@ async fn validate_display(
     Ok(())
 }
 
-async fn validate_accessibility(
-    expected_audio_description: Option<bool>,
-    expected_screen_reader: Option<bool>,
-    expected_color_inversion: Option<bool>,
-    expected_enable_magnification: Option<bool>,
-    expected_color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
-) -> Result<(), Error> {
+async fn validate_accessibility_set() -> Result<(), Error> {
+    const TEST_COLOR: fidl_fuchsia_ui_types::ColorRgba =
+        fidl_fuchsia_ui_types::ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
+    let expected_options: AccessibilityOptions = AccessibilityOptions {
+        audio_description: Some(true),
+        screen_reader: Some(true),
+        color_inversion: Some(false),
+        enable_magnification: Some(false),
+        color_correction: Some(ColorBlindnessType::Protanomaly),
+        caption_options: Some(CaptionCommands::CaptionOptions(CaptionOptions {
+            for_media: Some(true),
+            for_tts: Some(false),
+            window_color: Some(TEST_COLOR),
+            background_color: Some(TEST_COLOR),
+            style: CaptionFontStyle {
+                font_family: Some(CaptionFontFamily::Cursive),
+                font_color: Some(TEST_COLOR),
+                relative_size: Some(1.0),
+                char_edge_style: Some(EdgeStyle::Raised),
+            },
+        })),
+    };
+
     let env = create_service!(
-        Services::Accessibility, AccessibilityRequest::Set { settings, responder, } => {
-            if let (Some(audio_description), Some(expected_audio_description_value)) =
-                (settings.audio_description, expected_audio_description) {
-                assert_eq!(audio_description, expected_audio_description_value);
-                responder.send(&mut Ok(()))?;
-            } else if let (Some(screen_reader), Some(expected_screen_reader_value)) =
-                (settings.screen_reader, expected_screen_reader) {
-                assert_eq!(screen_reader, expected_screen_reader_value);
-                responder.send(&mut Ok(()))?;
-            } else if let (Some(color_inversion), Some(expected_color_inversion_value)) =
-                (settings.color_inversion, expected_color_inversion) {
-                assert_eq!(color_inversion, expected_color_inversion_value);
-                responder.send(&mut Ok(()))?;
-            } else if let (Some(enable_magnification), Some(expected_enable_magnification_value)) =
-                (settings.enable_magnification, expected_enable_magnification) {
-                assert_eq!(enable_magnification, expected_enable_magnification_value);
-                responder.send(&mut Ok(()))?;
-            } else if let (Some(color_correction), Some(expected_color_correction_value)) =
-                (settings.color_correction, expected_color_correction) {
-                assert_eq!(color_correction, expected_color_correction_value);
-                responder.send(&mut Ok(()))?;
-            } else {
-                panic!("Unexpected call to set");
+        Services::Accessibility, AccessibilityRequest::Set { settings, responder } => {
+            assert_eq!(expected_options.audio_description, settings.audio_description);
+            assert_eq!(expected_options.screen_reader, settings.screen_reader);
+            assert_eq!(expected_options.color_inversion, settings.color_inversion);
+            assert_eq!(expected_options.enable_magnification, settings.enable_magnification);
+            assert_eq!(expected_options.color_correction, settings.color_correction);
+
+            // If no caption options are provided, then captions_settings field in service should
+            // also be None. The inverse of this should also be true.
+            assert_eq!(expected_options.caption_options.is_some(), settings.captions_settings.is_some());
+            match (settings.captions_settings, expected_options.caption_options) {
+                (Some(captions_settings), Some(caption_settings_enum)) => {
+                    let CaptionCommands::CaptionOptions(input) = caption_settings_enum;
+
+                    assert_eq!(input.for_media, captions_settings.for_media);
+                    assert_eq!(input.for_tts, captions_settings.for_tts);
+                    assert_eq!(input.window_color, captions_settings.window_color);
+                    assert_eq!(input.background_color, captions_settings.background_color);
+
+                    if let Some(font_style) = captions_settings.font_style {
+                        let input_style = input.style;
+
+                        assert_eq!(input_style.font_family, font_style.family);
+                        assert_eq!(input_style.font_color, font_style.color);
+                        assert_eq!(input_style.relative_size, font_style.relative_size);
+                        assert_eq!(input_style.char_edge_style, font_style.char_edge_style);
+                    }
+                }
+                _ => {}
             }
+
+            responder.send(&mut Ok(()))?;
         },
         AccessibilityRequest::Watch { responder } => {
             responder.send(&mut Ok(AccessibilitySettings::empty()))?;
@@ -390,16 +395,31 @@ async fn validate_accessibility(
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    accessibility::command(
-        accessibility_service,
-        false,
-        expected_audio_description,
-        expected_screen_reader,
-        expected_color_inversion,
-        expected_enable_magnification,
-        expected_color_correction,
-    )
-    .await?;
+    let output = accessibility::command(accessibility_service, expected_options).await?;
+
+    assert_eq!(output, "Successfully set AccessibilitySettings");
+
+    Ok(())
+}
+
+async fn validate_accessibility_watch() -> Result<(), Error> {
+    let env = create_service!(
+        Services::Accessibility, AccessibilityRequest::Set { settings: _, responder } => {
+            responder.send(&mut Ok(()))?;
+        },
+        AccessibilityRequest::Watch { responder } => {
+            responder.send(&mut Ok(AccessibilitySettings::empty()))?;
+        }
+    );
+
+    let accessibility_service = env
+        .connect_to_service::<AccessibilityMarker>()
+        .context("Failed to connect to accessibility service")?;
+
+    let output =
+        accessibility::command(accessibility_service, AccessibilityOptions::default()).await?;
+
+    assert_eq!(output, format!("{:#?}", AccessibilitySettings::empty()));
 
     Ok(())
 }

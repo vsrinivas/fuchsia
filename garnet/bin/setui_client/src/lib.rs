@@ -11,16 +11,16 @@ use {
     structopt::StructOpt,
 };
 
-mod accessibility;
-mod audio;
-mod client;
-mod device;
-mod display;
-mod do_not_disturb;
-mod intl;
-mod privacy;
-mod setup;
-mod system;
+pub mod accessibility;
+pub mod audio;
+pub mod client;
+pub mod device;
+pub mod display;
+pub mod do_not_disturb;
+pub mod intl;
+pub mod privacy;
+pub mod setup;
+pub mod system;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
 /// action parameters are specified at as individual arguments, but the goal is
@@ -54,26 +54,7 @@ pub enum SettingClient {
     },
 
     #[structopt(name = "accessibility")]
-    Accessibility {
-        // Debug option that attempts to set some value for all fields in AccessibilitySettings.
-        #[structopt(long)]
-        debug_set_all: bool,
-
-        #[structopt(short = "a", long)]
-        audio_description: Option<bool>,
-
-        #[structopt(short = "s", long)]
-        screen_reader: Option<bool>,
-
-        #[structopt(short = "i", long)]
-        color_inversion: Option<bool>,
-
-        #[structopt(short = "m", long)]
-        enable_magnification: Option<bool>,
-
-        #[structopt(short = "c", long, parse(try_from_str = "str_to_color_blindness_type"))]
-        color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
-    },
+    Accessibility(AccessibilityOptions),
 
     #[structopt(name = "audio")]
     Audio {
@@ -136,6 +117,81 @@ pub enum SettingClient {
         #[structopt(short = "i", long = "interfaces", parse(from_str = "str_to_interfaces"))]
         configuration_interfaces: Option<ConfigurationInterfaces>,
     },
+}
+
+#[derive(StructOpt, Debug, Clone, Copy, Default)]
+pub struct AccessibilityOptions {
+    #[structopt(short = "a", long)]
+    pub audio_description: Option<bool>,
+
+    #[structopt(short = "s", long)]
+    pub screen_reader: Option<bool>,
+
+    #[structopt(short = "i", long)]
+    pub color_inversion: Option<bool>,
+
+    #[structopt(short = "m", long)]
+    pub enable_magnification: Option<bool>,
+
+    #[structopt(short = "c", long, parse(try_from_str = "str_to_color_blindness_type"))]
+    pub color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
+
+    #[structopt(subcommand)]
+    pub caption_options: Option<CaptionCommands>,
+}
+
+#[derive(StructOpt, Debug, Clone, Copy)]
+pub enum CaptionCommands {
+    #[structopt(name = "captions")]
+    CaptionOptions(CaptionOptions),
+}
+
+#[derive(StructOpt, Debug, Clone, Copy)]
+pub struct CaptionOptions {
+    #[structopt(short = "m", long)]
+    /// Enable closed captions for media sources of audio.
+    pub for_media: Option<bool>,
+
+    #[structopt(short = "t", long)]
+    /// Enable closed captions for Text-To-Speech sources of audio.
+    pub for_tts: Option<bool>,
+
+    #[structopt(short, long, parse(try_from_str = "str_to_color"))]
+    /// Border color used around the closed captions window. Valid options are red, green, or blue,
+    /// or just the first letter of each color (r, g, b).
+    pub window_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
+
+    #[structopt(short, long, parse(try_from_str = "str_to_color"))]
+    /// Border color used around the closed captions window. Valid options are red, green, or blue,
+    /// or just the first letter of each color (r, g, b).
+    pub background_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
+
+    #[structopt(flatten)]
+    pub style: CaptionFontStyle,
+}
+
+#[derive(StructOpt, Debug, Clone, Copy)]
+pub struct CaptionFontStyle {
+    #[structopt(short, long, parse(try_from_str = "str_to_font_family"))]
+    /// Font family for captions, specified by 47 CFR §79.102(k). Valid options are unknown,
+    /// monospaced_serif, proportional_serif, monospaced_sans_serif, proportional_sans_serif,
+    /// casual, cursive, and small_capitals,
+    pub font_family: Option<fidl_fuchsia_settings::CaptionFontFamily>,
+
+    #[structopt(short = "c", long, parse(try_from_str = "str_to_color"))]
+    /// Color of the closed cpation text. Valid options are red, green, or blue, or just the first
+    /// letter of each color (r, g, b).
+    pub font_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
+
+    #[structopt(short, long)]
+    /// Size of closed captions text relative to the default captions size. A range of [0.5, 2] is
+    /// guaranteed to be supported (as 47 CFR §79.103(c)(4) establishes).
+    pub relative_size: Option<f32>,
+
+    #[structopt(short = "e", long, parse(try_from_str = "str_to_edge_style"))]
+    /// Edge style for fonts as specified in 47 CFR §79.103(c)(7), valid options are none,
+    /// drop_shadow, raised, depressed, and outline.
+    pub char_edge_style: Option<fidl_fuchsia_settings::EdgeStyle>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -220,27 +276,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = intl::command(intl_service, time_zone, temperature_unit, locales).await?;
             println!("Intl: {}", output);
         }
-        SettingClient::Accessibility {
-            debug_set_all,
-            audio_description,
-            screen_reader,
-            color_inversion,
-            enable_magnification,
-            color_correction,
-        } => {
+        SettingClient::Accessibility(accessibility_options) => {
             let accessibility_service =
                 connect_to_service::<fidl_fuchsia_settings::AccessibilityMarker>()
                     .context("Failed to connect to accessibility service")?;
-            let output = accessibility::command(
-                accessibility_service,
-                debug_set_all,
-                audio_description,
-                screen_reader,
-                color_inversion,
-                enable_magnification,
-                color_correction,
-            )
-            .await?;
+
+            let output =
+                accessibility::command(accessibility_service, accessibility_options).await?;
             println!("Accessibility: {}", output);
         }
         SettingClient::Privacy { user_data_sharing_consent } => {
@@ -328,6 +370,48 @@ fn str_to_interfaces(src: &&str) -> ConfigurationInterfaces {
     }
 
     return interfaces;
+}
+
+fn str_to_color(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgba, &str> {
+    Ok(match src.to_lowercase().as_str() {
+        "red" | "r" => {
+            fidl_fuchsia_ui_types::ColorRgba { red: 255.0, green: 0.0, blue: 0.0, alpha: 255.0 }
+        }
+        "green" | "g" => {
+            fidl_fuchsia_ui_types::ColorRgba { red: 0.0, green: 2.055, blue: 0.0, alpha: 255.0 }
+        }
+        "blue" | "b" => {
+            fidl_fuchsia_ui_types::ColorRgba { red: 0.0, green: 0.0, blue: 255.0, alpha: 255.0 }
+        }
+        _ => return Err("Couldn't parse color"),
+    })
+}
+
+fn str_to_font_family(src: &str) -> Result<fidl_fuchsia_settings::CaptionFontFamily, &str> {
+    Ok(match src.to_lowercase().as_str() {
+        "unknown" => fidl_fuchsia_settings::CaptionFontFamily::Unknown,
+        "monospaced_serif" => fidl_fuchsia_settings::CaptionFontFamily::MonospacedSerif,
+        "proportional_serif" => fidl_fuchsia_settings::CaptionFontFamily::ProportionalSerif,
+        "monospaced_sans_serif" => fidl_fuchsia_settings::CaptionFontFamily::MonospacedSansSerif,
+        "proportional_sans_serif" => {
+            fidl_fuchsia_settings::CaptionFontFamily::ProportionalSansSerif
+        }
+        "casual" => fidl_fuchsia_settings::CaptionFontFamily::Casual,
+        "cursive" => fidl_fuchsia_settings::CaptionFontFamily::Cursive,
+        "small_capitals" => fidl_fuchsia_settings::CaptionFontFamily::SmallCapitals,
+        _ => return Err("Couldn't parse font family"),
+    })
+}
+
+fn str_to_edge_style(src: &str) -> Result<fidl_fuchsia_settings::EdgeStyle, &str> {
+    Ok(match src.to_lowercase().as_str() {
+        "none" => fidl_fuchsia_settings::EdgeStyle::None,
+        "drop_shadow" => fidl_fuchsia_settings::EdgeStyle::DropShadow,
+        "raised" => fidl_fuchsia_settings::EdgeStyle::Raised,
+        "depressed" => fidl_fuchsia_settings::EdgeStyle::Depressed,
+        "outline" => fidl_fuchsia_settings::EdgeStyle::Outline,
+        _ => return Err("Couldn't parse edge style"),
+    })
 }
 
 fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUnit, &str> {
