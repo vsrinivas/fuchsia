@@ -50,7 +50,6 @@ group("tests") {
     "//tools/build:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
-    "//tools/fidlcat:fidlcat_tests",
     "//tools/integration:tests($host_toolchain)",
     "//tools/kazoo:kazoo_host_tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
-#define TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
+#ifndef SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_
+#define SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_
 
 #include <lib/fidl/cpp/message.h>
 
@@ -13,10 +13,10 @@
 
 #include <src/lib/fxl/logging.h>
 
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/message_decoder.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/message_decoder.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 // Base class for all the fields we can find within a message.
 class Field {
@@ -349,6 +349,6 @@ class HandleField : public Field {
   const zx_handle_info_t handle_;
 };
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
+#endif  // SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_

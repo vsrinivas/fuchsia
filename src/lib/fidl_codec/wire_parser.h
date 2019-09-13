@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_WIRE_PARSER_H_
-#define TOOLS_FIDLCAT_LIB_WIRE_PARSER_H_
+#ifndef SRC_LIB_FIDL_CODEC_WIRE_PARSER_H_
+#define SRC_LIB_FIDL_CODEC_WIRE_PARSER_H_
 
 #include <lib/fidl/cpp/message.h>
 
 #include <cstdint>
 
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/wire_types.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 // Given a wire-formatted |message| and a schema for that message represented by
 // |method|, populates |decoded_object| with an object representing that
@@ -34,6 +34,6 @@ bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_
                     const zx_handle_info_t* handles, uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object);
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_WIRE_PARSER_H_
+#endif  // SRC_LIB_FIDL_CODEC_WIRE_PARSER_H_

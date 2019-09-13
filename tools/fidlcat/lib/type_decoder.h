@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <ostream>
 
+#include "src/lib/fidl_codec/colors.h"
 #include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidlcat {
@@ -24,7 +25,7 @@ namespace fidlcat {
 #define kMinutesPerHour 60
 #define kHoursPerDay 24
 
-constexpr int kCharatersPerByte = 2;
+constexpr int kCharactersPerByte = 2;
 
 // Types for syscall arguments.
 enum class SyscallType {
@@ -102,24 +103,6 @@ enum class SyscallReturnType {
   kUint64,
 };
 
-struct Colors {
-  Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
-         const char* new_white_on_magenta, const char* new_yellow_background)
-      : reset(new_reset),
-        red(new_red),
-        green(new_green),
-        blue(new_blue),
-        white_on_magenta(new_white_on_magenta),
-        yellow_background(new_yellow_background) {}
-
-  const char* const reset;
-  const char* const red;
-  const char* const green;
-  const char* const blue;
-  const char* const white_on_magenta;
-  const char* const yellow_background;
-};
-
 void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
@@ -127,21 +110,19 @@ void FeatureKindName(uint32_t feature_kind, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
 void KtraceControlActionName(uint32_t action, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
-void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
 void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
 void PolicyActionName(uint32_t action, std::ostream& os);
 void PolicyConditionName(uint32_t condition, std::ostream& os);
 void PolicyTopicName(uint32_t topic, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
-void RightsName(zx_rights_t rights, std::ostream& os);
 void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
 void SignalName(zx_signals_t signals, std::ostream& os);
 void SocketCreateOptionsName(uint32_t options, std::ostream& os);
 void SocketReadOptionsName(uint32_t options, std::ostream& os);
 void SocketShutdownOptionsName(uint32_t options, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);
-void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
+void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os);
 void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
 void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
 void ThreadStateName(uint32_t state, std::ostream& os);
@@ -150,18 +131,17 @@ void TimerOptionName(uint32_t option, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);
-void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os);
-void DisplayType(const Colors& colors, SyscallType type, std::ostream& os);
+void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os);
 
 class DisplayDuration {
  public:
-  DisplayDuration(const Colors& colors, zx_duration_t duration_ns)
+  DisplayDuration(const fidl_codec::Colors& colors, zx_duration_t duration_ns)
       : colors_(colors), duration_ns_(duration_ns) {}
-  [[nodiscard]] const Colors& colors() const { return colors_; }
+  [[nodiscard]] const fidl_codec::Colors& colors() const { return colors_; }
   [[nodiscard]] zx_duration_t duration_ns() const { return duration_ns_; }
 
  private:
-  const Colors& colors_;
+  const fidl_codec::Colors& colors_;
   const zx_duration_t duration_ns_;
 };
 
@@ -228,12 +208,13 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayStatus& status) {
 
 class DisplayTime {
  public:
-  DisplayTime(const Colors& colors, zx_time_t time_ns) : colors_(colors), time_ns_(time_ns) {}
-  [[nodiscard]] const Colors& colors() const { return colors_; }
+  DisplayTime(const fidl_codec::Colors& colors, zx_time_t time_ns)
+      : colors_(colors), time_ns_(time_ns) {}
+  [[nodiscard]] const fidl_codec::Colors& colors() const { return colors_; }
   [[nodiscard]] zx_time_t time_ns() const { return time_ns_; }
 
  private:
-  const Colors& colors_;
+  const fidl_codec::Colors& colors_;
   const zx_time_t time_ns_;
 };
 

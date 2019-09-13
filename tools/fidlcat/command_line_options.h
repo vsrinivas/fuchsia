@@ -7,8 +7,8 @@
 
 #include <cmdline/args_parser.h>
 
+#include "src/lib/fidl_codec/display_options.h"
 #include "tools/fidlcat/lib/decode_options.h"
-#include "tools/fidlcat/lib/display_options.h"
 
 namespace fidlcat {
 

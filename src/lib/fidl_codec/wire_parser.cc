@@ -4,10 +4,10 @@
 
 #include "wire_parser.h"
 
-#include "tools/fidlcat/lib/wire_object.h"
-#include "tools/fidlcat/lib/wire_types.h"
+#include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 #if 0
 
@@ -79,4 +79,4 @@ bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_
   return DecodeMessage(*method->response(), bytes, num_bytes, handles, num_handles, decoded_object);
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

@@ -7,12 +7,12 @@
 #include <src/lib/fxl/logging.h>
 
 #include "rapidjson/error/en.h"
-#include "tools/fidlcat/lib/wire_object.h"
-#include "tools/fidlcat/lib/wire_types.h"
+#include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 // See library_loader.h for details.
 
-namespace fidlcat {
+namespace fidl_codec {
 
 Enum::Enum(const rapidjson::Value& value) : value_(value) {}
 
@@ -350,4 +350,4 @@ LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library
   }
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

@@ -22,22 +22,22 @@ constexpr int kPatternSize = 8;
 void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
                 SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
                 std::ostream& os) {
-  os << line_header << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << dispatcher->colors().red
      << "Can't decode message num_bytes=" << num_bytes << " num_handles=" << num_handles;
   if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
     auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
     os << " ordinal=" << std::hex << header->ordinal << std::dec;
     if (dispatcher->message_decoder_dispatcher().loader() != nullptr) {
-      const std::vector<const InterfaceMethod*>* methods =
+      const std::vector<const fidl_codec::InterfaceMethod*>* methods =
           dispatcher->message_decoder_dispatcher().loader()->GetByOrdinal(header->ordinal);
       if ((methods != nullptr) && !methods->empty()) {
-        const InterfaceMethod* method = (*methods)[0];
+        const fidl_codec::InterfaceMethod* method = (*methods)[0];
         os << '(' << method->enclosing_interface().name() << '.' << method->name() << ')';
       }
     }
   }
   os << '\n';
-  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << "data=";
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "data=";
   const char* separator = " ";
   for (uint32_t i = 0; i < num_bytes; ++i) {
     // Display 4 bytes in red then four bytes in black ...
@@ -46,7 +46,7 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
     } else if (i % kPatternColorSize == 0) {
       os << dispatcher->colors().reset;
     }
-    std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
+    std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
     snprintf(buffer.data(), buffer.size(), "%02x", bytes[i]);
     os << separator << buffer.data();
     separator = ", ";
@@ -54,7 +54,8 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
   os << dispatcher->colors().reset << '\n';
 }
 
-void DisplayString(const Colors& colors, const char* string, size_t size, std::ostream& os) {
+void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t size,
+                   std::ostream& os) {
   if (string == nullptr) {
     os << "nullptr\n";
   } else {

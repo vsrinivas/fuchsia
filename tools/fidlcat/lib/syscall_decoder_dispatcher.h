@@ -23,10 +23,11 @@
 #include <src/lib/fxl/logging.h>
 
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/lib/fidl_codec/display_handle.h"
+#include "src/lib/fidl_codec/display_options.h"
+#include "src/lib/fidl_codec/message_decoder.h"
 #include "tools/fidlcat/lib/decode_options.h"
-#include "tools/fidlcat/lib/display_options.h"
 #include "tools/fidlcat/lib/exception_decoder.h"
-#include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
@@ -40,13 +41,13 @@ class Class;
 
 // Display a value on a stream.
 template <typename ValueType>
-void DisplayValue(const Colors& /*colors*/, SyscallType type, ValueType /*value*/,
+void DisplayValue(const fidl_codec::Colors& /*colors*/, SyscallType type, ValueType /*value*/,
                   std::ostream& os) {
   os << "unimplemented generic value " << static_cast<uint32_t>(type);
 }
 
 template <>
-inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool value,
+inline void DisplayValue<bool>(const fidl_codec::Colors& colors, SyscallType type, bool value,
                                std::ostream& os) {
   switch (type) {
     case SyscallType::kBool:
@@ -59,7 +60,8 @@ inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool valu
 }
 
 template <>
-inline void DisplayValue<std::pair<const char*, size_t>>(const Colors& colors, SyscallType type,
+inline void DisplayValue<std::pair<const char*, size_t>>(const fidl_codec::Colors& colors,
+                                                         SyscallType type,
                                                          std::pair<const char*, size_t> value,
                                                          std::ostream& os) {
   switch (type) {
@@ -80,7 +82,7 @@ inline void DisplayValue<std::pair<const char*, size_t>>(const Colors& colors, S
 }
 
 template <>
-inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_t value,
+inline void DisplayValue<int32_t>(const fidl_codec::Colors& colors, SyscallType type, int32_t value,
                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kInt32:
@@ -99,7 +101,7 @@ inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_
 }
 
 template <>
-inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value,
+inline void DisplayValue<int64_t>(const fidl_codec::Colors& colors, SyscallType type, int64_t value,
                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kInt64:
@@ -124,14 +126,14 @@ inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_
 }
 
 template <>
-inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_t value,
+inline void DisplayValue<uint8_t>(const fidl_codec::Colors& colors, SyscallType type, uint8_t value,
                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kUint8:
       os << colors.blue << static_cast<uint32_t>(value) << colors.reset;
       break;
     case SyscallType::kUint8Hexa: {
-      std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%02x", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -148,7 +150,8 @@ inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint8_t*, int>>(const Colors& colors, SyscallType type,
+inline void DisplayValue<std::pair<const uint8_t*, int>>(const fidl_codec::Colors& colors,
+                                                         SyscallType type,
                                                          std::pair<const uint8_t*, int> value,
                                                          std::ostream& os) {
   switch (type) {
@@ -172,14 +175,14 @@ inline void DisplayValue<std::pair<const uint8_t*, int>>(const Colors& colors, S
 }
 
 template <>
-inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint16_t value,
-                                   std::ostream& os) {
+inline void DisplayValue<uint16_t>(const fidl_codec::Colors& colors, SyscallType type,
+                                   uint16_t value, std::ostream& os) {
   switch (type) {
     case SyscallType::kUint16:
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kUint16Hexa: {
-      std::vector<char> buffer(sizeof(uint16_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint16_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%04x", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -196,7 +199,8 @@ inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint1
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint16_t*, int>>(const Colors& colors, SyscallType type,
+inline void DisplayValue<std::pair<const uint16_t*, int>>(const fidl_codec::Colors& colors,
+                                                          SyscallType type,
                                                           std::pair<const uint16_t*, int> value,
                                                           std::ostream& os) {
   switch (type) {
@@ -220,14 +224,14 @@ inline void DisplayValue<std::pair<const uint16_t*, int>>(const Colors& colors, 
 }
 
 template <>
-inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint32_t value,
-                                   std::ostream& os) {
+inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType type,
+                                   uint32_t value, std::ostream& os) {
   switch (type) {
     case SyscallType::kUint32:
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kUint32Hexa: {
-      std::vector<char> buffer(sizeof(uint32_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%08x", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -257,7 +261,7 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       handle_info.handle = value;
       handle_info.type = ZX_OBJ_TYPE_NONE;
       handle_info.rights = 0;
-      DisplayHandle(colors, handle_info, os);
+      fidl_codec::DisplayHandle(colors, handle_info, os);
       break;
     }
     case SyscallType::kInfoMapsType:
@@ -282,7 +286,7 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       break;
     case SyscallType::kObjType:
       os << colors.blue;
-      ObjTypeName(value, os);
+      fidl_codec::ObjTypeName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kPolicyAction:
@@ -307,7 +311,7 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       break;
     case SyscallType::kRights:
       os << colors.blue;
-      RightsName(value, os);
+      fidl_codec::RightsName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kRsrcKind:
@@ -377,7 +381,8 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint32_t*, int>>(const Colors& colors, SyscallType type,
+inline void DisplayValue<std::pair<const uint32_t*, int>>(const fidl_codec::Colors& colors,
+                                                          SyscallType type,
                                                           std::pair<const uint32_t*, int> value,
                                                           std::ostream& os) {
   switch (type) {
@@ -401,21 +406,21 @@ inline void DisplayValue<std::pair<const uint32_t*, int>>(const Colors& colors, 
 }
 
 template <>
-inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint64_t value,
-                                   std::ostream& os) {
+inline void DisplayValue<uint64_t>(const fidl_codec::Colors& colors, SyscallType type,
+                                   uint64_t value, std::ostream& os) {
   switch (type) {
     case SyscallType::kUint64:
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kUint64Hexa: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
 #ifndef __MACH__
     case SyscallType::kGpAddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -434,13 +439,13 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
       break;
 #ifndef __MACH__
     case SyscallType::kUintptr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
     case SyscallType::kVaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -453,7 +458,8 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
 }
 
 template <>
-inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, SyscallType type,
+inline void DisplayValue<std::pair<const uint64_t*, int>>(const fidl_codec::Colors& colors,
+                                                          SyscallType type,
                                                           std::pair<const uint64_t*, int> value,
                                                           std::ostream& os) {
   switch (type) {
@@ -478,11 +484,11 @@ inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, 
 
 #ifdef __MACH__
 template <>
-inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uintptr_t value,
-                                    std::ostream& os) {
+inline void DisplayValue<uintptr_t>(const fidl_codec::Colors& colors, SyscallType type,
+                                    uintptr_t value, std::ostream& os) {
   switch (type) {
     case SyscallType::kGpAddr: {
-      std::vector<char> buffer(sizeof(uintptr_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uintptr_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -491,13 +497,13 @@ inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uint
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kUintptr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
     case SyscallType::kVaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -510,11 +516,11 @@ inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uint
 #endif
 
 template <>
-inline void DisplayValue<zx_uint128_t>(const Colors& colors, SyscallType type, zx_uint128_t value,
-                                       std::ostream& os) {
+inline void DisplayValue<zx_uint128_t>(const fidl_codec::Colors& colors, SyscallType type,
+                                       zx_uint128_t value, std::ostream& os) {
   switch (type) {
     case SyscallType::kUint128Hexa: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value.low);
       os << colors.blue << "{ low = " << buffer.data();
       snprintf(buffer.data(), buffer.size(), "%016lx", value.high);
@@ -529,7 +535,7 @@ inline void DisplayValue<zx_uint128_t>(const Colors& colors, SyscallType type, z
 
 template <>
 inline void DisplayValue<std::pair<const zx_uint128_t*, int>>(
-    const Colors& colors, SyscallType type, std::pair<const zx_uint128_t*, int> value,
+    const fidl_codec::Colors& colors, SyscallType type, std::pair<const zx_uint128_t*, int> value,
     std::ostream& os) {
   switch (type) {
     case SyscallType::kUint128ArrayHexa: {
@@ -647,8 +653,9 @@ class ClassFieldBase {
     return true;
   }
 
-  virtual void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
-                       std::string_view line_header, int tabs, std::ostream& os) const = 0;
+  virtual void Display(const ClassType* object, debug_ipc::Arch arch,
+                       const fidl_codec::Colors& colors, std::string_view line_header, int tabs,
+                       std::ostream& os) const = 0;
 
  private:
   std::string name_;
@@ -665,9 +672,10 @@ class ClassField : public ClassFieldBase<ClassType> {
 
   Type (*get() const)(const ClassType* from) { return get_; }
 
-  void Display(const ClassType* object, debug_ipc::Arch /*arch*/, const Colors& colors,
+  void Display(const ClassType* object, debug_ipc::Arch /*arch*/, const fidl_codec::Colors& colors,
                std::string_view line_header, int tabs, std::ostream& os) const override {
-    os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name();
+    os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ')
+       << ClassFieldBase<ClassType>::name();
     DisplayType(colors, ClassFieldBase<ClassType>::syscall_type(), os);
     DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), get_(object), os);
     os << '\n';
@@ -688,7 +696,7 @@ class ClassClassField : public ClassFieldBase<ClassType> {
         get_(get),
         field_class_(field_class) {}
 
-  void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+  void Display(const ClassType* object, debug_ipc::Arch arch, const fidl_codec::Colors& colors,
                std::string_view line_header, int tabs, std::ostream& os) const override;
 
  private:
@@ -706,7 +714,7 @@ class ArrayClassField : public ClassFieldBase<ClassType> {
                   const Class<Type>* sub_class)
       : ClassFieldBase<ClassType>(name, SyscallType::kStruct), get_(get), sub_class_(sub_class) {}
 
-  void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+  void Display(const ClassType* object, debug_ipc::Arch arch, const fidl_codec::Colors& colors,
                std::string_view line_header, int tabs, std::ostream& os) const override;
 
  private:
@@ -722,15 +730,16 @@ class Class {
  public:
   const std::string& name() const { return name_; }
 
-  void DisplayObject(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
-                     std::string_view line_header, int tabs, std::ostream& os) const {
+  void DisplayObject(const ClassType* object, debug_ipc::Arch arch,
+                     const fidl_codec::Colors& colors, std::string_view line_header, int tabs,
+                     std::ostream& os) const {
     os << "{\n";
     for (const auto& field : fields_) {
       if (field->ConditionsAreTrue(object, arch)) {
         field->Display(object, arch, colors, line_header, tabs + 1, os);
       }
     }
-    os << line_header << std::string(tabs * kTabSize, ' ') << "}";
+    os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << "}";
   }
 
   template <typename Type>
@@ -787,10 +796,12 @@ bool ArchCondition<ClassType, Type>::True(const ClassType* /*object*/, debug_ipc
 
 template <typename ClassType, typename Type>
 void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
-                                               const Colors& colors, std::string_view line_header,
-                                               int tabs, std::ostream& os) const {
-  os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name() << ':'
-     << colors.green << field_class_->name() << colors.reset << ": ";
+                                               const fidl_codec::Colors& colors,
+                                               std::string_view line_header, int tabs,
+                                               std::ostream& os) const {
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ')
+     << ClassFieldBase<ClassType>::name() << ':' << colors.green << field_class_->name()
+     << colors.reset << ": ";
   const Type* sub_object = get_(object);
   field_class_->DisplayObject(sub_object, arch, colors, line_header, tabs, os);
   os << '\n';
@@ -798,17 +809,19 @@ void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
 
 template <typename ClassType, typename Type>
 void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
-                                               const Colors& colors, std::string_view line_header,
-                                               int tabs, std::ostream& os) const {
-  os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name() << ':'
-     << colors.green << sub_class_->name() << colors.reset << "[]: {\n";
+                                               const fidl_codec::Colors& colors,
+                                               std::string_view line_header, int tabs,
+                                               std::ostream& os) const {
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ')
+     << ClassFieldBase<ClassType>::name() << ':' << colors.green << sub_class_->name()
+     << colors.reset << "[]: {\n";
   std::pair<const Type*, int> array = get_(object);
   for (int i = 0; i < array.second; ++i) {
-    os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+    os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ');
     sub_class_->DisplayObject(array.first + i, arch, colors, line_header, tabs + 1, os);
     os << '\n';
   }
-  os << line_header << std::string(tabs * kTabSize, ' ') << "}\n";
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << "}\n";
 }
 
 // Base class (not templated) for system call arguments.
@@ -1461,7 +1474,7 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
 template <typename HandleType>
 class SyscallFidlMessage : public SyscallInputOutputBase {
  public:
-  SyscallFidlMessage(int64_t error_code, std::string_view name, SyscallFidlType type,
+  SyscallFidlMessage(int64_t error_code, std::string_view name, fidl_codec::SyscallFidlType type,
                      std::unique_ptr<Access<zx_handle_t>> handle,
                      std::unique_ptr<Access<uint8_t>> bytes,
                      std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1497,7 +1510,7 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
   }
 
  protected:
-  const SyscallFidlType type_;
+  const fidl_codec::SyscallFidlType type_;
   const std::unique_ptr<Access<zx_handle_t>> handle_;
   const std::unique_ptr<Access<uint8_t>> bytes_;
   const std::unique_ptr<Access<uint32_t>> num_bytes_;
@@ -1507,7 +1520,8 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
 
 class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
  public:
-  SyscallFidlMessageHandle(int64_t error_code, std::string_view name, SyscallFidlType type,
+  SyscallFidlMessageHandle(int64_t error_code, std::string_view name,
+                           fidl_codec::SyscallFidlType type,
                            std::unique_ptr<Access<zx_handle_t>> handle,
                            std::unique_ptr<Access<uint8_t>> bytes,
                            std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1523,7 +1537,8 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
 
 class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t> {
  public:
-  SyscallFidlMessageHandleInfo(int64_t error_code, std::string_view name, SyscallFidlType type,
+  SyscallFidlMessageHandleInfo(int64_t error_code, std::string_view name,
+                               fidl_codec::SyscallFidlType type,
                                std::unique_ptr<Access<zx_handle_t>> handle,
                                std::unique_ptr<Access<uint8_t>> bytes,
                                std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1656,7 +1671,7 @@ class Syscall {
   }
 
   // Adds an input FIDL message to display.
-  void InputFidlMessage(std::string_view name, SyscallFidlType type,
+  void InputFidlMessage(std::string_view name, fidl_codec::SyscallFidlType type,
                         std::unique_ptr<Access<zx_handle_t>> handle,
                         std::unique_ptr<Access<uint8_t>> bytes,
                         std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1742,7 +1757,8 @@ class Syscall {
   }
 
   // Add an output FIDL message to display.
-  void OutputFidlMessageHandle(int64_t error_code, std::string_view name, SyscallFidlType type,
+  void OutputFidlMessageHandle(int64_t error_code, std::string_view name,
+                               fidl_codec::SyscallFidlType type,
                                std::unique_ptr<Access<zx_handle_t>> handle,
                                std::unique_ptr<Access<uint8_t>> bytes,
                                std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1752,7 +1768,8 @@ class Syscall {
         error_code, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
         std::move(handles), std::move(num_handles)));
   }
-  void OutputFidlMessageHandleInfo(int64_t error_code, std::string_view name, SyscallFidlType type,
+  void OutputFidlMessageHandleInfo(int64_t error_code, std::string_view name,
+                                   fidl_codec::SyscallFidlType type,
                                    std::unique_ptr<Access<zx_handle_t>> handle,
                                    std::unique_ptr<Access<uint8_t>> bytes,
                                    std::unique_ptr<Access<uint32_t>> num_bytes,
@@ -1845,15 +1862,17 @@ class SyscallDecoderDispatcher {
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
  public:
-  SyscallDisplayDispatcher(LibraryLoader* loader, const DecodeOptions& decode_options,
+  SyscallDisplayDispatcher(fidl_codec::LibraryLoader* loader, const DecodeOptions& decode_options,
                            const DisplayOptions& display_options, std::ostream& os)
       : SyscallDecoderDispatcher(decode_options),
         message_decoder_dispatcher_(loader, display_options),
         os_(os) {}
 
-  MessageDecoderDispatcher& message_decoder_dispatcher() { return message_decoder_dispatcher_; }
+  fidl_codec::MessageDecoderDispatcher& message_decoder_dispatcher() {
+    return message_decoder_dispatcher_;
+  }
 
-  const Colors& colors() const { return message_decoder_dispatcher_.colors(); }
+  const fidl_codec::Colors& colors() const { return message_decoder_dispatcher_.colors(); }
 
   bool with_process_info() const { return message_decoder_dispatcher_.with_process_info(); }
 
@@ -1876,7 +1895,7 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
  private:
   // Class which can decode a FIDL message.
-  MessageDecoderDispatcher message_decoder_dispatcher_;
+  fidl_codec::MessageDecoderDispatcher message_decoder_dispatcher_;
   // The last syscall we displayed the inputs on the stream.
   const SyscallDisplay* last_displayed_syscall_ = nullptr;
   // The stream which will receive the syscall decodings.
@@ -1886,7 +1905,7 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 template <typename Type>
 void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
                            Stage stage, std::string_view name, std::ostream& os) const {
-  const Colors& colors = dispatcher->colors();
+  const fidl_codec::Colors& colors = dispatcher->colors();
   os << name;
   DisplayType(colors, GetSyscallType(), os);
   if (ValueValid(decoder, stage)) {
@@ -1903,7 +1922,7 @@ const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
   os << separator;
   actual_->Display(dispatcher, decoder, stage, name(), os);
   os << "/";
-  const Colors& colors = dispatcher->colors();
+  const fidl_codec::Colors& colors = dispatcher->colors();
   if (asked_->ValueValid(decoder, stage)) {
     DisplayValue<Type>(colors, asked_->GetSyscallType(), asked_->Value(decoder, stage), os);
   } else {
@@ -1917,7 +1936,7 @@ const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
     SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
     const char* separator, std::ostream& os) const {
   os << separator << name();
-  const Colors& colors = dispatcher->colors();
+  const fidl_codec::Colors& colors = dispatcher->colors();
   DisplayType(colors, syscall_type_, os);
   const FromType* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
@@ -1933,8 +1952,8 @@ void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDisp
                                                               SyscallDecoder* decoder, Stage stage,
                                                               std::string_view line_header,
                                                               int tabs, std::ostream& os) const {
-  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name();
-  const Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
+  const fidl_codec::Colors& colors = dispatcher->colors();
   DisplayType(colors, syscall_type_, os);
   const FromType* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
@@ -1959,8 +1978,8 @@ template <>
 inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
     SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
     std::string_view line_header, int tabs, std::ostream& os) const {
-  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name();
-  const Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
+  const fidl_codec::Colors& colors = dispatcher->colors();
   DisplayType(colors, syscall_type_, os);
   const uint8_t* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
@@ -2015,9 +2034,9 @@ void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatche
                                                          SyscallDecoder* decoder, Stage stage,
                                                          std::string_view line_header, int tabs,
                                                          std::ostream& os) const {
-  const Colors& colors = dispatcher->colors();
-  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
-     << class_definition_->name() << colors.reset << ": ";
+  const fidl_codec::Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name() << ":"
+     << colors.green << class_definition_->name() << colors.reset << ": ";
   auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
   if (object == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
@@ -2031,9 +2050,9 @@ template <typename ClassType, typename SizeType>
 void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
     SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
     std::string_view line_header, int tabs, std::ostream& os) const {
-  const Colors& colors = dispatcher->colors();
-  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
-     << class_definition_->name() << colors.reset << "[]: ";
+  const fidl_codec::Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name() << ":"
+     << colors.green << class_definition_->name() << colors.reset << "[]: ";
   auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
   if (object == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
@@ -2042,12 +2061,12 @@ void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
     SizeType count = buffer_size_->Value(decoder, stage);
     const char* separator = "\n";
     for (SizeType i = 0; i < count; ++i) {
-      os << separator << line_header << std::string((tabs + 2) * kTabSize, ' ');
+      os << separator << line_header << std::string((tabs + 2) * fidl_codec::kTabSize, ' ');
       class_definition_->DisplayObject(object + i, decoder->arch(), colors, line_header, tabs + 2,
                                        os);
       separator = ",\n";
     }
-    os << '\n' << line_header << std::string((tabs + 1) * kTabSize, ' ') << '}';
+    os << '\n' << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << '}';
   }
   os << '\n';
 }

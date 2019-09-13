@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_FIDLCAT_TEST_H_
-#define TOOLS_FIDLCAT_LIB_FIDLCAT_TEST_H_
+#ifndef SRC_LIB_FIDL_CODEC_FIDL_CODEC_TEST_H_
+#define SRC_LIB_FIDL_CODEC_FIDL_CODEC_TEST_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "tools/fidlcat/lib/library_loader.h"
+#include "src/lib/fidl_codec/library_loader.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 // Stolen from //sdk/lib/fidl/cpp/test/async_loop_for_test.{h,cc}; cc
 // is not public
@@ -47,7 +47,7 @@ class AsyncLoopForTestImpl {
   async::Loop loop_;
 };
 
-// The fidlcat tests work the following way:
+// The fidl_codec tests work the following way:
 // 1) Create a channel.
 // 2) Bind an interface pointer to the client side of that channel.
 // 3) Listen at the other end of the channel for the message.
@@ -80,6 +80,6 @@ void InterceptRequest(fidl::Message& message, std::function<void(fidl::Interface
 
 LibraryLoader* GetLoader();
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_FIDLCAT_TEST_H_
+#endif  // SRC_LIB_FIDL_CODEC_FIDL_CODEC_TEST_H_

@@ -10,12 +10,12 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "tools/fidlcat/lib/library_loader_test_data.h"
+#include "src/lib/fidl_codec/library_loader_test_data.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 TEST(LibraryLoader, LoadSimple) {
-  fidlcat_test::ExampleMap examples;
+  fidl_codec_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
@@ -45,7 +45,7 @@ TEST(LibraryLoader, LoadSimple) {
 // Ensure that, if you load two libraries with the same name, the last one in the list is the one
 // that sticks.
 TEST(LibraryLoader, LoadSecondWins) {
-  fidlcat_test::ExampleMap examples;
+  fidl_codec_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   std::string frobinator_value;
   const std::string file_to_replace = "frobinator.fidl.json";
@@ -100,7 +100,7 @@ TEST(LibraryLoader, LoadSecondWins) {
 }
 
 TEST(LibraryLoader, LoadFromOrdinal) {
-  fidlcat_test::ExampleMap examples;
+  fidl_codec_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
@@ -112,15 +112,15 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   LibraryLoader loader = LibraryLoader(&library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
-  Library* library_ptr = loader.GetLibraryFromName("test.fidlcat.sys");
+  Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.sys");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "test.fidlcat.sys/ComponentController";
+  std::string kDesiredInterfaceName = "test.fidlcodec.sys/ComponentController";
   const Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcat.sys/ComponentController.OnDirectoryReady",
+  found_interface->GetMethodByFullName("test.fidlcodec.sys/ComponentController.OnDirectoryReady",
                                        &found_method);
 
   Ordinal64 correct_ordinal = found_method->ordinal();
@@ -144,15 +144,16 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
   LibraryLoader loader = LibraryLoader(library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
-  Library* library_ptr = loader.GetLibraryFromName("test.fidlcat.examples");
+  Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.examples");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "test.fidlcat.examples/ParamProtocol";
+  std::string kDesiredInterfaceName = "test.fidlcodec.examples/ParamProtocol";
   const Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcat.examples/ParamProtocol.Method", &found_method);
+  found_interface->GetMethodByFullName("test.fidlcodec.examples/ParamProtocol.Method",
+                                       &found_method);
 
   Ordinal64 correct_ordinal = found_method->ordinal();
   const std::vector<const InterfaceMethod*>* ordinal_methods = loader.GetByOrdinal(correct_ordinal);
@@ -165,7 +166,7 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
 
   const InterfaceMethod* ordinal_method_composed = (*ordinal_methods)[1];
   ASSERT_NE(ordinal_method_composed, nullptr);
-  ASSERT_EQ("test.fidlcat.composedinto/ComposedParamProtocol",
+  ASSERT_EQ("test.fidlcodec.composedinto/ComposedParamProtocol",
             ordinal_method_composed->enclosing_interface().name());
   ASSERT_EQ("Method", ordinal_method_composed->name());
 
@@ -186,7 +187,7 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
 TEST(LibraryLoader, OrdinalComposition) {
   {
     // Load the libraries in the order in examples.map().
-    fidlcat_test::ExampleMap examples;
+    fidl_codec_test::ExampleMap examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
     for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =
@@ -199,7 +200,7 @@ TEST(LibraryLoader, OrdinalComposition) {
   }
   {
     // Load the libraries in the reverse of the order in examples.map().
-    fidlcat_test::ExampleMap examples;
+    fidl_codec_test::ExampleMap examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
     for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =
@@ -210,4 +211,4 @@ TEST(LibraryLoader, OrdinalComposition) {
   }
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

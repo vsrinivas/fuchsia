@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_DISPLAY_OPTIONS_H_
-#define TOOLS_FIDLCAT_LIB_DISPLAY_OPTIONS_H_
+#ifndef SRC_LIB_FIDL_CODEC_DISPLAY_OPTIONS_H_
+#define SRC_LIB_FIDL_CODEC_DISPLAY_OPTIONS_H_
 
 struct DisplayOptions {
   bool pretty_print = false;
@@ -12,4 +12,4 @@ struct DisplayOptions {
   bool needs_colors = false;
 };
 
-#endif  // TOOLS_FIDLCAT_LIB_DISPLAY_OPTIONS_H_
+#endif  // SRC_LIB_FIDL_CODEC_DISPLAY_OPTIONS_H_

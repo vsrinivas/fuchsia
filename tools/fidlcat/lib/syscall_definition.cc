@@ -2615,7 +2615,7 @@ void SyscallDecoderDispatcher::Populate() {
                                      std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
     // Outputs
     zx_channel_read->OutputFidlMessageHandle(
-        ZX_OK, "", SyscallFidlType::kInputMessage,
+        ZX_OK, "", fidl_codec::SyscallFidlType::kInputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
@@ -2649,7 +2649,7 @@ void SyscallDecoderDispatcher::Populate() {
                                          std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
     // Outputs
     zx_channel_read_etc->OutputFidlMessageHandleInfo(
-        ZX_OK, "", SyscallFidlType::kInputMessage,
+        ZX_OK, "", fidl_codec::SyscallFidlType::kInputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
@@ -2676,7 +2676,7 @@ void SyscallDecoderDispatcher::Populate() {
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_channel_write->Input<uint32_t>("options",
                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
-    zx_channel_write->InputFidlMessage("", SyscallFidlType::kOutputMessage,
+    zx_channel_write->InputFidlMessage("", fidl_codec::SyscallFidlType::kOutputMessage,
                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
                                        std::make_unique<ArgumentAccess<uint8_t>>(bytes),
                                        std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
@@ -2706,7 +2706,8 @@ void SyscallDecoderDispatcher::Populate() {
         "rd_num_handles", std::make_unique<FieldAccess<zx_channel_call_args, uint32_t>>(
                               args, ZxChannelCallArgs::rd_num_handles, SyscallType::kUint32));
     zx_channel_call->InputFidlMessage(
-        "", SyscallFidlType::kOutputRequest, std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        "", fidl_codec::SyscallFidlType::kOutputRequest,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(
             args, ZxChannelCallArgs::wr_bytes, SyscallType::kUint8),
         std::make_unique<FieldAccess<zx_channel_call_args, uint32_t>>(
@@ -2717,7 +2718,7 @@ void SyscallDecoderDispatcher::Populate() {
             args, ZxChannelCallArgs::wr_num_handles, SyscallType::kUint32));
     // Outputs
     zx_channel_call->OutputFidlMessageHandle(
-        ZX_OK, "", SyscallFidlType::kInputResponse,
+        ZX_OK, "", fidl_codec::SyscallFidlType::kInputResponse,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(
             args, ZxChannelCallArgs::rd_bytes, SyscallType::kUint8),

@@ -140,45 +140,6 @@ void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os) {
   }
 }
 
-#define ObjTypeNameCase(name) \
-  case name:                  \
-    os << #name;              \
-    return
-
-void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os) {
-  switch (obj_type) {
-    ObjTypeNameCase(ZX_OBJ_TYPE_NONE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PROCESS);
-    ObjTypeNameCase(ZX_OBJ_TYPE_THREAD);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VMO);
-    ObjTypeNameCase(ZX_OBJ_TYPE_CHANNEL);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EVENT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PORT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_INTERRUPT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PCI_DEVICE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_LOG);
-    ObjTypeNameCase(ZX_OBJ_TYPE_SOCKET);
-    ObjTypeNameCase(ZX_OBJ_TYPE_RESOURCE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EVENTPAIR);
-    ObjTypeNameCase(ZX_OBJ_TYPE_JOB);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VMAR);
-    ObjTypeNameCase(ZX_OBJ_TYPE_FIFO);
-    ObjTypeNameCase(ZX_OBJ_TYPE_GUEST);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VCPU);
-    ObjTypeNameCase(ZX_OBJ_TYPE_TIMER);
-    ObjTypeNameCase(ZX_OBJ_TYPE_IOMMU);
-    ObjTypeNameCase(ZX_OBJ_TYPE_BTI);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PROFILE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PMT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_SUSPEND_TOKEN);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PAGER);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EXCEPTION);
-    default:
-      os << obj_type;
-      return;
-  }
-}
-
 #define PacketGuestVcpuTypeNameCase(name) \
   case name:                              \
     os << #name;                          \
@@ -289,41 +250,6 @@ void PortPacketTypeName(uint32_t type, std::ostream& os) {
       os << "port_packet_type=" << type;
       return;
   }
-}
-
-#define RightsNameCase(name)    \
-  if ((rights & (name)) != 0) { \
-    os << separator << #name;   \
-    separator = " | ";          \
-  }
-
-void RightsName(zx_rights_t rights, std::ostream& os) {
-  if (rights == 0) {
-    os << "ZX_RIGHT_NONE";
-    return;
-  }
-  const char* separator = "";
-  RightsNameCase(ZX_RIGHT_DUPLICATE);
-  RightsNameCase(ZX_RIGHT_TRANSFER);
-  RightsNameCase(ZX_RIGHT_READ);
-  RightsNameCase(ZX_RIGHT_WRITE);
-  RightsNameCase(ZX_RIGHT_EXECUTE);
-  RightsNameCase(ZX_RIGHT_MAP);
-  RightsNameCase(ZX_RIGHT_GET_PROPERTY);
-  RightsNameCase(ZX_RIGHT_SET_PROPERTY);
-  RightsNameCase(ZX_RIGHT_ENUMERATE);
-  RightsNameCase(ZX_RIGHT_DESTROY);
-  RightsNameCase(ZX_RIGHT_SET_POLICY);
-  RightsNameCase(ZX_RIGHT_GET_POLICY);
-  RightsNameCase(ZX_RIGHT_SIGNAL);
-  RightsNameCase(ZX_RIGHT_SIGNAL_PEER);
-  RightsNameCase(ZX_RIGHT_WAIT);
-  RightsNameCase(ZX_RIGHT_INSPECT);
-  RightsNameCase(ZX_RIGHT_MANAGE_JOB);
-  RightsNameCase(ZX_RIGHT_MANAGE_PROCESS);
-  RightsNameCase(ZX_RIGHT_MANAGE_THREAD);
-  RightsNameCase(ZX_RIGHT_APPLY_PROFILE);
-  RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
 }
 
 #define RsrcKindNameCase(name) \
@@ -501,7 +427,7 @@ void StatusName(zx_status_t status, std::ostream& os) {
   }
 }
 
-void StatusName(const Colors& colors, zx_status_t status, std::ostream& os) {
+void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os) {
   if (status == ZX_OK) {
     os << colors.green;
   } else {
@@ -719,25 +645,7 @@ void VmoTypeName(uint32_t type, std::ostream& os) {
   VmoTypeNameCase(ZX_INFO_VMO_CONTIGUOUS);
 }
 
-constexpr int kUint32Precision = 8;
-
-void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os) {
-  os << colors.red;
-  if (handle.type != ZX_OBJ_TYPE_NONE) {
-    ObjTypeName(handle.type, os);
-    os << ':';
-  }
-  os << std::hex << std::setfill('0') << std::setw(kUint32Precision) << handle.handle << std::dec
-     << std::setw(0);
-  if (handle.rights != 0) {
-    os << colors.blue << '(';
-    RightsName(handle.rights, os);
-    os << ')';
-  }
-  os << colors.reset;
-}
-
-void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
+void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os) {
   switch (type) {
     case SyscallType::kBool:
       os << ":" << colors.green << "bool" << colors.reset << ": ";

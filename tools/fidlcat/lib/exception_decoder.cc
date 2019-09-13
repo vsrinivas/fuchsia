@@ -54,7 +54,7 @@ void ExceptionDecoder::Destroy() {
 }
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
-  const Colors& colors = dispatcher_->colors();
+  const fidl_codec::Colors& colors = dispatcher_->colors();
   line_header_ = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
                  std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
                  colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
@@ -75,7 +75,7 @@ void ExceptionDisplay::DecodingError(const DecoderError& error, ExceptionDecoder
   size_t pos = 0;
   for (;;) {
     size_t end = message.find('\n', pos);
-    const Colors& colors = dispatcher_->colors();
+    const fidl_codec::Colors& colors = dispatcher_->colors();
     os_ << decoder->thread()->GetProcess()->GetName() << ' ' << colors.red
         << decoder->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
         << decoder->thread_id() << colors.reset << ": " << colors.red

@@ -9,12 +9,12 @@
 #include <src/lib/fxl/logging.h>
 
 #include "rapidjson/error/en.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/wire_object.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/wire_object.h"
 
 // See wire_types.h for details.
 
-namespace fidlcat {
+namespace fidl_codec {
 
 bool Type::ValueEquals(const uint8_t* /*bytes*/, size_t /*length*/,
                        const rapidjson::Value& /*value*/) const {
@@ -270,4 +270,4 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   return std::make_unique<RawType>(inline_size);
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

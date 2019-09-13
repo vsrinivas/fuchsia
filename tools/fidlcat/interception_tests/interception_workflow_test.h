@@ -545,7 +545,8 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
 
 class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
  public:
-  SyscallDisplayDispatcherTest(LibraryLoader* loader, const DecodeOptions& decode_options,
+  SyscallDisplayDispatcherTest(fidl_codec::LibraryLoader* loader,
+                               const DecodeOptions& decode_options,
                                const DisplayOptions& display_options, std::ostream& os,
                                ProcessController* controller)
       : SyscallDisplayDispatcher(loader, decode_options, display_options, os),

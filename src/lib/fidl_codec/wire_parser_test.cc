@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tools/fidlcat/lib/wire_parser.h"
+#include "src/lib/fidl_codec/wire_parser.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -17,14 +17,14 @@
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "test/fidlcat/examples/cpp/fidl.h"
-#include "tools/fidlcat/lib/fidlcat_test.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/library_loader_test_data.h"
-#include "tools/fidlcat/lib/message_decoder.h"
-#include "tools/fidlcat/lib/wire_object.h"
+#include "src/lib/fidl_codec/fidl_codec_test.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/library_loader_test_data.h"
+#include "src/lib/fidl_codec/message_decoder.h"
+#include "src/lib/fidl_codec/wire_object.h"
+#include "test/fidlcodec/examples/cpp/fidl.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 constexpr uint32_t kUninitialized = 0xdeadbeef;
 constexpr float kFloatValue = 0.25;
@@ -47,7 +47,7 @@ async_dispatcher_t* AsyncLoopForTest::dispatcher() { return impl_->loop()->dispa
 
 LibraryLoader* InitLoader() {
   std::vector<std::unique_ptr<std::istream>> library_files;
-  fidlcat_test::ExampleMap examples;
+  fidl_codec_test::ExampleMap examples;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
         std::make_unique<std::istringstream>(std::istringstream(element.second));
@@ -103,9 +103,9 @@ TEST_F(WireParserTest, ParseSingleString) {
     }
   }
 
-  std::unique_ptr<fidlcat::Object> decoded_request;
-  fidlcat::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                         message.handles().size(), &decoded_request);
+  std::unique_ptr<fidl_codec::Object> decoded_request;
+  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
+                            message.handles().size(), &decoded_request);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -122,7 +122,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 // results.  It can be generalized to a wide variety of types (and is, below).
 // It checks for successful parsing, as well as failure when parsing truncated
 // values.
-// |_iface| is the interface method name on examples::FidlcatTestInterface
+// |_iface| is the interface method name on examples::FidlCodecTestInterface
 //    (TODO: generalize which interface to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
@@ -132,10 +132,10 @@ TEST_F(WireParserTest, ParseSingleString) {
   do {                                                                                             \
     fidl::MessageBuffer buffer;                                                                    \
     fidl::Message message = buffer.CreateEmptyMessage();                                           \
-    using test::fidlcat::examples::FidlcatTestInterface;                                           \
-    InterceptRequest<FidlcatTestInterface>(                                                        \
+    using test::fidlcodec::examples::FidlCodecTestInterface;                                       \
+    InterceptRequest<FidlCodecTestInterface>(                                                      \
         message,                                                                                   \
-        [&](fidl::InterfacePtr<FidlcatTestInterface>& ptr) { ptr->_iface(__VA_ARGS__); });         \
+        [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) { ptr->_iface(__VA_ARGS__); });       \
                                                                                                    \
     fidl_message_header_t header = message.header();                                               \
                                                                                                    \
@@ -209,7 +209,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
 // |_testname| is the name of the test (prepended by Parse in the output)
-// |_iface| is the interface method name on examples::FidlcatTestInterface
+// |_iface| is the interface method name on examples::FidlCodecTestInterface
 //    (TODO: generalize which interface to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
@@ -455,15 +455,15 @@ TEST_DECODE_WIRE(
 
 TEST_DECODE_WIRE(
     VectorUint8MultilineString, VectorUint8,
-    R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33","10","72","111","119","32","97","114","101","32","121","111","117","32","116","111","100","97","121","63","10","73","39","109","32","116","101","115","116","105","110","103","32","102","105","100","108","99","97","116","46"]})",
+    R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33","10","72","111","119","32","97","114","101","32","121","111","117","32","116","111","100","97","121", "63","10","73","39","109","32","116","101","115","116","105","110","103","32","102","105","100","108","95","99","111","100","101","99","46"]})",
     "{\n"
     "  v: #gre#vector<uint8>#rst# = [\n"
     "    Hello testing world!\n"
     "    How are you today?\n"
-    "    I'm testing fidlcat.\n"
+    "    I'm testing fidl_codec.\n"
     "  ]\n"
     "}",
-    VectorUint8("Hello testing world!\nHow are you today?\nI'm testing fidlcat."))
+    VectorUint8("Hello testing world!\nHow are you today?\nI'm testing fidl_codec."))
 
 TEST_DECODE_WIRE(
     VectorUint32, VectorUint32,
@@ -513,7 +513,7 @@ class StructSupport {
   std::string GetPretty() {
     std::ostringstream es;
     es << "{\n"
-       << "  p: #gre#test.fidlcat.examples/PrimitiveTypes#rst# = {\n"
+       << "  p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = {\n"
        << "    " << FieldToPretty("s", "string", pt.s) << "\n"
        << "    " << FieldToPretty("b", "bool", pt.b) << "\n"
        << "    " << FieldToPretty("i8", "int8", pt.i8) << "\n"
@@ -531,7 +531,7 @@ class StructSupport {
     return es.str();
   }
 
-  test::fidlcat::examples::PrimitiveTypes pt;
+  test::fidlcodec::examples::PrimitiveTypes pt;
 };
 
 }  // namespace
@@ -542,34 +542,35 @@ TEST_F(WireParserTest, ParseStruct) {
 }
 
 TEST_DECODE_WIRE(NullableStruct, NullableStruct, R"({"p":null})",
-                 "{ p: #gre#test.fidlcat.examples/PrimitiveTypes#rst# = #blu#null#rst# }", nullptr);
+                 "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = #blu#null#rst# }",
+                 nullptr);
 
 TEST_DECODE_WIRE(NullableStructAndInt, NullableStructAndInt, R"({"p":null, "i":"1"})",
-                 "{ p: #gre#test.fidlcat.examples/PrimitiveTypes#rst# = "
+                 "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = "
                  "#blu#null#rst#, i: #gre#int32#rst# = #blu#1#rst# }",
                  nullptr, 1);
 
 namespace {
 
-test::fidlcat::examples::TwoStringStruct TwoStringStructFromVals(const std::string& v1,
-                                                                 const std::string& v2) {
-  test::fidlcat::examples::TwoStringStruct tss;
+test::fidlcodec::examples::TwoStringStruct TwoStringStructFromVals(const std::string& v1,
+                                                                   const std::string& v2) {
+  test::fidlcodec::examples::TwoStringStruct tss;
   tss.value1 = v1;
   tss.value2 = v2;
   return tss;
 }
 
-std::unique_ptr<test::fidlcat::examples::TwoStringStruct> TwoStringStructFromValsPtr(
+std::unique_ptr<test::fidlcodec::examples::TwoStringStruct> TwoStringStructFromValsPtr(
     const std::string& v1, const std::string& v2) {
-  std::unique_ptr<test::fidlcat::examples::TwoStringStruct> ptr(
-      new test::fidlcat::examples::TwoStringStruct());
+  std::unique_ptr<test::fidlcodec::examples::TwoStringStruct> ptr(
+      new test::fidlcodec::examples::TwoStringStruct());
   ptr->value1 = v1;
   ptr->value2 = v2;
   return ptr;
 }
 
 std::string TwoStringStructIntPretty(const char* s1, const char* s2, int v) {
-  std::string result = "{\n  s: #gre#test.fidlcat.examples/TwoStringStruct#rst# = {\n";
+  std::string result = "{\n  s: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n";
   result += "    " + FieldToPretty("value1", "string", s1) + "\n";
   result += "    " + FieldToPretty("value2", "string", s2) + "\n";
   result += "  }\n";
@@ -594,8 +595,8 @@ TEST_DECODE_WIRE(TwoStringNullableStructInt, TwoStringNullableStructInt,
 
 namespace {
 
-using isu = test::fidlcat::examples::IntStructUnion;
-using xisu = test::fidlcat::examples::IntStructXunion;
+using isu = test::fidlcodec::examples::IntStructUnion;
+using xisu = test::fidlcodec::examples::IntStructXunion;
 
 template <class T>
 T GetIntUnion(int32_t i) {
@@ -607,7 +608,7 @@ T GetIntUnion(int32_t i) {
 template <class T>
 T GetStructUnion(const std::string& v1, const std::string& v2) {
   T u;
-  test::fidlcat::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
+  test::fidlcodec::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
   u.set_variant_tss(tss);
   return u;
 }
@@ -622,14 +623,14 @@ std::unique_ptr<T> GetIntUnionPtr(int32_t i) {
 template <class T>
 std::unique_ptr<T> GetStructUnionPtr(const std::string& v1, const std::string& v2) {
   std::unique_ptr<T> ptr(new T());
-  test::fidlcat::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
+  test::fidlcodec::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
   ptr->set_variant_tss(tss);
   return ptr;
 }
 
 std::string IntUnionIntPretty(const std::string& name, int u, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcat.examples/" + name + "#rst# = { " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
             FieldToPretty("variant_i", "int32", u) + " }\n";
   result += "  " + FieldToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -638,9 +639,9 @@ std::string IntUnionIntPretty(const std::string& name, int u, int v) {
 
 std::string StructUnionIntPretty(const std::string& name, const char* u1, const char* u2, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcat.examples/" + name + "#rst# = {\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = {\n";
   result +=
-      "    variant_tss: #gre#test.fidlcat.examples/TwoStringStruct#rst# = "
+      "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
   result += "      " + FieldToPretty("value1", "string", u1) + "\n";
   result += "      " + FieldToPretty("value2", "string", u2) + "\n";
@@ -654,7 +655,7 @@ std::string StructUnionIntPretty(const std::string& name, const char* u1, const 
 std::string IntIntUnionPretty(const std::string& name, int v, int u) {
   std::string result = "{\n";
   result += "  " + FieldToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcat.examples/" + name + "#rst# = { " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
             FieldToPretty("variant_i", "int32", u) + " }\n";
   result += "}";
   return result;
@@ -663,9 +664,9 @@ std::string IntIntUnionPretty(const std::string& name, int v, int u) {
 std::string IntStructUnionPretty(const std::string& name, int v, const char* u1, const char* u2) {
   std::string result = "{\n";
   result += "  " + FieldToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcat.examples/" + name + "#rst# = {\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = {\n";
   result +=
-      "    variant_tss: #gre#test.fidlcat.examples/TwoStringStruct#rst# = "
+      "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
   result += "      " + FieldToPretty("value1", "string", u1) + "\n";
   result += "      " + FieldToPretty("value2", "string", u2) + "\n";
@@ -729,8 +730,8 @@ TEST_DECODE_WIRE(NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
 
 namespace {
 
-using uuu = test::fidlcat::examples::U8U16Union;
-using uux = test::fidlcat::examples::U8U16Xunion;
+using uuu = test::fidlcodec::examples::U8U16Union;
+using uux = test::fidlcodec::examples::U8U16Xunion;
 
 template <class T>
 T GetUInt8Union(uint8_t i) {
@@ -749,7 +750,7 @@ T GetUInt16Union(uint16_t i) {
 std::string ShortUnionPretty(const std::string& name, const char* field, const char* type, int u,
                              int v) {
   std::string result = "{\n";
-  result += "  u: #gre#test.fidlcat.examples/" + name + "#rst# = { " +
+  result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
             FieldToPretty(field, type, u) + " }\n";
   result += "  " + FieldToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -777,22 +778,22 @@ TEST_DECODE_WIRE(ShortXUnion16, ShortXUnion, R"({"u":{"variant_u16":"1024"}, "i"
 // Enum Tests
 
 TEST_DECODE_WIRE(DefaultEnum, DefaultEnumMessage, R"({"ev":"X"})",
-                 "{ ev: #gre#test.fidlcat.examples/DefaultEnum#rst# = #blu#X#rst# }",
-                 test::fidlcat::examples::DefaultEnum::X);
+                 "{ ev: #gre#test.fidlcodec.examples/DefaultEnum#rst# = #blu#X#rst# }",
+                 test::fidlcodec::examples::DefaultEnum::X);
 TEST_DECODE_WIRE(I8Enum, I8EnumMessage, R"({"ev":"X"})",
-                 "{ ev: #gre#test.fidlcat.examples/I8Enum#rst# = #blu#X#rst# }",
-                 test::fidlcat::examples::I8Enum::X);
+                 "{ ev: #gre#test.fidlcodec.examples/I8Enum#rst# = #blu#X#rst# }",
+                 test::fidlcodec::examples::I8Enum::X);
 TEST_DECODE_WIRE(I16Enum, I16EnumMessage, R"({"ev":"X"})",
-                 "{ ev: #gre#test.fidlcat.examples/I16Enum#rst# = #blu#X#rst# }",
-                 test::fidlcat::examples::I16Enum::X);
+                 "{ ev: #gre#test.fidlcodec.examples/I16Enum#rst# = #blu#X#rst# }",
+                 test::fidlcodec::examples::I16Enum::X);
 
 // Table Tests
 
-test::fidlcat::examples::ValueTable GetTable(std::optional<int16_t> first_int16,
-                                             std::optional<std::string> value1,
-                                             std::optional<std::string> value2,
-                                             std::optional<int32_t> third_union_val) {
-  test::fidlcat::examples::ValueTable table;
+test::fidlcodec::examples::ValueTable GetTable(std::optional<int16_t> first_int16,
+                                               std::optional<std::string> value1,
+                                               std::optional<std::string> value2,
+                                               std::optional<int32_t> third_union_val) {
+  test::fidlcodec::examples::ValueTable table;
   if (first_int16.has_value()) {
     table.set_first_int16(*first_int16);
   }
@@ -800,7 +801,7 @@ test::fidlcat::examples::ValueTable GetTable(std::optional<int16_t> first_int16,
     table.set_second_struct(TwoStringStructFromVals(*value1, *value2));
   }
   if (third_union_val.has_value()) {
-    test::fidlcat::examples::IntStructUnion u;
+    test::fidlcodec::examples::IntStructUnion u;
     u.set_variant_i(*third_union_val);
     table.set_third_union(std::move(u));
   }
@@ -811,32 +812,30 @@ std::string TablePretty(std::optional<int16_t> first_int16, std::optional<std::s
                         std::optional<std::string> value2, std::optional<int32_t> third_union_val,
                         int i) {
   if (!first_int16.has_value() && !value1.has_value() && !third_union_val.has_value()) {
-    std::string result = "{ table: #gre#test.fidlcat.examples/ValueTable#rst# = {}, ";
+    std::string result = "{ table: #gre#test.fidlcodec.examples/ValueTable#rst# = {}, ";
     result += FieldToPretty("i", "int32", i);
     result += " }";
     return result;
   }
   std::string result = "{\n";
   if (!value1.has_value() && !third_union_val.has_value()) {
-    result += "  table: #gre#test.fidlcat.examples/ValueTable#rst# = { ";
+    result += "  table: #gre#test.fidlcodec.examples/ValueTable#rst# = { ";
     result += FieldToPretty("first_int16", "int16", *first_int16) + " }\n";
   } else {
-    result += "  table: #gre#test.fidlcat.examples/ValueTable#rst# = {\n";
+    result += "  table: #gre#test.fidlcodec.examples/ValueTable#rst# = {\n";
     if (first_int16.has_value()) {
       result += "    " + FieldToPretty("first_int16", "int16", *first_int16) + "\n";
     }
     if (value1.has_value()) {
       result +=
           "    second_struct: "
-          "#gre#test.fidlcat.examples/TwoStringStruct#rst# = {\n";
+          "#gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n";
       result += "      " + FieldToPretty("value1", "string", *value1) + "\n";
       result += "      " + FieldToPretty("value2", "string", *value2) + "\n";
       result += "    }\n";
     }
     if (third_union_val.has_value()) {
-      result +=
-          "    third_union: #gre#test.fidlcat.examples/IntStructUnion#rst# = "
-          "{\n";
+      result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = {\n";
       result += "      " + FieldToPretty("variant_i", "int32", *third_union_val) + "\n";
       result += "    }\n";
     }
@@ -953,7 +952,7 @@ TEST_F(WireParserTest, ParseNullableHandle) {
 TEST_F(WireParserTest, ParseProtocol) {
   HandleSupport support;
   TEST_DECODE_WIRE_BODY(Protocol, support.GetJSON(), support.GetPretty(),
-                        support.interface<test::fidlcat::examples::ParamProtocol>());
+                        support.interface<test::fidlcodec::examples::ParamProtocol>());
 }
 
 namespace {
@@ -965,12 +964,12 @@ class HandleStructSupport {
     zx::channel::create(0, &out3_, &out4_);
     json_ = "{\"hs\":{" + HandleToJson("h1", out1_.get()) + "," + HandleToJson("h2", out2_.get()) +
             "," + HandleToJson("h3", out3_.get()) + "}}";
-    pretty_ = "{\n  hs: #gre#test.fidlcat.examples/HandleStruct#rst# = {\n    " +
+    pretty_ = "{\n  hs: #gre#test.fidlcodec.examples/HandleStruct#rst# = {\n    " +
               HandleToPretty("h1", out1_.get()) + "\n    " + HandleToPretty("h2", out2_.get()) +
               "\n    " + HandleToPretty("h3", out3_.get()) + "\n  }\n}";
   }
-  test::fidlcat::examples::HandleStruct handle_struct() {
-    test::fidlcat::examples::HandleStruct hs;
+  test::fidlcodec::examples::HandleStruct handle_struct() {
+    test::fidlcodec::examples::HandleStruct hs;
     hs.h1 = std::move(out1_);
     hs.h2 = std::move(out2_);
     hs.h3 = std::move(out3_);
@@ -1008,15 +1007,15 @@ class TraversalOrderSupport {
             HandleToJson("sh2", sh2_.get()) + "}," + HandleToJson("h1", h1_.get()) + "," +
             HandleToJson("h2", h2_.get()) + "}}";
     pretty_ =
-        "{\n  t: #gre#test.fidlcat.examples/TraversalOrder#rst# = {\n    "
-        "s: #gre#test.fidlcat.examples/OptHandleStruct#rst# = {\n      " +
+        "{\n  t: #gre#test.fidlcodec.examples/TraversalOrder#rst# = {\n    "
+        "s: #gre#test.fidlcodec.examples/OptHandleStruct#rst# = {\n      " +
         HandleToPretty("sh1", sh1_.get()) + "\n      " + HandleToPretty("sh2", sh2_.get()) +
         "\n    }\n    " + HandleToPretty("h1", h1_.get()) + "\n    " +
         HandleToPretty("h2", h2_.get()) + "\n  }\n}";
   }
-  test::fidlcat::examples::TraversalOrder TraversalOrder() {
-    test::fidlcat::examples::TraversalOrder t;
-    auto s = std::make_unique<test::fidlcat::examples::OptHandleStruct>();
+  test::fidlcodec::examples::TraversalOrder TraversalOrder() {
+    test::fidlcodec::examples::TraversalOrder t;
+    auto s = std::make_unique<test::fidlcodec::examples::OptHandleStruct>();
     s->sh1 = std::move(sh1_);
     s->sh2 = std::move(sh2_);
     t.s = std::move(s);
@@ -1059,19 +1058,19 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   "enum_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.fidlcat.examples/FidlcatTestInterface",
+      "name": "test.fidlcodec.examples/FidlCodecTestInterface",
       "location": {
-        "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
+        "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
         "line": 11,
         "column": 10
       },
       "methods": [
         {
-          "ordinal": 6983408019165937664,
-          "generated_ordinal": 6983408019165937664,
+          "ordinal": 913676553315942400,
+          "generated_ordinal": 913676553315942400,
           "name": "Int32",
           "location": {
-            "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
+            "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
             "line": 16,
             "column": 5
           },
@@ -1083,7 +1082,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
               },
               "name": "i32",
               "location": {
-                "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
+                "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
                 "line": 16,
                 "column": 17
               },
@@ -1116,8 +1115,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   fidl::MessageBuffer buffer;
   fidl::Message message = buffer.CreateEmptyMessage();
 
-  InterceptRequest<test::fidlcat::examples::FidlcatTestInterface>(
-      message, [](fidl::InterfacePtr<test::fidlcat::examples::FidlcatTestInterface>& ptr) {
+  InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
+      message, [](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
         ptr->Int32(kUninitialized);
       });
 
@@ -1141,9 +1140,9 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   // If this is null, you probably have to update the schema above.
   ASSERT_NE(method, nullptr);
 
-  std::unique_ptr<fidlcat::Object> decoded_request;
-  fidlcat::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                         message.handles().size(), &decoded_request);
+  std::unique_ptr<fidl_codec::Object> decoded_request;
+  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
+                            message.handles().size(), &decoded_request);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -1154,4 +1153,4 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   delete[] handle_infos;
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

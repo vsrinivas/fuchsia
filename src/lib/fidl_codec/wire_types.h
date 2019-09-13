@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_
-#define TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_
+#ifndef SRC_LIB_FIDL_CODEC_WIRE_TYPES_H_
+#define SRC_LIB_FIDL_CODEC_WIRE_TYPES_H_
 
 #include <lib/fit/function.h>
 
@@ -18,12 +18,12 @@ typedef uint32_t zx_handle_t;
 #include <vector>
 
 #include "rapidjson/document.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/memory_helpers.h"
-#include "tools/fidlcat/lib/message_decoder.h"
-#include "tools/fidlcat/lib/wire_object.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/memory_helpers.h"
+#include "src/lib/fidl_codec/message_decoder.h"
+#include "src/lib/fidl_codec/wire_object.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 // A FIDL type.  Provides methods for generating instances of this type.
 class Type {
@@ -325,6 +325,6 @@ class HandleType : public Type {
                                 uint64_t offset) const override;
 };
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_
+#endif  // SRC_LIB_FIDL_CODEC_WIRE_TYPES_H_

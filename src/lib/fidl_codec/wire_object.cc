@@ -11,11 +11,12 @@
 
 #include <src/lib/fxl/logging.h>
 
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/type_decoder.h"
-#include "tools/fidlcat/lib/wire_types.h"
+#include "src/lib/fidl_codec/colors.h"
+#include "src/lib/fidl_codec/display_handle.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 #define kInvalid "invalid"
 #define kNull "null"
@@ -658,4 +659,4 @@ void HandleField::PrettyPrint(std::ostream& os, const Colors& colors,
   DisplayHandle(colors, handle_, os);
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

@@ -303,7 +303,7 @@ void SyscallDecoder::DecodeAndDisplay() {
 void SyscallDecoder::Destroy() { dispatcher_->DeleteDecoder(this); }
 
 void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
-  const Colors& colors = dispatcher_->colors();
+  const fidl_codec::Colors& colors = dispatcher_->colors();
   line_header_ = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
                  std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
                  colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
@@ -344,7 +344,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    const Colors& colors = dispatcher_->colors();
+    const fidl_codec::Colors& colors = dispatcher_->colors();
     // Displays the returned value.
     if (dispatcher_->last_displayed_syscall() != this) {
       // Add a blank line to tell the user that this display is not linked to the
@@ -415,7 +415,7 @@ void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDeco
   size_t pos = 0;
   for (;;) {
     size_t end = message.find('\n', pos);
-    const Colors& colors = dispatcher_->colors();
+    const fidl_codec::Colors& colors = dispatcher_->colors();
     os_ << decoder->thread()->GetProcess()->GetName() << ' ' << colors.red
         << decoder->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
         << decoder->thread_id() << colors.reset << ' ' << decoder->syscall()->name() << ": "

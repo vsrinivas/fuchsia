@@ -10,12 +10,12 @@
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/wire_object.h"
-#include "tools/fidlcat/lib/wire_parser.h"
-#include "tools/fidlcat/lib/wire_types.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_parser.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 std::string DocumentToString(rapidjson::Document* document) {
   rapidjson::StringBuffer output;
@@ -218,4 +218,4 @@ std::unique_ptr<Field> MessageDecoder::DecodeField(std::string_view name, const 
   return result;
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec

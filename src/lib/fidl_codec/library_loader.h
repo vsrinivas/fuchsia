@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
-#define TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
+#ifndef SRC_LIB_FIDL_CODEC_LIBRARY_LOADER_H_
+#define SRC_LIB_FIDL_CODEC_LIBRARY_LOADER_H_
 
 #include <iostream>
 #include <map>
@@ -28,14 +28,14 @@
 // fidl_message_header_t header = message.header();
 // const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header.ordinal);
 // rapidjson::Document actual;
-// fidlcat::RequestToJSON(methods->at(0), message, actual);
+// fidl_codec::RequestToJSON(methods->at(0), message, actual);
 //
 // |actual| will then contain the contents of the message in JSON
 // (human-readable) format.
 //
 // These libraries are currently thread-unsafe.
 
-namespace fidlcat {
+namespace fidl_codec {
 
 constexpr int kDecimalBase = 10;
 
@@ -334,7 +334,7 @@ class Interface {
         if (!ords_are_same)
           index[method->old_ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
       }
-      // Ensure composed methods come after non-composed methods.  The fidlcat
+      // Ensure composed methods come after non-composed methods.  The fidl_codec
       // libraries pick the first one they find.
       if (method->is_composed()) {
         index[method->ordinal()]->push_back(method);
@@ -483,6 +483,6 @@ class LibraryLoader {
   std::map<std::string, std::unique_ptr<Library>> representations_;
 };
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
+#endif  // SRC_LIB_FIDL_CODEC_LIBRARY_LOADER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_MESSAGE_DECODER_H_
-#define TOOLS_FIDLCAT_LIB_MESSAGE_DECODER_H_
+#ifndef SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
+#define SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
 
 #include <cstdint>
 #include <memory>
@@ -15,12 +15,12 @@
 #include <src/lib/fxl/logging.h>
 
 #include "lib/fidl/cpp/message.h"
-#include "tools/fidlcat/lib/display_options.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/memory_helpers.h"
-#include "tools/fidlcat/lib/type_decoder.h"
+#include "src/lib/fidl_codec/colors.h"
+#include "src/lib/fidl_codec/display_options.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/memory_helpers.h"
 
-namespace fidlcat {
+namespace fidl_codec {
 
 class Field;
 class Object;
@@ -188,6 +188,6 @@ bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   return true;
 }
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_MESSAGE_DECODER_H_
+#endif  // SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_

@@ -22,9 +22,9 @@ if (current_toolchain == host_toolchain) {
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
+      "//src/lib/fidl_codec",
       "//src/lib/fxl",
       "//third_party/rapidjson",
-      "//tools/fidlcat/lib",
       "//tools/fidlcat/lib:host_lib",
       "//zircon/public/lib/cmdline",
       "//zircon/public/lib/fidl_base",
@@ -65,27 +65,6 @@ if (current_toolchain == host_toolchain) {
       "//zircon/public/lib/cmdline",
     ]
   }
-}
-
-executable("fidlcat_lib_tests") {
-  testonly = true
-  output_name = "fidlcat_lib_tests"
-  sources = []
-  deps = [
-    "//tools/fidlcat/lib:tests",
-  ]
-}
-
-unittest_package("fidlcat_tests") {
-  deps = [
-    ":fidlcat_lib_tests",
-  ]
-  tests = [
-    {
-      name = "fidlcat_lib_tests"
-      environments = basic_envs
-    },
-  ]
 }
 
 install_host_tools("fidlcat_host") {

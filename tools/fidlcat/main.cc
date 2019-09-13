@@ -22,8 +22,8 @@
 
 #include "lib/fidl/cpp/message.h"
 #include "src/developer/debug/zxdb/common/inet_util.h"
-#include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/message_decoder.h"
+#include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
@@ -63,7 +63,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
   std::vector<uint64_t> process_koids;
   if (!options.remote_pid.empty()) {
     for (const std::string& pid_str : options.remote_pid) {
-      uint64_t process_koid = strtoull(pid_str.c_str(), nullptr, kDecimalBase);
+      uint64_t process_koid = strtoull(pid_str.c_str(), nullptr, fidl_codec::kDecimalBase);
       // There is no process 0, and if there were, we probably wouldn't be able to
       // talk with it.
       if (process_koid == 0) {
@@ -142,9 +142,9 @@ int ConsoleMain(int argc, const char* argv[]) {
     FXL_LOG(INFO) << error;
   }
 
-  fidlcat::LibraryReadError loader_err;
-  LibraryLoader loader(&paths, &loader_err);
-  if (loader_err.value != fidlcat::LibraryReadError::kOk) {
+  fidl_codec::LibraryReadError loader_err;
+  fidl_codec::LibraryLoader loader(&paths, &loader_err);
+  if (loader_err.value != fidl_codec::LibraryReadError::kOk) {
     FXL_LOG(ERROR) << "Failed to read libraries";
     return 1;
   }

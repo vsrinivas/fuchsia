@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_FIDLCAT_LIB_MEMORY_HELPERS_H_
-#define TOOLS_FIDLCAT_LIB_MEMORY_HELPERS_H_
+#ifndef SRC_LIB_FIDL_CODEC_MEMORY_HELPERS_H_
+#define SRC_LIB_FIDL_CODEC_MEMORY_HELPERS_H_
 
 #if defined(__APPLE__)
 
@@ -17,7 +17,7 @@
 #include <endian.h>
 #endif
 
-namespace fidlcat {
+namespace fidl_codec {
 
 namespace internal {
 
@@ -65,6 +65,6 @@ T MemoryFrom(P bytes) {
 
 }  // namespace internal
 
-}  // namespace fidlcat
+}  // namespace fidl_codec
 
-#endif  // TOOLS_FIDLCAT_LIB_MEMORY_HELPERS_H_
+#endif  // SRC_LIB_FIDL_CODEC_MEMORY_HELPERS_H_

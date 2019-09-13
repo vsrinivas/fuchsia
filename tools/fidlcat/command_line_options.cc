@@ -20,7 +20,6 @@
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "tools/fidlcat/lib/decode_options.h"
-#include "tools/fidlcat/lib/display_options.h"
 
 namespace fidlcat {
 
