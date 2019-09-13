@@ -4,9 +4,26 @@
 
 library ddk.protocol.camerahwaccel;
 
+enum FrameStatus : uint8 {
+    OK = 0;
+    ERROR_FRAME = 1;
+    ERROR_BUFFER_FULL = 2;
+};
+
+struct FrameMetadata {
+    uint64 timestamp;
+    uint32 image_format_index;
+};
+
+struct FrameAvailableInfo {
+    FrameStatus frame_status;
+    uint32 buffer_id;
+    FrameMetadata metadata;
+};
+
 [Layout = "ddk-callback"]
 protocol HwAccelCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // frame is ready to be consumed.
-    FrameReady(uint32 buffer_index);
+    FrameReady(FrameAvailableInfo info);
 };

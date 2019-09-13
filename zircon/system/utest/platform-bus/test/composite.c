@@ -414,7 +414,7 @@ static zx_status_t CreateContiguousBufferCollectionInfo(
   return ZX_OK;
 }
 
-static void frame_ready(void* ctx, uint32_t buffer_index) {}
+static void frame_ready(void* ctx, const frame_available_info_t *info) {}
 
 static zx_status_t test_gdc(gdc_protocol_t* gdc) {
   zx_status_t status = ZX_OK;

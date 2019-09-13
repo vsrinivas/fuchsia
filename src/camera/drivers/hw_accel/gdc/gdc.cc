@@ -237,8 +237,12 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
     // which is ready to be used.
-    auto output_buffer_index = task->GetOutputBufferIndex();
-    task->callback()->frame_ready(task->callback()->ctx, output_buffer_index);
+    frame_available_info info;
+    info.frame_status = FRAME_STATUS_OK;
+    info.buffer_id = task->GetOutputBufferIndex();
+    info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    info.metadata.image_format_index = 0; // unused.
+    task->callback()->frame_ready(task->callback()->ctx, &info);
   }
 }
 
