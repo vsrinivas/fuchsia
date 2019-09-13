@@ -208,24 +208,6 @@ void EntityProviderRunner::OnEntityProviderFinished(const std::string agent_url)
   entity_provider_controllers_.erase(agent_url);
 }
 
-std::string EntityProviderRunner::CreateReferenceFromData(
-    std::map<std::string, std::string> type_to_data) {
-  // TODO(rosswang): Several of these heap allocations are unnecessary but this
-  // code is only temporary.
-  std::string encoded;
-  XdrWrite(&encoded, &type_to_data, XdrStringMap);
-
-  std::vector<std::string> parts(2);
-  parts[0] = kEntityDataReferencePrefix;
-  parts[1] = StringEscape(encoded, "/");
-  std::string joined = fxl::JoinStrings(parts, "/");
-  if (joined.length() > ZX_CHANNEL_MAX_MSG_BYTES) {
-    FXL_LOG(ERROR) << "data entity reference size exceeds FIDL channel message "
-                      "size limits";
-  }
-  return joined;
-}
-
 void EntityProviderRunner::CreateReference(
     const std::string& agent_url, const std::string& cookie,
     fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback callback) {

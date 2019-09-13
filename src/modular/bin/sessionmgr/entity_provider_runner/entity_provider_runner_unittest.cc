@@ -249,36 +249,6 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   EXPECT_EQ(1u, counts["GetData"]);
 }
 
-TEST_F(EntityProviderRunnerTest, DataEntity) {
-  std::map<std::string, std::string> data;
-  data["type1"] = "data1";
-
-  auto entity_ref = entity_provider_runner()->CreateReferenceFromData(data);
-
-  fuchsia::modular::EntityResolverPtr entity_resolver;
-  entity_provider_runner()->ConnectEntityResolver(entity_resolver.NewRequest());
-  fuchsia::modular::EntityPtr entity;
-  entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
-
-  fidl::VectorPtr<std::string> output_types;
-  entity->GetTypes([&output_types](std::vector<std::string> result) {
-    output_types.emplace(std::move(result));
-  });
-  RunLoopWithTimeoutOrUntil([&output_types] { return output_types.has_value(); });
-
-  EXPECT_EQ(data.size(), output_types->size());
-  EXPECT_EQ("type1", output_types->at(0));
-
-  fidl::StringPtr output_data;
-  entity->GetData("type1", [&output_data](std::unique_ptr<fuchsia::mem::Buffer> result) {
-    std::string data_string;
-    FXL_CHECK(fsl::StringFromVmo(*result, &data_string));
-    output_data = data_string;
-  });
-  RunLoopWithTimeoutOrUntil([&output_data] { return output_data.has_value(); });
-  EXPECT_EQ("data1", output_data);
-}
-
 }  // namespace
 }  // namespace testing
 }  // namespace modular

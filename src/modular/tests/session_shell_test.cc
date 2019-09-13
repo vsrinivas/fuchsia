@@ -50,24 +50,6 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
   modular::testing::FakeSessionShell fake_session_shell_;
 };
 
-TEST_F(SessionShellTest, GetPackageName) {
-  fuchsia::modular::testing::TestHarnessSpec spec;
-  test_harness()->Run(std::move(spec));
-
-  fuchsia::modular::ComponentContextPtr component_context;
-  fuchsia::modular::testing::ModularService svc;
-  svc.set_component_context(component_context.NewRequest());
-  test_harness()->ConnectToModularService(std::move(svc));
-
-  bool got_name = false;
-  component_context->GetPackageName([&got_name](fidl::StringPtr name) {
-    EXPECT_THAT(name, Not(IsNull()));
-    got_name = true;
-  });
-
-  RunLoopUntil([&] { return got_name; });
-}
-
 TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   RunHarnessAndInterceptSessionShell();
 

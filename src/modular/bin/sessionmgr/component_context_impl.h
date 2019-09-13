@@ -80,13 +80,6 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
-  // |fuchsia::modular::ComponentContext|
-  void CreateEntityWithData(std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-                            CreateEntityWithDataCallback result) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void GetPackageName(GetPackageNameCallback result) override;
-
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;

@@ -45,12 +45,4 @@ void ComponentContextFake::GetEntityResolver(
   entity_resolver_.Connect(std::move(request));
 }
 
-void ComponentContextFake::CreateEntityWithData(
-    std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-    CreateEntityWithDataCallback result) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void ComponentContextFake::GetPackageName(GetPackageNameCallback result) { FXL_NOTIMPLEMENTED(); }
-
 }  // namespace modular

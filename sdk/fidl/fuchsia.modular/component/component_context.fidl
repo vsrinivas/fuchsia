@@ -51,23 +51,6 @@ protocol ComponentContext {
     /// Gets the EntityResolver service, which can be used to resolve an entity
     /// reference to an Entity interface.
     GetEntityResolver(request<EntityResolver> request);
-
-    /// Creates a new entity from `type_to_data` such that duplicate types are
-    /// overriden by subsequent entries.
-    ///
-    /// This is a useful way to represent small immutable entities without having
-    /// to provide the entity using an Agent. The types and data together must be
-    /// within 16KB in size.
-    CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
-        -> (string? entity_reference);
-
-    /// Gets the package name of this component.
-    ///
-    // TODO(vardhan): MI4-939. This information should likely be exposed by a
-    // lower level (component-level, or application level). This information is
-    // most meant for a component to identify itself automatically when publishing
-    // metrics.
-    GetPackageName() -> (string package_name);
 };
 
 /// Used by ComponentContext.ConnectToAgentService
@@ -85,10 +68,4 @@ table AgentServiceRequest {
 
     /// The AgentController that keeps the agent alive.
     4: request<AgentController> agent_controller;
-};
-
-/// Used by ComponentContext.CreateEntityWithData().
-struct TypeToDataEntry {
-    string type;
-    string data;
 };

@@ -27,8 +27,6 @@ namespace modular {
 //
 //  * GetEntityResolver() -> returns a FakeEntityResolver (see
 //    lib/entity/cpp/testing/fake_entity_resolver.h).
-//  * CreateEntityWithData() -> returns a reference that the FakeEntityResolver
-//    will resolve.
 class ComponentContextFake : public fuchsia::modular::ComponentContext {
  public:
   ComponentContextFake();
@@ -61,13 +59,6 @@ class ComponentContextFake : public fuchsia::modular::ComponentContext {
 
   // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void CreateEntityWithData(std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-                            CreateEntityWithDataCallback result) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void GetPackageName(GetPackageNameCallback result) override;
 
   EntityResolverFake entity_resolver_;
 

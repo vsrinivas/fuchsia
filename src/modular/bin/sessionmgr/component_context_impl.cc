@@ -79,16 +79,4 @@ void ComponentContextImpl::GetEntityResolver(
   entity_provider_runner_->ConnectEntityResolver(std::move(request));
 }
 
-void ComponentContextImpl::CreateEntityWithData(
-    std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-    CreateEntityWithDataCallback result) {
-  std::map<std::string, std::string> copy;
-  for (const auto& it : type_to_data) {
-    copy[it.type] = it.data;
-  }
-  result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));
-}
-
-void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) { result(component_url_); }
-
 }  // namespace modular

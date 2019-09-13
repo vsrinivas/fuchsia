@@ -47,11 +47,6 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
   // specified |story_id|.
   std::string CreateStoryEntityReference(const std::string& story_id, const std::string& cookie);
 
-  // Given a map of entity type -> entity data, creates an entity reference for
-  // it. This data is encoded into the entity reference, and must be within
-  // 16KB. If successful, a non-null value is returned.
-  std::string CreateReferenceFromData(std::map<std::string, std::string> type_to_data);
-
   // Called by a DataEntity when it has no more |fuchsia::modular::Entity|s it
   // needs to serve for a particular |entity_reference|.
   void OnDataEntityFinished(const std::string& entity_reference);
