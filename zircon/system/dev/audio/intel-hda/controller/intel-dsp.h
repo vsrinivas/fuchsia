@@ -112,6 +112,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   zx_status_t CreateAndStartStreams();
 
+  // Receive a notification from the DSP.
+  void DspNotificationReceived(NotificationType type);
+
   // Debug
   void DumpRegs();
   void DumpFirmwareConfig(const TLVHeader* config, size_t length);
@@ -140,6 +143,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // IPC
   std::optional<IntelDspIpc> ipc_;
+
+  // Notified when the DSP has notified us that the DSP firmware is ready.
+  sync_completion_t firmware_ready_;
 
   std::unique_ptr<Nhlt> nhlt_;
 

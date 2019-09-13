@@ -68,6 +68,8 @@ source_set("src") {
   public_deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/refcount",
     "$zx/system/ulib/sync",

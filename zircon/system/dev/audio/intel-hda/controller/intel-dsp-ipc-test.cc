@@ -80,6 +80,18 @@ void SendReply(IntelDspIpc* dsp, adsp_registers_t* regs, const IpcMessage& reply
   dsp->ProcessIrq();
 }
 
+// Simulate the hardware sending an IPC notification, and firing an interrupt.
+void SendNotification(IntelDspIpc* dsp, adsp_registers_t* regs, NotificationType type) {
+  REG_WR(&regs->hipct, static_cast<uint8_t>(MsgTarget::FW_GEN_MSG) << IPC_PRI_MSG_TGT_SHIFT |
+                           static_cast<uint8_t>(MsgDir::MSG_NOTIFICATION) << IPC_PRI_RSP_SHIFT |
+                           static_cast<uint8_t>(GlobalType::NOTIFICATION) << IPC_PRI_TYPE_SHIFT |
+                           (static_cast<uint16_t>(type) << IPC_PRI_NOTIF_TYPE_SHIFT) |
+                           ADSP_REG_HIPCT_BUSY);
+  REG_WR(&regs->hipcte, 0U);
+  REG_SET_BITS(&regs->adspis, ADSP_REG_ADSPIC_IPC);  // Indicate IPC ready.
+  dsp->ProcessIrq();
+}
+
 // Poll the IPC-related registers until a message is sent by the driver.
 IpcMessage ReadMessage(adsp_registers_t* regs) {
   // Wait for a message.
@@ -97,13 +109,13 @@ IpcMessage ReadMessage(adsp_registers_t* regs) {
 
 TEST(Ipc, ConstructDestruct) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 }
 
 TEST(Ipc, SimpleSend) {
   driver_set_log_flags(ZX_LOG_LEVEL_MASK);
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, give it a chance to run.
   auto worker = Thread([&]() {
@@ -127,7 +139,7 @@ TEST(Ipc, SimpleSend) {
 
 TEST(Ipc, ErrorReply) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread.
   auto worker = Thread([&]() {
@@ -147,7 +159,7 @@ TEST(Ipc, ErrorReply) {
 
 TEST(Ipc, HardwareTimeout) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::usec(1));
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::usec(1));
 
   // Start a thread.
   auto worker = Thread([&]() {
@@ -162,7 +174,7 @@ TEST(Ipc, HardwareTimeout) {
 
 TEST(Ipc, UnsolicitedReply) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Ensuring sending a reply and an IRQ doesn't crash.
   SendReply(&dsp, &regs, IpcMessage(42, 0));
@@ -171,7 +183,7 @@ TEST(Ipc, UnsolicitedReply) {
 TEST(Ipc, QueuedMessages) {
   constexpr int kNumThreads = 10;
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start many threads, racing to send messages.
   std::array<std::unique_ptr<Thread>, kNumThreads> workers;
@@ -196,7 +208,7 @@ TEST(Ipc, QueuedMessages) {
 
 TEST(Ipc, ShutdownWithQueuedSend) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, zx::duration::infinite());
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
@@ -214,7 +226,7 @@ TEST(Ipc, ShutdownWithQueuedSend) {
 TEST(Ipc, DestructWithQueuedThread) {
   adsp_registers_t regs = {};
   std::optional<IntelDspIpc> dsp;
-  dsp.emplace("UnitTests", &regs, zx::duration::infinite());
+  dsp.emplace("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
@@ -227,6 +239,28 @@ TEST(Ipc, DestructWithQueuedThread) {
 
   // Destruct the object.
   dsp.reset();
+}
+
+TEST(Ipc, NotificationNoReceiver) {
+  adsp_registers_t regs = {};
+  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+
+  // Ensure notifications without a receiver don't crash.
+  for (int i = 0; i < 10; i++) {
+    SendNotification(&dsp, &regs, NotificationType::FW_READY);
+  }
+}
+
+TEST(Ipc, NotificationReceived) {
+  std::optional<NotificationType> received_notification;
+  adsp_registers_t regs = {};
+  IntelDspIpc dsp(
+      "UnitTests", &regs, [&](NotificationType type) { received_notification = type; },
+      zx::duration::infinite());
+
+  // Ensure a notification is sent and received.
+  SendNotification(&dsp, &regs, NotificationType::FW_READY);
+  EXPECT_EQ(received_notification, NotificationType::FW_READY);
 }
 
 }  // namespace

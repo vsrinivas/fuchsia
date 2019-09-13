@@ -7,6 +7,8 @@
 #include <lib/zx/time.h>
 #include <string.h>
 
+#include <functional>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -26,8 +28,12 @@ namespace intel_hda {
 constexpr size_t MAILBOX_SIZE = 0x1000;
 
 IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs,
+                         std::optional<std::function<void(NotificationType)>> notification_callback,
                          zx::duration hardware_timeout)
-    : log_prefix_(std::move(log_prefix)), regs_(regs), hardware_timeout_(hardware_timeout) {
+    : log_prefix_(std::move(log_prefix)),
+      regs_(regs),
+      callback_(std::move(notification_callback)),
+      hardware_timeout_(hardware_timeout) {
   uint8_t* mapped_base = reinterpret_cast<uint8_t*>(regs);
   mailbox_in_.Initialize(
       static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
@@ -46,7 +52,7 @@ void IntelDspIpc::Shutdown() {
   }
 
   // Wait for refcount to hit zero.
-  in_flight_sends_.WaitForZero();
+  in_flight_callbacks_.WaitForZero();
 }
 
 Status IntelDspIpc::SendWithData(uint32_t primary, uint32_t extension,
@@ -98,8 +104,8 @@ void IntelDspIpc::SendIpc(const Txn& txn) {
 }
 
 zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
-  in_flight_sends_.Inc();
-  auto cleanup = fbl::MakeAutoCall([this]() { in_flight_sends_.Dec(); });
+  in_flight_callbacks_.Inc();
+  auto cleanup = fbl::MakeAutoCall([this]() { in_flight_callbacks_.Dec(); });
 
   {
     // Add to the pending queue and start the ipc if necessary
@@ -130,52 +136,53 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
 }
 
 void IntelDspIpc::ProcessIrq() {
-  fbl::AutoLock l(&lock_);
+  std::optional<fit::inline_function<void()>> callback;
 
-  uint32_t adspis = REG_RD(&regs_->adspis);
-  if (!(adspis & ADSP_REG_ADSPIC_IPC)) {
-    return;
-  }
+  // Process any pending IRQs.
+  {
+    fbl::AutoLock l(&lock_);
 
-  IpcMessage message(REG_RD(&regs_->hipct), REG_RD(&regs_->hipcte));
-  if (message.primary & ADSP_REG_HIPCT_BUSY) {
-    // Process the incoming message
-    ProcessIpc(message);
+    uint32_t adspis = REG_RD(&regs_->adspis);
+    if (adspis & ADSP_REG_ADSPIC_IPC) {
+      IpcMessage message(REG_RD(&regs_->hipct), REG_RD(&regs_->hipcte));
+      if (message.primary & ADSP_REG_HIPCT_BUSY) {
+        // Process the incoming message
+        if (message.is_notif()) {
+          callback = CreateNotificationCallback(message);
+        } else if (message.is_reply()) {
+          ProcessIpcReply(message);
+        }
 
-    // Ack the IRQ after reading mailboxes.
-    REG_SET_BITS(&regs_->hipct, ADSP_REG_HIPCT_BUSY);
-  }
-
-  // Ack the IPC target done IRQ
-  uint32_t val = REG_RD(&regs_->hipcie);
-  if (val & ADSP_REG_HIPCIE_DONE) {
-    REG_WR(&regs_->hipcie, val);
-  }
-}
-
-void IntelDspIpc::ProcessIpc(const IpcMessage& message) {
-  if (message.is_notif()) {
-    ProcessIpcNotification(message);
-  } else if (message.is_reply()) {
-    ProcessIpcReply(message);
-  }
-}
-
-void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
-  switch (notif.notif_type()) {
-    case NotificationType::FW_READY:
-      LOG(TRACE, "firmware ready\n");
-      sync_completion_signal(&fw_ready_completion_);
-      break;
-    case NotificationType::RESOURCE_EVENT: {
-      ResourceEventData data;
-      IpcMailboxRead(&data, sizeof(data));
-      break;
+        // Ack the IRQ after reading mailboxes.
+        REG_SET_BITS(&regs_->hipct, ADSP_REG_HIPCT_BUSY);
+      }
     }
-    default:
-      LOG(INFO, "got notification type %u\n", to_underlying(notif.notif_type()));
-      break;
+
+    // Ack the IPC target done IRQ
+    uint32_t val = REG_RD(&regs_->hipcie);
+    if (val & ADSP_REG_HIPCIE_DONE) {
+      REG_WR(&regs_->hipcie, val);
+    }
   }
+
+  // If a notification was required, issue it outside the lock.
+  if (callback.has_value()) {
+    (*callback)();
+  }
+}
+
+std::optional<fit::inline_function<void()>> IntelDspIpc::CreateNotificationCallback(
+    const IpcMessage& notif) {
+  if (!callback_.has_value()) {
+    return std::nullopt;
+  }
+  NotificationType type = notif.notif_type();
+  in_flight_callbacks_.Inc();
+  // Use a fit::inline_function<void()>() to avoid heap allocations on the notification pass.
+  return fit::inline_function<void()>([this, type]() {
+    (*callback_)(type);
+    in_flight_callbacks_.Dec();
+  });
 }
 
 void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {

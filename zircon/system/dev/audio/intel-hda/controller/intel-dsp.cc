@@ -432,7 +432,8 @@ Status IntelDsp::SetupDspDevice() {
   }
 
   // Initialize IPC.
-  ipc_.emplace(log_prefix_, regs());
+  ipc_.emplace(log_prefix_, regs(),
+               [this](NotificationType type) { DspNotificationReceived(type); });
 
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
@@ -733,7 +734,7 @@ zx_status_t IntelDsp::LoadFirmware() {
   // Now check whether we received the FW Ready IPC. Receiving this IPC indicates the
   // IPC system is ready. Both FW_STATUS = ADSP_FW_STATUS_STATE_ENTER_BASE_FW and
   // receiving the IPC are required for the DSP to be operational.
-  st = ipc_->WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
+  sync_completion_wait(&firmware_ready_, INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
   if (st != ZX_OK) {
     LOG(ERROR, "Error waiting for FW Ready IPC (err %d, fw_status = 0x%08x)\n", st,
         REG_RD(&fw_regs()->fw_status));
@@ -741,6 +742,23 @@ zx_status_t IntelDsp::LoadFirmware() {
   }
 
   return ZX_OK;
+}
+
+void IntelDsp::DspNotificationReceived(NotificationType type) {
+  switch (type) {
+    case NotificationType::FW_READY:
+      // Indicate that the firmware is ready to go.
+      sync_completion_signal(&firmware_ready_);
+      break;
+
+    case NotificationType::EXCEPTION_CAUGHT:
+      LOG(ERROR, "DSP reported exception.");
+      break;
+
+    default:
+      LOG(TRACE, "Received unknown notification type %d from DSP.", static_cast<int>(type));
+      break;
+  }
 }
 
 zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {

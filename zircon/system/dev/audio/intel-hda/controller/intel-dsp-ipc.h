@@ -5,9 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_IPC_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_IPC_H_
 
+#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/time.h>
+
+#include <functional>
+#include <optional>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -31,10 +35,12 @@ class IntelDspIpc {
   //
   // |hardware_timeout| specifies how long we should wait for hardware to respond
   // to our requests before failing operations.
-  IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs,
-              zx::duration hardware_timeout = kDefaultTimeout);
+  IntelDspIpc(
+      fbl::String log_prefix, adsp_registers_t* regs,
+      std::optional<std::function<void(NotificationType)>> notification_callback = std::nullopt,
+      zx::duration hardware_timeout = kDefaultTimeout);
 
-  // Will block until all pending operations have been cancelled.
+  // Will block until all pending operations have been cancelled and callbacks completed.
   ~IntelDspIpc();
 
   // Shutdown the object, cancelling all in-flight transactions.
@@ -56,11 +62,6 @@ class IntelDspIpc {
   Status Send(uint32_t primary, uint32_t extension);
   Status SendWithData(uint32_t primary, uint32_t extension, fbl::Span<const uint8_t> payload,
                       fbl::Span<uint8_t> recv_buffer, size_t* bytes_received);
-
-  // Block until the firmware has sent a response indicated that it is ready.
-  zx_status_t WaitForFirmwareReady(zx_duration_t timeout) {
-    return sync_completion_wait(&fw_ready_completion_, timeout);
-  }
 
   // Return true if at least one operation is pending.
   bool IsOperationPending() const;
@@ -121,9 +122,16 @@ class IntelDspIpc {
   // Send an IPC message and wait for response
   zx_status_t SendIpcWait(Txn* txn) TA_EXCL(lock_);
 
+  // Process a notification received from the DSP, creating
+  // a fit::inline_function which, when invoked, will actually perform the
+  // callback.
+  //
+  // The fit::inline_function which should be called outside |lock_| to notify
+  // the registered callback.
+  std::optional<fit::inline_function<void()>> CreateNotificationCallback(const IpcMessage& notif)
+      TA_REQ(lock_);
+
   // Process responses from DSP
-  void ProcessIpc(const IpcMessage& message) TA_REQ(lock_);
-  void ProcessIpcNotification(const IpcMessage& notif) TA_REQ(lock_);
   void ProcessIpcReply(const IpcMessage& reply) TA_REQ(lock_);
   void ProcessLargeConfigGetReply(Txn* txn) TA_REQ(lock_);
 
@@ -133,7 +141,7 @@ class IntelDspIpc {
   void SendIpc(const Txn& txn) TA_REQ(lock_);
 
   mutable fbl::Mutex lock_;
-  refcount::BlockingRefCount in_flight_sends_;  // Number of in-flight send operations
+  refcount::BlockingRefCount in_flight_callbacks_;  // Number of in-flight send operations
 
   Mailbox mailbox_in_ TA_GUARDED(lock_);
   Mailbox mailbox_out_ TA_GUARDED(lock_);
@@ -144,11 +152,11 @@ class IntelDspIpc {
   // Pending IPC
   fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(lock_);
 
-  // Used to wait for firmware ready
-  sync_completion_t fw_ready_completion_;
-
   // Hardware registers.
   adsp_registers_t* const regs_ TA_GUARDED(lock_);
+
+  // Callback for unsolicited notifications from the DSP.
+  const std::optional<const std::function<void(NotificationType)>> callback_;
 
   // Timeout for hardware responses.
   const zx::duration hardware_timeout_;
