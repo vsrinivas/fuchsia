@@ -64,7 +64,7 @@ const TestDataSet kTestDataThreadRipper2970wx = {
                  Features::MSR, Features::PAE,   Features::MCE, Features::CX8,      Features::APIC,
                  Features::SEP, Features::MTRR,  Features::PGE, Features::MCA,      Features::CMOV,
                  Features::PAT, Features::PSE36, Features::MMX, Features::FSGSBASE, Features::FXSR,
-                 Features::SSE, Features::SSE2},
+                 Features::SSE, Features::SSE2,  Features::CLZERO},
     .missing_features =
         {
             Features::PSN,
@@ -89,7 +89,7 @@ const TestDataSet kTestDataThreadRipper2970wx = {
 // Queried from "AMD A4-9120C RADEON R4, 5 COMPUTE CORES 2C+3G" (HP Chromebook 14)
 const TestDataSet kTestDataAmdA49120C = {
     .features = {},
-    .missing_features = {},
+    .missing_features = { Features::CLZERO },
     .leaf0 = {.reg = {0xd, 0x68747541, 0x444d4163, 0x69746e65}},
     .leaf1 = {.reg = {0x670f00, 0x20800, 0x7ed8320b, 0x178bfbff}},
     .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
@@ -149,13 +149,13 @@ class FakeCpuId : public CpuId {
   ProcessorId ReadProcessorId() const override { return ProcessorId(data_.leaf1); }
 
   Features ReadFeatures() const override {
-    return Features(data_.leaf1, data_.leaf7, data_.leaf8_1);
+    return Features(data_.leaf1, data_.leaf7, data_.leaf8_1, data_.leaf8_8);
   }
 
   Topology ReadTopology() const override {
     return Topology(ManufacturerInfo(data_.leaf0, data_.leaf8_0),
-                    Features(data_.leaf1, data_.leaf7, data_.leaf8_1), data_.leaf4, data_.leafB,
-                    data_.leaf8_8, data_.leaf8_1D, data_.leaf8_1E);
+                    Features(data_.leaf1, data_.leaf7, data_.leaf8_1, data_.leaf8_8), data_.leaf4,
+                    data_.leafB, data_.leaf8_8, data_.leaf8_1D, data_.leaf8_1E);
   }
 
  private:
