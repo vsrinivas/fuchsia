@@ -12,7 +12,7 @@ Source code shortcuts:
   * [Control](/sdk/fidl/fuchsia.bluetooth.control)
   * [GATT](/sdk/fidl/fuchsia.bluetooth.gatt)
   * [LE](/sdk/fidl/fuchsia.bluetooth.le)
-- [Private API](/sdk/fidl/fuchsia.bluetooth.host)
+- [Private API](/src/connectivity/bluetooth/fidl)
 - [Tools](tools/)
 - [Host Bus Driver](core/bt-host)
 - [HCI Drivers](hci)
