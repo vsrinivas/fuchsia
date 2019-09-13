@@ -243,10 +243,15 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
 
-// The control plane for a network socket. Once a socket has been retrieved from a
-// `Provider`, this interface is then used to further configure and use the socket.
-// This interface is essentially POSIX. Its implementation must support Linux-specific arguments
-// to {Get,Set}SockOpt.
+// The control plane for a network socket.
+//
+// Once a socket has been retrieved from a `Provider`, this interface is then used to further
+// configure and use the socket. This interface is essentially POSIX. Its implementation must
+// support Linux-specific arguments to {Get,Set}SockOpt.
+//
+// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+// and clients that couple directly to this protocol will make those changes more difficult.
 class Control final {
   Control() = delete;
  public:
