@@ -121,7 +121,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)> callback) override;
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
-  void GetDeviceName(fit::function<void(::std::string)> callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<fuchsia::modular::FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
@@ -223,7 +222,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
   AsyncHolder<AgentRunner> agent_runner_;
-  std::string device_name_;
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;

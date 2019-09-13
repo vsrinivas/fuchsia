@@ -60,7 +60,6 @@ protocol SessionShellContext {
     /// logged into GUEST mode.
     GetAccount() -> (fuchsia.modular.auth.Account? account);
     GetComponentContext(request<ComponentContext> request);
-    GetDeviceName() -> (string device_name);
     GetFocusController(request<FocusController> request);
     GetFocusProvider(request<FocusProvider> request);
     GetLink(request<Link> request);

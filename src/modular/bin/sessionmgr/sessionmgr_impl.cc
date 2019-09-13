@@ -790,10 +790,6 @@ void SessionmgrImpl::GetComponentContext(
   session_shell_component_context_impl_->Connect(std::move(request));
 }
 
-void SessionmgrImpl::GetDeviceName(fit::function<void(::std::string)> callback) {
-  callback(device_name_);
-}
-
 void SessionmgrImpl::GetFocusController(
     fidl::InterfaceRequest<fuchsia::modular::FocusController> request) {
   focus_handler_->AddControllerBinding(std::move(request));
