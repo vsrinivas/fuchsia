@@ -55,8 +55,8 @@ bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::Vie
   PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kRootNodeId));
   PushCommand(&cmds, scenic::NewAddChildCmd(kViewId, kRootNodeId));
   PushCommand(&cmds, scenic::NewCreateMaterialCmd(kMaterialId));
-  PushCommand(&cmds, scenic::NewCreateImagePipeCmd(
-                         kImagePipeId, fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
+  PushCommand(&cmds, scenic::NewCreateImagePipe2Cmd(
+                         kImagePipeId, fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(
                                            std::move(remote_endpoint))));
   PushCommand(&cmds, scenic::NewSetTextureCmd(kMaterialId, kImagePipeId));
   PushCommand(&cmds, scenic::NewCreateShapeNodeCmd(kShapeNodeId));

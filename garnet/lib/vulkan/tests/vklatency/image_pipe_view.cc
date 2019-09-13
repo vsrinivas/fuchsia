@@ -21,9 +21,9 @@ ImagePipeView::ImagePipeView(scenic::ViewContext view_context, bool protected_ou
 
   // Create an ImagePipe
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(
+  session()->Enqueue(scenic::NewCreateImagePipe2Cmd(
       image_pipe_id,
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(remote_endpoint))));
+      fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(remote_endpoint))));
 
   // Create a material that has our image pipe mapped onto it:
   scenic::Material material(session());
@@ -33,6 +33,9 @@ ImagePipeView::ImagePipeView(scenic::ViewContext view_context, bool protected_ou
   // Create a rectangle shape to display the Image on.
   canvas_node_.SetMaterial(material);
   root_node().AddChild(canvas_node_);
+  session()->Present(0,                                             // presentation time
+                     [](fuchsia::images::PresentationInfo info) {}  // presentation callback
+  );
 }
 
 void ImagePipeView::Initialize() {

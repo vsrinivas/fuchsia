@@ -5,22 +5,27 @@
 #ifndef GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_ASYNC_H_
 #define GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_ASYNC_H_
 
-#include "image_pipe_surface.h"
-
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
 #include <mutex>
 #include <thread>
+
+#include "image_pipe_surface.h"
 
 namespace image_pipe_swapchain {
 
 // An implementation of ImagePipeSurface based on an async fidl ImagePipe.
 class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
-  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle) : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  explicit ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle)
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
     loop_.StartThread();
   }
+
+  bool Init() override;
 
   bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
@@ -38,7 +43,7 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
 
   async::Loop loop_;
   std::mutex mutex_;
-  fuchsia::images::ImagePipePtr image_pipe_;
+  fuchsia::images::ImagePipe2Ptr image_pipe_;
   struct PendingPresent {
     uint32_t image_id;
     std::vector<zx::event> acquire_fences;
@@ -46,6 +51,7 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   };
   std::vector<PendingPresent> queue_;
   bool present_pending_ = false;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 }  // namespace image_pipe_swapchain

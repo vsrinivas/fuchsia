@@ -608,12 +608,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
     fprintf(stderr, "Device extension not available: %s\n",
             VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   }
-#if USE_IMAGEPIPE_SURFACE_FB
   if (!fuchsia_buffer_collection_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
             VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   }
-#endif
   if (!external_memory_extension_available || !external_semaphore_extension_available)
     return VK_ERROR_INITIALIZATION_FAILED;
 
@@ -624,9 +622,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-#if USE_IMAGEPIPE_SURFACE_FB
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
-#endif
   create_info.enabledExtensionCount = enabled_extensions.size();
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 

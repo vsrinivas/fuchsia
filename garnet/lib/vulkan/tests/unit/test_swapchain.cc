@@ -6,6 +6,7 @@
 #include <fuchsia/images/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/channel.h>
 
@@ -15,6 +16,101 @@
 
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
+
+namespace {
+
+uint64_t ZirconIdFromHandle(uint32_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK)
+    return 0;
+  return info.koid;
+}
+
+// FakeImagePipe runs async loop on its own thread to allow the test
+// to use blocking Vulkan calls while present callbacks are processed.
+class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
+ public:
+  FakeImagePipe(fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request)
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        binding_(this, std::move(request), loop_.dispatcher()) {
+    loop_.StartThread();
+  }
+
+  ~FakeImagePipe() { loop_.Shutdown(); }
+
+  void NotImplemented_(const std::string& name) override {}
+
+  void AddBufferCollection(uint32_t buffer_collection_id,
+                           ::fidl::InterfaceHandle<::fuchsia::sysmem::BufferCollectionToken>
+                               buffer_collection_token) override {
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
+    EXPECT_EQ(status, ZX_OK);
+
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    status = sysmem_allocator->BindSharedCollection(std::move(buffer_collection_token.BindSync()),
+                                                    buffer_collection.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    status = buffer_collection->SetConstraints(false, constraints);
+    EXPECT_EQ(status, ZX_OK);
+
+    status = buffer_collection->Close();
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  void AddImage(uint32_t image_id, uint32_t buffer_collection_id, uint32_t buffer_collection_index,
+                ::fuchsia::sysmem::ImageFormat_2 image_format) override {
+    // Do nothing.
+  }
+
+  void PresentImage(uint32_t image_id, uint64_t presentation_time,
+                    ::std::vector<::zx::event> acquire_fences,
+                    ::std::vector<::zx::event> release_fences,
+                    PresentImageCallback callback) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    acquire_fences_.insert(ZirconIdFromHandle(acquire_fences[0].get()));
+
+    zx_signals_t pending;
+    zx_status_t status =
+        acquire_fences[0].wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(10)), &pending);
+
+    if (status == ZX_OK) {
+      release_fences[0].signal(0, ZX_EVENT_SIGNALED);
+      callback({0, 0});
+    }
+    presented_.push_back({image_id, status});
+  }
+
+  uint32_t presented_count() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return presented_.size();
+  }
+
+  uint32_t acquire_fences_count() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return acquire_fences_.size();
+  }
+
+  struct Presented {
+    uint32_t image_id;
+    zx_status_t acquire_wait_status;
+  };
+
+ private:
+  async::Loop loop_;
+  fidl::Binding<fuchsia::images::ImagePipe2> binding_;
+  std::mutex mutex_;
+  std::vector<Presented> presented_;
+  std::set<uint64_t> acquire_fences_;
+};
+
+}  // namespace
 
 class TestSwapchain {
  public:
@@ -29,7 +125,8 @@ class TestSwapchain {
     std::vector<const char*> instance_layers{"VK_LAYER_FUCHSIA_imagepipe_swapchain"};
     std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
                                           VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
-    std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                                        VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
 
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -187,6 +284,10 @@ class TestSwapchain {
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
 
+    // Create FakeImagePipe that can consume BuffercollectionToken.
+    imagepipe_ = std::make_unique<FakeImagePipe>(
+        fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(endpoint1)));
+
     VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
         .imagePipeHandle = endpoint0.release(),
@@ -210,6 +311,7 @@ class TestSwapchain {
   PFN_vkGetSwapchainImagesKHR get_swapchain_images_khr_;
   PFN_vkAcquireNextImageKHR acquire_next_image_khr_;
   PFN_vkQueuePresentKHR queue_present_khr_;
+  std::unique_ptr<FakeImagePipe> imagepipe_;
 
   const bool protected_memory_ = false;
   bool init_ = false;
@@ -250,81 +352,6 @@ TEST_P(SwapchainTest, Create) {
 
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
 
-namespace {
-
-uint64_t ZirconIdFromHandle(uint32_t handle) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK)
-    return 0;
-  return info.koid;
-}
-
-// FakeImagePipe runs async loop on its own thread to allow the test
-// to use blocking Vulkan calls while present callbacks are processed.
-class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
- public:
-  FakeImagePipe(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
-      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        binding_(this, std::move(request), loop_.dispatcher()) {
-    loop_.StartThread();
-  }
-
-  ~FakeImagePipe() { loop_.Shutdown(); }
-
-  void NotImplemented_(const std::string& name) override {}
-
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, ::zx::vmo memory,
-                uint64_t offset_bytes, uint64_t size_bytes,
-                fuchsia::images::MemoryType memory_type) override {
-    // Do nothing.
-  }
-
-  void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    ::std::vector<::zx::event> acquire_fences,
-                    ::std::vector<::zx::event> release_fences,
-                    PresentImageCallback callback) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-
-    acquire_fences_.insert(ZirconIdFromHandle(acquire_fences[0].get()));
-
-    zx_signals_t pending;
-    zx_status_t status =
-        acquire_fences[0].wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(10)), &pending);
-
-    if (status == ZX_OK) {
-      release_fences[0].signal(0, ZX_EVENT_SIGNALED);
-      callback({0, 0});
-    }
-    presented_.push_back({image_id, status});
-  }
-
-  uint32_t presented_count() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return presented_.size();
-  }
-
-  uint32_t acquire_fences_count() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return acquire_fences_.size();
-  }
-
-  struct Presented {
-    uint32_t image_id;
-    zx_status_t acquire_wait_status;
-  };
-
- private:
-  async::Loop loop_;
-  fidl::Binding<fuchsia::images::ImagePipe> binding_;
-  std::mutex mutex_;
-  std::vector<Presented> presented_;
-  std::set<uint64_t> acquire_fences_;
-};
-
-}  // namespace
-
 class SwapchainFidlTest : public ::testing::TestWithParam<bool /* protected_memory */> {};
 
 TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
@@ -340,7 +367,7 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local_endpoint, &remote_endpoint));
 
   std::unique_ptr<FakeImagePipe> imagepipe_ = std::make_unique<FakeImagePipe>(
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(remote_endpoint)));
+      fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(remote_endpoint)));
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
