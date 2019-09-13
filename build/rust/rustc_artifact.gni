@@ -249,6 +249,8 @@ template("rustc_artifact") {
     root_file = "src/lib.rs"
   }
 
+  only_unit_tests = defined(invoker.only_unit_tests) && invoker.only_unit_tests
+
   third_party_build = "//third_party/rust_crates:build-third-party"
   third_party_deps_data =
       "${root_out_dir}/rust_third_party_crates/deps_data.json"
@@ -269,18 +271,13 @@ template("rustc_artifact") {
     output_dir = first_party_crate_root
   }
   output_file = "${output_dir}/$output_filename"
-  output_depfile = "${output_dir}/${prefix}${crate_name}.d"
+  if (!only_unit_tests) {
+    if (type == "bin" && !only_unit_tests) {
+      output_path = "${root_out_dir}/${output_filename}"
+    }
+    output_depfile = "${output_dir}/${prefix}${crate_name}.d"
 
-  build_target_name = "${target_name}_build"
-  only_unit_tests = defined(invoker.only_unit_tests) && invoker.only_unit_tests
-  if (only_unit_tests) {
-    not_needed([
-                 "output_filename",
-                 "output_file",
-                 "output_depfile",
-                 "build_target_name",
-               ])
-  } else {
+    build_target_name = "${target_name}_build"
     group_deps += [ ":${build_target_name}" ]
   }
 
@@ -293,6 +290,7 @@ template("rustc_artifact") {
       test_filename = "${crate_name}_${invoker.type}_test"
     }
     test_output_file = "${unstripped_output_dir}/${test_filename}"
+    test_output_path = "${root_out_dir}/${test_filename}"
     test_depfile = "${test_output_file}.d"
 
     build_test_target_name = "${target_name}_test_build"
@@ -530,6 +528,25 @@ template("rustc_artifact") {
       depfile = output_depfile
       deps = rustc_target_deps
       public_deps = rustc_target_public_deps
+
+      if (type == "bin") {
+        metadata = {
+          binaries = [
+            {
+              type = "executable"
+              label = get_label_info(":$build_target_name", "label_with_toolchain")
+              cpu = current_cpu
+              os = current_os
+              debug = rebase_path(output_file, root_build_dir)
+              dist = rebase_path(output_path, root_build_dir)
+              if (current_os != "mac" && current_os != "win") {
+                elf_build_id =
+                    rebase_path("$output_path.build-id.stamp", root_build_dir)
+              }
+            },
+          ]
+        }
+      }
     }
   }
 
@@ -588,12 +605,27 @@ template("rustc_artifact") {
         deps += invoker.test_deps
       }
       public_deps = rustc_target_public_deps
+
+      metadata = {
+        binaries = [
+          {
+            type = "executable"
+            label = get_label_info(":$build_test_target_name", "label_with_toolchain")
+            cpu = current_cpu
+            os = current_os
+            debug = rebase_path(test_output_file, root_build_dir)
+            dist = rebase_path(test_output_path, root_build_dir)
+            if (current_os != "mac" && current_os != "win") {
+              elf_build_id =
+                  rebase_path("$test_output_path.build-id.stamp", root_build_dir)
+            }
+          },
+        ]
+      }
     }
   }
 
   if (type == "bin" && !only_unit_tests) {
-    output_path_stripped = "${root_out_dir}/${output_filename}"
-
     # strip staticlibs and binaries from "exe.unstripped" and put the results
     # in the root_out_dir
     strip_target_name = "${target_name}_strip"
@@ -608,7 +640,7 @@ template("rustc_artifact") {
         output_file,
       ]
       outputs = [
-        output_path_stripped,
+        output_path,
       ]
     }
 
@@ -636,7 +668,7 @@ template("rustc_artifact") {
 
         files = [
           {
-            source = output_path_stripped
+            source = output_path
             dest = file_base
           },
         ]
@@ -653,8 +685,6 @@ template("rustc_artifact") {
   if (with_unit_tests) {
     strip_test_target_name = "${target_name}_test_strip"
     test_group_deps += [ ":${strip_test_target_name}" ]
-
-    test_output_path = "${root_out_dir}/${test_filename}"
 
     copy_with_build_id(strip_test_target_name) {
       testonly = true

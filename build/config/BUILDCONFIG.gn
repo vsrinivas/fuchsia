@@ -254,6 +254,52 @@ if (toolchain_variant.with_shared) {
         # are actually used by the shared_library instantiation in the
         # -shared toolchain, so any going truly unused will be caught there.
         not_needed(invoker, "*")
+
+        if (!defined(output_dir)) {
+          output_dir = root_out_dir
+        }
+        if (!defined(output_name)) {
+          output_name = target_name
+        }
+        if (!defined(output_extension)) {
+          if (current_os == "mac") {
+            output_extension = "dylib"
+          } else {
+            output_extension = "so"
+          }
+        }
+
+        output_file = "$output_dir/lib$output_name"
+        if (output_extension != "") {
+          output_file += ".$output_extension"
+        }
+        link_output_file = "$output_dir/lib.unstripped/lib$output_name"
+        if (output_extension != "") {
+          link_output_file += ".$output_extension"
+        }
+
+        metadata = {
+          binaries = []
+
+          if (defined(invoker.metadata)) {
+            forward_variables_from(invoker.metadata, "*")
+          }
+
+          binaries += [
+            {
+              type = "shared_library"
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              cpu = current_cpu
+              os = current_os
+              debug = rebase_path(link_output_file, root_build_dir)
+              dist = rebase_path(output_file, root_build_dir)
+              if (current_os != "mac" && current_os != "win") {
+                elf_build_id =
+                    rebase_path("$output_file.build-id.stamp", root_build_dir)
+              }
+            },
+          ]
+        }
       }
     }
   } else {
@@ -942,6 +988,22 @@ template("executable") {
     forward_variables_from(invoker, [ "visibility" ])
     forward_variables_from(invoker, "*", [ "visibility" ])
 
+    if (!defined(output_dir)) {
+      output_dir = root_out_dir
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    if (!defined(output_extension)) {
+      output_extension = ""
+    }
+
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+    link_output_file = "$output_dir/exe.unstripped/$output_name"
+
     deps += default_executable_deps
 
     # This ensures that non-Zircon host executables get __zx_panic.
@@ -950,6 +1012,29 @@ template("executable") {
     # the bug for more info/discussion.
     if (current_toolchain == host_toolchain) {
       deps += [ "//zircon/public/lib/zx-panic-libc" ]
+    }
+
+    metadata = {
+      binaries = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      binaries += [
+        {
+          type = "executable"
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          cpu = current_cpu
+          os = current_os
+          debug = rebase_path(link_output_file, root_build_dir)
+          dist = rebase_path(output_file, root_build_dir)
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_file.build-id.stamp", root_build_dir)
+          }
+        },
+      ]
     }
   }
 }
@@ -967,8 +1052,51 @@ template("loadable_module") {
     # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
     forward_variables_from(invoker, "*", [ "visibility" ])
+
+    if (!defined(output_dir)) {
+      output_dir = root_out_dir
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
     if (!defined(output_extension)) {
-      output_extension = "so"
+      if (current_os == "mac") {
+        output_extension = "dylib"
+      } else {
+        output_extension = "so"
+      }
+    }
+
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+    link_output_file = "$output_dir/lib.unstripped/$output_name"
+    if (output_extension != "") {
+      link_output_file += ".$output_extension"
+    }
+
+    metadata = {
+      binaries = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      binaries += [
+        {
+          type = "loadable_module"
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          cpu = current_cpu
+          os = current_os
+          debug = rebase_path(link_output_file, root_build_dir)
+          dist = rebase_path(output_file, root_build_dir)
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_file.build-id.stamp", root_build_dir)
+          }
+        },
+      ]
     }
   }
 }

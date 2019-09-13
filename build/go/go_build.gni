@@ -191,8 +191,7 @@ template("go_build") {
     if (use_strip) {
       args += [
         "--unstripped-binname",
-        rebase_path("${root_out_dir}/exe.unstripped/${output_name}",
-                    root_build_dir),
+        rebase_path(unstripped_output_path, root_build_dir),
       ]
     }
 
@@ -246,6 +245,23 @@ template("go_build") {
           },
         ]
       }
+
+      binaries = [
+        {
+          type = "executable"
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          cpu = current_cpu
+          os = current_os
+          if (use_strip) {
+            debug = rebase_path(unstripped_output_path, root_build_dir)
+          }
+          dist = rebase_path(output_path, root_build_dir)
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_path.build-id.stamp", root_build_dir)
+          }
+        },
+      ]
     }
   }
 

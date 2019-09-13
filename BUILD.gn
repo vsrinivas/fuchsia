@@ -181,6 +181,18 @@ group("recovery_image") {
   ]
 }
 
+generated_file("binaries") {
+  outputs = [
+    "$root_build_dir/binaries.json",
+  ]
+  data_keys = [ "binaries" ]
+  output_conversion = "json"
+  deps = [
+    "//build/images:packages",
+    "//sdk",
+  ]
+}
+
 # TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module().
 #
 # Aggregates metadata about all tests within the build graph to create a
