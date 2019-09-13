@@ -648,7 +648,17 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "source_path": "/loggers/fuchsia.logger.Log",
+                            "source_path": "/loggers/fuchsia.logger.Log1",
+                            "target_path": "/svc/fuchsia.logger.Log",
+                            "target": "realm"
+                        }
+                    },
+                    {
+                        "service": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/loggers/fuchsia.logger.Log2",
                             "target_path": "/svc/fuchsia.logger.Log",
                             "target": "realm"
                         }
@@ -687,11 +697,17 @@ mod tests {
             output = {
                 let exposes = vec![
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        source_path: Some("/loggers/fuchsia.logger.Log1".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
+                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    }),
+                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                        source_path: Some("/loggers/fuchsia.logger.Log2".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
@@ -776,13 +792,27 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "source_path": "/svc/fuchsia.logger.Log",
+                            "source_path": "/svc/fuchsia.logger.Log1",
                             "target": {
                                 "collection": {
                                     "name": "modular"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.logger.SysLog"
+                            "target_path": "/svc/fuchsia.logger.Log"
+                        }
+                    },
+                    {
+                        "service": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/svc/fuchsia.logger.Log2",
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
+                                }
+                            },
+                            "target_path": "/svc/fuchsia.logger.Log"
                         }
                     },
                     {
@@ -898,7 +928,7 @@ mod tests {
                             "self": {}
                         }
                     }
-                ],
+                ]
             }),
             output = {
                 let offers = vec![
@@ -939,13 +969,23 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source_path: Some("/svc/fuchsia.logger.Log1".to_string()),
                         target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef {
                                name: "modular".to_string(),
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
+                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                    }),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
+                        target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef {
+                               name: "modular".to_string(),
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
                     fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),

@@ -197,7 +197,13 @@ struct ValidationContext<'a> {
     errors: Vec<Error>,
 }
 
-type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
+#[derive(Clone, Copy, PartialEq)]
+enum AllowablePaths {
+    One,
+    Many
+}
+
+type PathMap<'a> = HashMap<String, HashMap<&'a str, AllowablePaths>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(mut self) -> Result<(), Vec<Error>> {
@@ -231,7 +237,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "exposes".
         if let Some(exposes) = self.decl.exposes.as_ref() {
-            let mut target_paths = HashSet::new();
+            let mut target_paths = HashMap::new();
             for expose in exposes.iter() {
                 self.validate_expose_decl(&expose, &mut target_paths);
             }
@@ -399,12 +405,13 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose_decl(
         &mut self,
         expose: &'a fsys::ExposeDecl,
-        prev_target_paths: &mut HashSet<&'a str>,
+        prev_target_paths: &mut HashMap<&'a str, AllowablePaths>,
     ) {
         match expose {
             fsys::ExposeDecl::Service(e) => {
                 self.validate_expose_fields(
                     "ExposeServiceDecl",
+                    AllowablePaths::Many,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
@@ -415,6 +422,7 @@ impl<'a> ValidationContext<'a> {
             fsys::ExposeDecl::LegacyService(e) => {
                 self.validate_expose_fields(
                     "ExposeLegacyServiceDecl",
+                    AllowablePaths::One,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
@@ -425,6 +433,7 @@ impl<'a> ValidationContext<'a> {
             fsys::ExposeDecl::Directory(e) => {
                 self.validate_expose_fields(
                     "ExposeDirectoryDecl",
+                    AllowablePaths::One,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
@@ -441,11 +450,12 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose_fields(
         &mut self,
         decl: &str,
+        allowable_paths: AllowablePaths,
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
         target_path: Option<&'a String>,
         target: Option<&fsys::Ref>,
-        prev_child_target_paths: &mut HashSet<&'a str>,
+        prev_child_target_paths: &mut HashMap<&'a str, AllowablePaths>,
     ) {
         match source {
             Some(r) => match r {
@@ -476,9 +486,11 @@ impl<'a> ValidationContext<'a> {
         }
         check_path(source_path, decl, "source_path", &mut self.errors);
         if check_path(target_path, decl, "target_path", &mut self.errors) {
-            let target_path: &str = target_path.unwrap();
-            if !prev_child_target_paths.insert(target_path) {
-                self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
+            let target_path = target_path.unwrap();
+            if let Some(prev_state) = prev_child_target_paths.insert(target_path, allowable_paths) {
+                if prev_state == AllowablePaths::One || prev_state != allowable_paths {
+                    self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
+                }
             }
         }
     }
@@ -488,6 +500,7 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Service(o) => {
                 self.validate_offers_fields(
                     "OfferServiceDecl",
+                    AllowablePaths::Many,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
                     o.target.as_ref(),
@@ -497,6 +510,7 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::LegacyService(o) => {
                 self.validate_offers_fields(
                     "OfferLegacyServiceDecl",
+                    AllowablePaths::One,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
                     o.target.as_ref(),
@@ -506,6 +520,7 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Directory(o) => {
                 self.validate_offers_fields(
                     "OfferDirectoryDecl",
+                    AllowablePaths::One,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
                     o.target.as_ref(),
@@ -529,6 +544,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_offers_fields(
         &mut self,
         decl: &str,
+        allowable_paths: AllowablePaths,
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
         target: Option<&fsys::Ref>,
@@ -545,10 +561,10 @@ impl<'a> ValidationContext<'a> {
         check_path(source_path, decl, "source_path", &mut self.errors);
         match target {
             Some(fsys::Ref::Child(c)) => {
-                self.validate_target_child(decl, c, source, target_path);
+                self.validate_target_child(decl, allowable_paths, c, source, target_path);
             }
             Some(fsys::Ref::Collection(c)) => {
-                self.validate_target_collection(decl, c, target_path);
+                self.validate_target_collection(decl, allowable_paths, c, target_path);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "target"));
@@ -591,6 +607,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_child(
         &mut self,
         decl: &str,
+        allowable_paths: AllowablePaths,
         child: &fsys::ChildRef,
         source: Option<&fsys::Ref>,
         target_path: Option<&'a String>,
@@ -611,9 +628,15 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::invalid_child(decl, "target", &child.name as &str));
             }
             let paths_for_target =
-                self.child_target_paths.entry(child.name.to_string()).or_insert(HashSet::new());
-            if !paths_for_target.insert(target_path) {
-                self.errors.push(Error::duplicate_field(decl, "target_path", target_path as &str));
+                self.child_target_paths.entry(child.name.to_string()).or_insert(HashMap::new());
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
+                if prev_state == AllowablePaths::One || prev_state != allowable_paths {
+                    self.errors.push(Error::duplicate_field(
+                        decl,
+                        "target_path",
+                        target_path as &str,
+                    ));
+                }
             }
             if let Some(source) = source {
                 if let fsys::Ref::Child(source_child) = source {
@@ -629,6 +652,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_collection(
         &mut self,
         decl: &str,
+        allowable_paths: AllowablePaths,
         collection: &fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
@@ -646,9 +670,15 @@ impl<'a> ValidationContext<'a> {
             let paths_for_target = self
                 .collection_target_paths
                 .entry(collection.name.to_string())
-                .or_insert(HashSet::new());
-            if !paths_for_target.insert(target_path) {
-                self.errors.push(Error::duplicate_field(decl, "target_path", target_path as &str));
+                .or_insert(HashMap::new());
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
+                if prev_state == AllowablePaths::One || prev_state != allowable_paths {
+                    self.errors.push(Error::duplicate_field(
+                        decl,
+                        "target_path",
+                        target_path as &str,
+                    ));
+                }
             }
         }
     }
@@ -1444,22 +1474,42 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl::Service(ExposeServiceDecl {
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
-                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger2".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/svc/logger3".to_string()),
+                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/svc/netstack".to_string()),
+                        target_path: Some("/svc/fuchsia.net.Stack".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/svc/netstack2".to_string()),
+                        target_path: Some("/svc/fuchsia.net.Stack".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::duplicate_field("ExposeServiceDecl", "target_path",
+                                       "/svc/fuchsia.logger.Log"),
                 Error::duplicate_field("ExposeDirectoryDecl", "target_path",
                                        "/svc/fuchsia.logger.Log"),
             ])),
@@ -1911,6 +1961,14 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                     }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/data/assets".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_path: Some("/data".to_string()),
+                    }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
@@ -1936,7 +1994,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("OfferServiceDecl", "target_path", "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("OfferServiceDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
             ])),
         },
