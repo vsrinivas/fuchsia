@@ -4,6 +4,8 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 
+#include <endian.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
@@ -12,11 +14,116 @@
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 extern "C" {
 #include "libavformat/avformat.h"
+#include "libavutil/encryption_info.h"
 }
 
 namespace media_player {
 
 namespace {
+
+constexpr uint32_t kPsshType = 0x70737368;  // fourcc 'pssh'
+constexpr uint32_t kSystemIdSize = 16;      // System IDs in pssh boxes are always 16 bytes.
+constexpr uint32_t kKeyIdSize = 16;         // Key IDs in pssh boxes are always 16 bytes.
+
+// Deposits |size| bytes copied from |data| at |*p_in_out| and increases |*p_in_out| by |size|.
+void Deposit(const uint8_t* data, size_t size, uint8_t** p_in_out) {
+  FXL_DCHECK(size);
+  FXL_DCHECK(data);
+  FXL_DCHECK(p_in_out);
+  FXL_DCHECK(*p_in_out);
+  memcpy(*p_in_out, data, size);
+  *p_in_out += size;
+}
+
+// Deposits |t| at |*p_in_out| and increases |*p_in_out| by |sizeof(t)|.
+template <typename T>
+void Deposit(T t, uint8_t** p_in_out) {
+  Deposit(reinterpret_cast<const uint8_t*>(&t), sizeof(t), p_in_out);
+}
+
+// Creates a PSSH box as raw bytes from encryption init data on a stream, if there is any, otherwise
+// returns nullptr.
+std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
+  int encryption_side_data_size;
+  uint8_t* encryption_side_data =
+      av_stream_get_side_data(&from, AV_PKT_DATA_ENCRYPTION_INIT_INFO, &encryption_side_data_size);
+  if (encryption_side_data == nullptr) {
+    return nullptr;
+  }
+
+  // Create an |AVEncryptionInitInfo| structure from the side data. This is deleted below by
+  // calling |av_encryption_init_info_free|.
+  AVEncryptionInitInfo* encryption_init_info =
+      av_encryption_init_info_get_side_data(encryption_side_data, encryption_side_data_size);
+
+  // A pssh box has the following structure. Numeric values are big-endian.
+  //
+  // uint32_t size;
+  // uint32_t type; // fourcc 'pssh'
+  // uint8_t version;
+  // uint8_t flags[3]; // all zeros
+  // uint8_t system_id[16];
+  // if (version_ > 0) {
+  //   uint32_t key_id_count;
+  //   uint8_t key_ids[16][kid_count];
+  // }
+  // uint32_t data_size;
+  // uint8_t data[data_size];
+
+  struct __attribute__((packed)) PsshBoxInvariantPrefix {
+    uint32_t size_;
+    uint32_t type_;
+    uint8_t version_;
+    uint8_t flags_[3];
+    uint8_t system_id_[kSystemIdSize];
+  };
+
+  // Determine the size of the pssh box.
+  uint32_t box_size =
+      sizeof(PsshBoxInvariantPrefix) + sizeof(uint32_t) + encryption_init_info->data_size;
+  if (encryption_init_info->num_key_ids != 0) {
+    box_size += sizeof(uint32_t) + kKeyIdSize * encryption_init_info->num_key_ids;
+    FXL_DCHECK(encryption_init_info->key_id_size == kKeyIdSize);
+  }
+
+  // Create a buffer of the correct size.
+  auto result = Bytes::Create(box_size);
+
+  // Align |prefix| with the start of the buffer and populate it.
+  auto prefix = new (result->data()) PsshBoxInvariantPrefix;
+  prefix->size_ = htobe32(box_size);
+  prefix->type_ = htobe32(kPsshType);
+  prefix->version_ = (encryption_init_info->num_key_ids == 0) ? 0 : 1;
+  prefix->flags_[0] = 0;
+  prefix->flags_[1] = 0;
+  prefix->flags_[2] = 0;
+
+  FXL_DCHECK(encryption_init_info->system_id_size == kSystemIdSize);
+  memcpy(prefix->system_id_, encryption_init_info->system_id, kSystemIdSize);
+
+  // Set |p| to point to the first byte after |prefix|. |p| will be our write pointer into
+  // |result->data()| as we write the key IDs, data size and data.
+  auto p = reinterpret_cast<uint8_t*>(prefix + 1);
+
+  // Deposit the key IDs.
+  if (encryption_init_info->num_key_ids != 0) {
+    Deposit(htobe32(encryption_init_info->num_key_ids), &p);
+    for (uint32_t i = 0; i < encryption_init_info->num_key_ids; ++i) {
+      FXL_DCHECK(encryption_init_info->key_ids[i]);
+      Deposit(encryption_init_info->key_ids[i], kKeyIdSize, &p);
+    }
+  }
+
+  // Deposit the data size and data.
+  Deposit(htobe32(encryption_init_info->data_size), &p);
+  Deposit(encryption_init_info->data, encryption_init_info->data_size, &p);
+
+  FXL_DCHECK(p == result->data() + box_size);
+
+  av_encryption_init_info_free(encryption_init_info);
+
+  return result;
+}
 
 // Converts an AVSampleFormat into an AudioStreamType::SampleFormat.
 AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
@@ -42,6 +149,11 @@ AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
       FXL_LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
       abort();
   }
+}
+
+template <typename T>
+std::unique_ptr<Bytes> BytesFromExtraData(T& from) {
+  return from.extradata_size == 0 ? nullptr : Bytes::Create(from.extradata, from.extradata_size);
 }
 
 // Copies a buffer from Bytes into context->extradata. The result is malloc'ed
@@ -119,21 +231,24 @@ std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(const AVCodecContext
   bool decoded = from.codec != nullptr || IsLpcm(from.codec_id);
 
   return AudioStreamType::Create(
-      decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
-      (decoded || from.extradata_size == 0) ? nullptr
-                                            : Bytes::Create(from.extradata, from.extradata_size),
-      Convert(from.sample_fmt), from.channels, from.sample_rate);
+      nullptr, decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
+      decoded ? nullptr : BytesFromExtraData(from), Convert(from.sample_fmt), from.channels,
+      from.sample_rate);
 }
 
 // Creates a StreamType from an AVCodecContext describing an audio type.
-std::unique_ptr<StreamType> StreamTypeFromAudioCodecParameters(const AVCodecParameters& from) {
-  bool decoded = IsLpcm(from.codec_id);
+std::unique_ptr<StreamType> StreamTypeFromAudioStream(const AVStream& from) {
+  FXL_DCHECK(from.codecpar);
+
+  auto& codecpar = *from.codecpar;
+  bool decoded = IsLpcm(codecpar.codec_id);
 
   return AudioStreamType::Create(
-      decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
-      (decoded || from.extradata_size == 0) ? nullptr
-                                            : Bytes::Create(from.extradata, from.extradata_size),
-      Convert(static_cast<AVSampleFormat>(from.format)), from.channels, from.sample_rate);
+      EncryptionParametersFromStream(from),
+      decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(codecpar.codec_id),
+      decoded ? nullptr : BytesFromExtraData(codecpar),
+      Convert(static_cast<AVSampleFormat>(codecpar.format)), codecpar.channels,
+      codecpar.sample_rate);
 }
 
 // Converts AVColorSpace and AVColorRange to ColorSpace.
@@ -184,11 +299,10 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(const AVCodecContext
   }
 
   return VideoStreamType::Create(
+      nullptr,
       from.codec == nullptr ? EncodingFromCodecId(from.codec_id)
                             : StreamType::kVideoEncodingUncompressed,
-      (from.codec != nullptr || from.extradata_size == 0)
-          ? nullptr
-          : Bytes::Create(from.extradata, from.extradata_size),
+      from.codec != nullptr ? nullptr : BytesFromExtraData(from),
       PixelFormatFromAVPixelFormat(from.pix_fmt),
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range), from.width,
       from.height, coded_width, coded_height, aspect_ratio_width, aspect_ratio_height, line_stride);
@@ -209,11 +323,8 @@ std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
   }
 
   return VideoStreamType::Create(
-      EncodingFromCodecId(parameters.codec_id),
-      parameters.extradata_size == 0
-          ? nullptr
-          : Bytes::Create(parameters.extradata, parameters.extradata_size),
-      pixel_format,
+      EncryptionParametersFromStream(from), EncodingFromCodecId(parameters.codec_id),
+      BytesFromExtraData(parameters), pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(parameters.color_space, parameters.color_range),
       parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num, pixel_aspect_ratio.den, 0);
 }
@@ -221,25 +332,25 @@ std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
 // Creates a StreamType from an AVCodecContext describing a data type.
 std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(const AVCodecContext& from) {
   // TODO(dalesat): Implement.
-  return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
+  return TextStreamType::Create(nullptr, "UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
 }
 
 // Creates a StreamType from AVCodecParameters describing a data type.
 std::unique_ptr<StreamType> StreamTypeFromDataCodecParameters(const AVCodecParameters& from) {
   // TODO(dalesat): Implement.
-  return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
+  return TextStreamType::Create(nullptr, "UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
 }
 
 // Creates a StreamType from an AVCodecContext describing a subtitle type.
 std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecContext(const AVCodecContext& from) {
   // TODO(dalesat): Implement.
-  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
+  return SubpictureStreamType::Create(nullptr, "UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
 }
 
 // Creates a StreamType from AVCodecParameters describing a subtitle type.
 std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(const AVCodecParameters& from) {
   // TODO(dalesat): Implement.
-  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
+  return SubpictureStreamType::Create(nullptr, "UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
 }
 
 // Creates an AVCodecContext from an AudioStreamType.
@@ -445,7 +556,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVCodecContext& 
 std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVStream& from) {
   switch (from.codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-      return StreamTypeFromAudioCodecParameters(*from.codecpar);
+      return StreamTypeFromAudioStream(from);
     case AVMEDIA_TYPE_VIDEO:
       return StreamTypeFromVideoStream(from);
     case AVMEDIA_TYPE_UNKNOWN:
@@ -464,6 +575,8 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVStream& from) 
 
 // static
 AvCodecContextPtr AvCodecContext::Create(const StreamType& stream_type) {
+  FXL_DCHECK(!stream_type.encrypted());
+
   InitFfmpeg();
 
   switch (stream_type.medium()) {

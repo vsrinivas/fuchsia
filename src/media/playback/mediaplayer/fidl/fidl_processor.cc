@@ -32,13 +32,15 @@ FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medi
     : service_provider_(service_provider), medium_(medium), function_(function) {
   switch (medium_) {
     case StreamType::Medium::kAudio:
-      output_stream_type_ = AudioStreamType::Create(StreamType::kAudioEncodingLpcm, nullptr,
-                                                    AudioStreamType::SampleFormat::kNone, 1, 1);
+      output_stream_type_ =
+          AudioStreamType::Create(nullptr, StreamType::kAudioEncodingLpcm, nullptr,
+                                  AudioStreamType::SampleFormat::kNone, 1, 1);
       break;
     case StreamType::Medium::kVideo:
-      output_stream_type_ = VideoStreamType::Create(
-          StreamType::kVideoEncodingUncompressed, nullptr, VideoStreamType::PixelFormat::kUnknown,
-          VideoStreamType::ColorSpace::kUnknown, 0, 0, 0, 0, 1, 1, 0);
+      output_stream_type_ =
+          VideoStreamType::Create(nullptr, StreamType::kVideoEncodingUncompressed, nullptr,
+                                  VideoStreamType::PixelFormat::kUnknown,
+                                  VideoStreamType::ColorSpace::kUnknown, 0, 0, 0, 0, 1, 1, 0);
       break;
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:

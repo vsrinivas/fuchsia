@@ -19,16 +19,19 @@ class AudioStreamType : public StreamType {
  public:
   enum class SampleFormat { kNone, kAny, kUnsigned8, kSigned16, kSigned24In32, kFloat };
 
-  static std::unique_ptr<StreamType> Create(const std::string& encoding,
+  static std::unique_ptr<StreamType> Create(std::unique_ptr<Bytes> encryption_parameters,
+                                            const std::string& encoding,
                                             std::unique_ptr<Bytes> encoding_parameters,
                                             SampleFormat sample_format, uint32_t channels,
                                             uint32_t frames_per_second) {
     return std::unique_ptr<StreamType>(new AudioStreamType(
-        encoding, std::move(encoding_parameters), sample_format, channels, frames_per_second));
+        std::move(encryption_parameters), encoding, std::move(encoding_parameters), sample_format,
+        channels, frames_per_second));
   }
 
-  AudioStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
-                  SampleFormat sample_format, uint32_t channels, uint32_t frames_per_second);
+  AudioStreamType(std::unique_ptr<Bytes> encryption_parameters, const std::string& encoding,
+                  std::unique_ptr<Bytes> encoding_parameters, SampleFormat sample_format,
+                  uint32_t channels, uint32_t frames_per_second);
 
   AudioStreamType(const AudioStreamType& other);
 

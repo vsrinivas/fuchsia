@@ -94,30 +94,35 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 
 std::ostream& operator<<(std::ostream& os, const StreamType& value) {
   os << fostr::Indent;
-  os << fostr::NewLine << "medium:               " << value.medium();
-  os << fostr::NewLine << "encoding:             " << value.encoding();
+  os << fostr::NewLine << "medium:                " << value.medium();
   if (value.encoding_parameters()) {
-    os << fostr::NewLine << "encoding parameters:  " << *value.encoding_parameters();
+    os << fostr::NewLine << "encryption parameters: " << *value.encryption_parameters();
   } else {
-    os << fostr::NewLine << "encoding parameters:  <null>";
+    os << fostr::NewLine << "encryption parameters: <null>";
+  }
+  os << fostr::NewLine << "encoding:              " << value.encoding();
+  if (value.encoding_parameters()) {
+    os << fostr::NewLine << "encoding parameters:   " << *value.encoding_parameters();
+  } else {
+    os << fostr::NewLine << "encoding parameters:   <null>";
   }
 
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << fostr::NewLine << "sample format:        " << value.audio()->sample_format();
-      os << fostr::NewLine << "channels:             " << value.audio()->channels();
-      os << fostr::NewLine << "frames per second:    " << value.audio()->frames_per_second();
+      os << fostr::NewLine << "sample format:         " << value.audio()->sample_format();
+      os << fostr::NewLine << "channels:              " << value.audio()->channels();
+      os << fostr::NewLine << "frames per second:     " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << fostr::NewLine << "pixel format:         " << value.video()->pixel_format();
-      os << fostr::NewLine << "color space:          " << value.video()->color_space();
-      os << fostr::NewLine << "size:                 " << value.video()->width() << "x"
+      os << fostr::NewLine << "pixel format:          " << value.video()->pixel_format();
+      os << fostr::NewLine << "color space:           " << value.video()->color_space();
+      os << fostr::NewLine << "size:                  " << value.video()->width() << "x"
          << value.video()->height();
-      os << fostr::NewLine << "coded size:           " << value.video()->coded_width() << "x"
+      os << fostr::NewLine << "coded size:            " << value.video()->coded_width() << "x"
          << value.video()->coded_height();
-      os << fostr::NewLine << "pixel aspect ratio:   " << value.video()->pixel_aspect_ratio_width()
+      os << fostr::NewLine << "pixel aspect ratio:    " << value.video()->pixel_aspect_ratio_width()
          << "x" << value.video()->pixel_aspect_ratio_height();
-      os << fostr::NewLine << "line stride:          " << value.video()->line_stride();
+      os << fostr::NewLine << "line stride:           " << value.video()->line_stride();
       break;
     default:
       break;

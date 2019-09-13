@@ -42,19 +42,20 @@ class VideoStreamType : public StreamType {
 
   // Creates a VideoStreamType.
   static std::unique_ptr<StreamType> Create(
-      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
-      PixelFormat pixel_format, ColorSpace color_space, uint32_t width, uint32_t height,
-      uint32_t coded_width, uint32_t coded_height, uint32_t pixel_aspect_ratio_width,
-      uint32_t pixel_aspect_ratio_height, uint32_t line_stride) {
-    return std::unique_ptr<StreamType>(
-        new VideoStreamType(encoding, std::move(encoding_parameters), pixel_format, color_space,
-                            width, height, coded_width, coded_height, pixel_aspect_ratio_width,
-                            pixel_aspect_ratio_height, line_stride));
+      std::unique_ptr<Bytes> encryption_parameters, const std::string& encoding,
+      std::unique_ptr<Bytes> encoding_parameters, PixelFormat pixel_format, ColorSpace color_space,
+      uint32_t width, uint32_t height, uint32_t coded_width, uint32_t coded_height,
+      uint32_t pixel_aspect_ratio_width, uint32_t pixel_aspect_ratio_height, uint32_t line_stride) {
+    return std::unique_ptr<StreamType>(new VideoStreamType(
+        std::move(encryption_parameters), encoding, std::move(encoding_parameters), pixel_format,
+        color_space, width, height, coded_width, coded_height, pixel_aspect_ratio_width,
+        pixel_aspect_ratio_height, line_stride));
   }
 
-  VideoStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
-                  PixelFormat pixel_format, ColorSpace color_space, uint32_t width, uint32_t height,
-                  uint32_t coded_width, uint32_t coded_height, uint32_t pixel_aspect_ratio_width,
+  VideoStreamType(std::unique_ptr<Bytes> encryption_parameters, const std::string& encoding,
+                  std::unique_ptr<Bytes> encoding_parameters, PixelFormat pixel_format,
+                  ColorSpace color_space, uint32_t width, uint32_t height, uint32_t coded_width,
+                  uint32_t coded_height, uint32_t pixel_aspect_ratio_width,
                   uint32_t pixel_aspect_ratio_height, uint32_t line_stride);
 
   ~VideoStreamType() override;

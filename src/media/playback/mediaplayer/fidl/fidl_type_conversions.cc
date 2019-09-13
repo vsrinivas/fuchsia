@@ -250,13 +250,15 @@ TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamT
   switch (input.medium_specific.Which()) {
     case fuchsia::media::MediumSpecificStreamType::Tag::kAudio:
       return media_player::AudioStreamType::Create(
-          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
+          nullptr, input.encoding,
+          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::AudioStreamType::SampleFormat>(
               input.medium_specific.audio().sample_format),
           input.medium_specific.audio().channels, input.medium_specific.audio().frames_per_second);
     case fuchsia::media::MediumSpecificStreamType::Tag::kVideo:
       return media_player::VideoStreamType::Create(
-          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
+          nullptr, input.encoding,
+          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::VideoStreamType::PixelFormat>(
               input.medium_specific.video().pixel_format),
           To<media_player::VideoStreamType::ColorSpace>(input.medium_specific.video().color_space),
@@ -267,10 +269,12 @@ TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamT
           input.medium_specific.video().stride);
     case fuchsia::media::MediumSpecificStreamType::Tag::kText:
       return media_player::TextStreamType::Create(
-          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
+          nullptr, input.encoding,
+          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
     case fuchsia::media::MediumSpecificStreamType::Tag::kSubpicture:
       return media_player::SubpictureStreamType::Create(
-          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
+          nullptr, input.encoding,
+          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
     default:
       break;
   }
@@ -393,9 +397,9 @@ TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::FormatD
         return nullptr;
     }
 
-    return media_player::AudioStreamType::Create(media_player::StreamType::kAudioEncodingLpcm,
-                                                 nullptr, sample_format, format.channel_map.size(),
-                                                 format.frames_per_second);
+    return media_player::AudioStreamType::Create(
+        nullptr, media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
+        format.channel_map.size(), format.frames_per_second);
   }
 
   if (input.mime_type() == kVideoMimeTypeUncompressed) {
@@ -421,7 +425,7 @@ TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::FormatD
     // pixel_aspect_ratio_width == 1, pixel_aspect_ratio_height == 1 is as good
     // a default as any, at least for now.
     return media_player::VideoStreamType::Create(
-        media_player::StreamType::kVideoEncodingUncompressed, nullptr, pixel_format,
+        nullptr, media_player::StreamType::kVideoEncodingUncompressed, nullptr, pixel_format,
         media_player::VideoStreamType::ColorSpace::kUnknown, format.primary_display_width_pixels,
         format.primary_display_height_pixels, format.primary_width_pixels,
         format.primary_height_pixels, format.pixel_aspect_ratio_width,

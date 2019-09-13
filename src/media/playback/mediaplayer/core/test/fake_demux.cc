@@ -17,13 +17,13 @@ std::shared_ptr<FakeDemux> FakeDemux::Create() { return std::make_shared<FakeDem
 FakeDemux::FakeDemux() {
   streams_.push_back(std::make_unique<DemuxStreamImpl>(
       0,
-      AudioStreamType::Create(StreamType::kAudioEncodingVorbis, nullptr,
+      AudioStreamType::Create(nullptr, StreamType::kAudioEncodingVorbis, nullptr,
                               AudioStreamType::SampleFormat::kFloat, 2, 44100),
       media::TimelineRate(1, 1)));
   streams_.push_back(std::make_unique<DemuxStreamImpl>(
       1,
       VideoStreamType::Create(
-          StreamType::kVideoEncodingTheora, nullptr, VideoStreamType::PixelFormat::kYv12,
+          nullptr, StreamType::kVideoEncodingTheora, nullptr, VideoStreamType::PixelFormat::kYv12,
           VideoStreamType::ColorSpace::kNotApplicable, 1920, 1080, 1920, 1080, 1, 1, 1920),
       media::TimelineRate(1, 1)));
 }

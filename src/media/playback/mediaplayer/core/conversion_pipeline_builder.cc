@@ -112,6 +112,13 @@ Builder::Builder(const StreamType& in_type,
       callback_(std::move(callback)) {}
 
 void Builder::Build() {
+  if (type_->encrypted()) {
+    // TODO(dalesat): Support encrypted types.
+    FXL_DLOG(ERROR) << "encrypted types not supported.";
+    Fail();
+    return;
+  }
+
   switch (type_->medium()) {
     case StreamType::Medium::kAudio:
       if (type_->encoding() == StreamType::kAudioEncodingLpcm) {
@@ -239,7 +246,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
 
   // Build the resulting media type.
   type_ =
-      AudioStreamType::Create(StreamType::kAudioEncodingLpcm, nullptr,
+      AudioStreamType::Create(nullptr, StreamType::kAudioEncodingLpcm, nullptr,
                               out_type_set.sample_format() == AudioStreamType::SampleFormat::kAny
                                   ? audio_type.sample_format()
                                   : out_type_set.sample_format(),

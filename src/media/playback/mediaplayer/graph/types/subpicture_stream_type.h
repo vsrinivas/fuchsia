@@ -14,13 +14,15 @@ namespace media_player {
 // Describes the type of a subpicture stream.
 class SubpictureStreamType : public StreamType {
  public:
-  static std::unique_ptr<StreamType> Create(const std::string& encoding,
+  static std::unique_ptr<StreamType> Create(std::unique_ptr<Bytes> encryption_parameters,
+                                            const std::string& encoding,
                                             std::unique_ptr<Bytes> encoding_parameters) {
-    return std::unique_ptr<StreamType>(
-        new SubpictureStreamType(encoding, std::move(encoding_parameters)));
+    return std::unique_ptr<StreamType>(new SubpictureStreamType(
+        std::move(encryption_parameters), encoding, std::move(encoding_parameters)));
   }
 
-  SubpictureStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters);
+  SubpictureStreamType(std::unique_ptr<Bytes> encryption_parameters, const std::string& encoding,
+                       std::unique_ptr<Bytes> encoding_parameters);
 
   ~SubpictureStreamType() override;
 

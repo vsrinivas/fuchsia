@@ -50,18 +50,24 @@ class StreamType {
   static const char kVideoEncodingVp8[];
   static const char kVideoEncodingVp9[];
 
-  static std::unique_ptr<StreamType> Create(Medium medium, const std::string& encoding,
+  static std::unique_ptr<StreamType> Create(Medium medium,
+                                            std::unique_ptr<Bytes> encryption_parameters,
+                                            const std::string& encoding,
                                             std::unique_ptr<Bytes> encoding_parameters) {
-    return std::unique_ptr<StreamType>(
-        new StreamType(medium, encoding, std::move(encoding_parameters)));
+    return std::unique_ptr<StreamType>(new StreamType(medium, std::move(encryption_parameters),
+                                                      encoding, std::move(encoding_parameters)));
   }
 
-  StreamType(Medium medium, const std::string& encoding,
-             std::unique_ptr<Bytes> encoding_parameters);
+  StreamType(Medium medium, std::unique_ptr<Bytes> encryption_parameters,
+             const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters);
 
   virtual ~StreamType();
 
   Medium medium() const { return medium_; }
+
+  bool encrypted() const { return !!encryption_parameters_; }
+
+  const Bytes* encryption_parameters() const { return encryption_parameters_.get(); }
 
   const std::string& encoding() const { return encoding_; }
 
@@ -76,6 +82,7 @@ class StreamType {
 
  private:
   Medium medium_;
+  std::unique_ptr<Bytes> encryption_parameters_;
   std::string encoding_;
   std::unique_ptr<Bytes> encoding_parameters_;
 };

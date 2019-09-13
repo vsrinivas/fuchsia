@@ -36,9 +36,12 @@ const char StreamType::kVideoEncodingVp3[] = "fuchsia.media.vp3";
 const char StreamType::kVideoEncodingVp8[] = "fuchsia.media.vp8";
 const char StreamType::kVideoEncodingVp9[] = "fuchsia.media.vp9";
 
-StreamType::StreamType(Medium medium, const std::string& encoding,
-                       std::unique_ptr<Bytes> encoding_parameters)
-    : medium_(medium), encoding_(encoding), encoding_parameters_(std::move(encoding_parameters)) {}
+StreamType::StreamType(Medium medium, std::unique_ptr<Bytes> encryption_parameters,
+                       const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters)
+    : medium_(medium),
+      encryption_parameters_(std::move(encryption_parameters)),
+      encoding_(encoding),
+      encoding_parameters_(std::move(encoding_parameters)) {}
 
 StreamType::~StreamType() {}
 
@@ -63,7 +66,8 @@ const SubpictureStreamType* StreamType::subpicture() const {
 }
 
 std::unique_ptr<StreamType> StreamType::Clone() const {
-  return Create(medium(), encoding(), SafeClone(encoding_parameters()));
+  return Create(medium(), SafeClone(encryption_parameters()), encoding(),
+                SafeClone(encoding_parameters()));
 }
 
 StreamTypeSet::StreamTypeSet(StreamType::Medium medium, const std::vector<std::string>& encodings)
@@ -106,7 +110,7 @@ bool StreamTypeSet::IncludesEncoding(const std::string& encoding) const {
 }
 
 bool StreamTypeSet::Includes(const StreamType& type) const {
-  return medium_ == type.medium() && IncludesEncoding(type.encoding());
+  return !type.encrypted() && medium_ == type.medium() && IncludesEncoding(type.encoding());
 }
 
 }  // namespace media_player

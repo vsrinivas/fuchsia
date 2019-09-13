@@ -17,15 +17,16 @@ std::unique_ptr<StreamType> FakeDecoder::OutputStreamType(const StreamType& stre
     case StreamType::Medium::kAudio:
       FXL_DCHECK(stream_type.audio());
       return AudioStreamType::Create(
-          StreamType::kAudioEncodingLpcm, nullptr, stream_type.audio()->sample_format(),
+          nullptr, StreamType::kAudioEncodingLpcm, nullptr, stream_type.audio()->sample_format(),
           stream_type.audio()->channels(), stream_type.audio()->frames_per_second());
     case StreamType::Medium::kVideo:
       FXL_DCHECK(stream_type.video());
       return VideoStreamType::Create(
-          StreamType::kVideoEncodingUncompressed, nullptr, stream_type.video()->pixel_format(),
-          stream_type.video()->color_space(), stream_type.video()->width(),
-          stream_type.video()->height(), stream_type.video()->coded_width(),
-          stream_type.video()->coded_height(), stream_type.video()->pixel_aspect_ratio_width(),
+          nullptr, StreamType::kVideoEncodingUncompressed, nullptr,
+          stream_type.video()->pixel_format(), stream_type.video()->color_space(),
+          stream_type.video()->width(), stream_type.video()->height(),
+          stream_type.video()->coded_width(), stream_type.video()->coded_height(),
+          stream_type.video()->pixel_aspect_ratio_width(),
           stream_type.video()->pixel_aspect_ratio_height(), stream_type.video()->line_stride());
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:

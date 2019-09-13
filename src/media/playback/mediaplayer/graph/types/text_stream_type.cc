@@ -9,16 +9,18 @@
 
 namespace media_player {
 
-TextStreamType::TextStreamType(const std::string& encoding,
+TextStreamType::TextStreamType(std::unique_ptr<Bytes> encryption_parameters,
+                               const std::string& encoding,
                                std::unique_ptr<Bytes> encoding_parameters)
-    : StreamType(StreamType::Medium::kText, encoding, std::move(encoding_parameters)) {}
+    : StreamType(StreamType::Medium::kText, std::move(encryption_parameters), encoding,
+                 std::move(encoding_parameters)) {}
 
 TextStreamType::~TextStreamType() {}
 
 const TextStreamType* TextStreamType::text() const { return this; }
 
 std::unique_ptr<StreamType> TextStreamType::Clone() const {
-  return Create(encoding(), SafeClone(encoding_parameters()));
+  return Create(SafeClone(encryption_parameters()), encoding(), SafeClone(encoding_parameters()));
 }
 
 TextStreamTypeSet::TextStreamTypeSet(const std::vector<std::string>& encodings)

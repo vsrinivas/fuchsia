@@ -162,7 +162,7 @@ TEST_F(PlayerTest, FakeSegments) {
   ExpectNoStreams(player_core);
 
   // Add an audio stream indicating we will add more streams.
-  AudioStreamType audio_type(StreamType::kAudioEncodingLpcm, nullptr,
+  AudioStreamType audio_type(nullptr, StreamType::kAudioEncodingLpcm, nullptr,
                              AudioStreamType::SampleFormat::kSigned16, 2, 44100);
 
   // We need a non-null output, but it doesn't have to work.
@@ -181,7 +181,7 @@ TEST_F(PlayerTest, FakeSegments) {
   ExpectNoStreams(player_core, StreamType::Medium::kSubpicture);
 
   // Add a video stream indicating we will *not* add more streams.
-  VideoStreamType video_type(StreamType::kVideoEncodingUncompressed, nullptr,
+  VideoStreamType video_type(nullptr, StreamType::kVideoEncodingUncompressed, nullptr,
                              VideoStreamType::PixelFormat::kYv12,
                              VideoStreamType::ColorSpace::kNotApplicable, 0, 0, 0, 0, 1, 1, 0);
 

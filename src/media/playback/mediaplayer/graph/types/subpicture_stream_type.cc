@@ -8,16 +8,18 @@
 
 namespace media_player {
 
-SubpictureStreamType::SubpictureStreamType(const std::string& encoding,
+SubpictureStreamType::SubpictureStreamType(std::unique_ptr<Bytes> encryption_parameters,
+                                           const std::string& encoding,
                                            std::unique_ptr<Bytes> encoding_parameters)
-    : StreamType(StreamType::Medium::kSubpicture, encoding, std::move(encoding_parameters)) {}
+    : StreamType(StreamType::Medium::kSubpicture, std::move(encryption_parameters), encoding,
+                 std::move(encoding_parameters)) {}
 
 SubpictureStreamType::~SubpictureStreamType() {}
 
 const SubpictureStreamType* SubpictureStreamType::subpicture() const { return this; }
 
 std::unique_ptr<StreamType> SubpictureStreamType::Clone() const {
-  return Create(encoding(), SafeClone(encoding_parameters()));
+  return Create(SafeClone(encryption_parameters()), encoding(), SafeClone(encoding_parameters()));
 }
 
 SubpictureStreamTypeSet::SubpictureStreamTypeSet(const std::vector<std::string>& encodings)

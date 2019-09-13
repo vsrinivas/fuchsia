@@ -11,13 +11,15 @@
 
 namespace media_player {
 
-VideoStreamType::VideoStreamType(const std::string& encoding,
+VideoStreamType::VideoStreamType(std::unique_ptr<Bytes> encryption_parameters,
+                                 const std::string& encoding,
                                  std::unique_ptr<Bytes> encoding_parameters,
                                  PixelFormat pixel_format, ColorSpace color_space, uint32_t width,
                                  uint32_t height, uint32_t coded_width, uint32_t coded_height,
                                  uint32_t pixel_aspect_ratio_width,
                                  uint32_t pixel_aspect_ratio_height, uint32_t line_stride)
-    : StreamType(StreamType::Medium::kVideo, encoding, std::move(encoding_parameters)),
+    : StreamType(StreamType::Medium::kVideo, std::move(encryption_parameters), encoding,
+                 std::move(encoding_parameters)),
       pixel_format_(pixel_format),
       color_space_(color_space),
       width_(width),
@@ -33,9 +35,9 @@ VideoStreamType::~VideoStreamType() {}
 const VideoStreamType* VideoStreamType::video() const { return this; }
 
 std::unique_ptr<StreamType> VideoStreamType::Clone() const {
-  return Create(encoding(), SafeClone(encoding_parameters()), pixel_format(), color_space(),
-                width(), height(), coded_width(), coded_height(), pixel_aspect_ratio_width(),
-                pixel_aspect_ratio_height(), line_stride());
+  return Create(SafeClone(encryption_parameters()), encoding(), SafeClone(encoding_parameters()),
+                pixel_format(), color_space(), width(), height(), coded_width(), coded_height(),
+                pixel_aspect_ratio_width(), pixel_aspect_ratio_height(), line_stride());
 }
 
 VideoStreamTypeSet::VideoStreamTypeSet(const std::vector<std::string>& encodings,
