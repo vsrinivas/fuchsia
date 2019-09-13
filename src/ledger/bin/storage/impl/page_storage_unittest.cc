@@ -21,6 +21,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
@@ -103,6 +104,11 @@ testing::Matcher<const ClockEntry&> ClockEntryMatchesCommit(const Commit& commit
                Field("generation", &ClockEntry::generation, commit.GetGeneration()));
 }
 
+// Makes an object identifier untracked.
+void UntrackIdentifier(ObjectIdentifier* identifier) {
+  *identifier = ObjectIdentifier(identifier->key_index(), identifier->object_digest(), nullptr);
+}
+
 // DataSource that returns an error on the callback to Get().
 class FakeErrorDataSource : public DataSource {
  public:
@@ -141,6 +147,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
       : on_get_object_(std::move(on_get_object)) {}
 
   void AddObject(ObjectIdentifier object_identifier, const std::string& value) {
+    UntrackIdentifier(&object_identifier);
     digest_to_value_[std::move(object_identifier)] = value;
   }
 
@@ -148,6 +155,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
                  fit::function<void(Status, ChangeSource, IsObjectSynced,
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
+    UntrackIdentifier(&object_identifier);
     auto value_found = digest_to_value_.find(object_identifier);
     if (value_found == digest_to_value_.end()) {
       callback(Status::INTERNAL_NOT_FOUND, ChangeSource::CLOUD, IsObjectSynced::NO, nullptr);
@@ -316,11 +324,13 @@ class PageStorageTest : public StorageTest {
     EXPECT_EQ(storage_->GetId(), id);
   }
 
-  // After |ResetStorage|, |identifier| may point to an expired factory.
-  // Reallocates a fresh identifier tracked by the current storage's factory.
+  // After |UntrackIdentifier| or |ResetStorage|, |identifier| may point to an expired factory.
+  // Reallocates a fresh identifier tracked by the current storage's factory if necessary.
   void RetrackIdentifier(ObjectIdentifier* identifier) {
-    *identifier = storage_->GetObjectIdentifierFactory()->MakeObjectIdentifier(
-        identifier->key_index(), identifier->object_digest());
+    if (identifier->factory() != storage_->GetObjectIdentifierFactory()) {
+      *identifier = storage_->GetObjectIdentifierFactory()->MakeObjectIdentifier(
+          identifier->key_index(), identifier->object_digest());
+    }
   }
 
  protected:
@@ -350,15 +360,29 @@ class PageStorageTest : public StorageTest {
     return commit;
   }
 
+  // Returns a random, tracked, non-inline object identifier.
+  // Since random identifiers do not correspond to actual stored objects, we do not need to untrack
+  // them to allow more garbage-collection opportunities (they wouldn't be collected anyway).
+  // Keeping them tracked is necessary to satisfy validity checks within PageStorage operations.
   ObjectIdentifier RandomObjectIdentifier() {
     return storage::RandomObjectIdentifier(environment_.random(),
                                            storage_->GetObjectIdentifierFactory());
   }
 
-  // Returns an ObjectData built with the provided |args| and tracked by |storage_|.
+  // Returns a random, tracked, inline object identifier.
+  ObjectIdentifier RandomInlineObjectIdentifier() {
+    ObjectIdentifier identifier =
+        MakeObject(RandomString(environment_.random(), 31), InlineBehavior::ALLOW)
+            .object_identifier;
+    EXPECT_TRUE(GetObjectDigestInfo(identifier.object_digest()).is_inlined());
+    RetrackIdentifier(&identifier);
+    return identifier;
+  }
+
+  // Returns an untracked ObjectData built with the provided |args|.
   template <typename... Args>
   ObjectData MakeObject(Args&&... args) {
-    return ObjectData(storage_->GetObjectIdentifierFactory(), std::forward<Args>(args)...);
+    return ObjectData(&fake_factory_, std::forward<Args>(args)...);
   }
 
   std::unique_ptr<const Commit> TryCommitFromSync() {
@@ -433,7 +457,8 @@ class PageStorageTest : public StorageTest {
     return commit;
   }
 
-  void TryAddFromLocal(std::string content, const ObjectIdentifier& expected_identifier) {
+  ObjectIdentifier TryAddFromLocal(std::string content,
+                                   const ObjectIdentifier& expected_identifier) {
     bool called;
     Status status;
     ObjectIdentifier object_identifier;
@@ -444,11 +469,13 @@ class PageStorageTest : public StorageTest {
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
     EXPECT_EQ(object_identifier, expected_identifier);
+    return object_identifier;
   }
 
-  std::unique_ptr<const Object> TryGetObject(const ObjectIdentifier& object_identifier,
+  std::unique_ptr<const Object> TryGetObject(ObjectIdentifier object_identifier,
                                              PageStorage::Location location,
                                              Status expected_status = Status::OK) {
+    RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
     std::unique_ptr<const Object> object;
@@ -460,9 +487,10 @@ class PageStorageTest : public StorageTest {
     return object;
   }
 
-  fsl::SizedVmo TryGetObjectPart(const ObjectIdentifier& object_identifier, size_t offset,
-                                 size_t max_size, PageStorage::Location location,
+  fsl::SizedVmo TryGetObjectPart(ObjectIdentifier object_identifier, size_t offset, size_t max_size,
+                                 PageStorage::Location location,
                                  Status expected_status = Status::OK) {
+    RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
     fsl::SizedVmo vmo;
@@ -474,8 +502,9 @@ class PageStorageTest : public StorageTest {
     return vmo;
   }
 
-  std::unique_ptr<const Piece> TryGetPiece(const ObjectIdentifier& object_identifier,
+  std::unique_ptr<const Piece> TryGetPiece(ObjectIdentifier object_identifier,
                                            Status expected_status = Status::OK) {
+    RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
     std::unique_ptr<const Piece> piece;
@@ -483,7 +512,7 @@ class PageStorageTest : public StorageTest {
                        callback::Capture(callback::SetWhenCalled(&called), &status, &piece));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(status, expected_status);
+    EXPECT_EQ(status, expected_status) << object_identifier;
     return piece;
   }
 
@@ -557,6 +586,7 @@ class PageStorageTest : public StorageTest {
 
   ::testing::AssertionResult ObjectIsUntracked(ObjectIdentifier object_identifier,
                                                bool expected_untracked) {
+    RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
     bool is_untracked;
@@ -584,6 +614,7 @@ class PageStorageTest : public StorageTest {
 
   ::testing::AssertionResult IsPieceSynced(ObjectIdentifier object_identifier,
                                            bool expected_synced) {
+    RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
     bool is_synced;
@@ -612,6 +643,9 @@ class PageStorageTest : public StorageTest {
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
+  // A fake factory to allocate test identifiers, ensuring they are not automatically tracked by
+  // |storage_| (hence leaving more opportunities to find garbage-collection bugs).
+  fake::FakeObjectIdentifierFactory fake_factory_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
@@ -655,9 +689,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   // We then check that both commits 1 and 3 are stored as inbound references of their root node.
 
   std::unique_ptr<const Commit> base = GetFirstHead();
-  const ObjectData data =
-      MakeObject(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
-  const ObjectIdentifier object_id = data.object_identifier;
+  const ObjectIdentifier object_id = RandomObjectIdentifier();
 
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
   journal->Put("key", object_id, KeyPriority::EAGER);
@@ -780,8 +812,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
-                                                         storage_->GetObjectIdentifierFactory()));
+  parent.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(), &fake_factory_));
   ObjectIdentifier empty_object_id;
   GetEmptyNodeIdentifier(&empty_object_id);
   std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
@@ -1411,7 +1442,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
   std::vector<size_t> chunk_lengths;
   std::vector<ObjectIdentifier> chunk_identifiers;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+      data_str, ObjectType::BLOB, &fake_factory_,
       [&sync, &chunk_lengths, &chunk_identifiers](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
@@ -1456,7 +1487,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   std::vector<size_t> chunk_lengths;
   std::vector<ObjectIdentifier> chunk_identifiers;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+      data_str, ObjectType::BLOB, &fake_factory_,
       [&sync, &chunk_lengths, &chunk_identifiers](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
@@ -1495,8 +1526,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
 
   FakeSyncDelegate sync;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
-      [&sync](std::unique_ptr<const Piece> piece) {
+      data_str, ObjectType::BLOB, &fake_factory_, [&sync](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
         if (digest_info.is_inlined()) {
@@ -1536,7 +1566,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   FakeSyncDelegate sync;
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+      ForEachPiece(data_str, ObjectType::BLOB, &fake_factory_,
                    [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
                      ObjectIdentifier object_identifier = piece->GetIdentifier();
                      if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
@@ -1547,6 +1577,13 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
+
+  // Add a commit lazily referencing the object to keep it alive once downloaded.
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  RetrackIdentifier(&object_identifier);
+  journal->Put("key", object_identifier, KeyPriority::LAZY);
+  ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
+  UntrackIdentifier(&object_identifier);
 
   fsl::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
@@ -1590,15 +1627,14 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
-                   [&sync](std::unique_ptr<const Piece> piece) {
-                     ObjectIdentifier object_identifier = piece->GetIdentifier();
-                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-                       return;
-                     }
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
-                   });
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, &fake_factory_, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+          return;
+        }
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+      });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
 
@@ -1642,17 +1678,23 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
-                   [&sync](std::unique_ptr<const Piece> piece) {
-                     ObjectIdentifier object_identifier = piece->GetIdentifier();
-                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-                       return;
-                     }
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
-                   });
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, &fake_factory_, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+          return;
+        }
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+      });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
+
+  // Add a commit lazily referencing the object to keep it alive once downloaded.
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  RetrackIdentifier(&object_identifier);
+  journal->Put("key", object_identifier, KeyPriority::LAZY);
+  ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
+  UntrackIdentifier(&object_identifier);
 
   fsl::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
@@ -1740,7 +1782,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
                                  {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
     ASSERT_EQ(ForEachIndexChild(
-                  piece->GetData(), storage_->GetObjectIdentifierFactory(),
+                  piece->GetData(), &fake_factory_,
                   [this, handler, object_identifier](ObjectIdentifier piece_identifier) {
                     if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
                       // References to inline pieces are not stored on disk.
@@ -1777,9 +1819,8 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::TREE_NODE, storage_->GetObjectIdentifierFactory(),
-      [&sync, &digest_to_identifier, &inbound_references,
-       factory = storage_->GetObjectIdentifierFactory()](std::unique_ptr<const Piece> piece) {
+      data_str, ObjectType::TREE_NODE, &fake_factory_,
+      [&sync, &digest_to_identifier, &inbound_references](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier piece_identifier = piece->GetIdentifier();
         if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
           return;
@@ -1813,6 +1854,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   // Get the object from network and check that it is correct.
   // TODO(LE-823): when removing compatibility, we need to disable diffs for this test so we
   // actually get the objects (getting the objects this way will still be needed for P2P).
+  RetrackIdentifier(&object_identifier);
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::ValueFromNetwork());
   fxl::StringView content;
@@ -1821,8 +1863,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
 
   // Check that all pieces have been stored locally.
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
-  for (const auto& [piece_identifier, object_type] : sync.object_requests) {
+  for (auto [piece_identifier, object_type] : sync.object_requests) {
     EXPECT_EQ(object_type, RetrievedObjectType::BLOB);
+    RetrackIdentifier(&piece_identifier);
     TryGetPiece(piece_identifier);
   }
 
@@ -1847,21 +1890,20 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
       MakeObject("Some more data", InlineBehavior::PREVENT),
       MakeObject("Even more data", InlineBehavior::PREVENT),
   };
-  constexpr size_t size = arraysize(data_array);
+  std::vector<ObjectIdentifier> stored_identifiers;
   for (auto& data : data_array) {
-    TryAddFromLocal(data.value, data.object_identifier);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
-    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
+    auto object_identifier = TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(object_identifier, false));
+    stored_identifiers.push_back(object_identifier);
   }
 
   std::vector<CommitId> commits;
 
   // Add one key-value pair per commit.
-  for (size_t i = 0; i < size; ++i) {
+  for (const auto& data_identifier : stored_identifiers) {
     std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-
-    journal->Put(fxl::StringPrintf("key%lu", i), data_array[i].object_identifier,
-                 KeyPriority::LAZY);
+    journal->Put(RandomString(environment_.random(), 10), data_identifier, KeyPriority::LAZY);
     EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
     commits.push_back(GetFirstHead()->GetId());
   }
@@ -1876,22 +1918,15 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  EXPECT_EQ(object_identifiers.size(), 6u);
-  for (size_t i = 0; i < size; ++i) {
-    std::unique_ptr<const Commit> commit = GetCommit(commits[i]);
-    EXPECT_TRUE(std::find_if(object_identifiers.begin(), object_identifiers.end(),
-                             [&](const auto& identifier) {
-                               return identifier == commit->GetRootIdentifier();
-                             }) != object_identifiers.end());
-  }
-  for (auto& data : data_array) {
-    EXPECT_TRUE(std::find(object_identifiers.begin(), object_identifiers.end(),
-                          data.object_identifier) != object_identifiers.end());
-  }
+  EXPECT_THAT(object_identifiers, UnorderedElementsAre(stored_identifiers[0], stored_identifiers[1],
+                                                       stored_identifiers[2],
+                                                       GetCommit(commits[0])->GetRootIdentifier(),
+                                                       GetCommit(commits[1])->GetRootIdentifier(),
+                                                       GetCommit(commits[2])->GetRootIdentifier()));
 
   // Mark the 2nd object as synced. We now expect to still find the 2 unsynced
   // values and the (also unsynced) root node.
-  storage_->MarkPieceSynced(data_array[1].object_identifier,
+  storage_->MarkPieceSynced(stored_identifiers[1],
                             callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -1902,14 +1937,10 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  EXPECT_EQ(objects.size(), 5u);
-  std::unique_ptr<const Commit> commit = GetCommit(commits[2]);
-  EXPECT_TRUE(std::find(objects.begin(), objects.end(), commit->GetRootIdentifier()) !=
-              objects.end());
-  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data_array[0].object_identifier) !=
-              objects.end());
-  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data_array[2].object_identifier) !=
-              objects.end());
+  EXPECT_THAT(objects, UnorderedElementsAre(stored_identifiers[0], stored_identifiers[2],
+                                            GetCommit(commits[0])->GetRootIdentifier(),
+                                            GetCommit(commits[1])->GetRootIdentifier(),
+                                            GetCommit(commits[2])->GetRootIdentifier()));
 }
 
 TEST_F(PageStorageTest, PageIsSynced) {
@@ -1918,11 +1949,12 @@ TEST_F(PageStorageTest, PageIsSynced) {
       MakeObject("Some more data", InlineBehavior::PREVENT),
       MakeObject("Even more data", InlineBehavior::PREVENT),
   };
-  constexpr size_t size = arraysize(data_array);
+  std::vector<ObjectIdentifier> stored_identifiers;
   for (auto& data : data_array) {
-    TryAddFromLocal(data.value, data.object_identifier);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
-    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
+    auto object_identifier = TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(object_identifier, false));
+    stored_identifiers.push_back(object_identifier);
   }
 
   // The objects have not been added in a commit: there is nothing to sync and
@@ -1938,9 +1970,8 @@ TEST_F(PageStorageTest, PageIsSynced) {
 
   // Add all objects in one commit.
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  for (size_t i = 0; i < size; ++i) {
-    journal->Put(fxl::StringPrintf("key%lu", i), data_array[i].object_identifier,
-                 KeyPriority::LAZY);
+  for (const auto& data_identifier : stored_identifiers) {
+    journal->Put(RandomString(environment_.random(), 10), data_identifier, KeyPriority::LAZY);
   }
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   CommitId commit_id = GetFirstHead()->GetId();
@@ -1954,9 +1985,9 @@ TEST_F(PageStorageTest, PageIsSynced) {
   EXPECT_FALSE(is_synced);
   // Mark objects (and the root tree node) as synced and expect that the page is
   // still unsynced.
-  for (const auto& data : data_array) {
+  for (const auto& object_identifier : stored_identifiers) {
     called = false;
-    storage_->MarkPieceSynced(data.object_identifier,
+    storage_->MarkPieceSynced(object_identifier,
                               callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1992,8 +2023,8 @@ TEST_F(PageStorageTest, PageIsSynced) {
   EXPECT_TRUE(is_synced);
 
   // All objects should be synced now.
-  for (auto& data : data_array) {
-    EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
+  for (const auto& object_identifier : stored_identifiers) {
+    EXPECT_TRUE(IsPieceSynced(object_identifier, true));
   }
 }
 
@@ -2050,7 +2081,6 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineSyncWithPeer) {
 }
 
 TEST_F(PageStorageTest, PageIsEmpty) {
-  ObjectData value = MakeObject("Some value", InlineBehavior::PREVENT);
   bool called;
   Status status;
   bool is_empty;
@@ -2064,7 +2094,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
 
   // Add an entry and expect that the page is not empty any more.
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", value.object_identifier, KeyPriority::LAZY);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::LAZY);
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
   storage_->IsEmpty(callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
@@ -2092,15 +2122,15 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
 
   // After creating the object it should be marked as untracked.
-  TryAddFromLocal(data.value, data.object_identifier);
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+  ObjectIdentifier object_identifier = TryAddFromLocal(data.value, data.object_identifier);
+  EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
 
   // After adding the object in a commit it should not be untracked any more.
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", data.object_identifier, KeyPriority::EAGER);
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+  journal->Put("key", object_identifier, KeyPriority::EAGER);
+  EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
+  EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsComplex) {
@@ -2109,32 +2139,34 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
       MakeObject("Some more data", InlineBehavior::PREVENT),
       MakeObject("Even more data", InlineBehavior::PREVENT),
   };
+  std::vector<ObjectIdentifier> stored_identifiers;
   for (auto& data : data_array) {
-    TryAddFromLocal(data.value, data.object_identifier);
-    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+    auto object_identifier = TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+    stored_identifiers.push_back(object_identifier);
   }
 
-  // Add a first commit containing data_array[0].
+  // Add a first commit containing stored_identifiers[0].
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key0", data_array[0].object_identifier, KeyPriority::LAZY);
-  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, true));
+  journal->Put("key0", stored_identifiers[0], KeyPriority::LAZY);
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[0], true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_identifier, true));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[0], false));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[1], true));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[2], true));
 
   // Create a second commit. After calling Put for "key1" for the second time
-  // data_array[1] is no longer part of this commit: it should remain
+  // stored_identifiers[1] is no longer part of this commit: it should remain
   // untracked after committing.
   journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key1", data_array[1].object_identifier, KeyPriority::LAZY);
-  journal->Put("key2", data_array[2].object_identifier, KeyPriority::LAZY);
-  journal->Put("key1", data_array[2].object_identifier, KeyPriority::LAZY);
-  journal->Put("key3", data_array[0].object_identifier, KeyPriority::LAZY);
+  journal->Put("key1", stored_identifiers[1], KeyPriority::LAZY);
+  journal->Put("key2", stored_identifiers[2], KeyPriority::LAZY);
+  journal->Put("key1", stored_identifiers[2], KeyPriority::LAZY);
+  journal->Put("key3", stored_identifiers[0], KeyPriority::LAZY);
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
-  EXPECT_TRUE(ObjectIsUntracked(data_array[2].object_identifier, false));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[0], false));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[1], true));
+  EXPECT_TRUE(ObjectIsUntracked(stored_identifiers[2], false));
 }
 
 TEST_F(PageStorageTest, CommitWatchers) {
@@ -2636,13 +2668,14 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   bool called;
   Status status;
   std::unique_ptr<const Commit> base_commit = GetFirstHead();
-  ObjectData value_1 = MakeObject("data1", InlineBehavior::ALLOW);
-  ObjectData value_2 = MakeObject("data2", InlineBehavior::ALLOW);
-  ObjectData value_3 = MakeObject("data3", InlineBehavior::ALLOW);
-  ObjectIdentifier value_3_id = value_3.object_identifier;
+
+  ObjectIdentifier value_1 = RandomInlineObjectIdentifier();
+  ObjectIdentifier value_2 = RandomInlineObjectIdentifier();
+  ObjectIdentifier merge_value = RandomInlineObjectIdentifier();
+  ASSERT_NE(value_1, value_2);
 
   std::unique_ptr<Journal> journal1 = storage_->StartCommit(base_commit->Clone());
-  journal1->Put("key", value_1.object_identifier, KeyPriority::EAGER);
+  journal1->Put("key", value_1, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal1),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
@@ -2653,7 +2686,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   RunLoopFor(zx::sec(1));
 
   std::unique_ptr<Journal> journal2 = storage_->StartCommit(base_commit->Clone());
-  journal2->Put("key", value_2.object_identifier, KeyPriority::EAGER);
+  journal2->Put("key", value_2, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal2),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
@@ -2664,7 +2697,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // Create a merge.
   std::unique_ptr<Journal> journal3 =
       storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
-  journal3->Put("key", value_3_id, KeyPriority::EAGER);
+  journal3->Put("key", merge_value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit3;
   storage_->CommitJournal(std::move(journal3),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
@@ -2695,7 +2728,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   commit2.reset();
   commit3.reset();
   ResetStorage();
-  RetrackIdentifier(&value_3_id);
+  RetrackIdentifier(&merge_value);
 
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
@@ -2741,7 +2774,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   Status commits_from_local_status;
   std::unique_ptr<Journal> journal =
       storage_->StartMergeCommit(std::move(heads[0]), std::move(heads[1]));
-  journal->Put("key", value_3_id, KeyPriority::EAGER);
+  journal->Put("key", merge_value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(
       std::move(journal),
@@ -2925,7 +2958,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   Status status;
   std::unique_ptr<const Commit> base_commit = GetFirstHead();
   std::unique_ptr<Journal> journal = storage_->StartCommit(base_commit->Clone());
-  ObjectIdentifier value = MakeObject("data", InlineBehavior::ALLOW).object_identifier;
+  ObjectIdentifier value = RandomInlineObjectIdentifier();
   journal->Put("key", value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
@@ -2995,7 +3028,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
   Status status;
   std::unique_ptr<const Commit> base_commit = GetFirstHead();
   std::unique_ptr<Journal> journal = storage_->StartCommit(base_commit->Clone());
-  ObjectIdentifier value = MakeObject("data", InlineBehavior::ALLOW).object_identifier;
+  ObjectIdentifier value = RandomInlineObjectIdentifier();
   journal->Put("key", value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
@@ -3148,7 +3181,7 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
   FakeSyncDelegate sync;
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::TREE_NODE, storage_->GetObjectIdentifierFactory(),
+      ForEachPiece(data_str, ObjectType::TREE_NODE, &fake_factory_,
                    [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
                      ObjectIdentifier piece_identifier = piece->GetIdentifier();
                      if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
