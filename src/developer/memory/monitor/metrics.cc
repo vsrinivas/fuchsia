@@ -68,9 +68,8 @@ void Metrics::CollectMetrics() {
                                 << bucket.name();
       continue;
     }
-    events.push_back(builder.Clone()
-                         .with_event_code_at(cobalt_registry::kMemoryMetricId, code_iter->second)
-                         .as_memory_usage(bucket.size()));
+    events.push_back(
+        builder.Clone().with_event_code(code_iter->second).as_memory_usage(bucket.size()));
   }
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);

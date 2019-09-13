@@ -19,9 +19,9 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
-    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/trace",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
   deps = [
     ":memory_metrics_registry",
@@ -51,6 +51,7 @@ executable("bin") {
   ]
   deps = [
     ":lib",
+    "//garnet/public/lib/fsl",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",

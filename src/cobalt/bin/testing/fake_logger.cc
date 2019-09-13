@@ -113,6 +113,7 @@ zx_status_t FakeLogger_Sync::LogCobaltEvents(::std::vector<CobaltEvent> events,
   last_log_method_invoked_ = kLogCobaltEvents;
   *out_status = Status::OK;
   event_count_ = events.size();
+  logged_events_ = std::move(events);
   return ZX_OK;
 }
 

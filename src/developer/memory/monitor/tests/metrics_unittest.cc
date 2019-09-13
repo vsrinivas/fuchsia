@@ -14,6 +14,9 @@
 
 using namespace memory;
 
+using cobalt_registry::MemoryMetricDimensionBucket;
+using fuchsia::cobalt::EventPayload;
+
 namespace monitor {
 namespace {
 
@@ -64,7 +67,29 @@ TEST_F(MetricsUnitTest, All) {
   Metrics m(zx::msec(10), dispatcher(), &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
-  EXPECT_EQ(16U, logger.event_count());
+  EXPECT_EQ(16U, logger.logged_events().size());
+  for (const auto& cobalt_event : logger.logged_events()) {
+    EXPECT_EQ(1u, cobalt_event.metric_id);
+    ASSERT_EQ(1u, cobalt_event.event_codes.size());
+    EXPECT_EQ(EventPayload::Tag::kMemoryBytesUsed, cobalt_event.payload.Which());
+    switch (cobalt_event.event_codes[0]) {
+      case MemoryMetricDimensionBucket::Fshost:
+        EXPECT_EQ(16u, cobalt_event.payload.memory_bytes_used());
+        break;
+
+      case MemoryMetricDimensionBucket::Web:
+        EXPECT_EQ(15u, cobalt_event.payload.memory_bytes_used());
+        break;
+
+      case MemoryMetricDimensionBucket::Cast:
+        EXPECT_EQ(14u, cobalt_event.payload.memory_bytes_used());
+        break;
+
+      default:
+        EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() < 14);
+        break;
+    }
+  }
 }
 
 TEST_F(MetricsUnitTest, One) {

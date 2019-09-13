@@ -74,9 +74,15 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
 
   void reset_call_count() { call_count_ = 0; }
 
-  size_t event_count() { return event_count_; }  // for LogCobaltEvents only
+  // Used for LogCobaltEvent() and LogCobaltEvents() only.
 
-  void reset_event_count() { event_count_ = 0; }  // for LogCobaltEvents only
+  size_t event_count() { return event_count_; }
+
+  void reset_event_count() { event_count_ = 0; }
+
+  const std::vector<fuchsia::cobalt::CobaltEvent>& logged_events() { return logged_events_; };
+
+  void reset_logged_events() { logged_events_.clear(); };
 
   void reset() {
     reset_last_metric_id();
@@ -93,7 +99,10 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
   int64_t last_elapsed_time_ = -1;
   LogMethod last_log_method_invoked_ = kOther;
   size_t call_count_ = 0;
-  size_t event_count_ = 0;  // for LogCobaltEvents only
+
+  // Used for LogCobaltEvent() and LogCobaltEvents() only.
+  size_t event_count_ = 0;
+  std::vector<fuchsia::cobalt::CobaltEvent> logged_events_;
 };
 
 }  // namespace cobalt
