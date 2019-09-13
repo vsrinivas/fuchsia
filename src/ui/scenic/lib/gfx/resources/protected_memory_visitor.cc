@@ -17,15 +17,15 @@
 namespace scenic_impl {
 namespace gfx {
 
-void ProtectedMemoryVisitor::Visit(Memory* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Memory* r) {}
 
-void ProtectedMemoryVisitor::Visit(Image* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Image* r) {}
 
-void ProtectedMemoryVisitor::Visit(ImagePipeBase* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(ImagePipeBase* r) {}
 
-void ProtectedMemoryVisitor::Visit(Buffer* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Buffer* r) {}
 
-void ProtectedMemoryVisitor::Visit(View* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(View* r) {}
 
 void ProtectedMemoryVisitor::Visit(ViewNode* r) { VisitNode(r); }
 
@@ -33,7 +33,7 @@ void ProtectedMemoryVisitor::Visit(ViewHolder* r) { VisitNode(r); }
 
 void ProtectedMemoryVisitor::Visit(EntityNode* r) { VisitNode(r); }
 
-void ProtectedMemoryVisitor::Visit(OpacityNode* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(OpacityNode* r) {}
 
 void ProtectedMemoryVisitor::Visit(ShapeNode* r) {
   if (r->material()) {
@@ -43,13 +43,13 @@ void ProtectedMemoryVisitor::Visit(ShapeNode* r) {
 
 void ProtectedMemoryVisitor::Visit(Scene* r) { VisitNode(r); }
 
-void ProtectedMemoryVisitor::Visit(CircleShape* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(CircleShape* r) {}
 
-void ProtectedMemoryVisitor::Visit(RectangleShape* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(RectangleShape* r) {}
 
-void ProtectedMemoryVisitor::Visit(RoundedRectangleShape* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(RoundedRectangleShape* r) {}
 
-void ProtectedMemoryVisitor::Visit(MeshShape* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(MeshShape* r) {}
 
 void ProtectedMemoryVisitor::Visit(Material* r) {
   if (auto backing_image = r->texture_image()) {
@@ -59,11 +59,11 @@ void ProtectedMemoryVisitor::Visit(Material* r) {
   }
 }
 
-void ProtectedMemoryVisitor::Visit(Compositor* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Compositor* r) {}
 
-void ProtectedMemoryVisitor::Visit(DisplayCompositor* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(DisplayCompositor* r) {}
 
-void ProtectedMemoryVisitor::Visit(LayerStack* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(LayerStack* r) {}
 
 void ProtectedMemoryVisitor::Visit(Layer* r) {
   if (r->renderer()) {
@@ -79,15 +79,15 @@ void ProtectedMemoryVisitor::Visit(Renderer* r) {
   }
 }
 
-void ProtectedMemoryVisitor::Visit(Light* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Light* r) {}
 
-void ProtectedMemoryVisitor::Visit(AmbientLight* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(AmbientLight* r) {}
 
-void ProtectedMemoryVisitor::Visit(DirectionalLight* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(DirectionalLight* r) {}
 
-void ProtectedMemoryVisitor::Visit(PointLight* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(PointLight* r) {}
 
-void ProtectedMemoryVisitor::Visit(Import* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(Import* r) {}
 
 void ProtectedMemoryVisitor::VisitNode(Node* r) {
   if (!r->children().empty()) {

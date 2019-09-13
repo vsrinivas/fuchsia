@@ -9,6 +9,7 @@
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/opacity_node.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl::gfx::test {
@@ -39,6 +40,15 @@ class DummyImage : public ImageBase {
 }  // namespace
 
 class ProtectedMemoryVisitorTest : public SessionTest {};
+
+TEST_F(ProtectedMemoryVisitorTest, ReturnsFalseForOpacityNode) {
+  ProtectedMemoryVisitor visitor;
+
+  ResourceId next_id = 1;
+  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), next_id++);
+  visitor.Visit(opacity_node.get());
+  ASSERT_FALSE(visitor.HasProtectedMemoryUse());
+}
 
 TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForProtectedImage) {
   ProtectedMemoryVisitor visitor;
