@@ -317,6 +317,7 @@ constexpr uint32_t IPC_EXT_FINAL_BLOCK_SHIFT = 28;
 constexpr uint32_t IPC_EXT_LARGE_PARAM_ID_MASK = 0xFF;
 constexpr uint32_t IPC_EXT_LARGE_PARAM_ID_SHIFT = 20;
 constexpr uint32_t IPC_EXT_DATA_OFF_SIZE_MASK = 0x000FFFFF;
+constexpr uint32_t IPC_EXT_DATA_OFF_MAX_SIZE = IPC_EXT_DATA_OFF_SIZE_MASK;
 
 // Bind/Unbind Request Parameters
 

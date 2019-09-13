@@ -33,6 +33,8 @@ source_set("src") {
     "intel-dsp-debug.cc",
     "intel-dsp-ipc.cc",
     "intel-dsp-ipc.h",
+    "intel-dsp-modules.cc",
+    "intel-dsp-modules.h",
     "intel-dsp-stream.cc",
     "intel-dsp-stream.h",
     "intel-dsp-topology.cc",
@@ -62,16 +64,16 @@ source_set("src") {
     "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
   ]
   public_deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/intel-hda",
+    "$zx/system/ulib/refcount",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
   ]
 }
 
@@ -89,6 +91,7 @@ test("controller_test") {
   testonly = true
   sources = [
     "binary_decoder_test.cc",
+    "intel-dsp-ipc-test.cc",
     "nhlt_test.cc",
   ]
   deps = [

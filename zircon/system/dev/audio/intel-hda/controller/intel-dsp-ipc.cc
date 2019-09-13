@@ -10,16 +10,24 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/span.h>
+#include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
+#include <refcount/blocking_refcount.h>
 
 #include "debug-logging.h"
 
 namespace audio {
 namespace intel_hda {
 
-IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs)
-    : log_prefix_(std::move(log_prefix)), regs_(regs) {
+// Mailbox constants
+constexpr size_t MAILBOX_SIZE = 0x1000;
+
+IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs,
+                         zx::duration hardware_timeout)
+    : log_prefix_(std::move(log_prefix)), regs_(regs), hardware_timeout_(hardware_timeout) {
   uint8_t* mapped_base = reinterpret_cast<uint8_t*>(regs);
   mailbox_in_.Initialize(
       static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
@@ -27,12 +35,55 @@ IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs)
   mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET), MAILBOX_SIZE);
 }
 
+IntelDspIpc::~IntelDspIpc() { Shutdown(); }
+
 void IntelDspIpc::Shutdown() {
-  fbl::AutoLock ipc_lock(&ipc_lock_);
+  fbl::AutoLock ipc_lock(&lock_);
+
   // Fail all pending IPCs
   while (!ipc_queue_.is_empty()) {
     sync_completion_signal(&ipc_queue_.pop_front()->completion);
   }
+
+  // Wait for refcount to hit zero.
+  in_flight_sends_.WaitForZero();
+}
+
+Status IntelDspIpc::SendWithData(uint32_t primary, uint32_t extension,
+                                 fbl::Span<const uint8_t> payload, fbl::Span<uint8_t> recv_buffer,
+                                 size_t* bytes_received) {
+  Txn txn{primary,
+          extension,
+          payload.data(),
+          payload.size_bytes(),
+          recv_buffer.data(),
+          recv_buffer.size_bytes()};
+
+  zx_status_t res = SendIpcWait(&txn);
+  if (res != ZX_OK) {
+    return Status(res);
+  }
+  if (!txn.done) {
+    return Status(ZX_ERR_CANCELED, "Operation cancelled due to IPC shutdown.");
+  }
+  if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("DSP returned error %d", to_underlying(txn.reply.status())));
+  }
+
+  if (bytes_received != nullptr) {
+    *bytes_received = txn.rx_actual;
+  }
+  return OkStatus();
+}
+
+Status IntelDspIpc::Send(uint32_t primary, uint32_t extension) {
+  return SendWithData(primary, extension, fbl::Span<uint8_t>(), fbl::Span<uint8_t>(), nullptr);
+}
+
+bool IntelDspIpc::IsOperationPending() const {
+  fbl::AutoLock ipc_lock(&lock_);
+  return !ipc_queue_.is_empty();
 }
 
 void IntelDspIpc::SendIpc(const Txn& txn) {
@@ -40,18 +91,19 @@ void IntelDspIpc::SendIpc(const Txn& txn) {
   if (txn.tx_size > 0) {
     IpcMailboxWrite(txn.tx_data, txn.tx_size);
   }
-  SendIpcMessage(txn.request);
-}
 
-void IntelDspIpc::SendIpcMessage(const IpcMessage& message) {
-  REG_WR(&regs_->hipcie, message.extension);
-  REG_WR(&regs_->hipci, message.primary | ADSP_REG_HIPCI_BUSY);
+  // Copy metadata to hardware registers.
+  REG_WR(&regs_->hipcie, txn.request.extension);
+  REG_WR(&regs_->hipci, txn.request.primary | ADSP_REG_HIPCI_BUSY);
 }
 
 zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
+  in_flight_sends_.Inc();
+  auto cleanup = fbl::MakeAutoCall([this]() { in_flight_sends_.Dec(); });
+
   {
     // Add to the pending queue and start the ipc if necessary
-    fbl::AutoLock ipc_lock(&ipc_lock_);
+    fbl::AutoLock ipc_lock(&lock_);
     bool needs_start = ipc_queue_.is_empty();
     ipc_queue_.push_back(txn);
     if (needs_start) {
@@ -59,9 +111,16 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
     }
   }
 
-  // Wait for completion
-  zx_status_t res = sync_completion_wait(&txn->completion, ZX_MSEC(300));
+  // Wait for completion.
+  zx_status_t res = sync_completion_wait(&txn->completion, hardware_timeout_.get());
   if (res != ZX_OK) {
+    fbl::AutoLock ipc_lock(&lock_);
+    // When we wake up, our transaction might still be in the list, or it might have
+    // been removed (because we are racing with the receive that timed out).
+    // Ensure it is removed before returning to the caller.
+    if (txn->InContainer()) {
+      ipc_queue_.erase(*txn);
+    }
     return res;
   }
 
@@ -71,6 +130,8 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
 }
 
 void IntelDspIpc::ProcessIrq() {
+  fbl::AutoLock l(&lock_);
+
   uint32_t adspis = REG_RD(&regs_->adspis);
   if (!(adspis & ADSP_REG_ADSPIC_IPC)) {
     return;
@@ -90,130 +151,6 @@ void IntelDspIpc::ProcessIrq() {
   if (val & ADSP_REG_HIPCIE_DONE) {
     REG_WR(&regs_->hipcie, val);
   }
-}
-
-zx_status_t IntelDspIpc::InitInstance(uint16_t module_id, uint8_t instance_id,
-                                      ProcDomain proc_domain, uint8_t core_id,
-                                      uint8_t ppl_instance_id, uint16_t param_block_size,
-                                      const void* param_data) {
-  LOG(DEBUG1, "INIT_INSTANCE (mod %u inst %u)\n", module_id, instance_id);
-
-  Txn txn(IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::INIT_INSTANCE,
-                  instance_id, module_id),
-          IPC_INIT_INSTANCE_EXT(proc_domain, core_id, ppl_instance_id, param_block_size),
-          param_data, param_block_size, nullptr, 0);
-
-  zx_status_t res = SendIpcWait(&txn);
-  if (res != ZX_OK) {
-    LOG(ERROR, "IPC error (res %d)\n", res);
-    return res;
-  }
-
-  if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
-    LOG(ERROR, "INIT_INSTANCE (mod %u inst %u) failed (err %d)\n", module_id, instance_id,
-        to_underlying(txn.reply.status()));
-  } else {
-    LOG(DEBUG1, "INIT_INSTANCE (mod %u inst %u) success\n", module_id, instance_id);
-  }
-
-  return dsp_to_zx_status(txn.reply.status());
-}
-
-zx_status_t IntelDspIpc::LargeConfigGet(Txn* txn, uint16_t module_id, uint8_t instance_id,
-                                        uint8_t large_param_id, uint32_t data_off_size) {
-  ZX_DEBUG_ASSERT(txn->rx_data != nullptr);
-  ZX_DEBUG_ASSERT(txn->rx_size > 0);
-
-  LOG(DEBUG1, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id, instance_id,
-      large_param_id);
-
-  txn->request.primary = IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST,
-                                 ModuleMsgType::LARGE_CONFIG_GET, instance_id, module_id);
-  txn->request.extension = IPC_LARGE_CONFIG_EXT(true, false, large_param_id, data_off_size);
-
-  zx_status_t res = SendIpcWait(txn);
-  if (res != ZX_OK) {
-    LOG(ERROR, "IPC error (res %d)\n", res);
-    return res;
-  }
-
-  LOG(DEBUG1, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) status %d\n", module_id,
-      instance_id, large_param_id, to_underlying(txn->reply.status()));
-
-  return dsp_to_zx_status(txn->reply.status());
-}
-
-zx_status_t IntelDspIpc::Bind(uint16_t src_module_id, uint8_t src_instance_id, uint8_t src_queue,
-                              uint16_t dst_module_id, uint8_t dst_instance_id, uint8_t dst_queue) {
-  LOG(DEBUG1, "BIND (mod %u inst %u -> mod %u inst %u)\n", src_module_id, src_instance_id,
-      dst_module_id, dst_instance_id);
-
-  Txn txn(IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::BIND, src_instance_id,
-                  src_module_id),
-          IPC_BIND_UNBIND_EXT(dst_module_id, dst_instance_id, dst_queue, src_queue), nullptr, 0,
-          nullptr, 0);
-
-  zx_status_t res = SendIpcWait(&txn);
-  if (res != ZX_OK) {
-    LOG(ERROR, "IPC error (res %d)\n", res);
-    return res;
-  }
-
-  if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
-    LOG(ERROR, "BIND (mod %u inst %u -> mod %u inst %u) failed (err %d)\n", src_module_id,
-        src_instance_id, dst_module_id, dst_instance_id, to_underlying(txn.reply.status()));
-  } else {
-    LOG(DEBUG1, "BIND (mod %u inst %u -> mod %u inst %u) success\n", src_module_id, src_instance_id,
-        dst_module_id, dst_instance_id);
-  }
-
-  return dsp_to_zx_status(txn.reply.status());
-}
-
-zx_status_t IntelDspIpc::CreatePipeline(uint8_t instance_id, uint8_t ppl_priority,
-                                        uint16_t ppl_mem_size, bool lp) {
-  LOG(DEBUG1, "CREATE_PIPELINE (inst %u)\n", instance_id);
-
-  Txn txn(IPC_CREATE_PIPELINE_PRI(instance_id, ppl_priority, ppl_mem_size),
-          IPC_CREATE_PIPELINE_EXT(lp), nullptr, 0, nullptr, 0);
-
-  zx_status_t res = SendIpcWait(&txn);
-  if (res != ZX_OK) {
-    LOG(ERROR, "IPC error (res %d)\n", res);
-    return res;
-  }
-
-  if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
-    LOG(ERROR, "CREATE_PIPELINE (inst %u) failed (err %d)\n", instance_id,
-        to_underlying(txn.reply.status()));
-  } else {
-    LOG(DEBUG1, "CREATE_PIPELINE (inst %u) success\n", instance_id);
-  }
-
-  return dsp_to_zx_status(txn.reply.status());
-}
-
-zx_status_t IntelDspIpc::SetPipelineState(uint8_t ppl_id, PipelineState state,
-                                          bool sync_stop_start) {
-  LOG(DEBUG1, "SET_PIPELINE_STATE (inst %u)\n", ppl_id);
-
-  Txn txn(IPC_SET_PIPELINE_STATE_PRI(ppl_id, state),
-          IPC_SET_PIPELINE_STATE_EXT(false, sync_stop_start), nullptr, 0, nullptr, 0);
-
-  zx_status_t res = SendIpcWait(&txn);
-  if (res != ZX_OK) {
-    LOG(ERROR, "IPC error (res %d)\n", res);
-    return res;
-  }
-
-  if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
-    LOG(ERROR, "SET_PIPELINE_STATE (inst %u) failed (err %d)\n", ppl_id,
-        to_underlying(txn.reply.status()));
-  } else {
-    LOG(DEBUG1, "SET_PIPELINE_STATE (inst %u) success\n", ppl_id);
-  }
-
-  return dsp_to_zx_status(txn.reply.status());
 }
 
 void IntelDspIpc::ProcessIpc(const IpcMessage& message) {
@@ -242,7 +179,6 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
 }
 
 void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {
-  fbl::AutoLock ipc_lock(&ipc_lock_);
   if (ipc_queue_.is_empty()) {
     LOG(INFO, "got spurious reply message\n");
     return;
@@ -307,6 +243,10 @@ void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {
     txn->rx_actual = 0;
   }
 }
+
+void IntelDspIpc::IpcMailboxWrite(const void* data, size_t size) { mailbox_out_.Write(data, size); }
+
+void IntelDspIpc::IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
 
 }  // namespace intel_hda
 }  // namespace audio

@@ -17,6 +17,7 @@
 #include <intel-hda/utils/nhlt.h>
 
 #include "intel-dsp-code-loader.h"
+#include "intel-dsp-modules.h"
 #include "intel-hda-controller.h"
 
 namespace audio {
@@ -568,38 +569,57 @@ zx_status_t IntelDsp::Boot() {
 }
 
 zx_status_t IntelDsp::GetModulesInfo() {
-  uint8_t data[IntelDspIpc::MAILBOX_SIZE];
-  IntelDspIpc::Txn txn(nullptr, 0, data, sizeof(data));
-  ipc_->LargeConfigGet(&txn, 0, 0, to_underlying(BaseFWParamType::MODULES_INFO), sizeof(data));
+  constexpr int kMaxModules = 32;
+  uint8_t data[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
+  size_t bytes_received;
 
-  if (txn.success()) {
-    auto info = reinterpret_cast<const ModulesInfo*>(txn.rx_data);
-    uint32_t count = info->module_count;
+  // Fetch module information.
+  zx_status_t result = DspLargeConfigGet(&ipc_.value(), /*module_id=*/0, /*instance_id=*/0,
+                                         /*large_param_id=*/BaseFWParamType::MODULES_INFO,
+                                         fbl::Span<uint8_t>(data), &bytes_received);
+  if (result != ZX_OK) {
+    return result;
+  }
 
-    ZX_DEBUG_ASSERT(txn.rx_actual >= sizeof(ModulesInfo) + (count * sizeof(ModuleEntry)));
+  // Parse returned module information.
+  if (bytes_received < sizeof(ModulesInfo)) {
+    LOG(ERROR,
+        "DSP returned less data than expected when trying to fetch module info. Bytes returned: "
+        "%ld\n",
+        bytes_received);
+    return ZX_ERR_INTERNAL;
+  }
+  auto info = reinterpret_cast<const ModulesInfo*>(data);
+  uint32_t count = info->module_count;
+  if (bytes_received < sizeof(ModulesInfo) + (count * sizeof(ModuleEntry))) {
+    LOG(ERROR,
+        "DSP returned less data than expected when trying to fetch module info. Bytes expected: "
+        "%ld, bytes returned: %ld\n",
+        sizeof(ModulesInfo) + (count * sizeof(ModuleEntry)), bytes_received);
+    return ZX_ERR_INTERNAL;
+  }
 
-    static constexpr const char* MODULE_NAMES[] = {
-        [COPIER] = "COPIER",
-        [MIXIN] = "MIXIN",
-        [MIXOUT] = "MIXOUT",
-    };
-    static_assert(countof(MODULE_NAMES) == countof(module_ids_), "invalid module id count\n");
+  static constexpr const char* MODULE_NAMES[] = {
+      [COPIER] = "COPIER",
+      [MIXIN] = "MIXIN",
+      [MIXOUT] = "MIXOUT",
+  };
+  static_assert(countof(MODULE_NAMES) == countof(module_ids_), "invalid module id count\n");
 
-    for (uint32_t i = 0; i < count; i++) {
-      for (size_t j = 0; j < countof(MODULE_NAMES); j++) {
-        if (!strncmp(reinterpret_cast<const char*>(info->module_info[i].name), MODULE_NAMES[j],
-                     strlen(MODULE_NAMES[j]))) {
-          if (module_ids_[j] == MODULE_ID_INVALID) {
-            module_ids_[j] = info->module_info[i].module_id;
-          } else {
-            LOG(ERROR, "Found duplicate module id %hu\n", info->module_info[i].module_id);
-          }
+  for (uint32_t i = 0; i < count; i++) {
+    for (size_t j = 0; j < countof(MODULE_NAMES); j++) {
+      if (!strncmp(reinterpret_cast<const char*>(info->module_info[i].name), MODULE_NAMES[j],
+                   strlen(MODULE_NAMES[j]))) {
+        if (module_ids_[j] == MODULE_ID_INVALID) {
+          module_ids_[j] = info->module_info[i].module_id;
+        } else {
+          LOG(ERROR, "Found duplicate module id %hu\n", info->module_info[i].module_id);
         }
       }
     }
   }
 
-  return txn.success() ? ZX_OK : ZX_ERR_INTERNAL;
+  return ZX_OK;
 }
 
 zx_status_t IntelDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout) {
@@ -725,11 +745,11 @@ zx_status_t IntelDsp::LoadFirmware() {
 
 zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {
   // Pipeline must be paused before starting
-  zx_status_t st = ipc_->SetPipelineState(pipeline_id, PipelineState::PAUSED, true);
+  zx_status_t st = DspSetPipelineState(&ipc_.value(), pipeline_id, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
     return st;
   }
-  return ipc_->SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
+  return DspSetPipelineState(&ipc_.value(), pipeline_id, PipelineState::RUNNING, true);
 }
 
 bool IntelDsp::IsCoreEnabled(uint8_t core_mask) {
