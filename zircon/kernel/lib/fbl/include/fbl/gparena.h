@@ -93,8 +93,7 @@ class GPArena {
     // Use an acquire to match with the release in Free.
     HeadNode head_node = head_node_.load(ktl::memory_order_acquire);
     while (head_node.head) {
-      FreeNode* const next = head_node.next;
-      const HeadNode next_head_node = HeadNode(next, next ? next->next : nullptr);
+      const HeadNode next_head_node(head_node.head->next, head_node.gen + 1);
       if (head_node_.compare_exchange_strong(head_node, next_head_node, ktl::memory_order_acquire,
                                              ktl::memory_order_acquire)) {
         count_.fetch_add(1, ktl::memory_order_relaxed);
@@ -135,7 +134,7 @@ class GPArena {
       // we need to reset our intended next pointer every iteration.
       free_node->next = head_node.head;
       // Build our candidate next head node.
-      next_head_node = HeadNode(free_node, head_node.head);
+      next_head_node = HeadNode(free_node, head_node.gen + 1);
       // Use release semantics so that any writes to the Persist area, and our write to
       // free_node->next, are visible before the node can be seen in the free list and reused.
     } while (!head_node_.compare_exchange_strong(
@@ -236,13 +235,20 @@ class GPArena {
 
   ktl::atomic<size_t> count_ = 0;
 
-  // Stores the current head pointer and copy of the head's next pointer. Storing the next pointer
-  // allows us to known when we perform a CAS that the object head points to hasn't changed.
+  // Stores the current head pointer and a generation count. The generation count prevents races
+  // where one thread is modifying the list whilst another thread rapidly adds and removes. Every
+  // time a HeadNode is modified the generation count should be incremented to generate a unique
+  // value.
+  //
+  // It is important that the count not wrap past an existing value that is still in use. The
+  // generation is currently 64-bit number and shouldn't ever wrap back to 0 to begin with. Although
+  // even if it should it is incredibly unlikely a thread was stalled for 2^64 operations to cause a
+  // generation collision.
   struct alignas(16) HeadNode {
     FreeNode* head = nullptr;
-    FreeNode* next = nullptr;
+    uint64_t gen = 0;
     HeadNode() = default;
-    HeadNode(FreeNode* h, FreeNode* n) : head(h), next(n) {}
+    HeadNode(FreeNode* h, uint64_t g) : head(h), gen(g) {}
   };
   ktl::atomic<HeadNode> head_node_{};
 #ifdef __clang__
