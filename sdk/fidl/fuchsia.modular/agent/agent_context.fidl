@@ -23,6 +23,7 @@ protocol AgentContext {
 
     /// Schedules a task described in `task_info`. When this task is scheduled to
     /// run, Agent.RunTask() is called.
+    [Transitional]
     ScheduleTask(TaskInfo task_info);
 
     /// Schedules a task described in `task_info`. When this task is scheduled
@@ -30,6 +31,7 @@ protocol AgentContext {
     ScheduleTaskWithCompletion(TaskInfo task_info) -> (bool done);
 
     /// No new runs of this task will be scheduled.
+    [Transitional]
     DeleteTask(string task_id);
 
     /// The auth token manager this Agent may use for accessing external services.
