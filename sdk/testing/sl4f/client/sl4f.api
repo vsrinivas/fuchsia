@@ -2612,7 +2612,7 @@
               "isLate": false,
               "name": "artifacts",
               "type": "VariableDeclarationImpl",
-              "varType": "Map<String, String>"
+              "varType": "Map<String, dynamic>"
             },
             "duration_ms": {
               "isConst": false,

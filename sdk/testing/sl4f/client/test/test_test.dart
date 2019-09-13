@@ -38,7 +38,7 @@ void main(List<String> args) {
           ..duration_ms = 1
           ..outcome = 'passed'
           ..primary_log_path = 'log_path1'
-          ..artifacts = {'key1': 'value1', 'key2': 'value2'},
+          ..artifacts = {'key1': 'value1', 'key2': 'value2', 'key3': 4},
         TestStep()
           ..name = 'name2'
           ..duration_ms = 1
@@ -58,7 +58,7 @@ void main(List<String> args) {
                   'outcome': 'passed',
                   'duration_ms': 1,
                   'primary_log_path': 'log_path1',
-                  'artifacts': {'key1': 'value1', 'key2': 'value2'}
+                  'artifacts': {'key1': 'value1', 'key2': 'value2', 'key3': 4}
                 },
                 {
                   'name': 'name2',
