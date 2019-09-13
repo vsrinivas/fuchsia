@@ -33,8 +33,8 @@ class Sensor {
   // Sensor APIs for Camera manager to use
   zx_status_t Update();
   zx_status_t SetMode(uint8_t mode);
-  zx_status_t GetInfo(sensor_info_t* out_info);
-  zx_status_t GetSupportedModes(sensor_mode_t* out_modes_list, size_t modes_count);
+  zx_status_t GetInfo(camera_sensor_info_t* out_info);
+  zx_status_t GetSupportedModes(camera_sensor_mode_t* out_modes_list, size_t modes_count);
   int32_t SetAnalogGain(int32_t gain);
   int32_t SetDigitalGain(int32_t gain);
   zx_status_t StartStreaming();
@@ -50,7 +50,7 @@ class Sensor {
   ddk::CameraSensorProtocolClient camera_sensor_;
 
   uint8_t current_sensor_mode_;
-  sensor_mode_t sensor_modes_[kNumModes];
+  camera_sensor_mode_t sensor_modes_[kNumModes];
 };
 
 }  // namespace camera

@@ -203,16 +203,16 @@ void Imx227Device::CameraSensorDeInit() {
   initialized_ = false;
 }
 
-zx_status_t Imx227Device::CameraSensorGetInfo(sensor_info_t* out_info) {
+zx_status_t Imx227Device::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
   if (out_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(out_info, &ctx_.param, sizeof(sensor_info_t));
+  memcpy(out_info, &ctx_.param, sizeof(camera_sensor_info_t));
   return ZX_OK;
 }
 
-zx_status_t Imx227Device::CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
+zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
                                                         size_t modes_count,
                                                         size_t* out_modes_actual) {
   if (out_modes_list == nullptr || out_modes_actual == nullptr) {
@@ -223,7 +223,7 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(sensor_mode_t* out_modes
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(out_modes_list, &supported_modes, sizeof(sensor_mode_t) * countof(supported_modes));
+  memcpy(out_modes_list, &supported_modes, sizeof(camera_sensor_mode_t) * countof(supported_modes));
   *out_modes_actual = countof(supported_modes);
   return ZX_OK;
 }
@@ -412,7 +412,7 @@ zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "imx227 driver added\n");
   }
 
-  // sensor_device intentionally leaked as it is now held by DevMgr.
+  // camera_sensor_device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = sensor_device.release();
   return ZX_OK;
 }

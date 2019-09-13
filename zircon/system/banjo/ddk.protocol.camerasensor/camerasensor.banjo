@@ -16,17 +16,17 @@ const uint8 BAYER_GBRG = 2;
 const uint8 BAYER_BGGR = 3;
 
 /// This structure represents image resolution.
-struct ImageResolution {
+struct Resolution {
     uint32 width;
     uint32 height;
 };
 
 // A sensor can support several different predefined modes.
-struct SensorMode {
+struct CameraSensorMode {
     // Frames per milliseconds. NOTE: (Reference code has fps * 256)
     uint32 fpms;
     // Resolution of the mode.
-    ImageResolution resolution;
+    Resolution resolution;
     // How many exposures this mode supports.
     uint8 exposures;
     // The wdr mode.
@@ -43,11 +43,11 @@ struct SensorMode {
     uint8 bayer;
 };
 
-struct SensorInfo {
+struct CameraSensorInfo {
     // Total resolution of the image with blanking.
-    ImageResolution total;
+    Resolution total;
     // Active resolution without blanking.
-    ImageResolution active;
+    Resolution active;
     // Actual pixels per line after scaling/binning.
     uint32 pixels_per_line;
     // Maximum analog gain value in log2 format.
@@ -109,8 +109,8 @@ protocol CameraSensor {
     // Update the sensor with new parameters.
     Update() -> (zx.status s);
     // Gets the Sensor Parameters.
-    GetInfo() -> (zx.status s, SensorInfo info);
+    GetInfo() -> (zx.status s, CameraSensorInfo info);
     // Get the supported modes.
-    GetSupportedModes() ->(zx.status s, vector<SensorMode> modes);
+    GetSupportedModes() ->(zx.status s, vector<CameraSensorMode> modes);
 };
 

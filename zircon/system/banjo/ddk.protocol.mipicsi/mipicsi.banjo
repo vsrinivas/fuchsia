@@ -43,7 +43,7 @@ enum MipiPath : uint32 {
 };
 
 struct MipiAdapInfo {
-    ddk.protocol.camerasensor.ImageResolution resolution;
+    ddk.protocol.camerasensor.Resolution resolution;
     MipiImageFormat format;
     MipiModes mode;
     MipiPath path;

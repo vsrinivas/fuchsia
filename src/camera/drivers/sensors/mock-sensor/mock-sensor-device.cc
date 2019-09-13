@@ -86,21 +86,21 @@ zx_status_t MockSensorDevice::CameraSensorSetIntegrationTime(
   return ZX_OK;
 }
 
-zx_status_t MockSensorDevice::CameraSensorGetInfo(sensor_info_t* out_info) {
+zx_status_t MockSensorDevice::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t MockSensorDevice::CameraSensorGetSupportedModes(
-    sensor_mode_t* out_modes_list, size_t modes_count,
+    camera_sensor_mode_t* out_modes_list, size_t modes_count,
     size_t* out_modes_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MockSensorDevice::SetSensorInfo(const sensor_info_t& info) {
+zx_status_t MockSensorDevice::SetSensorInfo(const camera_sensor_info_t& info) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MockSensorDevice::AddMode(const sensor_mode_t& mode) {
+zx_status_t MockSensorDevice::AddMode(const camera_sensor_mode_t& mode) {
   supported_modes_.push_back(mode);
   return ZX_OK;
 }

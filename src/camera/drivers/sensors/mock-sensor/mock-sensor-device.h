@@ -90,7 +90,7 @@ class MockSensorDevice
   // Gets the information about the sensor and stores it in a sensor_info_t.
   // Args:
   //    |out_info|: Pointer to a sensor_info_t where the sensors info will go.
-  zx_status_t CameraSensorGetInfo(sensor_info_t* out_info);
+  zx_status_t CameraSensorGetInfo(camera_sensor_info_t* out_info);
 
   // Gets the supported modes of the sensor.
   // Args:
@@ -98,7 +98,7 @@ class MockSensorDevice
   //        will be stored.
   //    |modes_count|:
   //    |out_modes_actual|:
-  zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
+  zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
                                             size_t modes_count,
                                             size_t* out_modes_actual);
 
@@ -112,7 +112,7 @@ class MockSensorDevice
   // Gets the mode that the sensor is currently set to.
   // Returns:
   //     A sensor_mode_t that the sensor is currently set to.
-  sensor_mode_t GetMode() { return supported_modes_[mode_]; }
+  camera_sensor_mode_t GetMode() { return supported_modes_[mode_]; }
 
   // Checks if the sensor is streaming.
   bool IsStreaming() { return is_streaming_; }
@@ -129,12 +129,12 @@ class MockSensorDevice
   // Sets the sensor info.
   // Args:
   //    |info|: A sensor_info_t with info values to be set.
-  zx_status_t SetSensorInfo(const sensor_info_t& info);
+  zx_status_t SetSensorInfo(const camera_sensor_info_t& info);
 
   // Adds a mode to the supported modes.
   // Args:
   //    |mode|: The mode to add to the supported modes.
-  zx_status_t AddMode(const sensor_mode_t& mode);
+  zx_status_t AddMode(const camera_sensor_mode_t& mode);
 
  private:
   bool is_initialized_ = false;
@@ -146,7 +146,7 @@ class MockSensorDevice
   int32_t digital_gain_ = 100;
   int32_t integration_time_ = 100;
 
-  std::vector<sensor_mode_t> supported_modes_ = {
+  std::vector<camera_sensor_mode_t> supported_modes_ = {
       {
           .fpms = 30000,
           .resolution =

@@ -46,7 +46,7 @@ typedef struct sensor_context {
   uint8_t dgain_change;
   uint8_t change_flag;
   uint8_t hdr_flag;
-  sensor_info_t param;
+  camera_sensor_info_t param;
 } sensor_context_t;
 
 class Imx227Device;
@@ -95,8 +95,8 @@ class Imx227Device : public DeviceType,
   int32_t CameraSensorSetDigitalGain(int32_t gain);
   zx_status_t CameraSensorSetIntegrationTime(int32_t int_time);
   zx_status_t CameraSensorUpdate();
-  zx_status_t CameraSensorGetInfo(sensor_info_t* out_info);
-  zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list, size_t modes_count,
+  zx_status_t CameraSensorGetInfo(camera_sensor_info_t* out_info);
+  zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list, size_t modes_count,
                                             size_t* out_modes_actual);
 
  private:

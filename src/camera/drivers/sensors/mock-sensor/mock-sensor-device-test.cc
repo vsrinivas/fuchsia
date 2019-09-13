@@ -12,7 +12,7 @@ namespace {
 constexpr int32_t kNewGain = 1000;
 constexpr int32_t kNewIntegrationTime = 30;
 
-constexpr sensor_mode_t kMode = {
+constexpr camera_sensor_mode_t kMode = {
     .fpms = 30000,
     .resolution =
         {

@@ -534,7 +534,7 @@ const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
     setting_2400_2720_2lane_996mbps_28fps,
 };
 
-constexpr sensor_mode_t supported_modes[] = {
+constexpr camera_sensor_mode_t supported_modes[] = {
     {
         // NOTE: SW reference consumes this as (30fps * 256)
         //       We are representing this as fpms.

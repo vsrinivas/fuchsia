@@ -45,7 +45,7 @@ zx_status_t Sensor::HwInit() {
 }
 
 zx_status_t Sensor::SwInit() {
-  sensor_info_t info;
+  camera_sensor_info_t info;
   zx_status_t status = GetInfo(&info);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "", "%s: Sensor GetInfo failed %d\n", __func__, status);
@@ -148,7 +148,7 @@ zx_status_t Sensor::Init() {
   }
 
   size_t actual_modes;
-  status = camera_sensor_.GetSupportedModes(reinterpret_cast<sensor_mode_t*>(&sensor_modes_),
+  status = camera_sensor_.GetSupportedModes(reinterpret_cast<camera_sensor_mode_t*>(&sensor_modes_),
                                             kNumModes, &actual_modes);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "", "%s: Sensor GetSupportedModes failed %d\n", __func__, status);
@@ -189,12 +189,12 @@ zx_status_t Sensor::SetMode(uint8_t mode) {
   return status;
 }
 
-zx_status_t Sensor::GetSupportedModes(sensor_mode_t* out_modes_list, size_t modes_count) {
+zx_status_t Sensor::GetSupportedModes(camera_sensor_mode_t* out_modes_list, size_t modes_count) {
   if (out_modes_list == nullptr || modes_count != kNumModes) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(out_modes_list, &sensor_modes_, sizeof(sensor_mode_t) * kNumModes);
+  memcpy(out_modes_list, &sensor_modes_, sizeof(camera_sensor_mode_t) * kNumModes);
   return ZX_OK;
 }
 
@@ -212,7 +212,7 @@ zx_status_t Sensor::SetIntegrationTime(int32_t int_time) {
 
 zx_status_t Sensor::Update() { return camera_sensor_.Update(); }
 
-zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
+zx_status_t Sensor::GetInfo(camera_sensor_info_t* out_info) {
   if (out_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
