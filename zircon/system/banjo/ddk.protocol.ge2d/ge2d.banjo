@@ -15,11 +15,6 @@ enum Ge2dRotation : uint8 {
     MAX = 4;
 };
 
-struct Resolution {
-    uint32 height;
-    uint32 width;
-};
-
 struct CropRectangle {
     uint32 crop_x;
     uint32 crop_y;
@@ -28,14 +23,12 @@ struct CropRectangle {
 };
 
 struct ResizeInfo {
-    Resolution res;
     CropRectangle crop; // Initially this will be the same size as the canvas.
     // Rotation is needed for video playback
     Ge2dRotation output_rotation;
 };
 
 struct WaterMarkInfo {
-    Resolution res;
     handle<vmo> watermark_vmo;
     // Where to place WaterMark on the input image
     uint32 loc_x;
@@ -53,16 +46,22 @@ protocol Ge2d {
     // |input_buffer_collection| : Pool of VMOs as input to the GE2D.
     // |output_buffer_collection| : Pool of VMOs as output to the GE2D.
     // [info] : Resize Info
+    // [image_format_table] : Image format table (all possible image formats).
+    // [image_format_index] : Initialize with this image format.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
     InitTaskResize(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
                    zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
                    ResizeInfo info,
+                   vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                   uint32 image_format_index,
                    ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
                       zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
                       WaterMarkInfo info,
+                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      uint32 image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
@@ -81,8 +80,9 @@ protocol Ge2d {
 
     // Set the output resolution. This call sets the resolution on all the canvas ids,
     // for the specified task. This operation is queued to the worker thread to be
-    // performed in sequence.
-    SetOutputResolution(uint32 task_index, Resolution res);
+    // performed in sequence. Once the output resolution for this Task has changed,
+    // callback using the HwAccelCallback, returning the new index of the Image Format.
+    SetOutputResolution(uint32 task_index, uint32 image_format_index);
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.
