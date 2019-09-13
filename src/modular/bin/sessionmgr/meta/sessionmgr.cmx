@@ -17,7 +17,7 @@
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.scenic.Snapshooter"
+            "fuchsia.ui.scenic.Snapshot"
         ]
     }
 }
