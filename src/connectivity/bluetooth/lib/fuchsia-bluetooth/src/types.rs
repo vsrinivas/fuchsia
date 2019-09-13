@@ -5,7 +5,7 @@
 #![allow(warnings)]
 use {fidl_fuchsia_bluetooth, std::fmt};
 
-pub use {adapter_info::*, address::*, bonding_data::*, peer::*, uuid::*};
+pub use {self::uuid::*, adapter_info::*, address::*, bonding_data::*, peer::*};
 mod adapter_info;
 mod address;
 mod bonding_data;
