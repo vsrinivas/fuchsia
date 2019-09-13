@@ -334,10 +334,17 @@ FUNCTION_LABEL(x86_syscall)
     /*xor     %rdx, %rdx - already zero */
 
 .Lreturn_from_syscall:
-
-    /* make sure interrupts are disabled (they already are in the fall-through
-       path, but if we took the .Lthread_signaled path they aren't) */
-    cli
+#if LK_DEBUGLEVEL > 2
+    /* Ensure that interrupts are disabled on all paths to here. */
+    /* If they are not, enter a spinloop. */
+    pushq   %rax
+    pushf
+    popq    %rax
+    bt      $9, %rax  /* RFLAGS.IF */
+bad:
+    jc      bad       /* Loop if we found RFLAGS.IF set (interrupts enabled) */
+    popq    %rax
+#endif
 
     /* restore the user stack */
     pop_value %rsp
@@ -398,6 +405,7 @@ FUNCTION_LABEL(x86_syscall)
     pop_value %r15
     pop_value %rcx
     pop_value %r11
+    cli
     jmp     .Lreturn_from_syscall
 
 END_FUNCTION(x86_syscall)
