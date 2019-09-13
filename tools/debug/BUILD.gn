@@ -11,8 +11,7 @@ group("tools") {
     "//tools/debug/covargs",
     "//tools/debug/dump_breakpad_symbols",
     "//tools/debug/symbolize",
-
-    # TODO(fxb/36097): Create BUILD file for upload_debug_symbols and add tool here.
+    "//tools/debug/upload_debug_symbols",
   ]
 }
 
