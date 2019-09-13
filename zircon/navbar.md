@@ -1,6 +1,0 @@
-* [Zircon](/zircon/README.md)
-* [Concepts](/docs/zircon/concepts.md)
-* [Objects](/docs/zircon/objects.md)
-* [Syscalls](/docs/zircon/syscalls.md)
-* [DDK](/docs/zircon/ddk/overview.md)
-* [Getting Started](/docs/zircon/getting_started.md)
