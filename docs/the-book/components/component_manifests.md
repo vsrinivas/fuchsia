@@ -327,7 +327,7 @@ Example:
 ```
 "use": [
     {
-        "service": "/svc/fuchsia.log.Log",
+        "service": "/svc/fuchsia.logger.LogSink",
     },
     {
         "directory": "/data/themes",
@@ -408,7 +408,7 @@ Example:
 ```
 "offer": [
     {
-        "service": "/svc/fuchsia.log.Log",
+        "service": "/svc/fuchsia.logger.LogSink",
         "from": "#logger",
         "to": [
             { "dest": "#fshost" },
