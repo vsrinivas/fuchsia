@@ -31,6 +31,16 @@ class AudioAdmin {
     float mute_gain_db;
   };
 
+  // An interface by which |AudioAdmin| can report actions taken on usages. Policy is reactive, so
+  // any time a usage's active status (active: at least one stream is active on the usage, inactive:
+  // no streams are active on the usage) changes, all usages will be notified of the policy action
+  // taken on them.
+  class PolicyActionReporter {
+   public:
+    virtual void ReportPolicyAction(fuchsia::media::Usage usage,
+                                    fuchsia::media::Behavior policy_action) = 0;
+  };
+
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
   //
   // The |BehaviorGain| provides the target gain_db values to use when triggering behaviors between
@@ -38,17 +48,11 @@ class AudioAdmin {
   // an interface that this object will use to apply the target gain values in |BehaviorGain|.
   //
   // |gain_adjustment| must be non-null.
-  AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment);
+  AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
+             PolicyActionReporter* policy_action_reporter);
 
   // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
-  explicit AudioAdmin(UsageGainAdjustment* gain_adjustment)
-      : AudioAdmin(
-            BehaviorGain{
-                .none_gain_db = 0.0f,
-                .duck_gain_db = -14.0f,
-                .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
-            },
-            gain_adjustment) {}
+  AudioAdmin(UsageGainAdjustment* gain_adjustment);
 
   // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
@@ -69,6 +73,7 @@ class AudioAdmin {
  private:
   BehaviorGain behavior_gain_;
   UsageGainAdjustment& gain_adjustment_;
+  PolicyActionReporter& policy_action_reporter_;
 
   void UpdatePolicy();
 

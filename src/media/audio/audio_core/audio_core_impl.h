@@ -25,6 +25,7 @@ class SystemGainMuteProvider {
   virtual bool system_muted() const = 0;
 };
 
+// TODO(36403): Remove duplication of Render/Capturer functions in this interface and AudioAdmin
 class UsageGainAdjustment {
  public:
   virtual void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
