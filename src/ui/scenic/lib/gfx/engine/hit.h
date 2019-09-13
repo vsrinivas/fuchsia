@@ -15,9 +15,6 @@ namespace gfx {
 
 // Describes where a hit occurred within the content of a tagged node.
 struct Hit {
-  // The node's tag value. Non-zero values participate in the SessionHitTester.
-  uint32_t tag_value;
-
   // Raw pointer to the node. Valid only in the context of Scenic itself.
   // NOTE: The consumer (input subsystem) must not retain these pointers!
   const Node* node;

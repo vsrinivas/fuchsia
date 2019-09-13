@@ -65,13 +65,6 @@ Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& 
 }
 }  // namespace
 
-SessionHitTester::SessionHitTester(Session* session) : session_(session) { FXL_CHECK(session_); }
-
-bool SessionHitTester::should_participate(Node* node) {
-  FXL_DCHECK(node);
-  return node->tag_value() != 0 && node->session_id() == session_->id();
-}
-
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
@@ -146,8 +139,8 @@ void HitTester::AccumulateHitsLocal(Node* node) {
   tag_info_ = outer_tag_info;
 
   if (local_tag_info.is_hit()) {
-    hits_.emplace_back(Hit{node->tag_value(), node, ray_info_->ray, ray_info_->inverse_transform,
-                           local_tag_info.distance});
+    hits_.emplace_back(
+        Hit{node, ray_info_->ray, ray_info_->inverse_transform, local_tag_info.distance});
     if (outer_tag_info)
       outer_tag_info->ReportIntersection(local_tag_info.distance);
   }

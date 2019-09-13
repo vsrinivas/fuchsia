@@ -472,10 +472,7 @@ bool GfxCommandApplier::ApplyDetachChildrenCmd(Session* session,
 }
 
 bool GfxCommandApplier::ApplySetTagCmd(Session* session, fuchsia::ui::gfx::SetTagCmd command) {
-  if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
-    return node->SetTagValue(command.tag_value);
-  }
-  return false;
+  return true;  // No-op, but allow other session updates to continue.
 }
 
 bool GfxCommandApplier::ApplySetTranslationCmd(Session* session,

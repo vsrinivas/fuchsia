@@ -14,18 +14,6 @@ namespace test {
 
 using NodeTest = SessionTest;
 
-TEST_F(NodeTest, Tagging) {
-  const ResourceId kNodeId = 1;
-
-  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
-  auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(0u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(scenic::NewSetTagCmd(kNodeId, 42u)));
-  EXPECT_EQ(42u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(scenic::NewSetTagCmd(kNodeId, 0u)));
-  EXPECT_EQ(0u, shape_node->tag_value());
-}
-
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const ResourceId kNodeId = 1;
   const ResourceId kMaterialId = 2;

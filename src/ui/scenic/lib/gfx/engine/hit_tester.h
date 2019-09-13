@@ -92,18 +92,6 @@ class HitTester {
   Node::IntersectionInfo* intersection_info_ = nullptr;
 };
 
-class SessionHitTester : public HitTester {
- public:
-  explicit SessionHitTester(Session* session);
-  virtual ~SessionHitTester() = default;
-
- private:
-  // Node seen in hit testing only if non-zero tag and compatible session.
-  bool should_participate(Node* node) override;
-
-  Session* session_;
-};
-
 class GlobalHitTester : public HitTester {
  public:
   GlobalHitTester() = default;

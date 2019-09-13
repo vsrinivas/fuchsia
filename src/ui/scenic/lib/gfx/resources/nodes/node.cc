@@ -131,11 +131,6 @@ bool Node::DetachChildren(ErrorReporter* error_reporter) {
   return true;
 }
 
-bool Node::SetTagValue(uint32_t tag_value) {
-  tag_value_ = tag_value;
-  return true;
-}
-
 bool Node::SetTransform(const escher::Transform& transform, ErrorReporter* error_reporter) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter->ERROR() << "scenic::gfx::Node::SetTransform(): node of type " << type_name()

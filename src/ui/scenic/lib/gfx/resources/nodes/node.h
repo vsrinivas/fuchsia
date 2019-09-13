@@ -56,9 +56,6 @@ class Node : public Resource {
   bool AddChild(NodePtr child_node, ErrorReporter* error_reporter);
   bool DetachChildren(ErrorReporter* error_reporter);
 
-  bool SetTagValue(uint32_t tag_value);
-  uint32_t tag_value() const { return tag_value_; }
-
   bool SetTransform(const escher::Transform& transform, ErrorReporter* error_reporter);
   bool SetTranslation(const escher::vec3& translation, ErrorReporter* error_reporter);
   bool SetTranslation(Vector3VariablePtr translation, ErrorReporter* error_reporter);
@@ -159,8 +156,6 @@ class Node : public Resource {
   // Only called internally by the Node on its children, never externally.
   void DetachInternal();
   void RefreshScene(Scene* new_scene);
-
-  uint32_t tag_value_ = 0u;
 
   Node* parent_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
