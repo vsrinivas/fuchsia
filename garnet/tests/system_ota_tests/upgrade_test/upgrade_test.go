@@ -15,7 +15,6 @@ import (
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/paver"
 	"fuchsia.googlesource.com/host_target_testing/util"
 
 	"golang.org/x/crypto/ssh"
@@ -41,6 +40,47 @@ func TestMain(m *testing.M) {
 }
 
 func TestOTA(t *testing.T) {
+	device, err := c.NewDeviceClient()
+	if err != nil {
+		t.Fatalf("failed to create ota test client: %s", err)
+	}
+	defer device.Close()
+
+	if c.ShouldRepaveDevice() {
+		doPaveDevice(t, device)
+	}
+
+	doTestOTAs(t, device)
+}
+
+func doTestOTAs(t *testing.T, device *device.Client) {
+	repo, err := c.GetUpgradeRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Install version N on the device if it is not already on that version.
+	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+	if err != nil {
+		t.Fatalf("error extracting expected system image merkle: %s", err)
+	}
+
+	if !isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+		log.Printf("starting OTA from N-1 -> N test")
+		doSystemOTA(t, device, repo)
+		log.Printf("OTA from N-1 -> N successful")
+	}
+
+	log.Printf("starting OTA N -> N' test")
+	doSystemPrimeOTA(t, device, repo)
+	log.Printf("OTA from N -> N' successful")
+
+	log.Printf("starting OTA N' -> N test")
+	doSystemOTA(t, device, repo)
+	log.Printf("OTA from N' -> N successful")
+}
+
+func doPaveDevice(t *testing.T, device *device.Client) {
 	downgradePaver, err := c.GetDowngradePaver()
 	if err != nil {
 		t.Fatal(err)
@@ -51,55 +91,29 @@ func TestOTA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	upgradeRepo, err := c.GetUpgradeRepository()
-	if err != nil {
-		t.Fatal(err)
-	}
+	log.Printf("starting pave")
 
-	device, err := c.NewDeviceClient()
-	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
-	}
-	defer device.Close()
-
-	t.Run("PaveThenUpgrade", func(t *testing.T) {
-		log.Printf("starting downgrade pave")
-		doPave(t, device, downgradePaver, downgradeRepo)
-
-		log.Printf("starting upgrade test")
-		doSystemOTA(t, device, upgradeRepo)
-	})
-
-	t.Run("NPrimeThenN", func(t *testing.T) {
-		log.Printf("starting N -> N' test")
-		doSystemPrimeOTA(t, device, upgradeRepo)
-
-		log.Printf("starting N' -> N test")
-		doSystemOTA(t, device, upgradeRepo)
-	})
-}
-
-func doPave(t *testing.T, device *device.Client, paver *paver.Paver, repo *packages.Repository) {
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+	expectedSystemImageMerkle, err := extractUpdateSystemImage(downgradeRepo)
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
 	// Reboot the device into recovery and pave it.
 	if err = device.RebootToRecovery(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to reboot to recovery: %s", err)
 	}
 
-	if err = paver.Pave(c.DeviceName); err != nil {
+	if err = downgradePaver.Pave(c.DeviceName); err != nil {
 		t.Fatalf("device failed to pave: %s", err)
 	}
 
 	// Wait for the device to come online.
 	device.WaitForDeviceToBeConnected()
 
-	validateDevice(t, device, repo, expectedSystemImageMerkle)
+	validateDevice(t, device, downgradeRepo, expectedSystemImageMerkle)
 
-	log.Printf("pave successful")
+	log.Printf("paving successful")
+
 }
 
 func doSystemOTA(t *testing.T, device *device.Client, repo *packages.Repository) {

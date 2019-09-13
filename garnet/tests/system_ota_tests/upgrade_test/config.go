@@ -150,6 +150,10 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 	return c.archive
 }
 
+func (c *Config) ShouldRepaveDevice() bool {
+	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradePaver != ""
+}
+
 func (c *Config) GetDowngradeBuildID() (string, error) {
 	if c.downgradeBuilderName != "" && c.downgradeBuildID == "" {
 		a := c.BuildArchive()
