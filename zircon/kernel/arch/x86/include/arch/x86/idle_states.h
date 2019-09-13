@@ -32,6 +32,19 @@ typedef struct {
   // The list must be non-empty and end with X86_CSTATE_C1; all states after
   // this entry must be ignored.
   x86_idle_state_t states[X86_MAX_CSTATES];
+  // A bitmask of MWAIT hints which the system can request to enter.
+  //
+  // Bit x being set means that MWAIT(Cx+1) can be requested. For example:
+  //   0b0000 0000 0001 1111
+  // Allows states MWAIT(C1-C5) (and all of their sub-states) to be requested.
+  //
+  // NB:
+  //  - The base state C1 is always allowed, so bit 0 is ignored.
+  //  - MWAIT(Cx) does not necessarily map to C-state x; for example on Kaby
+  //    Lake processors, C-state C6 has mwait hint 0x20 (MWAIT(C3)).
+  //
+  // Can be overridden via `k idlestates setmask`.
+  uint32_t default_state_mask;
 } x86_idle_states_t;
 
 // Every processor must support at least C1.
@@ -63,6 +76,10 @@ typedef struct X86IdleStates X86IdleStates;
 __END_CDECLS
 
 #ifdef __cplusplus
+
+#include <ktl/atomic.h>
+
+constexpr uint32_t kX86IdleStateMaskC1Only = 0x1;
 
 class X86IdleState {
  public:
@@ -129,10 +146,14 @@ class X86IdleStates {
   // Callback to call when the system becomes idle.
   void RecordDuration(zx_duration_t duration) { last_idle_duration_ = duration; }
 
+  // Updates the mask of valid C-states.
+  void SetStateMask(uint32_t mask) { state_mask_ = mask | 0x1;  /* Always allow C1 */ }
+
  private:
   X86IdleState states_[X86_MAX_CSTATES];
   size_t num_states_;
   zx_duration_t last_idle_duration_;
+  ktl::atomic<uint32_t> state_mask_;
 };
 
 #endif  // __cplusplus

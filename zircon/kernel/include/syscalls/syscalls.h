@@ -6,6 +6,9 @@
 #define ZIRCON_KERNEL_INCLUDE_SYSCALLS_SYSCALLS_H_
 
 #include <sys/types.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 struct syscall_result {
   // The assembler relies on the fact that the ABI will return this in
@@ -16,5 +19,7 @@ struct syscall_result {
 };
 
 struct syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip);
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_SYSCALLS_SYSCALLS_H_

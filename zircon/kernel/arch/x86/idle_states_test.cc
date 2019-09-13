@@ -18,13 +18,18 @@
 
 namespace {
 
-x86_idle_states_t kC1OnlyIdleStates = {.states = {X86_CSTATE_C1(0)}};
+x86_idle_states_t kC1OnlyIdleStates = {
+  .states = {X86_CSTATE_C1(0)},
+  .default_state_mask = kX86IdleStateMaskC1Only,
+};
 
 x86_idle_states_t kKabyLakeIdleStates = {
     .states = {{.name = "C6", .mwait_hint = 0x50, .exit_latency = 1000, .flushes_tlb = true},
                {.name = "C3", .mwait_hint = 0x20, .exit_latency = 100, .flushes_tlb = true},
                {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
-               X86_CSTATE_C1(0)}};
+               X86_CSTATE_C1(0)},
+    .default_state_mask = 0b0000'0000'0011'1111,
+};
 
 bool test_c1_only() {
   BEGIN_TEST;
@@ -71,6 +76,59 @@ bool test_kbl() {
   END_TEST;
 }
 
+bool test_kbl_statemask() {
+  BEGIN_TEST;
+
+  X86IdleStates states(&kKabyLakeIdleStates);
+
+  // Empty mask will always choose C1 or C1E
+  states.SetStateMask(0b0000'0000'0000'0000);
+  X86IdleState* state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  states.RecordDuration(zx_duration_from_usec(3U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  states.RecordDuration(zx_duration_from_usec(4U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+  states.RecordDuration(zx_duration_from_usec(34U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+  states.RecordDuration(zx_duration_from_usec(334U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+
+  // Mask to only allow C6, C1/C1E
+  states.SetStateMask(0b0000'0000'0010'0001);
+  states.RecordDuration(zx_duration_from_usec(0u));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  states.RecordDuration(zx_duration_from_usec(3U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  states.RecordDuration(zx_duration_from_usec(4U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+  states.RecordDuration(zx_duration_from_usec(34U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+  states.RecordDuration(zx_duration_from_usec(334U));
+  state = states.PickIdleState();
+  EXPECT_EQ(state->MwaitHint(), 0x50u);
+  EXPECT_EQ(strcmp(state->Name(), "C6"), 0);
+
+  END_TEST;
+}
+
 volatile uint8_t monitor;
 
 static uint8_t kGuardValue = UINT8_MAX;
@@ -99,7 +157,7 @@ bool test_enter_idle_states() {
       // Thread must be created and started before arming the monitor,
       // since thread creation appears to trip the monitor latch prematurely.
       thread_t* thrd = thread_create("monitor_poker", &poke_monitor, nullptr, DEFAULT_PRIORITY);
-      thread_detach_and_resume(thrd);
+      thread_resume(thrd);
 
       monitor = i;
       smp_mb();
@@ -108,7 +166,6 @@ bool test_enter_idle_states() {
       x86_mwait(state.MwaitHint());
 
       unittest_printf("Exiting state (%ld ns elapsed)\n", zx_time_sub_time(current_time(), start));
-
       thread_join(thrd, nullptr, ZX_TIME_INFINITE);
     }
   } else {
@@ -123,6 +180,8 @@ bool test_enter_idle_states() {
 UNITTEST_START_TESTCASE(x86_idle_states_tests)
 UNITTEST("Select an idle state using data from a CPU with only C1.", test_c1_only)
 UNITTEST("Select an idle state using data from a Kabylake CPU.", test_kbl)
+UNITTEST("Select an idle state using data from a Kabylake CPU, respecting a mask of valid states.",
+         test_kbl_statemask)
 UNITTEST("Enter each supported idle state using MWAIT/MONITOR.", test_enter_idle_states)
 UNITTEST_END_TESTCASE(x86_idle_states_tests, "x86_idle_states",
                       "Test idle state enumeration and selection (x86 only).");

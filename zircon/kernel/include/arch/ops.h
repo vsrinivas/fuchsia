@@ -64,8 +64,12 @@ static void arch_spinloop_pause(void);
 /* arch optimized version of a page zero routine against a page aligned buffer */
 void arch_zero_page(void *);
 
+__END_CDECLS
+
 /* give the specific arch a chance to override some routines */
 #include <arch/arch_ops.h>
+
+__BEGIN_CDECLS
 
 /* The arch_blocking_disallowed() flag is used to check that in-kernel interrupt
  * handlers do not do any blocking operations.  This is a per-CPU flag.

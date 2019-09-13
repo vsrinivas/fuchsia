@@ -503,7 +503,18 @@ static const x86_microarch_config_t kbl_config{
     .has_mds = true,
     .idle_states =
         {
-            .states = {X86_CSTATE_C1(0)},
+            .states =
+                {
+                    {.name = "C10", .mwait_hint = 0x60, .exit_latency = 890, .flushes_tlb = true},
+                    {.name = "C9", .mwait_hint = 0x50, .exit_latency = 480, .flushes_tlb = true},
+                    {.name = "C8", .mwait_hint = 0x40, .exit_latency = 200, .flushes_tlb = true},
+                    {.name = "C7s", .mwait_hint = 0x33, .exit_latency = 124, .flushes_tlb = true},
+                    {.name = "C6", .mwait_hint = 0x20, .exit_latency = 85, .flushes_tlb = true},
+                    {.name = "C3", .mwait_hint = 0x10, .exit_latency = 70, .flushes_tlb = true},
+                    {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
+                    X86_CSTATE_C1(0),
+                },
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t skl_config{
@@ -519,6 +530,7 @@ static const x86_microarch_config_t skl_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t bdw_config{
@@ -534,6 +546,7 @@ static const x86_microarch_config_t bdw_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t hsw_config{
@@ -549,6 +562,7 @@ static const x86_microarch_config_t hsw_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t ivb_config{
@@ -564,6 +578,7 @@ static const x86_microarch_config_t ivb_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t snb_config{
@@ -579,6 +594,7 @@ static const x86_microarch_config_t snb_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t westmere_config{
@@ -594,6 +610,7 @@ static const x86_microarch_config_t westmere_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t nehalem_config{
@@ -609,6 +626,7 @@ static const x86_microarch_config_t nehalem_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t smt_config{
@@ -624,6 +642,7 @@ static const x86_microarch_config_t smt_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t glm_config{
@@ -640,6 +659,7 @@ static const x86_microarch_config_t glm_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t intel_default_config{
@@ -655,6 +675,7 @@ static const x86_microarch_config_t intel_default_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 
@@ -672,6 +693,7 @@ static const x86_microarch_config_t zen_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t jaguar_config{
@@ -687,6 +709,7 @@ static const x86_microarch_config_t jaguar_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t bulldozer_config{
@@ -702,6 +725,7 @@ static const x86_microarch_config_t bulldozer_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 static const x86_microarch_config_t amd_default_config{
@@ -717,6 +741,7 @@ static const x86_microarch_config_t amd_default_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 
@@ -734,6 +759,7 @@ static const x86_microarch_config_t unknown_vendor_config{
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
 

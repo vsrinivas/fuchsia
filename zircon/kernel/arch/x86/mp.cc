@@ -62,7 +62,10 @@ static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
 volatile uint8_t fake_monitor;
 
 // Also set up a fake table of idle states.
-x86_idle_states_t fake_supported_idle_states = {.states = {X86_CSTATE_C1(0)}};
+x86_idle_states_t fake_supported_idle_states = {
+  .states = {X86_CSTATE_C1(0)},
+  .default_state_mask = kX86IdleStateMaskC1Only,
+};
 X86IdleStates fake_idle_states = X86IdleStates(&fake_supported_idle_states);
 
 // Pre-initialize the per cpu structure for the boot cpu. Referenced by
@@ -501,7 +504,7 @@ static void reset_idle_counters(X86IdleStates* idle_states) {
   }
 }
 
-static void report_idlestats(int cpu_num, const X86IdleStates& idle_states) {
+static void report_idlestates(int cpu_num, const X86IdleStates& idle_states) {
   printf("CPU %d:\n", cpu_num);
   const X86IdleState* states = idle_states.ConstStates();
   for (unsigned i = 0; i < idle_states.NumStates(); ++i) {
@@ -513,25 +516,34 @@ static void report_idlestats(int cpu_num, const X86IdleStates& idle_states) {
   }
 }
 
-static int cmd_idlestats(int argc, const cmd_args* argv, uint32_t flags) {
+static int cmd_idlestates(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
   usage:
-    printf("Usage: %s (reset|print)\n", argv[0].str);
+    printf("Usage: %s (printstats | resetstats | setmask)\n", argv[0].str);
     return ZX_ERR_INVALID_ARGS;
   }
   if (!use_monitor) {
     printf("%s is only supported on systems with X86_FEATURE_MON\n", argv[0].str);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (!strcmp(argv[1].str, "reset")) {
+  if (!strcmp(argv[1].str, "resetstats")) {
     reset_idle_counters(bp_percpu.idle_states);
     for (unsigned i = 1; i < x86_num_cpus; ++i) {
       reset_idle_counters(ap_percpus[i - 1].idle_states);
     }
-  } else if (!strcmp(argv[1].str, "print")) {
-    report_idlestats(0, *bp_percpu.idle_states);
+  } else if (!strcmp(argv[1].str, "printstats")) {
+    report_idlestates(0, *bp_percpu.idle_states);
     for (unsigned i = 1; i < x86_num_cpus; ++i) {
-      report_idlestats(i, *ap_percpus[i - 1].idle_states);
+      report_idlestates(i, *ap_percpus[i - 1].idle_states);
+    }
+  } else if (!strcmp(argv[1].str, "setmask")) {
+    if (argc < 3) {
+      printf("Usage: %s setmask $mask\n", argv[0].str);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    bp_percpu.idle_states->SetStateMask(static_cast<uint32_t>(argv[2].u));
+    for (unsigned i = 1; i < x86_num_cpus; ++i) {
+      ap_percpus[i-1].idle_states->SetStateMask(static_cast<uint32_t>(argv[2].u));
     }
   } else {
     goto usage;
@@ -540,5 +552,5 @@ static int cmd_idlestats(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-STATIC_COMMAND("idlestats", "print idle stats or reset counters", &cmd_idlestats)
-STATIC_COMMAND_END(idlestats)
+STATIC_COMMAND("idlestates", "control or report on CPU idle state selection", &cmd_idlestates)
+STATIC_COMMAND_END(idlestates)

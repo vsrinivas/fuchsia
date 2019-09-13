@@ -6,6 +6,8 @@
 #include "arch/x86/idle_states.h"
 
 #include <assert.h>
+#include <bits.h>
+#include <ktl/atomic.h>
 #include <platform.h>
 #include <zircon/time.h>
 
@@ -15,6 +17,8 @@
 namespace {
 
 constexpr int kIdleDurationFactor = 3;
+
+constexpr uint32_t StateNumberFromMwaitHint(uint32_t hint) { return BITS_SHIFT(hint, 8, 4) + 1; }
 
 }  // namespace
 
@@ -38,6 +42,7 @@ X86IdleStates::X86IdleStates(const x86_idle_states_t* states) : last_idle_durati
   for (unsigned i = 0; i < num_states_; ++i) {
     states_[i] = X86IdleState(states->states + i);
   }
+  state_mask_ = states->default_state_mask | 0x1;  // Always allow C1
 }
 
 X86IdleState* X86IdleStates::PickIdleState() {
@@ -45,10 +50,15 @@ X86IdleState* X86IdleStates::PickIdleState() {
     // Return the shallowest state (C1).
     return &states_[num_states_ - 1];
   }
-  // Pick the deepest state which has ExitLatency less than
+  const uint32_t valid_state_mask = state_mask_.load(ktl::memory_order_relaxed);
+  // Pick the deepest valid state which has ExitLatency less than
   // kIdleDurationFactor * <expected idle duration>
   for (unsigned i = 0; i < num_states_; ++i) {
     auto& state = states_[i];
+    auto state_num = StateNumberFromMwaitHint(state.MwaitHint());
+    if (!(BIT_SET(valid_state_mask, state_num - 1))) {
+      continue;
+    }
     if (state.ExitLatency() < kIdleDurationFactor * last_idle_duration_) {
       return &state;
     }
