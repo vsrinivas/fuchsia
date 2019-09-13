@@ -146,7 +146,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
           container.story_node = std::make_unique<inspect::Node>(
               session_inspect_node_->CreateChild(story_id_.value_or("")));
 
-          container.last_focus_time = container.story_node->CreateInt(
+          container.last_focus_time_inspect_property = container.story_node->CreateInt(
               "last_focus_time", container.current_data->story_info().last_focus_time());
 
           container.controller_impl = std::make_unique<StoryControllerImpl>(
@@ -681,11 +681,14 @@ void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
   fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
-  auto i = story_runtime_containers_.find(story_data.story_info().id());
-  if (i != story_runtime_containers_.end()) {
-    runtime_state = i->second.model_observer->model().runtime_state();
-    visibility_state = i->second.model_observer->model().visibility_state();
-    i->second.current_data = CloneOptional(story_data);
+  auto it = story_runtime_containers_.find(story_data.story_info().id());
+  if (it != story_runtime_containers_.end()) {
+    auto& container = it->second;
+    runtime_state = container.model_observer->model().runtime_state();
+    visibility_state = container.model_observer->model().visibility_state();
+    container.current_data = CloneOptional(story_data);
+    container.last_focus_time_inspect_property.Set(
+        container.current_data->story_info().last_focus_time());
   } else {
     fuchsia::modular::StoryControllerPtr story_controller;
     GetController(story_id.value_or(""), story_controller.NewRequest());
@@ -749,12 +752,6 @@ void StoryProviderImpl::NotifyStoryWatchers(
     (*i)->OnChange(StoryInfo2ToStoryInfo(story_data->story_info()), story_state,
                    story_visibility_state);
     (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
-  }
-
-  auto i = story_runtime_containers_.find(story_data->story_info().id());
-  if (i != story_runtime_containers_.end()) {
-    story_runtime_containers_[story_data->story_info().id()].last_focus_time.Set(
-        story_data->story_info().last_focus_time());
   }
 }
 
