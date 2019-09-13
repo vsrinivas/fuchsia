@@ -9,16 +9,17 @@
 extern crate serde_derive;
 
 use {
-    failure::{Error, ResultExt},
+    failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::ControlRequestStream,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
-    futures::{future::try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     pin_utils::pin_mut,
 };
 
@@ -38,25 +39,36 @@ mod types;
 
 const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["bt-gap"]).expect("Can't init logger");
     fx_log_info!("Starting bt-gap...");
-    let result = run().context("Error running BT-GAP");
+    let result = run().await.context("Error running BT-GAP");
     if let Err(e) = &result {
         fx_log_err!("{:?}", e)
     };
     Ok(result?)
 }
 
-fn run() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+// Returns the device host name that we assign as the local Bluetooth device name by default.
+async fn get_host_name() -> Result<String, Error> {
+    // Obtain the local device name to assign it as the default Bluetooth name,
+    let name_provider = connect_to_service::<NameProviderMarker>()?;
+    name_provider
+        .get_device_name()
+        .await?
+        .map_err(|e| format_err!("failed to obtain host name: {:?}", e))
+}
+
+async fn run() -> Result<(), Error> {
     let inspect = fuchsia_inspect::Inspector::new();
     let stash_inspect = inspect.root().create_child("persistent");
-    let stash = executor
-        .run_singlethreaded(store::stash::init_stash(BT_GAP_COMPONENT_ID, stash_inspect))
+    let stash = store::stash::init_stash(BT_GAP_COMPONENT_ID, stash_inspect)
+        .await
         .context("Error initializing Stash service")?;
 
-    let hd = HostDispatcher::new(stash, inspect.root().create_child("system"));
+    let local_name = get_host_name().await.unwrap_or(DEFAULT_DEVICE_NAME.to_string());
+    let hd = HostDispatcher::new(local_name, stash, inspect.root().create_child("system"));
     let watch_hd = hd.clone();
     let central_hd = hd.clone();
     let control_hd = hd.clone();
@@ -64,7 +76,7 @@ fn run() -> Result<(), Error> {
     let profile_hd = hd.clone();
     let gatt_hd = hd.clone();
 
-    let host_watcher = async {
+    let host_watcher_task = async {
         let stream = watch_hosts();
         pin_mut!(stream);
         while let Some(msg) = stream.try_next().await? {
@@ -118,10 +130,8 @@ fn run() -> Result<(), Error> {
             None
         });
     fs.take_and_serve_directory_handle()?;
-
-    executor
-        .run_singlethreaded(try_join(fs.collect::<()>().map(Ok), host_watcher))
-        .map(|((), ())| ())
+    let svc_fs_task = fs.collect::<()>().map(Ok);
+    try_join!(svc_fs_task, host_watcher_task).map(|((), ())| ())
 }
 
 fn control_service(hd: HostDispatcher, stream: ControlRequestStream) {

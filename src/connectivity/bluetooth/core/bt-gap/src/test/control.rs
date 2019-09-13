@@ -22,7 +22,7 @@ use crate::{
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<ControlMarker>()?;
 
-    let hd = HostDispatcher::new(Stash::stub()?, placeholder_node());
+    let hd = HostDispatcher::new("test".to_string(), Stash::stub()?, placeholder_node());
     let serve_until_done = start_control_service(hd, server);
 
     // Send a FIDL request

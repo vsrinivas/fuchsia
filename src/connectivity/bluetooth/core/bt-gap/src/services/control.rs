@@ -131,7 +131,7 @@ async fn handler(
             responder.send(&mut resp)
         }
         ControlRequest::SetName { name, responder } => {
-            let result = hd.set_name(name).await;
+            let result = hd.set_name(name.unwrap_or("".to_string())).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDeviceClass { device_class, responder } => {

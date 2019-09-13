@@ -48,8 +48,6 @@ use crate::{
 
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 
-static DEFAULT_NAME: &'static str = "fuchsia";
-
 /// Available FIDL services that can be provided by a particular Host
 pub enum HostService {
     LeCentral,
@@ -308,11 +306,11 @@ pub struct HostDispatcher {
 }
 
 impl HostDispatcher {
-    pub fn new(stash: Stash, inspect: inspect::Node) -> HostDispatcher {
+    pub fn new(name: String, stash: Stash, inspect: inspect::Node) -> HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
             host_devices: HashMap::new(),
-            name: DEFAULT_NAME.to_string(),
+            name: name,
             input: InputCapabilityType::None,
             output: OutputCapabilityType::None,
             peers: HashMap::new(),
@@ -335,9 +333,8 @@ impl HostDispatcher {
         WhenHostsFound::new(self.clone()).await
     }
 
-    pub async fn set_name(&mut self, name: Option<String>) -> types::Result<()> {
-        self.state.write().name = name.unwrap_or(DEFAULT_NAME.to_string());
-
+    pub async fn set_name(&mut self, name: String) -> types::Result<()> {
+        self.state.write().name = name;
         match self.get_active_adapter().await {
             Some(adapter) => adapter.write().set_name(self.state.read().name.clone()).await,
             None => Err(types::Error::no_host()),
@@ -595,6 +592,13 @@ impl HostDispatcher {
             .await
             .map_err(|e| e.as_failure())?;
 
+        // Assign the name that is currently assigned to the HostDispatcher as the local name.
+        host_device
+            .read()
+            .set_name(self.state.read().name.clone())
+            .await
+            .map_err(|e| e.as_failure())?;
+
         // Enable privacy by default.
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
 
@@ -621,6 +625,7 @@ impl HostDispatcher {
                 fx_log_warn!("Error handling host event: {:?}", err);
             })
         }));
+
         Ok(())
     }
 
@@ -791,7 +796,7 @@ fn assign_host_data(
 
             if let Err(e) = stash.store_host_data(address, new_data.clone()) {
                 fx_log_err!("failed to persist local IRK");
-                return Err(e);
+                return Err(e.into());
             }
             new_data
         }
@@ -849,7 +854,7 @@ mod tests {
         let stash = Stash::stub().expect("Create stash stub");
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
-        let dispatcher = HostDispatcher::new(stash, system_inspect);
+        let dispatcher = HostDispatcher::new("test".to_string(), stash, system_inspect);
         let peer_id = "id".to_string();
 
         // assert inspect tree is in clean state
