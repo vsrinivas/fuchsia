@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gain_curve.h"
+#include "volume_curve.h"
 
 #include <float.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -19,23 +19,24 @@ namespace {
 
 constexpr float kDefaultGainForMinVolume = -60.0;
 
-const GainCurve kDefaultCurve = GainCurve::DefaultForMinGain(kDefaultGainForMinVolume);
+const VolumeCurve kDefaultCurve = VolumeCurve::DefaultForMinGain(kDefaultGainForMinVolume);
 
 }  // namespace
 
-const GainCurve& GainCurve::Default() { return kDefaultCurve; }
+const VolumeCurve& VolumeCurve::Default() { return kDefaultCurve; }
 
-GainCurve GainCurve::DefaultForMinGain(float min_gain_db) {
+VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);
   FXL_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
 
-  std::vector<VolumeMapping> mappings = {{0.0, fuchsia::media::audio::MUTED_GAIN_DB}};
+  std::vector<VolumeMapping> mappings = {
+      {fuchsia::media::audio::MIN_VOLUME, fuchsia::media::audio::MUTED_GAIN_DB}};
   if (min_gain_db != fuchsia::media::audio::MUTED_GAIN_DB) {
     mappings.push_back({FLT_EPSILON, min_gain_db});
   }
-  mappings.push_back({1.0, Gain::kUnityGainDb});
+  mappings.push_back({fuchsia::media::audio::MAX_VOLUME, Gain::kUnityGainDb});
 
-  auto curve_result = GainCurve::FromMappings(std::move(mappings));
+  auto curve_result = VolumeCurve::FromMappings(std::move(mappings));
   if (!curve_result.is_ok()) {
     FXL_LOG(FATAL) << "Failed to build curve; error: " << curve_result.take_error();
   }
@@ -43,17 +44,18 @@ GainCurve GainCurve::DefaultForMinGain(float min_gain_db) {
   return curve_result.take_value();
 }
 
-fit::result<GainCurve, GainCurve::Error> GainCurve::FromMappings(
+fit::result<VolumeCurve, VolumeCurve::Error> VolumeCurve::FromMappings(
     std::vector<VolumeMapping> mappings) {
   if (mappings.size() < 2) {
     return fit::error(kLessThanTwoMappingsCannotMakeCurve);
   }
 
-  if (mappings.front().volume != 0.0 || mappings.back().volume != 1.0) {
+  if (mappings.front().volume != fuchsia::media::audio::MIN_VOLUME ||
+      mappings.back().volume != fuchsia::media::audio::MAX_VOLUME) {
     return fit::error<Error>(kDomain0to1NotCovered);
   }
 
-  if (mappings.back().gain_dbfs != 0.0) {
+  if (mappings.back().gain_dbfs != Gain::kUnityGainDb) {
     return fit::error<Error>(kRange0NotCovered);
   }
 
@@ -67,13 +69,14 @@ fit::result<GainCurve, GainCurve::Error> GainCurve::FromMappings(
     }
   }
 
-  return fit::ok<GainCurve>(GainCurve(std::move(mappings)));
+  return fit::ok<VolumeCurve>(VolumeCurve(std::move(mappings)));
 }
 
-GainCurve::GainCurve(std::vector<VolumeMapping> mappings) : mappings_(std::move(mappings)) {}
+VolumeCurve::VolumeCurve(std::vector<VolumeMapping> mappings) : mappings_(std::move(mappings)) {}
 
-float GainCurve::VolumeToDb(float volume) const {
-  const float x = std::clamp<float>(volume, 0.0, 1.0);
+float VolumeCurve::VolumeToDb(float volume) const {
+  const float x = std::clamp<float>(volume, fuchsia::media::audio::MIN_VOLUME,
+                                    fuchsia::media::audio::MAX_VOLUME);
 
   const auto bounds = Bounds(x);
   FXL_DCHECK(bounds.has_value())
@@ -93,8 +96,8 @@ float GainCurve::VolumeToDb(float volume) const {
   return mixer::LinearInterpolateF(a, b, alpha);
 }
 
-std::optional<std::pair<GainCurve::VolumeMapping, GainCurve::VolumeMapping>> GainCurve::Bounds(
-    float x) const {
+std::optional<std::pair<VolumeCurve::VolumeMapping, VolumeCurve::VolumeMapping>>
+VolumeCurve::Bounds(float x) const {
   const auto mappings_are_enclosing_bounds = [x](VolumeMapping a, VolumeMapping b) {
     return a.volume <= x && b.volume >= x;
   };

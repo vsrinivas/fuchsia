@@ -11,11 +11,10 @@
 #include <fbl/ref_counted.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/media/audio/audio_core/gain_curve.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
+#include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
-
 class AudioDevice;
 class AudioObject;
 
@@ -23,7 +22,8 @@ struct AudioLinkSourceTag {};
 struct AudioLinkDestTag {};
 
 // AudioLink is the base class of two different versions of AudioLinks which join sources of audio
-// (AudioRenderers, inputs, outputs-being-looped-back) to destinations (outputs and AudioCapturers).
+// (AudioRenderers, inputs, outputs-being-looped-back) to destinations (outputs and
+// AudioCapturers).
 //
 // TODO(mpuryear): Finish docs.
 //
@@ -51,9 +51,9 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   const fbl::RefPtr<AudioObject>& GetSource() const { return source_; }
   const fbl::RefPtr<AudioObject>& GetDest() const { return dest_; }
 
-  // The GainCurve of the link, representing either the source or destination's mapping from volume
-  // to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
-  const std::optional<GainCurve>& gain_curve() const { return gain_curve_; }
+  // The VolumeCurve of the link, representing either the source or destination's mapping from
+  // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
+  const std::optional<VolumeCurve>& volume_curve() const { return volume_curve_; }
 
   SourceType source_type() const { return source_type_; }
 
@@ -80,7 +80,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   fbl::RefPtr<AudioObject> dest_;
   std::unique_ptr<Bookkeeping> bookkeeping_;
   std::atomic_bool valid_;
-  const std::optional<GainCurve> gain_curve_;
+  const std::optional<VolumeCurve> volume_curve_;
 };
 
 }  // namespace media::audio

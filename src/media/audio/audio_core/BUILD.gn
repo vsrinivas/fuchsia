@@ -143,8 +143,6 @@ source_set("audio_core_lib") {
     "driver_utils.cc",
     "driver_utils.h",
     "fwd_decls.h",
-    "gain_curve.cc",
-    "gain_curve.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
     "policy_loader.cc",
@@ -156,6 +154,8 @@ source_set("audio_core_lib") {
     "throttle_output.h",
     "utils.cc",
     "utils.h",
+    "volume_curve.cc",
+    "volume_curve.h",
   ]
 
   public_deps = [
@@ -223,11 +223,11 @@ executable("unittest_bin") {
     "audio_link_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",
     "command_line_options_unittest.cc",
-    "gain_curve_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "stream_volume_manager_unittest.cc",
     "utils_unittest.cc",
+    "volume_curve_unittest.cc",
   ]
 
   deps = [

@@ -18,13 +18,13 @@ class MockObjectNoCurve : public AudioObject {
 
 class MockObjectWithCurve : public AudioObject {
  public:
-  MockObjectWithCurve(GainCurve gain_curve)
-      : AudioObject(AudioObject::Type::Output), gain_curve_(std::move(gain_curve)) {}
+  MockObjectWithCurve(VolumeCurve volume_curve)
+      : AudioObject(AudioObject::Type::Output), volume_curve_(std::move(volume_curve)) {}
 
-  std::optional<GainCurve> GetGainCurve() const override { return {gain_curve_}; }
+  std::optional<VolumeCurve> GetVolumeCurve() const override { return {volume_curve_}; }
 
  private:
-  GainCurve gain_curve_;
+  VolumeCurve volume_curve_;
 };
 
 class AudioLinkChild : public AudioLink {
@@ -34,13 +34,13 @@ class AudioLinkChild : public AudioLink {
       : AudioLink(source_type, source, dest) {}
 };
 
-TEST(AudioLinkTest, LinkObjectWithGainCurve) {
+TEST(AudioLinkTest, LinkObjectWithVolumeCurve) {
   const auto no_curve = fbl::AdoptRef(new MockObjectNoCurve());
-  const auto with_curve = fbl::AdoptRef(new MockObjectWithCurve(GainCurve::Default()));
+  const auto with_curve = fbl::AdoptRef(new MockObjectWithCurve(VolumeCurve::Default()));
 
   AudioLinkChild link(AudioLink::SourceType::Packet, no_curve, with_curve);
 
-  EXPECT_TRUE(link.gain_curve().has_value());
+  EXPECT_TRUE(link.volume_curve().has_value());
 }
 
 TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
@@ -50,7 +50,7 @@ TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
   AudioLinkChild link(AudioLink::SourceType::Packet, no_curve1, no_curve2);
   // This passes by not crashing, to ensure we accept this valid case.
 
-  EXPECT_FALSE(link.gain_curve().has_value());
+  EXPECT_FALSE(link.volume_curve().has_value());
 }
 
 }  // namespace

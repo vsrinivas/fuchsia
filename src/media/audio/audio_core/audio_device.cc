@@ -42,7 +42,7 @@ void AudioDevice::Wakeup() {
   mix_wakeup_->Signal();
 }
 
-std::optional<GainCurve> AudioDevice::GetGainCurve() const {
+std::optional<VolumeCurve> AudioDevice::GetVolumeCurve() const {
   // ThrottleOutput does not have a driver.
   if (!driver_) {
     return std::nullopt;
@@ -54,7 +54,7 @@ std::optional<GainCurve> AudioDevice::GetGainCurve() const {
     return std::nullopt;
   }
 
-  return {GainCurve::DefaultForMinGain(caps.min_gain)};
+  return {VolumeCurve::DefaultForMinGain(caps.min_gain)};
 }
 
 uint64_t AudioDevice::token() const {

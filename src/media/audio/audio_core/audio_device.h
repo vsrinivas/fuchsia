@@ -55,7 +55,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   bool activated() const { return activated_; }
 
   // AudioObject overrides.
-  std::optional<GainCurve> GetGainCurve() const override;
+  std::optional<VolumeCurve> GetVolumeCurve() const override;
 
   // NotifyDestFormatPreference
   //
