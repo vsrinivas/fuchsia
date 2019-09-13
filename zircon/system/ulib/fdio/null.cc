@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
-#include <stdint.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -50,30 +49,6 @@ zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags) { return ZX_
 
 zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len) { return ZX_ERR_WRONG_TYPE; }
-
-ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t offset) {
-  return ZX_ERR_WRONG_TYPE;
-}
-
-ssize_t fdio_default_recvfrom(fdio_t* io, void* data, size_t len, int flags,
-                              struct sockaddr* __restrict addr, socklen_t* __restrict addrlen) {
-  return ZX_ERR_WRONG_TYPE;
-}
-
-ssize_t fdio_default_sendto(fdio_t* io, const void* data, size_t len, int flags,
-                            const struct sockaddr* addr, socklen_t addrlen) {
-  return ZX_ERR_WRONG_TYPE;
-}
-
-ssize_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
-  return ZX_ERR_WRONG_TYPE;
-}
-
-ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags) {
-  return ZX_ERR_WRONG_TYPE;
-}
-
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out) {
   return ZX_ERR_NOT_SUPPORTED;
@@ -86,12 +61,6 @@ zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle) {
 }
 
 zx_status_t fdio_default_shutdown(fdio_t* io, int how) { return ZX_ERR_WRONG_TYPE; }
-
-zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io) { return ZX_TIME_INFINITE; }
-
-zx_duration_t fdio_default_get_sndtimeo(fdio_t* io) { return ZX_TIME_INFINITE; }
-
-zx_status_t fdio_default_close(fdio_t* io) { return ZX_OK; }
 
 ssize_t fdio_default_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
                            void* out_buf, size_t out_len) {

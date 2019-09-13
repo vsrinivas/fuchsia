@@ -11,8 +11,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/zircon-internal/debug.h>
-#include <lib/zxs/protocol.h>
-#include <lib/zxs/zxs.h>
 #include <netdb.h>
 #include <poll.h>
 #include <stdarg.h>
@@ -123,7 +121,7 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -144,7 +142,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
       *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
     } else {
       zx_signals_t observed;
-      status = socket->socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(), &observed);
+      status = socket->pipe.socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(), &observed);
       if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -177,7 +175,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -198,7 +196,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int listen(int fd, int backlog) {
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -235,7 +233,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     zx_status_t status;
     int16_t out_code;
 
-    zxs_socket_t* socket;
+    zxio_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
       fdio_release_reserved(nfd);
@@ -260,8 +258,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
       if (out_code == EWOULDBLOCK) {
         if (!nonblocking) {
           zx_signals_t observed;
-          status = socket->socket.wait_one(ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
-                                           zx::time::infinite(), &observed);
+          status = socket->pipe.socket.wait_one(ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
+                                                zx::time::infinite(), &observed);
           if (status != ZX_OK) {
             break;
           }
@@ -432,7 +430,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -460,7 +458,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -485,7 +483,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -496,10 +494,10 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     const zx::duration* timeout = nullptr;
     switch (optname) {
       case SO_RCVTIMEO:
-        timeout = &socket->rcvtimeo;
+        timeout = fdio_get_rcvtimeo(io);
         break;
       case SO_SNDTIMEO:
-        timeout = &socket->sndtimeo;
+        timeout = fdio_get_sndtimeo(io);
         break;
     }
     if (timeout) {
@@ -541,7 +539,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
-  zxs_socket_t* socket;
+  zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
@@ -552,10 +550,10 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     zx::duration* timeout = nullptr;
     switch (optname) {
       case SO_RCVTIMEO:
-        timeout = &socket->rcvtimeo;
+        timeout = fdio_get_rcvtimeo(io);
         break;
       case SO_SNDTIMEO:
-        timeout = &socket->sndtimeo;
+        timeout = fdio_get_sndtimeo(io);
         break;
     }
     if (timeout) {

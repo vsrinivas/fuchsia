@@ -524,7 +524,7 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
   va_end(ap);
 
   size_t actual;
-  zxio_write(devmgr::devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), &actual);
+  zxio_write(devmgr::devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), 0, &actual);
 }
 
 namespace devmgr {
@@ -954,8 +954,8 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
   }
   log_rpc(dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
-      zx::unowned_channel(rpc.get()), ::fidl::StringView(path, strlen(path)),
-      type, ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
+      zx::unowned_channel(rpc.get()), ::fidl::StringView(path, strlen(path)), type,
+      ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {

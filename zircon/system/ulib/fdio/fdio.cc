@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <lib/fdio/io.h>
 #include <lib/zxio/null.h>
+
+#include <atomic>
+#include <cstdarg>
+#include <cstdint>
 
 #include "private.h"
 
@@ -19,6 +16,12 @@ struct fdio {
   int32_t dupcount;
   uint32_t ioflag;
   zxio_storage_t storage;
+
+  // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
+  zx::duration rcvtimeo;
+
+  // Used to implement SO_SNDTIMEO. See `man 7 socket` for details.
+  zx::duration sndtimeo;
 };
 
 // fdio_reserved_io is a globally shared fdio_t that is used to represent a
@@ -32,7 +35,13 @@ static fdio_t fdio_reserved_io = {
     // TODO(raggi): It may be ideal to replace these operations with ones that
     // more directly encode the result that a user must have implemented a race
     // in order to invoke them.
-    .ops = NULL, .refcount = 1, .dupcount = 1, .ioflag = 0, .storage = {},
+    .ops = nullptr,
+    .refcount = 1,
+    .dupcount = 1,
+    .ioflag = 0,
+    .storage = {},
+    .rcvtimeo = zx::duration::infinite(),
+    .sndtimeo = zx::duration::infinite(),
 };
 
 fdio_t* fdio_get_reserved_io(void) { return &fdio_reserved_io; }
@@ -52,18 +61,25 @@ uint32_t* fdio_get_ioflag(fdio_t* io) { return &io->ioflag; }
 zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) { return &io->storage; }
 
 fdio_t* fdio_alloc(const fdio_ops_t* ops) {
-  fdio_t* io = (fdio_t*)calloc(1, sizeof(fdio_t));
-  io->ops = ops;
-  io->refcount.store(1);
-  return io;
+  return new fdio_t{
+      .ops = ops,
+      .refcount = 1,
+      .dupcount = 0,
+      .ioflag = 0,
+      .storage = {},
+      .rcvtimeo = zx::duration::infinite(),
+      .sndtimeo = zx::duration::infinite(),
+  };
 }
+
+zx::duration* fdio_get_rcvtimeo(fdio_t* io) { return &io->rcvtimeo; }
+zx::duration* fdio_get_sndtimeo(fdio_t* io) { return &io->sndtimeo; }
 
 void fdio_acquire(fdio_t* io) { io->refcount.fetch_add(1); }
 
 void fdio_release(fdio_t* io) {
   if (io->refcount.fetch_sub(1) == 1) {
-    io->ops = NULL;
-    free(io);
+    delete io;
   }
 }
 

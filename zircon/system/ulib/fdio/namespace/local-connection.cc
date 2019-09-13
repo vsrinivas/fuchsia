@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/namespace.h>
+#include <lib/zxio/null.h>
+#include <zircon/device/vfs.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <new>
 
 #include <fbl/ref_ptr.h>
-#include <lib/fdio/namespace.h>
-#include <lib/zxio/null.h>
-#include <zircon/types.h>
-#include <zircon/device/vfs.h>
 
 #include "../private.h"
 #include "local-filesystem.h"
@@ -116,10 +116,8 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.link = fdio_default_link;
   ops.get_flags = fdio_default_get_flags;
   ops.set_flags = fdio_default_set_flags;
-  ops.recvfrom = fdio_default_recvfrom;
-  ops.sendto = fdio_default_sendto;
-  ops.recvmsg = fdio_default_recvmsg;
-  ops.sendmsg = fdio_default_sendmsg;
+  ops.recvmsg = fdio_zxio_recvmsg;
+  ops.sendmsg = fdio_zxio_sendmsg;
   ops.shutdown = fdio_default_shutdown;
   return ops;
 }();

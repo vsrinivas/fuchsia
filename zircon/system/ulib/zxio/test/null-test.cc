@@ -28,12 +28,12 @@ TEST(NullTest, Basic) {
   char buffer[1024];
   memset(buffer, 0, sizeof(buffer));
   size_t actual = 5u;
-  ASSERT_OK(zxio_read(&io, buffer, sizeof(buffer), &actual));
+  ASSERT_OK(zxio_read(&io, buffer, sizeof(buffer), 0, &actual));
   EXPECT_EQ(0u, actual);
-  ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_read_at(&io, 0u, buffer, sizeof(buffer), &actual));
-  ASSERT_OK(zxio_write(&io, buffer, sizeof(buffer), &actual));
+  ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_read_at(&io, 0u, buffer, sizeof(buffer), 0, &actual));
+  ASSERT_OK(zxio_write(&io, buffer, sizeof(buffer), 0, &actual));
   EXPECT_EQ(sizeof(buffer), actual);
-  ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), &actual));
+  ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), 0, &actual));
   size_t offset = 0u;
   ASSERT_EQ(ZX_ERR_WRONG_TYPE,
             zxio_seek(&io, 0u, ::llcpp::fuchsia::io::SeekOrigin::START, &offset));

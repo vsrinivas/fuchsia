@@ -5,18 +5,14 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/limits.h>
 #include <lib/fdio/unsafe.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <zxtest/zxtest.h>
@@ -65,26 +61,26 @@ void socketpair_shutdown_setup(int fds[2]) {
   ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
   // Set both ends to non-blocking to make testing for readability/writability easier.
-  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0, "");
-  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0, "");
+  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0);
+  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0);
 
   char buf[1] = {};
   // Both sides should be readable.
   errno = 0;
   status = read(fds[0], buf, sizeof(buf));
   EXPECT_EQ(status, -1, "fds[0] should initially be readable");
-  EXPECT_EQ(errno, EAGAIN, "");
+  EXPECT_EQ(errno, EAGAIN);
   errno = 0;
   status = read(fds[1], buf, sizeof(buf));
   EXPECT_EQ(status, -1, "fds[1] should initially be readable");
-  EXPECT_EQ(errno, EAGAIN, "");
+  EXPECT_EQ(errno, EAGAIN);
 
   // Both sides should be writable.
   EXPECT_EQ(write(fds[0], buf, sizeof(buf)), 1, "fds[0] should be initially writable");
   EXPECT_EQ(write(fds[1], buf, sizeof(buf)), 1, "fds[1] should be initially writable");
 
-  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1, "");
-  EXPECT_EQ(read(fds[1], buf, sizeof(buf)), 1, "");
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1);
+  EXPECT_EQ(read(fds[1], buf, sizeof(buf)), 1);
 }
 
 #if defined(__Fuchsia__)
@@ -99,7 +95,7 @@ TEST(SocketpairTest, ShutdownRead) {
 
   // Write a byte into fds[1] to test for readability later.
   char buf[1] = {};
-  EXPECT_EQ(write(fds[1], buf, sizeof(buf)), 1, "");
+  EXPECT_EQ(write(fds[1], buf, sizeof(buf)), 1);
 
   // Close one side down for reading.
   int status = shutdown(fds[0], SHUT_RD);
@@ -111,14 +107,14 @@ TEST(SocketpairTest, ShutdownRead) {
   EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1, "fds[0] should not be readable after SHUT_RD");
 
   // But not send any further bytes
-  EXPECT_EQ(send(fds[1], buf, sizeof(buf), SEND_FLAGS), -1, "");
+  EXPECT_EQ(send(fds[1], buf, sizeof(buf), SEND_FLAGS), -1);
   EXPECT_EQ(errno, EPIPE, "send should return EPIPE after shutdown(SHUT_RD) on other side");
 
   // Or read any more
-  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 0, "");
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 0);
 
-  EXPECT_EQ(close(fds[0]), 0, "");
-  EXPECT_EQ(close(fds[1]), 0, "");
+  EXPECT_EQ(close(fds[0]), 0);
+  EXPECT_EQ(close(fds[1]), 0);
 }
 
 TEST(SocketpairTest, ShutdownWrite) {
@@ -134,7 +130,7 @@ TEST(SocketpairTest, ShutdownWrite) {
   char buf[1] = {};
 
   // Should still be readable.
-  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), -1, "");
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), -1);
   EXPECT_EQ(errno, EAGAIN, "errno after read after SHUT_WR");
 
   // But not writable
@@ -142,11 +138,11 @@ TEST(SocketpairTest, ShutdownWrite) {
   EXPECT_EQ(errno, EPIPE, "errno after write after SHUT_WR");
 
   // Should still be able to write + read a message in the other direction.
-  EXPECT_EQ(write(fds[1], buf, sizeof(buf)), 1, "");
-  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1, "");
+  EXPECT_EQ(write(fds[1], buf, sizeof(buf)), 1);
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1);
 
-  EXPECT_EQ(close(fds[0]), 0, "");
-  EXPECT_EQ(close(fds[1]), 0, "");
+  EXPECT_EQ(close(fds[0]), 0);
+  EXPECT_EQ(close(fds[1]), 0);
 }
 
 TEST(SocketpairTest, ShutdownReadWrite) {
@@ -162,11 +158,11 @@ TEST(SocketpairTest, ShutdownReadWrite) {
   char buf[1] = {};
 
   // Writing should fail.
-  EXPECT_EQ(send(fds[0], buf, sizeof(buf), SEND_FLAGS), -1, "");
+  EXPECT_EQ(send(fds[0], buf, sizeof(buf), SEND_FLAGS), -1);
   EXPECT_EQ(errno, EPIPE, "errno after write after SHUT_RDWR");
 
   // Reading should return no data.
-  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 0, "");
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 0);
 }
 
 typedef struct poll_for_read_args {
@@ -190,7 +186,7 @@ int poll_for_read_with_timeout(void* arg) {
 
   int num_readable = 0;
   EXPECT_EQ(ioctl(poll_args->fd, FIONREAD, &num_readable), 0, "ioctl(FIONREAD)");
-  EXPECT_EQ(num_readable, 0, "");
+  EXPECT_EQ(num_readable, 0);
 
   return 0;
 }
@@ -402,8 +398,8 @@ TEST(SocketpairTest, RecvmsgNonblockBoundary) {
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
   ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
-  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0, "");
-  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0, "");
+  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0);
+  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0);
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -458,8 +454,8 @@ TEST(SocketpairTest, SendmsgNonblockBoundary) {
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
   ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
-  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0, "");
-  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0, "");
+  ASSERT_EQ(fcntl(fds[0], F_SETFL, O_NONBLOCK), 0);
+  ASSERT_EQ(fcntl(fds[1], F_SETFL, O_NONBLOCK), 0);
 
   struct msghdr msg;
   msg.msg_name = NULL;
@@ -499,43 +495,43 @@ TEST(SocketpairTest, WaitBeginEnd) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_signals_t signals = ZX_SIGNAL_NONE;
   fdio_unsafe_wait_begin(io, POLLIN, &handle, &signals);
-  EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
   EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED,
             "");
 
   handle = ZX_HANDLE_INVALID;
   signals = ZX_SIGNAL_NONE;
   fdio_unsafe_wait_begin(io, POLLOUT, &handle, &signals);
-  EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
-  EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED, "");
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+  EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
 
   handle = ZX_HANDLE_INVALID;
   signals = ZX_SIGNAL_NONE;
   fdio_unsafe_wait_begin(io, POLLRDHUP, &handle, &signals);
-  EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
-  EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+  EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
 
   // fdio_unsafe_wait_end
 
   uint32_t events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
-  EXPECT_EQ(events, (uint32_t)POLLIN, "");
+  EXPECT_EQ(events, (uint32_t)POLLIN);
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
-  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP), "");
+  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP));
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
-  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP), "");
+  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP));
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
-  EXPECT_EQ(events, (uint32_t)POLLOUT, "");
+  EXPECT_EQ(events, (uint32_t)POLLOUT);
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
-  EXPECT_EQ(events, (uint32_t)POLLOUT, "");
+  EXPECT_EQ(events, (uint32_t)POLLOUT);
 
   fdio_unsafe_release(io);
   close(fds[0]);
@@ -549,28 +545,23 @@ struct full_read_args {
 };
 int full_read_thread(void* arg) {
   struct full_read_args* args = arg;
-  int status;
-  size_t progress = 0;
+
   static char buf[WRITE_DATA_SIZE];
+  size_t progress = 0;
   while (progress < WRITE_DATA_SIZE) {
     size_t n = WRITE_DATA_SIZE - progress;
-    if (n > sizeof(buf))
-      n = sizeof(buf);
-    fflush(stdout);
-    status = read(args->fd, buf, n);
-    if (status < 0)
-      break;
+    int status = read(args->fd, buf, n);
+    if (status < 0) {
+      return status;
+    }
     progress += status;
   }
-  if (status < 0)
-    return status;
   return progress;
 }
 
 TEST(SocketpairTest, PartialWrite) {
   int fds[2];
-  int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+  ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, fds), 0);
 
   // Start a thread that reads everything we write.
   thrd_t t;
@@ -579,11 +570,16 @@ TEST(SocketpairTest, PartialWrite) {
   ASSERT_EQ(thrd_create_result, thrd_success, "create reading thread");
 
   // Write more data that can fit in the socket send buffer.
-  char* data = malloc(WRITE_DATA_SIZE);
-  memset(data, 'A', WRITE_DATA_SIZE);
-  int aa = write(fds[0], data, WRITE_DATA_SIZE);
-  EXPECT_EQ(aa, WRITE_DATA_SIZE, "write did not fully succeed");
-  free(data);
+  static char buf[WRITE_DATA_SIZE];
+  size_t progress = 0;
+  while (progress < WRITE_DATA_SIZE) {
+    size_t n = WRITE_DATA_SIZE - progress;
+    int status = write(fds[0], buf, n);
+    if (status < 0) {
+      ASSERT_EQ(errno, EAGAIN, "%s", strerror(errno));
+    }
+    progress += status;
+  }
 
   // Make sure the other thread read everything.
   int size_read;

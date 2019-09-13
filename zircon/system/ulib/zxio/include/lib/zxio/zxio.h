@@ -7,7 +7,6 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zxio/types.h>
-#include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -99,35 +98,69 @@ zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* at
 
 // File
 
-// Attempt to read |capacity| bytes from the file at the current seek offset.
+// Attempt to read |capacity| bytes into |buffer| at the current seek offset.
 //
 // The seek offset is moved forward by the actual number of bytes read.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
+zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t flags,
+                      size_t* out_actual);
 
-// Attempt to read |capacity| bytes from the file at the provided offset.
+// Attempt to read |capacity| bytes into |buffer| at |offset|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
-                         size_t* out_actual);
+zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capacity,
+                         zxio_flags_t flags, size_t* out_actual);
 
-// Attempt to write data to the file at the current seek offset.
+// Attempt to write |capacity| bytes into |buffer| at the current seek offset.
 //
 // The seek offset is moved forward by the actual number of bytes written.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual);
+zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, zxio_flags_t flags,
+                       size_t* out_actual);
 
-// Attempt to write data to the file at the provided offset.
+// Attempt to write |capacity| bytes into |buffer| at |offset|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
-                          size_t* out_actual);
+zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_t capacity,
+                          zxio_flags_t flags, size_t* out_actual);
+
+// Attempt to read bytes into the buffers described by |vector|.
+//
+// The seek offset is moved forward by the actual number of bytes read.
+//
+// The actual number of bytes read is returned in |out_actual|.
+zx_status_t zxio_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                             zxio_flags_t flags, size_t* out_actual);
+
+// Attempt to read bytes into the buffers described by |vector| at |offest|.
+//
+// Does not affect the seek offset.
+//
+// The actual number of bytes read is returned in |out_actual|.
+zx_status_t zxio_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+
+// Attempt to write bytes into the buffers described by |vector|.
+//
+// The seek offset is moved forward by the actual number of bytes written.
+//
+// The actual number of bytes written is returned in |out_actual|.
+zx_status_t zxio_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                              zxio_flags_t flags, size_t* out_actual);
+
+// Attempt to write bytes into the buffers described by |vector| at |offest|.
+//
+// Does not affect the seek offset.
+//
+// The actual number of bytes written is returned in |out_actual|.
+zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 
 // Modify the seek offset.
 //
@@ -135,7 +168,7 @@ zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer, size_t 
 //
 // The resulting seek offset relative to the start of the file is returned in
 // |out_offset|.
-zx_status_t zxio_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset);
+zx_status_t zxio_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start, size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
 zx_status_t zxio_truncate(zxio_t* io, size_t length);

@@ -5,17 +5,12 @@
 #ifndef ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_
 #define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_
 
-#include <errno.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <threads.h>
@@ -61,15 +56,9 @@ typedef struct fdio_ops {
   two_path_op link;
   zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
   zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
-  ssize_t (*recvfrom)(fdio_t* io, void* data, size_t len, int flags,
-                      struct sockaddr* __restrict addr, socklen_t* __restrict addrlen);
-  ssize_t (*sendto)(fdio_t* io, const void* data, size_t len, int flags,
-                    const struct sockaddr* addr, socklen_t addrlen);
-  ssize_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags);
-  ssize_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags);
+  zx_status_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
+  zx_status_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
   zx_status_t (*shutdown)(fdio_t* io, int how);
-  zx_duration_t (*get_rcvtimeo)(fdio_t* io);
-  zx_duration_t (*get_sndtimeo)(fdio_t* io);
 } fdio_ops_t;
 
 // fdio_t ioflag values
@@ -98,6 +87,15 @@ fdio_t* fdio_get_reserved_io(void);
 // Access the |zxio_t| field within an |fdio_t|.
 zxio_t* fdio_get_zxio(fdio_t* io);
 
+zx_status_t fdio_zxio_close(fdio_t* io);
+zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
+zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
+
+zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
+zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);
+
 // Initialize an |fdio_t| object with the provided ops table.
 //
 // Initializes the refcount to one. The refcount may be altered with the |fdio_acquire| and
@@ -122,6 +120,8 @@ void fdio_dupcount_acquire(fdio_t* io);
 void fdio_dupcount_release(fdio_t* io);
 uint32_t* fdio_get_ioflag(fdio_t* io);
 zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
+zx::duration* fdio_get_rcvtimeo(fdio_t* io);
+zx::duration* fdio_get_sndtimeo(fdio_t* io);
 
 // Lifecycle notes:
 //
@@ -234,16 +234,7 @@ zx_status_t fdio_default_link(fdio_t* io, const char* src, size_t srclen, zx_han
                               const char* dst, size_t dstlen);
 zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags);
 zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags);
-ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len);
-ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t offset);
-ssize_t fdio_default_recvfrom(fdio_t* io, void* _data, size_t len, int flags,
-                              struct sockaddr* __restrict addr, socklen_t* __restrict addrlen);
-ssize_t fdio_default_sendto(fdio_t* io, const void* _data, size_t len, int flags,
-                            const struct sockaddr* addr, socklen_t addrlen);
-ssize_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags);
-ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags);
 zx_status_t fdio_default_get_attr(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
-zx_status_t fdio_default_close(fdio_t* io);
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out);
 zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle);
@@ -254,8 +245,6 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
-zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io);
-zx_duration_t fdio_default_get_sndtimeo(fdio_t* io);
 zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx::vmo* out);
 

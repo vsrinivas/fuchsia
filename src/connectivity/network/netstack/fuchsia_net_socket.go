@@ -20,6 +20,7 @@ import (
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/ulib/musl/include
 // #include <errno.h>
 // #include <lib/zxs/protocol.h>
+// #include <netinet/in.h>
 import "C"
 
 type socketProviderImpl struct {

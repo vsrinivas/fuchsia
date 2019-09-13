@@ -2,12 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/channel.h>
-#include <lib/zxio/inception.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <zircon/syscalls.h>
 
 // The private fields of a |zxio_t| object.
@@ -96,29 +92,67 @@ zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* at
   return zio->ops->attr_set(io, flags, attr);
 }
 
-zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  zxio_internal_t* zio = (zxio_internal_t*)io;
-  return zio->ops->read(io, buffer, capacity, out_actual);
+zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t flags,
+                      size_t* out_actual) {
+  const zx_iovec_t vector = {
+      .buffer = buffer,
+      .capacity = capacity,
+  };
+  return zxio_read_vector(io, &vector, 1, flags, out_actual);
 }
 
-zx_status_t zxio_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
-                         size_t* out_actual) {
-  zxio_internal_t* zio = (zxio_internal_t*)io;
-  return zio->ops->read_at(io, offset, buffer, capacity, out_actual);
+zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capacity,
+                         zxio_flags_t flags, size_t* out_actual) {
+  const zx_iovec_t vector = {
+      .buffer = buffer,
+      .capacity = capacity,
+  };
+  return zxio_read_vector_at(io, offset, &vector, 1, flags, out_actual);
 }
 
-zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
-  zxio_internal_t* zio = (zxio_internal_t*)io;
-  return zio->ops->write(io, buffer, capacity, out_actual);
+zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, zxio_flags_t flags,
+                       size_t* out_actual) {
+  const zx_iovec_t vector = {
+      .buffer = const_cast<void*>(buffer),
+      .capacity = capacity,
+  };
+  return zxio_write_vector(io, &vector, 1, flags, out_actual);
 }
 
-zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
-                          size_t* out_actual) {
-  zxio_internal_t* zio = (zxio_internal_t*)io;
-  return zio->ops->write_at(io, offset, buffer, capacity, out_actual);
+zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_t capacity,
+                          zxio_flags_t flags, size_t* out_actual) {
+  const zx_iovec_t vector = {
+      .buffer = const_cast<void*>(buffer),
+      .capacity = capacity,
+  };
+  return zxio_write_vector_at(io, offset, &vector, 1, flags, out_actual);
 }
 
-zx_status_t zxio_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset) {
+zx_status_t zxio_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                             zxio_flags_t flags, size_t* out_actual) {
+  auto zio = (zxio_internal_t*)io;
+  return zio->ops->read_vector(io, vector, vector_count, flags, out_actual);
+}
+
+zx_status_t zxio_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+  auto zio = (zxio_internal_t*)io;
+  return zio->ops->read_vector_at(io, offset, vector, vector_count, flags, out_actual);
+}
+
+zx_status_t zxio_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                              zxio_flags_t flags, size_t* out_actual) {
+  auto zio = (zxio_internal_t*)io;
+  return zio->ops->write_vector(io, vector, vector_count, flags, out_actual);
+}
+
+zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+  auto zio = (zxio_internal_t*)io;
+  return zio->ops->write_vector_at(io, offset, vector, vector_count, flags, out_actual);
+}
+
+zx_status_t zxio_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start, size_t* out_offset) {
   zxio_internal_t* zio = (zxio_internal_t*)io;
   return zio->ops->seek(io, offset, start, out_offset);
 }

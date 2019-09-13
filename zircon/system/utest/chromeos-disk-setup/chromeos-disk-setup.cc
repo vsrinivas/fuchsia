@@ -2,28 +2,20 @@
 // Use of this source code is governed by a BSD-style license that be be
 // found in the LICENSE file.
 
-#include <fcntl.h>
 #include <lib/cksum.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/param.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/zx/vmo.h>
+#include <lib/zxio/null.h>
+#include <lib/zxio/ops.h>
+#include <sys/param.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
+#include <fbl/unique_fd.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <lib/zxio/null.h>
-#include <lib/zxio/ops.h>
-
 #include <unittest/unittest.h>
 
 #define TOTAL_BLOCKS 244277248  // roughly 116GB
@@ -54,31 +46,48 @@ const fuchsia_hardware_block_BlockInfo kDefaultBlockInfo = {
     .reserved = 0,
 };
 
-static zx_status_t mock_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  memset(buffer, 0, capacity);
-  *out_actual = capacity;
+static zx_status_t mock_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t total = 0;
+  for (size_t i = 0; i < vector_count; ++i) {
+    memset(vector[i].buffer, 0, vector[i].capacity);
+    total += vector[i].capacity;
+  }
+  *out_actual = total;
   return ZX_OK;
 }
 
-static zx_status_t mock_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
-                                size_t* out_actual) {
-  memset(buffer, 0, capacity);
-  *out_actual = capacity;
+static zx_status_t mock_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                       size_t vector_count, zxio_flags_t flags,
+                                       size_t* out_actual) {
+  return mock_read_vector(io, vector, vector_count, flags, out_actual);
+}
+
+static zx_status_t mock_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                     zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t total = 0;
+  for (size_t i = 0; i < vector_count; ++i) {
+    total += vector[i].capacity;
+  }
+  *out_actual = total;
   return ZX_OK;
 }
 
-static zx_status_t mock_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
-  *out_actual = capacity;
-  return ZX_OK;
+static zx_status_t mock_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                        size_t vector_count, zxio_flags_t flags,
+                                        size_t* out_actual) {
+  return mock_write_vector(io, vector, vector_count, flags, out_actual);
 }
 
-static zx_status_t mock_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
-                                 size_t* out_actual) {
-  *out_actual = capacity;
-  return ZX_OK;
-}
-
-static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start,
+static zx_status_t mock_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
                              size_t* out_offset) {
   if (start != zxio_seek_origin_t::START) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -89,11 +98,11 @@ static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start
 
 constexpr zxio_ops_t mock_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.read = &mock_read;
-  ops.write = &mock_write;
-  ops.seek = &mock_seek;
-  ops.read_at = &mock_read_at;
-  ops.write_at = &mock_write_at;
+  ops.read_vector = mock_read_vector;
+  ops.read_vector_at = mock_read_vector_at;
+  ops.write_vector = mock_write_vector;
+  ops.write_vector_at = mock_write_vector_at;
+  ops.seek = mock_seek;
   return ops;
 }();
 

@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
 #define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
 
-#include <lib/zxs/zxs.h>
+#include <lib/zxio/inception.h>
 #include <zircon/compiler.h>
 
 #include "private.h"
@@ -28,7 +28,7 @@ bool fdio_is_socket(fdio_t* io);
 // calling fdio_release to balance the reference count.
 //
 // Returns |NULL| if no |zxs_socket_t| was found.
-fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket);
+fdio_t* fd_to_socket(int fd, zxio_socket_t** out_socket);
 
 __END_CDECLS
 

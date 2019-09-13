@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -11,19 +9,15 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
-#include <stdint.h>
-#include <string.h>
+#include <stdarg.h>
 #include <sys/ioctl.h>
-#include <zircon/assert.h>
-#include <zircon/device/ioctl.h>
-#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
-static zx_status_t fdio_zxio_close(fdio_t* io) {
+zx_status_t fdio_zxio_close(fdio_t* io) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_close(z);
 }
@@ -62,12 +56,12 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_e
   *out_events = events;
 }
 
-static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle) {
+zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_clone(z, out_handle);
 }
 
-static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
+zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_release(z, out_handle);
 }
@@ -85,27 +79,6 @@ static zx_status_t fdio_zxio_get_attr(fdio_t* io, fio::NodeAttributes* out) {
 static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fio::NodeAttributes* attr) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_attr_set(z, flags, attr);
-}
-
-static ssize_t fdio_zxio_read(fdio_t* io, void* data, size_t len) {
-  zxio_t* z = fdio_get_zxio(io);
-  size_t actual = 0;
-  zx_status_t status = zxio_read(z, data, len, &actual);
-  return status != ZX_OK ? status : (ssize_t)actual;
-}
-
-static ssize_t fdio_zxio_write(fdio_t* io, const void* data, size_t len) {
-  zxio_t* z = fdio_get_zxio(io);
-  size_t actual = 0;
-  zx_status_t status = zxio_write(z, data, len, &actual);
-  return status != ZX_OK ? status : (ssize_t)actual;
-}
-
-static ssize_t fdio_zxio_write_at(fdio_t* io, const void* data, size_t len, off_t at) {
-  zxio_t* z = fdio_get_zxio(io);
-  size_t actual = 0;
-  zx_status_t status = zxio_write_at(z, at, data, len, &actual);
-  return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static zx_status_t fdio_zxio_truncate(fdio_t* io, off_t off) {
@@ -146,13 +119,9 @@ static fdio_ops_t fdio_zxio_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
+    .recvmsg = fdio_zxio_recvmsg,
+    .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
-    .get_rcvtimeo = fdio_default_get_rcvtimeo,
-    .get_sndtimeo = fdio_default_get_sndtimeo,
 };
 
 __EXPORT
@@ -375,13 +344,9 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .link = fdio_zxio_remote_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
+    .recvmsg = fdio_zxio_recvmsg,
+    .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
-    .get_rcvtimeo = fdio_default_get_rcvtimeo,
-    .get_sndtimeo = fdio_default_get_sndtimeo,
 };
 
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
@@ -536,13 +501,9 @@ static fdio_ops_t fdio_zxio_vmofile_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
+    .recvmsg = fdio_zxio_recvmsg,
+    .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
-    .get_rcvtimeo = fdio_default_get_rcvtimeo,
-    .get_sndtimeo = fdio_default_get_sndtimeo,
 };
 
 fdio_t* fdio_vmofile_create(fio::File::SyncClient control, zx::vmo vmo, zx_off_t offset,
@@ -565,13 +526,12 @@ static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
   return (zxio_pipe_t*)fdio_get_zxio(io);
 }
 
-static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
-  zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
+zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va) {
   switch (request) {
     case FIONREAD: {
       zx_info_socket_t info;
       memset(&info, 0, sizeof(info));
-      zx_status_t status = pipe->socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+      zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
       if (status != ZX_OK) {
         return status;
       }
@@ -588,64 +548,47 @@ static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list v
   }
 }
 
-static ssize_t fdio_zxio_pipe_recvfrom(fdio_t* io, void* data, size_t len, int flags,
-                                       struct sockaddr* __restrict addr,
-                                       socklen_t* __restrict addrlen) {
-  if (flags & ~MSG_DONTWAIT) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return fdio_zxio_read(io, data, len);
+static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
+  return fdio_zx_socket_posix_ioctl(fdio_get_zxio_pipe(io)->socket, request, va);
 }
 
-static ssize_t fdio_zxio_pipe_sendto(fdio_t* io, const void* data, size_t len, int flags,
-                                     const struct sockaddr* addr, socklen_t addrlen) {
-  if (flags & ~MSG_DONTWAIT) {
-    return ZX_ERR_INVALID_ARGS;
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual) {
+  zxio_flags_t zxio_flags = 0;
+  if (flags & MSG_PEEK) {
+    zxio_flags |= ZXIO_PEEK;
+    flags &= ~MSG_PEEK;
   }
-  if (addr != NULL) {
-    return ZX_ERR_INVALID_ARGS;  // should set errno to EISCONN
+  if (flags) {
+    // TODO: support MSG_OOB
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  return fdio_zxio_write(io, data, len);
+  zx_iovec_t zx_iov[msg->msg_iovlen];
+  for (int i = 0; i < msg->msg_iovlen; ++i) {
+    zx_iov[i] = {
+        .buffer = msg->msg_iov[i].iov_base,
+        .capacity = msg->msg_iov[i].iov_len,
+    };
+  }
+  return zxio_read_vector(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
 }
 
-static ssize_t fdio_zxio_pipe_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
-  // we ignore msg_name and msg_namelen members.
-  // (this is a consistent behavior with other OS implementations for TCP protocol)
-  ssize_t total = 0;
-  ssize_t n = 0;
-  for (int i = 0; i < msg->msg_iovlen; i++) {
-    struct iovec* iov = &msg->msg_iov[i];
-    n = fdio_zxio_read(io, iov->iov_base, iov->iov_len);
-    if (n > 0) {
-      total += n;
-    }
-    if ((size_t)n != iov->iov_len) {
-      break;
-    }
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual) {
+  if (flags) {
+    // TODO: support MSG_NOSIGNAL
+    // TODO: support MSG_OOB
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  return total > 0 ? total : n;
+  zx_iovec_t zx_iov[msg->msg_iovlen];
+  for (int i = 0; i < msg->msg_iovlen; ++i) {
+    zx_iov[i] = {
+        .buffer = msg->msg_iov[i].iov_base,
+        .capacity = msg->msg_iov[i].iov_len,
+    };
+  }
+  return zxio_write_vector(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, 0, out_actual);
 }
 
-static ssize_t fdio_zxio_pipe_sendmsg(fdio_t* io, const struct msghdr* msg, int flags) {
-  ssize_t total = 0;
-  ssize_t n = 0;
-  for (int i = 0; i < msg->msg_iovlen; i++) {
-    struct iovec* iov = &msg->msg_iov[i];
-    if (iov->iov_len <= 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    n = fdio_zxio_write(io, iov->iov_base, iov->iov_len);
-    if (n > 0) {
-      total += n;
-    }
-    if ((size_t)n != iov->iov_len) {
-      break;
-    }
-  }
-  return total > 0 ? total : n;
-}
-
-static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
+zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how) {
   uint32_t options = 0;
   switch (how) {
     case SHUT_RD:
@@ -658,8 +601,11 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
       options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
       break;
   }
-  zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
-  return pipe->socket.shutdown(options);
+  return socket.shutdown(options);
+}
+
+static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
+  return fdio_zx_socket_shutdown(fdio_get_zxio_pipe(io)->socket, how);
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
@@ -683,23 +629,24 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
-    .recvfrom = fdio_zxio_pipe_recvfrom,
-    .sendto = fdio_zxio_pipe_sendto,
-    .recvmsg = fdio_zxio_pipe_recvmsg,
-    .sendmsg = fdio_zxio_pipe_sendmsg,
+    .recvmsg = fdio_zxio_recvmsg,
+    .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_zxio_pipe_shutdown,
-    .get_rcvtimeo = fdio_default_get_rcvtimeo,
-    .get_sndtimeo = fdio_default_get_sndtimeo,
 };
 
 fdio_t* fdio_pipe_create(zx::socket socket) {
   fdio_t* io = fdio_alloc(&fdio_zxio_pipe_ops);
-  if (io == NULL) {
-    return NULL;
+  if (io == nullptr) {
+    return nullptr;
   }
-  zx_status_t status = zxio_pipe_init(fdio_get_zxio_storage(io), std::move(socket));
+  zx_info_socket_t info;
+  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    return NULL;
+    return nullptr;
+  }
+  status = zxio_pipe_init(fdio_get_zxio_storage(io), std::move(socket), info);
+  if (status != ZX_OK) {
+    return nullptr;
   }
   return io;
 }

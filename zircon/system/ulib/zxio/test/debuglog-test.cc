@@ -29,7 +29,7 @@ TEST(DebugLogTest, TheadSafety) {
     threads[i] = std::thread([i, logger]() {
       std::string log_str = "output from " + std::to_string(i);
       size_t actual;
-      ASSERT_OK(zxio_write(logger, log_str.c_str(), log_str.size(), &actual));
+      ASSERT_OK(zxio_write(logger, log_str.c_str(), log_str.size(), 0, &actual));
       ASSERT_EQ(actual, log_str.size());
     });
   }

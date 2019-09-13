@@ -4,25 +4,16 @@
 
 #include "unistd.h"
 
-#include <assert.h>
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
-#include <lib/zircon-internal/debug.h>
-#include <limits.h>
 #include <poll.h>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
@@ -32,16 +23,12 @@
 #include <sys/statvfs.h>
 #include <sys/uio.h>
 #include <threads.h>
-#include <unistd.h>
 #include <utime.h>
-#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/time.h>
 
 #include <fbl/auto_lock.h>
 
@@ -949,48 +936,6 @@ zx_status_t errno_to_fdio_status(int16_t out_code) {
 // The functions from here on provide implementations of fd and path
 // centric posix-y io operations.
 
-__EXPORT
-ssize_t readv(int fd, const struct iovec* iov, int num) {
-  ssize_t count = 0;
-  ssize_t r;
-  while (num > 0) {
-    if (iov->iov_len != 0) {
-      r = read(fd, iov->iov_base, iov->iov_len);
-      if (r < 0) {
-        return count ? count : r;
-      }
-      if ((size_t)r < iov->iov_len) {
-        return count + r;
-      }
-      count += r;
-    }
-    iov++;
-    num--;
-  }
-  return count;
-}
-
-__EXPORT
-ssize_t writev(int fd, const struct iovec* iov, int num) {
-  ssize_t count = 0;
-  ssize_t r;
-  while (num > 0) {
-    if (iov->iov_len != 0) {
-      r = write(fd, iov->iov_base, iov->iov_len);
-      if (r < 0) {
-        return count ? count : r;
-      }
-      if ((size_t)r < iov->iov_len) {
-        return count + r;
-      }
-      count += r;
-    }
-    iov++;
-    num--;
-  }
-  return count;
-}
-
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/stdio_impl.h
 extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options,
@@ -1052,172 +997,120 @@ int unlinkat(int dirfd, const char* path, int flags) {
 }
 
 __EXPORT
-ssize_t read(int fd, void* buf, size_t count) {
-  if (buf == NULL && count > 0) {
-    return ERRNO(EINVAL);
-  }
+ssize_t readv(int fd, const struct iovec* iov, int iovcnt) {
+  struct msghdr msg = {};
+  msg.msg_iov = const_cast<struct iovec*>(iov);
+  msg.msg_iovlen = iovcnt;
+  return recvmsg(fd, &msg, 0);
+}
 
+__EXPORT
+ssize_t writev(int fd, const struct iovec* iov, int iovcnt) {
+  struct msghdr msg = {};
+  msg.msg_iov = const_cast<struct iovec*>(iov);
+  msg.msg_iovlen = iovcnt;
+  return sendmsg(fd, &msg, 0);
+}
+
+__EXPORT
+ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   fdio_t* io = fd_to_io(fd);
   if (io == NULL) {
     return ERRNO(EBADF);
   }
   bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  size_t actual = 0u;
-  zx_status_t status;
-  zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  for (;;) {
-    status = zxio_read(fdio_get_zxio(io), buf, count, &actual);
-    if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
-      break;
-    }
-    if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
-    }
+  zx_time_t deadline = zx::deadline_after(*fdio_get_rcvtimeo(io)).get();
+
+  zx_iovec_t zx_iov[iovcnt];
+  for (int i = 0; i < iovcnt; ++i) {
+    zx_iov[i] = {
+        .buffer = iov[i].iov_base,
+        .capacity = iov[i].iov_len,
+    };
   }
-  fdio_release(io);
-  return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
+
+  for (;;) {
+    size_t actual;
+    zx_status_t status = zxio_read_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
+    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+      if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
+          ZX_ERR_TIMED_OUT) {
+        continue;
+      }
+    }
+    fdio_release(io);
+    if (status != ZX_OK) {
+      return ERROR(status);
+    }
+    return actual;
+  }
+}
+
+__EXPORT
+ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == NULL) {
+    return ERRNO(EBADF);
+  }
+  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
+  zx_time_t deadline = zx::deadline_after(*fdio_get_sndtimeo(io)).get();
+
+  zx_iovec_t zx_iov[iovcnt];
+  for (int i = 0; i < iovcnt; ++i) {
+    zx_iov[i] = {
+        .buffer = iov[i].iov_base,
+        .capacity = iov[i].iov_len,
+    };
+  }
+
+  for (;;) {
+    size_t actual;
+    zx_status_t status =
+        zxio_write_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
+    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+      if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
+          ZX_ERR_TIMED_OUT) {
+        continue;
+      }
+    }
+    fdio_release(io);
+    if (status != ZX_OK) {
+      return ERROR(status);
+    }
+    return actual;
+  }
+}
+
+__EXPORT
+ssize_t pread(int fd, void* buf, size_t count, off_t offset) {
+  struct iovec iov = {};
+  iov.iov_base = buf;
+  iov.iov_len = count;
+  return preadv(fd, &iov, 1, offset);
+}
+
+__EXPORT
+ssize_t pwrite(int fd, const void* buf, size_t count, off_t offset) {
+  struct iovec iov = {};
+  iov.iov_base = const_cast<void*>(buf);
+  iov.iov_len = count;
+  return pwritev(fd, &iov, 1, offset);
+}
+
+__EXPORT
+ssize_t read(int fd, void* buf, size_t count) {
+  struct iovec iov = {};
+  iov.iov_base = buf;
+  iov.iov_len = count;
+  return readv(fd, &iov, 1);
 }
 
 __EXPORT
 ssize_t write(int fd, const void* buf, size_t count) {
-  if (buf == NULL && count > 0) {
-    return ERRNO(EINVAL);
-  }
-
-  fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  size_t progress = 0u;
-  zx_status_t status;
-  zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  do {
-    size_t actual = 0u;
-    status = zxio_write(fdio_get_zxio(io), (char*)buf + progress, count - progress, &actual);
-    progress += actual;
-    if (nonblocking) {
-      break;
-    }
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-          ZX_ERR_TIMED_OUT) {
-        break;
-      }
-      continue;
-    }
-    if (actual == 0u) {
-      // Either an error occurred, or zxio_write did nothing and there's no point trying it again.
-      break;
-    }
-  } while (progress < count);
-  fdio_release(io);
-  return status != ZX_OK ? ERROR(status) : (ssize_t)progress;
-}
-
-__EXPORT
-ssize_t preadv(int fd, const struct iovec* iov, int count, off_t ofs) {
-  ssize_t iov_count = 0;
-  ssize_t r;
-  while (count > 0) {
-    if (iov->iov_len != 0) {
-      r = pread(fd, iov->iov_base, iov->iov_len, ofs);
-      if (r < 0) {
-        return iov_count ? iov_count : r;
-      }
-      if ((size_t)r < iov->iov_len) {
-        return iov_count + r;
-      }
-      iov_count += r;
-      ofs += r;
-    }
-    iov++;
-    count--;
-  }
-  return iov_count;
-}
-
-__EXPORT
-ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
-  if (buf == NULL && size > 0) {
-    return ERRNO(EINVAL);
-  }
-
-  fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  size_t actual = 0u;
-  zx_status_t status;
-  zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  for (;;) {
-    status = zxio_read_at(fdio_get_zxio(io), ofs, buf, size, &actual);
-    if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
-      break;
-    }
-    if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
-    }
-  }
-  fdio_release(io);
-  return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
-}
-
-__EXPORT
-ssize_t pwritev(int fd, const struct iovec* iov, int count, off_t ofs) {
-  ssize_t iov_count = 0;
-  ssize_t r;
-  while (count > 0) {
-    if (iov->iov_len != 0) {
-      r = pwrite(fd, iov->iov_base, iov->iov_len, ofs);
-      if (r < 0) {
-        return iov_count ? iov_count : r;
-      }
-      if ((size_t)r < iov->iov_len) {
-        return iov_count + r;
-      }
-      iov_count += r;
-      ofs += r;
-    }
-    iov++;
-    count--;
-  }
-  return iov_count;
-}
-
-__EXPORT
-ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
-  if (buf == NULL && size > 0) {
-    return ERRNO(EINVAL);
-  }
-
-  fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  size_t actual = 0u;
-  zx_status_t status;
-  zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  for (;;) {
-    status = zxio_write_at(fdio_get_zxio(io), ofs, buf, size, &actual);
-    if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
-      break;
-    }
-    if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
-    }
-  }
-  fdio_release(io);
-  return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
+  struct iovec iov = {};
+  iov.iov_base = const_cast<void*>(buf);
+  iov.iov_len = count;
+  return writev(fd, &iov, 1);
 }
 
 __EXPORT
@@ -2332,54 +2225,38 @@ int ioctl(int fd, int req, ...) {
 __EXPORT
 ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
                socklen_t addrlen) {
-  fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-  bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-  ssize_t status_or_count;
-  zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  for (;;) {
-    status_or_count = fdio_get_ops(io)->sendto(io, buf, buflen, flags, addr, addrlen);
-    if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
-      break;
-    }
-    if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
-    }
-  }
-  fdio_release(io);
-  return status_or_count < 0 ? STATUS(static_cast<zx_status_t>(status_or_count)) : status_or_count;
+  struct iovec iov;
+  iov.iov_base = const_cast<void*>(buf);
+  iov.iov_len = buflen;
+
+  struct msghdr msg = {};
+  msg.msg_name = const_cast<struct sockaddr*>(addr);
+  msg.msg_namelen = addrlen;
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  return sendmsg(fd, &msg, flags);
 }
 
 __EXPORT
 ssize_t recvfrom(int fd, void* __restrict buf, size_t buflen, int flags,
                  struct sockaddr* __restrict addr, socklen_t* __restrict addrlen) {
-  fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
-    return ERRNO(EBADF);
+  struct iovec iov;
+  iov.iov_base = buf;
+  iov.iov_len = buflen;
+
+  struct msghdr msg = {};
+  msg.msg_name = addr;
+  if (addrlen != nullptr) {
+    msg.msg_namelen = *addrlen;
   }
-  if (addr != NULL && addrlen == NULL) {
-    return ERRNO(EFAULT);
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+
+  ssize_t n = recvmsg(fd, &msg, flags);
+  if (addrlen != nullptr) {
+    *addrlen = msg.msg_namelen;
   }
-  bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-  ssize_t status_or_count;
-  zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
-  for (;;) {
-    status_or_count = fdio_get_ops(io)->recvfrom(io, buf, buflen, flags, addr, addrlen);
-    if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
-      break;
-    }
-    if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
-    }
-  }
-  fdio_release(io);
-  return status_or_count < 0 ? STATUS(static_cast<zx_status_t>(status_or_count)) : status_or_count;
+  return n;
 }
 
 __EXPORT
@@ -2393,21 +2270,23 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   // install additional signal handlers to handle cases where connection has
   // been closed by remote end.
   bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-  ssize_t status_or_count;
-  zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
+  flags &= ~MSG_DONTWAIT;
+  zx_time_t deadline = zx::deadline_after(*fdio_get_sndtimeo(io)).get();
   for (;;) {
-    status_or_count = fdio_get_ops(io)->sendmsg(io, msg, flags);
-    if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
-      break;
+    size_t actual;
+    zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual);
+    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+      if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
+          ZX_ERR_TIMED_OUT) {
+        continue;
+      }
     }
-    if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
+    fdio_release(io);
+    if (status != ZX_OK) {
+      return ERROR(status);
     }
+    return actual;
   }
-  fdio_release(io);
-  return status_or_count < 0 ? STATUS(static_cast<zx_status_t>(status_or_count)) : status_or_count;
 }
 
 __EXPORT
@@ -2417,21 +2296,23 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     return ERRNO(EBADF);
   }
   bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-  ssize_t status_or_count;
-  zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
-  zx_time_t deadline = zx_deadline_after(duration);
+  flags &= ~MSG_DONTWAIT;
+  zx_time_t deadline = zx::deadline_after(*fdio_get_rcvtimeo(io)).get();
   for (;;) {
-    status_or_count = fdio_get_ops(io)->recvmsg(io, msg, flags);
-    if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
-      break;
+    size_t actual;
+    zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual);
+    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+      if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
+          ZX_ERR_TIMED_OUT) {
+        continue;
+      }
     }
-    if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) ==
-        ZX_ERR_TIMED_OUT) {
-      break;
+    fdio_release(io);
+    if (status != ZX_OK) {
+      return ERROR(status);
     }
+    return actual;
   }
-  fdio_release(io);
-  return status_or_count < 0 ? STATUS(static_cast<zx_status_t>(status_or_count)) : status_or_count;
 }
 
 __EXPORT

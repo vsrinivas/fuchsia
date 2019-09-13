@@ -10,6 +10,10 @@
 
 __BEGIN_CDECLS
 
+typedef uint32_t zxio_flags_t;
+
+#define ZXIO_PEEK ((zxio_flags_t)1u << 0)
+
 typedef uint32_t zxio_signals_t;
 
 // These values match the corresponding values in zircon/types.h

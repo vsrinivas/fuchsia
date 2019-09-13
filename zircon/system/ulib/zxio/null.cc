@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <zircon/syscalls.h>
+
+#include "private.h"
 
 zx_status_t zxio_default_close(zxio_t* io) { return ZX_OK; }
 
@@ -34,26 +35,29 @@ zx_status_t zxio_default_attr_set(zxio_t* io, uint32_t flags, const zxio_node_at
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
+zx_status_t zxio_default_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                     zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
-                                 size_t* out_actual) {
+zx_status_t zxio_default_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                        size_t vector_count, zxio_flags_t flags,
+                                        size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_write(zxio_t* io, const void* buffer, size_t capacity,
-                               size_t* out_actual) {
+zx_status_t zxio_default_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                      zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
-                                  size_t* out_actual) {
+zx_status_t zxio_default_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                         size_t vector_count, zxio_flags_t flags,
+                                         size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start,
+zx_status_t zxio_default_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
                               size_t* out_offset) {
   return ZX_ERR_WRONG_TYPE;
 }
@@ -104,14 +108,28 @@ zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity, size
 
 zx_status_t zxio_default_rewind(zxio_t* io) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t zxio_null_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  *out_actual = 0u;
-  return ZX_OK;
+zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                  zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return zxio_do_vector(vector, vector_count, out_actual,
+                        [](void* buffer, size_t capacity, size_t* out_actual) {
+                          *out_actual = 0;
+                          return ZX_OK;
+                        });
 }
 
-zx_status_t zxio_null_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
-  *out_actual = capacity;
-  return ZX_OK;
+zx_status_t zxio_null_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                   zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return zxio_do_vector(vector, vector_count, out_actual,
+                        [](void* buffer, size_t capacity, size_t* out_actual) {
+                          *out_actual = capacity;
+                          return ZX_OK;
+                        });
 }
 
 zx_status_t zxio_default_isatty(zxio_t* io, bool* tty) {
@@ -121,8 +139,8 @@ zx_status_t zxio_default_isatty(zxio_t* io, bool* tty) {
 
 static constexpr zxio_ops_t zxio_null_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.read = zxio_null_read;
-  ops.write = zxio_null_write;
+  ops.read_vector = zxio_null_read_vector;
+  ops.write_vector = zxio_null_write_vector;
   return ops;
 }();
 

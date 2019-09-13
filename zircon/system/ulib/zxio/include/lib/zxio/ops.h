@@ -7,7 +7,6 @@
 
 #include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
-#include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -34,18 +33,16 @@ typedef struct zxio_storage {
 // Most of the functions that operate on a zxio_t call through this operations
 // table to actually perform the operation. Use |zxio_alloc| to create a zxio_t
 // with a custom operations table.
-typedef struct zxio_ops zxio_ops_t;
-
-// Initialize a |zxio_t| object with the given |ops| table.
-void zxio_init(zxio_t* io, const zxio_ops_t* ops);
-
-struct zxio_ops {
+typedef struct zxio_ops {
   // After |close| returns, no further ops will be called relative to |ctx|.
   zx_status_t (*close)(zxio_t* io);
 
   // After |release| returns, no further ops will be called relative to |ctx|.
   zx_status_t (*release)(zxio_t* io, zx_handle_t* out_handle);
 
+  // TODO(tamird/abarth): clarify the semantics of this operation. fdio currently relies on this to
+  // implement POSIX-style dup() which expects the seek pointer to be preserved, but zxio_vmo_clone
+  // does not currently produce those semantics.
   zx_status_t (*clone)(zxio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                      zx_signals_t* out_zx_signals);
@@ -53,13 +50,15 @@ struct zxio_ops {
   zx_status_t (*sync)(zxio_t* io);
   zx_status_t (*attr_get)(zxio_t* io, zxio_node_attr_t* out_attr);
   zx_status_t (*attr_set)(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
-  zx_status_t (*read)(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
-  zx_status_t (*read_at)(zxio_t* io, size_t offset, void* buffer, size_t capacity,
-                         size_t* out_actual);
-  zx_status_t (*write)(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual);
-  zx_status_t (*write_at)(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
-                          size_t* out_actual);
-  zx_status_t (*seek)(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset);
+  zx_status_t (*read_vector)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                             zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*read_vector_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*write_vector)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                              zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*write_vector_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*seek)(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start, size_t* out_offset);
   zx_status_t (*truncate)(zxio_t* io, size_t length);
   zx_status_t (*flags_get)(zxio_t* io, uint32_t* out_flags);
   zx_status_t (*flags_set)(zxio_t* io, uint32_t flags);
@@ -76,7 +75,10 @@ struct zxio_ops {
   zx_status_t (*readdir)(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
   zx_status_t (*rewind)(zxio_t* io);
   zx_status_t (*isatty)(zxio_t* io, bool* tty);
-};
+} zxio_ops_t;
+
+// Initialize a |zxio_t| object with the given |ops| table.
+void zxio_init(zxio_t* io, const zxio_ops_t* ops);
 
 __END_CDECLS
 

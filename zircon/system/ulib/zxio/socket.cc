@@ -5,20 +5,23 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <sys/socket.h>
 #include <zircon/syscalls.h>
+
+#include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
 static zx_status_t zxio_socket_close(zxio_t* io) {
   auto zs = reinterpret_cast<zxio_socket_t*>(io);
-  zx_status_t status = zxs_close(std::move(zs->socket));
+  auto result = zs->control.Close();
   zs->~zxio_socket_t();
-  return status;
+  return result.ok() ? result->s : result.status();
 }
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
   auto zs = reinterpret_cast<zxio_socket_t*>(io);
-  *out_handle = zs->socket.control.mutable_channel()->release();
+  *out_handle = zs->control.mutable_channel()->release();
   zs->~zxio_socket_t();
   return ZX_OK;
 }
@@ -30,7 +33,7 @@ static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  status = zs->socket.control.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
+  status = zs->control.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
   if (status != ZX_OK) {
     return status;
   }
@@ -38,32 +41,40 @@ static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_socket_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  auto zs = reinterpret_cast<zxio_socket_t*>(io);
-  return zxs_recv(&zs->socket, buffer, capacity, out_actual);
-}
-
-static zx_status_t zxio_socket_write(zxio_t* io, const void* buffer, size_t capacity,
-                                     size_t* out_actual) {
-  auto zs = reinterpret_cast<zxio_socket_t*>(io);
-  return zxs_send(&zs->socket, buffer, capacity, out_actual);
-}
-
 static constexpr zxio_ops_t zxio_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_socket_close;
   ops.release = zxio_socket_release;
   ops.clone = zxio_socket_clone;
-  ops.read = zxio_socket_read;
-  ops.write = zxio_socket_write;
   return ops;
 }();
 
-zx_status_t zxio_socket_init(zxio_storage_t* storage, zxs_socket_t socket) {
+static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
+  zxio_ops_t ops = zxio_socket_ops;
+  ops.read_vector = zxio_datagram_pipe_read_vector;
+  ops.write_vector = zxio_datagram_pipe_write_vector;
+  return ops;
+}();
+
+static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
+  zxio_ops_t ops = zxio_socket_ops;
+  ops.read_vector = zxio_stream_pipe_read_vector;
+  ops.write_vector = zxio_stream_pipe_write_vector;
+  return ops;
+}();
+
+zx_status_t zxio_socket_init(zxio_storage_t* storage,
+                             ::llcpp::fuchsia::posix::socket::Control::SyncClient control,
+                             zx::socket socket, zx_info_socket_t info) {
   auto zs = new (storage) zxio_socket_t{
-      .io = storage->io,
-      .socket = std::move(socket),
+      .pipe =
+          {
+              .io = storage->io,
+              .socket = std::move(socket),
+          },
+      .control = std::move(control),
   };
-  zxio_init(&zs->io, &zxio_socket_ops);
+  zxio_init(&zs->pipe.io, info.options & ZX_SOCKET_DATAGRAM ? &zxio_datagram_socket_ops
+                                                            : &zxio_stream_socket_ops);
   return ZX_OK;
 }

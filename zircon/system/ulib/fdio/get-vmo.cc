@@ -20,7 +20,7 @@ static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset, size
   size_t actual = 0u;
   zx_status_t status = ZX_OK;
   for (;;) {
-    status = zxio_read_at(fdio_get_zxio(io), offset, buf, len, &actual);
+    status = zxio_read_at(fdio_get_zxio(io), offset, buf, len, 0, &actual);
     if (status != ZX_ERR_SHOULD_WAIT) {
       break;
     }

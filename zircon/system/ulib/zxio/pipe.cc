@@ -5,30 +5,33 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+#include "private.h"
+
 static zx_status_t zxio_pipe_close(zxio_t* io) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  pipe->socket.reset();
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
+  pipe->~zxio_pipe_t();
   return ZX_OK;
 }
 
 static zx_status_t zxio_pipe_release(zxio_t* io, zx_handle_t* out_handle) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
   *out_handle = pipe->socket.release();
+  pipe->~zxio_pipe_t();
   return ZX_OK;
 }
 
 static zx_status_t zxio_pipe_clone(zxio_t* io, zx_handle_t* out_handle) {
-  zx::object<zx::socket> out_socket;
+  zx::socket out_socket;
   zx_status_t status =
       reinterpret_cast<zxio_pipe_t*>(io)->socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_socket);
-  if (status == ZX_OK) {
-    *out_handle = out_socket.release();
+  if (status != ZX_OK) {
+    return status;
   }
-  return status;
+  *out_handle = out_socket.release();
+  return ZX_OK;
 }
 
 static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -39,10 +42,10 @@ static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 
 static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                                  zx_signals_t* out_zx_signals) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
   *out_handle = pipe->socket.get();
 
-  zx_signals_t zx_signals = static_cast<zx_signals_t>(zxio_signals);
+  auto zx_signals = static_cast<zx_signals_t>(zxio_signals);
   if (zxio_signals & ZXIO_READ_DISABLED) {
     zx_signals |= ZX_SOCKET_PEER_CLOSED;
   }
@@ -51,32 +54,120 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_han
 
 static void zxio_pipe_wait_end(zxio_t* io, zx_signals_t zx_signals,
                                zxio_signals_t* out_zxio_signals) {
-  zxio_signals_t zxio_signals = static_cast<zxio_signals_t>(zx_signals) & ZXIO_SIGNAL_ALL;
+  auto zxio_signals = static_cast<zxio_signals_t>(zx_signals) & ZXIO_SIGNAL_ALL;
   if (zx_signals & ZX_SOCKET_PEER_CLOSED) {
     zxio_signals |= ZXIO_READ_DISABLED;
   }
   *out_zxio_signals = zxio_signals;
 }
 
-static zx_status_t zxio_pipe_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  zx_status_t status = pipe->socket.read(0, buffer, capacity, out_actual);
+static zx_status_t zxio_pipe_read_status(zx_status_t status, size_t* out_actual) {
   // We've reached end-of-file, which is signaled by successfully reading zero
   // bytes.
   //
   // If we see |ZX_ERR_BAD_STATE|, that implies reading has been disabled for
   // this endpoint.
   if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
-    *out_actual = 0u;
-    return ZX_OK;
+    *out_actual = 0;
+    status = ZX_OK;
   }
   return status;
 }
 
-static zx_status_t zxio_pipe_write(zxio_t* io, const void* buffer, size_t capacity,
-                                   size_t* out_actual) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  return pipe->socket.write(0, buffer, capacity, out_actual);
+zx_status_t zxio_datagram_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector,
+                                           size_t vector_count, zxio_flags_t flags,
+                                           size_t* out_actual) {
+  uint32_t zx_flags = 0;
+  if (flags & ZXIO_PEEK) {
+    zx_flags |= ZX_SOCKET_PEEK;
+    flags &= ~ZXIO_PEEK;
+  }
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
+
+  size_t total = 0;
+  for (size_t i = 0; i < vector_count; ++i) {
+    total += vector[i].capacity;
+  }
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[total]);
+
+  size_t actual;
+  zx_status_t status = pipe->socket.read(zx_flags, buf.get(), total, &actual);
+  if (status != ZX_OK) {
+    return zxio_pipe_read_status(status, out_actual);
+  }
+
+  uint8_t* data = buf.get();
+  size_t remaining = actual;
+  return zxio_do_vector(vector, vector_count, out_actual,
+                        [&](void* buffer, size_t capacity, size_t* out_actual) {
+                          size_t actual = std::min(capacity, remaining);
+                          memcpy(buffer, data, actual);
+                          data += actual;
+                          remaining -= actual;
+                          *out_actual = actual;
+                          return ZX_OK;
+                        });
+}
+
+zx_status_t zxio_datagram_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector,
+                                            size_t vector_count, zxio_flags_t flags,
+                                            size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
+
+  size_t total = 0;
+  for (size_t i = 0; i < vector_count; ++i) {
+    total += vector[i].capacity;
+  }
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[total]);
+
+  uint8_t* data = buf.get();
+  for (size_t i = 0; i < vector_count; ++i) {
+    memcpy(data, vector[i].buffer, vector[i].capacity);
+    data += vector[i].capacity;
+  }
+
+  return pipe->socket.write(0, buf.get(), total, out_actual);
+}
+
+zx_status_t zxio_stream_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                         zxio_flags_t flags, size_t* out_actual) {
+  if (flags & ZXIO_PEEK) {
+    return zxio_datagram_pipe_read_vector(io, vector, vector_count, flags, out_actual);
+  }
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
+
+  return zxio_pipe_read_status(
+      zxio_do_vector(vector, vector_count, out_actual,
+                     [&](void* buffer, size_t capacity, size_t* out_actual) {
+                       return pipe->socket.read(0, buffer, capacity, out_actual);
+                     }),
+      out_actual);
+}
+
+zx_status_t zxio_stream_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                          zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
+
+  return zxio_do_vector(vector, vector_count, out_actual,
+                        [&](void* buffer, size_t capacity, size_t* out_actual) {
+                          return pipe->socket.write(0, buffer, capacity, out_actual);
+                        });
 }
 
 static constexpr zxio_ops_t zxio_pipe_ops = []() {
@@ -87,14 +178,29 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
   ops.wait_begin = zxio_pipe_wait_begin;
   ops.wait_end = zxio_pipe_wait_end;
   ops.attr_get = zxio_pipe_attr_get;
-  ops.read = zxio_pipe_read;
-  ops.write = zxio_pipe_write;
   return ops;
 }();
 
-zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx::socket socket) {
-  zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(storage);
-  zxio_init(&pipe->io, &zxio_pipe_ops);
-  pipe->socket = std::move(socket);
+static constexpr zxio_ops_t zxio_datagram_pipe_ops = []() {
+  zxio_ops_t ops = zxio_pipe_ops;
+  ops.read_vector = zxio_datagram_pipe_read_vector;
+  ops.write_vector = zxio_datagram_pipe_write_vector;
+  return ops;
+}();
+
+static constexpr zxio_ops_t zxio_stream_pipe_ops = []() {
+  zxio_ops_t ops = zxio_pipe_ops;
+  ops.read_vector = zxio_stream_pipe_read_vector;
+  ops.write_vector = zxio_stream_pipe_write_vector;
+  return ops;
+}();
+
+zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx::socket socket, zx_info_socket_t info) {
+  auto pipe = new (storage) zxio_pipe_t{
+      .io = storage->io,
+      .socket = std::move(socket),
+  };
+  zxio_init(&pipe->io,
+            info.options & ZX_SOCKET_DATAGRAM ? &zxio_datagram_pipe_ops : &zxio_stream_pipe_ops);
   return ZX_OK;
 }

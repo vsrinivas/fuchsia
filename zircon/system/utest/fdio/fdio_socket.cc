@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
@@ -14,7 +13,6 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <array>
@@ -176,7 +174,7 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   // Fail at compilation stage if anyone changes types.
   // This is mandatory here: we need the first chunk to be exactly the same
   // length as total size of data we just wrote.
-  assert(sizeof(data_in1) == sizeof(data_out));
+  static_assert(sizeof(data_in1) == sizeof(data_out));
 
   struct iovec iov[2];
   iov[0].iov_base = &data_in1;
@@ -282,7 +280,7 @@ TEST(SocketTest, DatagramSendMsg) {
   // sendmsg should accept 0 length payload.
   EXPECT_EQ(sendmsg(fd, &msg, 0), 0, "%s", strerror(errno));
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
-  EXPECT_EQ(actual - FDIO_SOCKET_MSG_HEADER_SIZE, 0);
+  EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), 0);
 
   msg.msg_name = &addr;
   msg.msg_namelen = addrlen;
@@ -297,7 +295,7 @@ TEST(SocketTest, DatagramSendMsg) {
   EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
 
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
-  EXPECT_EQ(actual - FDIO_SOCKET_MSG_HEADER_SIZE, sizeof(buf));
+  EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), sizeof(buf));
   EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
 }
 

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ctype.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
@@ -12,7 +11,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -24,11 +22,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
@@ -42,14 +36,14 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
-#include <utility>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <loader-service/loader-service.h>
 
-#include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 #include "boot-args.h"
@@ -410,8 +404,23 @@ int console_starter(void* arg) {
       return 1;
     }
 
-    proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    printf("devcoordinator: console shell exited, restarting\n");
+    status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      printf("devcoordinator: failed to wait for console shell termination (%s)\n",
+             zx_status_get_string(status));
+      return 1;
+    }
+    zx_info_process_t proc_info;
+    status = proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      printf("devcoordinator: failed to determine console shell termination cause (%s)\n",
+             zx_status_get_string(status));
+      return 1;
+    }
+    printf(
+        "devcoordinator: console shell exited (started=%d exited=%d, return_code=%ld), "
+        "restarting\n",
+        proc_info.started, proc_info.exited, proc_info.return_code);
   }
   /* NOTREACHED */
   return 0;
@@ -671,39 +680,39 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
   fbl::Vector<fdio_spawn_action_t> actions;
 
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_SET_NAME,
-    .name = {.data = name},
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {.data = name},
   });
 
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_DIRECTORY_REQUEST, .handle = dir_request.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_DIRECTORY_REQUEST, .handle = dir_request.release()},
   });
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()},
   });
 
   // Remove once svchost hosts the fuchsia.tracing.provider service itself.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 0), .handle = appmgr_svc.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 0), .handle = appmgr_svc.release()},
   });
 
   // Give svchost a restricted root job handle. svchost is already a privileged system service
   // as it controls system-wide process launching. With the root job it can consolidate a few
   // services such as crashsvc and the profile service.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 1), .handle = root_job_copy.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 1), .handle = root_job_copy.release()},
   });
 
   // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
   // service.
   if (root_resource_copy.is_valid()) {
     actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 2), .handle = root_resource_copy.release()},
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_USER0, 2), .handle = root_resource_copy.release()},
     });
   }
 
@@ -713,42 +722,42 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
 
   // Add handle to channel to allow svchost to proxy fidl services to us.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
   });
 
   // Add a handle to allow svchost to proxy services to fshost.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 4), .handle = fshost_client.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 4), .handle = fshost_client.release()},
   });
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
     // Add handle to channel to allow svchost to proxy fidl services to
     // virtcon.
     actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 5), .handle = virtcon_client.release()},
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_USER0, 5), .handle = virtcon_client.release()},
     });
   }
 
   // Add handle to channel to allow svchost to talk to miscsvc.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 6), .handle = miscsvc_svc.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 6), .handle = miscsvc_svc.release()},
   });
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by component_manager and includes services routed from other components; see
   // "devcoordinator.cml".
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 7), .handle = devcoordinator_svc.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 7), .handle = devcoordinator_svc.release()},
   });
 
   // Add handle to channel to allow svchost to talk to device_name_provider.
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_USER0, 8), .handle = device_name_provider_svc.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 8), .handle = device_name_provider_svc.release()},
   });
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
@@ -759,8 +768,8 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
     return ZX_ERR_BAD_STATE;
   }
   actions.push_back((fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-    .ns = {.prefix = "/sysmem", .handle = fs_handle.release()},
+      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+      .ns = {.prefix = "/sysmem", .handle = fs_handle.release()},
   });
 
   char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];

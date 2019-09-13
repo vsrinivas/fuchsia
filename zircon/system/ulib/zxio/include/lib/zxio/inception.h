@@ -5,10 +5,10 @@
 #ifndef LIB_ZXIO_INCEPTION_H_
 #define LIB_ZXIO_INCEPTION_H_
 
+#include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/sync/mutex.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
-#include <lib/zxs/zxs.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -56,11 +56,8 @@ typedef struct zxio_vmo {
   zx_off_t size;
 
   // The current seek offset within the file.
-  //
-  // Protected by |lock|.
-  zx_off_t offset;
+  zx_off_t offset __TA_GUARDED(lock);
 
-  // The lock that protects |offset|.
   sync_mutex_t lock;
 } zxio_vmo_t;
 
@@ -108,7 +105,7 @@ typedef struct zxio_pipe {
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket);
+zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
 
 // socket ----------------------------------------------------------------------
 
@@ -117,14 +114,17 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket);
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
 typedef struct zxio_socket {
-  zxio_t io;
-  zxs_socket_t socket;
+  zxio_pipe_t pipe;
+
+  ::llcpp::fuchsia::posix::socket::Control::SyncClient control;
 } zxio_socket_t;
 
 static_assert(sizeof(zxio_socket_t) <= sizeof(zxio_storage_t),
               "zxio_socket_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_socket_init(zxio_storage_t* pipe, zxs_socket_t socket);
+zx_status_t zxio_socket_init(zxio_storage_t* pipe,
+                             ::llcpp::fuchsia::posix::socket::Control::SyncClient control,
+                             zx::socket socket, zx_info_socket_t info);
 
 // debuglog --------------------------------------------------------------------
 

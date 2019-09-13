@@ -38,7 +38,7 @@ import (
 // #include <errno.h>
 // #include <fcntl.h>
 // #include <lib/zxs/protocol.h>
-// #include <netinet/tcp.h>
+// #include <netinet/in.h>
 // #include <lib/netstack/c/netconfig.h>
 import "C"
 
@@ -129,8 +129,9 @@ func (ios *iostate) loopWrite() error {
 
 		var opts tcpip.WriteOptions
 		if ios.transProto != tcp.ProtocolNumber {
+			const size = C.sizeof_struct_fdio_socket_msg
 			var fdioSocketMsg C.struct_fdio_socket_msg
-			if err := fdioSocketMsg.Unmarshal(v[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
+			if err := fdioSocketMsg.Unmarshal(v[:size]); err != nil {
 				return err
 			}
 			if fdioSocketMsg.addrlen != 0 {
@@ -140,7 +141,7 @@ func (ios *iostate) loopWrite() error {
 				}
 				opts.To = &addr
 			}
-			v = v[C.FDIO_SOCKET_MSG_HEADER_SIZE:]
+			v = v[size:]
 		}
 	LoopWrite:
 		for {
@@ -299,13 +300,14 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 		}
 
 		if ios.transProto != tcp.ProtocolNumber {
-			out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
+			const size = C.sizeof_struct_fdio_socket_msg
+			out := make([]byte, size+len(v))
 			var fdioSocketMsg C.struct_fdio_socket_msg
 			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
-			if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
+			if _, err := fdioSocketMsg.MarshalTo(out[:size]); err != nil {
 				return err
 			}
-			if n := copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v); n < len(v) {
+			if n := copy(out[size:], v); n < len(v) {
 				panic(fmt.Sprintf("copied %d/%d bytes", n, len(v)))
 			}
 			v = out

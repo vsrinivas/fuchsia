@@ -247,6 +247,12 @@ typedef uintptr_t zx_gpaddr_t;
 // offset
 typedef uint64_t zx_off_t;
 
+// vectorized I/O
+typedef struct zx_iovec {
+  void* buffer;
+  size_t capacity;
+} zx_iovec_t;
+
 // Maximum string length for kernel names (process name, thread name, etc)
 #define ZX_MAX_NAME_LEN              ((size_t)32u)
 

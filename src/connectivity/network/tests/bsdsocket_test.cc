@@ -1472,6 +1472,9 @@ class NetSocketTest : public ::testing::TestWithParam<int> {};
 
 // Test MSG_PEEK
 // MSG_PEEK : Peek into the socket receive queue without moving the contents from it.
+//
+// TODO(fxb.dev/33100): change this test to use recvmsg instead of recvfrom to exercise MSG_PEEK
+// with scatter/gather.
 TEST_P(NetSocketTest, SocketPeekTest) {
   int socketType = GetParam();
   struct sockaddr_in addr = {};
