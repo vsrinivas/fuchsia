@@ -26,6 +26,7 @@
 #include <src/lib/fxl/macros.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "garnet/bin/ui/root_presenter/a11y_settings_watcher.h"
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
@@ -117,6 +118,8 @@ class App : public fuchsia::ui::policy::Presenter,
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
+
+  std::unique_ptr<A11ySettingsWatcher> a11y_settings_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
