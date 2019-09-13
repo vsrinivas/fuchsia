@@ -156,37 +156,6 @@ TEST_F(GainTest, SourceGainCaching) {
   EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 }
 
-// We independently limit stream and device gains to kMaxGainDb/0, respectively.
-// MTWN-70 concerns Gain's statefulness. Does it need this complexity?
-TEST_F(GainTest, MaxClamp) {
-  // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
-  gain_.SetSourceGain(Gain::kMaxGainDb * 2);
-  gain_.SetDestGain(Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
-
-  // This combination (24.05 dB) is clamped to 24.0dB.
-  gain_.SetSourceGain(Gain::kMaxGainDb);
-  gain_.SetDestGain(0.05f);
-  EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
-
-  // System limits renderer gain to kMaxGainDb, even when sum is less than 0.
-  // Renderer Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.
-  constexpr float kScale24DbDown = 0.0630957344f;
-  gain_.SetSourceGain(Gain::kMaxGainDb * 1.5f);
-  gain_.SetDestGain(-2 * Gain::kMaxGainDb);
-  EXPECT_FLOAT_EQ(kScale24DbDown, gain_.GetGainScale());
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_FALSE(gain_.IsSilent());
-
-  // AudioCore limits master to 0dB, but Gain object handles up to kMaxGainDb.
-  // Dest also clamps to +24dB: source(-48dB) + dest(+36dB=>24dB) becomes -24dB.
-  gain_.SetSourceGain(-2 * Gain::kMaxGainDb);
-  gain_.SetDestGain(Gain::kMaxGainDb * 1.5f);
-  EXPECT_FLOAT_EQ(kScale24DbDown, gain_.GetGainScale());
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_FALSE(gain_.IsSilent());
-}
-
 // System independently limits stream and master/device Gains to kMinGainDb
 // (-160dB). Assert scale is zero, if either (or combo) are kMinGainDb or less.
 TEST_F(GainTest, MinMute) {

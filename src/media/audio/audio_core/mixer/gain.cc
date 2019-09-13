@@ -130,13 +130,8 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
     return combined_gain_scale_;
   }
 
-  // Update the internal gains, clamping in the process.
-  // We only clamp these to kMaxGainDb, despite the fact that master (or device)
-  // gain is limited to a max of 0 dB. This is because the roles played by
-  // src_gain and dest_gain during playback are reversed during capture (i.e.
-  // during capture the master/device gain is the src_gain).
-  current_src_gain_db_ = fbl::clamp(src_gain_db, kMinGainDb, kMaxGainDb);
-  current_dest_gain_db_ = fbl::clamp(dest_gain_db, kMinGainDb, kMaxGainDb);
+  current_src_gain_db_ = src_gain_db;
+  current_dest_gain_db_ = dest_gain_db;
 
   // If sum of the src and dest cancel each other, the combined is kUnityScale.
   if ((current_dest_gain_db_ + current_src_gain_db_) == kUnityGainDb) {
