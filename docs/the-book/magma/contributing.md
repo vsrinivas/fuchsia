@@ -21,27 +21,22 @@ often these are built from third party projects, such as third_party/mesa.
 
 ### Coding Conventions and Formatting
 
-* Use the **[Google style guide](https://google.github.io/styleguide/cppguide.html)** for source code (except 4 spaces for indent).
+* Use the **[Google style guide](https://google.github.io/styleguide/cppguide.html)** for source code.
 * Run **clang-format** on your changes to maintain consistent formatting.
 
 ### Build Configuration for Testing
 
 ##### Product for L0 and L1 testing:
-* garnet/products/graphics-dev.gni
+* core
 
 ##### Packages for L0 and L1 testing:
-* garnet/packages/tests/magma
-* garnet/packages/experimental/disabled/tests_magma
-* garnet/packages/tests/image_pipe_swapchain
-* garnet/packages/examples/vkcube_on_scenic
-* garnet/packages/examples/vkcube_on_fb
-* garnet/packages/tools/magma
+* src/graphics/lib/magma/tests:l1
 
 ##### Product for L2 testing:
-* topaz/products/default.gni
+* workstation
 
 ##### Package for L2 testing:
-* topaz/packages/examples/spinning_cube
+* topaz/app/spinning_cube
 
 ### Testing Pre-Submit
 
@@ -71,7 +66,7 @@ then present the device as usual for general applications.  Inspect the syslog f
 
 If you have an attached display, execute the spinning [vkcube](/garnet/lib/vulkan/tests/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.  
-Build with `--with garnet/packages/examples/vkcube_on_scenic`.
+Build with `--with src/graphics/lib/magma/tests:l1`.
 Run the test with `run fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx`.
 
 #### L2

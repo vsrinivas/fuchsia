@@ -14,7 +14,20 @@ group("vulkan-tests") {
   testonly = true
   public_deps = [
     # We also need run-test-component to run these tests.
-    "//garnet/packages/testing:run_test_component",
     "//garnet/lib/magma/tests:vulkan-tests",
+    "//garnet/packages/testing:run_test_component",
+  ]
+}
+
+# Packages needed for L1 tests from //doc/the-book/magma/contributing.md
+group("l1") {
+  testonly = true
+  deps = [
+    "//garnet/packages/examples:vkcube_on_fb",
+    "//garnet/packages/examples:vkcube_on_scenic",
+    "//garnet/packages/prod:scenic",
+    "//garnet/packages/tests:image_pipe_swapchain",
+    "//garnet/packages/tests:magma",
+    "//garnet/packages/tools:magma",
   ]
 }
