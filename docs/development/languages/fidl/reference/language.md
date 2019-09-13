@@ -350,6 +350,7 @@ struct Record {
 *   Nullable; null strings and empty strings are distinct.
 *   Can specify a maximum size, eg. **`string:40`** for a
     maximum 40 byte string.
+*   May contain embedded `NUL` bytes, unlike traditional C strings.
 
 #### Use
 
