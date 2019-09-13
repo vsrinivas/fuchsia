@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 go_library("command") {
   name = "go.fuchsia.dev/fuchsia/tools/lib/command"
   deps = [
-    "//garnet/public/go/third_party:github.com/google/subcommands",
+    "//third_party/golibs:github.com/google/subcommands",
   ]
 }
 

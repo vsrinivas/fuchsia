@@ -15,9 +15,9 @@ go_library("pm_lib") {
     "//garnet/go/src/far",
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:github.com/fsnotify/fsnotify",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:github.com/fsnotify/fsnotify",
+    "//third_party/golibs:golang.org/x/crypto",
   ]
 }
 
@@ -34,7 +34,7 @@ foreach(pkg, test_packages) {
   pkg_ = string_replace(pkg, "/", "_")
   name = "pm_${pkg_}_test"
   go_test(name) {
-    gopackages = ["fuchsia.googlesource.com/pm/${pkg}"]
+    gopackages = [ "fuchsia.googlesource.com/pm/${pkg}" ]
     deps = [
       ":pm_lib",
     ]

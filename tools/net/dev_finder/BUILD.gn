@@ -10,8 +10,8 @@ go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
   source_dir = "cmd"
   deps = [
-    "//garnet/public/go/third_party:github.com/google/go-cmp",
-    "//garnet/public/go/third_party:github.com/google/subcommands",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/google/subcommands",
     "//tools/net/mdns",
   ]
 }

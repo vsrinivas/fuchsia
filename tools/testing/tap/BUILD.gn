@@ -21,6 +21,6 @@ go_test("tap_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tap/lib" ]
   deps = [
     ":tap",
-    "//garnet/public/go/third_party:github.com/go-yaml/yaml",
+    "//third_party/golibs:github.com/go-yaml/yaml",
   ]
 }

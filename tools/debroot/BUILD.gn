@@ -9,9 +9,9 @@ go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/debroot"
   source_dir = "cmd"
   deps = [
-    "//garnet/public/go/third_party:github.com/go-yaml/yaml",
-    "//garnet/public/go/third_party:github.com/google/subcommands",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//third_party/golibs:github.com/go-yaml/yaml",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:golang.org/x/crypto",
   ]
 }
 

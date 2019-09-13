@@ -11,7 +11,7 @@ go_library("fidl_lib") {
   name = "fidl"
 
   deps = [
-    "//garnet/public/go/third_party:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/google/go-cmp",
   ]
 }
 

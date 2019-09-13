@@ -7,56 +7,56 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_test("go_tuf_repo_test") {
-  gopackages = ["github.com/flynn/go-tuf"]
+  gopackages = [ "github.com/flynn/go-tuf" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 
 go_test("go_tuf_data_test") {
-  gopackages = ["github.com/flynn/go-tuf/data"]
+  gopackages = [ "github.com/flynn/go-tuf/data" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 
 go_test("go_tuf_leveldbstore_test") {
-  gopackages = ["github.com/flynn/go-tuf/client/leveldbstore"]
+  gopackages = [ "github.com/flynn/go-tuf/client/leveldbstore" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 
 go_test("go_tuf_encrypted_test") {
-  gopackages = ["github.com/flynn/go-tuf/encrypted"]
+  gopackages = [ "github.com/flynn/go-tuf/encrypted" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 
 go_test("go_tuf_util_test") {
-  gopackages = ["github.com/flynn/go-tuf/util"]
+  gopackages = [ "github.com/flynn/go-tuf/util" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 
 go_test("go_tuf_verify_test") {
-  gopackages = ["github.com/flynn/go-tuf/verify"]
+  gopackages = [ "github.com/flynn/go-tuf/verify" ]
 
   deps = [
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:gopkg.in/check.v1",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:gopkg.in/check.v1",
   ]
 }
 

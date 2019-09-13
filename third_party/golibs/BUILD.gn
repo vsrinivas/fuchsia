@@ -4,8 +4,6 @@
 
 import("//build/go/go_library.gni")
 
-# TODO(raggi): move this into golibs
-
 template("golib") {
   go_library(target_name) {
     name = target_name
@@ -14,26 +12,9 @@ template("golib") {
   }
 }
 
-golib("golang.org/x/crypto") {
-}
-golib("golang.org/x/net") {
-}
-golib("golang.org/x/oauth2") {
-  deps = [
-    ":golang.org/x/net",
-  ]
-}
-golib("golang.org/x/sys") {
-}
+##### NOTE: keep the following targets in alphabetical order.
 
-go_library("gopkg.in/check.v1") {
-  name = "gopkg.in/check.v1"
-  source_dir = "//third_party/golibs/github.com/go-check/check"
-  deps = [
-    ":github.com/kr/pretty",
-  ]
-}
-
+### github.com/*
 golib("github.com/dustin/go-humanize") {
 }
 golib("github.com/flynn/go-docopt") {
@@ -45,6 +26,11 @@ golib("github.com/flynn/go-tuf") {
     ":github.com/syndtr/goleveldb",
     ":github.com/tent/canonical-json-go",
     ":golang.org/x/crypto",
+  ]
+}
+golib("github.com/fsnotify/fsnotify") {
+  deps = [
+    ":golang.org/x/sys",
   ]
 }
 golib("github.com/go-yaml/yaml") {
@@ -59,11 +45,6 @@ golib("github.com/golang/protobuf") {
 golib("github.com/golang/snappy") {
 }
 golib("github.com/google/btree") {
-}
-golib("github.com/fsnotify/fsnotify") {
-  deps = [
-    ":golang.org/x/sys",
-  ]
 }
 golib("github.com/google/go-cmp") {
 }
@@ -105,4 +86,26 @@ golib("github.com/syndtr/goleveldb") {
   ]
 }
 golib("github.com/tent/canonical-json-go") {
+}
+
+### golang.org/x/*
+golib("golang.org/x/crypto") {
+}
+golib("golang.org/x/net") {
+}
+golib("golang.org/x/oauth2") {
+  deps = [
+    ":golang.org/x/net",
+  ]
+}
+golib("golang.org/x/sys") {
+}
+
+### gopkg.in/*
+go_library("gopkg.in/check.v1") {
+  name = "gopkg.in/check.v1"
+  source_dir = "//third_party/golibs/github.com/go-check/check"
+  deps = [
+    ":github.com/kr/pretty",
+  ]
 }

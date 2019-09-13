@@ -27,7 +27,6 @@ allowed_deps = [
     # moved to //sdk or //src/lib:
     # Code libraries
     '//garnet/lib/rust',
-    '//garnet/public/go/third_party',
     '//garnet/public/lib',
     '//garnet/public/rust',
     '//zircon/public/fidl',
@@ -66,6 +65,7 @@ target_types_to_check = [
 
 
 class DisallowedDepsRecord:
+
     def __init__(self):
         self.count = 0
         self.labels = {}
@@ -129,8 +129,10 @@ def record_bad_dep(bad_deps, area, label, bad_dep):
 
 
 def extract_build_graph(gn_binary, out_dir):
-    args = [gn_binary, 'desc', out_dir, '//src/*', '--format=json',
-            '--all-toolchains']
+    args = [
+        gn_binary, 'desc', out_dir, '//src/*', '--format=json',
+        '--all-toolchains'
+    ]
     json_build_graph = subprocess.check_output(args)
     return json.loads(json_build_graph)
 
@@ -138,16 +140,18 @@ def extract_build_graph(gn_binary, out_dir):
 def main():
     parser = argparse.ArgumentParser(
         description='Check dependency graph in areas')
-    parser.add_argument('--out', default='out/default',
-                        help='Build output directory')
-    parser.add_argument('--ignore-exceptions', action='store_true',
-                        help='Ignore registered exceptions.  ' +
-                        'Set to see all dependency issues')
+    parser.add_argument(
+        '--out', default='out/default', help='Build output directory')
+    parser.add_argument(
+        '--ignore-exceptions',
+        action='store_true',
+        help='Ignore registered exceptions.  ' +
+        'Set to see all dependency issues')
     args = parser.parse_args()
 
     gn_binary = os.path.join(fuchsia_root, 'buildtools', 'gn')
-    targets = extract_build_graph(gn_binary, os.path.join(fuchsia_root,
-                                                          args.out))
+    targets = extract_build_graph(
+        gn_binary, os.path.join(fuchsia_root, args.out))
 
     disallowed_dependencies = {}
     for label, target in targets.iteritems():
@@ -157,8 +161,7 @@ def main():
         testonly = target['testonly']
         for dep in target['deps']:
             dep_area = area_for_label(fuchsia_root, dep)
-            if not dep_allowed(label, label_area, dep,
-                               dep_area, testonly,
+            if not dep_allowed(label, label_area, dep, dep_area, testonly,
                                args.ignore_exceptions):
                 record_bad_dep(disallowed_dependencies, label_area, label, dep)
 

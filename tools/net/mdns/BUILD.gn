@@ -9,8 +9,8 @@ go_library("mdns") {
   name = "go.fuchsia.dev/fuchsia/tools/net/mdns"
 
   deps = [
-    "//garnet/public/go/third_party:golang.org/x/net",
-    "//garnet/public/go/third_party:golang.org/x/sys",
+    "//third_party/golibs:golang.org/x/net",
+    "//third_party/golibs:golang.org/x/sys",
   ]
 }
 
@@ -18,6 +18,6 @@ go_test("mdns_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/mdns" ]
   deps = [
     ":mdns",
-    "//garnet/public/go/third_party:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/google/go-cmp",
   ]
 }

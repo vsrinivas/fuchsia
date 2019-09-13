@@ -7,6 +7,6 @@ import("//build/go/go_library.gni")
 go_library("netboot") {
   name = "go.fuchsia.dev/fuchsia/tools/net/netboot"
   deps = [
-    "//garnet/public/go/third_party:golang.org/x/sys",
+    "//third_party/golibs:golang.org/x/sys",
   ]
 }

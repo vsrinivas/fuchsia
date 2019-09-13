@@ -9,7 +9,7 @@ go_library("power") {
   deps = [
     ":amt",
     ":wol",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/logger",
     "//tools/net/sshutil",
   ]
@@ -19,7 +19,7 @@ go_library("amt") {
   name = "go.fuchsia.dev/fuchsia/tools/botanist/power/amt"
   source_dir = "amt"
   deps = [
-    "//garnet/public/go/third_party:github.com/google/uuid",
+    "//third_party/golibs:github.com/google/uuid",
     "//tools/net/digest",
   ]
 }

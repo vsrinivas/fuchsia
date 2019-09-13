@@ -54,6 +54,6 @@ go_test("whereiscl_test") {
   deps = [
     ":lib",
     ":testhelper",
-    "//garnet/public/go/third_party:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/google/go-cmp",
   ]
 }

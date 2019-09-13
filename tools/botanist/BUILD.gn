@@ -9,7 +9,7 @@ import("//build/go/go_test.gni")
 go_library("botanist_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/botanist/lib"
   deps = [
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/crypto",
     "//tools/build/api",
     "//tools/lib/logger",
     "//tools/lib/retry",

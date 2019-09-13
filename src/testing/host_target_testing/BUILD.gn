@@ -10,7 +10,7 @@ go_library("host_target_testing") {
   deps = [
     "//garnet/go/src/far:far",
     "//garnet/go/src/pm:pm_lib",
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:golang.org/x/crypto",
   ]
 }

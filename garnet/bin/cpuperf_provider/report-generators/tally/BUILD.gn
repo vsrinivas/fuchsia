@@ -11,7 +11,7 @@ go_library("lib") {
   name = "tally"
 
   deps = [
-    "//garnet/public/go/third_party:github.com/dustin/go-humanize",
+    "//third_party/golibs:github.com/dustin/go-humanize",
   ]
 }
 

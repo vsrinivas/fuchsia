@@ -30,9 +30,6 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
-    "//garnet/public/go/third_party:golang.org/x/oauth2",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
@@ -41,6 +38,9 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.update($go_toolchain)",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//third_party/golibs:github.com/rjw57/oauth2device",
+    "//third_party/golibs:golang.org/x/oauth2",
     "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
   ]
@@ -172,7 +172,7 @@ foreach(test, test_targets) {
       ":lib",
       "//garnet/go/src/pm:pm_lib",
       "//garnet/go/src/pmd",
-      "//garnet/public/go/third_party:github.com/google/go-cmp",
+      "//third_party/golibs:github.com/google/go-cmp",
     ]
   }
 }
