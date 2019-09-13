@@ -64,7 +64,8 @@ class StatusModel extends ChangeNotifier implements Inspectable {
       offset: 0,
     );
     statusBatteryManager
-        .watch(_batteryInfoWatcherBinding.wrap(_BatteryInfoWatcherImpl(this)));
+      ..watch(_batteryInfoWatcherBinding.wrap(_BatteryInfoWatcherImpl(this)))
+      ..getBatteryInfo().then(_updateBattery);
     batteryModel = StatusProgressBarVisualizerModel(
       barFirst: true,
       barHeight: 14,
@@ -241,7 +242,6 @@ class StatusModel extends ChangeNotifier implements Inspectable {
     String dummyCpuValue = newGraphData.toInt().toString();
     dummyCpuModel.graphValue = '$dummyCpuValue%';
   }
-
 
   @override
   void onInspect(Node node) {
