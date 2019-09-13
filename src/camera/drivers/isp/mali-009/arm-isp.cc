@@ -176,7 +176,8 @@ int ArmIspDevice::IspIrqHandler() {
   zx_status_t status = ZX_OK;
 
   while (running_.load()) {
-    status = isp_irq_.wait(NULL);
+    zx::time time;
+    status = isp_irq_.wait(&time);
     if (status != ZX_OK) {
       return status;
     }
@@ -703,6 +704,8 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
                                                 const frame_rate_t* rate, stream_type_t type,
                                                 const output_stream_callback_t* stream,
                                                 output_stream_protocol_t* out_s) {
+  ZX_ASSERT(stream && stream->frame_ready);
+
   if (!IsIspConfigInitialized()) {
     zx_status_t status = SetupIspConfig();
     if (status != ZX_OK) {
@@ -713,10 +716,12 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
   }
 
   // TODO(CAM-79): Set frame rate in sensor
-  auto frame_ready_callback = [stream](fuchsia_camera_common_FrameAvailableEvent event) {
+  auto frame_ready_callback = [stream = *stream](fuchsia_camera_common_FrameAvailableEvent event) {
     // TODO(CAM-80): change the output_stream_callback_t so it uses all the
     // frame available info
-    stream->frame_ready(stream->ctx, event.buffer_id);
+    if (event.frame_status == fuchsia_camera_common_FrameStatus_OK) {
+      stream.frame_ready(stream.ctx, event.buffer_id);
+    }
   };
 
   // Set the control interface:
