@@ -4,12 +4,9 @@
 
 library fuchsia.modular;
 
-using fuchsia.speech;
 using fuchsia.sys;
 
 protocol UserIntelligenceProvider {
-    GetSpeechToText(request<fuchsia.speech.SpeechToText> speech_to_text);
-
     /// The `ComponentContext` is used to create agents and use message queues.
     StartAgents(ComponentContext user_intelligence_context,
                 vector<string> session_agents,

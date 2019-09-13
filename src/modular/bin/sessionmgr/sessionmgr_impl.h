@@ -13,7 +13,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
-#include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
@@ -126,7 +125,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
-  void GetSpeechToText(fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request) override;

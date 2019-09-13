@@ -818,11 +818,6 @@ void SessionmgrImpl::GetPresentation(
   session_context_->GetPresentation(std::move(request));
 }
 
-void SessionmgrImpl::GetSpeechToText(
-    fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
-  user_intelligence_provider_impl_->GetSpeechToText(std::move(request));
-}
-
 void SessionmgrImpl::GetStoryProvider(
     fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   story_provider_impl_->Connect(std::move(request));

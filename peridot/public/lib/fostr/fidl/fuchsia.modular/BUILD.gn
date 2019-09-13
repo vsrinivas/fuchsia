@@ -16,6 +16,5 @@ fostr_fidl("fuchsia.modular") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
     "//peridot/public/lib/fostr/fidl/fuchsia.ledger",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular.auth",
-    "//peridot/public/lib/fostr/fidl/fuchsia.speech",
   ]
 }

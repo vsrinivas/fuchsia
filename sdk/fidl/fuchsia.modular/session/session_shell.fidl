@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.modular.auth;
-using fuchsia.speech;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
@@ -64,7 +63,6 @@ protocol SessionShellContext {
     GetFocusProvider(request<FocusProvider> request);
     GetLink(request<Link> request);
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
-    GetSpeechToText(request<fuchsia.speech.SpeechToText> request);
     GetStoryProvider(request<StoryProvider> request);
     GetVisibleStoriesController(request<VisibleStoriesController> request);
 

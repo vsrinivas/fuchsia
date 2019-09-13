@@ -10,6 +10,5 @@ group("fidl") {
     "fuchsia.modular.auth",
     "fuchsia.modular.internal",
     "fuchsia.modular.storymodel",
-    "fuchsia.speech",
   ]
 }

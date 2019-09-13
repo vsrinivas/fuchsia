@@ -20,7 +20,6 @@ using cobalt_registry::SessionAgentEventsMetricDimensionEventType;
 
 namespace {
 
-constexpr char kKronkUrl[] = "kronk";
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {3, zx::sec(45)};
 
 }  // namespace
@@ -54,16 +53,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     : story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)){};
-
-void UserIntelligenceProviderImpl::GetSpeechToText(
-    fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
-  auto it = session_agents_.find(kKronkUrl);
-  if (it != session_agents_.end()) {
-    it->second.ConnectOrQueueServiceRequest(std::move(request));
-  } else {
-    FXL_LOG(WARNING) << "No speech-to-text agent loaded";
-  }
-}
 
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,

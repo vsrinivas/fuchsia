@@ -34,8 +34,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
 
   ~UserIntelligenceProviderImpl() override = default;
 
-  void GetSpeechToText(fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
-
   void StartAgents(
       fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
       std::vector<std::string> session_agents, std::vector<std::string> startup_agents) override;
