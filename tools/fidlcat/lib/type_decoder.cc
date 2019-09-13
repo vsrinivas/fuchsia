@@ -8,6 +8,7 @@
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/syscalls/system.h>
 #include <zircon/system/public/zircon/types.h>
@@ -204,6 +205,57 @@ void PacketPageRequestCommandName(uint16_t command, std::ostream& os) {
     PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
     default:
       os << static_cast<uint32_t>(command);
+      return;
+  }
+}
+
+#define PolicyNameCase(name) \
+  case name:                 \
+    os << #name;             \
+    return
+
+void PolicyActionName(uint32_t action, std::ostream& os) {
+  switch (action) {
+    PolicyNameCase(ZX_POL_ACTION_ALLOW);
+    PolicyNameCase(ZX_POL_ACTION_DENY);
+    PolicyNameCase(ZX_POL_ACTION_ALLOW_EXCEPTION);
+    PolicyNameCase(ZX_POL_ACTION_DENY_EXCEPTION);
+    PolicyNameCase(ZX_POL_ACTION_KILL);
+    default:
+      os << action;
+      return;
+  }
+}
+
+void PolicyConditionName(uint32_t condition, std::ostream& os) {
+  switch (condition) {
+    PolicyNameCase(ZX_POL_BAD_HANDLE);
+    PolicyNameCase(ZX_POL_WRONG_OBJECT);
+    PolicyNameCase(ZX_POL_VMAR_WX);
+    PolicyNameCase(ZX_POL_NEW_ANY);
+    PolicyNameCase(ZX_POL_NEW_VMO);
+    PolicyNameCase(ZX_POL_NEW_CHANNEL);
+    PolicyNameCase(ZX_POL_NEW_EVENT);
+    PolicyNameCase(ZX_POL_NEW_EVENTPAIR);
+    PolicyNameCase(ZX_POL_NEW_PORT);
+    PolicyNameCase(ZX_POL_NEW_SOCKET);
+    PolicyNameCase(ZX_POL_NEW_FIFO);
+    PolicyNameCase(ZX_POL_NEW_TIMER);
+    PolicyNameCase(ZX_POL_NEW_PROCESS);
+    PolicyNameCase(ZX_POL_NEW_PROFILE);
+    PolicyNameCase(ZX_POL_AMBIENT_MARK_VMO_EXEC);
+    default:
+      os << condition;
+      return;
+  }
+}
+
+void PolicyTopicName(uint32_t topic, std::ostream& os) {
+  switch (topic) {
+    PolicyNameCase(ZX_JOB_POL_BASIC);
+    PolicyNameCase(ZX_JOB_POL_TIMER_SLACK);
+    default:
+      os << topic;
       return;
   }
 }
@@ -542,6 +594,22 @@ void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os) {
   }
 }
 
+#define TimerOptionNameCase(name) \
+  case name:                      \
+    os << #name;                  \
+    return
+
+void TimerOptionName(uint32_t option, std::ostream& os) {
+  switch (option) {
+    TimerOptionNameCase(ZX_TIMER_SLACK_CENTER);
+    TimerOptionNameCase(ZX_TIMER_SLACK_EARLY);
+    TimerOptionNameCase(ZX_TIMER_SLACK_LATE);
+    default:
+      os << option;
+      return;
+  }
+}
+
 #define TopicNameCase(name) \
   case name:                \
     os << #name;            \
@@ -680,6 +748,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kCharArray:
       os << ":" << colors.green << "char[]" << colors.reset << ": ";
       break;
+    case SyscallType::kInt32:
+      os << ":" << colors.green << "int32" << colors.reset << ": ";
+      break;
     case SyscallType::kInt64:
       os << ":" << colors.green << "int64" << colors.reset << ": ";
       break;
@@ -737,6 +808,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kFeatureKind:
       os << ":" << colors.green << "zx_feature_kind_t" << colors.reset << ": ";
       break;
+    case SyscallType::kFutex:
+      os << ":" << colors.green << "zx_futex_t" << colors.reset << ": ";
+      break;
     case SyscallType::kGpAddr:
       os << ":" << colors.green << "zx_gpaddr_t" << colors.reset << ": ";
       break;
@@ -769,6 +843,15 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kPacketPageRequestCommand:
       os << ":" << colors.green << "zx_packet_page_request_t::command" << colors.reset << ": ";
+      break;
+    case SyscallType::kPolicyAction:
+      os << ":" << colors.green << "zx_policy_action_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kPolicyCondition:
+      os << ":" << colors.green << "zx_policy_condition_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kPolicyTopic:
+      os << ":" << colors.green << "zx_policy_topic_t" << colors.reset << ": ";
       break;
     case SyscallType::kPortPacketType:
       os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
@@ -811,6 +894,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kTime:
       os << ":" << colors.green << "time" << colors.reset << ": ";
+      break;
+    case SyscallType::kTimerOption:
+      os << ":" << colors.green << "zx_timer_option_t" << colors.reset << ": ";
       break;
     case SyscallType::kUintptr:
       os << ":" << colors.green << "uintptr_t" << colors.reset << ": ";

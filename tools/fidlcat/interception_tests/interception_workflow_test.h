@@ -45,6 +45,8 @@ constexpr uint32_t kPort = 0xdf0b2ec1;
 constexpr uint64_t kKey = 1234;
 constexpr uint64_t kKoid = 4252;
 constexpr uint64_t kKoid2 = 5242;
+constexpr zx_futex_t kFutex = 56789;
+constexpr zx_futex_t kFutex2 = 98765;
 
 class SystemCallTest {
  public:

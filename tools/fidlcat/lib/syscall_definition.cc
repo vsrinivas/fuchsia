@@ -4,6 +4,7 @@
 
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
+#include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/syscalls/system.h>
 
@@ -1389,6 +1390,62 @@ const ZxPacketPageRequest* ZxPacketPageRequest::GetClass() {
   return instance_;
 }
 
+class ZxPolicyBasic : public Class<zx_policy_basic_t> {
+ public:
+  static const ZxPolicyBasic* GetClass();
+
+  static uint32_t condition(const zx_policy_basic_t* from) { return from->condition; }
+  static uint32_t policy(const zx_policy_basic_t* from) { return from->policy; }
+
+ private:
+  ZxPolicyBasic() : Class("zx_policy_basic_t") {
+    AddField(std::make_unique<ClassField<zx_policy_basic_t, uint32_t>>(
+        "condition", SyscallType::kPolicyCondition, condition));
+    AddField(std::make_unique<ClassField<zx_policy_basic_t, uint32_t>>(
+        "policy", SyscallType::kPolicyAction, policy));
+  }
+  ZxPolicyBasic(const ZxPolicyBasic&) = delete;
+  ZxPolicyBasic& operator=(const ZxPolicyBasic&) = delete;
+  static ZxPolicyBasic* instance_;
+};
+
+ZxPolicyBasic* ZxPolicyBasic::instance_ = nullptr;
+
+const ZxPolicyBasic* ZxPolicyBasic::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPolicyBasic;
+  }
+  return instance_;
+}
+
+class ZxPolicyTimerSlack : public Class<zx_policy_timer_slack_t> {
+ public:
+  static const ZxPolicyTimerSlack* GetClass();
+
+  static zx_duration_t min_slack(const zx_policy_timer_slack_t* from) { return from->min_slack; }
+  static uint32_t default_mode(const zx_policy_timer_slack_t* from) { return from->default_mode; }
+
+ private:
+  ZxPolicyTimerSlack() : Class("zx_policy_timer_slack_t") {
+    AddField(std::make_unique<ClassField<zx_policy_timer_slack_t, zx_duration_t>>(
+        "min_slack", SyscallType::kDuration, min_slack));
+    AddField(std::make_unique<ClassField<zx_policy_timer_slack_t, uint32_t>>(
+        "default_mode", SyscallType::kTimerOption, default_mode));
+  }
+  ZxPolicyTimerSlack(const ZxPolicyTimerSlack&) = delete;
+  ZxPolicyTimerSlack& operator=(const ZxPolicyTimerSlack&) = delete;
+  static ZxPolicyTimerSlack* instance_;
+};
+
+ZxPolicyTimerSlack* ZxPolicyTimerSlack::instance_ = nullptr;
+
+const ZxPolicyTimerSlack* ZxPolicyTimerSlack::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPolicyTimerSlack;
+  }
+  return instance_;
+}
+
 class ZxPortPacket : public Class<zx_port_packet_t> {
  public:
   static const ZxPortPacket* GetClass();
@@ -2264,16 +2321,16 @@ void SyscallDecoderDispatcher::Populate() {
     auto count = zx_object_wait_many->Argument<size_t>(SyscallType::kSize);
     auto deadline = zx_object_wait_many->Argument<zx_time_t>(SyscallType::kTime);
     // Inputs
-    zx_object_wait_many->InputObjectArray<zx_wait_item_t>(
+    zx_object_wait_many->InputObjectArray<zx_wait_item_t, size_t>(
         "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
         std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
     zx_object_wait_many->Input<zx_time_t>("deadline",
                                           std::make_unique<ArgumentAccess<zx_time_t>>(deadline));
     // Outputs
-    zx_object_wait_many->OutputObjectArray<zx_wait_item_t>(
+    zx_object_wait_many->OutputObjectArray<zx_wait_item_t, size_t>(
         ZX_OK, "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
         std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
-    zx_object_wait_many->OutputObjectArray<zx_wait_item_t>(
+    zx_object_wait_many->OutputObjectArray<zx_wait_item_t, size_t>(
         ZX_ERR_CANCELED, "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
         std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
   }
@@ -2467,7 +2524,7 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_PROCESS_MAPS);
     zx_object_get_info
-        ->OutputObjectArray<zx_info_maps_t>(
+        ->OutputObjectArray<zx_info_maps_t, size_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoMaps::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
@@ -2479,7 +2536,7 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_PROCESS_VMOS);
     zx_object_get_info
-        ->OutputObjectArray<zx_info_vmo_t>(
+        ->OutputObjectArray<zx_info_vmo_t, size_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoVmo::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
@@ -2747,7 +2804,7 @@ void SyscallDecoderDispatcher::Populate() {
                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
   }
 
-  { Add("zx_thread_exit", SyscallReturnType::kVoid); }
+  { Add("zx_thread_exit", SyscallReturnType::kNoReturn); }
 
   {
     Syscall* zx_thread_create = Add("zx_thread_create", SyscallReturnType::kStatus);
@@ -2956,7 +3013,7 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_process_exit = Add("zx_process_exit", SyscallReturnType::kVoid);
+    Syscall* zx_process_exit = Add("zx_process_exit", SyscallReturnType::kNoReturn);
     // Arguments
     auto retcode = zx_process_exit->Argument<int64_t>(SyscallType::kInt64);
     // Inputs
@@ -3052,6 +3109,136 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
+    Syscall* zx_job_create = Add("zx_job_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto parent_job = zx_job_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_job_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_job_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_job_create->Input<zx_handle_t>("parent_job",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(parent_job));
+    zx_job_create->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_job_create->Output<zx_handle_t>(ZX_OK, "out",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_job_set_policy = Add("zx_job_set_policy", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_job_set_policy->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_job_set_policy->Argument<uint32_t>(SyscallType::kUint32);
+    auto topic = zx_job_set_policy->Argument<uint32_t>(SyscallType::kPolicyTopic);
+    auto policy = zx_job_set_policy->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto count = zx_job_set_policy->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_job_set_policy->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_job_set_policy->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_job_set_policy->Input<uint32_t>("topic", std::make_unique<ArgumentAccess<uint32_t>>(topic));
+    zx_job_set_policy
+        ->InputObjectArray<zx_policy_basic_t, uint32_t>(
+            "policy", std::make_unique<ArgumentAccess<uint8_t>>(policy),
+            std::make_unique<ArgumentAccess<uint32_t>>(count), ZxPolicyBasic::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_JOB_POL_BASIC);
+    zx_job_set_policy
+        ->InputObject<zx_policy_timer_slack_t>("policy",
+                                               std::make_unique<ArgumentAccess<uint8_t>>(policy),
+                                               ZxPolicyTimerSlack::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_JOB_POL_TIMER_SLACK);
+  }
+
+  {
+    Syscall* zx_task_bind_exception_port =
+        Add("zx_task_bind_exception_port", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_bind_exception_port->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto port = zx_task_bind_exception_port->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto key = zx_task_bind_exception_port->Argument<uint64_t>(SyscallType::kUint64);
+    auto options = zx_task_bind_exception_port->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_task_bind_exception_port->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_task_bind_exception_port->Input<zx_handle_t>(
+        "port", std::make_unique<ArgumentAccess<zx_handle_t>>(port));
+    zx_task_bind_exception_port->Input<uint64_t>("key",
+                                                 std::make_unique<ArgumentAccess<uint64_t>>(key));
+    zx_task_bind_exception_port->Input<uint32_t>(
+        "options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_task_suspend = Add("zx_task_suspend", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_suspend->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto token = zx_task_suspend->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_task_suspend->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_task_suspend->Output<zx_handle_t>(ZX_OK, "token",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(token));
+  }
+
+  {
+    Syscall* zx_task_suspend_token = Add("zx_task_suspend_token", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_suspend_token->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto token = zx_task_suspend_token->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_task_suspend_token->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_task_suspend_token->Output<zx_handle_t>(
+        ZX_OK, "token", std::make_unique<ArgumentAccess<zx_handle_t>>(token));
+  }
+
+  {
+    Syscall* zx_task_resume_from_exception =
+        Add("zx_task_resume_from_exception", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_resume_from_exception->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto port = zx_task_resume_from_exception->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_task_resume_from_exception->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_task_resume_from_exception->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_task_resume_from_exception->Input<zx_handle_t>(
+        "port", std::make_unique<ArgumentAccess<zx_handle_t>>(port));
+    zx_task_resume_from_exception->Input<uint32_t>(
+        "options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_task_create_exception_channel =
+        Add("zx_task_create_exception_channel", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_create_exception_channel->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_task_create_exception_channel->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_task_create_exception_channel->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_task_create_exception_channel->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_task_create_exception_channel->Input<uint32_t>(
+        "options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_task_create_exception_channel->Output<zx_handle_t>(
+        ZX_OK, "out", std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_task_kill = Add("zx_task_kill", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_task_kill->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_task_kill->Input<zx_handle_t>("handle",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
     Syscall* zx_exception_get_thread = Add("zx_exception_get_thread", SyscallReturnType::kStatus);
     // Arguments
     auto handle = zx_exception_get_thread->Argument<zx_handle_t>(SyscallType::kHandle);
@@ -3104,6 +3291,130 @@ void SyscallDecoderDispatcher::Populate() {
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_eventpair_create->Output<zx_handle_t>(ZX_OK, "out1",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+  }
+
+  {
+    Syscall* zx_futex_wait = Add("zx_futex_wait", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr = zx_futex_wait->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto current_value = zx_futex_wait->Argument<zx_futex_t>(SyscallType::kFutex);
+    auto new_futex_owner = zx_futex_wait->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto deadline = zx_futex_wait->Argument<zx_time_t>(SyscallType::kTime);
+    // Inputs
+    zx_futex_wait->Input<zx_futex_t>("value_ptr",
+                                     std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    zx_futex_wait->Input<zx_futex_t>("current_value",
+                                     std::make_unique<ArgumentAccess<zx_futex_t>>(current_value));
+    zx_futex_wait->Input<zx_handle_t>(
+        "new_futex_owner", std::make_unique<ArgumentAccess<zx_handle_t>>(new_futex_owner));
+    zx_futex_wait->Input<zx_time_t>("deadline",
+                                    std::make_unique<ArgumentAccess<zx_time_t>>(deadline));
+  }
+
+  {
+    Syscall* zx_futex_wake = Add("zx_futex_wake", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr = zx_futex_wake->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto wake_count = zx_futex_wake->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_futex_wake->Input<zx_futex_t>("value_ptr",
+                                     std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    zx_futex_wake->Input<uint32_t>("wake_count",
+                                   std::make_unique<ArgumentAccess<uint32_t>>(wake_count));
+  }
+
+  {
+    Syscall* zx_futex_requeue = Add("zx_futex_requeue", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr = zx_futex_requeue->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto wake_count = zx_futex_requeue->Argument<uint32_t>(SyscallType::kUint32);
+    auto current_value = zx_futex_requeue->Argument<zx_futex_t>(SyscallType::kFutex);
+    auto requeue_ptr = zx_futex_requeue->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto requeue_count = zx_futex_requeue->Argument<uint32_t>(SyscallType::kUint32);
+    auto new_requeue_owner = zx_futex_requeue->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_futex_requeue->Input<zx_futex_t>("value_ptr",
+                                        std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    zx_futex_requeue->Input<uint32_t>("wake_count",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(wake_count));
+    zx_futex_requeue->Input<zx_futex_t>(
+        "current_value", std::make_unique<ArgumentAccess<zx_futex_t>>(current_value));
+    zx_futex_requeue->Input<zx_futex_t>("requeue_ptr",
+                                        std::make_unique<ArgumentAccess<zx_futex_t>>(requeue_ptr));
+    zx_futex_requeue->Input<uint32_t>("requeue_count",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(requeue_count));
+    zx_futex_requeue->Input<zx_handle_t>(
+        "new_requeue_owner", std::make_unique<ArgumentAccess<zx_handle_t>>(new_requeue_owner));
+  }
+
+  {
+    Syscall* zx_futex_wake_single_owner =
+        Add("zx_futex_wake_single_owner", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr = zx_futex_wake_single_owner->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    // Inputs
+    zx_futex_wake_single_owner->Input<zx_futex_t>(
+        "value_ptr", std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+  }
+
+  {
+    Syscall* zx_futex_requeue_single_owner =
+        Add("zx_futex_requeue_single_owner", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr =
+        zx_futex_requeue_single_owner->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto current_value = zx_futex_requeue_single_owner->Argument<zx_futex_t>(SyscallType::kFutex);
+    auto requeue_ptr =
+        zx_futex_requeue_single_owner->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto requeue_count = zx_futex_requeue_single_owner->Argument<uint32_t>(SyscallType::kUint32);
+    auto new_requeue_owner =
+        zx_futex_requeue_single_owner->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_futex_requeue_single_owner->Input<zx_futex_t>(
+        "value_ptr", std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    zx_futex_requeue_single_owner->Input<zx_futex_t>(
+        "current_value", std::make_unique<ArgumentAccess<zx_futex_t>>(current_value));
+    zx_futex_requeue_single_owner->Input<zx_futex_t>(
+        "requeue_ptr", std::make_unique<ArgumentAccess<zx_futex_t>>(requeue_ptr));
+    zx_futex_requeue_single_owner->Input<uint32_t>(
+        "requeue_count", std::make_unique<ArgumentAccess<uint32_t>>(requeue_count));
+    zx_futex_requeue_single_owner->Input<zx_handle_t>(
+        "new_requeue_owner", std::make_unique<ArgumentAccess<zx_handle_t>>(new_requeue_owner));
+  }
+
+  {
+    Syscall* zx_futex_get_owner = Add("zx_futex_get_owner", SyscallReturnType::kStatus);
+    // Arguments
+    auto value_ptr = zx_futex_get_owner->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto koid = zx_futex_get_owner->PointerArgument<zx_koid_t>(SyscallType::kKoid);
+    // Inputs
+    zx_futex_get_owner->Input<zx_futex_t>("value_ptr",
+                                          std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    // Outputs
+    zx_futex_get_owner->Output<zx_koid_t>(ZX_OK, "koid",
+                                          std::make_unique<ArgumentAccess<zx_koid_t>>(koid));
+  }
+
+  {
+    Syscall* zx_futex_wake_handle_close_thread_exit =
+        Add("zx_futex_wake_handle_close_thread_exit", SyscallReturnType::kNoReturn);
+    // Arguments
+    auto value_ptr =
+        zx_futex_wake_handle_close_thread_exit->PointerArgument<zx_futex_t>(SyscallType::kFutex);
+    auto wake_count =
+        zx_futex_wake_handle_close_thread_exit->Argument<uint32_t>(SyscallType::kUint32);
+    auto new_value = zx_futex_wake_handle_close_thread_exit->Argument<int32_t>(SyscallType::kInt32);
+    auto close_handle =
+        zx_futex_wake_handle_close_thread_exit->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_futex_wake_handle_close_thread_exit->Input<zx_futex_t>(
+        "value_ptr", std::make_unique<ArgumentAccess<zx_futex_t>>(value_ptr));
+    zx_futex_wake_handle_close_thread_exit->Input<uint32_t>(
+        "wake_count", std::make_unique<ArgumentAccess<uint32_t>>(wake_count));
+    zx_futex_wake_handle_close_thread_exit->Input<int32_t>(
+        "new_value", std::make_unique<ArgumentAccess<int32_t>>(new_value));
+    zx_futex_wake_handle_close_thread_exit->Input<zx_handle_t>(
+        "close_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(close_handle));
   }
 
   {

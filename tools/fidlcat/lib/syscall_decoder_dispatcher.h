@@ -83,6 +83,12 @@ template <>
 inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_t value,
                                   std::ostream& os) {
   switch (type) {
+    case SyscallType::kInt32:
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kFutex:
+      os << colors.red << value << colors.reset;
+      break;
     case SyscallType::kStatus:
       StatusName(colors, value, os);
       break;
@@ -101,6 +107,9 @@ inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_
       break;
     case SyscallType::kDuration:
       os << DisplayDuration(colors, value);
+      break;
+    case SyscallType::kFutex:
+      os << colors.red << value << colors.reset;
       break;
     case SyscallType::kMonotonicTime:
       os << DisplayDuration(colors, value);
@@ -276,6 +285,21 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       ObjTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kPolicyAction:
+      os << colors.blue;
+      PolicyActionName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kPolicyCondition:
+      os << colors.blue;
+      PolicyConditionName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kPolicyTopic:
+      os << colors.blue;
+      PolicyTopicName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kPortPacketType:
       os << colors.blue;
       PortPacketTypeName(value, os);
@@ -329,6 +353,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
     case SyscallType::kThreadStateTopic:
       os << colors.blue;
       ThreadStateTopicName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kTimerOption:
+      os << colors.blue;
+      TimerOptionName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kVmOption:
@@ -1392,12 +1421,12 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
 };
 
 // An input/output which is an array of objects. This is always displayed outline.
-template <typename ClassType>
+template <typename ClassType, typename SizeType>
 class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
  public:
   SyscallInputOutputObjectArray(int64_t error_code, std::string_view name,
                                 std::unique_ptr<AccessBase> buffer,
-                                std::unique_ptr<Access<size_t>> buffer_size,
+                                std::unique_ptr<Access<SizeType>> buffer_size,
                                 const Class<ClassType>* class_definition)
       : SyscallInputOutputBase(error_code, name),
         buffer_(std::move(buffer)),
@@ -1423,7 +1452,7 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
   // Access to the buffer (raw data) which contains the object.
   const std::unique_ptr<AccessBase> buffer_;
   // Access to the buffer size.
-  const std::unique_ptr<Access<size_t>> buffer_size_;
+  const std::unique_ptr<Access<SizeType>> buffer_size_;
   // Class definition for the displayed object.
   const Class<ClassType>* class_definition_;
 };
@@ -1615,11 +1644,11 @@ class Syscall {
   }
 
   // Adds an object array input to display.
-  template <typename ClassType>
-  SyscallInputOutputObjectArray<ClassType>* InputObjectArray(
+  template <typename ClassType, typename SizeType>
+  SyscallInputOutputObjectArray<ClassType, SizeType>* InputObjectArray(
       std::string_view name, std::unique_ptr<AccessBase> buffer,
-      std::unique_ptr<Access<size_t>> buffer_size, const Class<ClassType>* class_definition) {
-    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType>>(
+      std::unique_ptr<Access<SizeType>> buffer_size, const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType, SizeType>>(
         0, name, std::move(buffer), std::move(buffer_size), class_definition);
     auto result = object.get();
     inputs_.push_back(std::move(object));
@@ -1701,11 +1730,11 @@ class Syscall {
   }
 
   // Adds an object array output to display.
-  template <typename ClassType>
-  SyscallInputOutputObjectArray<ClassType>* OutputObjectArray(
+  template <typename ClassType, typename SizeType>
+  SyscallInputOutputObjectArray<ClassType, SizeType>* OutputObjectArray(
       int64_t error_code, std::string_view name, std::unique_ptr<AccessBase> buffer,
-      std::unique_ptr<Access<size_t>> buffer_size, const Class<ClassType>* class_definition) {
-    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType>>(
+      std::unique_ptr<Access<SizeType>> buffer_size, const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType, SizeType>>(
         error_code, name, std::move(buffer), std::move(buffer_size), class_definition);
     auto result = object.get();
     outputs_.push_back(std::move(object));
@@ -1998,11 +2027,10 @@ void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatche
   os << '\n';
 }
 
-template <typename ClassType>
-void SyscallInputOutputObjectArray<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                              SyscallDecoder* decoder, Stage stage,
-                                                              std::string_view line_header,
-                                                              int tabs, std::ostream& os) const {
+template <typename ClassType, typename SizeType>
+void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    std::string_view line_header, int tabs, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
   os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
      << class_definition_->name() << colors.reset << "[]: ";
@@ -2011,9 +2039,9 @@ void SyscallInputOutputObjectArray<ClassType>::DisplayOutline(SyscallDisplayDisp
     os << colors.red << "nullptr" << colors.reset;
   } else {
     os << " {";
-    size_t count = buffer_size_->Value(decoder, stage);
+    SizeType count = buffer_size_->Value(decoder, stage);
     const char* separator = "\n";
-    for (size_t i = 0; i < count; ++i) {
+    for (SizeType i = 0; i < count; ++i) {
       os << separator << line_header << std::string((tabs + 2) * kTabSize, ' ');
       class_definition_->DisplayObject(object + i, decoder->arch(), colors, line_header, tabs + 2,
                                        os);

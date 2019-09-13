@@ -31,6 +31,7 @@ enum class SyscallType {
   kBool,
   kChar,
   kCharArray,
+  kInt32,
   kInt64,
   kUint8,
   kUint8Hexa,
@@ -55,6 +56,7 @@ enum class SyscallType {
   kDuration,
   kExceptionChannelType,
   kFeatureKind,
+  kFutex,
   kGpAddr,
   kHandle,
   kInfoMapsType,
@@ -66,6 +68,9 @@ enum class SyscallType {
   kObjType,
   kPacketGuestVcpuType,
   kPacketPageRequestCommand,
+  kPolicyAction,
+  kPolicyCondition,
+  kPolicyTopic,
   kPortPacketType,
   kRights,
   kRsrcKind,
@@ -80,6 +85,7 @@ enum class SyscallType {
   kThreadState,
   kThreadStateTopic,
   kTime,
+  kTimerOption,
   kUintptr,
   kVaddr,
   kVmOption,
@@ -88,7 +94,7 @@ enum class SyscallType {
 };
 
 enum class SyscallReturnType {
-  kVoid,
+  kNoReturn,
   kStatus,
   kTicks,
   kTime,
@@ -124,6 +130,9 @@ void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
 void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
+void PolicyActionName(uint32_t action, std::ostream& os);
+void PolicyConditionName(uint32_t condition, std::ostream& os);
+void PolicyTopicName(uint32_t topic, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
 void RightsName(zx_rights_t rights, std::ostream& os);
 void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
@@ -137,6 +146,7 @@ void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
 void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
 void ThreadStateName(uint32_t state, std::ostream& os);
 void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os);
+void TimerOptionName(uint32_t option, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);

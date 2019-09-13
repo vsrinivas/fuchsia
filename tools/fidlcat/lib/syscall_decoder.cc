@@ -244,7 +244,7 @@ void SyscallDecoder::LoadInputs() {
 void SyscallDecoder::StepToReturnAddress() {
   use_->SyscallInputsDecoded(this);
 
-  if (syscall_->return_type() == SyscallReturnType::kVoid) {
+  if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
     // We don't expect the syscall to return and it doesn't have any output.
     use_->SyscallOutputsDecoded(this);
     return;
@@ -343,7 +343,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 }
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
-  if (decoder->syscall()->return_type() != SyscallReturnType::kVoid) {
+  if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
     const Colors& colors = dispatcher_->colors();
     // Displays the returned value.
     if (dispatcher_->last_displayed_syscall() != this) {
@@ -361,7 +361,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
       os_ << line_header_ << "  -> ";
     }
     switch (decoder->syscall()->return_type()) {
-      case SyscallReturnType::kVoid:
+      case SyscallReturnType::kNoReturn:
         break;
       case SyscallReturnType::kStatus:
         StatusName(colors, static_cast<zx_status_t>(decoder->syscall_return_value()), os_);
