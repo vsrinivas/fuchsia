@@ -93,17 +93,31 @@ impl WorkItem {
     }
 }
 
+/// State maintained by a `WorkScheduler`, kept consistent via a single `Mutex`.
+struct WorkSchedulerState {
+    /// Scheduled work items that have not been dispatched.
+    pub work_items: Vec<WorkItem>,
+    /// Period between wakeup, batch, dispatch cycles.
+    pub period: i64,
+}
+
+impl WorkSchedulerState {
+    pub fn new() -> Self {
+        WorkSchedulerState { work_items: Vec::new(), period: std::i64::MAX }
+    }
+}
+
 /// Provides a common facility for scheduling canceling work. Each component instance manages its
 /// work items in isolation from each other, but the `WorkScheduler` maintains a collection of all
 /// items to make global scheduling decisions.
 #[derive(Clone)]
 pub struct WorkScheduler {
-    work_items: Arc<Mutex<Vec<WorkItem>>>,
+    state: Arc<Mutex<WorkSchedulerState>>,
 }
 
 impl WorkScheduler {
     pub fn new() -> Self {
-        Self { work_items: Arc::new(Mutex::new(Vec::new())) }
+        Self { state: Arc::new(Mutex::new(WorkSchedulerState::new())) }
     }
 
     pub fn hooks(&self) -> Vec<Hook> {
@@ -116,7 +130,8 @@ impl WorkScheduler {
         work_id: &str,
         work_request: &fsys::WorkRequest,
     ) -> Result<(), fsys::Error> {
-        let mut work_items = self.work_items.lock().await;
+        let mut state = self.state.lock().await;
+        let work_items = &mut state.work_items;
         let work_item = WorkItem::try_new(abs_moniker, work_id, work_request)?;
 
         if work_items.contains(&work_item) {
@@ -133,7 +148,8 @@ impl WorkScheduler {
         abs_moniker: &AbsoluteMoniker,
         work_id: &str,
     ) -> Result<(), fsys::Error> {
-        let mut work_items = self.work_items.lock().await;
+        let mut state = self.state.lock().await;
+        let work_items = &mut state.work_items;
         let work_item = WorkItem::new_by_identity(abs_moniker, work_id);
 
         // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
@@ -148,6 +164,17 @@ impl WorkScheduler {
             return Err(fsys::Error::InstanceNotFound);
         }
 
+        Ok(())
+    }
+
+    pub async fn get_batch_period(&self) -> Result<zx::Duration, fsys::Error> {
+        let state = self.state.lock().await;
+        Ok(zx::Duration::from_nanos(state.period))
+    }
+
+    pub async fn set_batch_period(&mut self, period: zx::Duration) -> Result<(), fsys::Error> {
+        let mut state = self.state.lock().await;
+        state.period = period.into_nanos();
         Ok(())
     }
 
@@ -302,7 +329,8 @@ mod tests {
         abs_moniker: &AbsoluteMoniker,
         work_id: &str,
     ) -> Result<(i64, Option<i64>), fsys::Error> {
-        let work_items = work_scheduler.work_items.lock().await;
+        let state = work_scheduler.state.lock().await;
+        let work_items = &state.work_items;
         match work_items
             .iter()
             .find(|work_item| &work_item.abs_moniker == abs_moniker && work_item.id == work_id)
@@ -313,8 +341,8 @@ mod tests {
     }
 
     async fn get_all_by_deadline(work_scheduler: &WorkScheduler) -> Vec<WorkItem> {
-        let work_items = work_scheduler.work_items.lock().await;
-        work_items.clone()
+        let state = work_scheduler.state.lock().await;
+        state.work_items.clone()
     }
 
     fn child(parent: &AbsoluteMoniker, name: &str) -> AbsoluteMoniker {
@@ -470,5 +498,16 @@ mod tests {
             ],
             get_all_by_deadline(&work_scheduler).await
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn work_scheduler_batch_period() {
+        let mut work_scheduler = WorkScheduler::new();
+        assert_eq!(
+            Ok(zx::Duration::from_nanos(std::i64::MAX)),
+            work_scheduler.get_batch_period().await
+        );
+        assert_eq!(Ok(()), work_scheduler.set_batch_period(zx::Duration::from_nanos(SECOND)).await);
+        assert_eq!(Ok(zx::Duration::from_nanos(SECOND)), work_scheduler.get_batch_period().await)
     }
 }
