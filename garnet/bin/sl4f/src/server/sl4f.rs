@@ -40,6 +40,9 @@ use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
 use crate::common_utils::error::Sl4fError;
 
+// Factory related includes
+use crate::factory_store::facade::FactoryStoreFacade;
+
 // File related includes
 use crate::file::facade::FileFacade;
 
@@ -91,6 +94,9 @@ pub struct Sl4f {
     // bt_control_facade: Thread safe object for state for  Bluetooth control tests
     bt_control_facade: Arc<BluetoothControlFacade>,
 
+    // factory_store_facade: Thread safe object for state for Factory functions.
+    factory_store_facade: Arc<FactoryStoreFacade>,
+
     // file_facade: Thread safe object for state for  File control functions
     file_facade: Arc<FileFacade>,
 
@@ -140,6 +146,7 @@ impl Sl4f {
         let basemgr_facade = Arc::new(BaseManagerFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let bt_control_facade = Arc::new(BluetoothControlFacade::new());
+        let factory_store_facade = Arc::new(FactoryStoreFacade::new());
         let file_facade = Arc::new(FileFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
@@ -159,6 +166,7 @@ impl Sl4f {
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
             bt_control_facade,
+            factory_store_facade,
             file_facade,
             gatt_client_facade,
             gatt_server_facade,
@@ -197,6 +205,10 @@ impl Sl4f {
 
     pub fn get_bt_control_facade(&self) -> Arc<BluetoothControlFacade> {
         self.bt_control_facade.clone()
+    }
+
+    pub fn get_factory_store_facade(&self) -> Arc<FactoryStoreFacade> {
+        self.factory_store_facade.clone()
     }
 
     pub fn get_file_facade(&self) -> Arc<FileFacade> {

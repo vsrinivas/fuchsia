@@ -654,6 +654,120 @@
       "name": "exceptions.dart",
       "type": "file"
     },
+    "factory_store.dart": {
+      "ClassDeclarationImpl": {
+        "FactoryStore": {
+          "ConstructorDeclarationImpl": {
+            "FactoryStore": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FactoryStore",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "listFiles": {
+              "SimpleFormalParameterImpl": {
+                "provider": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "provider",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FactoryStoreProvider"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "listFiles",
+              "returnType": "Future<List<String>>",
+              "type": "MethodDeclarationImpl"
+            },
+            "readFile": {
+              "SimpleFormalParameterImpl": {
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "provider": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "provider",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FactoryStoreProvider"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "readFile",
+              "returnType": "Future<Uint8List>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "FactoryStore",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "EnumDeclarationImpl": {
+        "FactoryStoreProvider": {
+          "EnumConstantDeclarationImpl": {
+            "cast": {
+              "name": "cast",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "misc": {
+              "name": "misc",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "playready": {
+              "name": "playready",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "widevine": {
+              "name": "widevine",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "FactoryStoreProvider",
+          "type": "EnumDeclarationImpl"
+        }
+      },
+      "name": "factory_store.dart",
+      "type": "file"
+    },
     "input.dart": {
       "ClassDeclarationImpl": {
         "Input": {
@@ -1524,6 +1638,10 @@
         },
         "src/exceptions.dart": {
           "name": "src/exceptions.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/factory_store.dart": {
+          "name": "src/factory_store.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/input.dart": {

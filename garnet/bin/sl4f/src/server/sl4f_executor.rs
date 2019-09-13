@@ -25,6 +25,7 @@ use crate::bluetooth::commands::gatt_client_method_to_fidl;
 use crate::bluetooth::commands::gatt_server_method_to_fidl;
 use crate::bluetooth::commands::profile_server_method_to_fidl;
 use crate::common_utils::error::Sl4fError;
+use crate::factory_store::commands::factory_store_method_to_fidl;
 use crate::file::commands::file_method_to_fidl;
 use crate::logging::commands::logging_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
@@ -121,6 +122,14 @@ async fn method_to_fidl(
             )
             .await
         }
+        FacadeType::FactoryStoreFacade => {
+            factory_store_method_to_fidl(
+                method_name,
+                args,
+                sl4f_session.read().get_factory_store_facade(),
+            )
+            .await
+        }
         FacadeType::FileFacade => {
             file_method_to_fidl(method_name, args, sl4f_session.read().get_file_facade()).await
         }
@@ -177,7 +186,8 @@ async fn method_to_fidl(
             wlan_method_to_fidl(method_name, args, sl4f_session.read().get_wlan_facade()).await
         }
         _ => {
-            Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_type).to_string()).into())
+            Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_type).to_string())
+                .into())
         }
     }
 }

@@ -23,6 +23,8 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/connectivity-testing",
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
@@ -42,6 +44,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
@@ -72,9 +75,17 @@ rustc_library("lib") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+  ]
+
+  test_deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
   ]
 }
 
@@ -111,6 +122,48 @@ package("sl4f") {
   binary = "sl4f"
 }
 
+test_package("sl4f-service-tests") {
+  deps = [
+    ":lib_test",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("testdata/cast_factory_store.config")
+      dest = "cast_factory_store.config"
+    },
+    {
+      path = rebase_path("testdata/misc_factory_store.config")
+      dest = "misc_factory_store.config"
+    },
+    {
+      path = rebase_path("testdata/playready_factory_store.config")
+      dest = "playready_factory_store.config"
+    },
+    {
+      path = rebase_path("testdata/widevine_factory_store.config")
+      dest = "widevine_factory_store.config"
+    },
+  ]
+
+  tests = [
+    {
+      name = "sl4f_lib_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+config_data("fake-factory-store-providers-config") {
+  for_pkg = "fake_factory_store_providers"
+  sources = [
+    "testdata/cast_factory_store.config",
+    "testdata/misc_factory_store.config",
+    "testdata/playready_factory_store.config",
+    "testdata/widevine_factory_store.config",
+  ]
+}
+
 unittest_package("sl4f-tests") {
   deps = [
     ":bin_test",
@@ -125,9 +178,19 @@ unittest_package("sl4f-tests") {
   ]
 }
 
+group("service-tests") {
+  testonly = true
+  deps = [
+    ":fake-factory-store-providers-config",
+    ":sl4f-service-tests",
+    "//src/factory/fake_factory_store_providers",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":service-tests",
     ":sl4f-tests",
     "tests",
   ]
