@@ -11,6 +11,7 @@ dart_library("settings") {
   sources = [
     "settings.dart",
     "src/brightness.dart",
+    "src/cpu.dart",
   ]
 
   deps = [
@@ -24,6 +25,7 @@ dart_library("settings") {
 flutter_test("ermine_settings_unittests") {
   sources = [
     "brightness_test.dart",
+    "cpu_test.dart",
   ]
 
   deps = [

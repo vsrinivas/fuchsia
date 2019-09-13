@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 export 'src/brightness.dart';
+export 'src/cpu.dart';
