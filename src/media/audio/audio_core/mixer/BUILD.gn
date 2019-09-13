@@ -21,8 +21,6 @@ source_set("mixer") {
     "output_producer.h",
     "point_sampler.cc",
     "point_sampler.h",
-    "usage_gain_settings.cc",
-    "usage_gain_settings.h",
   ]
 
   public_deps = [
@@ -66,7 +64,6 @@ executable("unittest_bin") {
   sources = [
     "bookkeeping_unittest.cc",
     "output_producer_unittest.cc",
-    "usage_gain_settings_unittest.cc",
   ]
 
   deps = [

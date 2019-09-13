@@ -152,6 +152,8 @@ source_set("audio_core_lib") {
     "stream_volume_manager.cc",
     "stream_volume_manager.h",
     "throttle_output.h",
+    "usage_settings.cc",
+    "usage_settings.h",
     "utils.cc",
     "utils.h",
     "volume_curve.cc",
@@ -226,6 +228,7 @@ executable("unittest_bin") {
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "stream_volume_manager_unittest.cc",
+    "usage_settings_unittest.cc",
     "utils_unittest.cc",
     "volume_curve_unittest.cc",
   ]

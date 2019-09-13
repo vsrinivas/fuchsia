@@ -56,17 +56,6 @@ TEST(StreamVolumeManagerTest, ChangingUsageGainUpdatesRegisteredStreams) {
   EXPECT_FLOAT_EQ(mock.adjusted_gain_db_, -10.0);
 }
 
-TEST(StreamVolumeManagerTest, UsageGainIsClampedToUnity) {
-  MockStreamGain mock;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
-
-  StreamVolumeManager manager;
-  manager.AddStream(&mock);
-  manager.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 10.0);
-
-  EXPECT_EQ(mock.adjusted_gain_db_, Gain::kUnityGainDb);
-}
-
 TEST(StreamVolumeManagerTest, StreamGainIsConsidered) {
   MockStreamGain mock;
   mock.stream_gain_db_ = -20.0;

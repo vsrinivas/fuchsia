@@ -55,12 +55,13 @@ class Gain {
   static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
   // Higher-precision (but slower) version currently used only by fidelity tests
   static double DoubleToDb(double val) { return std::log10(val) * 20.0; }
-  static inline float CombineGains(float gain_db_a, float gain_db_b) {
+  static inline float CombineGains(float gain_db_a, float gain_db_b,
+                                   float max_gain_db = kMaxGainDb) {
     if (gain_db_a <= kMinGainDb || gain_db_b <= kMinGainDb) {
       return kMinGainDb;
     }
 
-    return fbl::clamp(gain_db_a + gain_db_b, kMinGainDb, kMaxGainDb);
+    return fbl::clamp(gain_db_a + gain_db_b, kMinGainDb, max_gain_db);
   }
 
   // Helper constant values in the gain-scale domain.

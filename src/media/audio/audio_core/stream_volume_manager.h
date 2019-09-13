@@ -12,7 +12,7 @@
 #include <unordered_set>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
-#include "src/media/audio/audio_core/mixer/usage_gain_settings.h"
+#include "src/media/audio/audio_core/usage_settings.h"
 
 namespace media::audio {
 

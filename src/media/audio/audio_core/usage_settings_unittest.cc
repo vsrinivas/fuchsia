@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/usage_gain_settings.h"
+#include "src/media/audio/audio_core/usage_settings.h"
 
 #include <gtest/gtest.h>
+
+#include "src/media/audio/audio_core/mixer/gain.h"
 
 namespace media::audio {
 namespace {
@@ -24,10 +26,7 @@ TEST(UsageGainSettingsTest, BasicRenderUsageGainPersists) {
                     kArbitraryGainValue + kArbitraryGainAdjustment);
   };
 
-  test_usage(fuchsia::media::AudioRenderUsage::BACKGROUND);
   test_usage(fuchsia::media::AudioRenderUsage::MEDIA);
-  test_usage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
-  test_usage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
   test_usage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
 }
 
@@ -45,6 +44,14 @@ TEST(UsageGainSettingsTest, BasicCaptureUsageGainPersists) {
 
   test_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
   test_usage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+}
+
+TEST(UsageGainSettingsTest, UsageGainCannotExceedUnity) {
+  const auto usage = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  UsageGainSettings under_test;
+  under_test.SetUsageGain(fidl::Clone(usage), 10.0);
+
+  EXPECT_FLOAT_EQ(under_test.GetUsageGain(fidl::Clone(usage)), Gain::kUnityGainDb);
 }
 
 }  // namespace
