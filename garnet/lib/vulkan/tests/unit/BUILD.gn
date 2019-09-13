@@ -18,3 +18,15 @@ executable("test_image_pipe_swapchain") {
     "//zircon/public/lib/zx",
   ]
 }
+
+executable("test_vk_validation") {
+  testonly = true
+  sources = [
+    "test_validation_layers.cc",
+  ]
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//src/graphics/lib/vulkan",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

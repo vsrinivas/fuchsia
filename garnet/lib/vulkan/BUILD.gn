@@ -97,6 +97,24 @@ test_package("image-pipe-swapchain-tests") {
       vulkan_validation_layers.resources + image_pipe_swapchain.resources
 }
 
+test_package("test-vk-validation") {
+  deps = [
+    "tests/unit:test_vk_validation",
+    "//src/graphics/lib/vulkan:validation_layers",
+  ]
+
+  tests = [
+    {
+      name = "test_vk_validation"
+      environments = magma_libvulkan_hardware_envs
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
+
 package("vklatency_on_scenic") {
   testonly = true
 
