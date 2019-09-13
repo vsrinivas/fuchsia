@@ -11,7 +11,7 @@ use {
     },
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_app_discover::{
-        InstanceStateError, ModuleIdentifier, StoryModuleRequest, StoryModuleRequestStream,
+        ModuleIdentifier, StoryDiscoverError, StoryModuleRequest, StoryModuleRequestStream,
     },
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_modular::Intent,
@@ -77,14 +77,11 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
                             // TODO: bind controller.
                         }
                         StoryModuleRequest::WriteInstanceState { key, value, responder } => {
-                            self.handle_write_instance_state(&key, value).await?;
-                            responder.send(&mut Ok(()))?;
+                            let mut result = self.handle_write_instance_state(&key, value).await;
+                            responder.send(&mut result)?;
                         }
                         StoryModuleRequest::ReadInstanceState { key, responder } => {
-                            let mut result = self
-                                .handle_read_instance_state(&key)
-                                .await
-                                .map_err(|_| InstanceStateError::InvalidKey);
+                            let mut result = self.handle_read_instance_state(&key).await;
                             responder.send(&mut result)?;
                         }
                     }
@@ -142,7 +139,11 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
         Ok(())
     }
 
-    async fn handle_write_instance_state(&self, key: &str, value: Buffer) -> Result<(), Error> {
+    async fn handle_write_instance_state(
+        &self,
+        key: &str,
+        value: Buffer,
+    ) -> Result<(), StoryDiscoverError> {
         let mod_manager = self.mod_manager.lock();
         let mut story_manager = mod_manager.story_manager.lock();
         story_manager
@@ -150,17 +151,19 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
                 &self.story_id,
                 &self.module_id,
                 key,
-                utils::vmo_buffer_to_string(Box::new(value))?,
+                utils::vmo_buffer_to_string(Box::new(value))
+                    .map_err(|_| StoryDiscoverError::VmoStringConversion)?,
             )
             .await
     }
 
-    async fn handle_read_instance_state(&self, key: &str) -> Result<Buffer, Error> {
+    async fn handle_read_instance_state(&self, key: &str) -> Result<Buffer, StoryDiscoverError> {
         let mod_manager = self.mod_manager.lock();
         let story_manager = mod_manager.story_manager.lock();
         let state_string =
             story_manager.get_instance_state(&self.story_id, &self.module_id, &key).await?;
-        Ok(utils::string_to_vmo_buffer(state_string)?)
+        utils::string_to_vmo_buffer(state_string)
+            .map_err(|_| StoryDiscoverError::VmoStringConversion)
     }
 }
 

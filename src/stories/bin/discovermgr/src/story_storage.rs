@@ -4,8 +4,9 @@
 
 use {
     crate::{constants::TITLE_KEY, utils},
-    failure::{format_err, Error, ResultExt},
+    failure::{Error, ResultExt},
     fidl::encoding::OutOfLine,
+    fidl_fuchsia_app_discover::StoryDiscoverError,
     fidl_fuchsia_ledger::{
         Entry, Error as LedgerError, LedgerMarker, PageMarker, PageProxy, PageSnapshotMarker,
         Priority, Token,
@@ -30,31 +31,31 @@ pub trait StoryStorage: Send + Sync {
         story_name: &'a str,
         key: &'a str,
         value: String,
-    ) -> LocalFutureObj<'a, Result<(), Error>>;
+    ) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>>;
 
     // Get specific property of given story
     fn get_property<'a>(
         &'a self,
         story_name: &'a str,
         key: &'a str,
-    ) -> LocalFutureObj<'a, Result<String, Error>>;
+    ) -> LocalFutureObj<'a, Result<String, StoryDiscoverError>>;
 
     // Return the number of saved stories
-    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>>;
+    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, StoryDiscoverError>>;
 
     // Return ledger entries with the given prefix of key
     fn get_entries<'a>(
         &'a self,
         prefix: &'a str,
-    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>>;
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, StoryDiscoverError>>;
 
     // Return names and stories of all stories
     fn get_name_titles<'a>(
         &'a self,
-    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>>;
+    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, StoryDiscoverError>>;
 
     // Clear the storage
-    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), Error>>;
+    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>>;
 }
 
 pub struct MemoryStorage {
@@ -67,7 +68,7 @@ impl StoryStorage for MemoryStorage {
         story_name: &'a str,
         key: &'a str,
         value: String,
-    ) -> LocalFutureObj<'a, Result<(), Error>> {
+    ) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let memory_key = format!("{}/{}", key, story_name);
             self.properties.insert(memory_key, value);
@@ -79,25 +80,25 @@ impl StoryStorage for MemoryStorage {
         &'a self,
         story_name: &'a str,
         key: &'a str,
-    ) -> LocalFutureObj<'a, Result<String, Error>> {
+    ) -> LocalFutureObj<'a, Result<String, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let memory_key = format!("{}/{}", key, story_name);
             if self.properties.contains_key(&memory_key) {
                 Ok(self.properties[&memory_key].clone())
             } else {
-                Err(format_err!("fail to get property"))
+                Err(StoryDiscoverError::InvalidKey)
             }
         }))
     }
 
-    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>> {
+    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move { Ok(self.get_name_titles().await?.len()) }))
     }
 
     fn get_entries<'a>(
         &'a self,
         prefix: &'a str,
-    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>> {
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             Ok(self.properties.clone().into_iter().filter(|(k, _)| k.starts_with(prefix)).collect())
         }))
@@ -105,7 +106,7 @@ impl StoryStorage for MemoryStorage {
 
     fn get_name_titles<'a>(
         &'a self,
-    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
+    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let entries = self.get_entries(TITLE_KEY).await?;
             let results = entries
@@ -116,7 +117,7 @@ impl StoryStorage for MemoryStorage {
         }))
     }
 
-    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), Error>> {
+    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             self.properties.clear();
             Ok(())
@@ -144,45 +145,68 @@ impl LedgerStorage {
         Ok(LedgerStorage { page })
     }
 
-    async fn write(&self, key: &str, value: &str) -> Result<(), Error> {
+    async fn write(&self, key: &str, value: &str) -> Result<(), StoryDiscoverError> {
         let data_ref = self
             .page
-            .create_reference_from_buffer(&mut utils::string_to_vmo_buffer(value)?)
-            .await?;
+            .create_reference_from_buffer(
+                &mut utils::string_to_vmo_buffer(value)
+                    .map_err(|_| StoryDiscoverError::VmoStringConversion)?,
+            )
+            .await
+            .map_err(|_| StoryDiscoverError::Storage)?;
         match data_ref {
             Ok(mut data) => {
-                self.page.put_reference(&mut key.bytes(), &mut data, Priority::Eager)?;
+                self.page
+                    .put_reference(&mut key.bytes(), &mut data, Priority::Eager)
+                    .map_err(|_| StoryDiscoverError::Storage)?;
                 Ok(())
             }
             Err(e) => {
                 fx_log_err!("Unable to create data reference with error code: {}", e);
-                Err(format_err!("Unable to create data reference with error code: {}", e))
+                Err(StoryDiscoverError::Storage)
             }
         }
     }
 
-    async fn read(&self, prefix: &str, key: &str) -> Result<Option<String>, Error> {
-        let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()?;
-        self.page.get_snapshot(server_end, &mut prefix.bytes(), None)?;
-        let entry = snapshot.get(&mut key.bytes()).await?;
-        entry.and_then(|e| Ok(utils::vmo_buffer_to_string(Box::new(e)).ok())).or_else(|e| match e {
-            LedgerError::KeyNotFound => Ok(None), // handle the not-found error
-            _ => Err(format_err!("Unable to read with error code: {:?}", e)),
-        })
+    async fn read(&self, prefix: &str, key: &str) -> Result<String, StoryDiscoverError> {
+        let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()
+            .map_err(|_| StoryDiscoverError::Storage)?;
+        self.page
+            .get_snapshot(server_end, &mut prefix.bytes(), None)
+            .map_err(|_| StoryDiscoverError::Storage)?;
+        let entry =
+            snapshot.get(&mut key.bytes()).await.map_err(|_| StoryDiscoverError::Storage)?;
+        entry
+            .or_else(|e| match e {
+                LedgerError::KeyNotFound => Err(StoryDiscoverError::InvalidKey), // handle the not-found error
+                _ => Err(StoryDiscoverError::Storage),
+            })
+            .and_then(|e| {
+                utils::vmo_buffer_to_string(Box::new(e))
+                    .map_err(|_| StoryDiscoverError::VmoStringConversion)
+            })
     }
 
-    async fn read_keys(&self, prefix: &str) -> Result<Vec<LedgerKey>, Error> {
-        let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()?;
-        self.page.get_snapshot(server_end, &mut prefix.bytes(), None)?;
-        let mut results = snapshot.get_keys(&mut "".bytes(), None).await?;
+    async fn read_keys(&self, prefix: &str) -> Result<Vec<LedgerKey>, StoryDiscoverError> {
+        let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()
+            .map_err(|_| StoryDiscoverError::Storage)?;
+        self.page
+            .get_snapshot(server_end, &mut prefix.bytes(), None)
+            .map_err(|_| StoryDiscoverError::Storage)?;
+        let mut results = snapshot
+            .get_keys(&mut "".bytes(), None)
+            .await
+            .map_err(|_| StoryDiscoverError::Storage)?;
         let mut keys = vec![];
         keys.append(&mut results.0);
         let mut token: Option<Token> = results.1.and_then(|boxed_token| Some(*boxed_token));
         while let Some(mut unwrap_token) = token.take()
         // keep reading until token is none
         {
-            results =
-                snapshot.get_keys(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token))).await?;
+            results = snapshot
+                .get_keys(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token)))
+                .await
+                .map_err(|_| StoryDiscoverError::Storage)?;
             keys.append(&mut results.0);
             token = results.1.and_then(|boxed_token| Some(*boxed_token));
         }
@@ -196,7 +220,7 @@ impl StoryStorage for LedgerStorage {
         story_name: &'a str,
         key: &'a str,
         value: String,
-    ) -> LocalFutureObj<'a, Result<(), Error>> {
+    ) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let ledger_key = format!("{}/{}", key, story_name);
             self.write(&ledger_key, &value).await?;
@@ -208,28 +232,31 @@ impl StoryStorage for LedgerStorage {
         &'a self,
         story_name: &'a str,
         key: &'a str,
-    ) -> LocalFutureObj<'a, Result<String, Error>> {
+    ) -> LocalFutureObj<'a, Result<String, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let ledger_key = format!("{}/{}", key, story_name);
-            self.read(&ledger_key, &ledger_key)
-                .await
-                .unwrap_or(None)
-                .ok_or(format_err!("fail to get property"))
+            self.read(&ledger_key, &ledger_key).await
         }))
     }
 
-    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>> {
+    fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move { Ok(self.read_keys(TITLE_KEY).await?.len()) }))
     }
 
     fn get_entries<'a>(
         &'a self,
         prefix: &'a str,
-    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>> {
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
-            let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()?;
-            self.page.get_snapshot(server_end, &mut prefix.bytes(), None)?;
-            let mut results = snapshot.get_entries(&mut "".bytes(), None).await?;
+            let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()
+                .map_err(|_| StoryDiscoverError::Storage)?;
+            self.page
+                .get_snapshot(server_end, &mut prefix.bytes(), None)
+                .map_err(|_| StoryDiscoverError::Storage)?;
+            let mut results = snapshot
+                .get_entries(&mut "".bytes(), None)
+                .await
+                .map_err(|_| StoryDiscoverError::Storage)?;
             let mut entries: Vec<Entry> = vec![];
             entries.append(&mut results.0);
             let mut token = results.1.and_then(|boxed_token| Some(*boxed_token));
@@ -238,7 +265,8 @@ impl StoryStorage for LedgerStorage {
             {
                 results = snapshot
                     .get_entries(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token)))
-                    .await?;
+                    .await
+                    .map_err(|_| StoryDiscoverError::Storage)?;
                 entries.append(&mut results.0);
                 token = results.1.and_then(|boxed_token| Some(*boxed_token));
             }
@@ -257,7 +285,7 @@ impl StoryStorage for LedgerStorage {
 
     fn get_name_titles<'a>(
         &'a self,
-    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
+    ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
             let entries = self.get_entries(TITLE_KEY).await?;
             let results = entries
@@ -268,9 +296,9 @@ impl StoryStorage for LedgerStorage {
         }))
     }
 
-    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), Error>> {
+    fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), StoryDiscoverError>> {
         LocalFutureObj::new(Box::new(async move {
-            self.page.clear()?;
+            self.page.clear().map_err(|_| StoryDiscoverError::Storage)?;
             Ok(())
         }))
     }
@@ -283,6 +311,7 @@ mod tests {
         crate::{
             constants::{GRAPH_KEY, TITLE_KEY},
             story_graph::StoryGraph,
+            story_manager::StoryManager,
         },
         failure::Error,
         fuchsia_async as fasync,
@@ -291,39 +320,73 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn memory_storage() -> Result<(), Error> {
         let mut memory_storage = MemoryStorage::new();
-        memory_storage.set_property("story_name", TITLE_KEY, "story_title".to_string()).await?;
+        memory_storage
+            .set_property("story_name", TITLE_KEY, "story_title".to_string())
+            .await
+            .map_err(StoryManager::error_mapping)?;
         memory_storage
             .set_property(
                 "story_name",
                 GRAPH_KEY,
                 serde_json::to_string(&StoryGraph::new()).unwrap(),
             )
-            .await?;
+            .await
+            .map_err(StoryManager::error_mapping)?;
 
-        let mut name_titles = memory_storage.get_name_titles().await?;
+        let mut name_titles =
+            memory_storage.get_name_titles().await.map_err(StoryManager::error_mapping)?;
         assert_eq!(name_titles.len(), 1);
-        assert_eq!(memory_storage.get_story_count().await?, 1);
+        assert_eq!(memory_storage.get_story_count().await.map_err(StoryManager::error_mapping)?, 1);
         assert_eq!(name_titles[0].1, "story_title".to_string());
 
         // update the story title of saved story
-        memory_storage.set_property("story_name", TITLE_KEY, "story_title_new".to_string()).await?;
-        name_titles = memory_storage.get_name_titles().await?;
+        memory_storage
+            .set_property("story_name", TITLE_KEY, "story_title_new".to_string())
+            .await
+            .map_err(StoryManager::error_mapping)?;
+        name_titles =
+            memory_storage.get_name_titles().await.map_err(StoryManager::error_mapping)?;
         assert_eq!(name_titles[0].1, "story_title_new".to_string());
 
-        memory_storage.clear().await?;
-        assert_eq!(memory_storage.get_story_count().await?, 0);
+        memory_storage.clear().await.map_err(StoryManager::error_mapping)?;
+        assert_eq!(memory_storage.get_story_count().await.map_err(StoryManager::error_mapping)?, 0);
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn get_entries() -> Result<(), Error> {
         let mut memory_storage = MemoryStorage::new();
-        memory_storage.set_property("story-a", "some-feature", "feature-a".to_string()).await?;
-        memory_storage.set_property("story-b", "some-feature", "feature-b".to_string()).await?;
-        let entries = memory_storage.get_entries("some-feature").await?;
+        memory_storage
+            .set_property("story-a", "some-feature", "feature-a".to_string())
+            .await
+            .map_err(StoryManager::error_mapping)?;
+        memory_storage
+            .set_property("story-b", "some-feature", "feature-b".to_string())
+            .await
+            .map_err(StoryManager::error_mapping)?;
+        let entries = memory_storage
+            .get_entries("some-feature")
+            .await
+            .map_err(StoryManager::error_mapping)?;
         assert_eq!(entries.len(), 2);
         assert!(entries.iter().any(|(_, v)| v == "feature-a"));
         assert!(entries.iter().any(|(_, v)| v == "feature-b"));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn error_handling() -> Result<(), Error> {
+        let mut memory_storage = MemoryStorage::new();
+        memory_storage
+            .set_property("story-a", "some-feature", "feature-a".to_string())
+            .await
+            .map_err(StoryManager::error_mapping)?;
+
+        // Ensure that the InvalidKey error is correctly returned.
+        assert_eq!(
+            memory_storage.get_property("story-b", "some-feature").await,
+            Err(StoryDiscoverError::InvalidKey)
+        );
         Ok(())
     }
 }

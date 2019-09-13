@@ -11,7 +11,8 @@ use {
         story_storage::{StoryName, StoryStorage},
     },
     chrono::{Datelike, Timelike, Utc},
-    failure::{bail, Error},
+    failure::{format_err, Error},
+    fidl_fuchsia_app_discover::StoryDiscoverError,
     std::{
         collections::HashMap,
         time::{SystemTime, UNIX_EPOCH},
@@ -43,16 +44,20 @@ impl StoryManager {
         story_name: &StoryName,
         key: &str,
         value: impl Into<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), StoryDiscoverError> {
         match key {
             // Writing to story graph and instance state is not allowed.
-            GRAPH_KEY | STATE_KEY => bail!("Key for set_property is now allowed"),
+            GRAPH_KEY | STATE_KEY => Err(StoryDiscoverError::InvalidKey),
             _ => self.story_storage.set_property(story_name, key, value.into()).await,
         }
     }
 
     // Get property of given story with key.
-    pub async fn get_property(&self, story_name: &StoryName, key: &str) -> Result<String, Error> {
+    pub async fn get_property(
+        &self,
+        story_name: &StoryName,
+        key: &str,
+    ) -> Result<String, StoryDiscoverError> {
         self.story_storage.get_property(story_name, &key).await
     }
 
@@ -63,7 +68,7 @@ impl StoryManager {
         module_name: &str,
         state_name: &str,
         value: impl Into<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), StoryDiscoverError> {
         let identity_path = format!("{}/{}/{}", story_name, module_name, state_name);
         self.story_storage.set_property(&identity_path, STATE_KEY, value.into()).await
     }
@@ -74,7 +79,7 @@ impl StoryManager {
         story_name: &str,
         module_name: &str,
         state_name: &str,
-    ) -> Result<String, Error> {
+    ) -> Result<String, StoryDiscoverError> {
         let identity_path = format!("{}/{}/{}", story_name, module_name, state_name);
         self.story_storage.get_property(&identity_path, STATE_KEY).await
     }
@@ -83,7 +88,10 @@ impl StoryManager {
     pub async fn update_timestamp(&mut self, story_name: &str) -> Result<(), Error> {
         let timestamp =
             SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
-        self.story_storage.set_property(story_name, TIME_KEY, timestamp.to_string()).await
+        self.story_storage
+            .set_property(story_name, TIME_KEY, timestamp.to_string())
+            .await
+            .map_err(StoryManager::error_mapping)
     }
 
     // Restore the story in story_manager by returning a vector of its modules
@@ -92,7 +100,11 @@ impl StoryManager {
         target_story_name: StoryName,
     ) -> Result<Vec<Module>, Error> {
         let story_graph = serde_json::from_str(
-            &self.story_storage.get_property(&target_story_name, GRAPH_KEY).await?,
+            &self
+                .story_storage
+                .get_property(&target_story_name, GRAPH_KEY)
+                .await
+                .map_err(StoryManager::error_mapping)?,
         )
         .unwrap_or(StoryGraph::new());
 
@@ -141,7 +153,10 @@ impl StoryManager {
                 }
 
                 if let Ok(string_content) = serde_json::to_string(&story_graph) {
-                    self.story_storage.set_property(&story_id, GRAPH_KEY, string_content).await?;
+                    self.story_storage
+                        .set_property(&story_id, GRAPH_KEY, string_content)
+                        .await
+                        .map_err(StoryManager::error_mapping)?;
                 }
                 Ok(())
             }
@@ -184,7 +199,10 @@ impl StoryManager {
         }
 
         if let Ok(string_content) = serde_json::to_string(&story_graph) {
-            self.story_storage.set_property(action.story_name(), GRAPH_KEY, string_content).await?;
+            self.story_storage
+                .set_property(action.story_name(), GRAPH_KEY, string_content)
+                .await
+                .map_err(StoryManager::error_mapping)?;
         }
 
         let story_title = self.story_storage.get_property(action.story_name(), TITLE_KEY).await;
@@ -204,7 +222,8 @@ impl StoryManager {
                     now.second(),
                 ),
             )
-            .await?;
+            .await
+            .map_err(StoryManager::error_mapping)?;
         self.update_timestamp(action.story_name()).await
     }
 
@@ -213,7 +232,8 @@ impl StoryManager {
         let mut time_map = self
             .story_storage
             .get_entries(TIME_KEY)
-            .await?
+            .await
+            .map_err(StoryManager::error_mapping)?
             .into_iter()
             .map(|(name, time)| {
                 (name.split_at(TIME_KEY.len() + 1).1.to_string(), time.parse::<u128>().unwrap_or(0))
@@ -222,12 +242,23 @@ impl StoryManager {
         Ok(self
             .story_storage
             .get_name_titles()
-            .await?
+            .await
+            .map_err(StoryManager::error_mapping)?
             .iter()
             .map(|(name, title)| {
                 (StoryMetadata::new(name, title, time_map.remove(name).unwrap_or(0)))
             })
             .collect())
+    }
+
+    pub fn error_mapping(error: StoryDiscoverError) -> Error {
+        match error {
+            StoryDiscoverError::Storage => format_err!("StoryDicoverError : Storage"),
+            StoryDiscoverError::VmoStringConversion => {
+                format_err!("StoryDiscoverError: VmoStringConversion")
+            }
+            StoryDiscoverError::InvalidKey => format_err!("StoryDiscoverError : InvalidKey"),
+        }
     }
 }
 
@@ -267,13 +298,24 @@ mod tests {
         }
 
         let story_graph = serde_json::from_str(
-            &story_manager.story_storage.get_property("story_name_1", GRAPH_KEY).await?,
+            &story_manager
+                .story_storage
+                .get_property("story_name_1", GRAPH_KEY)
+                .await
+                .map_err(StoryManager::error_mapping)?,
         )
         .unwrap_or(StoryGraph::new());
         assert_eq!(story_graph.get_module_count(), 1);
 
         // story_name_1 already saved
-        assert_eq!(story_manager.story_storage.get_story_count().await?, 1);
+        assert_eq!(
+            story_manager
+                .story_storage
+                .get_story_count()
+                .await
+                .map_err(StoryManager::error_mapping)?,
+            1
+        );
         // changed to a new story_name_2
         match suggestion_2.action() {
             SuggestedAction::AddMod(action) => {
@@ -282,7 +324,14 @@ mod tests {
             _ => assert!(false),
         }
         // story_name_1 & 2 already saved
-        assert_eq!(story_manager.story_storage.get_story_count().await?, 2);
+        assert_eq!(
+            story_manager
+                .story_storage
+                .get_story_count()
+                .await
+                .map_err(StoryManager::error_mapping)?,
+            2
+        );
         // restore the story_name_1
         let modules = story_manager.restore_story_graph("story_name_1".to_string()).await?;
         assert_eq!(modules.len(), 1);
@@ -357,9 +406,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_and_get_instance_state() -> Result<(), Error> {
         let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
-        story_manager.set_instance_state("some-story", "some-mod", "some-state", "value").await?;
-        let instance_state =
-            story_manager.get_instance_state("some-story", "some-mod", "some-state").await?;
+        story_manager
+            .set_instance_state("some-story", "some-mod", "some-state", "value")
+            .await
+            .map_err(StoryManager::error_mapping)?;
+        let instance_state = story_manager
+            .get_instance_state("some-story", "some-mod", "some-state")
+            .await
+            .map_err(StoryManager::error_mapping)?;
         assert_eq!(&instance_state, "value");
         Ok(())
     }
@@ -369,11 +423,19 @@ mod tests {
         let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
         let story_name = "story_1".to_string();
         story_manager.update_timestamp(&story_name).await?;
-        let timestamp_1 =
-            story_manager.get_property(&story_name, TIME_KEY).await?.parse::<u128>().unwrap_or(0);
+        let timestamp_1 = story_manager
+            .get_property(&story_name, TIME_KEY)
+            .await
+            .map_err(StoryManager::error_mapping)?
+            .parse::<u128>()
+            .unwrap_or(0);
         story_manager.update_timestamp(&story_name).await?;
-        let timestamp_2 =
-            story_manager.get_property(&story_name, TIME_KEY).await?.parse::<u128>().unwrap_or(0);
+        let timestamp_2 = story_manager
+            .get_property(&story_name, TIME_KEY)
+            .await
+            .map_err(StoryManager::error_mapping)?
+            .parse::<u128>()
+            .unwrap_or(0);
         assert!(timestamp_2 > timestamp_1);
         Ok(())
     }

@@ -7,7 +7,8 @@ use {
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{
         SessionDiscoverContextRequest, SessionDiscoverContextRequestStream,
-        StoryDiscoverContextRequest, StoryDiscoverContextRequestStream, SurfaceData,
+        StoryDiscoverContextRequest, StoryDiscoverContextRequestStream, StoryDiscoverError,
+        SurfaceData,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
@@ -78,22 +79,23 @@ impl StoryContextService {
                         }
                         StoryDiscoverContextRequest::SetProperty { key, value, responder } => {
                             let mut story_manager = self.story_manager.lock();
-                            story_manager
+                            let mut res = story_manager
                                 .set_property(
                                     &self.story_id,
                                     &key,
                                     utils::vmo_buffer_to_string(Box::new(value))?,
                                 )
-                                .await?;
-                            // TODO: handle the errors properly in a followup CL.
-                            responder.send(&mut Ok(()))?;
+                                .await;
+                            responder.send(&mut res)?;
                         }
 
                         StoryDiscoverContextRequest::GetProperty { key, responder } => {
                             let story_manager = self.story_manager.lock();
-                            let property = story_manager.get_property(&self.story_id, &key).await?;
-                            // TODO: handle the errors properly in a followup CL.
-                            responder.send(&mut Ok(utils::string_to_vmo_buffer(property)?))?;
+                            let property = story_manager.get_property(&self.story_id, &key).await;
+                            responder.send(&mut property.and_then(|content| {
+                                utils::string_to_vmo_buffer(content)
+                                    .map_err(|_| StoryDiscoverError::VmoStringConversion)
+                            }))?;
                         }
                     }
                 }
@@ -109,8 +111,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            constants::TITLE_KEY, models::AddModInfo, story_manager::StoryManager,
-            story_storage::MemoryStorage, utils,
+            constants::{GRAPH_KEY, STATE_KEY, TITLE_KEY},
+            models::AddModInfo,
+            story_manager::StoryManager,
+            story_storage::MemoryStorage,
+            utils,
         },
         fidl_fuchsia_app_discover::{SessionDiscoverContextMarker, StoryDiscoverContextMarker},
         fuchsia_async as fasync,
@@ -184,6 +189,20 @@ mod tests {
 
         // Ensure that set & get all succeed
         assert_eq!(returned_title, "new_title".to_string());
+
+        // Ensure that setting to state/graph is not allowed
+        assert_eq!(
+            story_discover_context_proxy
+                .set_property(STATE_KEY, &mut utils::string_to_vmo_buffer("some-state")?)
+                .await?,
+            Err(StoryDiscoverError::InvalidKey)
+        );
+        assert_eq!(
+            story_discover_context_proxy
+                .set_property(GRAPH_KEY, &mut utils::string_to_vmo_buffer("some-state")?)
+                .await?,
+            Err(StoryDiscoverError::InvalidKey)
+        );
         Ok(())
     }
 }
