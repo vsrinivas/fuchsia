@@ -33,8 +33,14 @@ async fn test_device() {
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
 
-    let _device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
+    let device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
 
-    // Nothing to test yet
-    // TODO (go/fxb/36349): Add tests along with service implementation
+    let settings = device_proxy.watch().await.expect("watch completed");
+
+    // The tag could be in different formats based on whether it's a release build or not,
+    // just check that it is nonempty.
+    match settings.build_tag {
+        Some(tag) => assert!(tag.len() > 0),
+        None => panic!("Build tag not loaded from file"),
+    }
 }

@@ -23,7 +23,7 @@ fn describe_device(device_settings: &DeviceSettings) -> String {
     output.push_str("DeviceSettings {\n ");
 
     if let Some(build_tag) = &device_settings.build_tag {
-        output.push_str(&format!("build_tag: {}", build_tag));
+        output.push_str(&format!("build_tag: {}\n", build_tag));
     }
 
     output.push_str("}");

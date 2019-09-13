@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "build-info"
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
