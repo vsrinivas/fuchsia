@@ -5,3 +5,4 @@
 mod bind_library;
 mod c_generation;
 mod instruction;
+mod parser_common;
