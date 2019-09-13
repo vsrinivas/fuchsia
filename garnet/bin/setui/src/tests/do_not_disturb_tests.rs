@@ -12,7 +12,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";

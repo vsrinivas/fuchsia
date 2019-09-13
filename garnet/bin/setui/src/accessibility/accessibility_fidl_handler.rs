@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use futures::lock::Mutex;
 use futures::TryStreamExt;
@@ -107,7 +107,6 @@ fn set_accessibility(
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
     if switchboard_handle
         .write()
-        .unwrap()
         .request(SettingType::Accessibility, settings.into(), response_tx)
         .is_ok()
     {

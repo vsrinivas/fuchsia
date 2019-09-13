@@ -15,8 +15,9 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
 use futures::stream::StreamExt;
 use futures::TryFutureExt;
+use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 pub struct RegistryImpl {
     /// A mapping of setting types to senders, used to relay new commands.
@@ -59,7 +60,7 @@ impl RegistryImpl {
             fasync::spawn(
                 async move {
                     while let Some(action) = receiver.next().await {
-                        registry_clone.write().unwrap().process_action(action);
+                        registry_clone.write().process_action(action);
                     }
                     Ok(())
                 }
@@ -74,7 +75,7 @@ impl RegistryImpl {
             fasync::spawn(
                 async move {
                     while let Some(setting_type) = notification_rx.next().await {
-                        registry_clone.write().unwrap().notify(setting_type);
+                        registry_clone.write().notify(setting_type);
                     }
                     Ok(())
                 }
@@ -208,7 +209,7 @@ mod tests {
 
         let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
-        assert!(registry.write().unwrap().register(setting_type, handler_tx).is_ok());
+        assert!(registry.write().register(setting_type, handler_tx).is_ok());
 
         // Send a listen state and make sure sink is notified.
         {
@@ -272,7 +273,7 @@ mod tests {
 
         let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
-        assert!(registry.write().unwrap().register(setting_type, handler_tx).is_ok());
+        assert!(registry.write().register(setting_type, handler_tx).is_ok());
 
         // Send initial request.
         assert!(action_tx

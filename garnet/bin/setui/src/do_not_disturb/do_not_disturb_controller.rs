@@ -8,7 +8,8 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::StreamExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 const USER_DND_NAME: &str = "user_dnd";
@@ -40,10 +41,10 @@ pub fn spawn_do_not_disturb_controller(
             match command {
                 Command::ChangeState(state) => match state {
                     State::Listen(notifier) => {
-                        *notifier_lock.write().unwrap() = Some(notifier);
+                        *notifier_lock.write() = Some(notifier);
                     }
                     State::EndListen => {
-                        *notifier_lock.write().unwrap() = None;
+                        *notifier_lock.write() = None;
                     }
                 },
                 Command::HandleRequest(request, responder) =>
@@ -116,7 +117,7 @@ async fn write_value(
 // TODO: watch for changes on current do_not_disturb and notify changes
 // that way instead.
 fn notify(notifier_lock: Arc<RwLock<Option<Notifier>>>) -> std::result::Result<(), Error> {
-    if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+    if let Some(notifier) = (*notifier_lock.read()).clone() {
         notifier.unbounded_send(SettingType::DoNotDisturb)?;
     }
     Ok(())

@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::switchboard::base::*,
-    failure::Error,
-    fuchsia_async as fasync,
-    futures::lock::Mutex,
-    futures::stream::StreamExt,
-    std::marker::PhantomData,
-    std::sync::{Arc, RwLock},
+    crate::switchboard::base::*, failure::Error, fuchsia_async as fasync, futures::lock::Mutex,
+    futures::stream::StreamExt, parking_lot::RwLock, std::marker::PhantomData, std::sync::Arc,
 };
 
 /// Handler for hanging gets within the switchboard.
@@ -48,7 +43,6 @@ where
             _listen_session: switchboard_handle
                 .clone()
                 .write()
-                .expect("got switchboard write lock")
                 .listen(setting_type, on_change_sender)
                 .expect("started listening successfully"),
             sent_latest_value: false,
@@ -102,8 +96,7 @@ where
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
         {
-            let mut switchboard =
-                self.switchboard_handle.write().expect("got switchboard write lock");
+            let mut switchboard = self.switchboard_handle.write();
             switchboard
                 .request(self.setting_type, SettingRequest::Get, response_tx)
                 .expect("made request");
@@ -187,7 +180,7 @@ mod tests {
             assert_eq!(setting_type, SETTING_TYPE);
             assert_eq!(request, SettingRequest::Get);
 
-            let value = *self.id_to_send.read().unwrap();
+            let value = *self.id_to_send.read();
             callback
                 .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(false, value)))))
                 .unwrap();
@@ -236,11 +229,11 @@ mod tests {
         }
 
         {
-            *current_id.write().unwrap() = ID2;
+            *current_id.write() = ID2;
         }
 
         {
-            let switchboard = switchboard_handle.read().unwrap();
+            let switchboard = switchboard_handle.read();
             switchboard.notify_listener();
         }
 

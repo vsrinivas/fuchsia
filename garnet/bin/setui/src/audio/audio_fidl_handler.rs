@@ -11,7 +11,8 @@ use {
     fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::prelude::*,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl Sender<AudioSettings> for AudioWatchResponder {
@@ -158,7 +159,7 @@ fn set_volume(
     responder: AudioSetResponder,
 ) {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard.write().unwrap().request(SettingType::Audio, request, response_tx).is_ok() {
+    if switchboard.write().request(SettingType::Audio, request, response_tx).is_ok() {
         fasync::spawn(async move {
             // Return success if we get a Ok result from the
             // switchboard.

@@ -10,8 +10,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
+    parking_lot::RwLock,
     std::collections::HashMap,
-    std::sync::{Arc, RwLock},
+    std::sync::Arc,
 };
 
 // TODO(go/fxb/35983): Load default values from a config.
@@ -50,7 +51,6 @@ pub fn spawn_audio_controller(
         // Connect to the audio core service.
         let audio_service = service_context_handle
             .read()
-            .expect("got service context handle")
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .expect("connected to audio core");
 
@@ -58,10 +58,10 @@ pub fn spawn_audio_controller(
             match command {
                 Command::ChangeState(state) => match state {
                     State::Listen(notifier) => {
-                        *notifier_lock.write().unwrap() = Some(notifier);
+                        *notifier_lock.write() = Some(notifier);
                     }
                     State::EndListen => {
-                        *notifier_lock.write().unwrap() = None;
+                        *notifier_lock.write() = None;
                     }
                 },
                 Command::HandleRequest(request, responder) =>
@@ -85,7 +85,7 @@ pub fn spawn_audio_controller(
                             }
 
                             let _ = responder.send(Ok(None)).ok();
-                            if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                            if let Some(notifier) = (*notifier_lock.read()).clone() {
                                 notifier.unbounded_send(SettingType::Audio).unwrap();
                             }
                         }
@@ -129,7 +129,7 @@ async fn set_volume(
         return audio_service.set_render_usage_gain(
             AudioRenderUsage::from(stream.stream_type),
             get_gain_db(DEFAULT_VOLUME_LEVEL, DEFAULT_VOLUME_MUTED),
-        )
+        );
     }
 
     return Ok(());

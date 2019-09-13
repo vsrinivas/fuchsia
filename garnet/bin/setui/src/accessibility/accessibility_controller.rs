@@ -13,7 +13,8 @@ use {
     futures::lock::Mutex,
     futures::stream::StreamExt,
     futures::TryFutureExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl DeviceStorageCompatible for AccessibilityInfo {
@@ -35,7 +36,6 @@ pub fn spawn_accessibility_controller(
     let (accessibility_handler_tx, mut accessibility_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 
-    // TODO(fxb/35532): switch to parking_lot
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
 
     fasync::spawn(
@@ -51,10 +51,10 @@ pub fn spawn_accessibility_controller(
                 match command {
                     Command::ChangeState(state) => match state {
                         State::Listen(notifier) => {
-                            *notifier_lock.write().unwrap() = Some(notifier);
+                            *notifier_lock.write() = Some(notifier);
                         }
                         State::EndListen => {
-                            *notifier_lock.write().unwrap() = None;
+                            *notifier_lock.write() = None;
                         }
                     },
                     Command::HandleRequest(request, responder) => {
@@ -96,7 +96,7 @@ pub fn spawn_accessibility_controller(
                         }
 
                         // Notify listeners of value change.
-                        if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                        if let Some(notifier) = (*notifier_lock.read()).clone() {
                             notifier.unbounded_send(SettingType::Accessibility)?;
                         }
 

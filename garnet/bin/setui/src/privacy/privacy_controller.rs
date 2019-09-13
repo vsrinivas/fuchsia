@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
@@ -53,7 +53,7 @@ impl PrivacyController {
                 }));
 
                 while let Some(command) = ctrl_rx.next().await {
-                    handle.write().unwrap().process_command(command)?;
+                    handle.write().process_command(command)?;
                 }
                 Ok(())
             }
@@ -69,10 +69,10 @@ impl PrivacyController {
         match command {
             Command::ChangeState(state) => match state {
                 State::Listen(notifier) => {
-                    *self.listen_notifier.write().unwrap() = Some(notifier);
+                    *self.listen_notifier.write() = Some(notifier);
                 }
                 State::EndListen => {
-                    *self.listen_notifier.write().unwrap() = None;
+                    *self.listen_notifier.write() = None;
                 }
             },
             Command::HandleRequest(request, responder) =>
@@ -115,7 +115,7 @@ impl PrivacyController {
         self.persist_privacy_info(self.stored_value, responder);
 
         // Notify listeners of value change.
-        if let Some(notifier) = (*self.listen_notifier.read().unwrap()).clone() {
+        if let Some(notifier) = (*self.listen_notifier.read()).clone() {
             notifier.unbounded_send(SettingType::Privacy)?;
         }
 

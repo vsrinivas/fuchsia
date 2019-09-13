@@ -20,8 +20,9 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
+    parking_lot::RwLock,
     std::collections::HashMap,
-    std::sync::{Arc, RwLock},
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_audio_test_environment";
@@ -65,7 +66,7 @@ async fn test_audio() {
                         gain_db,
                         control_handle: _,
                     } => {
-                        (*AUDIO_STREAMS.write().unwrap()).insert(usage, gain_db);
+                        (*AUDIO_STREAMS.write()).insert(usage, gain_db);
                     }
                     _ => {}
                 }
@@ -112,7 +113,7 @@ async fn test_audio() {
 
     assert_eq!(
         get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        *(*AUDIO_STREAMS.read().unwrap())
+        *(*AUDIO_STREAMS.read())
             .get(&fidl_fuchsia_media::AudioRenderUsage::Media)
             .expect("contains media stream")
     );

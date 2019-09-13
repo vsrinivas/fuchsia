@@ -10,7 +10,8 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::StreamExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl DeviceStorageCompatible for DisplayInfo {
@@ -33,7 +34,6 @@ pub fn spawn_display_controller(
     fasync::spawn(async move {
         let brightness_service = service_context_handle
             .read()
-            .expect("got service context handle")
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .expect("connected to brightness");
 
@@ -56,10 +56,10 @@ pub fn spawn_display_controller(
             match command {
                 Command::ChangeState(state) => match state {
                     State::Listen(notifier) => {
-                        *notifier_lock.write().unwrap() = Some(notifier);
+                        *notifier_lock.write() = Some(notifier);
                     }
                     State::EndListen => {
-                        *notifier_lock.write().unwrap() = None;
+                        *notifier_lock.write() = None;
                     }
                 },
                 Command::HandleRequest(request, responder) => {
@@ -138,7 +138,7 @@ async fn set_brightness(
 // TODO(fxb/35459): watch for changes on current brightness and notify changes
 // that way instead.
 fn notify(notifier_lock: Arc<RwLock<Option<Notifier>>>) {
-    if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+    if let Some(notifier) = (*notifier_lock.read()).clone() {
         notifier.unbounded_send(SettingType::Display).unwrap();
     }
 }

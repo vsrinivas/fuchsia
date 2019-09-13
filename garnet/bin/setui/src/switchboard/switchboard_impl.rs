@@ -8,8 +8,9 @@ use failure::{format_err, Error};
 
 use futures::channel::mpsc::UnboundedSender;
 
+use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use fuchsia_async as fasync;
 use futures::stream::StreamExt;
@@ -115,7 +116,7 @@ impl SwitchboardImpl {
             let switchboard_clone = switchboard.clone();
             fasync::spawn(async move {
                 while let Some(event) = event_rx.next().await {
-                    switchboard_clone.write().unwrap().process_event(event);
+                    switchboard_clone.write().process_event(event);
                 }
             });
         }
@@ -124,7 +125,7 @@ impl SwitchboardImpl {
             let switchboard_clone = switchboard.clone();
             fasync::spawn(async move {
                 while let Some(info) = cancel_listen_rx.next().await {
-                    switchboard_clone.write().unwrap().stop_listening(info);
+                    switchboard_clone.write().stop_listening(info);
                 }
             });
         }
@@ -258,7 +259,6 @@ mod tests {
         // Send request
         assert!(switchboard
             .write()
-            .unwrap()
             .request(SettingType::Unknown, SettingRequest::Get, response_tx)
             .is_ok());
 
@@ -288,7 +288,7 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        let listen_result = switchboard.write().unwrap().listen(setting_type, notify_tx1);
+        let listen_result = switchboard.write().listen(setting_type, notify_tx1);
 
         assert!(listen_result.is_ok());
         {
@@ -321,7 +321,7 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard.write().unwrap().listen(setting_type, notify_tx1).is_ok());
+        assert!(switchboard.write().listen(setting_type, notify_tx1).is_ok());
         {
             let action = action_rx.next().await.unwrap();
 
@@ -331,7 +331,7 @@ mod tests {
 
         // Register second listener and verify count
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard.write().unwrap().listen(setting_type, notify_tx2).is_ok());
+        assert!(switchboard.write().listen(setting_type, notify_tx2).is_ok());
         {
             let action = action_rx.next().await.unwrap();
 

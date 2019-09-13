@@ -12,7 +12,8 @@ use failure::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 impl DeviceStorageCompatible for SetupInfo {
     const DEFAULT_VALUE: Self =
@@ -46,7 +47,7 @@ impl SetupController {
             }));
 
             while let Some(command) = ctrl_rx.next().await {
-                handle.write().unwrap().process_command(command);
+                handle.write().process_command(command);
             }
         });
 
@@ -68,10 +69,10 @@ impl SetupController {
             },
             Command::ChangeState(state) => match state {
                 State::Listen(notifier) => {
-                    *self.listen_notifier.write().unwrap() = Some(notifier);
+                    *self.listen_notifier.write() = Some(notifier);
                 }
                 State::EndListen => {
-                    *self.listen_notifier.write().unwrap() = None;
+                    *self.listen_notifier.write() = None;
                 }
             },
         }
@@ -84,7 +85,7 @@ impl SetupController {
     ) {
         self.info.configuration_interfaces = interfaces;
         responder.send(Ok(None)).ok();
-        if let Some(notifier) = (*self.listen_notifier.read().unwrap()).clone() {
+        if let Some(notifier) = (*self.listen_notifier.read()).clone() {
             notifier.unbounded_send(SettingType::Setup).unwrap();
         }
 

@@ -10,7 +10,8 @@ use {
     fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::prelude::*,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl Sender<DisplaySettings> for DisplayWatchResponder {
@@ -65,7 +66,7 @@ pub fn spawn_display_fidl_handler(
                     if let Some(request) = to_request(settings) {
                         let (response_tx, _response_rx) =
                             futures::channel::oneshot::channel::<SettingResponseResult>();
-                        let mut switchboard = switchboard_lock.write().unwrap();
+                        let mut switchboard = switchboard_lock.write();
                         let result =
                             switchboard.request(SettingType::Display, request, response_tx);
 

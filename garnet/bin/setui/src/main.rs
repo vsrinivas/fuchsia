@@ -10,11 +10,12 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::StreamExt,
+    parking_lot::RwLock,
     settings::create_fidl_service,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::registry::service_context::ServiceContext,
     settings::switchboard::base::get_all_setting_types,
-    std::sync::{Arc, RwLock},
+    std::sync::Arc,
 };
 
 extern crate settings;

@@ -11,7 +11,8 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::TryStreamExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl Sender<DoNotDisturbSettings> for DoNotDisturbWatchResponder {
@@ -65,7 +66,6 @@ pub fn spawn_do_not_disturb_fidl_handler(
                             futures::channel::oneshot::channel::<SettingResponseResult>();
                         if switchboard_lock
                             .write()
-                            .unwrap()
                             .request(SettingType::DoNotDisturb, request, response_tx)
                             .is_ok()
                         {

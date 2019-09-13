@@ -37,9 +37,10 @@ use {
     fuchsia_component::server::{ServiceFsDir, ServiceObj},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     log::error,
+    parking_lot::RwLock,
     setui_handler::SetUIHandler,
     std::collections::HashSet,
-    std::sync::{Arc, RwLock},
+    std::sync::Arc,
 };
 
 mod accessibility;
@@ -122,7 +123,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Accessibility) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Accessibility,
                 spawn_accessibility_controller(
@@ -140,7 +140,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Audio) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Audio,
                 spawn_audio_controller(service_context_handle.clone()),
@@ -156,7 +155,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Device) {
         registry_handle
             .write()
-            .unwrap()
             .register(switchboard::base::SettingType::Device, spawn_device_controller())
             .unwrap();
 
@@ -169,7 +167,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Display) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Display,
                 spawn_display_controller(
@@ -186,7 +183,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::DoNotDisturb) {
-        let register_result = registry_handle.write().unwrap().register(
+        let register_result = registry_handle.write().register(
             switchboard::base::SettingType::DoNotDisturb,
             spawn_do_not_disturb_controller(
                 unboxed_storage_factory.get_store::<switchboard::base::DoNotDisturbInfo>(),
@@ -206,7 +203,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Intl) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Intl,
                 IntlController::spawn(service_context_handle.clone()).unwrap(),
@@ -222,7 +218,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Privacy) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Privacy,
                 PrivacyController::spawn(
@@ -241,7 +236,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::System) {
         registry_handle
             .write()
-            .unwrap()
             .register(switchboard::base::SettingType::System, spawn_system_controller())
             .unwrap();
 
@@ -254,7 +248,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::Setup) {
         registry_handle
             .write()
-            .unwrap()
             .register(
                 switchboard::base::SettingType::Setup,
                 SetupController::spawn(

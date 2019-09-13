@@ -11,7 +11,8 @@ use failure::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::StreamExt;
 use futures::TryFutureExt;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 pub struct IntlController {
     service_context_handle: Arc<RwLock<ServiceContext>>,
@@ -31,7 +32,7 @@ impl IntlController {
         fasync::spawn(
             async move {
                 while let Some(command) = ctrl_rx.next().await {
-                    handle_clone.write().unwrap().process_command(command);
+                    handle_clone.write().process_command(command);
                 }
                 Ok(())
             }
@@ -61,11 +62,8 @@ impl IntlController {
     }
 
     fn get(&self, responder: SettingRequestResponder) {
-        let service_result = self
-            .service_context_handle
-            .write()
-            .unwrap()
-            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();
+        let service_result =
+            self.service_context_handle.write().connect::<fidl_fuchsia_timezone::TimezoneMarker>();
 
         if service_result.is_err() {
             responder.send(Err(format_err!("get time zone failed"))).ok();
@@ -90,11 +88,8 @@ impl IntlController {
     }
 
     fn set_time_zone(&self, time_zone_id: String, responder: SettingRequestResponder) {
-        let service_result = self
-            .service_context_handle
-            .write()
-            .unwrap()
-            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();
+        let service_result =
+            self.service_context_handle.write().connect::<fidl_fuchsia_timezone::TimezoneMarker>();
 
         if service_result.is_err() {
             responder.send(Err(format_err!("get time zone failed"))).ok();

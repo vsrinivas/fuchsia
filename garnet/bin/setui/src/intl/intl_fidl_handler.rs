@@ -14,7 +14,8 @@ use fidl_fuchsia_settings::{
 };
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use fuchsia_async as fasync;
 
@@ -31,7 +32,7 @@ impl IntlFidlHandler {
         let switchboard_lock = switchboard.clone();
 
         {
-            let mut switchboard = switchboard_lock.write().unwrap();
+            let mut switchboard = switchboard_lock.write();
             let (listen_tx, _listen_rx) = futures::channel::mpsc::unbounded::<SettingType>();
             switchboard.listen(SettingType::Intl, listen_tx).unwrap();
         }
@@ -53,7 +54,7 @@ impl IntlFidlHandler {
                             futures::channel::oneshot::channel::<SettingResponseResult>();
 
                         {
-                            let mut switchboard = switchboard.write().unwrap();
+                            let mut switchboard = switchboard.write();
 
                             switchboard
                                 .request(SettingType::Intl, SettingRequest::Get, response_tx)
@@ -81,7 +82,6 @@ impl IntlFidlHandler {
         if self
             .switchboard_handle
             .write()
-            .unwrap()
             .request(SettingType::Intl, SettingRequest::SetTimeZone(time_zone_id.id), response_tx)
             .is_ok()
         {

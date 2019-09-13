@@ -129,7 +129,8 @@ mod tests {
     use crate::common::Store;
     use crate::setting_adapter::{MutationHandler, SettingAdapter};
     use failure::Error;
-    use std::sync::{Arc, RwLock};
+    use parking_lot::RwLock;
+    use std::sync::Arc;
 
     struct WrittenData {
         sync: bool,
@@ -147,7 +148,7 @@ mod tests {
 
     impl Store for TestStore {
         fn write(&mut self, _data: SettingData, sync: bool) -> Result<(), Error> {
-            self.written_data.write().unwrap().push(WrittenData { sync: sync });
+            self.written_data.write().push(WrittenData { sync: sync });
             Ok(())
         }
 
@@ -187,7 +188,7 @@ mod tests {
             value: "Bar".to_string(),
         }));
 
-        let data = written_data.read().unwrap();
+        let data = written_data.read();
         assert_eq!(data.len(), 1);
         assert!(data[0].sync == should_sync);
     }

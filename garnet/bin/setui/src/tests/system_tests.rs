@@ -4,15 +4,10 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
-    crate::registry::device_storage::testing::*,
-    crate::registry::service_context::ServiceContext,
-    crate::switchboard::base::SettingType,
-    fidl_fuchsia_settings::*,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
-    std::sync::{Arc, RwLock},
+    crate::create_fidl_service, crate::registry::device_storage::testing::*,
+    crate::registry::service_context::ServiceContext, crate::switchboard::base::SettingType,
+    fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
+    futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_system_test_environment";

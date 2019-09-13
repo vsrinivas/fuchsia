@@ -15,7 +15,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";

@@ -14,8 +14,9 @@ use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use parking_lot::RwLock;
 use std::convert::TryFrom;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 impl Sender<SetupSettings> for SetupWatchResponder {
     fn send_response(self, data: SetupSettings) {
@@ -103,7 +104,7 @@ impl SetupFidlHandler {
             let (response_tx, response_rx) =
                 futures::channel::oneshot::channel::<SettingResponseResult>();
 
-            let mut switchboard = self.switchboard_handle.write().unwrap();
+            let mut switchboard = self.switchboard_handle.write();
 
             if switchboard.request(SettingType::Setup, request, response_tx).is_err() {
                 // Respond immediately with an error if request was not possible.

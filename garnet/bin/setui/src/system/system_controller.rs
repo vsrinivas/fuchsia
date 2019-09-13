@@ -7,7 +7,8 @@ use {
     crate::switchboard::base::*,
     fuchsia_async as fasync,
     futures::StreamExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Command> {
@@ -16,7 +17,6 @@ pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Comm
     // TODO(go/fxb/25465): Replace this stored value with persisted storage once it's available.
     let mut stored_login_override_mode = fidl_fuchsia_settings::LoginOverride::None;
 
-    // TODO(go/fxb/35532): Replace with parking_lot::RwLock.
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
 
     fasync::spawn(async move {
@@ -24,10 +24,10 @@ pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Comm
             match command {
                 Command::ChangeState(state) => match state {
                     State::Listen(notifier) => {
-                        *notifier_lock.write().unwrap() = Some(notifier);
+                        *notifier_lock.write() = Some(notifier);
                     }
                     State::EndListen => {
-                        *notifier_lock.write().unwrap() = None;
+                        *notifier_lock.write() = None;
                     }
                 },
                 Command::HandleRequest(request, responder) =>
@@ -40,7 +40,7 @@ pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Comm
                             responder.send(Ok(None)).unwrap();
 
                             {
-                                if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                                if let Some(notifier) = (*notifier_lock.read()).clone() {
                                     notifier
                                         .unbounded_send(SettingType::System)
                                         .expect("failed to send system setting notification");

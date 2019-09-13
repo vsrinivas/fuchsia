@@ -9,7 +9,8 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::TryStreamExt,
-    std::sync::{Arc, RwLock},
+    parking_lot::RwLock,
+    std::sync::Arc,
 };
 
 impl Sender<DeviceSettings> for DeviceWatchResponder {
