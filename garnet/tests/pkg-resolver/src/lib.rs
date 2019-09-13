@@ -21,6 +21,7 @@ use {
         PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
+    fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -292,6 +293,58 @@ async fn test_package_resolution() -> Result<(), Error> {
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
     Ok(())
+}
+
+async fn verify_separate_blobs_url(download_blob: bool) -> Result<(), Error> {
+    let env = TestEnv::new();
+    let pkg = make_rolldice_pkg_with_extra_blobs(3).await?;
+    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let served_repository = repo.serve(env.launcher()).await?;
+
+    // Rename the blobs directory so the blobs can't be found in the usual place.
+    // Both amber and the package resolver currently require Content-Length headers when
+    // downloading content blobs. "pm serve" will gzip compress paths that aren't prefixed with
+    // "/blobs", which removes the Content-Length header. To ensure "pm serve" does not compress
+    // the blobs stored at this alternate path, its name must start with "blobs".
+    let repo_root = repo.path();
+    std::fs::rename(repo_root.join("blobs"), repo_root.join("blobsbolb"))?;
+
+    // Configure the repo manager with different TUF and blobs URLs.
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let mut repo_config = served_repository.make_repo_config(repo_url);
+    let mirror = &repo_config.mirrors()[0];
+    let mirror = MirrorConfigBuilder::new(mirror.mirror_url())
+        .subscribe(mirror.subscribe())
+        .blob_mirror_url(format!("{}/blobsbolb", mirror.mirror_url()))
+        .build();
+    repo_config.insert_mirror(mirror).unwrap();
+    env.proxies.repo_manager.add(repo_config.into()).await?;
+
+    // Optionally use the new install flow.
+    if download_blob {
+        env.set_experiment_state(Experiment::DownloadBlob, true).await;
+    }
+
+    // Verify package installation from the split repo succeeds.
+    let package = env
+        .resolve_package("fuchsia-pkg://test/rolldice")
+        .await
+        .expect("package to resolve without error");
+    pkg.verify_contents(&package).await.expect("correct package contents");
+    std::fs::rename(repo_root.join("blobsbolb"), repo_root.join("blobs"))?;
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_separate_blobs_url() -> Result<(), Error> {
+    verify_separate_blobs_url(false).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_separate_blobs_url() -> Result<(), Error> {
+    verify_separate_blobs_url(true).await
 }
 
 async fn verify_download_blob_resolve_with_altered_env(

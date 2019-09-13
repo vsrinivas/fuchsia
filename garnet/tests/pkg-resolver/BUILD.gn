@@ -13,6 +13,7 @@ rustc_test("driver") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_amber_ext",
+    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/fuchsia_pkg_testing",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",

@@ -119,6 +119,10 @@ table MirrorConfig {
 
     /// The private (or symmetric) key used to decrypt blobs fetched from this mirror. Optional.
     3: RepositoryBlobKey blob_key;
+
+    /// The URL where blobs from this mirror should be fetched.  Optional.
+    /// Defaults to `mirror_url + "/blobs"`.
+    4: string blob_mirror_url;
 };
 
 /// The iterator over all the repositories defined in a `PackageResolver`.

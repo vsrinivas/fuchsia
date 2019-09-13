@@ -29,6 +29,7 @@ func convertRepositoryConfig(config *pkg.RepositoryConfig) (*amber.SourceConfig,
 		return nil, errors.New("mirror_url is required")
 	}
 	var repoUrl string = mirrorConfig.MirrorUrl
+	var blobRepoUrl string = mirrorConfig.BlobMirrorUrl
 	var rootKeys []amber.KeyConfig
 	for _, key := range config.RootKeys {
 		if key.Which() != pkg.RepositoryKeyConfigEd25519Key {
@@ -61,6 +62,7 @@ func convertRepositoryConfig(config *pkg.RepositoryConfig) (*amber.SourceConfig,
 
 	cfg := &amber.SourceConfig{
 		RepoUrl:      repoUrl,
+		BlobRepoUrl:  blobRepoUrl,
 		RootKeys:     rootKeys,
 		StatusConfig: &amber.StatusConfig{Enabled: true},
 		Auto:         mirrorConfig.Subscribe,

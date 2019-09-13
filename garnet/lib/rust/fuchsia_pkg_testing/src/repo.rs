@@ -221,7 +221,7 @@ impl Repository {
     }
 
     /// Returns the path of the base of the repository.
-    pub(crate) fn path(&self) -> PathBuf {
+    pub fn path(&self) -> PathBuf {
         self.dir.path().join("repository")
     }
 

@@ -481,7 +481,7 @@ async fn fetch_blob(
     }
 
     // TODO try the other mirrors depending on the errors encountered trying this one.
-    let blob_url = make_blob_url(mirrors[0].mirror_url(), &merkle)?;
+    let blob_url = make_blob_url(mirrors[0].blob_mirror_url(), &merkle)?;
 
     if let Some(blob) =
         cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
@@ -492,20 +492,19 @@ async fn fetch_blob(
     Ok(())
 }
 
-fn make_blob_url(mirror_url: &str, merkle: &BlobId) -> Result<Url, url::ParseError> {
+fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<Url, url::ParseError> {
     // Url::join does not perform as might be expected.  Notably, it will:
     // * strip the final path segment in the lhs if it does not end with '/'
     // * strip the lhs's entire path if the rhs starts with '/'.
     // Url::path_segments_mut provides a type with fewer unexpected edge cases.
 
-    let mut blob_url = mirror_url.parse::<Url>()?;
+    let mut blob_url = blob_mirror_url.parse::<Url>()?;
     {
         let mut path_mut = blob_url
             .path_segments_mut()
             .map_err(|()| url::ParseError::RelativeUrlWithCannotBeABaseBase)?;
         // if the url ends with '/', remove it, as push always pushes a '/'.
         path_mut.pop_if_empty();
-        path_mut.push("blobs");
         path_mut.push(&merkle.to_string());
     }
     Ok(blob_url)
@@ -660,17 +659,17 @@ mod tests {
 
         assert_eq!(
             make_blob_url("http://example.com", &merkle),
-            Ok(format!("http://example.com/blobs/{}", merkle).parse().unwrap())
+            Ok(format!("http://example.com/{}", merkle).parse().unwrap())
         );
 
         assert_eq!(
             make_blob_url("http://example.com/noslash", &merkle),
-            Ok(format!("http://example.com/noslash/blobs/{}", merkle).parse().unwrap())
+            Ok(format!("http://example.com/noslash/{}", merkle).parse().unwrap())
         );
 
         assert_eq!(
             make_blob_url("http://example.com/slash/", &merkle),
-            Ok(format!("http://example.com/slash/blobs/{}", merkle).parse().unwrap())
+            Ok(format!("http://example.com/slash/{}", merkle).parse().unwrap())
         );
 
         assert_eq!(
