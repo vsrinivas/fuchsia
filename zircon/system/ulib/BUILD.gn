@@ -106,6 +106,7 @@ group("ulib") {
     "port",
     "pretty",
     "ramdevice-client",
+    "refcount",
     "region-alloc",
     "rtc",
     "runtests-utils",
