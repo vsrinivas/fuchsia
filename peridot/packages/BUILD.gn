@@ -13,10 +13,13 @@ group("all") {
     "//peridot/packages/prod:all",
     "//peridot/packages/testing:all",
     "//peridot/packages/tests:all",
-    "//peridot/packages/tools:all",
+    "//src/ledger/cloud_provider_in_memory/bin",
+    "//src/ledger/cloud_provider_memory_diff",
+    "//src/modular/bin/voila",
   ]
 }
 
+# WARNING: Known to //topaz.
 group("peridot") {
   testonly = true
   public_deps = [

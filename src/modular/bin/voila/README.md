@@ -11,9 +11,8 @@ responsible for running the story multiple times.
 To run Voilà, build the workstation product:
 
 ```
-fx set workstation.x64
- \ --with peridot/packages/tools:voila
- \ [--with-base topaz/packages/examples:misc]
+fx set workstation.x64 --with //bundles:tools
+ \ [--with-base //topaz/packages/examples:misc]
 ```
 
 We recommend adding topaz misc examples to base so that some examples are

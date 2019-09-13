@@ -13,6 +13,7 @@ group("re2") {
 }
 
 # WARNING: Known to infrastructure.
+# WARNING: Known to //topaz.
 group("ledger") {
   testonly = true
   public_deps = [
@@ -59,6 +60,7 @@ group("maxwell_unittests") {
   ]
 }
 
+# WARNING: Known to //topaz.
 group("modular_test_harness") {
   testonly = true
   public_deps = [
