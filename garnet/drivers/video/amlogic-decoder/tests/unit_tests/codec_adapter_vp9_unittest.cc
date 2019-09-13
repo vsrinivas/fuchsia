@@ -64,3 +64,22 @@ TEST_F(CodecAdapterVp9Test, OutputFormat) {
   EXPECT_EQ(image_format.pixel_aspect_ratio_width, kSarWidth);
   EXPECT_EQ(image_format.pixel_aspect_ratio_height, kSarHeight);
 }
+
+TEST_F(CodecAdapterVp9Test, OutputBufferConstrains) {
+  fuchsia::media::StreamBufferConstraints stream_buffer_constraints;
+  fuchsia::media::StreamBufferPartialSettings partial_settings;
+  partial_settings.set_packet_count_for_server(3);
+  partial_settings.set_packet_count_for_client(3);
+
+  fuchsia::sysmem::BufferCollectionConstraints constrains = adapter_.CoreCodecGetBufferCollectionConstraints(
+     kOutputPort,stream_buffer_constraints, partial_settings);
+
+  EXPECT_TRUE(constrains.buffer_memory_constraints.cpu_domain_supported);
+  EXPECT_TRUE(constrains.buffer_memory_constraints.ram_domain_supported);
+  EXPECT_GE(constrains.buffer_memory_constraints.min_size_bytes, kStride * kCodedHeight * 3 /2);
+  EXPECT_EQ(constrains.image_format_constraints_count, 1U);
+  EXPECT_EQ(constrains.image_format_constraints[0].required_min_coded_width, kCodedWidth);
+  EXPECT_EQ(constrains.image_format_constraints[0].required_max_coded_width, kCodedWidth);
+  EXPECT_EQ(constrains.image_format_constraints[0].required_min_coded_height, kCodedHeight);
+  EXPECT_EQ(constrains.image_format_constraints[0].required_max_coded_height, kCodedHeight);
+}

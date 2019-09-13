@@ -583,6 +583,8 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   // amlogic requires physically contiguous on both input and output
   result.buffer_memory_constraints.physically_contiguous_required = true;
   result.buffer_memory_constraints.secure_required = false;
+  result.buffer_memory_constraints.cpu_domain_supported = true;
+  result.buffer_memory_constraints.ram_domain_supported = port == kOutputPort;
 
   if (port == kOutputPort) {
     result.image_format_constraints_count = 1;
@@ -663,8 +665,6 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
 void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain ==
-                  fuchsia::sysmem::CoherencyDomain::CPU);
   if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
