@@ -369,6 +369,21 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       VmOptionName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kVmoCreationOption:
+      os << colors.blue;
+      VmoCreationOptionName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kVmoOp:
+      os << colors.blue;
+      VmoOpName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kVmoOption:
+      os << colors.blue;
+      VmoOptionName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kVmoType:
       os << colors.blue;
       VmoTypeName(value, os);
@@ -438,6 +453,12 @@ inline void DisplayValue<uint64_t>(const fidl_codec::Colors& colors, SyscallType
       os << DisplayTime(colors, value);
       break;
 #ifndef __MACH__
+    case SyscallType::kPaddr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
@@ -496,6 +517,12 @@ inline void DisplayValue<uintptr_t>(const fidl_codec::Colors& colors, SyscallTyp
     case SyscallType::kSize:
       os << colors.blue << value << colors.reset;
       break;
+    case SyscallType::kPaddr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);

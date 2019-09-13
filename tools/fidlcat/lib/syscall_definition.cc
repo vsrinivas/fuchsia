@@ -3515,6 +3515,180 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
+    Syscall* zx_vmo_create = Add("zx_vmo_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto size = zx_vmo_create->Argument<uint64_t>(SyscallType::kUint64);
+    auto options = zx_vmo_create->Argument<uint32_t>(SyscallType::kVmoCreationOption);
+    auto out = zx_vmo_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmo_create->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+    zx_vmo_create->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_vmo_create->Output<zx_handle_t>(ZX_OK, "out",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vmo_read = Add("zx_vmo_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto buffer = zx_vmo_read->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto offset = zx_vmo_read->Argument<uint64_t>(SyscallType::kUint64);
+    auto buffer_size = zx_vmo_read->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_vmo_read->Input<zx_handle_t>("handle",
+                                    std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_read->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    // Outputs
+    zx_vmo_read->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_vmo_write = Add("zx_vmo_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto buffer = zx_vmo_write->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto offset = zx_vmo_write->Argument<uint64_t>(SyscallType::kUint64);
+    auto buffer_size = zx_vmo_write->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_vmo_write->Input<zx_handle_t>("handle",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_write->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_vmo_write->InputBuffer<uint8_t, uint8_t>(
+        "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_vmo_get_size = Add("zx_vmo_get_size", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_get_size->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto size = zx_vmo_get_size->PointerArgument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_vmo_get_size->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_vmo_get_size->Output<uint64_t>(ZX_OK, "size",
+                                      std::make_unique<ArgumentAccess<uint64_t>>(size));
+  }
+
+  {
+    Syscall* zx_vmo_set_size = Add("zx_vmo_set_size", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_set_size->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto size = zx_vmo_set_size->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_vmo_set_size->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_set_size->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+  }
+
+  {
+    Syscall* zx_vmo_op_range = Add("zx_vmo_op_range", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_op_range->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto op = zx_vmo_op_range->Argument<uint32_t>(SyscallType::kVmoOp);
+    auto offset = zx_vmo_op_range->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_vmo_op_range->Argument<uint64_t>(SyscallType::kUint64);
+    zx_vmo_op_range->PointerArgument<uint8_t>(SyscallType::kUint8);
+    zx_vmo_op_range->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_vmo_op_range->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_op_range->Input<uint32_t>("op", std::make_unique<ArgumentAccess<uint32_t>>(op));
+    zx_vmo_op_range->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_vmo_op_range->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+  }
+
+  {
+    Syscall* zx_vmo_create_child = Add("zx_vmo_create_child", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_create_child->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_vmo_create_child->Argument<uint32_t>(SyscallType::kVmoOption);
+    auto offset = zx_vmo_create_child->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_vmo_create_child->Argument<uint64_t>(SyscallType::kUint64);
+    auto out = zx_vmo_create_child->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmo_create_child->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_create_child->Input<uint32_t>("options",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_vmo_create_child->Input<uint64_t>("offset",
+                                         std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_vmo_create_child->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+    // Outputs
+    zx_vmo_create_child->Output<zx_handle_t>(ZX_OK, "out",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vmo_set_cache_policy = Add("zx_vmo_set_cache_policy", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_set_cache_policy->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto cache_policy = zx_vmo_set_cache_policy->Argument<uint32_t>(SyscallType::kCachePolicy);
+    // Inputs
+    zx_vmo_set_cache_policy->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_set_cache_policy->Input<uint32_t>(
+        "cache_policy", std::make_unique<ArgumentAccess<uint32_t>>(cache_policy));
+  }
+
+  {
+    Syscall* zx_vmo_replace_as_executable =
+        Add("zx_vmo_replace_as_executable", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmo_replace_as_executable->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vmex = zx_vmo_replace_as_executable->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto out = zx_vmo_replace_as_executable->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmo_replace_as_executable->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmo_replace_as_executable->Input<zx_handle_t>(
+        "vmex", std::make_unique<ArgumentAccess<zx_handle_t>>(vmex));
+    // Outputs
+    zx_vmo_replace_as_executable->Output<zx_handle_t>(
+        ZX_OK, "out", std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vmo_create_contiguous = Add("zx_vmo_create_contiguous", SyscallReturnType::kStatus);
+    // Arguments
+    auto bti = zx_vmo_create_contiguous->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto size = zx_vmo_create_contiguous->Argument<size_t>(SyscallType::kSize);
+    auto alignment_log2 = zx_vmo_create_contiguous->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_vmo_create_contiguous->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmo_create_contiguous->Input<zx_handle_t>(
+        "bti", std::make_unique<ArgumentAccess<zx_handle_t>>(bti));
+    zx_vmo_create_contiguous->Input<size_t>("size", std::make_unique<ArgumentAccess<size_t>>(size));
+    zx_vmo_create_contiguous->Input<uint32_t>(
+        "alignment_log2", std::make_unique<ArgumentAccess<uint32_t>>(alignment_log2));
+    // Outputs
+    zx_vmo_create_contiguous->Output<zx_handle_t>(
+        ZX_OK, "out", std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vmo_create_physical = Add("zx_vmo_create_physical", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_vmo_create_physical->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto paddr = zx_vmo_create_physical->Argument<zx_paddr_t>(SyscallType::kPaddr);
+    auto size = zx_vmo_create_physical->Argument<size_t>(SyscallType::kSize);
+    auto out = zx_vmo_create_physical->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmo_create_physical->Input<zx_handle_t>(
+        "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_vmo_create_physical->Input<zx_paddr_t>("paddr",
+                                              std::make_unique<ArgumentAccess<zx_paddr_t>>(paddr));
+    zx_vmo_create_physical->Input<size_t>("size", std::make_unique<ArgumentAccess<size_t>>(size));
+    // Outputs
+    zx_vmo_create_physical->Output<zx_handle_t>(ZX_OK, "out",
+                                                std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
     Syscall* zx_debuglog_create = Add("zx_debuglog_create", SyscallReturnType::kStatus);
     // Arguments
     auto resource = zx_debuglog_create->Argument<zx_handle_t>(SyscallType::kHandle);

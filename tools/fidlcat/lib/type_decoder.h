@@ -69,6 +69,7 @@ enum class SyscallType {
   kObjType,
   kPacketGuestVcpuType,
   kPacketPageRequestCommand,
+  kPaddr,
   kPolicyAction,
   kPolicyCondition,
   kPolicyTopic,
@@ -90,6 +91,9 @@ enum class SyscallType {
   kUintptr,
   kVaddr,
   kVmOption,
+  kVmoCreationOption,
+  kVmoOp,
+  kVmoOption,
   kVmoType,
   kStruct
 };
@@ -130,6 +134,9 @@ void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os);
 void TimerOptionName(uint32_t option, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
+void VmoCreationOptionName(uint32_t option, std::ostream& os);
+void VmoOpName(uint32_t op, std::ostream& os);
+void VmoOptionName(uint32_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);
 void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os);
 

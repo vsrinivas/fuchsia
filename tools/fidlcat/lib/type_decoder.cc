@@ -626,6 +626,60 @@ void VmOptionName(zx_vm_option_t option, std::ostream& os) {
   VmOptionCase(ZX_VM_ALLOW_FAULTS);
 }
 
+#define VmoCreationOptionNameCase(name) \
+  if ((options & (name)) == (name)) {   \
+    os << separator << #name;           \
+    separator = " | ";                  \
+  }
+
+void VmoCreationOptionName(uint32_t options, std::ostream& os) {
+  if (options == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
+  VmoCreationOptionNameCase(ZX_VMO_RESIZABLE);
+}
+
+#define VmoOpNameCase(name) \
+  case name:                \
+    os << #name;            \
+    return
+
+void VmoOpName(uint32_t op, std::ostream& os) {
+  switch (op) {
+    VmoOpNameCase(ZX_VMO_OP_COMMIT);
+    VmoOpNameCase(ZX_VMO_OP_DECOMMIT);
+    VmoOpNameCase(ZX_VMO_OP_LOCK);
+    VmoOpNameCase(ZX_VMO_OP_UNLOCK);
+    VmoOpNameCase(ZX_VMO_OP_CACHE_SYNC);
+    VmoOpNameCase(ZX_VMO_OP_CACHE_INVALIDATE);
+    VmoOpNameCase(ZX_VMO_OP_CACHE_CLEAN);
+    VmoOpNameCase(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE);
+    default:
+      os << op;
+      return;
+  }
+}
+
+#define VmoOptionNameCase(name)       \
+  if ((options & (name)) == (name)) { \
+    os << separator << #name;         \
+    separator = " | ";                \
+  }
+
+void VmoOptionName(uint32_t options, std::ostream& os) {
+  if (options == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
+  VmoOptionNameCase(ZX_VMO_CHILD_COPY_ON_WRITE);
+  VmoOptionNameCase(ZX_VMO_CHILD_RESIZABLE);
+  VmoOptionNameCase(ZX_VMO_CHILD_SLICE);
+  VmoOptionNameCase(ZX_VMO_CHILD_PRIVATE_PAGER_COPY);
+}
+
 #define VmoTypeNameCase(name)      \
   if ((type & (name)) == (name)) { \
     os << " | " << #name;          \
@@ -752,6 +806,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
     case SyscallType::kPacketPageRequestCommand:
       os << ":" << colors.green << "zx_packet_page_request_t::command" << colors.reset << ": ";
       break;
+    case SyscallType::kPaddr:
+      os << ":" << colors.green << "zx_paddr_t" << colors.reset << ": ";
+      break;
     case SyscallType::kPolicyAction:
       os << ":" << colors.green << "zx_policy_action_t" << colors.reset << ": ";
       break;
@@ -814,6 +871,15 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kVmOption:
       os << ":" << colors.green << "zx_vm_option_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVmoCreationOption:
+      os << ":" << colors.green << "zx_vmo_creation_option_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVmoOp:
+      os << ":" << colors.green << "zx_vmo_op_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVmoOption:
+      os << ":" << colors.green << "zx_vmo_option_t" << colors.reset << ": ";
       break;
     case SyscallType::kVmoType:
       os << ":" << colors.green << "zx_info_vmo_type_t" << colors.reset << ": ";

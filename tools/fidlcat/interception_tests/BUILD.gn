@@ -29,6 +29,7 @@ if (current_toolchain == host_toolchain) {
       "thread_test.cc",
       "ticks_test.cc",
       "timer_test.cc",
+      "vmo_test.cc",
     ]
 
     deps = [
