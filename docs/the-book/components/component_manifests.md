@@ -355,7 +355,7 @@ explained in [Routing terminology](#routing-terminology).
 Example:
 
 ```
-"expose: [
+"expose": [
     {
         "directory": "/data/themes",
         "from": "self",

@@ -12,7 +12,7 @@ service's path in the component's [outgoing directory][glossary-outgoing] is
 
 ```
 {
-    "expose: [{
+    "expose": [{
         "service": "/svc/fuchsia.example.ExampleService",
         "from": "self",
     }],
@@ -23,7 +23,7 @@ service's path in the component's [outgoing directory][glossary-outgoing] is
 
 ```
 {
-    "offer: [{
+    "offer": [{
         "service": "/svc/fuchsia.example.ExampleService",
         "from": "self",
         "to": [{
@@ -103,7 +103,7 @@ which FIDL protocol to use over the channel, this will work just fine.
 ```
 A.cml:
 {
-    "offer: [{
+    "offer": [{
         "service": "/svc/fidl.example.X",
         "from": "self",
         "to": [{
@@ -120,7 +120,7 @@ A.cml:
 ```
 B.cml:
 {
-    "offer: [{
+    "offer": [{
         "service": "/intermediary",
         "from": "self",
         "to": [{
