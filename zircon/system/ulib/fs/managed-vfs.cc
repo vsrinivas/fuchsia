@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/managed-vfs.h>
-
-#include <fbl/unique_ptr.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
 #include <utility>
+
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+#include <fs/managed-vfs.h>
 
 namespace fs {
 
@@ -19,16 +20,19 @@ ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher)
 
 ManagedVfs::~ManagedVfs() { ZX_DEBUG_ASSERT(connections_.is_empty()); }
 
-bool ManagedVfs::IsTerminated() const { return is_shutting_down_ && connections_.is_empty(); }
+bool ManagedVfs::IsTerminated() const {
+  return is_shutting_down_.load() && connections_.is_empty();
+}
 
 // Asynchronously drop all connections.
 void ManagedVfs::Shutdown(ShutdownCallback handler) {
   ZX_DEBUG_ASSERT(handler);
   zx_status_t status =
       async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
+        fbl::AutoLock<fbl::Mutex> lock(&lock_);
         ZX_DEBUG_ASSERT(!shutdown_handler_);
         shutdown_handler_ = std::move(closure);
-        is_shutting_down_ = true;
+        is_shutting_down_.store(true);
 
         UninstallAll(ZX_TIME_INFINITE);
 
@@ -51,6 +55,7 @@ void ManagedVfs::CheckForShutdownComplete() {
 }
 
 void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status) {
+  fbl::AutoLock<fbl::Mutex> lock(&lock_);
   ZX_ASSERT_MSG(IsTerminated(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
                 status);
   ZX_DEBUG_ASSERT(shutdown_handler_);
@@ -60,11 +65,13 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
 }
 
 void ManagedVfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
-  ZX_DEBUG_ASSERT(!is_shutting_down_);
+  fbl::AutoLock<fbl::Mutex> lock(&lock_);
+  ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   connections_.push_back(std::move(connection));
 }
 
 void ManagedVfs::UnregisterConnection(Connection* connection) {
+  fbl::AutoLock<fbl::Mutex> lock(&lock_);
   // We drop the result of |erase| on the floor, effectively destroying the
   // connection when all other references (like async callbacks) have
   // completed.
@@ -72,6 +79,6 @@ void ManagedVfs::UnregisterConnection(Connection* connection) {
   CheckForShutdownComplete();
 }
 
-bool ManagedVfs::IsTerminating() const { return is_shutting_down_; }
+bool ManagedVfs::IsTerminating() const { return is_shutting_down_.load(); }
 
 }  // namespace fs
