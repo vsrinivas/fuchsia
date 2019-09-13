@@ -353,7 +353,7 @@ impl HubInner {
         Ok(())
     }
 
-    pub async fn on_bind_instance_async<'a>(
+    async fn on_bind_instance_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
@@ -423,6 +423,17 @@ impl HubInner {
         Ok(())
     }
 
+    async fn on_add_dynamic_child_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
+        let mut instances_map = self.instances.lock().await;
+        Self::add_instance_to_parent_if_necessary(
+            &realm.abs_moniker,
+            realm.component_url.clone(),
+            &mut instances_map,
+        )
+        .await?;
+        Ok(())
+    }
+
     // TODO(fsamuel): We should probably preserve the original error messages
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
@@ -442,9 +453,8 @@ impl model::BindInstanceHook for HubInner {
 }
 
 impl model::AddDynamicChildHook for HubInner {
-    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub with the new child
-        Box::pin(async { Ok(()) })
+    fn on(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_add_dynamic_child_async(realm))
     }
 }
 

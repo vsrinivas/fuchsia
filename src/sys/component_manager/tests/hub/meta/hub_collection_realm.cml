@@ -1,0 +1,25 @@
+{
+    "program": {
+        "binary": "bin/hub_collection_realm"
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework"
+        },
+        {
+            "legacy_service": "/svc/fuchsia.test.hub.HubReport",
+            "from": "framework"
+        },
+        {
+            "directory": "/hub",
+            "from": "framework",
+        },
+    ],
+    "collections": [
+        {
+            "name": "coll",
+            "durability": "transient",
+        },
+    ]
+}

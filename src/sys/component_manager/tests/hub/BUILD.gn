@@ -1,0 +1,173 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("hub_client_bin") {
+  name = "hub_client"
+  edition = "2018"
+  source_root = "hub_client.rs"
+  deps = [
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//examples/components/routing/fidl:echo-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("simple_bin") {
+  name = "simple"
+  edition = "2018"
+  source_root = "simple.rs"
+  deps = [
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+rustc_binary("hub_collection_realm_bin") {
+  name = "hub_collection_realm"
+  edition = "2018"
+  source_root = "hub_collection_realm.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+rustc_library("hub_test_hook") {
+  name = "hub_test_hook"
+  edition = "2018"
+  source_root = "hub_test_hook.rs"
+  deps = [
+    "//garnet/lib/rust/cm_rust",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+  ]
+}
+
+rustc_test("hub_integration_test_bin") {
+  name = "hub_integration_test"
+  edition = "2018"
+  source_root = "//src/sys/component_manager/tests/hub/hub_integration_test.rs"
+  deps = [
+    ":hub_test_hook",
+    "//examples/components/routing/fidl:echo-rustc",
+    "//garnet/lib/rust/cm_fidl_translator",
+    "//garnet/lib/rust/cm_rust",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:test_utils",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:url",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+  non_rust_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/memfs",
+  ]
+}
+
+test_package("hub_integration_test") {
+  deps = [
+    ":hub_integration_test_bin",
+    ":hub_collection_realm_bin",
+    ":simple_bin",
+    ":hub_client_bin",
+    "//examples/components/routing/echo_server",
+    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//src/sys/component_manager/tests/meta/mock_pkg_resolver_for_hub_integration_test.cmx")
+      dest = "mock_pkg_resolver.cmx"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+    {
+      path = rebase_path("meta/hub_client.cml")
+      dest = "hub_client.cm"
+    },
+    {
+      path = rebase_path("//src/sys/component_manager/tests/meta/echo_realm_for_hub_integration.cml")
+      dest = "echo_realm.cm"
+    },
+    {
+      path = rebase_path("meta/hub_collection_realm.cml")
+      dest = "hub_collection_realm.cm"
+    },
+    {
+      path = rebase_path("meta/simple.cml")
+      dest = "simple.cm"
+    }
+  ]
+
+  binaries = [
+    {
+      name = "mock_pkg_resolver"
+    },
+    {
+      name = "echo_server"
+    },
+    {
+      name = "hub_client"
+    },
+    {
+      name = "hub_collection_realm"
+    },
+    {
+      name = "simple"
+    },
+  ]
+
+  tests = [
+    {
+      name = "hub_integration_test"
+    },
+  ]
+}
