@@ -85,7 +85,6 @@ void WriteCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
     return;
   }
   ctx->current_block += 1;
-  ctx->op.vmo_offset += ctx->nand_info->pages_per_block;
 
   status = ctx->block_map->GetPhysical(ctx->copy, ctx->current_block, &ctx->physical_block);
   if (status != ZX_OK) {
@@ -112,12 +111,14 @@ void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
     sync_completion_signal(ctx->completion_event);
     return;
   }
+  const size_t vmo_offset =
+      ctx->op.vmo_offset + ((ctx->current_block - ctx->op.block) * ctx->nand_info->pages_per_block);
   op->rw.command = NAND_OP_WRITE;
   op->rw.data_vmo = ctx->op.vmo.get();
   op->rw.oob_vmo = ZX_HANDLE_INVALID;
   op->rw.length = ctx->nand_info->pages_per_block;
   op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block;
-  op->rw.offset_data_vmo = ctx->op.vmo_offset;
+  op->rw.offset_data_vmo = vmo_offset;
   ctx->nand->Queue(op, WriteCompletionCallback, cookie);
   return;
 }

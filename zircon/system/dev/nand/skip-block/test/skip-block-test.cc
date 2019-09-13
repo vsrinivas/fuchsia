@@ -616,7 +616,7 @@ TEST_F(SkipBlockTest, GetPartitionInfo) {
     ASSERT_EQ(info.partition_block_count, kNumBlocks);
 }
 
-// This test attempts to write 2 copies of a single block to a partition that is 5 blocks wide.
+// This test attempts to write 2 copies of a single block to a partition that is 10 blocks wide.
 // The copies of logical block 1, start out as block 1 and 6. After erase or write failures, the
 // blocks are marked bad, and blocks 2 and 7 become the new "physical" copies of logical block 1.
 TEST_F(SkipBlockTest, WriteMultipleCopies) {
@@ -657,6 +657,58 @@ TEST_F(SkipBlockTest, WriteMultipleCopies) {
     ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 2, kBlockSize));
     ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 6, kBlockSize));
     ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 7, kBlockSize));
+}
+
+// This test attempts to write 2 copies of two blocks to a partition that is 10 blocks wide.
+// The copies of logical block 1, start out as block 1 and 6. After erase or write failures, the
+// blocks are marked bad, and blocks 2 and 7 become the new "physical" copies of logical block 1,
+// and 3 and 8 becomes the new "physical" copies of logical block 2.
+TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
+    const uint32_t count_ = 2;
+    ddk().SetMetadata(&count_, sizeof(count_));
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Erase Block 1.
+    nand().set_result(ZX_OK);
+    // Write Block 1.
+    nand().set_result(ZX_ERR_IO);
+    // Erase Block 2.
+    nand().set_result(ZX_OK);
+    // Write Block 2.
+    nand().set_result(ZX_OK);
+    // Erase Block 3.
+    nand().set_result(ZX_OK);
+    // Write Block 3.
+    nand().set_result(ZX_OK);
+    // Erase Block 6.
+    nand().set_result(ZX_ERR_IO);
+    // Erase Block 7.
+    nand().set_result(ZX_OK);
+    // Write Block 7.
+    nand().set_result(ZX_OK);
+    // Erase Block 8.
+    nand().set_result(ZX_OK);
+    // Write Block 8.
+    nand().set_result(ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(kBlockSize * 2, &vmo));
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(vmo);
+    op.block = 1;
+    op.block_count = 2;
+
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+    ASSERT_TRUE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
+    ASSERT_EQ(bad_block().grown_bad_blocks()[0], 1);
+    ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 1, kBlockSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 2, kBlockSize * 2));
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 6, kBlockSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 7, kBlockSize * 2));
 }
 
 // This test attempts to write 4 copies of a single block to a partition that is 4 blocks wide.
