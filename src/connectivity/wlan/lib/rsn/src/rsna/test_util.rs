@@ -105,7 +105,7 @@ pub fn get_pmk() -> Vec<u8> {
 pub fn encrypt_key_data(kek: &[u8], key_data: &[u8]) -> Vec<u8> {
     let keywrap_alg =
         keywrap_algorithm(&get_akm()).expect("error AKM has no known keywrap Algorithm");
-    keywrap_alg.wrap(kek, key_data).expect("could not encrypt key data")
+    keywrap_alg.wrap_key(kek, &[0; 16], key_data).expect("could not encrypt key data")
 }
 
 pub fn mic_len() -> usize {

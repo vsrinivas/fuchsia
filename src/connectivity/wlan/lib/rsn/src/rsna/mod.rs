@@ -125,9 +125,11 @@ impl<B: ByteSlice> EncryptedKeyData<B> {
         kek: &[u8],
         akm: &Akm,
     ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), failure::Error> {
-        let key_data = keywrap_algorithm(akm)
-            .ok_or(Error::UnsupportedAkmSuite)?
-            .unwrap(kek, &self.0.key_data[..])?;
+        let key_data = keywrap_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.unwrap_key(
+            kek,
+            &self.0.key_frame_fields.key_iv,
+            &self.0.key_data[..],
+        )?;
         Ok((self.0, key_data))
     }
 }

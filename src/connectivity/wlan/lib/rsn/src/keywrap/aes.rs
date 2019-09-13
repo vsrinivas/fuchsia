@@ -82,7 +82,7 @@ pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
 
 impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
-    fn wrap(&self, key: &[u8], p: &[u8]) -> Result<Vec<u8>, failure::Error> {
+    fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = p.len() / 8;
         ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
 
@@ -127,7 +127,7 @@ impl Algorithm for NistAes {
     }
 
     // RFC 3394, 2.2.2 - uses index based unwrapping
-    fn unwrap(&self, key: &[u8], c: &[u8]) -> Result<Vec<u8>, failure::Error> {
+    fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = c.len() / 8 - 1;
         ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
 
@@ -181,11 +181,11 @@ mod tests {
         let kek = Vec::from_hex(kek_hex).unwrap();
         let data = Vec::from_hex(data_hex).unwrap();
         let keywrap = NistAes;
-        let result = keywrap.wrap(&kek[..], &data[..]);
+        let result = keywrap.wrap_key(&kek[..], &[0u8; 16], &data[..]);
         assert_eq!(result.is_ok(), true);
         let expected = Vec::from_hex(expected_hex).unwrap();
         assert_eq!(result.unwrap(), expected);
-        let plain = keywrap.unwrap(&kek[..], &expected[..]);
+        let plain = keywrap.unwrap_key(&kek[..], &[0u8; 16], &expected[..]);
         assert_eq!(plain.is_ok(), true);
         assert_eq!(data, plain.unwrap());
     }
@@ -254,9 +254,9 @@ mod tests {
         let kek = Vec::from_hex("0102030405060708090A0B0C0D0E0F").unwrap(); // 240bit
         let data = Vec::from_hex("00112233445566778899AABBCCDDEEFF").unwrap();
         let keywrap = NistAes;
-        let result = keywrap.wrap(&kek[..], &data[..]);
+        let result = keywrap.wrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(result.is_err(), true);
-        let plain = keywrap.unwrap(&kek[..], &data[..]);
+        let plain = keywrap.unwrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
 
@@ -267,9 +267,9 @@ mod tests {
             Vec::from_hex("012345678912345601234567891234560123456789123456012345678912345614")
                 .unwrap();
         let keywrap = NistAes;
-        let result = keywrap.wrap(&kek[..], &data[..]);
+        let result = keywrap.wrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(result.is_err(), true);
-        let plain = keywrap.unwrap(&kek[..], &data[..]);
+        let plain = keywrap.unwrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
 
@@ -278,10 +278,10 @@ mod tests {
         let mut kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
         let data = Vec::from_hex("00112233445566778899AABBCCDDEEFF").unwrap();
         let keywrap = NistAes;
-        let result = keywrap.wrap(&kek[..], &data[..]);
+        let result = keywrap.wrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(result.is_ok(), true);
         kek[0] = 0xFF;
-        let plain = keywrap.unwrap(&kek[..], &data[..]);
+        let plain = keywrap.unwrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
 
@@ -290,9 +290,24 @@ mod tests {
         let kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
         let data = Vec::from_hex("0011223344556677").unwrap();
         let keywrap = NistAes;
-        let result = keywrap.wrap(&kek[..], &data[..]);
+        let result = keywrap.wrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(result.is_err(), true);
-        let plain = keywrap.unwrap(&kek[..], &data[..]);
+        let plain = keywrap.unwrap_key(&kek[..], &[0; 16], &data[..]);
         assert_eq!(plain.is_err(), true);
+    }
+
+    #[test]
+    fn test_iv_unused() {
+        let kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
+        let data = Vec::from_hex("00112233445566778899AABBCCDDEEFF").unwrap();
+        let iv = [0xab; 16];
+        let keywrap = NistAes;
+        let result = keywrap.wrap_key(&kek[..], &iv, &data[..]);
+        assert_eq!(result.is_ok(), true);
+        let expected = Vec::from_hex("1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5").unwrap();
+        assert_eq!(result.unwrap(), expected);
+        let plain = keywrap.unwrap_key(&kek[..], &iv, &expected[..]);
+        assert_eq!(plain.is_ok(), true);
+        assert_eq!(data, plain.unwrap());
     }
 }

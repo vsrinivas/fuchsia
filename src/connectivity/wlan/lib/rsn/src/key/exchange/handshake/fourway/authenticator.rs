@@ -257,9 +257,10 @@ fn create_message_3(
     w.write_protection(&cfg.a_protection)?;
     w.write_gtk(&kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk()))?;
     let key_data = w.finalize_for_encryption()?;
+    let key_iv = [0u8; 16];
     let encrypted_key_data = keywrap_algorithm(&protection.akm)
         .ok_or(Error::UnsupportedAkmSuite)?
-        .wrap(kek, &key_data[..])?;
+        .wrap_key(kek, &key_iv, &key_data[..])?;
 
     // Construct message.
     let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, protection);
@@ -285,8 +286,8 @@ fn create_message_3(
             key_len,
             krc,
             eapol::to_array(anonce),
-            [0u8; 16], // iv
-            0,         // rsc
+            key_iv,
+            0, // rsc
         ),
         encrypted_key_data,
         protection.mic_size as usize,
