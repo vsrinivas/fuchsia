@@ -40,7 +40,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
         le_acl_buffer_settings: None,
     };
 
-    let emulator = Emulator::create("bt-hci-integration-lifecycle").await?;
+    let mut emulator = Emulator::create("bt-hci-integration-lifecycle").await?;
     let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
@@ -60,8 +60,8 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     // The bt-host should have been initialized with the address that we initially configured.
     assert_eq!(address.to_string(), info.address);
 
-    // Remove the bt-hci device
-    drop(emulator);
+    // Remove the bt-hci device and check that the test device is also destroyed.
+    emulator.destroy_and_wait().await?;
 
     // Check that the bt-host device is also destroyed.
     watcher.watch_removed(bthost.path()).await

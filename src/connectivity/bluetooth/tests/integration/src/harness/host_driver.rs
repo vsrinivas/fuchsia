@@ -195,7 +195,7 @@ where
     F: FnOnce(HostDriverHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let (harness, emulator) = new_host_harness().await?;
+    let (harness, mut emulator) = new_host_harness().await?;
 
     // Start processing events in a background task.
     fasync::spawn(
@@ -210,7 +210,8 @@ where
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
     let host_path = &harness.read().host_path;
 
-    drop(emulator);
+    emulator.destroy_and_wait().await?;
+
     watcher.watch_removed(host_path).await?;
 
     result

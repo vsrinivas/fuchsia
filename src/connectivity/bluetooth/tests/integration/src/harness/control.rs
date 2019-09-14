@@ -213,6 +213,10 @@ impl ActivatedFakeHost {
     }
 
     pub async fn release(mut self) -> Result<(), Error> {
+        // Wait for the test device to be destroyed.
+        if let Some(hci) = &mut self.hci {
+            hci.destroy_and_wait().await?;
+        }
         self.hci = None;
 
         // Wait for BT-GAP to unregister the associated fake host

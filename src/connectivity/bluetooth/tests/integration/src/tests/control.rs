@@ -25,8 +25,8 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let fake_hci_0 = Emulator::create_and_publish("bt-hci-integration-control-0").await?;
-    let fake_hci_1 = Emulator::create_and_publish("bt-hci-integration-control-1").await?;
+    let mut fake_hci_0 = Emulator::create_and_publish("bt-hci-integration-control-0").await?;
+    let mut fake_hci_1 = Emulator::create_and_publish("bt-hci-integration-control-1").await?;
 
     let state = control
         .when_satisfied(
@@ -56,8 +56,8 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
         control.when_satisfied(control_expectation::active_host_is(id), control_timeout()).await?;
     }
 
-    drop(fake_hci_0);
-    drop(fake_hci_1);
+    fake_hci_0.destroy_and_wait().await?;
+    fake_hci_1.destroy_and_wait().await?;
 
     for host in fake_hosts {
         control
@@ -69,7 +69,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
 }
 
 async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
-    let (_host, hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
+    let (_host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
 
     // Insert a fake peer to test connection and disconnection.
     let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
@@ -113,6 +113,8 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     control
         .when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
         .await?;
+
+    hci.destroy_and_wait().await?;
     Ok(())
 }
 

@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{
-        DeviceSynchronousProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
+        DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
     },
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
@@ -28,10 +28,14 @@ fn watch_timeout() -> zx::Duration {
 
 /// Represents a bt-hci device emulator. Instances of this type can be used manage the
 /// bt-hci-emulator driver within the test device hierarchy. The associated driver instance gets
-/// unbound and all bt-hci and bt-emulator device instances destroyed when a FakeHciDevice goes out
-/// of scope.
+/// unbound and all bt-hci and bt-emulator device instances destroyed when
+/// `destroy_and_wait()` resolves successfully.
+/// `destroy_and_wait()` MUST be called for proper clean up of the emulator device.
 pub struct Emulator {
-    dev: TestDevice,
+    /// This will have a value when the emulator is instantiated and will be reset to None
+    /// in `destroy_and_wait()`. This is so the destructor can assert that the TestDevice has been
+    /// destroyed.
+    dev: Option<TestDevice>,
     emulator: HciEmulatorProxy,
 }
 
@@ -54,7 +58,7 @@ impl Emulator {
     pub async fn create(name: &str) -> Result<Emulator, Error> {
         let dev = TestDevice::create(name).await?;
         let emulator = dev.bind().await?;
-        Ok(Emulator { dev: dev, emulator: emulator })
+        Ok(Emulator { dev: Some(dev), emulator: emulator })
     }
 
     /// Publish a bt-emulator and a bt-hci device using the default emulator settings.
@@ -84,9 +88,19 @@ impl Emulator {
         watcher.watch_new(&topo, WatchFilter::AddedOrExisting).await
     }
 
+    /// Sends the test device a destroy message which will unbind the driver.
+    /// This will wait for the test device to be unpublished from devfs.
+    pub async fn destroy_and_wait(&mut self) -> Result<(), Error> {
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, watch_timeout()).await?;
+        let topo_path = PathBuf::from(fdio::device_get_topo_path(self.file())?);
+        let fake_dev = self.dev.take();
+        fake_dev.expect("attempted to destroy an already destroyed emulator device").destroy()?;
+        watcher.watch_removed(&topo_path).await
+    }
+
     /// Returns a reference to the underlying file.
     pub fn file(&self) -> &File {
-        &self.dev.0
+        &self.dev.as_ref().expect("emulator device accessed after it was destroyed!").0
     }
 
     /// Returns a reference to the fuchsia.bluetooth.test.HciEmulator protocol proxy.
@@ -95,7 +109,18 @@ impl Emulator {
     }
 }
 
-// Represents the test device. Destroys the underlying device when it goes out of scope.
+impl Drop for Emulator {
+    fn drop(&mut self) {
+        if self.dev.is_some() {
+            fx_log_err!("Did not call destroy() on Emulator");
+        }
+    }
+}
+
+// Represents the test device. `destroy()` MUST be called explicitly to remove the device.
+// The device will be removed asynchronously so the caller cannot rely on synchronous
+// execution of destroy() to know about device removal. Instead, the caller should watch for the
+// device path to be removed.
 struct TestDevice(File);
 
 impl TestDevice {
@@ -135,7 +160,7 @@ impl TestDevice {
     // Send the test device a destroy message which will unbind the driver.
     fn destroy(&mut self) -> Result<(), Error> {
         let channel = fdio::clone_channel(&self.0)?;
-        let mut device = DeviceSynchronousProxy::new(channel);
+        let device = DeviceProxy::new(fasync::Channel::from_channel(channel)?);
         Ok(device.destroy()?)
     }
 
@@ -171,14 +196,6 @@ impl TestDevice {
     }
 }
 
-impl Drop for TestDevice {
-    fn drop(&mut self) {
-        if let Err(e) = self.destroy() {
-            fx_log_err!("error while destroying test device: {:?}", e);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {super::*, crate::constants::HCI_DEVICE_DIR, fidl_fuchsia_bluetooth_test::EmulatorError};
@@ -203,9 +220,9 @@ mod tests {
         let emul_dev: DeviceFile;
 
         {
-            let fake_dev =
+            let mut fake_dev =
                 Emulator::create("publish-test-0").await.expect("Failed to construct Emulator");
-            let topo_path = fdio::device_get_topo_path(&fake_dev.dev.0)
+            let topo_path = fdio::device_get_topo_path(&fake_dev.file())
                 .expect("Failed to obtain topological path for Emulator");
             let topo_path = PathBuf::from(topo_path);
 
@@ -241,6 +258,8 @@ mod tests {
                 .await
                 .expect("Failed to send second Publish message to emulator device");
             assert_eq!(Err(EmulatorError::HciAlreadyPublished), result);
+
+            fake_dev.destroy_and_wait().await.expect("Expected test device to be removed");
         }
 
         // Both devices should be destroyed when `fake_dev` gets dropped.
