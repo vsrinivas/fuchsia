@@ -120,9 +120,9 @@ class RecipeApp : public modular::ViewApp {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     fuchsia::modular::Intent intent;
     intent.handler = module_query;
-    module_context_->EmbedModule2(module_query, std::move(intent), module_.NewRequest(),
-                                  std::move(view_token),
-                                  [](const fuchsia::modular::StartModuleStatus&) {});
+    module_context_->EmbedModule(module_query, std::move(intent), module_.NewRequest(),
+                                 std::move(view_token),
+                                 [](const fuchsia::modular::StartModuleStatus&) {});
     view_holder_token_ = std::move(view_holder_token);
     SetChild();
   }

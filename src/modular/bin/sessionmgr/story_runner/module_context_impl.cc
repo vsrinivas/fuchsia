@@ -68,14 +68,6 @@ void ModuleContextImpl::EmbedModule(
                                       std::move(view_token), std::move(callback));
 }
 
-void ModuleContextImpl::EmbedModule2(
-    std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-    fuchsia::ui::views::ViewToken view_token, EmbedModule2Callback callback) {
-  EmbedModule(std::move(name), std::move(intent), std::move(module_controller),
-              std::move(view_token), std::move(callback));
-}
-
 void ModuleContextImpl::AddModuleToStory(
     std::string name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,

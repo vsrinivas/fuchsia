@@ -80,7 +80,7 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
     auto embedded_mod_intent = fuchsia::modular::Intent{.handler = embedded_module_url_};
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     fuchsia::modular::ModuleControllerPtr module_controller;
-    parent_module_->module_context()->EmbedModule2(
+    parent_module_->module_context()->EmbedModule(
         kEmbeddedModuleName, std::move(embedded_mod_intent), module_controller.NewRequest(),
         std::move(view_token), [](const fuchsia::modular::StartModuleStatus status) {});
 

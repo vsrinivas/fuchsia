@@ -57,12 +57,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
                    fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
-  void EmbedModule2(std::string name, fuchsia::modular::Intent intent,
-                    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-                    fuchsia::ui::views::ViewToken view_token,
-                    EmbedModule2Callback callback) override;
-
-  // |fuchsia::modular::ModuleContext|
   void AddModuleToStory(
       std::string name, fuchsia::modular::Intent intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,

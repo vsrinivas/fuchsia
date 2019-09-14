@@ -51,12 +51,6 @@ protocol ModuleContext {
                 request<ModuleController> module_controller,
                 fuchsia.ui.views.ViewToken view_token)
         -> (StartModuleStatus status);
-    // DEPRECATED, for transition purposes only.
-    [Transitional]
-    EmbedModule2(string name, Intent intent,
-                 request<ModuleController> module_controller,
-                 fuchsia.ui.views.ViewToken view_token)
-        -> (StartModuleStatus status);
 
     /// Requests that the current story and module gain focus. It's up to the story
     /// shell and session shell to honor that request.
