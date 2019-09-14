@@ -405,7 +405,7 @@ void Client::HandleImportBufferCollection(
   *resp_table = &fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
   zx::channel collection_token(req->collection_token);
   if (!sysmem_allocator_) {
-    resp->res = ZX_ERR_INTERNAL;
+    resp->res = ZX_ERR_NOT_SUPPORTED;
     return;
   }
 

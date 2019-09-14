@@ -5,10 +5,21 @@
 #include "lib/framebuffer/framebuffer.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <zircon/pixelformat.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+namespace fhd = llcpp::fuchsia::hardware::display;
+namespace sysmem = ::llcpp::fuchsia::sysmem;
+
+zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
+                                 zx::channel dc_client_channel);
 
 TEST(Framebuffer, SingleBuffer) {
   fbl::unique_fd dc_fd(open("/dev/class/display-controller/000", O_RDWR));
@@ -22,11 +33,10 @@ TEST(Framebuffer, SingleBuffer) {
   for (uint32_t i = 0; i < kIterations; i++) {
     const char* error;
     zx_status_t status = fb_bind(true, &error);
-    if (status == ZX_ERR_NO_RESOURCES) {
-      // If the simple display driver is being used then only one client can
-      // connect to the display at a time. virtcon is probably already using it,
-      // so libframebuffer isn't supported there.
-      fprintf(stderr, "Skipping because received ZX_ERR_NO_RESOURCES\n");
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      // If the simple display driver is being used then sysmem isn't supported
+      // and libframebuffer isn't either.
+      fprintf(stderr, "Skipping because received ZX_ERR_NOT_SUPPORTED\n");
       return;
     }
     EXPECT_OK(status);
@@ -45,4 +55,247 @@ TEST(Framebuffer, SingleBuffer) {
 
     fb_release();
   }
+}
+
+namespace {
+
+constexpr uint32_t kBytesPerRowDivisor = 128;
+
+class StubDisplayController : public fhd::Controller::Interface {
+ public:
+  StubDisplayController() {
+    zx::channel sysmem_server, sysmem_client;
+    ASSERT_OK(zx::channel::create(0, &sysmem_server, &sysmem_client));
+    ASSERT_OK(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release()));
+
+    sysmem_allocator_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+  }
+
+  ~StubDisplayController() { current_buffer_collection_->Close(); }
+  void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
+                      ImportVmoImageCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
+                   ImportImageCompleter::Sync _completer) override {
+    _completer.Reply(ZX_OK, 1);
+  }
+  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void CreateLayer(CreateLayerCompleter::Sync _completer) override { _completer.Reply(ZX_OK, 1); }
+
+  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void SetDisplayMode(uint64_t display_id, fhd::Mode mode,
+                      SetDisplayModeCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
+                                 ::fidl::Array<float, 9> coefficients,
+                                 ::fidl::Array<float, 3> postoffsets,
+                                 SetDisplayColorConversionCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
+                        SetDisplayLayersCompleter::Sync _completer) override {
+    // Ignore
+  }
+
+  void SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+                             SetLayerPrimaryConfigCompleter::Sync _completer) override {
+    // Ignore
+  }
+
+  void SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform, fhd::Frame src_frame,
+                               fhd::Frame dest_frame,
+                               SetLayerPrimaryPositionCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
+                            SetLayerPrimaryAlphaCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+                            SetLayerCursorConfigCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
+                              SetLayerCursorPositionCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
+                           ::fidl::VectorView<uint8_t> color_bytes,
+                           SetLayerColorConfigCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
+                     uint64_t signal_event_id, SetLayerImageCompleter::Sync _completer) override {
+    // Ignore
+  }
+
+  void CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ApplyConfig(ApplyConfigCompleter::Sync _completer) override {
+    // Ignore
+  }
+
+  void EnableVsync(bool enable, EnableVsyncCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ComputeLinearImageStride(uint32_t width, uint32_t pixel_format,
+                                ComputeLinearImageStrideCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
+                              ImportBufferCollectionCompleter::Sync _completer) override {
+    zx::channel server, client;
+    ASSERT_OK(zx::channel::create(0, &server, &client));
+
+    ASSERT_TRUE(
+        sysmem_allocator_->BindSharedCollection(std::move(collection_token), std::move(server))
+            .ok());
+    current_buffer_collection_ =
+        std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
+
+    _completer.Reply(ZX_OK);
+  }
+  void ReleaseBufferCollection(uint64_t collection_id,
+                               ReleaseBufferCollectionCompleter::Sync _completer) override {}
+
+  void SetBufferCollectionConstraints(
+      uint64_t collection_id, fhd::ImageConfig config,
+      SetBufferCollectionConstraintsCompleter::Sync _completer) override {
+    sysmem::BufferCollectionConstraints constraints;
+    constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
+    constraints.min_buffer_count = 1;
+    constraints.image_format_constraints_count = 1;
+    constraints.image_format_constraints[0] = sysmem::ImageFormatConstraints();
+    constraints.image_format_constraints[0].pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
+    constraints.image_format_constraints[0].pixel_format.format_modifier.value =
+        sysmem::FORMAT_MODIFIER_LINEAR;
+    constraints.image_format_constraints[0].color_spaces_count = 1;
+    constraints.image_format_constraints[0].color_space[0].type = sysmem::ColorSpaceType::SRGB;
+    constraints.image_format_constraints[0].min_coded_width = 0;
+    constraints.image_format_constraints[0].min_coded_height = 0;
+    constraints.image_format_constraints[0].layers = 1;
+    auto& image_constraints = constraints.image_format_constraints[0];
+    image_constraints.max_coded_width = 0xffffffff;
+    image_constraints.max_coded_height = 0xffffffff;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = kBytesPerRowDivisor;
+    image_constraints.start_offset_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+
+    current_buffer_collection_->SetConstraints(true, constraints);
+    _completer.Reply(ZX_OK);
+  }
+
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
+                             ImportImageForCaptureCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void StartCapture(uint64_t signal_event_id, uint64_t image_id,
+                    StartCaptureCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+ private:
+  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
+  std::unique_ptr<sysmem::BufferCollection::SyncClient> current_buffer_collection_;
+};
+
+}  // namespace
+
+void SendInitialDisplay(const zx::channel& server_channel, fhd::Mode* mode, uint32_t pixel_format) {
+  fhd::Info info;
+  info.pixel_format = fidl::VectorView(&pixel_format, 1);
+  info.modes = fidl::VectorView(mode, 1);
+  fidl::VectorView<fhd::Info> added(&info, 1);
+  fidl::VectorView<uint64_t> removed;
+
+  ASSERT_OK(fhd::Controller::SendDisplaysChangedEvent(zx::unowned_channel(server_channel), added,
+                                                      removed));
+}
+
+// Check that the correct stride is returned when a weird one is used.
+TEST(Framebuffer, DisplayStride) {
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  StubDisplayController controller;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  fhd::Mode mode;
+  mode.horizontal_resolution = 301;
+  mode.vertical_resolution = 250;
+  constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+  SendInitialDisplay(server_channel, &mode, kPixelFormat);
+
+  loop.StartThread();
+
+  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &controller));
+
+  const char* error;
+  zx_status_t status = fb_bind_with_channel(true, &error, std::move(client_channel));
+  EXPECT_OK(status);
+  zx_handle_t buffer_handle = fb_get_single_buffer();
+  EXPECT_NE(ZX_HANDLE_INVALID, buffer_handle);
+
+  uint32_t width, height, linear_stride_px;
+  zx_pixel_format_t format;
+  fb_get_config(&width, &height, &linear_stride_px, &format);
+  EXPECT_EQ(mode.horizontal_resolution, width);
+  EXPECT_EQ(mode.vertical_resolution, height);
+  EXPECT_EQ(kPixelFormat, format);
+
+  constexpr uint32_t kBytesPerPixel = 4;
+
+  // Round up to be a multiple of kBytesPerRowDivisor bytes.
+  EXPECT_EQ(fbl::round_up(width * kBytesPerPixel, kBytesPerRowDivisor) / kBytesPerPixel,
+            linear_stride_px);
+
+  uint64_t buffer_size;
+  EXPECT_OK(zx_vmo_get_size(buffer_handle, &buffer_size));
+  EXPECT_LE(linear_stride_px * ZX_PIXEL_FORMAT_BYTES(format) * height, buffer_size);
 }
