@@ -273,7 +273,7 @@ def main():
         outfile = args.pave
         write_script_for(args.pave, 'bootserver_pave')
     if args.pave_zedboot:
-        outfile = args.pave
+        outfile = args.pave_zedboot
         write_script_for(args.pave_zedboot, 'bootserver_pave_zedboot')
     if args.netboot:
         outfile = args.netboot
