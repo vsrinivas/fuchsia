@@ -24,18 +24,6 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
     done();
   }
 
-  // |AgentRunnerStorage|
-  void WriteTask(const std::string& /*agent_url*/, TriggerInfo /*info*/,
-                 fit::function<void(bool)> done) override {
-    done(true);
-  }
-
-  // |AgentRunnerStorage|
-  void DeleteTask(const std::string& /*agent_url*/, const std::string& /*task_id*/,
-                  fit::function<void(bool)> done) override {
-    done(true);
-  }
-
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeAgentRunnerStorage);
 };
 

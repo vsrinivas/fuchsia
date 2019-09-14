@@ -70,16 +70,6 @@ class AgentRunnerStorage {
   // Ownership of |delegate| is not taken and it must out-live *this.
   virtual void Initialize(NotificationDelegate* delegate, fit::function<void()> done) = 0;
 
-  // Writes a new task to storage. |NotificationDelegate| will be notified of
-  // the new task.
-  virtual void WriteTask(const std::string& agent_url, TriggerInfo info,
-                         fit::function<void(bool)> done) = 0;
-
-  // Deletes existing task on the storage. |NotificationDelegate| will be
-  // notified of the deleted task.
-  virtual void DeleteTask(const std::string& agent_url, const std::string& task_id,
-                          fit::function<void(bool)> done) = 0;
-
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorage);
 };

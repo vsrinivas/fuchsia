@@ -27,18 +27,8 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
   // |AgentRunnerStorage|
   void Initialize(NotificationDelegate* delegate, fit::function<void()> done) override;
 
-  // |AgentRunnerStorage|
-  void WriteTask(const std::string& agent_url, TriggerInfo data,
-                 fit::function<void(bool)> done) override;
-
-  // |AgentRunnerStorage|
-  void DeleteTask(const std::string& agent_url, const std::string& task_id,
-                  fit::function<void(bool)> done) override;
-
   // Operation subclasses:
   class InitializeCall;
-  class WriteTaskCall;
-  class DeleteTaskCall;
 
   // |PageClient|
 

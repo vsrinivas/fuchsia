@@ -237,17 +237,6 @@ void AgentContextImpl::GetEntityReferenceFactory(
   entity_provider_runner_->ConnectEntityReferenceFactory(url_, std::move(request));
 }
 
-void AgentContextImpl::ScheduleTask(fuchsia::modular::TaskInfo task_info) {
-  agent_runner_->ScheduleTask(url_, std::move(task_info));
-}
-
-void AgentContextImpl::ScheduleTaskWithCompletion(fuchsia::modular::TaskInfo task_info,
-                                                  ScheduleTaskWithCompletionCallback callback) {
-  agent_runner_->ScheduleTask(url_, std::move(task_info), std::move(callback));
-}
-
-void AgentContextImpl::DeleteTask(std::string task_id) { agent_runner_->DeleteTask(url_, task_id); }
-
 void AgentContextImpl::Authorize(
     fuchsia::auth::AppConfig app_config,
     fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext> auth_ui_context,

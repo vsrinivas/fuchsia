@@ -79,13 +79,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
   // |fuchsia::modular::AgentContext|
   void GetTokenManager(fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) override;
-  // |fuchsia::modular::AgentContext|
-  void ScheduleTask(fuchsia::modular::TaskInfo task_info) override;
-  // |fuchsia::modular::AgentContext|
-  void ScheduleTaskWithCompletion(fuchsia::modular::TaskInfo task_info,
-                                  ScheduleTaskWithCompletionCallback callback) override;
-  // |fuchsia::modular::AgentContext|
-  void DeleteTask(std::string task_id) override;
+
   // |fuchsia::modular::AgentContext|
   void GetEntityReferenceFactory(
       fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) override;

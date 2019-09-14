@@ -265,37 +265,6 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
   }
 }
 
-void AgentRunner::ScheduleTask(const std::string& agent_url, fuchsia::modular::TaskInfo task_info,
-                               fit::function<void(bool)> done) {
-  AgentRunnerStorage::TriggerInfo data;
-  data.agent_url = agent_url;
-  data.task_id = task_info.task_id;
-
-  if (task_info.trigger_condition.is_message_on_queue()) {
-    data.queue_name = task_info.trigger_condition.message_on_queue();
-    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE;
-  } else if (task_info.trigger_condition.is_queue_deleted()) {
-    data.queue_token = task_info.trigger_condition.queue_deleted();
-    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_DELETION;
-  } else if (task_info.trigger_condition.is_alarm_in_seconds()) {
-    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_ALARM;
-    data.alarm_in_seconds = task_info.trigger_condition.alarm_in_seconds();
-  } else {
-    // Not a defined trigger condition.
-    FXL_NOTREACHED();
-  }
-
-  if (task_info.persistent) {
-    // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()|
-    // after this trigger information has been added to the ledger via a
-    // ledger page watching mechanism.
-    agent_runner_storage_->WriteTask(agent_url, data, std::move(done));
-  } else {
-    AddedTask(MakeTriggerKey(agent_url, data.task_id), data);
-    done(true);
-  }
-}
-
 void AgentRunner::AddedTask(const std::string& key, AgentRunnerStorage::TriggerInfo data) {
   switch (data.task_type) {
     case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE:
@@ -488,13 +457,6 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url, const std::str
         });
       },
       zx::sec(alarm_in_seconds));
-}
-
-void AgentRunner::DeleteTask(const std::string& agent_url, const std::string& task_id) {
-  // This works for non-persistent tasks too since
-  // |AgentRunnerStorageImpl::DeleteTask| handles missing keys in ledger
-  // gracefully.
-  agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
 std::vector<std::string> AgentRunner::GetAllAgents() {
