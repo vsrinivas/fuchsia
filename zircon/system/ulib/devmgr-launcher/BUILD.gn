@@ -15,11 +15,12 @@ library("devmgr-launcher") {
     "launcher.cc",
   ]
   public_deps = [
-    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fit:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
