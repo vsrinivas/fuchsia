@@ -146,6 +146,8 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_NOT_SUPPORTED);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_NOT_SUPPORTED);
+
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
@@ -177,6 +179,7 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
   // because the ramdisk doesn't have a data GUID.
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_WRONG_TYPE);
 
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
@@ -208,6 +211,7 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
   EXPECT_OK(device.MountFilesystem());
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_ALREADY_BOUND);
 
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
@@ -246,6 +250,7 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
   EXPECT_OK(device.CheckFilesystem());
   EXPECT_OK(device.MountFilesystem());
 
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
@@ -283,6 +288,7 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
   EXPECT_OK(device.CheckFilesystem());
   EXPECT_NOT_OK(device.MountFilesystem());
 
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
@@ -327,6 +333,7 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   ASSERT_NE(logger_->counters().find(metric_id), logger_->counters().end());
   ASSERT_EQ(logger_->counters().at(metric_id), 1);
 
+  mounter.~FilesystemMounter();
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
