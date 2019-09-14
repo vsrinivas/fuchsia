@@ -361,7 +361,7 @@ macro_rules! open_as_file_assert_err {
 macro_rules! open_get_directory_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
         use $crate::test_utils::assertions::reexport::{
-            DirectoryEvent, DirectoryMarker, NodeInfo, Status,
+            DirectoryEvent, DirectoryMarker, DirectoryObject, NodeInfo, Status,
         };
 
         open_get_proxy_assert!(
