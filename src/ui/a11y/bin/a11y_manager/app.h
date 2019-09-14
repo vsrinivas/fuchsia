@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_APP_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -40,6 +41,13 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // Helper function to copy given settings to member variable.
   void SetSettings(fuchsia::accessibility::Settings provided_settings);
 
+  // Callback for Setui's Watch() method.
+  void SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result);
+
+  // Set up continuous watch of setui's accessibility settings. The Watch(...) method returns on the
+  // initial call, and afterwards uses a hanging get to return only when settings change.
+  void WatchSetui();
+
   // Initializes Screen Reader pointer when screen reader is enabled, and destroys
   // the pointer when Screen Reader is disabled.
   void OnScreenReaderEnabled(bool enabled);
@@ -61,8 +69,10 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
 
+  // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
   fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
+
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
 
   fuchsia::accessibility::Settings settings_;
@@ -70,6 +80,9 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // Interface between a11y manager and Root presenter to register a
   // accessibility pointer event listener.
   fuchsia::ui::input::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+
+  // Interface between Setui and a11y manager to get updates when user settings change.
+  fuchsia::settings::AccessibilityPtr setui_settings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

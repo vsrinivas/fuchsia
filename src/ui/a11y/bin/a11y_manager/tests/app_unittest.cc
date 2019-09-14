@@ -16,6 +16,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -248,6 +249,55 @@ TEST_F(AppUnitTest, RegistersAccessibilityPointerEventListener) {
   RunLoopUntilIdle();
   EXPECT_EQ(status, SettingsManagerStatus::OK);
   EXPECT_FALSE(mock_pointer_event_registry.IsListenerRegistered());
+}
+
+// This test makes sure that the accessibility manager is watching for settings updates from setUI.
+TEST_F(AppUnitTest, WatchesSetUISettings) {
+  // Create a mock setUI & configure initial settings (everything off).
+  MockSetUIAccessibility mock_setui(&context_provider_);
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(false);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  // Verify that app settings are initialized to appropriately.
+  SettingsPtr settings = app.GetSettings();
+  EXPECT_TRUE(settings->has_screen_reader_enabled());
+  EXPECT_FALSE(settings->screen_reader_enabled());
+  EXPECT_TRUE(settings->has_magnification_enabled());
+  EXPECT_FALSE(settings->magnification_enabled());
+  EXPECT_TRUE(settings->has_color_inversion_enabled());
+  EXPECT_FALSE(settings->color_inversion_enabled());
+  EXPECT_TRUE(settings->has_color_correction());
+  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::DISABLED, settings->color_correction());
+  EXPECT_TRUE(settings->has_screen_reader_enabled());
+  EXPECT_FALSE(settings->screen_reader_enabled());
+
+  // Change the settings values (everything on).
+  fuchsia::settings::AccessibilitySettings newAccessibilitySettings;
+  newAccessibilitySettings.set_screen_reader(true);
+  newAccessibilitySettings.set_color_inversion(true);
+  newAccessibilitySettings.set_enable_magnification(true);
+  newAccessibilitySettings.set_color_correction(
+      fuchsia::settings::ColorBlindnessType::DEUTERANOMALY);
+  mock_setui.Set(std::move(newAccessibilitySettings), [](auto) {});
+  RunLoopUntilIdle();
+
+  // Verify that stuff changed
+  settings = app.GetSettings();
+  EXPECT_TRUE(settings->has_screen_reader_enabled());
+  EXPECT_TRUE(settings->screen_reader_enabled());
+  EXPECT_TRUE(settings->has_magnification_enabled());
+  EXPECT_TRUE(settings->magnification_enabled());
+  EXPECT_TRUE(settings->has_color_inversion_enabled());
+  EXPECT_TRUE(settings->color_inversion_enabled());
+  EXPECT_TRUE(settings->has_color_correction());
+  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
+            settings->color_correction());
 }
 
 }  // namespace

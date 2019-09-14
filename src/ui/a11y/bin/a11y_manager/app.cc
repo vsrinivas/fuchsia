@@ -30,12 +30,69 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
   pointer_event_registry_ =
       startup_context_->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
   pointer_event_registry_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Cannot connect to PointerEventRegistry with status:"
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
                    << zx_status_get_string(status);
   });
+
+  // Connect to setui.
+  setui_settings_ = startup_context_->svc()->Connect<fuchsia::settings::Accessibility>();
+  setui_settings_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::settings::Accessibility" << zx_status_get_string(status);
+  });
+
+  // Start watching setui for current settings
+  WatchSetui();
 }
 
 App::~App() = default;
+
+// Temporary method to map setui's version of the settings to the soon-to-be deprecated a11y
+// settings.
+// TODO(17180): Remove this method once settings.fidl is fully deprecated.
+fuchsia::accessibility::Settings ConvertSetuiSettingsToInternalSettings(
+    const fuchsia::settings::AccessibilitySettings& systemSettings) {
+  fuchsia::accessibility::Settings internalSettings;
+  if (systemSettings.has_screen_reader()) {
+    internalSettings.set_screen_reader_enabled(systemSettings.screen_reader());
+  }
+  if (systemSettings.has_color_inversion()) {
+    internalSettings.set_color_inversion_enabled(systemSettings.color_inversion());
+  }
+  if (systemSettings.has_enable_magnification()) {
+    internalSettings.set_magnification_enabled(systemSettings.enable_magnification());
+  }
+  if (systemSettings.has_color_correction()) {
+    switch (systemSettings.color_correction()) {
+      case fuchsia::settings::ColorBlindnessType::NONE:
+        internalSettings.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
+        break;
+      case fuchsia::settings::ColorBlindnessType::PROTANOMALY:
+        internalSettings.set_color_correction(
+            fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
+        break;
+      case fuchsia::settings::ColorBlindnessType::DEUTERANOMALY:
+        internalSettings.set_color_correction(
+            fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY);
+        break;
+      case fuchsia::settings::ColorBlindnessType::TRITANOMALY:
+        internalSettings.set_color_correction(
+            fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY);
+        break;
+    }
+  }
+  return internalSettings;
+}
+
+void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result) {
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "Error reading setui accessibility settings.";
+  } else if (result.is_response()) {
+    OnSettingsChange(ConvertSetuiSettingsToInternalSettings(result.response().settings));
+  }
+  WatchSetui();
+}
+
+void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() {
   auto settings_ptr = fuchsia::accessibility::Settings::New();

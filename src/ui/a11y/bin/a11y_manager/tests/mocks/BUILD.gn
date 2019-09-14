@@ -10,11 +10,14 @@ source_set("mocks") {
     "mock_semantic_listener.h",
     "mock_settings_provider.cc",
     "mock_settings_provider.h",
+    "mock_setui_accessibility.cc",
+    "mock_setui_accessibility.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.views",

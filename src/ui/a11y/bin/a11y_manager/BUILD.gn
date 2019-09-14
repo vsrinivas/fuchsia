@@ -53,6 +53,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.accessibility.tts",
     "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//src/ui/a11y/lib",
   ]
