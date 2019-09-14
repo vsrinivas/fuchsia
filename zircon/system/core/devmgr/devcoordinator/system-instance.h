@@ -19,56 +19,60 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo);
 
 class SystemInstance {
  public:
-  SystemInstance();
-
-  // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
-  zx_status_t clone_fshost_ldsvc(zx::channel* loader);
-
-  void do_autorun(const char* name, const char* cmd);
-
   struct ServiceStarterArgs {
     SystemInstance* instance;
     devmgr::Coordinator* coordinator;
   };
 
-  // Thread entry point
-  static int fuchsia_starter(void* arg);
+  SystemInstance();
 
-  int FuchsiaStarter(devmgr::Coordinator* coordinator);
-
-  static int service_starter(void* arg);
-
-  int ServiceStarter(devmgr::Coordinator* coordinator);
-
-  struct ConsoleStarterArgs {
-    SystemInstance* instance;
-    devmgr::BootArgs* boot_args;
-  };
-
-  static int console_starter(void* arg);
-
-  int ConsoleStarter(const devmgr::BootArgs* arg);
-
-  // Thread entry point
-  static int pwrbtn_monitor_starter(void* arg);
-
-  int PwrbtnMonitorStarter();
-
-  void start_console_shell(const devmgr::BootArgs& boot_args);
-
+  // The heart of the public API, in the order that things get called during
+  // startup.
+  zx_status_t CreateSvcJob(const zx::job& root_job);
   zx_status_t CreateFuchsiaJob(const zx::job& root_job);
+  zx_status_t PrepareChannels();
 
   zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
                            devmgr::Coordinator* coordinator, zx::channel fshost_client);
-
-  void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
-                    zx::channel fshost_server);
+  zx_status_t ReuseExistingSvchost();
 
   void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
                        zx::channel fshost_server);
+  // Thread entry point
+  static int pwrbtn_monitor_starter(void* arg);
+  int PwrbtnMonitorStarter();
 
-  // The handle used to transmit messages to appmgr.
+  void start_console_shell(const devmgr::BootArgs& boot_args);
+  int ConsoleStarter(const devmgr::BootArgs* arg);
+
+  // Thread entry point
+  static int service_starter(void* arg);
+  int ServiceStarter(devmgr::Coordinator* coordinator);
+  int FuchsiaStarter(devmgr::Coordinator* coordinator);
+
+  // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
+  zx_status_t clone_fshost_ldsvc(zx::channel* loader);
+
+  // Some other things that are still public because globals in main.cc need to
+  // be able to reach into them until we refactor that away.
+
+  // The handle used to transmit messages to appmgr.  Still public because
+  // fs_clone needs to grab it out of a global SystemInstance in main.cc
   zx::channel appmgr_client;
+
+  // The root of the filesystem host.  Also still public because fs_clone
+  // needs to grab it out of a global SystemInstance in main.cc
+  zx::channel fs_root;
+
+  // The outgoing (exposed) connection to the svchost.  Also still public
+  // because fs_clone needs to grab it out of a global SystemInstance in main.cc
+  zx::channel svchost_outgoing;
+
+ private:
+  // Private helper functions.
+  void do_autorun(const char* name, const char* cmd);
+  void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
+                    zx::channel fshost_server);
 
   // The handle used by appmgr to serve incoming requests.
   // If appmgr cannot be launched within a timeout, this handle is closed.
@@ -94,9 +98,6 @@ class SystemInstance {
 
   zx::job svc_job;
   zx::job fuchsia_job;
-  zx::channel svchost_outgoing;
-
-  zx::channel fs_root;
 
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.

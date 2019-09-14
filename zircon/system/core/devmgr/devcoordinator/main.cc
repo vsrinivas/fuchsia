@@ -319,12 +319,10 @@ int main(int argc, char** argv) {
     fdio_service_clone_to(devmgr::devfs_root_borrow()->get(), devfs_client.release());
   }
 
-  status = zx::job::create(root_job, 0u, &system_instance.svc_job);
+  status = system_instance.CreateSvcJob(root_job);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create service job: %d\n", status);
     return 1;
   }
-  system_instance.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
 
   status = system_instance.CreateFuchsiaJob(root_job);
   if (status != ZX_OK) {
@@ -332,11 +330,18 @@ int main(int argc, char** argv) {
   }
 
   zx::channel fshost_client, fshost_server;
-  zx::channel::create(0, &fshost_client, &fshost_server);
-  zx::channel::create(0, &system_instance.appmgr_client, &system_instance.appmgr_server);
-  zx::channel::create(0, &system_instance.miscsvc_client, &system_instance.miscsvc_server);
-  zx::channel::create(0, &system_instance.device_name_provider_client,
-                      &system_instance.device_name_provider_server);
+  status = zx::channel::create(0, &fshost_client, &fshost_server);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to create fshost channels %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
+  status = system_instance.PrepareChannels();
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to create other system channels %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
 
   if (devmgr_args.start_svchost) {
     status = system_instance.StartSvchost(root_job, require_system, &coordinator,
@@ -347,22 +352,10 @@ int main(int argc, char** argv) {
       return 1;
     }
   } else {
-    // This path is only used in integration tests that start an "isolated" devmgr/devcoordinator.
-    // Rather than start another svchost process - which won't work for a couple reasons - we
-    // clone the /svc in devcoordinator's namespace when devcoordinator launches other processes.
-    // This may or may not work well, depending on the services those processes require and whether
-    // they happen to be in the /svc exposed to this test instance of devcoordinator.
-    // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
-    // into separate components.
-    zx::channel dir_request;
-    zx_status_t status = zx::channel::create(0, &dir_request, &system_instance.svchost_outgoing);
+    status = system_instance.ReuseExistingSvchost();
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to create svchost_outgoing channel\n");
-      return 1;
-    }
-    status = fdio_service_connect("/svc", dir_request.release());
-    if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to connect to /svc\n");
+      fprintf(stderr, "devcoordinator: failed to reuse existing svchost: %s\n",
+              zx_status_get_string(status));
       return 1;
     }
   }

@@ -26,6 +26,11 @@
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 
+struct ConsoleStarterArgs {
+  SystemInstance* instance;
+  devmgr::BootArgs* boot_args;
+};
+
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t wait_for_file(const char* path, zx::time deadline) {
   char path_copy[PATH_MAX];
@@ -119,8 +124,9 @@ void SystemInstance::do_autorun(const char* name, const char* cmd) {
 }
 
 // Thread entry point
-int SystemInstance::fuchsia_starter(void* arg) {
-  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
+int fuchsia_starter(void* arg) {
+  auto args = std::unique_ptr<SystemInstance::ServiceStarterArgs>(
+      static_cast<SystemInstance::ServiceStarterArgs*>(arg));
   return args->instance->FuchsiaStarter(args->coordinator);
 }
 
@@ -336,7 +342,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   return 0;
 }
 
-int SystemInstance::console_starter(void* arg) {
+int console_starter(void* arg) {
   auto args = std::unique_ptr<ConsoleStarterArgs>(static_cast<ConsoleStarterArgs*>(arg));
   return args->instance->ConsoleStarter(args->boot_args);
 }
@@ -919,4 +925,62 @@ void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
   if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
     printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
   }
+}
+
+zx_status_t SystemInstance::PrepareChannels() {
+  zx_status_t status;
+  status = zx::channel::create(0, &appmgr_client, &appmgr_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = zx::channel::create(0, &miscsvc_client, &miscsvc_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = zx::channel::create(0, &device_name_provider_client, &device_name_provider_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
+  zx_status_t status = zx::job::create(root_job, 0u, &svc_job);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to create service job: %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
+  status = svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to set service job name: %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SystemInstance::ReuseExistingSvchost() {
+  // This path is only used in integration tests that start an "isolated" devmgr/devcoordinator.
+  // Rather than start another svchost process - which won't work for a couple reasons - we
+  // clone the /svc in devcoordinator's namespace when devcoordinator launches other processes.
+  // This may or may not work well, depending on the services those processes require and whether
+  // they happen to be in the /svc exposed to this test instance of devcoordinator.
+  // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
+  // into separate components.
+  zx::channel dir_request;
+  zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to create svchost_outgoing channel\n");
+    return 1;
+  }
+  status = fdio_service_connect("/svc", dir_request.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to connect to /svc\n");
+    return 1;
+  }
+
+  return ZX_OK;
 }
