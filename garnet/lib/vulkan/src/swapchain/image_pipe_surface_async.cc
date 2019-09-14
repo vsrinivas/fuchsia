@@ -56,8 +56,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   }
 
   // Pass |scenic_token| to Scenic to collect constraints.
-  const uint32_t kBufferId = 1;
-  image_pipe_->AddBufferCollection(kBufferId, std::move(scenic_token));
+  image_pipe_->AddBufferCollection(++current_buffer_id_, std::move(scenic_token));
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: AddBufferCollection failed: %d\n", status);
     return false;
@@ -198,8 +197,11 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     };
     image_info_out->push_back(info);
     std::lock_guard<std::mutex> lock(mutex_);
-    image_pipe_->AddImage(info.image_id, kBufferId, i, image_format);
+    image_pipe_->AddImage(info.image_id, current_buffer_id_, i, image_format);
+
+    image_id_to_buffer_id_.emplace(info.image_id, current_buffer_id_);
   }
+  buffer_counts_.emplace(current_buffer_id_, image_count);
 
   pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   buffer_collection->Close();
@@ -224,6 +226,12 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
     lock.lock();
   }
   image_pipe_->RemoveImage(image_id);
+
+  // We do not expect same image to be removed multiple times.
+  auto buffer_it = buffer_counts_.find(image_id_to_buffer_id_[image_id]);
+  if (--buffer_it->second == 0) {
+    image_pipe_->RemoveBufferCollection(buffer_it->first);
+  }
 }
 
 void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,

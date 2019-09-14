@@ -278,7 +278,7 @@ class TestSwapchain {
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
-  void CreateSwapchain() {
+  void CreateSwapchain(int num_swapchains) {
     ASSERT_TRUE(init_);
 
     zx::channel endpoint0, endpoint1;
@@ -297,10 +297,12 @@ class TestSwapchain {
     EXPECT_EQ(VK_SUCCESS,
               vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
 
-    VkSwapchainKHR swapchain;
-    EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
+    for (int i = 0; i < num_swapchains; ++i) {
+      VkSwapchainKHR swapchain;
+      EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
+      destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
+    }
 
-    destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
@@ -323,8 +325,9 @@ class SwapchainTest : public ::testing::TestWithParam<bool /* protected_memory *
 TEST_P(SwapchainTest, Surface) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
-  if (protected_memory && !test.protected_memory_is_supported_)
-    return;
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(test.init_);
 
   test.Surface(false);
@@ -333,8 +336,9 @@ TEST_P(SwapchainTest, Surface) {
 TEST_P(SwapchainTest, SurfaceDynamicSymbol) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
-  if (protected_memory && !test.protected_memory_is_supported_)
-    return;
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(test.init_);
 
   test.Surface(true);
@@ -343,11 +347,23 @@ TEST_P(SwapchainTest, SurfaceDynamicSymbol) {
 TEST_P(SwapchainTest, Create) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
-  if (protected_memory && !test.protected_memory_is_supported_)
-    return;
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(test.init_);
 
-  test.CreateSwapchain();
+  test.CreateSwapchain(1);
+}
+
+TEST_P(SwapchainTest, CreateTwice) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.init_);
+
+  test.CreateSwapchain(2);
 }
 
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
@@ -357,8 +373,9 @@ class SwapchainFidlTest : public ::testing::TestWithParam<bool /* protected_memo
 TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   const bool protected_memory = GetParam();
   TestSwapchain test(protected_memory);
-  if (protected_memory && !test.protected_memory_is_supported_)
-    return;
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(test.init_);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

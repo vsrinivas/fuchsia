@@ -11,6 +11,7 @@
 
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 #include "image_pipe_surface.h"
 
@@ -44,6 +45,11 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   async::Loop loop_;
   std::mutex mutex_;
   fuchsia::images::ImagePipe2Ptr image_pipe_;
+
+  uint32_t current_buffer_id_ = 0;
+  std::unordered_map</*image_id=*/uint32_t, /*buffer_id=*/uint32_t> image_id_to_buffer_id_;
+  std::unordered_map</*buffer_id=*/uint32_t, /*image count=*/uint32_t> buffer_counts_;
+
   struct PendingPresent {
     uint32_t image_id;
     std::vector<zx::event> acquire_fences;
