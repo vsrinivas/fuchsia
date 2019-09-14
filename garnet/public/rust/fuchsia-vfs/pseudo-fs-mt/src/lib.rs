@@ -11,15 +11,17 @@ use proc_macro_hack::proc_macro_hack;
 
 pub mod test_utils;
 
+pub mod common;
+
+pub mod execution_scope;
+pub mod path;
+pub mod registry;
+
 pub mod directory;
 pub mod file;
 pub mod service;
 
 pub mod tree_builder;
-
-pub mod common;
-pub mod execution_scope;
-pub mod path;
 
 // --- pseudo_directory ---
 
