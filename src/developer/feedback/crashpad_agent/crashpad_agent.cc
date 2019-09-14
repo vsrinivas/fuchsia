@@ -33,7 +33,6 @@
 #include "src/lib/files/unique_fd.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
-#include "third_party/crashpad/client/settings.h"
 #include "third_party/crashpad/util/misc/metrics.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 #include "third_party/crashpad/util/net/http_body.h"
@@ -115,12 +114,6 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     return nullptr;
   }
 
-  // Today we enable uploads here. In the future, this will most likely be set in some external
-  // settings.
-  database->GetSettings()->SetUploadsEnabled(config.crash_server.enable_upload);
-
-  inspect_manager->ExposeConfig(config);
-
   return std::unique_ptr<CrashpadAgent>(
       new CrashpadAgent(dispatcher, std::move(services), std::move(config), std::move(database),
                         std::move(crash_server), inspect_manager));
@@ -145,6 +138,11 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   if (config.crash_server.enable_upload) {
     FXL_DCHECK(crash_server_);
   }
+
+  // TODO(fxb/6360): add support for setting the upload policy according to PrivacySettingsWatcher.
+  settings_.set_upload_policy(config_.crash_server.enable_upload);
+
+  inspect_manager_->ExposeConfig(config_);
 }
 
 void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
@@ -293,8 +291,7 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
   InspectManager::Report* inspect_report =
       inspect_manager_->AddReport(program_name, local_report_id);
 
-  bool uploads_enabled;
-  if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) || !uploads_enabled)) {
+  if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
                   << local_report_id.ToString() << ", available under "
                   << config_.crashpad_database.path;
@@ -303,6 +300,9 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
         status != crashpad::CrashReportDatabase::kNoError) {
       FX_LOGS(WARNING) << "error skipping local crash report upload (" << status << ")";
     }
+    return true;
+  } else if (settings_.upload_policy() == Settings::UploadPolicy::LIMBO) {
+    // TODO(fxb/6049): put the limbo crash reports in the pending queue.
     return true;
   }
 

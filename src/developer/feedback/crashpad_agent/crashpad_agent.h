@@ -22,6 +22,7 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -78,6 +79,7 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
+  Settings settings_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
   InspectManager* inspect_manager_;

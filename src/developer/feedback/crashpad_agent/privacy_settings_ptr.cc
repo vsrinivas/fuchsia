@@ -8,13 +8,16 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/types.h>
 
+#include <optional>
+
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
 
 PrivacySettingsWatcher::PrivacySettingsWatcher(std::shared_ptr<sys::ServiceDirectory> services,
-                                               crashpad::Settings* crashpad_database_settings)
-    : services_(services), crashpad_database_settings_(crashpad_database_settings) {}
+                                               Settings* crash_reporter_settings)
+    : services_(services), crash_reporter_settings_(crash_reporter_settings) {}
 
 void PrivacySettingsWatcher::StartWatching() {
   Connect();
@@ -51,17 +54,12 @@ void PrivacySettingsWatcher::Reset() {
 }
 
 void PrivacySettingsWatcher::Update() {
-  if (privacy_settings_.has_user_data_sharing_consent() &&
-      privacy_settings_.user_data_sharing_consent()) {
-    if (crashpad_database_settings_->SetUploadsEnabled(true)) {
-      FX_LOGS(INFO) << "Enabled crash report upload";
-    } else {
-      FX_LOGS(ERROR) << "Failed to enable crash report upload";
-    }
+  if (!privacy_settings_.has_user_data_sharing_consent()) {
+    crash_reporter_settings_->set_upload_policy(Settings::UploadPolicy::LIMBO);
+  } else if (privacy_settings_.user_data_sharing_consent()) {
+    crash_reporter_settings_->set_upload_policy(Settings::UploadPolicy::ENABLED);
   } else {
-    FXL_CHECK(crashpad_database_settings_->SetUploadsEnabled(false))
-        << "Failed to disable crash report upload";
-    FX_LOGS(INFO) << "Disabled crash report upload";
+    crash_reporter_settings_->set_upload_policy(Settings::UploadPolicy::DISABLED);
   }
 }
 

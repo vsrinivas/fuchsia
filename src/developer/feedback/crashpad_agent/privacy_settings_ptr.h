@@ -10,15 +10,15 @@
 
 #include <memory>
 
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/crashpad/client/settings.h"
 
 namespace feedback {
 
-// Updates the "enable upload" field in Crashpad's database settings on "user data sharing consent"
+// Updates the upload policy in the crash reporter's settings on "user data sharing consent"
 // changes.
 //
-// In case of failure, e.g., loss of connection, error returned, "enable upload" is set to false
+// In case of failure, e.g., loss of connection, error returned, the upload policy is set to LIMBO
 // regardless of its current state.
 //
 // Wraps around fuchsia::settings::PrivacyPtr to handle establishing the connection, losing the
@@ -27,7 +27,7 @@ class PrivacySettingsWatcher {
  public:
   // fuchsia.settings.Privacy is expected to be in |services|.
   PrivacySettingsWatcher(std::shared_ptr<sys::ServiceDirectory> services,
-                         crashpad::Settings* crashpad_database_settings);
+                         Settings* crash_reporter_settings);
 
   // Connects to fuchsia.settings.Privacy and watches for "user data sharing consent" changes.
   void StartWatching();
@@ -47,7 +47,7 @@ class PrivacySettingsWatcher {
   void Update();
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  crashpad::Settings* crashpad_database_settings_;
+  Settings* crash_reporter_settings_;
 
   fuchsia::settings::PrivacySettings privacy_settings_;
   fuchsia::settings::PrivacyPtr privacy_settings_ptr_;

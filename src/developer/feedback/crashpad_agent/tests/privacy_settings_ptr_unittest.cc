@@ -14,13 +14,10 @@
 #include <optional>
 
 #include "fuchsia/settings/cpp/fidl.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
-#include "src/lib/files/path.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "third_party/crashpad/client/settings.h"
-#include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
@@ -29,11 +26,15 @@ namespace {
 using fuchsia::settings::Privacy_Set_Result;
 using fuchsia::settings::PrivacySettings;
 
+constexpr Settings::UploadPolicy kDisabled = Settings::UploadPolicy::DISABLED;
+constexpr Settings::UploadPolicy kEnabled = Settings::UploadPolicy::ENABLED;
+constexpr Settings::UploadPolicy kLimbo = Settings::UploadPolicy::LIMBO;
+
 constexpr bool kUserOptIn = true;
 constexpr bool kUserOptOut = false;
 constexpr std::optional<bool> kNotSet = std::nullopt;
 
-PrivacySettings MakePrivacySettings(std::optional<bool> user_data_sharing_consent) {
+PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_consent) {
   PrivacySettings settings;
   if (user_data_sharing_consent.has_value()) {
     settings.set_user_data_sharing_consent(user_data_sharing_consent.value());
@@ -42,16 +43,11 @@ PrivacySettings MakePrivacySettings(std::optional<bool> user_data_sharing_consen
 }
 
 class PrivacySettingsWatcherTest : public gtest::TestLoopFixture,
-                                   public testing::WithParamInterface<std::optional<bool>> {
+                                   public testing::WithParamInterface<Settings::UploadPolicy> {
  public:
   PrivacySettingsWatcherTest()
       : service_directory_provider_(dispatcher()),
-        watcher_(service_directory_provider_.service_directory(), &crashpad_settings_) {}
-
-  void SetUp() override {
-    crashpad_settings_filepath_ = files::JoinPath(tmp_dir_.path(), "settings.dat");
-    ASSERT_TRUE(crashpad_settings_.Initialize(base::FilePath(crashpad_settings_filepath_)));
-  }
+        watcher_(service_directory_provider_.service_directory(), &crash_reporter_settings_) {}
 
  protected:
   void ResetPrivacySettings(std::unique_ptr<FakePrivacySettings> fake_privacy_settings) {
@@ -70,235 +66,219 @@ class PrivacySettingsWatcherTest : public gtest::TestLoopFixture,
     EXPECT_TRUE(set_result.is_response());
   }
 
-  void SetCrashpadUploadsEnabled(std::optional<bool> enabled) {
-    if (enabled.has_value()) {
-      ASSERT_TRUE(crashpad_settings_.SetUploadsEnabled(enabled.value()));
-    }
-  }
-
-  void ExpectCrashpadUploadsDisabled() {
-    bool enabled;
-    ASSERT_TRUE(crashpad_settings_.GetUploadsEnabled(&enabled));
-    EXPECT_FALSE(enabled);
-  }
-
-  void ExpectCrashpadUploadsEnabled() {
-    bool enabled;
-    ASSERT_TRUE(crashpad_settings_.GetUploadsEnabled(&enabled));
-    EXPECT_TRUE(enabled);
+  void SetInitialUploadPolicy(const Settings::UploadPolicy upload_policy) {
+    crash_reporter_settings_.set_upload_policy(upload_policy);
   }
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  crashpad::Settings crashpad_settings_;
 
  protected:
+  Settings crash_reporter_settings_;
   PrivacySettingsWatcher watcher_;
 
  private:
   std::unique_ptr<FakePrivacySettings> fake_privacy_settings_;
-  files::ScopedTempDir tmp_dir_;
-  std::string crashpad_settings_filepath_;
 };
 
 TEST_F(PrivacySettingsWatcherTest, SetUp) {
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
   EXPECT_FALSE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
 }
 
 // This allows us to see meaningful names rather than /0, /1 and /2 in the parameterized test case
 // names.
-std::string PrettyPrintCrashpadUploadsEnabledValue(
-    const testing::TestParamInfo<std::optional<bool>>& info) {
-  if (!info.param.has_value()) {
-    return "Uninitialized";
+std::string PrettyPrintUploadPolicyUploadsEnabledValue(
+    const testing::TestParamInfo<Settings::UploadPolicy>& info) {
+  switch (info.param) {
+    case Settings::UploadPolicy::DISABLED:
+      return "DisabledInitially";
+    case Settings::UploadPolicy::ENABLED:
+      return "EnabledInitially";
+    case Settings::UploadPolicy::LIMBO:
+      return "LimboInitially";
   }
-  if (info.param.value()) {
-    return "EnabledInitially";
-  }
-  return "DisabledInitially";
 };
 
-// We want to make sure that regardless of the state in which the Crashpad database's settings
+// We want to make sure that regardless of the state in which the crash reporter's upload policy
 // started in, the expectations are always the same. In particular that failure paths always end up
-// setting "upload enable" to false in Crashpad. We use a parameterized gTest where the 3 values
-// represent the 3 possible states in which "upload enable" can start in.
-INSTANTIATE_TEST_SUITE_P(WithVariousInitialCrashpadUploadsEnabledValues, PrivacySettingsWatcherTest,
-                         ::testing::ValuesIn(std::vector<std::optional<bool>>({
-                             true,
-                             false,
-                             std::nullopt,
+// setting the upload policy to LIMBO.
+//
+// We use a parameterized gTest where the 3 values represent the 3 possible UploadPolicy.
+INSTANTIATE_TEST_SUITE_P(WithVariousInitialUploadPolicies, PrivacySettingsWatcherTest,
+                         ::testing::ValuesIn(std::vector<Settings::UploadPolicy>({
+                             Settings::UploadPolicy::DISABLED,
+                             Settings::UploadPolicy::ENABLED,
+                             Settings::UploadPolicy::LIMBO,
                          })),
-                         &PrettyPrintCrashpadUploadsEnabledValue);
+                         &PrettyPrintUploadPolicyUploadsEnabledValue);
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadDefaultToDisabledIfServerNotAvailable) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerNotAvailable) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(nullptr);
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_FALSE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
-  // Crashpad's database setting default to false so we cannot actually distinguish whether it was
-  // not set or set to false. Thus, we also check the PrivacySettings object owned by the watcher.
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadDefaultToDisabledIfServerClosesConnection) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerClosesConnection) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettingsClosesConnection>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_FALSE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadDefaultToDisabledIfNoCallToSet) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfNoCallToSet) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnFirstWatch_OptIn) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_OptIn) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   SetPrivacySettings(kUserOptIn);
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnFirstWatch_OptOut) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_OptOut) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   SetPrivacySettings(kUserOptOut);
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kDisabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnFirstWatch_NotSet) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_NotSet) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   SetPrivacySettings(kNotSet);
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnSecondWatch_OptIn) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_OptIn) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptIn);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnSecondWatch_OptOut) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_OptOut) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptOut);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kDisabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnSecondWatch_NotSet) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_NotSet) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kNotSet);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
-TEST_P(PrivacySettingsWatcherTest, CrashpadSwitchesToSetValueOnEachWatch) {
-  SetCrashpadUploadsEnabled(GetParam());
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnEachWatch) {
+  SetInitialUploadPolicy(GetParam());
   ResetPrivacySettings(std::make_unique<FakePrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_TRUE(watcher_.IsConnected());
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptIn);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptOut);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kDisabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptIn);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptIn);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptOut);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kDisabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kNotSet);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kUserOptIn);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsEnabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
   EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 
   SetPrivacySettings(kNotSet);
   RunLoopUntilIdle();
-  ExpectCrashpadUploadsDisabled();
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 

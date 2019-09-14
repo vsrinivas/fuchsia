@@ -32,7 +32,9 @@ struct CrashServerConfig {
   std::unique_ptr<std::string> url;
 };
 
-// Crash analysis configuration.
+// Crash reporter static configuration.
+//
+// It is intended to represent an immutable configuration, typically loaded from a file.
 struct Config {
   CrashpadDatabaseConfig crashpad_database;
 
