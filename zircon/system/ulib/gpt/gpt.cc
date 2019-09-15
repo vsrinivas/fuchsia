@@ -65,8 +65,9 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
   part->first = first;
   part->last = last;
   part->flags = flags;
+  const size_t num_utf16_bits = sizeof(uint16_t);
   cstring_to_utf16(reinterpret_cast<uint16_t*>(part->name), name,
-                   sizeof(part->name) / sizeof(uint16_t));
+                   sizeof(part->name) / num_utf16_bits);
 }
 
 zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,

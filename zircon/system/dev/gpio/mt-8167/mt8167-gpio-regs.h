@@ -146,7 +146,7 @@ class GpioPullEnReg : public GpioBitFieldView {
 
  private:
   bool PullEnableInternal(size_t idx, bool val) const {
-    if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(bool) ||
+    if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(**kGpioPullInGpioRegs) ||
         !kGpioPullInGpioRegs[idx / 16][idx % 16]) {
       return false;
     }
@@ -163,7 +163,7 @@ class GpioPullSelReg : public GpioBitFieldView {
 
  private:
   bool SetPullInternal(size_t idx, bool up) const {
-    if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(bool) ||
+    if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(**kGpioPullInGpioRegs) ||
         !kGpioPullInGpioRegs[idx / 16][idx % 16]) {
       return false;
     }
