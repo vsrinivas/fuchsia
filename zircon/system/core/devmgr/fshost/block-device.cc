@@ -402,7 +402,6 @@ zx_status_t BlockDeviceInterface::Add() {
   switch (df) {
     case DISK_FORMAT_BLOBFS: {
       const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-
       if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
         return ZX_ERR_INVALID_ARGS;
       }
@@ -414,6 +413,12 @@ zx_status_t BlockDeviceInterface::Add() {
     }
     case DISK_FORMAT_MINFS: {
       printf("fshost: mounting minfs\n");
+
+      const uint8_t expected_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+
       if (CheckFilesystem() != ZX_OK) {
         if ((status = FormatFilesystem()) != ZX_OK) {
           return status;

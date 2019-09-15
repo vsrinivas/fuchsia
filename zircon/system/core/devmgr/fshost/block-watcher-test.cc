@@ -135,17 +135,26 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
   EXPECT_TRUE(device.attached);
 }
 
-// Tests adding blobfs which does not not have a type GUID.
+// Tests adding blobfs which does not not have a valid type GUID.
 TEST(AddDeviceTestCase, AddNoGUIDBlobDevice) {
   class BlobDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_BLOBFS; }
     zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
-      return ZX_ERR_NOT_SUPPORTED;
+      *out_guid = GUID_TEST_VALUE;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      ADD_FATAL_FAILURE("Should not check filesystem");
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      ADD_FATAL_FAILURE("Should not mount filesystem");
+      return ZX_OK;
     }
   };
   BlobDevice device;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.Add());
 }
 
 // Tests adding blobfs with a valid type GUID, but invalid metadata.
@@ -214,6 +223,28 @@ TEST(AddDeviceTestCase, AddValidBlobDevice) {
   EXPECT_TRUE(device.checked);
   EXPECT_FALSE(device.formatted);
   EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding minfs which does not not have a valid type GUID.
+TEST(AddDeviceTestCase, AddNoGUIDMinfsDevice) {
+  class MinfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GUID_TEST_VALUE;
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      ADD_FATAL_FAILURE("Should not check filesystem");
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      ADD_FATAL_FAILURE("Should not mount filesystem");
+      return ZX_OK;
+    }
+  };
+  MinfsDevice device;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.Add());
 }
 
 // Tests adding minfs with a valid type GUID and invalid metadata. Observe that
