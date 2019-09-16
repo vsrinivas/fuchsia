@@ -40,6 +40,7 @@ library("fake-device") {
   sources = [
     "fake-device.cc",
   ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     ":block-client",
     "$zx/system/ulib/fbl",
