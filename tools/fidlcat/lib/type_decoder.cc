@@ -10,6 +10,7 @@
 #include <zircon/system/public/zircon/syscalls/object.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/profile.h>
 #include <zircon/system/public/zircon/syscalls/system.h>
 #include <zircon/system/public/zircon/types.h>
 
@@ -250,6 +251,22 @@ void PortPacketTypeName(uint32_t type, std::ostream& os) {
       os << "port_packet_type=" << type;
       return;
   }
+}
+
+#define ProfileInfoFlagsNameCase(name) \
+  if ((flags & (name)) == (name)) {    \
+    os << separator << #name;          \
+    separator = " | ";                 \
+  }
+
+void ProfileInfoFlagsName(uint32_t flags, std::ostream& os) {
+  if (flags == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
+  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_PRIORITY);
+  ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_CPU_MASK);
 }
 
 #define RsrcKindNameCase(name) \
@@ -575,14 +592,21 @@ void TopicName(uint32_t topic, std::ostream& os) {
 #define VmOptionAlign(name) \
   case name:                \
     os << #name;            \
+    separator = " | ";      \
     break;
 
 #define VmOptionCase(name)           \
   if ((option & (name)) == (name)) { \
-    os << " | " << #name;            \
+    os << separator << #name;        \
+    separator = " | ";               \
   }
 
 void VmOptionName(zx_vm_option_t option, std::ostream& os) {
+  if (option == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
   switch (option & ~((1 << ZX_VM_ALIGN_BASE) - 1)) {
     VmOptionAlign(ZX_VM_ALIGN_1KB);
     VmOptionAlign(ZX_VM_ALIGN_2KB);
@@ -608,7 +632,9 @@ void VmOptionName(zx_vm_option_t option, std::ostream& os) {
     VmOptionAlign(ZX_VM_ALIGN_2GB);
     VmOptionAlign(ZX_VM_ALIGN_4GB);
     default:
-      os << (option >> ZX_VM_ALIGN_BASE);
+      if ((option >> ZX_VM_ALIGN_BASE) != 0) {
+        os << (option >> ZX_VM_ALIGN_BASE);
+      }
       break;
   }
   VmOptionCase(ZX_VM_PERM_READ);
@@ -820,6 +846,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kPortPacketType:
       os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
+      break;
+    case SyscallType::kProfileInfoFlags:
+      os << ":" << colors.green << "zx_profile_info_flags_t" << colors.reset << ": ";
       break;
     case SyscallType::kRights:
       os << ":" << colors.green << "zx_rights_t" << colors.reset << ": ";

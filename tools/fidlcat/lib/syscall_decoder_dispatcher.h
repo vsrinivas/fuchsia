@@ -309,6 +309,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       PortPacketTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kProfileInfoFlags:
+      os << colors.blue;
+      ProfileInfoFlagsName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kRights:
       os << colors.blue;
       fidl_codec::RightsName(value, os);
@@ -1352,18 +1357,27 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
  public:
   SyscallInputOutputBuffer(int64_t error_code, std::string_view name, SyscallType syscall_type,
                            std::unique_ptr<Access<FromType>> buffer,
-                           std::unique_ptr<Access<size_t>> buffer_size)
+                           std::unique_ptr<Access<size_t>> elem_size,
+                           std::unique_ptr<Access<size_t>> elem_count)
       : SyscallInputOutputBase(error_code, name),
         syscall_type_(syscall_type),
         buffer_(std::move(buffer)),
-        buffer_size_(std::move(buffer_size)) {}
+        elem_size_(std::move(elem_size)),
+        elem_count_(std::move(elem_count)) {}
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
-    buffer_size_->Load(decoder, stage);
+    elem_size_->Load(decoder, stage);
+    if (elem_count_ != nullptr) {
+      elem_count_->Load(decoder, stage);
+    }
 
-    if (buffer_size_->Loaded(decoder, stage)) {
-      size_t value = buffer_size_->Value(decoder, stage);
+    if (elem_size_->Loaded(decoder, stage) &&
+        ((elem_count_ == nullptr) || elem_count_->Loaded(decoder, stage))) {
+      size_t value = elem_size_->Value(decoder, stage);
+      if (elem_count_ != nullptr) {
+        value *= elem_count_->Value(decoder, stage);
+      }
       if (value > 0) {
         buffer_->LoadArray(decoder, stage, value * sizeof(Type));
       }
@@ -1378,8 +1392,10 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
   SyscallType syscall_type_;
   // Access to the buffer which contains all the items.
   const std::unique_ptr<Access<FromType>> buffer_;
-  // Item count in the buffer.
-  const std::unique_ptr<Access<size_t>> buffer_size_;
+  // Size in bytes of one element in the buffer.
+  const std::unique_ptr<Access<size_t>> elem_size_;
+  // Element count in the buffer. If null, we have exactly one element.
+  const std::unique_ptr<Access<size_t>> elem_count_;
 };
 
 // An input/output which is a string. This is always displayed inline.
@@ -1649,10 +1665,10 @@ class Syscall {
   // Adds an input buffer to display.
   template <typename Type, typename FromType>
   void InputBuffer(std::string_view name, SyscallType syscall_type,
-                   std::unique_ptr<Access<Type>> buffer,
-                   std::unique_ptr<Access<size_t>> buffer_size) {
+                   std::unique_ptr<Access<Type>> buffer, std::unique_ptr<Access<size_t>> elem_size,
+                   std::unique_ptr<Access<size_t>> elem_count = nullptr) {
     inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
-        0, name, syscall_type, std::move(buffer), std::move(buffer_size)));
+        0, name, syscall_type, std::move(buffer), std::move(elem_size), std::move(elem_count)));
   }
 
   // Adds an input string to display.
@@ -1744,9 +1760,11 @@ class Syscall {
   template <typename Type, typename FromType>
   SyscallInputOutputBuffer<Type, FromType>* OutputBuffer(
       int64_t error_code, std::string_view name, SyscallType syscall_type,
-      std::unique_ptr<Access<FromType>> buffer, std::unique_ptr<Access<size_t>> buffer_size) {
+      std::unique_ptr<Access<FromType>> buffer, std::unique_ptr<Access<size_t>> elem_size,
+      std::unique_ptr<Access<size_t>> elem_count = nullptr) {
     auto object = std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
-        error_code, name, syscall_type, std::move(buffer), std::move(buffer_size));
+        error_code, name, syscall_type, std::move(buffer), std::move(elem_size),
+        std::move(elem_count));
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -1986,7 +2004,10 @@ void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDisp
   if (buffer == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
   } else {
-    size_t buffer_size = buffer_size_->Value(decoder, stage);
+    size_t buffer_size = elem_size_->Value(decoder, stage);
+    if (elem_count_ != nullptr) {
+      buffer_size *= elem_count_->Value(decoder, stage);
+    }
     if (buffer_size == 0) {
       os << "empty\n";
       return;
@@ -2012,7 +2033,10 @@ inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
   if (buffer == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
   } else {
-    size_t buffer_size = buffer_size_->Value(decoder, stage);
+    size_t buffer_size = elem_size_->Value(decoder, stage);
+    if (elem_count_ != nullptr) {
+      buffer_size *= elem_count_->Value(decoder, stage);
+    }
     if (buffer_size == 0) {
       os << "empty\n";
       return;

@@ -6,6 +6,7 @@
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/profile.h>
 #include <zircon/system/public/zircon/syscalls/system.h>
 
 #include <cstdint>
@@ -1536,6 +1537,39 @@ ZxPortPacket* ZxPortPacket::instance_ = nullptr;
 const ZxPortPacket* ZxPortPacket::GetClass() {
   if (instance_ == nullptr) {
     instance_ = new ZxPortPacket;
+  }
+  return instance_;
+}
+
+class ZxProfileInfo : public Class<zx_profile_info_t> {
+ public:
+  static const ZxProfileInfo* GetClass();
+
+  static uint32_t flags(const zx_profile_info_t* from) { return from->flags; }
+  static int32_t priority(const zx_profile_info_t* from) { return from->priority; }
+  static const zx_cpu_set_t* cpu_affinity_mask(const zx_profile_info_t* from) {
+    return &from->cpu_affinity_mask;
+  }
+
+ private:
+  ZxProfileInfo() : Class("zx_profile_info_t") {
+    AddField(std::make_unique<ClassField<zx_profile_info_t, uint32_t>>(
+        "flags", SyscallType::kProfileInfoFlags, flags));
+    AddField(std::make_unique<ClassField<zx_profile_info_t, int32_t>>(
+        "priority", SyscallType::kInt32, priority));
+    AddField(std::make_unique<ClassClassField<zx_profile_info_t, zx_cpu_set_t>>(
+        "cpu_affinity_mask", cpu_affinity_mask, ZxCpuSet::GetClass()));
+  }
+  ZxProfileInfo(const ZxProfileInfo&) = delete;
+  ZxProfileInfo& operator=(const ZxProfileInfo&) = delete;
+  static ZxProfileInfo* instance_;
+};
+
+ZxProfileInfo* ZxProfileInfo::instance_ = nullptr;
+
+const ZxProfileInfo* ZxProfileInfo::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxProfileInfo;
   }
   return instance_;
 }
@@ -3686,6 +3720,222 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_vmo_create_physical->Output<zx_handle_t>(ZX_OK, "out",
                                                 std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vmar_allocate = Add("zx_vmar_allocate", SyscallReturnType::kStatus);
+    // Arguments
+    auto parent_vmar = zx_vmar_allocate->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_vmar_allocate->Argument<zx_vm_option_t>(SyscallType::kVmOption);
+    auto offset = zx_vmar_allocate->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_vmar_allocate->Argument<uint64_t>(SyscallType::kUint64);
+    auto child_vmar = zx_vmar_allocate->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto child_addr = zx_vmar_allocate->PointerArgument<zx_vaddr_t>(SyscallType::kVaddr);
+    // Inputs
+    zx_vmar_allocate->Input<zx_handle_t>(
+        "parent_vmar", std::make_unique<ArgumentAccess<zx_handle_t>>(parent_vmar));
+    zx_vmar_allocate->Input<zx_vm_option_t>(
+        "options", std::make_unique<ArgumentAccess<zx_vm_option_t>>(options));
+    zx_vmar_allocate->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_vmar_allocate->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+    // Outputs
+    zx_vmar_allocate->Output<zx_handle_t>(
+        ZX_OK, "child_vmar", std::make_unique<ArgumentAccess<zx_handle_t>>(child_vmar));
+    zx_vmar_allocate->Output<zx_vaddr_t>(ZX_OK, "child_addr",
+                                         std::make_unique<ArgumentAccess<zx_vaddr_t>>(child_addr));
+  }
+
+  {
+    Syscall* zx_vmar_destroy = Add("zx_vmar_destroy", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmar_destroy->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmar_destroy->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_vmar_map = Add("zx_vmar_map", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmar_map->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_vmar_map->Argument<zx_vm_option_t>(SyscallType::kVmOption);
+    auto vmar_offset = zx_vmar_map->Argument<uint64_t>(SyscallType::kUint64);
+    auto vmo = zx_vmar_map->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vmo_offset = zx_vmar_map->Argument<uint64_t>(SyscallType::kUint64);
+    auto len = zx_vmar_map->Argument<uint64_t>(SyscallType::kUint64);
+    auto mapped_addr = zx_vmar_map->PointerArgument<zx_vaddr_t>(SyscallType::kVaddr);
+    // Inputs
+    zx_vmar_map->Input<zx_handle_t>("handle",
+                                    std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmar_map->Input<zx_vm_option_t>("options",
+                                       std::make_unique<ArgumentAccess<zx_vm_option_t>>(options));
+    zx_vmar_map->Input<uint64_t>("vmar_offset",
+                                 std::make_unique<ArgumentAccess<uint64_t>>(vmar_offset));
+    zx_vmar_map->Input<zx_handle_t>("vmo", std::make_unique<ArgumentAccess<zx_handle_t>>(vmo));
+    zx_vmar_map->Input<uint64_t>("vmo_offset",
+                                 std::make_unique<ArgumentAccess<uint64_t>>(vmo_offset));
+    zx_vmar_map->Input<uint64_t>("len", std::make_unique<ArgumentAccess<uint64_t>>(len));
+    // Outputs
+    zx_vmar_map->Output<zx_vaddr_t>(ZX_OK, "mapped_addr",
+                                    std::make_unique<ArgumentAccess<zx_vaddr_t>>(mapped_addr));
+  }
+
+  {
+    Syscall* zx_vmar_unmap = Add("zx_vmar_unmap", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmar_unmap->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto addr = zx_vmar_unmap->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto len = zx_vmar_unmap->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_vmar_unmap->Input<zx_handle_t>("handle",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmar_unmap->Input<zx_vaddr_t>("addr", std::make_unique<ArgumentAccess<zx_vaddr_t>>(addr));
+    zx_vmar_unmap->Input<uint64_t>("len", std::make_unique<ArgumentAccess<uint64_t>>(len));
+  }
+
+  {
+    Syscall* zx_vmar_protect = Add("zx_vmar_protect", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vmar_protect->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_vmar_protect->Argument<zx_vm_option_t>(SyscallType::kVmOption);
+    auto addr = zx_vmar_protect->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto len = zx_vmar_protect->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_vmar_protect->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vmar_protect->Input<zx_vm_option_t>(
+        "options", std::make_unique<ArgumentAccess<zx_vm_option_t>>(options));
+    zx_vmar_protect->Input<zx_vaddr_t>("addr", std::make_unique<ArgumentAccess<zx_vaddr_t>>(addr));
+    zx_vmar_protect->Input<uint64_t>("len", std::make_unique<ArgumentAccess<uint64_t>>(len));
+  }
+
+  {
+    Syscall* zx_vmar_unmap_handle_close_thread_exit =
+        Add("zx_vmar_unmap_handle_close_thread_exit", SyscallReturnType::kStatus);
+    // Arguments
+    auto vmar_handle =
+        zx_vmar_unmap_handle_close_thread_exit->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto addr = zx_vmar_unmap_handle_close_thread_exit->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto size = zx_vmar_unmap_handle_close_thread_exit->Argument<size_t>(SyscallType::kSize);
+    auto close_handle =
+        zx_vmar_unmap_handle_close_thread_exit->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vmar_unmap_handle_close_thread_exit->Input<zx_handle_t>(
+        "vmar_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(vmar_handle));
+    zx_vmar_unmap_handle_close_thread_exit->Input<zx_vaddr_t>(
+        "addr", std::make_unique<ArgumentAccess<zx_vaddr_t>>(addr));
+    zx_vmar_unmap_handle_close_thread_exit->Input<size_t>(
+        "size", std::make_unique<ArgumentAccess<size_t>>(size));
+    zx_vmar_unmap_handle_close_thread_exit->Input<zx_handle_t>(
+        "close_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(close_handle));
+  }
+
+  {
+    Syscall* zx_cprng_draw = Add("zx_cprng_draw", SyscallReturnType::kVoid);
+    // Arguments
+    auto buffer = zx_cprng_draw->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto buffer_size = zx_cprng_draw->Argument<size_t>(SyscallType::kSize);
+    // Outputs
+    zx_cprng_draw->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_cprng_add_entropy = Add("zx_cprng_add_entropy", SyscallReturnType::kStatus);
+    // Arguments
+    auto buffer = zx_cprng_add_entropy->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto buffer_size = zx_cprng_add_entropy->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_cprng_add_entropy->InputBuffer<uint8_t, uint8_t>(
+        "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_fifo_create = Add("zx_fifo_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto elem_count = zx_fifo_create->Argument<size_t>(SyscallType::kSize);
+    auto elem_size = zx_fifo_create->Argument<size_t>(SyscallType::kSize);
+    auto options = zx_fifo_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out0 = zx_fifo_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto out1 = zx_fifo_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_fifo_create->Input<size_t>("elem_count",
+                                  std::make_unique<ArgumentAccess<size_t>>(elem_count));
+    zx_fifo_create->Input<size_t>("elem_size", std::make_unique<ArgumentAccess<size_t>>(elem_size));
+    zx_fifo_create->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_fifo_create->Output<zx_handle_t>(ZX_OK, "out0",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
+    zx_fifo_create->Output<zx_handle_t>(ZX_OK, "out1",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+  }
+
+  {
+    Syscall* zx_fifo_read = Add("zx_fifo_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_fifo_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto elem_size = zx_fifo_read->Argument<size_t>(SyscallType::kSize);
+    auto data = zx_fifo_read->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto count = zx_fifo_read->Argument<size_t>(SyscallType::kSize);
+    auto actual_count = zx_fifo_read->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_fifo_read->Input<zx_handle_t>("handle",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_fifo_read->Input<size_t>("elem_size", std::make_unique<ArgumentAccess<size_t>>(elem_size));
+    zx_fifo_read->Input<size_t>("count", std::make_unique<ArgumentAccess<size_t>>(count));
+    // Outputs
+    zx_fifo_read->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual_count),
+        std::make_unique<ArgumentAccess<size_t>>(count));
+    zx_fifo_read->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
+        std::make_unique<ArgumentAccess<size_t>>(elem_size),
+        std::make_unique<ArgumentAccess<size_t>>(actual_count));
+  }
+
+  {
+    Syscall* zx_fifo_write = Add("zx_fifo_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_fifo_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto elem_size = zx_fifo_write->Argument<size_t>(SyscallType::kSize);
+    auto data = zx_fifo_write->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto count = zx_fifo_write->Argument<size_t>(SyscallType::kSize);
+    auto actual_count = zx_fifo_write->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_fifo_write->Input<zx_handle_t>("handle",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_fifo_write->Input<size_t>("elem_size", std::make_unique<ArgumentAccess<size_t>>(elem_size));
+    zx_fifo_write->Input<size_t>("count", std::make_unique<ArgumentAccess<size_t>>(count));
+    zx_fifo_write->InputBuffer<uint8_t, uint8_t>(
+        "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
+        std::make_unique<ArgumentAccess<size_t>>(elem_size),
+        std::make_unique<ArgumentAccess<size_t>>(count));
+    // Outputs
+    zx_fifo_write->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual_count),
+        std::make_unique<ArgumentAccess<size_t>>(count));
+  }
+
+  {
+    Syscall* zx_profile_create = Add("zx_profile_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto root_job = zx_profile_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_profile_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto profile = zx_profile_create->PointerArgument<zx_profile_info_t>(SyscallType::kStruct);
+    auto out = zx_profile_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_profile_create->Input<zx_handle_t>("root_job",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(root_job));
+    zx_profile_create->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_profile_create->InputObject<zx_profile_info_t>(
+        "info", std::make_unique<ArgumentAccess<zx_profile_info_t>>(profile),
+        ZxProfileInfo::GetClass());
+    // Outputs
+    zx_profile_create->Output<zx_handle_t>(ZX_OK, "out",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out));
   }
 
   {

@@ -74,6 +74,7 @@ enum class SyscallType {
   kPolicyCondition,
   kPolicyTopic,
   kPortPacketType,
+  kProfileInfoFlags,
   kRights,
   kRsrcKind,
   kSignals,
@@ -100,6 +101,7 @@ enum class SyscallType {
 
 enum class SyscallReturnType {
   kNoReturn,
+  kVoid,
   kStatus,
   kTicks,
   kTime,
@@ -120,6 +122,7 @@ void PolicyActionName(uint32_t action, std::ostream& os);
 void PolicyConditionName(uint32_t condition, std::ostream& os);
 void PolicyTopicName(uint32_t topic, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
+void ProfileInfoFlagsName(uint32_t flags, std::ostream& os);
 void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
 void SignalName(zx_signals_t signals, std::ostream& os);
 void SocketCreateOptionsName(uint32_t options, std::ostream& os);

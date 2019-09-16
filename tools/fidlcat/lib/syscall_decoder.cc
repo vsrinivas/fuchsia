@@ -362,6 +362,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
     }
     switch (decoder->syscall()->return_type()) {
       case SyscallReturnType::kNoReturn:
+      case SyscallReturnType::kVoid:
         break;
       case SyscallReturnType::kStatus:
         StatusName(colors, static_cast<zx_status_t>(decoder->syscall_return_value()), os_);
