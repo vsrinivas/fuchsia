@@ -12,7 +12,7 @@ group("interactive_minimal") {
     "//garnet/packages/config:shortcut",
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:media_audio",
-    "//garnet/packages/prod:media_codec",
+    "//garnet/packages/prod:media_codec_factory",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:vboot_reference",

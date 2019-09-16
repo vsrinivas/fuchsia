@@ -214,7 +214,7 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:media",
     "//garnet/packages/prod:media_audio",
-    "//garnet/packages/prod:media_codec",
+    "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:memory_monitor",
@@ -500,13 +500,44 @@ group("cobalt_client") {
   ]
 }
 
-group("media_codec") {
+group("media_codec_all") {
   testonly = true
   public_deps = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_aac",
     "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec:codec_runner_sw_sbc",
+  ]
+}
+
+group("media_codec_factory") {
+  testonly = true
+  public_deps = [
+    "//src/media/codec:codec_factory",
+  ]
+}
+
+group("media_codec_sw_aac") {
+  testonly = true
+  public_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_aac",
+  ]
+}
+
+group("media_codec_sw_sbc") {
+  testonly = true
+  public_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_sbc",
+  ]
+}
+
+group("media_codec_sw_ffmpeg") {
+  testonly = true
+  public_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
   ]
 }
 
@@ -545,7 +576,7 @@ group("media") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:media_audio",
-    "//garnet/packages/prod:media_codec",
+    "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:tts",

@@ -9,7 +9,7 @@ group("tools") {
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:media_audio",
-    "//garnet/packages/prod:media_codec",
+    "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:sbase",
