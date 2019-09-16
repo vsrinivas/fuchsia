@@ -16,7 +16,7 @@ class Buffer : public fs::BlockBuffer {
 
   size_t capacity() const final { return 1; }
   uint32_t BlockSize() const final { return kBlockSize; }
-  vmoid_t vmoid() const final { return VMOID_INVALID; }
+  vmoid_t vmoid() const final { return BLOCK_VMOID_INVALID; }
   void* Data(size_t index) final { return &buffer_[index * kBlockSize]; }
   const void* Data(size_t index) const final { return &buffer_[index * kBlockSize]; }
 

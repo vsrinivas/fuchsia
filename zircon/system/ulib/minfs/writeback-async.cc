@@ -11,7 +11,7 @@
 namespace minfs {
 
 Buffer::~Buffer() {
-  if (vmoid_.id != VMOID_INVALID) {
+  if (vmoid_.id != BLOCK_VMOID_INVALID) {
     // Close the buffer vmo.
     block_fifo_request_t request;
     request.group = bc_->BlockGroupID();

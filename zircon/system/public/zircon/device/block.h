@@ -41,16 +41,9 @@ typedef uint16_t vmoid_t;
 // Dummy vmoid value reserved for "invalid". Will never be allocated; can be
 // used as a local value for unallocated / freed ID.
 #define BLOCK_VMOID_INVALID 0
-// TODO(surajmalhotra): Remove this after all clients transitioned.
-#define VMOID_INVALID BLOCK_VMOID_INVALID
 
 #define BLOCK_GUID_LEN 16
-// TODO(surajmalhotra): Remove this after all clients transitioned.
-#define GUID_LEN BLOCK_GUID_LEN
-
 #define BLOCK_NAME_LEN 24
-// TODO(surajmalhotra): Remove this after all clients transitioned.
-#define NAME_LEN BLOCK_NAME_LEN
 #define MAX_FVM_VSLICE_REQUESTS 16
 
 typedef struct {

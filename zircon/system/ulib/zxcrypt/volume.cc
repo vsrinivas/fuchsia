@@ -56,7 +56,7 @@ const char* kWrapKeyLabel = "wrap key %" PRIu64;
 const char* kWrapIvLabel = "wrap iv %" PRIu64;
 
 // Header is type GUID | instance GUID | version.
-const size_t kHeaderLen = sizeof(zxcrypt_magic) + GUID_LEN + sizeof(uint32_t);
+const size_t kHeaderLen = sizeof(zxcrypt_magic) + BLOCK_GUID_LEN + sizeof(uint32_t);
 
 }  // namespace
 
@@ -305,13 +305,13 @@ zx_status_t Volume::CreateBlock() {
   out += sizeof(zxcrypt_magic);
 
   // Create a variant 1/version 4 instance GUID according to RFC 4122.
-  if ((rc = guid_.Randomize(GUID_LEN)) != ZX_OK) {
+  if ((rc = guid_.Randomize(BLOCK_GUID_LEN)) != ZX_OK) {
     return rc;
   }
   guid_[6] = (guid_[6] & 0x0F) | 0x40;
   guid_[8] = (guid_[8] & 0x3F) | 0x80;
-  memcpy(out, guid_.get(), GUID_LEN);
-  out += GUID_LEN;
+  memcpy(out, guid_.get(), BLOCK_GUID_LEN);
+  out += BLOCK_GUID_LEN;
 
   // Write the 32-bit version.
   if ((rc = Configure(kDefaultVersion)) != ZX_OK) {
@@ -416,10 +416,10 @@ zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
   in += sizeof(zxcrypt_magic);
 
   // Save the instance GUID
-  if ((rc = guid_.Copy(in, GUID_LEN)) != ZX_OK) {
+  if ((rc = guid_.Copy(in, BLOCK_GUID_LEN)) != ZX_OK) {
     return rc;
   }
-  in += GUID_LEN;
+  in += BLOCK_GUID_LEN;
 
   // Read the version
   uint32_t version;

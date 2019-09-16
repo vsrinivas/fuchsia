@@ -20,7 +20,7 @@
 zx_status_t FlushClient(const block_client::Client& client) {
   block_fifo_request_t request;
   request.group = 0;
-  request.vmoid = VMOID_INVALID;
+  request.vmoid = BLOCK_VMOID_INVALID;
   request.opcode = BLOCKIO_FLUSH;
   request.length = 0;
   request.vmo_offset = 0;
