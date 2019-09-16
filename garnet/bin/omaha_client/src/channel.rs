@@ -4,8 +4,7 @@
 
 use failure::Error;
 use serde_derive::Deserialize;
-use std::fs;
-use std::path::Path;
+use std::{fs, io, path::Path};
 
 #[derive(Deserialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
@@ -16,7 +15,7 @@ enum Channel {
 
 pub fn read_channel(path: impl AsRef<Path>) -> Result<String, Error> {
     let f = fs::File::open(path.as_ref())?;
-    match serde_json::from_reader(f)? {
+    match serde_json::from_reader(io::BufReader::new(f))? {
         Channel::Version1 { legacy_amber_source_name } => Ok(legacy_amber_source_name),
     }
 }
