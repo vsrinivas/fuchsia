@@ -130,7 +130,6 @@ impl Realm {
         &'a self,
         collection_name: String,
         child_decl: &'a ChildDecl,
-        hooks: &'a Hooks,
     ) -> Result<(), ModelError> {
         match child_decl.startup {
             fsys::StartupMode::Lazy => {}
@@ -166,7 +165,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        hooks.on_add_dynamic_child(child_realm.clone()).await?;
+        self.hooks.on_add_dynamic_child(child_realm.clone()).await?;
         Ok(())
     }
 

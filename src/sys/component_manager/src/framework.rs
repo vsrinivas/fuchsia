@@ -192,7 +192,7 @@ impl RealmServiceHostInner {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fsys::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        realm.add_dynamic_child(collection.name, &child_decl, &realm.hooks).await.map_err(|e| {
+        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| {
             match e {
                 ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
                 ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
