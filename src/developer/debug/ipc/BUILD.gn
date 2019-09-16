@@ -39,6 +39,7 @@ static_library("shared") {
 
   deps = [
     "//src/developer/debug/shared",
+    "//zircon/system/public",
   ]
 
   public_deps = [

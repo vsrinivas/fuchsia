@@ -35,6 +35,10 @@ if (current_toolchain == host_toolchain) {
       "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
     ]
+
+    public_deps = [
+      "//zircon/system/public",
+    ]
   }
 }
 

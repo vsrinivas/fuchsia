@@ -44,6 +44,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       "//src/lib/files",
       "//zircon/public/lib/fbl",
+      "//zircon/system/public",
     ]
     public_deps = [
       "//src/lib/fxl",
