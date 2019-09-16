@@ -86,6 +86,10 @@ impl From<icu::Error> for Error {
 #[derive(Debug, Clone)]
 pub struct Loader {
     refs: Arc<udata::UDataMemory>,
+    vmo_size_bytes: usize,
+    file_size_bytes: usize,
+    icu_data_file_path: Option<String>,
+    icu_data_path: String,
 }
 // Loader is OK to be sent to threads.
 unsafe impl Sync for Loader {}
@@ -113,9 +117,13 @@ impl Loader {
         // function are expected.  So we take a write lock immmediately.
         let mut l = REFCOUNT.lock().expect("refcount lock acquired");
         match l.upgrade() {
-            Some(refs) => {
-                Ok(Loader { refs })
-            },
+            Some(refs) => Ok(Loader {
+                refs,
+                vmo_size_bytes: 0,
+                file_size_bytes: 0,
+                icu_data_file_path: None,
+                icu_data_path: "".to_string(),
+            }),
             None => {
                 // Load up the TZ files directory.
                 if let Some(p) = path {
@@ -133,13 +141,21 @@ impl Loader {
                 }
                 // Read ICU data file from the filesystem.
                 let file = fs::File::open(ICU_DATA_PATH_DEFAULT)?;
+                let file_size_bytes = file.metadata()?.len() as usize;
                 let vmo = fdio::get_vmo_copy_from_file(&file)?;
-                let mut buf: Vec<u8> = vec![0; vmo.get_size()? as usize];
+                let vmo_size_bytes = vmo.get_size()? as usize;
+                let mut buf: Vec<u8> = vec![0; file_size_bytes];
                 vmo.read(&mut buf, 0)?;
                 let refs = Arc::new(udata::UDataMemory::try_from(buf)?);
                 (*l) = Arc::downgrade(&refs);
-                Ok(Loader { refs })
-            },
+                Ok(Loader {
+                    refs,
+                    vmo_size_bytes,
+                    file_size_bytes,
+                    icu_data_file_path: path.map(|p| p.to_string()),
+                    icu_data_path: ICU_DATA_PATH_DEFAULT.to_string(),
+                })
+            }
         }
     }
 }
