@@ -17,13 +17,13 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CompoundIdentifier {
     pub namespace: Vec<String>,
     pub name: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Include {
     pub name: CompoundIdentifier,
     pub alias: Option<String>,
@@ -44,6 +44,13 @@ pub enum BindParserError {
     LibraryKeyword(String),
     UsingKeyword(String),
     AsKeyword(String),
+    IfBlockStart(String),
+    IfBlockEnd(String),
+    IfKeyword(String),
+    ElseKeyword(String),
+    ConditionOp(String),
+    ConditionValue(String),
+    AcceptKeyword(String),
     UnrecognisedInput(String),
     Unknown(String, ErrorKind),
 }
@@ -53,8 +60,8 @@ impl ParseError<&str> for BindParserError {
         BindParserError::Unknown(input.to_string(), kind)
     }
 
-    fn append(input: &str, kind: ErrorKind, _: Self) -> Self {
-        BindParserError::Unknown(input.to_string(), kind)
+    fn append(_input: &str, _kind: ErrorKind, e: Self) -> Self {
+        e
     }
 }
 

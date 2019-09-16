@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod bind_library;
+mod bind_program;
 mod c_generation;
 mod instruction;
 mod parser_common;
