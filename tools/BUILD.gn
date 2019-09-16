@@ -46,7 +46,7 @@ group("tests") {
   deps = [
     "//tools/bindc:tests",
     "//tools/blackout:tests",
-    "//tools/botanist:botanist_tests($host_toolchain)",
+    "//tools/botanist:tests($host_toolchain)",
     "//tools/build:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",

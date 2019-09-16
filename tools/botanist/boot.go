@@ -165,8 +165,35 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 // This function serves to emulate zero-state, and will eventually be superseded by an
 // infra implementation.
 func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image) error {
+	files, err := filterZedbootShimImages(imgs)
+	if err != nil {
+		return err
+	}
+	defer func(files []*netsvcFile) {
+		for _, file := range files {
+			defer file.close()
+		}
+	}(files)
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].index < files[j].index
+	})
+
+	if err := transfer(ctx, addr, files); err != nil {
+		return err
+	}
+	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
+	n := netboot.NewClient(time.Second)
+	if hasRAMKernel {
+		return n.Boot(addr)
+	}
+	return n.Reboot(addr)
+}
+
+func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 	netsvcName := kernelNetsvcName
 	zirconRImg := build.Image{}
+	bootloaderImg := build.Image{}
 	for _, img := range imgs {
 		for _, arg := range img.PaveArgs {
 			// Find name by bootserver arg to ensure we are extracting the correct zircon-r.
@@ -174,39 +201,42 @@ func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image)
 			// the bootserver for paving.
 			name, ok := bootserverArgToName[arg]
 			if !ok {
-				return fmt.Errorf("unrecognized bootserver argument found: %q", arg)
+				return nil, fmt.Errorf("unrecognized bootserver argument found: %q", arg)
 			}
-			if name == zirconRNetsvcName {
+			switch name {
+			case zirconRNetsvcName:
 				zirconRImg = img
 				// Signed ZBIs cannot be mexec()'d, so pave them to A and boot instead.
 				if strings.HasSuffix(img.Name, ".signed") {
 					netsvcName = zirconANetsvcName
 				}
-				break
+			case bootloaderNetsvcName:
+				bootloaderImg = img
+			default:
+				continue
 			}
 		}
-		if zirconRImg.Name != "" {
-			break
-		}
 	}
 
-	if zirconRImg.Name != "" {
-		imgFile, err := openNetsvcFile(netsvcName, zirconRImg.Path)
+	if zirconRImg.Path != "" {
+		files := []*netsvcFile{}
+		zedbootFile, err := openNetsvcFile(netsvcName, zirconRImg.Path)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		defer imgFile.close()
-		if err := transfer(ctx, addr, []*netsvcFile{imgFile}); err != nil {
-			return err
+		files = append(files, zedbootFile)
+		if bootloaderImg.Path != "" {
+			bootloaderFile, err := openNetsvcFile(bootloaderNetsvcName, bootloaderImg.Path)
+			if err != nil {
+				zedbootFile.close()
+				return nil, err
+			}
+			files = append(files, bootloaderFile)
 		}
-		n := netboot.NewClient(time.Second)
-		if netsvcName == kernelNetsvcName {
-			return n.Boot(addr)
-		}
-		return n.Reboot(addr)
+		return files, nil
 	}
 
-	return fmt.Errorf("no zircon-r image found in: %v", imgs)
+	return nil, fmt.Errorf("no zircon-r image found in: %v", imgs)
 }
 
 // A file to send to netsvc.
