@@ -16,6 +16,11 @@ import subprocess
 import sys
 
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    SCRIPT_DIR))                 # unification
+
 GN_TARGET = '//src/lib/fxl:fxl_logging(//build/toolchain/fuchsia:arm64-shared)'
 ZN_TARGET = '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)'
 
@@ -43,15 +48,12 @@ def diff_lists(gn_object, zn_object, dimension):
 def main():
     parser = argparse.ArgumentParser(
             description='Compares C/C++ compilation flags between the GN and ZN builds')
-    parser.add_argument('--source-dir',
-                        help='Path to the root of the source tree',
-                        default='.')
     parser.add_argument('--build-dir',
                         help='Path to the GN build dir',
                         required=True)
     args = parser.parse_args()
 
-    source_dir = os.path.abspath(args.source_dir)
+    source_dir = FUCHSIA_ROOT
     gn_build_dir = os.path.abspath(args.build_dir)
     zn_build_dir = gn_build_dir + '.zircon'
 

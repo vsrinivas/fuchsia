@@ -9,6 +9,12 @@ import subprocess
 import sys
 
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    SCRIPT_DIR))                 # unification
+
+
 class Finder(object):
 
     def __init__(self, gn_binary, zircon_dir, build_dir):
@@ -51,9 +57,6 @@ class Finder(object):
 def main():
     parser = argparse.ArgumentParser('Determines whether libraries can be '
                                      'moved out of the ZN build')
-    parser.add_argument('--source-dir',
-                        help='Path to the root of the source tree',
-                        default='.')
     parser.add_argument('--build-dir',
                         help='Path to the GN build dir',
                         required=True)
@@ -73,7 +76,7 @@ def main():
                         nargs='?')
     args = parser.parse_args()
 
-    source_dir = os.path.abspath(args.source_dir)
+    source_dir = FUCHSIA_ROOT
     zircon_dir = os.path.join(source_dir, 'zircon')
     build_dir = os.path.abspath(args.build_dir)
 
