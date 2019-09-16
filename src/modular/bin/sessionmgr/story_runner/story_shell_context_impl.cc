@@ -52,6 +52,4 @@ void StoryShellContextImpl::GetLink(fidl::InterfaceRequest<fuchsia::modular::Lin
 
 void StoryShellContextImpl::RequestView(std::string surface_id) {}
 
-void StoryShellContextImpl::OnSurfaceOffScreen(std::string surface_id) {}
-
 }  // namespace modular

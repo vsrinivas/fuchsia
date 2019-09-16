@@ -205,9 +205,6 @@ protocol StoryShellContext {
     /// Requests that a view for `surface_id` is provided through
     /// StoryShell.ReconnectView().
     RequestView(string surface_id);
-
-    /// Notification that the Surface is no longer on screen.
-    OnSurfaceOffScreen(string surface_id);
 };
 
 /// Implemented by StoryShell to get notified about visual state changes.

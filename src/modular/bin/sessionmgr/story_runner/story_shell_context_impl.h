@@ -29,7 +29,6 @@ class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void RequestView(std::string surface_id) override;
-  void OnSurfaceOffScreen(std::string surface_id) override;
 
   const fidl::StringPtr story_id_;
   // Not owned. The StoryProviderImpl corresponding to this context.
