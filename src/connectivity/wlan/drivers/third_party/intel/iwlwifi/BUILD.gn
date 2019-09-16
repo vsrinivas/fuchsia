@@ -46,6 +46,7 @@ source_set("core") {
     "mvm/tt.c",
     "mvm/tx.c",
     "mvm/utils.c",
+    "wlan-device.c",
   ]
 
   deps = [

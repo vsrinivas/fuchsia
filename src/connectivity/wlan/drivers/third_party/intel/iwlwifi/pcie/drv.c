@@ -49,6 +49,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #endif  // NEEDS_PORTING
@@ -986,13 +987,6 @@ static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = iwl_pci_unbind,
     .release = iwl_pci_release,
-};
-
-static wlanphy_impl_protocol_ops_t wlanphy_ops = {
-    .query = NULL,
-    .create_iface = NULL,
-    .destroy_iface = NULL,
-    .set_country = NULL,
 };
 
 static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {

@@ -34,6 +34,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 }
 
 using wlan::testing::SimMvm;
@@ -208,12 +209,6 @@ static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = transport_sim_unbind,
     .release = transport_sim_release,
-};
-
-static wlanphy_impl_protocol_ops_t wlanphy_ops = {
-    .query = NULL,
-    .create_iface = NULL,
-    .destroy_iface = NULL,
 };
 
 static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev) {
