@@ -137,7 +137,7 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
 
 fn get_channel_indices(fdr: &ForcedFDR) -> Result<HashMap<String, i32>, Error> {
     let f = open_channel_indices_file(fdr)?;
-    match serde_json::from_reader(f)? {
+    match serde_json::from_reader(std::io::BufReader::new(f))? {
         ChannelIndices::Version1 { channel_indices } => Ok(channel_indices),
     }
 }
