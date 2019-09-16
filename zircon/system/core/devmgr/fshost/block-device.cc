@@ -238,7 +238,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
 
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();
-        mounter_->mutable_metrics()->mutable_collector()->Flush();
+        mounter_->FlushMetrics();
         fprintf(stderr, "--------------------------------------------------------------\n");
         fprintf(stderr, "|                                                             \n");
         fprintf(stderr, "|   WARNING: fshost fsck failure!                             \n");

@@ -41,7 +41,10 @@ class InMemoryLogger : public internal::Logger {
     return persisted_histograms_;
   }
 
+  void fail_logging(bool fail) { fail_logging_ = fail; }
+
  protected:
+  bool fail_logging_ = false;
   std::map<uint64_t, Counter::Count> persisted_counters_;
   std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>> persisted_histograms_;
 };

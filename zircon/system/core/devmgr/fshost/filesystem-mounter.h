@@ -49,6 +49,8 @@ class FilesystemMounter {
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
 
+  void FlushMetrics() { fshost_->FlushMetrics(); }
+
  private:
   std::unique_ptr<FsManager> fshost_;
   const bool netboot_ = false;

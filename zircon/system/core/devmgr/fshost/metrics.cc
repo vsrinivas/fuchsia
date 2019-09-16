@@ -4,6 +4,8 @@
 
 #include "metrics.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <type_traits>
 
 #include <cobalt-client/cpp/metric-options.h>
@@ -34,6 +36,13 @@ FsHostMetrics::~FsHostMetrics() {
 
 void FsHostMetrics::LogMinfsCorruption() {
   counters_[fs_metrics::Event::kDataCorruption]->Increment();
+}
+
+void FsHostMetrics::FlushUntilSuccess(async_dispatcher_t* dispatcher) {
+  if (!collector_->Flush()) {
+    async::PostDelayedTask(
+        dispatcher, [this, dispatcher]() { FlushUntilSuccess(dispatcher); }, zx::sec(10));
+  }
 }
 
 }  // namespace devmgr

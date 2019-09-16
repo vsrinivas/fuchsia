@@ -4,6 +4,8 @@
 
 #include "metrics.h"
 
+#include <lib/async-testing/test_loop.h>
+
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -49,6 +51,37 @@ TEST_F(MetricsTest, LogMinfsDataCorruption) {
   ASSERT_NE(logger_->counters().find(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
             logger_->counters().end());
 
+  EXPECT_EQ(logger_->counters().at(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
+            1);
+}
+
+TEST_F(MetricsTest, FlushUntilSuccessWorks) {
+  async::TestLoop loop;
+  FsHostMetrics metrics(std::move(collector_));
+  metrics.LogMinfsCorruption();
+
+  // Logger is not working
+  logger_->fail_logging(true);
+  metrics.FlushUntilSuccess(loop.dispatcher());
+  loop.RunFor(zx::sec(10));
+
+  // After 10 seconds, nothing should be logged.
+  ASSERT_EQ(logger_->counters().find(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
+            logger_->counters().end());
+  loop.RunFor(zx::sec(10));
+
+  // After 20 seconds, nothing should be logged.
+  ASSERT_EQ(logger_->counters().find(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
+            logger_->counters().end());
+
+  // Logger begins working.
+  logger_->fail_logging(false);
+
+  loop.RunFor(zx::sec(10));
+
+  // Within 10 seconds, the metric gets logged.
+  ASSERT_NE(logger_->counters().find(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
+            logger_->counters().end());
   EXPECT_EQ(logger_->counters().at(static_cast<EventIntType>(fs_metrics::Event::kDataCorruption)),
             1);
 }

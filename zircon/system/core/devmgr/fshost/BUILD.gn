@@ -36,6 +36,7 @@ source_set("metrics") {
     "metrics.h",
   ]
   public_deps = [
+    "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/cobalt-client:headers",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
   ]
@@ -128,6 +129,7 @@ test("fshost-metrics-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/zxtest",
+    "$zx/system/ulib/async-testing"
   ]
 }
 

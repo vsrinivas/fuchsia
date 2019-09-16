@@ -9,7 +9,6 @@
 
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
-
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -90,7 +89,8 @@ class Collector {
 
   // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
   // in charge of persisting the data.
-  void Flush();
+  // Returns true when all flushable metrics flush successfully.
+  bool Flush();
 
  private:
   // Convert this into a HashTable.

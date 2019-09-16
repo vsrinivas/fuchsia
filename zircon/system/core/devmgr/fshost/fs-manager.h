@@ -59,6 +59,9 @@ class FsManager {
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return &metrics_; }
 
+  // Flushes FsHostMetrics to cobalt.
+  void FlushMetrics();
+
  private:
   FsManager(zx::event fshost_event, FsHostMetrics metrics);
   zx_status_t Initialize();

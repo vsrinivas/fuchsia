@@ -9,13 +9,13 @@
 #include <cobalt-client/cpp/types-internal.h>
 
 #ifdef __Fuchsia__
-#include <cobalt-client/cpp/collector-internal.h>
-
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+
+#include <cobalt-client/cpp/collector-internal.h>
 #endif
 
 #include <utility>
@@ -81,21 +81,25 @@ Collector::~Collector() {
   }
 }
 
-void Collector::Flush() {
+bool Collector::Flush() {
   // If we are already flushing we just return and do nothing.
   // First come first serve.
   if (flushing_.exchange(true)) {
-    return;
+    return false;
   }
 
+  bool all_flushed = true;
   for (internal::FlushInterface* flushable : flushables_) {
     if (!flushable->Flush(logger_.get())) {
+      all_flushed = false;
       flushable->UndoFlush();
     }
   }
 
   // Once we are finished we allow flushing again.
   flushing_.store(false);
+
+  return all_flushed;
 }
 
 void Collector::UnSubscribe(internal::FlushInterface* flushable) {

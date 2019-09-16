@@ -30,6 +30,7 @@
 #include <fs/vfs.h>
 
 #include "cobalt-client/cpp/collector.h"
+#include "lib/async/cpp/task.h"
 #include "metrics.h"
 
 #define ZXDEBUG 0
@@ -135,6 +136,8 @@ zx_status_t FsManager::Initialize() {
   root_vfs_->SetDispatcher(global_loop_->dispatcher());
   return ZX_OK;
 }
+
+void FsManager::FlushMetrics() { mutable_metrics()->FlushUntilSuccess(global_loop_->dispatcher()); }
 
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
   for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {

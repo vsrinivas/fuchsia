@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_METRICS_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_METRICS_H_
 
+#include <lib/async/dispatcher.h>
+
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -31,6 +33,11 @@ class FsHostMetrics {
 
   // This method logs an event describing a corrupted MinFs filesystem, detected on mount or fsck.
   void LogMinfsCorruption();
+
+  // Repeatedly attempt to flush to cobalt until success.
+  //
+  // Retries every 10 seconds.
+  void FlushUntilSuccess(async_dispatcher_t* dispatcher);
 
   // Returns a pointer to the underlying |cobalt_client::Collector| instance.
   cobalt_client::Collector* mutable_collector() { return collector_.get(); }
