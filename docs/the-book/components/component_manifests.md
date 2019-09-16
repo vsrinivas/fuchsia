@@ -13,7 +13,7 @@ Component declarations contain:
 
 - Information about [how to run the component](#runtime).
 - The realm's [child component instances][children] and
-  [component collections](#component-collections).
+  [component collections][collections].
 - [Routing rules](#capability-routing) that describe how capabilities are used,
   exposed, and offered between components.
 - [Freeform data ("facets")](#facet-metadata) which is ignored by the component
@@ -220,7 +220,7 @@ A reference may refer to:
 - A [storage declaration](#storage) whose name is `<reference-name>`.
 
 [children]: ./realms.md#child-component-instances
-[collections]: ./realms.md#collections
+[collections]: ./realms.md#component-collections
 [realm-definitions]: ./realms.md#definitions
 [static-children]: ./realms.md#static-children
 
@@ -281,7 +281,7 @@ Example:
 ### collections
 
 The `collections` section declares collections as described in [Component
-collections](#component-collections).
+collections][collections].
 
 `collections` is an array of objects with the following properties:
 
