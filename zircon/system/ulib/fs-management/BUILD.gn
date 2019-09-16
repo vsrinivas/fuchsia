@@ -19,11 +19,12 @@ library("fs-management") {
     "mount.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
