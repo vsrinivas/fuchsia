@@ -18,13 +18,7 @@ class CoroutineManager {
  public:
   explicit CoroutineManager(CoroutineService* service) : service_(service) {}
 
-  ~CoroutineManager() {
-    // Interrupt any active handlers.
-    in_deletion_ = true;
-    while (!handlers_.empty()) {
-      (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
-    }
-  }
+  ~CoroutineManager() { Shutdown(); }
 
   CoroutineManager(const CoroutineManager&) = delete;
   const CoroutineManager& operator=(const CoroutineManager&) = delete;
@@ -37,10 +31,13 @@ class CoroutineManager {
   //   void(CoroutineHandler*, fit::function<void(Args...)>)
   // When the second argument of |runnable| is called, the coroutine is
   // unregistered from the manager object and |callback| is called with the same
-  // arguments. It is an error to exit the coroutine without calling
-  // |runnable|'s callback.
+  // arguments unless the manager is shutting down. It is an error to exit the
+  // coroutine without calling |runnable|'s callback.
   template <typename Callback, typename Runnable>
   void StartCoroutine(Callback callback, Runnable runnable) {
+    if (disabled_) {
+      return;
+    }
     service_->StartCoroutine([this, callback = std::move(callback),
                               runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
       bool callback_called = false;
@@ -52,7 +49,7 @@ class CoroutineManager {
         // destructor is called in the callback.
         handlers_.erase(iter);
         callback_called = true;
-        if (!in_deletion_) {
+        if (!disabled_) {
           callback(std::move(args)...);
         }
       };
@@ -72,6 +69,9 @@ class CoroutineManager {
   //   void(CoroutineHandler*)
   template <typename Runnable>
   void StartCoroutine(Runnable runnable) {
+    if (disabled_) {
+      return;
+    }
     service_->StartCoroutine(
         [this, runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
           auto iter = handlers_.insert(handlers_.cend(), handler);
@@ -80,8 +80,18 @@ class CoroutineManager {
         });
   }
 
+  // Shuts the manager down. All running coroutines will be interrupted and any
+  // future one will not be started.
+  void Shutdown() {
+    // Interrupt any active handlers.
+    disabled_ = true;
+    while (!handlers_.empty()) {
+      (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
+    }
+  }
+
  private:
-  bool in_deletion_ = false;
+  bool disabled_ = false;
   std::list<coroutine::CoroutineHandler*> handlers_;
   CoroutineService* const service_;
 };

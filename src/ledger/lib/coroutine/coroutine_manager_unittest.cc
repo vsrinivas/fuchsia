@@ -57,7 +57,45 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
   EXPECT_FALSE(reached_callback);
   manager.reset();
   EXPECT_FALSE(called);
+  // The manager is shutting down, so |SetWhenCalled| is not called when
+  // |callback| is called.
   EXPECT_TRUE(executed_callback);
+}
+
+TEST(CoroutineManager, Shutdown) {
+  CoroutineServiceImpl coroutine_service;
+  CoroutineManager manager(&coroutine_service);
+
+  bool called = false;
+  bool reached_callback = false;
+  bool executed_callback = false;
+  CoroutineHandler* handler = nullptr;
+  manager.StartCoroutine(callback::SetWhenCalled(&called),
+                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+                            handler = current_handler;
+                            EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+                            reached_callback = true;
+                            callback();
+                            executed_callback = true;
+                          });
+
+  ASSERT_TRUE(handler);
+  EXPECT_FALSE(called);
+  EXPECT_FALSE(reached_callback);
+  manager.Shutdown();
+  EXPECT_FALSE(called);
+  // The manager is shutting down, so |SetWhenCalled| is not called when
+  // |callback| is called.
+  EXPECT_TRUE(executed_callback);
+
+  bool coroutine_started = false;
+  manager.StartCoroutine(callback::SetWhenCalled(&called),
+                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+                            coroutine_started = true;
+                            callback();
+                          });
+  EXPECT_FALSE(called);
+  EXPECT_FALSE(coroutine_started);
 }
 
 TEST(CoroutineManager, NoCallback) {
