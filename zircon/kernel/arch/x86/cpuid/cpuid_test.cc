@@ -25,31 +25,33 @@ using cpu_id::Topology;
 bool test_intel_feature_flags() {
   BEGIN_TEST;
 
-  auto& data = cpu_id::kTestDataXeon2690v4;
-  auto features = cpu_id::kCpuIdXeon2690v4.ReadFeatures();
+  for (const auto& data : {cpu_id::kTestDataXeon2690v4, cpu_id::kTestDataCeleronJ3455}) {
+    cpu_id::FakeCpuId fake_cpu(data);
+    auto features = fake_cpu.ReadFeatures();
 
-  // Features we know this processor has.
-  for (auto feature : data.features) {
-    if (feature.leaf == Features::INVALID_SET)
-      continue;
+    // Features we know this processor has.
+    for (auto feature : data.features) {
+      if (feature.leaf == Features::INVALID_SET)
+        continue;
 
-    const bool result = features.HasFeature(feature);
-    if (!result) {
-      printf("Missing Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      const bool result = features.HasFeature(feature);
+      if (!result) {
+        printf("Missing Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      }
+      EXPECT_TRUE(result);
     }
-    EXPECT_TRUE(result);
-  }
 
-  // Some features we know it doesn't.
-  for (auto feature : data.missing_features) {
-    if (feature.leaf == Features::INVALID_SET)
-      continue;
+    // Some features we know it doesn't.
+    for (auto feature : data.missing_features) {
+      if (feature.leaf == Features::INVALID_SET)
+        continue;
 
-    const bool result = features.HasFeature(feature);
-    if (result) {
-      printf("Extra Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      const bool result = features.HasFeature(feature);
+      if (result) {
+        printf("Extra Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      }
+      EXPECT_FALSE(result);
     }
-    EXPECT_FALSE(result);
   }
 
   END_TEST;
@@ -58,31 +60,33 @@ bool test_intel_feature_flags() {
 bool test_amd_feature_flags() {
   BEGIN_TEST;
 
-  auto& data = cpu_id::kTestDataThreadRipper2970wx;
-  auto features = cpu_id::kCpuIdThreadRipper2970wx.ReadFeatures();
+  for (const auto& data : {cpu_id::kTestDataThreadRipper2970wx, cpu_id::kTestDataAmdA49120C}) {
+    cpu_id::FakeCpuId fake_cpu(data);
+    auto features = fake_cpu.ReadFeatures();
 
-  // Features we know this processor has.
-  for (auto feature : data.features) {
-    if (feature.leaf == Features::INVALID_SET)
-      continue;
+    // Features we know this processor has.
+    for (auto feature : data.features) {
+      if (feature.leaf == Features::INVALID_SET)
+        continue;
 
-    const bool result = features.HasFeature(feature);
-    if (!result) {
-      printf("Missing Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      const bool result = features.HasFeature(feature);
+      if (!result) {
+        printf("Missing Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      }
+      EXPECT_TRUE(result);
     }
-    EXPECT_TRUE(result);
-  }
 
-  // Some features we know it doesn't.
-  for (auto feature : data.missing_features) {
-    if (feature.leaf == Features::INVALID_SET)
-      continue;
+    // Some features we know it doesn't.
+    for (auto feature : data.missing_features) {
+      if (feature.leaf == Features::INVALID_SET)
+        continue;
 
-    const bool result = features.HasFeature(feature);
-    if (result) {
-      printf("Extra Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      const bool result = features.HasFeature(feature);
+      if (result) {
+        printf("Extra Feature: set:%u reg:%u bit:%u\n", feature.leaf, feature.reg, feature.bit);
+      }
+      EXPECT_FALSE(result);
     }
-    EXPECT_FALSE(result);
   }
 
   END_TEST;

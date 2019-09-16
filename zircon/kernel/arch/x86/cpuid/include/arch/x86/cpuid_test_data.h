@@ -87,9 +87,17 @@ const TestDataSet kTestDataThreadRipper2970wx = {
 };
 
 // Queried from "AMD A4-9120C RADEON R4, 5 COMPUTE CORES 2C+3G" (HP Chromebook 14)
+// 'Stoney Ridge' APU, AMD Excavator CPU
 const TestDataSet kTestDataAmdA49120C = {
-    .features = {},
-    .missing_features = { Features::CLZERO },
+    // CPU features we do expect to find.
+    .features = {Features::FPU, Features::VME, Features::DE,  Features::PSE, Features::TSC,
+                 Features::MSR, Features::PAE, Features::MCE, Features::CX8, Features::APIC,
+                 Features::SEP, Features::MTRR, Features::PGE, Features::MCA, Features::CMOV,
+                 Features::PAT, Features::PSE36, Features::MMX, Features::CLFSH,
+                 Features::FSGSBASE, Features::MOVBE},
+    // Sample of CPU features we do not expect to find.
+    .missing_features = {Features::SGX, Features::RTM, Features::PCID, Features::RDPID,
+                         Features::CLZERO},
     .leaf0 = {.reg = {0xd, 0x68747541, 0x444d4163, 0x69746e65}},
     .leaf1 = {.reg = {0x670f00, 0x20800, 0x7ed8320b, 0x178bfbff}},
     .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
@@ -102,24 +110,6 @@ const TestDataSet kTestDataAmdA49120C = {
     .leaf8_8 = {.reg = {0x3030, 0x1000, 0x4001, 0x0}},
     .leaf8_1D = {.reg = {0x121, 0x1c0003f, 0x3f, 0x0}},
     .leaf8_1E = {.reg = {0x10, 0x100, 0x0, 0x0}},
-};
-
-// Queried from AMD Athlon 845 (Carrizo)
-const TestDataSet kTestDataAmdAthlon845 = {
-    .features = {},
-    .missing_features = {},
-    .leaf0 = {.reg = {0xd, 0x68747541, 0x444d4163, 0x69746e65}},
-    .leaf1 = {.reg = {0x660f01, 0x1040800, 0x7ed8320b, 0x178bfbff}},
-    .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
-    .leaf7 = {.reg = {0x0, 0x1a9, 0x0, 0x0}},
-    .leafB = {{{.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}}}},
-    .leaf8_0 = {.reg = {0x8000001e, 0x68747541, 0x444d4163, 0x69746e65}},
-    .leaf8_1 = {.reg = {0x660f01, 0x30000000, 0x2febbfff, 0x2fd3fbff}},
-    .leaf8_8 = {.reg = {0x3030, 0x0, 0x4003, 0x0}},
-    .leaf8_1D = {.reg = {0x121, 0x1c0003f, 0x3f, 0x0}},
-    .leaf8_1E = {.reg = {0x11, 0x100, 0x0, 0x0}},
 };
 
 // Queried from Intel Celeron J3455 (NUC6CAYH); Apollo Lake NUC (Goldmont)
@@ -165,7 +155,6 @@ class FakeCpuId : public CpuId {
 const FakeCpuId kCpuIdXeon2690v4(kTestDataXeon2690v4);
 const FakeCpuId kCpuIdThreadRipper2970wx(kTestDataThreadRipper2970wx);
 const FakeCpuId kCpuIdAmdA49120C(kTestDataAmdA49120C);
-const FakeCpuId kCpuIdAmdAthlon845(kTestDataAmdAthlon845);
 const FakeCpuId kCpuIdCeleronJ3455(kTestDataCeleronJ3455);
 
 }  // namespace cpu_id
