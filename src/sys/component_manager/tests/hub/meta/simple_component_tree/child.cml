@@ -1,0 +1,9 @@
+{
+     "children": [
+        {
+            "name": "grandchild",
+            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/grandchild.cm",
+            "startup": "eager"
+        }
+    ],
+}

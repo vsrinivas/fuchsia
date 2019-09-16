@@ -52,6 +52,23 @@ rustc_binary("hub_collection_realm_bin") {
   ]
 }
 
+rustc_binary("parent_bin") {
+  name = "parent"
+  edition = "2018"
+  source_root = "parent.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
 rustc_library("hub_test_hook") {
   name = "hub_test_hook"
   edition = "2018"
@@ -115,6 +132,7 @@ test_package("hub_integration_test") {
     ":hub_integration_test_bin",
     ":hub_collection_realm_bin",
     ":simple_bin",
+    ":parent_bin",
     ":hub_client_bin",
     "//examples/components/routing/echo_server",
     "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
@@ -144,7 +162,19 @@ test_package("hub_integration_test") {
     {
       path = rebase_path("meta/simple.cml")
       dest = "simple.cm"
-    }
+    },
+    {
+      path = rebase_path("meta/simple_component_tree/parent.cml")
+      dest = "parent.cm"
+    },
+    {
+      path = rebase_path("meta/simple_component_tree/child.cml")
+      dest = "child.cm"
+    },
+    {
+      path = rebase_path("meta/simple_component_tree/grandchild.cml")
+      dest = "grandchild.cm"
+    },
   ]
 
   binaries = [
@@ -162,6 +192,9 @@ test_package("hub_integration_test") {
     },
     {
       name = "simple"
+    },
+    {
+      name = "parent"
     },
   ]
 
