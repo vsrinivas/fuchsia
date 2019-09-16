@@ -141,7 +141,7 @@ if (is_fuchsia) {
       "$zx/system/fidl/fuchsia-io:c.headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
-      "$zx/system/ulib/trace:headers",
+      "$zx/system/ulib/trace:trace-driver.headers",
     ]
     configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps = [

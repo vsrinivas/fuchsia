@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
 
 library("framebuffer") {
   sdk = "static"

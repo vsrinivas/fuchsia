@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-import("$zx/public/gn/config/levels.gni")
+import("$zx_build/public/gn/config/levels.gni")
 
 library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's
@@ -46,7 +46,7 @@ library("ngunwind") {
     "ngunwind/libunwind.h",
   ]
 
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 
   configs += [ ":private_config" ]
   deps = [
@@ -119,15 +119,16 @@ library("ngunwind") {
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "$zx/public/gn/config:default_frame_pointers" ] -
-      [ "$zx/public/gn/config:default_frame_pointers" ] != configs) {
-    configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-    configs += [ "$zx/public/gn/config:frame_pointers" ]
+  if (configs + [ "$zx_build/public/gn/config:default_frame_pointers" ] -
+      [ "$zx_build/public/gn/config:default_frame_pointers" ] != configs) {
+    configs -= [ "$zx_build/public/gn/config:default_frame_pointers" ]
+    configs += [ "$zx_build/public/gn/config:frame_pointers" ]
   }
 
   if (opt_level < 2) {
+
     # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "$zx/public/gn/config:opt_level" ]
+    configs -= [ "$zx_build/public/gn/config:opt_level" ]
     cflags = [ "-O2" ]
   }
 }

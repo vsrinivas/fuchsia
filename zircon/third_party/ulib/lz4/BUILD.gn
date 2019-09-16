@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-import("$zx/public/gn/fuzzer.gni")
+import("$zx_build/public/gn/fuzzer.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "$zx/../third_party/lz4/lib"
@@ -17,7 +17,7 @@ library("lz4") {
     "$lz4_lib/lz4hc.c",
     "$lz4_lib/xxhash.c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   defines = [
     "XXH_NAMESPACE=LZ4_",
 
@@ -32,7 +32,7 @@ library("lz4") {
   ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
 }
 
 group("test") {

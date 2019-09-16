@@ -27,7 +27,7 @@ library("uboringssl") {
       "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
     ]
   } else {
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 
     if (is_fuchsia) {
       deps = [
@@ -94,5 +94,5 @@ library("uboringssl") {
   }
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
 }

@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/kernel/syscalls/abigen.gni")
-import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/environment.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx_build/kernel/syscalls/abigen.gni")
+import("$zx_build/public/gn/config/globals.gni")
+import("$zx_build/public/gn/config/standard.gni")
+import("$zx_build/public/gn/toolchain/environment.gni")
+import("$zx_build/public/gn/toolchain/environment_redirect.gni")
 
 # The vDSO is built in its own special environment because it has special
 # constraints.  If all the code going into the vDSO were built entirely in

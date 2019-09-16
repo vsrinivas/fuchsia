@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
 # Metrics which depend on cobalt only.
 library("metrics-cobalt") {
   sources = [
     "cobalt-metrics.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
     "$zx/system/ulib/fbl:headers",
@@ -23,7 +26,7 @@ library("metrics-inspect") {
   sources = [
     "histograms.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fzl:headers",
@@ -44,7 +47,7 @@ library("metrics-composite-latency-event") {
   sources = [
     "composite-latency-event.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
     "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",

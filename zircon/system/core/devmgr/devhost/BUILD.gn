@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/source_set_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
 executable("devhost") {
   sources = [
     "main.cc",
@@ -58,8 +62,8 @@ source_set("common") {
   ]
 
   configs += [
-    "$zx/public/gn/config:static-libc++",
-    "$zx/public/gn/config:visibility_hidden",
+    "$zx_build/public/gn/config:static-libc++",
+    "$zx_build/public/gn/config:visibility_hidden",
   ]
 }
 
