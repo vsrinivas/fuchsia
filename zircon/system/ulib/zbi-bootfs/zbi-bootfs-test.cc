@@ -64,6 +64,17 @@ TEST(ZbiBootfsTestCase, InitBadInput) {
   ASSERT_EQ(ZX_ERR_IO, image.Init(input, byte_offset));
 }
 
+TEST(ZbiBootfsTestCase, InitNotCalled) {
+  zbi_bootfs::ZbiBootfsParser image;
+  const std::string input = ImagePath(kGeneratedZbi);
+  const char* filename = kGeneratedZbiFilename;
+
+  zbi_bootfs::Entry entry;
+
+  // Unable to process without Init call. Assert bad state.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(filename, &entry));
+}
+
 TEST(ZbiBootfsTestCase, ProcessGeneratedZbi) {
   zbi_bootfs::ZbiBootfsParser image;
   const std::string input = ImagePath(kGeneratedZbi);
