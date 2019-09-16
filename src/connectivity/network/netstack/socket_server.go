@@ -58,19 +58,31 @@ type iostate struct {
 	// The number of live `socketImpl`s that reference this iostate.
 	clones int64
 
-	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
-	transProto tcpip.TransportProtocolNumber // TCP or UDP
+	netProto   tcpip.NetworkProtocolNumber
+	transProto tcpip.TransportProtocolNumber
 
-	dataHandle         zx.Socket // used to communicate with libc
+	local, peer zx.Socket
+
 	incomingAssertedMu sync.Mutex
 
-	loopWriteDone chan struct{} // report that loopWrite finished
-
-	closing chan struct{}
+	// Along with (*iostate).close, these channels are used to coordinate
+	// orderly shutdown of loops, handles, and endpoints. See the comment
+	// on (*iostate).close for more information.
+	//
+	// Notes:
+	//
+	//  - closing is signaled iff close has been called and the reference
+	//    count has reached zero.
+	//
+	//  - loop{Read,Write}Done are signaled iff loop{Read,Write} have
+	//    exited, respectively.
+	closing, loopReadDone, loopWriteDone chan struct{}
 }
 
 // loopWrite connects libc write to the network stack.
-func (ios *iostate) loopWrite() error {
+func (ios *iostate) loopWrite() {
+	closeFn := func() { ios.close(ios.loopReadDone) }
+
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
 
@@ -79,47 +91,45 @@ func (ios *iostate) loopWrite() error {
 	defer ios.wq.EventUnregister(&waitEntry)
 
 	for {
-		// TODO: obviously allocating for each read is silly.
-		// A quick hack we can do is store these in a ring buffer,
-		// as the lifecycle of this buffer.View starts here, and
-		// ends in nearby code we control in link.go.
+		// TODO: obviously allocating for each read is silly. A quick hack we can
+		// do is store these in a ring buffer, as the lifecycle of this buffer.View
+		// starts here, and ends in nearby code we control in link.go.
 		v := make([]byte, 0, 2048)
-		n, err := ios.dataHandle.Read(v[:cap(v)], 0)
+		n, err := ios.local.Read(v[:cap(v)], 0)
 		if err != nil {
 			if err, ok := err.(*zx.Error); ok {
 				switch err.Status {
 				case zx.ErrPeerClosed:
-					return nil
+					// The client has unexpectedly disappeared. We normally expect the
+					// client to close gracefully via FIDL, but it didn't.
+					closeFn()
+					return
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
 					if err := ios.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
-						return fmt.Errorf("Endpoint.Shutdown(ShutdownWrite): %s", err)
+						panic(err)
 					}
-					return nil
+					return
 				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite)
+					obs, err := zxwait.Wait(zx.Handle(ios.local), sigs, zx.TimensecInfinite)
 					if err != nil {
-						if err, ok := err.(*zx.Error); ok {
-							switch err.Status {
-							case zx.ErrCanceled:
-								return nil
-							}
-						}
 						panic(err)
 					}
 					switch {
 					case obs&zx.SignalSocketPeerWriteDisabled != 0:
-						// The next Read will return zx.BadState.
+						// The next Read will return zx.ErrBadState.
 						continue
 					case obs&zx.SignalSocketReadable != 0:
-						// The client might have written some data into the socket.
-						// Always continue to the 'for' loop below and try to read them
-						// even if the signals show the client has closed the dataHandle.
+						// The client might have written some data into the socket. Always
+						// continue to the loop below and try to read even if the signals
+						// show the client has closed the socket.
 						continue
 					case obs&zx.SignalSocketPeerClosed != 0:
-						return nil
+						// The next Read will return zx.ErrPeerClosed.
+						continue
 					case obs&localSignalClosing != 0:
-						return nil
+						// We're shutting down.
+						return
 					}
 				}
 			}
@@ -132,18 +142,22 @@ func (ios *iostate) loopWrite() error {
 			const size = C.sizeof_struct_fdio_socket_msg
 			var fdioSocketMsg C.struct_fdio_socket_msg
 			if err := fdioSocketMsg.Unmarshal(v[:size]); err != nil {
-				return err
+				syslog.Errorf("malformed datagram: %s", err)
+				closeFn()
+				return
 			}
 			if fdioSocketMsg.addrlen != 0 {
 				addr, err := fdioSocketMsg.addr.Decode()
 				if err != nil {
-					return err
+					syslog.Errorf("malformed datagram: %s", err)
+					closeFn()
+					return
 				}
 				opts.To = &addr
 			}
 			v = v[size:]
 		}
-	LoopWrite:
+
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), opts)
 			if resCh != nil {
@@ -156,48 +170,55 @@ func (ios *iostate) loopWrite() error {
 				<-resCh
 				continue
 			}
-
 			// TODO(fxb.dev/35006): Handle all transport write errors.
 			switch err {
 			case nil:
-				{
-					if ios.transProto != tcp.ProtocolNumber {
-						if n < int64(len(v)) {
-							panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
-						}
-					}
-					v = v[n:]
-					if len(v) == 0 {
-						break LoopWrite
+				if ios.transProto != tcp.ProtocolNumber {
+					if n < int64(len(v)) {
+						panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
 					}
 				}
-			case tcpip.ErrWouldBlock:
-				{
-					if ios.transProto != tcp.ProtocolNumber {
-						panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
-					}
-					// Note that Close should not interrupt this wait.
-					<-notifyCh
+				v = v[n:]
+				if len(v) != 0 {
 					continue
 				}
-			case tcpip.ErrNoLinkAddress:
-				// ARP timeout, drop this packet and continue.
-				break LoopWrite
-			default:
-				{
-					optsStr := "<TCP>"
-					if to := opts.To; to != nil {
-						optsStr = fmt.Sprintf("%+v", *to)
-					}
-					return fmt.Errorf("Endpoint.Write(%s): %s", optsStr, err)
+			case tcpip.ErrWouldBlock:
+				if ios.transProto != tcp.ProtocolNumber {
+					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
 				}
+
+				select {
+				case <-ios.closing:
+					// We're shutting down.
+					return
+				case <-notifyCh:
+					continue
+				}
+			case tcpip.ErrClosedForSend:
+				if err := ios.local.Shutdown(zx.SocketShutdownRead); err != nil {
+					panic(err)
+				}
+				return
+			case tcpip.ErrConnectionReset:
+				// We got a TCP RST.
+				closeFn()
+				return
+			default:
+				optsStr := "<TCP>"
+				if to := opts.To; to != nil {
+					optsStr = fmt.Sprintf("%+v", *to)
+				}
+				syslog.Errorf("Endpoint.Write(%s): %s", optsStr, err)
 			}
+			break
 		}
 	}
 }
 
 // loopRead connects libc read to the network stack.
-func (ios *iostate) loopRead(inCh <-chan struct{}) error {
+func (ios *iostate) loopRead(inCh <-chan struct{}) {
+	closeFn := func() { ios.close(ios.loopWriteDone) }
+
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
 
@@ -208,7 +229,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 		defer func() {
 			if !connected {
 				// If connected became true then we must have already unregistered
-				// below.  We must never unregister the same entry twice because that
+				// below. We must never unregister the same entry twice because that
 				// can corrupt the waiter queue.
 				ios.wq.EventUnregister(&outEntry)
 			}
@@ -228,20 +249,24 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 				}
 				select {
 				case <-ios.closing:
-					return nil
+					// We're shutting down.
+					return
 				case <-inCh:
 					// We got an incoming connection; we must be a listening socket.
-					// Because we are a listening socket, we don't expect anymore outbound
-					// events so there's no harm in letting outEntry remain registered
-					// until the end of the function.
+					// Because we are a listening socket, we don't expect anymore
+					// outbound events so there's no harm in letting outEntry remain
+					// registered until the end of the function.
 					ios.incomingAssertedMu.Lock()
-					err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+					err := ios.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
 					ios.incomingAssertedMu.Unlock()
 					if err != nil {
 						if err, ok := err.(*zx.Error); ok {
 							switch err.Status {
-							case zx.ErrBadHandle, zx.ErrPeerClosed:
-								return nil
+							case zx.ErrPeerClosed:
+								// The client has unexpectedly disappeared. We normally expect
+								// the client to close gracefully via FIDL, but it didn't.
+								closeFn()
+								return
 							}
 						}
 						panic(err)
@@ -261,11 +286,14 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
 				}
 
-				if err := ios.dataHandle.Handle().SignalPeer(0, signals); err != nil {
+				if err := ios.local.Handle().SignalPeer(0, signals); err != nil {
 					if err, ok := err.(*zx.Error); ok {
 						switch err.Status {
-						case zx.ErrBadHandle, zx.ErrPeerClosed:
-							return nil
+						case zx.ErrPeerClosed:
+							// The client has unexpectedly disappeared. We normally expect
+							// the client to close gracefully via FIDL, but it didn't.
+							closeFn()
+							return
 						}
 					}
 					panic(err)
@@ -274,8 +302,6 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			// TODO(fxb.dev/35006): Handle all transport read errors.
 			switch err {
 			case nil:
-			case tcpip.ErrClosedForReceive:
-				return nil
 			case tcpip.ErrConnectionRefused:
 				// Linux allows sockets with connection errors to be reused. If the
 				// client calls connect() again (and the underlying Endpoint correctly
@@ -284,17 +310,28 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 				case <-outCh:
 					continue
 				case <-ios.closing:
-					return nil
+					// We're shutting down.
+					return
 				}
 			case tcpip.ErrWouldBlock:
 				select {
 				case <-inCh:
 					continue
 				case <-ios.closing:
-					return nil
+					// We're shutting down.
+					return
 				}
+			case tcpip.ErrClosedForReceive:
+				if err := ios.local.Shutdown(zx.SocketShutdownWrite); err != nil {
+					panic(err)
+				}
+				return
+			case tcpip.ErrConnectionReset:
+				// We got a TCP RST.
+				closeFn()
+				return
 			default:
-				return fmt.Errorf("Endpoint.Read(): %s", err)
+				syslog.Errorf("Endpoint.Read(): %s", err)
 			}
 			break
 		}
@@ -305,7 +342,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			var fdioSocketMsg C.struct_fdio_socket_msg
 			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
 			if _, err := fdioSocketMsg.MarshalTo(out[:size]); err != nil {
-				return err
+				panic(err)
 			}
 			if n := copy(out[size:], v); n < len(v) {
 				panic(fmt.Sprintf("copied %d/%d bytes", n, len(v)))
@@ -313,41 +350,39 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			v = out
 		}
 
-	writeLoop:
 		for {
-			n, err := ios.dataHandle.Write(v, 0)
+			n, err := ios.local.Write(v, 0)
 			if err != nil {
 				if err, ok := err.(*zx.Error); ok {
 					switch err.Status {
-					case zx.ErrBadHandle, zx.ErrPeerClosed:
-						return nil
+					case zx.ErrPeerClosed:
+						// The client has unexpectedly disappeared. We normally expect the
+						// client to close gracefully via FIDL, but it didn't.
+						closeFn()
+						return
 					case zx.ErrBadState:
 						// Writing has been disabled for this socket endpoint.
 						if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
-							return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
+							panic(err)
 						}
-						return nil
+						return
 					case zx.ErrShouldWait:
-						obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite)
+						obs, err := zxwait.Wait(zx.Handle(ios.local), sigs, zx.TimensecInfinite)
 						if err != nil {
-							if err, ok := err.(*zx.Error); ok {
-								switch err.Status {
-								case zx.ErrBadHandle, zx.ErrCanceled:
-									return nil
-								}
-							}
 							panic(err)
 						}
 						switch {
 						case obs&zx.SignalSocketWriteDisabled != 0:
-							// The next Write will return zx.BadState.
+							// The next Write will return zx.ErrBadState.
 							continue
 						case obs&zx.SignalSocketWritable != 0:
 							continue
 						case obs&zx.SignalSocketPeerClosed != 0:
-							return nil
+							// The next Write will return zx.ErrPeerClosed.
+							continue
 						case obs&localSignalClosing != 0:
-							return nil
+							// We're shutting down.
+							return
 						}
 					}
 				}
@@ -360,7 +395,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			}
 			v = v[n:]
 			if len(v) == 0 {
-				break writeLoop
+				break
 			}
 		}
 	}
@@ -388,7 +423,9 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		wq:            wq,
 		ep:            ep,
 		ns:            ns,
-		dataHandle:    localS,
+		local:         localS,
+		peer:          peerS,
+		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
 	}
@@ -399,43 +436,21 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 
 	go func() {
+		defer close(ios.loopReadDone)
 		defer ios.wq.EventUnregister(&inEntry)
 
-		if err := ios.loopRead(inCh); err != nil {
-			syslog.VLogf(syslog.DebugVerbosity, "%p: loopRead: %s", ios, err)
-		}
-		if err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); err != nil {
-			if err, ok := err.(*zx.Error); ok {
-				switch err.Status {
-				case zx.ErrBadHandle:
-					return
-				}
-			}
-			syslog.Warnf("%p: %s", ios, err)
-		}
+		ios.loopRead(inCh)
 	}()
 	go func() {
 		defer close(ios.loopWriteDone)
 
-		if err := ios.loopWrite(); err != nil {
-			syslog.VLogf(syslog.DebugVerbosity, "%p: loopWrite: %s", ios, err)
-		}
-		if err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); err != nil {
-			if err, ok := err.(*zx.Error); ok {
-				switch err.Status {
-				case zx.ErrBadHandle:
-					return
-				}
-			}
-			syslog.Warnf("%p: %s", ios, err)
-		}
+		ios.loopWrite()
 	}()
 
 	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
 
 	s := &socketImpl{
 		iostate:        ios,
-		peer:           peerS,
 		controlService: controlService,
 	}
 	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
@@ -443,6 +458,46 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		return socket.ControlInterface{}, err
 	}
 	return socket.ControlInterface{Channel: peerC}, nil
+}
+
+// close destroys the iostate and releases associated resources, taking its
+// reference count into account.
+//
+// When called, close signals loopRead and loopWrite (via iostate.closing and
+// ios.local) to exit, and then blocks until its arguments are signaled. close
+// is typically called with ios.loop{Read,Write}Done.
+func (ios *iostate) close(loopDone ...<-chan struct{}) int64 {
+	clones := atomic.AddInt64(&ios.clones, -1)
+
+	if clones == 0 {
+		// Interrupt waits on notification channels. Notification reads
+		// are always combined with ios.closing in a select statement.
+		close(ios.closing)
+
+		// Interrupt waits on iostate.local. Handle waits always
+		// include localSignalClosing.
+		if err := ios.local.Handle().Signal(0, localSignalClosing); err != nil {
+			panic(err)
+		}
+
+		// The interruptions above cause our loops to exit. Wait until
+		// they do before releasing resources they may be using.
+		for _, ch := range loopDone {
+			<-ch
+		}
+
+		ios.ep.Close()
+
+		if err := ios.local.Close(); err != nil {
+			panic(err)
+		}
+
+		if err := ios.peer.Close(); err != nil {
+			panic(err)
+		}
+	}
+
+	return clones
 }
 
 func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
@@ -597,7 +652,6 @@ var _ socket.Control = (*socketImpl)(nil)
 type socketImpl struct {
 	*iostate
 
-	peer           zx.Socket
 	controlService *socket.ControlService
 	bindingKey     fidl.BindingKey
 }
@@ -617,34 +671,7 @@ func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 }
 
 func (s *socketImpl) close() {
-	clones := atomic.AddInt64(&s.iostate.clones, -1)
-
-	if clones == 0 {
-		close(s.iostate.closing)
-
-		// Signal that we're about to close. This tells the various message loops to finish
-		// processing, and let us know when they're done.
-		if err := s.iostate.dataHandle.Handle().Signal(0, localSignalClosing); err != nil {
-			panic(err)
-		}
-
-		// NB: we can't wait for loopRead to finish here because the dataHandle
-		// may be full, and loopRead will never exit.
-		if ch := s.iostate.loopWriteDone; ch != nil {
-			<-ch
-		}
-
-		// This has to happen after loopWrite exits because ios.ep is used there.
-		s.iostate.ep.Close()
-
-		if err := s.iostate.dataHandle.Close(); err != nil {
-			panic(err)
-		}
-
-		if err := s.peer.Close(); err != nil {
-			panic(err)
-		}
-	}
+	clones := s.iostate.close(s.iostate.loopReadDone, s.iostate.loopWriteDone)
 
 	removed := s.controlService.Remove(s.bindingKey)
 
@@ -658,7 +685,7 @@ func (s *socketImpl) Close() (int32, error) {
 
 func (s *socketImpl) Describe() (io.NodeInfo, error) {
 	var info io.NodeInfo
-	h, err := s.peer.Handle().Duplicate(zx.RightSameRights)
+	h, err := s.iostate.peer.Handle().Duplicate(zx.RightSameRights)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.iostate, err)
 	if err != nil {
 		return info, err
@@ -703,7 +730,7 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 	// while we clear the signal.
 	s.iostate.incomingAssertedMu.Lock()
 	if s.iostate.ep.Readiness(waiter.EventIn) == 0 {
-		if err := s.iostate.dataHandle.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
+		if err := s.iostate.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
 			panic(err)
 		}
 	}
