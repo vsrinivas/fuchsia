@@ -15,6 +15,8 @@ pub mod test_utils;
 pub mod directory;
 pub mod file;
 
+pub mod tree_builder;
+
 mod common;
 mod execution_scope;
 mod path;
