@@ -1,36 +1,19 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("backoff") {
-  sources = [
-    "backoff.h",
-    "exponential_backoff.cc",
-    "exponential_backoff.h",
-  ]
-
+# Do not use this target directly, instead depend on //src/lib/backoff:backoff.
+group("backoff") {
   public_deps = [
-    "//src/lib/fxl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
+    "//src/lib/backoff:backoff",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "exponential_backoff_unittest.cc",
-  ]
-
+# Do not use this target directly, instead depend on //src/lib/backoff:unittests.
+group("unittests") {
   public_deps = [
-    "//src/lib/fxl:printers",
+    "//src/lib/backoff:unittests",
   ]
 
-  deps = [
-    ":backoff",
-    "//third_party/googletest:gtest",
-  ]
+  testonly = true
 }

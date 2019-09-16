@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/backoff/exponential_backoff.h>
-
 #include <stdlib.h>
+#include <zircon/syscalls.h>
 
 #include <src/lib/fxl/logging.h>
-#include <zircon/syscalls.h>
 
 namespace backoff {
 
