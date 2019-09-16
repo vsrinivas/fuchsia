@@ -35,6 +35,7 @@
 namespace devmgr {
 
 class DevhostLoaderService;
+class FsProvider;
 
 class SuspendContext {
  public:
@@ -112,6 +113,8 @@ struct CoordinatorConfig {
   bool asan_drivers;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback;
+  // Something to clone a handle from the environment to pass to a Devhost.
+  FsProvider* fs_provider;
 };
 
 using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;

@@ -29,10 +29,6 @@
 #include "devhost.h"
 #include "driver-test-reporter.h"
 
-namespace devmgr {
-zx::channel fs_clone(const char* path) { return zx::channel(); }
-}  // namespace devmgr
-
 namespace {
 
 constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
@@ -40,6 +36,11 @@ constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
+
+class DummyFsProvider : public devmgr::FsProvider {
+  ~DummyFsProvider() {}
+  zx::channel CloneFs(const char* path) override { return zx::channel(); }
+};
 
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
   zx::vmo vmo;
@@ -64,6 +65,7 @@ devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
   config.require_system = false;
   config.asan_drivers = false;
   config.boot_args = boot_args;
+  config.fs_provider = new DummyFsProvider();
   zx::event::create(0, &config.fshost_event);
   return config;
 }

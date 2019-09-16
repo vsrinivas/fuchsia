@@ -8,20 +8,26 @@
 #include <minfs/minfs.h>
 #include <zircon/status.h>
 
+#include "../shared/fdio.h"
 #include "filesystem-mounter.h"
+#include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
 
 namespace devmgr {
 namespace {
 
 zx_status_t LaunchBlobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-  return devmgr_launch(*zx::job::default_job(), "blobfs:/blob", argv, nullptr, -1, hnd, ids, len,
-                       nullptr, FS_FOR_FSPROC);
+  FshostFsProvider fs_provider;
+  DevmgrLauncher launcher(&fs_provider);
+  return launcher.Launch(*zx::job::default_job(), "blobfs:/blob", argv, nullptr, -1, hnd,
+                         ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 zx_status_t LaunchMinfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-  return devmgr_launch(*zx::job::default_job(), "minfs:/data", argv, nullptr, -1, hnd, ids, len,
-                       nullptr, FS_FOR_FSPROC);
+  FshostFsProvider fs_provider;
+  DevmgrLauncher launcher(&fs_provider);
+  return launcher.Launch(*zx::job::default_job(), "minfs:/data", argv, nullptr, -1, hnd,
+                         ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 }  // namespace

@@ -25,6 +25,7 @@
 
 #include "../shared/fdio.h"
 #include "../shared/log.h"
+#include "devfs.h"
 
 struct ConsoleStarterArgs {
   SystemInstance* instance;
@@ -87,7 +88,7 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
                                ramdisk_vmo->reset_and_get_address(), &length);
 }
 
-SystemInstance::SystemInstance() : fshost_ldsvc(zx::channel()) {}
+SystemInstance::SystemInstance() : fshost_ldsvc(zx::channel()), launcher_(this) {}
 
 zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
   zx_status_t status = zx::job::create(root_job, 0u, &svc_job);
@@ -390,7 +391,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
   // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
-  zx::channel fs_handle = devmgr::fs_clone("dev/class/sysmem");
+  zx::channel fs_handle = CloneFs("dev/class/sysmem");
   if (!fs_handle.is_valid()) {
     printf("devcoordinator: failed to clone /dev/class/sysmem\n");
     return ZX_ERR_BAD_STATE;
@@ -450,14 +451,14 @@ void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
   zx_status_t r;
   r = fdio_ns_get_installed(&ns);
   ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot get namespace: %s\n", zx_status_get_string(r));
-  r = fdio_ns_bind(ns, "/dev", devmgr::fs_clone("dev").release());
+  r = fdio_ns_bind(ns, "/dev", CloneFs("dev").release());
   ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /dev to namespace: %s\n",
                 zx_status_get_string(r));
 
   // Start fshost before binding /system, since it publishes it.
   fshost_start(coordinator, devmgr_args, std::move(fshost_server));
 
-  if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
+  if ((r = fdio_ns_bind(ns, "/system", CloneFs("system").release())) != ZX_OK) {
     printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
   }
 }
@@ -486,13 +487,13 @@ int SystemInstance::PwrbtnMonitorStarter() {
     return 1;
   }
 
-  zx::channel input_handle = devmgr::fs_clone("dev/class/input");
+  zx::channel input_handle = CloneFs("dev/class/input");
   if (!input_handle.is_valid()) {
     printf("devcoordinator: failed to clone /dev/input\n");
     return 1;
   }
 
-  zx::channel svc_handle = devmgr::fs_clone("svc");
+  zx::channel svc_handle = CloneFs("svc");
   if (!svc_handle.is_valid()) {
     printf("devcoordinator: failed to clone /svc\n");
     return 1;
@@ -630,9 +631,9 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
 
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};
     zx::process proc;
-    status = devmgr::devmgr_launch_with_loader(svc_job, "sh:console", zx::vmo(), std::move(ldsvc),
-                                               argv_sh, envp, fd.release(), nullptr, nullptr, 0,
-                                               &proc, FS_ALL);
+    status = launcher_.LaunchWithLoader(svc_job, "sh:console", zx::vmo(), std::move(ldsvc),
+                                        argv_sh, envp, fd.release(), nullptr, nullptr, 0,
+                                        &proc, FS_ALL);
     if (status != ZX_OK) {
       printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
@@ -693,9 +694,9 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       return -1;
     }
 
-    devmgr::devmgr_launch_with_loader(svc_job, "miscsvc", zx::vmo(), std::move(ldsvc), args,
-                                      nullptr, -1, handles, types, countof(handles), nullptr,
-                                      FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
+    launcher_.LaunchWithLoader(svc_job, "miscsvc", zx::vmo(), std::move(ldsvc), args,
+                               nullptr, -1, handles, types, countof(handles), nullptr,
+                               FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
   }
 
   bool netboot = false;
@@ -723,8 +724,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
     }
 
     zx::process proc;
-    zx_status_t status = devmgr::devmgr_launch(svc_job, "netsvc", args, nullptr, -1, nullptr,
-                                               nullptr, 0, &proc, FS_ALL);
+    zx_status_t status = launcher_.Launch(svc_job, "netsvc", args, nullptr, -1, nullptr,
+                                          nullptr, 0, &proc, FS_ALL);
     if (status == ZX_OK) {
       if (vruncmd) {
         zx_info_handle_basic_t info = {};
@@ -757,8 +758,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[argc++] = nodename;
     }
 
-    devmgr::devmgr_launch(svc_job, "device-name-provider", args, nullptr, -1, handles, types,
-                          countof(handles), nullptr, FS_DEV);
+    launcher_.Launch(svc_job, "device-name-provider", args, nullptr, -1, handles, types,
+                     countof(handles), nullptr, FS_DEV);
   }
 
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
@@ -791,8 +792,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[3] = "--run";
       args[4] = vcmd.data();
     }
-    devmgr::devmgr_launch(svc_job, "virtual-console", args, env.data(), -1, handles, types,
-                          handle_count, nullptr, FS_ALL);
+    launcher_.Launch(svc_job, "virtual-console", args, env.data(), -1, handles, types,
+                     handle_count, nullptr, FS_ALL);
   }
 
   const char* backstop = coordinator->boot_args().Get("clock.backstop");
@@ -879,9 +880,9 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
         appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
         appmgr_hnd_count++;
       }
-      devmgr::devmgr_launch_with_loader(fuchsia_job, "appmgr", zx::vmo(), std::move(ldsvc),
-                                        argv_appmgr, nullptr, -1, appmgr_hnds, appmgr_ids,
-                                        appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
+      launcher_.LaunchWithLoader(fuchsia_job, "appmgr", zx::vmo(), std::move(ldsvc),
+                                 argv_appmgr, nullptr, -1, appmgr_hnds, appmgr_ids,
+                                 appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
       appmgr_started = true;
     }
     if (!autorun_started) {
@@ -921,8 +922,8 @@ void SystemInstance::do_autorun(const char* name, const char* cmd) {
       return;
     }
 
-    devmgr::devmgr_launch_with_loader(svc_job, name, zx::vmo(), std::move(ldsvc), args.argv(),
-                                      nullptr, -1, nullptr, nullptr, 0, nullptr, FS_ALL);
+    launcher_.LaunchWithLoader(svc_job, name, zx::vmo(), std::move(ldsvc), args.argv(),
+                               nullptr, -1, nullptr, nullptr, 0, nullptr, FS_ALL);
   }
 }
 
@@ -995,6 +996,43 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
   coordinator->boot_args().Collect("zircon.system", &env);
   env.push_back(nullptr);
 
-  devmgr::devmgr_launch(svc_job, "fshost", args.data(), env.data(), -1, handles, types, n, nullptr,
-                        FS_BOOT | FS_DEV | FS_SVC);
+  launcher_.Launch(svc_job, "fshost", args.data(), env.data(), -1, handles, types, n, nullptr,
+                   FS_BOOT | FS_DEV | FS_SVC);
+}
+
+zx::channel SystemInstance::CloneFs(const char* path) {
+  if (!strcmp(path, "dev")) {
+    return devmgr::devfs_root_clone();
+  }
+  zx::channel h0, h1;
+  if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
+    return zx::channel();
+  }
+  if (!strcmp(path, "boot")) {
+    zx_status_t status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
+    if (status != ZX_OK) {
+      log(ERROR, "devcoordinator: fdio_open(\"/boot\") failed: %s\n", zx_status_get_string(status));
+      return zx::channel();
+    }
+    return h0;
+  }
+  zx::unowned_channel fs(fs_root);
+  int flags = FS_DIR_FLAGS;
+  if (!strcmp(path, "hub")) {
+    fs = zx::unowned_channel(appmgr_client);
+  } else if (!strcmp(path, "svc")) {
+    flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+    fs = zx::unowned_channel(svchost_outgoing);
+    path = ".";
+  } else if (!strncmp(path, "dev/", 4)) {
+    fs = devmgr::devfs_root_borrow();
+    path += 4;
+  }
+  zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
+  if (status != ZX_OK) {
+    log(ERROR, "devcoordinator: fdio_open_at failed for path %s: %s\n", path,
+        zx_status_get_string(status));
+    return zx::channel();
+  }
+  return h0;
 }

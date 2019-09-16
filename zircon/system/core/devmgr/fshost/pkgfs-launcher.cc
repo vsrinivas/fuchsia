@@ -22,6 +22,8 @@
 
 #include <utility>
 
+#include "../shared/fdio.h"
+#include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
 
 namespace devmgr {
@@ -207,7 +209,10 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
   const zx_handle_t raw_h1 = h1.release();
   zx::process proc;
   args.Print("fshost");
-  status = devmgr_launch_with_loader(
+
+  FshostFsProvider fs_provider;
+  DevmgrLauncher launcher(&fs_provider);
+  status = launcher.LaunchWithLoader(
       *zx::job::default_job(), "pkgfs", std::move(executable), std::move(loader), argv, nullptr, -1,
       &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
   if (status != ZX_OK) {

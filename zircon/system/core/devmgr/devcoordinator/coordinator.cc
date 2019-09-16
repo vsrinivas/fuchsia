@@ -366,7 +366,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
                                      const char* devhost_bin, const char* name,
                                      const char* const* env, zx_handle_t hrpc,
                                      const zx::resource& root_resource,
-                                     zx::unowned_job devhost_job) {
+                                     zx::unowned_job devhost_job, FsProvider* fs_provider) {
   // Give devhosts the root resource if we have it (in tests, we may not)
   // TODO: limit root resource to root devhost only
   zx::resource resource;
@@ -399,7 +399,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
   // TODO: constrain to /svc/device
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = fs_clone("svc").release()},
+      .ns = {.prefix = "/svc", .handle = fs_provider->CloneFs("svc").release()},
   };
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
@@ -472,8 +472,9 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
   status = dc_launch_devhost(dh.get(), loader_service_connector_,
-                             get_devhost_bin(config_.asan_drivers), name, env.data(), hrpc.release(),
-                             root_resource(), zx::unowned_job(config_.devhost_job));
+                             get_devhost_bin(config_.asan_drivers), name, env.data(),
+                             hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job),
+                             config_.fs_provider);
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());
     return status;

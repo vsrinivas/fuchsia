@@ -68,15 +68,18 @@ static struct {
 //
 void devmgr_disable_appmgr_services() { FSTAB[1].flags = 0; }
 
-zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::vmo executable,
-                                      zx::channel loader, const char* const* argv,
-                                      const char** initial_envp, int stdiofd,
-                                      const zx_handle_t* handles, const uint32_t* types,
-                                      size_t hcount, zx::process* out_proc, uint32_t flags) {
+FsProvider::~FsProvider() {}
+
+DevmgrLauncher::DevmgrLauncher(FsProvider* fs_provider) : fs_provider_(fs_provider) {}
+
+zx_status_t DevmgrLauncher::LaunchWithLoader(
+    const zx::job& job, const char* name, zx::vmo executable, zx::channel loader,
+    const char* const* argv, const char** initial_envp, int stdiofd, const zx_handle_t* handles,
+    const uint32_t* types, size_t hcount, zx::process* out_proc, uint32_t flags) {
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
-    printf("devmgr_launch failed %s\n", zx_status_get_string(status));
+    printf("launch failed %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -125,7 +128,7 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
     switch (FSTAB[n].action) {
       case FdioAction::AddNsEntry: {
         zx_handle_t h;
-        if ((h = fs_clone(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
+        if ((h = fs_provider_->CloneFs(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
           actions.push_back((fdio_spawn_action_t){
               .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
               .ns = {.prefix = FSTAB[n].mount, .handle = h},
@@ -182,11 +185,11 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
   return ZX_OK;
 }
 
-zx_status_t devmgr_launch(const zx::job& job, const char* name, const char* const* argv,
-                          const char** initial_envp, int stdiofd, const zx_handle_t* handles,
-                          const uint32_t* types, size_t hcount, zx::process* out_proc,
-                          uint32_t flags) {
-  return devmgr_launch_with_loader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
+zx_status_t DevmgrLauncher::Launch(
+    const zx::job& job, const char* name, const char* const* argv, const char** initial_envp,
+    int stdiofd, const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+    zx::process* out_proc, uint32_t flags) {
+  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
                                    handles, types, hcount, out_proc, flags);
 }
 

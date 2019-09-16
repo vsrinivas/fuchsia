@@ -87,8 +87,6 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
   return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
 }
 
-static SystemInstance system_instance;
-
 void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
   enum {
     kDriverSearchPath,
@@ -181,47 +179,6 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 
 }  // namespace
 
-namespace devmgr {
-
-zx::channel fs_clone(const char* path) {
-  if (!strcmp(path, "dev")) {
-    return devfs_root_clone();
-  }
-  zx::channel h0, h1;
-  if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
-    return zx::channel();
-  }
-  if (!strcmp(path, "boot")) {
-    zx_status_t status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
-    if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: fdio_open(\"/boot\") failed: %s\n", zx_status_get_string(status));
-      return zx::channel();
-    }
-    return h0;
-  }
-  zx::unowned_channel fs(system_instance.fs_root);
-  int flags = FS_DIR_FLAGS;
-  if (!strcmp(path, "hub")) {
-    fs = zx::unowned_channel(system_instance.appmgr_client);
-  } else if (!strcmp(path, "svc")) {
-    flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-    fs = zx::unowned_channel(system_instance.svchost_outgoing);
-    path = ".";
-  } else if (!strncmp(path, "dev/", 4)) {
-    fs = devfs_root_borrow();
-    path += 4;
-  }
-  zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
-  if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: fdio_open_at failed for path %s: %s\n", path,
-        zx_status_get_string(status));
-    return zx::channel();
-  }
-  return h0;
-}
-
-}  // namespace devmgr
-
 int main(int argc, char** argv) {
   devmgr::BootArgs boot_args;
   zx::vmo args_vmo;
@@ -258,12 +215,14 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::CoordinatorConfig config{};
+  SystemInstance system_instance;
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
   config.require_system = require_system;
   config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
   config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
   config.disable_netsvc = devmgr_args.disable_netsvc;
+  config.fs_provider = &system_instance;
 
   // TODO(ZX-4178): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
@@ -405,7 +364,7 @@ int main(int argc, char** argv) {
 
   fbl::unique_ptr<devmgr::DevhostLoaderService> loader_service;
   if (boot_args.GetBool("devmgr.devhost.strict-linking", false)) {
-    status = devmgr::DevhostLoaderService::Create(loop.dispatcher(), &loader_service);
+    status = devmgr::DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
       return 1;
     }
@@ -419,7 +378,7 @@ int main(int argc, char** argv) {
           return status;
         });
   } else {
-    coordinator.set_loader_service_connector([](zx::channel* c) {
+    coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
         fprintf(stderr, "devcoordinator: failed to clone fshost loader for devhost: %d\n", status);

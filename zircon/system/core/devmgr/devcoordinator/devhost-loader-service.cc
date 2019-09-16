@@ -15,6 +15,7 @@
 
 #include "../shared/fdio.h"
 #include "coordinator.h"
+#include "system-instance.h"
 
 namespace {
 
@@ -80,6 +81,7 @@ constexpr loader_service_ops_t ops_{
 namespace devmgr {
 
 zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
+                                         SystemInstance* system_instance,
                                          fbl::unique_ptr<DevhostLoaderService>* out) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
@@ -88,7 +90,7 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
     return status;
   }
   auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
-  status = fdio_ns_bind(ns, "/boot", fs_clone("boot").release());
+  status = fdio_ns_bind(ns, "/boot", system_instance->CloneFs("boot").release());
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to bind namespace %d\n", status);
     return status;

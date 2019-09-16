@@ -37,36 +37,6 @@
 
 namespace devmgr {
 
-// Must appear in the devmgr namespace.
-// Expected dependency of "shared/fdio.h".
-//
-// This is currently exposed in a somewhat odd location to also be
-// visible to unit tests, avoiding linkage errors.
-zx::channel fs_clone(const char* path) {
-  if (strcmp(path, "svc") == 0) {
-    path = "/svc";
-  } else if (strcmp(path, "data") == 0) {
-    path = "/fs/data";
-  } else if (strcmp(path, "blob") == 0) {
-    path = "/fs/blob";
-  } else {
-    printf("%s: Cannot clone: %s\n", __FUNCTION__, path);
-    return zx::channel();
-  }
-
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return zx::channel();
-  }
-  status = fdio_service_connect(path, server.release());
-  if (status != ZX_OK) {
-    printf("%s: Failed to connect to %s: %d\n", __FUNCTION__, path, status);
-    return zx::channel();
-  }
-  return client;
-}
-
 cobalt_client::CollectorOptions FsManager::CollectorOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
   options.project_name = "local_storage";

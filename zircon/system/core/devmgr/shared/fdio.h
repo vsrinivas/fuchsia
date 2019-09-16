@@ -43,17 +43,39 @@ namespace devmgr {
 
 #define FS_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
 
-// If |executable| is invalid, then argv[0] is used as the path to the binary
-// If |loader| is invalid, the default loader service is used.
-zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::vmo executable,
-                                      zx::channel loader, const char* const* argv,
-                                      const char** initial_envp, int stdiofd,
-                                      const zx_handle_t* handles, const uint32_t* types,
-                                      size_t hcount, zx::process* out_proc, uint32_t flags);
-zx_status_t devmgr_launch(const zx::job& job, const char* name, const char* const* argv,
-                          const char** envp, int stdiofd, const zx_handle_t* handles,
-                          const uint32_t* types, size_t hcount, zx::process* proc_out,
-                          uint32_t flags);
+class FsProvider {
+  // Pure abstract interface describing how to get a clone of a channel to an fs handle.
+ public:
+  virtual ~FsProvider();
+
+  // Opens a path relative to locally-specified roots.
+  //
+  // This acts similar to 'open', but avoids utilizing the local process' namespace.
+  // Instead, it manually translates hardcoded paths, such as "svc", "dev", etc into
+  // their corresponding root connection, where the request is forwarded.
+  //
+  // This function is implemented by both devmgr and fshost.
+  virtual zx::channel CloneFs(const char* path) = 0;
+};
+
+class DevmgrLauncher {
+ public:
+  explicit DevmgrLauncher(FsProvider* fs_provider);
+  // If |executable| is invalid, then argv[0] is used as the path to the binary
+  // If |loader| is invalid, the default loader service is used.
+  zx_status_t LaunchWithLoader(const zx::job& job, const char* name, zx::vmo executable,
+                               zx::channel loader, const char* const* argv,
+                               const char** initial_envp, int stdiofd,
+                               const zx_handle_t* handles, const uint32_t* types,
+                               size_t hcount, zx::process* out_proc, uint32_t flags);
+  zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv,
+                     const char** envp, int stdiofd, const zx_handle_t* handles,
+                     const uint32_t* types, size_t hcount, zx::process* proc_out,
+                     uint32_t flags);
+
+ private:
+  FsProvider* fs_provider_;
+};
 
 // Returns the result of splitting |args| into an argument vector.
 class ArgumentVector {
@@ -82,13 +104,5 @@ void devmgr_disable_appmgr_services();
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-// Opens a path relative to locally-specified roots.
-//
-// This acts similar to 'open', but avoids utilizing the local process' namespace.
-// Instead, it manually translates hardcoded paths, such as "svc", "dev", etc into
-// their corresponding root connection, where the request is forwarded.
-//
-// This function is implemented by both devmgr and fshost.
-zx::channel fs_clone(const char* path);
 
 }  // namespace devmgr

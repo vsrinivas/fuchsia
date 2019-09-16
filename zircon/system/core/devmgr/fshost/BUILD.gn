@@ -52,6 +52,7 @@ source_set("block-watcher") {
     "block-watcher.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
+    "fshost-fs-provider.cc",
     "pkgfs-launcher.cc",
   ]
   public_deps = [
