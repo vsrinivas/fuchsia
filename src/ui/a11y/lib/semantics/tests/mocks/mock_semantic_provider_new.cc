@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/logger.h>
 
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+
 namespace accessibility_test {
 namespace {
 
@@ -51,6 +53,10 @@ void MockSemanticProviderNew::CommitUpdates() {
 
 void MockSemanticProviderNew::SetHitTestResult(uint32_t hit_test_result) {
   semantic_listener_.SetHitTestResult(hit_test_result);
+}
+
+bool MockSemanticProviderNew::GetSemanticsEnabled() {
+  return semantic_listener_.GetSemanticsEnabled();
 }
 
 }  // namespace accessibility_test

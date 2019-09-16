@@ -57,6 +57,11 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
       ::fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback);
 
+  // Calls OnSemanticsModeChanged() to notify semantic provider whether Semantics Manager is enabled
+  // or not.
+  // Also, deletes the semantic tree, when Semantics Manager is disabled.
+  void EnableSemanticsUpdates(bool enabled);
+
  private:
   // Representation of single semantic tree update/delete transaction.
   struct SemanticTreeTransaction {
@@ -145,6 +150,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
   vfs::PseudoDir* const debug_dir_;
+  bool semantics_manager_enabled_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTree);
 };

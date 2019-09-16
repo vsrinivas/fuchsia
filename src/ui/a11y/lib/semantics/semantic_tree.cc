@@ -327,4 +327,18 @@ void SemanticTree::PerformHitTesting(
   client_action_listener_->HitTest(local_point, std::move(callback));
 }
 
+void SemanticTree::EnableSemanticsUpdates(bool enabled) {
+  semantics_manager_enabled_ = enabled;
+  // If Semantics Manager is disabled, then clear current semantic tree.
+  if (!enabled) {
+    nodes_.clear();
+  }
+
+  // Notify Semantic Provider about Semantics Manager's enable state.
+  fuchsia::accessibility::semantics::SemanticListener::OnSemanticsModeChangedCallback callback =
+      []() { FX_LOGS(INFO) << "NotifySemanticsEnabled complete."; };
+  semantic_listener_->OnSemanticsModeChanged(enabled, std::move(callback));
+}
+
+// namespace a11y
 }  // namespace a11y

@@ -22,4 +22,10 @@ void MockSemanticListener::HitTest(::fuchsia::math::PointF local_point, HitTestC
   callback(std::move(hit));
 }
 
+void MockSemanticListener::OnSemanticsModeChanged(bool update_enabled,
+                                                  OnSemanticsModeChangedCallback callback) {
+  semantics_enabled_ = update_enabled;
+  callback();
+}
+
 }  // namespace accessibility_test

@@ -31,8 +31,8 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override;
 
   // |fuchsia::accessibility::semantics::SemanticListener|
-  void OnSemanticsModeChanged(bool updtate_enabled,
-                              OnSemanticsModeChangedCallback callback) override {}
+  void OnSemanticsModeChanged(bool update_enabled,
+                              OnSemanticsModeChangedCallback callback) override;
 
   // Sets hit_test_node_id_ with given node_id, which will then be returned when
   // HitTest() is called.
@@ -40,11 +40,15 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
 
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
 
+  bool GetSemanticsEnabled() { return semantics_enabled_; }
+
  private:
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticListener> semantic_listener_bindings_;
 
   // Node id which will be returned when HitTest() is called.
   uint32_t hit_test_node_id_ = 1;
+
+  bool semantics_enabled_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticListener);
 };

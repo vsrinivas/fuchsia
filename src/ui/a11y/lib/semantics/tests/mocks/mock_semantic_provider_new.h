@@ -44,6 +44,9 @@ class MockSemanticProviderNew {
   // Returns Commit Failed status.
   bool CommitFailedStatus() { return commit_failed_; };
 
+  // Returns Semantics Enabled field from Semantic Listener.
+  bool GetSemanticsEnabled();
+
  private:
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.

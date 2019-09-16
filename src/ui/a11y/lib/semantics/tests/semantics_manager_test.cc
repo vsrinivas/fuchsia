@@ -427,47 +427,6 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 }
 
-// Basic test to check that Semantic Tree is deleted when Semantics Manager is
-// disabled.
-TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
-  // Note: Enable has no effect on the behavior of semantics manager.
-  semantics_manager_.SetSemanticsManagerEnabled(true);
-
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Creating test node to update.
-  std::vector<Node> update_nodes;
-  Node node = CreateTestNode(0, kLabelA);
-  Node clone_node;
-  node.Clone(&clone_node);
-  update_nodes.push_back(std::move(clone_node));
-
-  // Update the node created above.
-  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-  RunLoopUntilIdle();
-
-  // Commit nodes.
-  semantic_provider.Commit();
-  RunLoopUntilIdle();
-
-  // Check that the committed node is present in the semantic tree.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-  EXPECT_NE(returned_node, nullptr);
-  EXPECT_EQ(node.node_id(), returned_node->node_id());
-  EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-
-  // Disable Semantics Manager.
-  // This should delete all the registered semantic tree so far.
-  semantics_manager_.SetSemanticsManagerEnabled(false);
-
-  // Check that previously committed node is not present in the semantic tree.
-  returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-  EXPECT_EQ(returned_node, nullptr);
-}
-
 // Test for PerformHitTesting() to make sure correct node_id is passed from the
 // semantic provider to semantics manager.
 TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
@@ -757,6 +716,59 @@ TEST_F(SemanticsManagerTest, PartialNodeUpdateWithCommit_NodeIdMissing) {
     ASSERT_TRUE(returned_node->has_child_ids());
     EXPECT_NE(returned_node->child_ids(), partial_node.child_ids());
   }
+}
+
+// Basic test to check that Semantic Provider gets notified and checks that semantic tree is
+// deleted inside A11y when Semantics Manager is disabled.
+TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
+  // Enable Semantics Manager.
+  semantics_manager_.SetSemanticsManagerEnabled(true);
+  RunLoopUntilIdle();
+
+  // Create SemanticListener.
+  accessibility_test::MockSemanticProviderNew semantic_provider(&semantics_manager_);
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // On registration of a new view, Semantic Listener should get notified about the current
+  // settings.
+  EXPECT_TRUE(semantic_provider.GetSemanticsEnabled());
+
+  // Add a node to semantic tree.
+  {
+    std::vector<Node> update_nodes;
+    Node node = CreateTestNode(0, kLabelA);
+    Node clone_node;
+    node.Clone(&clone_node);
+    update_nodes.push_back(std::move(clone_node));
+
+    // Update the node created above.
+    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+    RunLoopUntilIdle();
+    update_nodes.clear();
+
+    // Commit nodes.
+    semantic_provider.Commit();
+    RunLoopUntilIdle();
+
+    // Check that the committed node is present in the semantic tree.
+    NodePtr returned_node =
+        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+    EXPECT_NE(returned_node, nullptr);
+    EXPECT_EQ(node.node_id(), returned_node->node_id());
+    EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
+  }
+
+  // Disable Semantics Manager.
+  semantics_manager_.SetSemanticsManagerEnabled(false);
+  RunLoopUntilIdle();
+  // Semantics Listener should get notified about Semantics manager disable.
+  EXPECT_FALSE(semantic_provider.GetSemanticsEnabled());
+
+  // Check that semantic tree is empty.
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+  EXPECT_EQ(returned_node, nullptr);
 }
 
 }  // namespace accessibility_test

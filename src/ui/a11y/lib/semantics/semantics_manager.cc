@@ -24,13 +24,10 @@ void SemanticsManager::RegisterView(
     fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
-  // During View Registration, Semantics manager will ignore enabled flag, to
-  // avoid race condition with Semantic Provider(flutter/chrome, etc) since both
-  // semantic provider and semantics manager will be notified together about a
-  // change in settings.
-  // Semantics Manager clears out old bindings when Screen Reader is
-  // disabled, and will rely on clients to make sure they only try to register
-  // views when screen reader is enabled.
+  // Clients should register every view that gets created irrespective of the
+  // state(enabled/disabled) of screen reader.
+  // When ViewRef is no longer valid, then all the holders of ViewRef will get a signal, and
+  // Semantics Manager should then delete the binding for that ViewRef.
 
   fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener = handle.Bind();
   // TODO(MI4-1736): Log View information in below error handler, once ViewRef
@@ -49,13 +46,11 @@ void SemanticsManager::RegisterViewForSemantics(
     fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
-  // During View Registration, Semantics manager will ignore enabled flag, to
-  // avoid race condition with Semantic Provider(flutter/chrome, etc) since both
-  // semantic provider and semantics manager will be notified together about a
-  // change in settings.
-  // Semantics Manager clears out old bindings when Screen Reader is
-  // disabled, and will rely on clients to make sure they only try to register
-  // views when screen reader is enabled.
+  // Clients should register every view that gets created irrespective of the
+  // state(enabled/disabled) of screen reader.
+  // TODO(36199): Check if ViewRef is Valid.
+  // TODO(36199): When ViewRef is no longer valid, then all the holders of ViewRef will get a
+  // signal, and Semantics Manager should then delete the binding for that ViewRef.
 
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener = handle.Bind();
   semantic_listener.set_error_handler([](zx_status_t status) {
@@ -78,6 +73,11 @@ void SemanticsManager::CompleteSemanticRegistration(
       std::move(view_ref), std::move(action_listener), std::move(semantic_listener), debug_dir_,
       /*commit_error_callback=*/[this](zx_koid_t koid) { CloseChannel(koid); });
 
+  // As part of the registration, client should get notified about the current Semantics Manager
+  // enable settings.
+  semantic_tree->EnableSemanticsUpdates(semantics_enabled_);
+
+  // Create Binding.
   semantic_tree_bindings_.AddBinding(std::move(semantic_tree), std::move(semantic_tree_request));
 }
 
@@ -102,12 +102,8 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNod
 }
 
 void SemanticsManager::SetSemanticsManagerEnabled(bool enabled) {
-  if ((enabled_ != enabled) && !enabled) {
-    FX_LOGS(INFO) << "Resetting SemanticsTree since SemanticsManager is disabled.";
-    bindings_.CloseAll();
-    semantic_tree_bindings_.CloseAll();
-  }
-  enabled_ = enabled;
+  semantics_enabled_ = enabled;
+  EnableSemanticsUpdates(semantics_enabled_);
 }
 
 void SemanticsManager::PerformHitTesting(
@@ -127,6 +123,13 @@ void SemanticsManager::CloseChannel(zx_koid_t koid) {
     if (binding->impl()->IsSameKoid(koid)) {
       semantic_tree_bindings_.RemoveBinding(binding->impl());
     }
+  }
+}
+
+void SemanticsManager::EnableSemanticsUpdates(bool enabled) {
+  // Notify all the Views about change in Semantics Enabled.
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    binding->impl()->EnableSemanticsUpdates(enabled);
   }
 }
 

@@ -73,12 +73,15 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   // Closes channel for semantic tree that matches the given "koid".
   void CloseChannel(zx_koid_t koid);
 
+  // Helper function to enable semantic updates for all the Views.
+  void EnableSemanticsUpdates(bool enabled);
+
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree, std::unique_ptr<SemanticTree>>
       semantic_tree_bindings_;
 
-  bool enabled_ = false;
+  bool semantics_enabled_ = false;
 
   vfs::PseudoDir* const debug_dir_;
 };
