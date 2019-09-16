@@ -42,7 +42,6 @@ class SessionTest : public ErrorReportingTest {
   }
 
   Session* session() { return session_.get(); }
-  Display* display() { return display_.get(); }
 
  protected:
   // Creates a SessionContext with only a SessionManager and a
