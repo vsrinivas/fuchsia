@@ -5,8 +5,8 @@
 use {
     crate::{framework::FrameworkCapability, model::*},
     cm_rust::FrameworkCapabilityDecl,
-    futures::{future::BoxFuture, lock::Mutex},
-    std::sync::Arc,
+    futures::{future::BoxFuture, lock::Mutex, prelude::*},
+    std::{pin::Pin, sync::Arc},
 };
 
 // ByAddr allows two Arcs to be compared by address instead of using its contained
@@ -88,16 +88,6 @@ pub trait DestroyInstanceHook {
 pub type DestroyInstanceHookRef = Arc<dyn DestroyInstanceHook + Send + Sync>;
 pub type DestroyInstanceHookInternalRef = ByAddr<dyn DestroyInstanceHook + Send + Sync>;
 
-#[derive(Clone)]
-pub struct Hooks {
-    add_dynamic_child_hooks: Arc<Mutex<Vec<AddDynamicChildHookInternalRef>>>,
-    remove_dynamic_child_hooks: Arc<Mutex<Vec<RemoveDynamicChildHookInternalRef>>>,
-    bind_instance_hooks: Arc<Mutex<Vec<BindInstanceHookInternalRef>>>,
-    capability_routing_hooks: Arc<Mutex<Vec<RouteFrameworkCapabilityHookInternalRef>>>,
-    stop_instance_hooks: Arc<Mutex<Vec<StopInstanceHookInternalRef>>>,
-    destroy_instance_hooks: Arc<Mutex<Vec<DestroyInstanceHookInternalRef>>>,
-}
-
 pub enum Hook {
     AddDynamicChild(AddDynamicChildHookRef),
     RemoveDynamicChild(RemoveDynamicChildHookRef),
@@ -107,114 +97,185 @@ pub enum Hook {
     DestroyInstance(DestroyInstanceHookRef),
 }
 
-impl Hooks {
-    pub fn new() -> Self {
-        Hooks {
-            add_dynamic_child_hooks: Arc::new(Mutex::new(Vec::new())),
-            remove_dynamic_child_hooks: Arc::new(Mutex::new(Vec::new())),
-            bind_instance_hooks: Arc::new(Mutex::new(Vec::new())),
-            capability_routing_hooks: Arc::new(Mutex::new(Vec::new())),
-            stop_instance_hooks: Arc::new(Mutex::new(Vec::new())),
-            destroy_instance_hooks: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
+/// This is a collection of hooks to component manager events.
+/// Note: Cloning Hooks results in a shallow copy.
+#[derive(Clone)]
+pub struct Hooks {
+    parent: Option<Box<Hooks>>,
+    inner: Arc<Mutex<HooksInner>>,
+}
 
-    fn install_hook<T>(hooks: &mut Vec<T>, hook: T)
-    where
-        T: Sized + PartialEq,
-    {
-        if !hooks.contains(&hook) {
-            hooks.push(hook);
+fn install_hook<T>(hooks: &mut Vec<T>, hook: T)
+where
+    T: Sized + PartialEq,
+{
+    if !hooks.contains(&hook) {
+        hooks.push(hook);
+    }
+}
+
+impl Hooks {
+    pub fn new(parent: Option<&Hooks>) -> Self {
+        Self {
+            parent: parent.map(|hooks| Box::new(hooks.clone())),
+            inner: Arc::new(Mutex::new(HooksInner::new())),
         }
     }
 
     pub async fn install(&self, hooks: Vec<Hook>) {
         for hook in hooks.into_iter() {
+            let mut inner = self.inner.lock().await;
             match hook {
                 Hook::AddDynamicChild(hook) => {
-                    let mut hooks = self.add_dynamic_child_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.add_dynamic_child_hooks, ByAddr::new(hook));
                 }
                 Hook::RemoveDynamicChild(hook) => {
-                    let mut hooks = self.remove_dynamic_child_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.remove_dynamic_child_hooks, ByAddr::new(hook));
                 }
                 Hook::BindInstance(hook) => {
-                    let mut hooks = self.bind_instance_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.bind_instance_hooks, ByAddr::new(hook));
                 }
                 Hook::RouteFrameworkCapability(hook) => {
-                    let mut hooks = self.capability_routing_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.capability_routing_hooks, ByAddr::new(hook));
                 }
                 Hook::StopInstance(hook) => {
-                    let mut hooks = self.stop_instance_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.stop_instance_hooks, ByAddr::new(hook));
                 }
                 Hook::DestroyInstance(hook) => {
-                    let mut hooks = self.destroy_instance_hooks.lock().await;
-                    Self::install_hook(&mut hooks, ByAddr::new(hook));
+                    install_hook(&mut inner.destroy_instance_hooks, ByAddr::new(hook));
                 }
             }
         }
     }
 
-    pub async fn on_route_framework_capability<'a>(
+    pub fn on_route_framework_capability<'a>(
         &'a self,
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,
         mut capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        let capability_routing_hooks = { self.capability_routing_hooks.lock().await.clone() };
-        for hook in capability_routing_hooks.iter() {
-            capability = hook.0.on(realm.clone(), &capability_decl, capability).await?;
-        }
-        Ok(capability)
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<Option<Box<dyn FrameworkCapability>>, ModelError>>
+                + Send
+                + 'a,
+        >,
+    > {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.capability_routing_hooks.clone() };
+            for hook in hooks.iter() {
+                capability = hook.0.on(realm.clone(), &capability_decl, capability).await?;
+            }
+            if let Some(parent) = &self.parent {
+                capability = parent
+                    .on_route_framework_capability(realm, capability_decl, capability)
+                    .await?;
+            }
+            Ok(capability)
+        })
     }
 
-    pub async fn on_bind_instance<'a>(
+    pub fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
         routing_facade: RoutingFacade,
-    ) -> Result<(), ModelError> {
-        let hooks = { self.bind_instance_hooks.lock().await.clone() };
-        for hook in hooks.iter() {
-            hook.0.on(realm.clone(), &realm_state, routing_facade.clone()).await?;
-        }
-        Ok(())
+    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.bind_instance_hooks.clone() };
+            for hook in hooks.iter() {
+                hook.0.on(realm.clone(), &realm_state, routing_facade.clone()).await?;
+            }
+            if let Some(parent) = &self.parent {
+                parent.on_bind_instance(realm, realm_state, routing_facade).await?;
+            }
+            Ok(())
+        })
     }
 
-    pub async fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-        let hooks = { self.add_dynamic_child_hooks.lock().await.clone() };
-        for hook in hooks.iter() {
-            hook.0.on(realm.clone()).await?;
-        }
-        Ok(())
+    pub fn on_add_dynamic_child<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.add_dynamic_child_hooks.clone() };
+            for hook in hooks.iter() {
+                hook.0.on(realm.clone()).await?;
+            }
+            if let Some(parent) = &self.parent {
+                parent.on_add_dynamic_child(realm).await?;
+            }
+            Ok(())
+        })
     }
 
-    pub async fn on_remove_dynamic_child(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-        let hooks = { self.remove_dynamic_child_hooks.lock().await.clone() };
-        for hook in hooks.iter() {
-            hook.0.on(realm.clone()).await?;
-        }
-        Ok(())
+    pub fn on_remove_dynamic_child<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.remove_dynamic_child_hooks.clone() };
+            for hook in hooks.iter() {
+                hook.0.on(realm.clone()).await?;
+            }
+            if let Some(parent) = &self.parent {
+                parent.on_remove_dynamic_child(realm).await?;
+            }
+            Ok(())
+        })
     }
 
-    pub async fn on_stop_instance(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-        let hooks = { self.stop_instance_hooks.lock().await.clone() };
-        for hook in hooks.iter() {
-            hook.0.on(realm.clone()).await?;
-        }
-        Ok(())
+    pub fn on_stop_instance<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.stop_instance_hooks.clone() };
+            for hook in hooks.iter() {
+                hook.0.on(realm.clone()).await?;
+            }
+            if let Some(parent) = &self.parent {
+                parent.on_stop_instance(realm).await?;
+            }
+            Ok(())
+        })
     }
 
-    pub async fn on_destroy_instance(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-        let hooks = { self.destroy_instance_hooks.lock().await.clone() };
-        for hook in hooks.iter() {
-            hook.0.on(realm.clone()).await?;
+    pub fn on_destroy_instance<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let hooks = { self.inner.lock().await.destroy_instance_hooks.clone() };
+            for hook in hooks.iter() {
+                hook.0.on(realm.clone()).await?;
+            }
+            if let Some(parent) = &self.parent {
+                parent.on_destroy_instance(realm).await?;
+            }
+            Ok(())
+        })
+    }
+}
+
+pub struct HooksInner {
+    add_dynamic_child_hooks: Vec<AddDynamicChildHookInternalRef>,
+    remove_dynamic_child_hooks: Vec<RemoveDynamicChildHookInternalRef>,
+    bind_instance_hooks: Vec<BindInstanceHookInternalRef>,
+    capability_routing_hooks: Vec<RouteFrameworkCapabilityHookInternalRef>,
+    stop_instance_hooks: Vec<StopInstanceHookInternalRef>,
+    destroy_instance_hooks: Vec<DestroyInstanceHookInternalRef>,
+}
+
+impl HooksInner {
+    pub fn new() -> Self {
+        Self {
+            add_dynamic_child_hooks: vec![],
+            remove_dynamic_child_hooks: vec![],
+            bind_instance_hooks: vec![],
+            capability_routing_hooks: vec![],
+            stop_instance_hooks: vec![],
+            destroy_instance_hooks: vec![],
         }
-        Ok(())
     }
 }
 
@@ -254,7 +315,7 @@ mod tests {
         // CallCounter counts the number of AddDynamicChild events it receives.
         // It should only ever receive one.
         let call_counter = CallCounter::new();
-        let hooks = Hooks::new();
+        let hooks = Hooks::new(None);
 
         // Attempt to install CallCounter twice.
         hooks.install(vec![Hook::AddDynamicChild(call_counter.clone())]).await;
@@ -267,6 +328,27 @@ mod tests {
             Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
         };
         hooks.on_add_dynamic_child(realm.clone()).await.expect("Unable to call hooks.");
+        assert_eq!(1, call_counter.count().await);
+    }
+
+    // This test verifies that events propagate from child_hooks to parent_hooks.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_propagation() {
+        let parent_hooks = Hooks::new(None);
+        let child_hooks = Hooks::new(Some(&parent_hooks));
+
+        let call_counter = CallCounter::new();
+        parent_hooks.install(vec![Hook::AddDynamicChild(call_counter.clone())]).await;
+
+        let realm = {
+            let resolver = ResolverRegistry::new();
+            let runner = Arc::new(mocks::MockRunner::new());
+            let root_component_url = "test:///root".to_string();
+            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+        };
+        child_hooks.on_add_dynamic_child(realm.clone()).await.expect("Unable to call hooks.");
+        // call_counter gets informed of the event on child_hooks even though it has
+        // been installed on parent_hooks.
         assert_eq!(1, call_counter.count().await);
     }
 }

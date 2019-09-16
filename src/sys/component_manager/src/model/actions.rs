@@ -293,7 +293,7 @@ async fn do_delete_child(
         let mut state = realm.lock_state().await;
         state.get_mut().remove_child_realm(&moniker);
     }
-    model.hooks.on_destroy_instance(child_realm.clone()).await?;
+    child_realm.hooks.on_destroy_instance(child_realm.clone()).await?;
     Ok(())
 }
 
@@ -445,10 +445,10 @@ mod tests {
                 builtin_services: Arc::new(builtin),
             });
             let realm_service_host = RealmServiceHost::new(model.clone());
-            model.hooks.install(realm_service_host.hooks()).await;
+            model.root_realm.hooks.install(realm_service_host.hooks()).await;
             let test_hook = TestHook::new();
-            model.hooks.install(test_hook.hooks()).await;
-            model.hooks.install(extra_hooks).await;
+            model.root_realm.hooks.install(test_hook.hooks()).await;
+            model.root_realm.hooks.install(extra_hooks).await;
 
             // Host framework service for root realm, if requested.
             let realm_proxy = if let Some(realm_moniker) = realm_moniker {

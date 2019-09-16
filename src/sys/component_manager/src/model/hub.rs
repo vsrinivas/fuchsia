@@ -632,8 +632,8 @@ mod tests {
             config: model::ModelConfig::default(),
             builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
         }));
-        model.hooks.install(hub.hooks()).await;
-        model.hooks.install(additional_hooks).await;
+        model.root_realm.hooks.install(hub.hooks()).await;
+        model.root_realm.hooks.install(additional_hooks).await;
 
         let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());

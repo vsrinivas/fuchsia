@@ -138,7 +138,7 @@ fn connect_pkg_resolver() -> Result<Option<PackageResolverProxy>, Error> {
 /// Installs a Hub if possible.
 pub async fn install_hub_if_possible(model: &Model) -> Result<(), ModelError> {
     let hub = Arc::new(Hub::new(model.root_realm.component_url.clone())?);
-    model.hooks.install(hub.hooks()).await;
+    model.root_realm.hooks.install(hub.hooks()).await;
     if let Some(out_dir_handle) =
         fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
     {
@@ -253,7 +253,7 @@ pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
     };
     let model = Model::new(params);
     let realm_service_host = RealmServiceHost::new(model.clone());
-    model.hooks.install(realm_service_host.hooks()).await;
+    model.root_realm.hooks.install(realm_service_host.hooks()).await;
     Ok(model)
 }
 

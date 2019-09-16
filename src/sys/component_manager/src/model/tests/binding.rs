@@ -34,7 +34,7 @@ async fn new_model_with(
         config: ModelConfig::default(),
         builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     });
-    model.hooks.install(additional_hooks).await;
+    model.root_realm.hooks.install(additional_hooks).await;
     model
 }
 

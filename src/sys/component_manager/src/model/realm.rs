@@ -37,6 +37,8 @@ pub struct Realm {
     pub abs_moniker: AbsoluteMoniker,
     /// The component's mutable state.
     state: Mutex<RealmStateHolder>,
+    /// The hooks scoped to this realm.
+    pub hooks: Hooks,
 }
 
 impl Realm {
@@ -54,6 +56,7 @@ impl Realm {
             // Started by main().
             startup: fsys::StartupMode::Lazy,
             state: Mutex::new(RealmStateHolder::new()),
+            hooks: Hooks::new(None),
         }
     }
 
@@ -71,7 +74,7 @@ impl Realm {
             let component = self.resolver_registry.resolve(&self.component_url).await?;
             let mut state = self.lock_state().await;
             if !state.is_resolved() {
-                state.set(RealmState::new(self, component.decl)?);
+                state.set(RealmState::new(self, component.decl).await?);
             }
         }
         Ok(())
@@ -150,7 +153,7 @@ impl Realm {
                 }
             }
             if let Some(child_realm) =
-                state.add_child_realm(self, child_decl, Some(collection_name.clone()))
+                state.add_child_realm(self, child_decl, Some(collection_name.clone())).await
             {
                 child_realm
             } else {
@@ -197,7 +200,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        model.hooks.on_remove_dynamic_child(child_realm.clone()).await?;
+        realm.hooks.on_remove_dynamic_child(child_realm.clone()).await?;
         Ok(())
     }
 
@@ -219,7 +222,7 @@ impl Realm {
             Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
         };
         nf.await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-        model.hooks.on_stop_instance(realm.clone()).await?;
+        realm.hooks.on_stop_instance(realm.clone()).await?;
         Ok(())
     }
 
@@ -290,7 +293,7 @@ pub struct RealmState {
 }
 
 impl RealmState {
-    pub fn new(realm: &Realm, decl: Option<fsys::ComponentDecl>) -> Result<Self, ModelError> {
+    pub async fn new(realm: &Realm, decl: Option<fsys::ComponentDecl>) -> Result<Self, ModelError> {
         if decl.is_none() {
             return Err(ModelError::ComponentInvalid);
         }
@@ -308,7 +311,7 @@ impl RealmState {
             actions: ActionSet::new(),
             next_dynamic_instance_id: 1,
         };
-        state.add_static_child_realms(realm, &decl);
+        state.add_static_child_realms(realm, &decl).await;
         Ok(state)
     }
 
@@ -395,7 +398,7 @@ impl RealmState {
 
     /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,
     /// or None if it already existed.
-    fn add_child_realm<'a>(
+    async fn add_child_realm<'a>(
         &'a mut self,
         realm: &'a Realm,
         child: &'a ChildDecl,
@@ -420,6 +423,7 @@ impl RealmState {
                 component_url: child.url.clone(),
                 startup: child.startup,
                 state: Mutex::new(RealmStateHolder::new()),
+                hooks: Hooks::new(Some(&realm.hooks)),
             });
             self.child_realms.insert(child_moniker, child_realm.clone());
             self.live_child_realms.insert(partial_moniker, (instance_id, child_realm.clone()));
@@ -429,9 +433,9 @@ impl RealmState {
         }
     }
 
-    fn add_static_child_realms<'a>(&'a mut self, realm: &'a Realm, decl: &'a ComponentDecl) {
+    async fn add_static_child_realms<'a>(&'a mut self, realm: &'a Realm, decl: &'a ComponentDecl) {
         for child in decl.children.iter() {
-            self.add_child_realm(realm, child, None);
+            self.add_child_realm(realm, child, None).await;
         }
     }
 

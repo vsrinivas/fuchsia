@@ -159,9 +159,7 @@ impl RealmServiceHostInner {
         while let Some(request) = stream.try_next().await? {
             match request {
                 fsys::RealmRequest::CreateChild { responder, collection, decl } => {
-                    let mut res =
-                        Self::create_child(self.model.clone(), realm.clone(), collection, decl)
-                            .await;
+                    let mut res = Self::create_child(realm.clone(), collection, decl).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
@@ -187,7 +185,6 @@ impl RealmServiceHostInner {
     }
 
     async fn create_child(
-        model: Model,
         realm: Arc<Realm>,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
@@ -195,7 +192,7 @@ impl RealmServiceHostInner {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fsys::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        realm.add_dynamic_child(collection.name, &child_decl, &model.hooks).await.map_err(|e| {
+        realm.add_dynamic_child(collection.name, &child_decl, &realm.hooks).await.map_err(|e| {
             match e {
                 ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
                 ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
@@ -398,8 +395,8 @@ mod tests {
                 ),
             });
             let realm_service_host = RealmServiceHost::new(model.clone());
-            model.hooks.install(realm_service_host.hooks()).await;
-            model.hooks.install(hooks).await;
+            model.root_realm.hooks.install(realm_service_host.hooks()).await;
+            model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
             let realm = model.look_up_realm(&realm_moniker).await.expect("failed to look up realm");

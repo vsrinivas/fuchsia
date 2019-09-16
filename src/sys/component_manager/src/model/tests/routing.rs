@@ -186,7 +186,7 @@ async fn use_framework_service() {
     // RoutingTest installs the real RealmServiceHost. Installing the
     // MockRealmServiceHost here overrides the previously installed one.
     let realm_service_host = MockRealmServiceHost::new();
-    test.model.hooks.install(realm_service_host.hooks()).await;
+    test.model.root_realm.hooks.install(realm_service_host.hooks()).await;
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }
 

@@ -46,7 +46,7 @@ async fn main() -> Result<(), Error> {
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
     let hub = Arc::new(Hub::new(args.root_component_url.clone()).unwrap());
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
-    model.hooks.install(hub.hooks()).await;
+    model.root_realm.hooks.install(hub.hooks()).await;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {

@@ -49,9 +49,9 @@ async fn destruction() -> Result<(), Error> {
     let realm_service_host = RealmServiceHost::new((*model).clone());
     let test_hook = TestHook::new();
     let (destroy_hook, mut destroy_recv) = DestroyHook::new(vec!["coll:root:1"].into());
-    model.hooks.install(test_hook.hooks()).await;
-    model.hooks.install(DestroyHook::hooks(destroy_hook)).await;
-    model.hooks.install(realm_service_host.hooks()).await;
+    model.root_realm.hooks.install(test_hook.hooks()).await;
+    model.root_realm.hooks.install(DestroyHook::hooks(destroy_hook)).await;
+    model.root_realm.hooks.install(realm_service_host.hooks()).await;
 
     model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await?;
 

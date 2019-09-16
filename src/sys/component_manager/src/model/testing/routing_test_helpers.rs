@@ -137,8 +137,8 @@ impl RoutingTest {
         });
 
         let realm_service_host = RealmServiceHost::new(model.clone());
-        model.hooks.install(realm_service_host.hooks()).await;
-        model.hooks.install(additional_hooks).await;
+        model.root_realm.hooks.install(realm_service_host.hooks()).await;
+        model.root_realm.hooks.install(additional_hooks).await;
         Self { components, model, realm_service_host, namespaces, memfs }
     }
 

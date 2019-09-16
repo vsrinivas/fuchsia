@@ -127,7 +127,6 @@ async fn open_capability_at_source<'a>(
         }
         CapabilitySource::Framework(capability_decl, realm) => {
             open_framework_capability(
-                model.clone(),
                 FLAGS,
                 open_mode,
                 relative_path,
@@ -145,7 +144,6 @@ async fn open_capability_at_source<'a>(
 }
 
 async fn open_framework_capability<'a>(
-    model: Model,
     flags: u32,
     open_mode: u32,
     relative_path: String,
@@ -155,7 +153,7 @@ async fn open_framework_capability<'a>(
 ) -> Result<(), ModelError> {
     let mut capability = None;
 
-    capability = model
+    capability = realm
         .hooks
         .on_route_framework_capability(realm.clone(), &capability_decl, capability)
         .await?;

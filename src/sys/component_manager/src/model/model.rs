@@ -43,7 +43,6 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
     pub config: ModelConfig,
-    pub hooks: Hooks,
     /// Builtin services that are available in the root realm.
     pub builtin_services: Arc<BuiltinRootServices>,
 }
@@ -75,7 +74,6 @@ impl Model {
                 params.root_default_runner,
                 params.root_component_url,
             )),
-            hooks: Hooks::new(),
             config: params.config,
             builtin_services: params.builtin_services,
         }
@@ -214,7 +212,7 @@ impl Model {
             // TODO: Don't hold the lock while calling the hooks.
             let mut state = realm.lock_state().await;
             let mut state = state.get_mut();
-            self.hooks.on_bind_instance(realm.clone(), &mut state, routing_facade.clone()).await?;
+            realm.hooks.on_bind_instance(realm.clone(), &mut state, routing_facade.clone()).await?;
             eager_children
         };
         Ok(eager_children)
@@ -252,7 +250,7 @@ impl Model {
         let (decl, exposed_dir) = {
             let mut state = realm.lock_state().await;
             if !state.is_resolved() {
-                state.set(RealmState::new(&*realm, component.decl)?);
+                state.set(RealmState::new(&*realm, component.decl).await?);
             }
             let state = state.get();
             if state.is_shut_down() {

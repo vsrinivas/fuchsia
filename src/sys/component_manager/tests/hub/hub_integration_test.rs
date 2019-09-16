@@ -62,14 +62,14 @@ async fn install_hub(model: &Model) -> Result<DirectoryProxy, Error> {
     let hub = Hub::new(root_component_url)?;
     // TODO(xbhatnag): Investigate why test() fails when OPEN_RIGHT_WRITABLE is removed
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
-    model.hooks.install(hub.hooks()).await;
+    model.root_realm.hooks.install(hub.hooks()).await;
     let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan).into_proxy()?;
     Ok(hub_proxy)
 }
 
 async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
     let hub_test_hook = Arc::new(HubTestHook::new());
-    model.hooks.install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())]).await;
+    model.root_realm.hooks.install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())]).await;
     hub_test_hook
 }
 
