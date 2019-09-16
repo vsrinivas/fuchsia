@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/dwarf_die_scanner.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_die_scanner2.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
@@ -10,26 +10,22 @@
 
 namespace zxdb {
 
-DwarfDieScanner::DwarfDieScanner(llvm::DWARFUnit* unit) : unit_(unit) {
+DwarfDieScanner2::DwarfDieScanner2(llvm::DWARFUnit* unit) : unit_(unit) {
   die_count_ = unit_->getNumDIEs();
   parent_indices_.resize(die_count_);
-  tree_stack_.reserve(8);
 
+  // We prefer not to reallocate and normally the C++ component depth is < 8.
+  tree_stack_.reserve(8);
   tree_stack_.emplace_back(-1, kNoParent, false);
 }
 
-DwarfDieScanner::~DwarfDieScanner() = default;
+DwarfDieScanner2::~DwarfDieScanner2() = default;
 
-const llvm::DWARFDebugInfoEntry* DwarfDieScanner::Prepare() {
+const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
   if (done())
     return nullptr;
 
   cur_die_ = unit_->getDIEAtIndex(die_index_).getDebugInfoEntry();
-  return cur_die_;
-}
-
-void DwarfDieScanner::Advance() {
-  FXL_DCHECK(!done());
 
   // LLVM can provide the depth in O(1) time but not the parent.
   int current_depth = static_cast<int>(cur_die_->getDepth());
@@ -67,6 +63,12 @@ void DwarfDieScanner::Advance() {
   // Save parent info. The parent of this node is the one right before the
   // current one (the last one in the stack).
   parent_indices_[die_index_] = (tree_stack_.end() - 2)->index;
+
+  return cur_die_;
+}
+
+void DwarfDieScanner2::Advance() {
+  FXL_DCHECK(!done());
 
   die_index_++;
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
 
 #include <stdint.h>
 
@@ -36,14 +36,14 @@ namespace zxdb {
 // constant time. In LLVm's library, getting the parent of a DIE requires a linear search upward in
 // the DIE list until the indentation is less than the given one. Since we have to do a linear scan
 // anyway, we can avoid this linear search by storing the parents.
-class DwarfDieScanner {
+class DwarfDieScanner2 {
  public:
   static constexpr uint32_t kNoParent = static_cast<uint32_t>(-1);
 
   // The unit pointer must outlive this class.
-  DwarfDieScanner(llvm::DWARFUnit* unit);
+  DwarfDieScanner2(llvm::DWARFUnit* unit);
 
-  ~DwarfDieScanner();
+  ~DwarfDieScanner2();
 
   // Call at the beginning of each iteration (when !done()) to get the current DIE. This is required
   // to be called before Advance() as it sets some internal state.
@@ -101,4 +101,4 @@ class DwarfDieScanner {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
