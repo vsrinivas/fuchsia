@@ -168,6 +168,7 @@ sdk_molecule("core_tools") {
 }
 sdk_molecule("core_lib") {
   visibility = [ ":*" ]
+  testonly = true
   deps = [
     "//sdk/lib/fidl/cpp:cpp_sdk",
     "//sdk/lib/media/cpp:cpp_sdk",
