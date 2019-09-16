@@ -132,6 +132,7 @@ group("rootresource_svc_allowlist") {
     "//src/developer/memory/monitor/tests:memory_monitor_tests",
     "//src/developer/memory/monitor:monitor",
     "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",
+    "//src/sys/component_manager:component_manager_tests",
     "//src/virtualization/bin/vmm:vmm",
   ]
 }

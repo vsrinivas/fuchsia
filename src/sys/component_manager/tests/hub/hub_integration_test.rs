@@ -51,7 +51,11 @@ fn file_content(content: &str) -> HubReportEvent {
 async fn create_model(root_component_url: &str) -> Result<Model, Error> {
     let root_component_url = root_component_url.to_string();
     // TODO(xbhatnag): Explain this in more detail. Setting use_builtin_process_launcher to false is non-obvious.
-    let args = startup::Arguments { use_builtin_process_launcher: false, root_component_url };
+    let args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        use_builtin_vmex: false,
+        root_component_url,
+    };
     let model = startup::model_setup(&args).await?;
     Ok(model)
 }

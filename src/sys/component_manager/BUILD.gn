@@ -46,9 +46,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
+    "//zircon/system/fidl/fuchsia-security-resource:fuchsia-security-resource-rustc",
 
     # This is a 'logical' test-only dep, in that it's only used in the
     # model::testing helpers, but that module is currently included in the main
@@ -130,6 +132,7 @@ package("component_manager") {
 
 test_package("component_manager_tests") {
   rootjob_svc = "//build"
+  rootresource_svc = "//build"
 
   deps = [
     ":lib_test",

@@ -666,6 +666,20 @@ zx_info_job_t!(zx_info_job_t);
 struct_decl_macro! {
     #[repr(C)]
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_resource_t> {
+        pub kind: u32,
+        pub flags: u32,
+        pub base: u64,
+        pub size: usize,
+        pub name: [u8; ZX_MAX_NAME_LEN],
+    }
+}
+
+zx_info_resource_t!(zx_info_resource_t);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_info_vmar_t> {
         pub base: usize,
         pub len: usize,

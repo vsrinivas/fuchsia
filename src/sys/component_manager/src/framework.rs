@@ -383,6 +383,7 @@ mod tests {
             config.list_children_batch_size = 2;
             let startup_args = startup::Arguments {
                 use_builtin_process_launcher: false,
+                use_builtin_vmex: false,
                 root_component_url: "".to_string(),
             };
             let model = Model::new(ModelParams {

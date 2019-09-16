@@ -11,12 +11,14 @@ use {
         model::{error::ModelError, hub::Hub, Model, ModelConfig, ModelParams, ResolverRegistry},
         process_launcher::ProcessLauncherService,
         system_controller,
+        vmex::VmexService,
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_process::LauncherMarker,
+    fidl_fuchsia_security_resource::VmexMarker,
     fidl_fuchsia_sys2::SystemControllerMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -41,6 +43,10 @@ pub struct Arguments {
     /// use and/or offer this service using '/builtin/fuchsia.process.Launcher' from realm.
     pub use_builtin_process_launcher: bool,
 
+    /// If true, component_manager will serve an instance of fuchsia.security.resource.Vmex to the
+    /// root realm.
+    pub use_builtin_vmex: bool,
+
     /// URL of the root component to launch.
     pub root_component_url: String,
 }
@@ -62,6 +68,8 @@ impl Arguments {
         while let Some(arg) = iter.next() {
             if arg == "--use-builtin-process-launcher" {
                 args.use_builtin_process_launcher = true;
+            } else if arg == "--use-builtin-vmex" {
+                args.use_builtin_vmex = true;
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {
@@ -161,6 +169,8 @@ impl BuiltinRootServices {
     ///
     /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
     ///   is available.
+    /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
+    ///   available.
     pub fn new(args: &Arguments) -> Result<Self, Error> {
         let (services, available) = Self::serve(args)?;
         Ok(Self { services, available })
@@ -221,6 +231,15 @@ impl BuiltinRootServices {
                 )
             });
         }
+        if args.use_builtin_vmex {
+            available.insert(VmexMarker::NAME.to_string());
+            fs.add_fidl_service(move |stream| {
+                fasync::spawn(
+                    VmexService::serve(stream)
+                        .unwrap_or_else(|e| panic!("Error while serving vmex service: {}", e)),
+                )
+            });
+        }
 
         // TODO (fxb/35949) instead of embedding SystemController, model it as a hook
         available.insert(SystemControllerMarker::NAME.to_string());
@@ -264,7 +283,18 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
         fidl_fuchsia_process::{LaunchInfo, LauncherMarker},
+        fuchsia_zircon::AsHandleRef,
+        fuchsia_zircon_sys as sys,
     };
+
+    fn root_resource_available() -> bool {
+        let bin = std::env::args().next();
+        match bin.as_ref().map(String::as_ref) {
+            Some("/pkg/test/component_manager_tests") => false,
+            Some("/pkg/test/component_manager_boot_env_tests") => true,
+            _ => panic!("Unexpected test binary name {:?}", bin),
+        }
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn parse_arguments() -> Result<(), Error> {
@@ -272,10 +302,12 @@ mod tests {
         let dummy_url2 = || "fuchsia-pkg://fuchsia.com/pkg#meta/component2.cm".to_string();
         let unknown_flag = || "--unknown".to_string();
         let use_builtin_launcher = || "--use-builtin-process-launcher".to_string();
+        let use_builtin_vmex = || "--use-builtin-vmex".to_string();
 
         // Zero or multiple positional arguments is an error; must be exactly one URL.
         assert!(Arguments::new(vec![]).is_err());
         assert!(Arguments::new(vec![use_builtin_launcher()]).is_err());
+        assert!(Arguments::new(vec![use_builtin_vmex()]).is_err());
         assert!(Arguments::new(vec![dummy_url(), dummy_url2()]).is_err());
         assert!(Arguments::new(vec![dummy_url(), use_builtin_launcher(), dummy_url2()]).is_err());
 
@@ -298,19 +330,36 @@ mod tests {
         assert_eq!(
             Arguments::new(vec![use_builtin_launcher(), dummy_url()])
                 .expect("Unexpected error with option"),
-            Arguments { use_builtin_process_launcher: true, root_component_url: dummy_url() }
+            Arguments {
+                use_builtin_process_launcher: true,
+                root_component_url: dummy_url(),
+                ..Default::default()
+            }
         );
         assert_eq!(
             Arguments::new(vec![dummy_url(), use_builtin_launcher()])
                 .expect("Unexpected error with option"),
-            Arguments { use_builtin_process_launcher: true, root_component_url: dummy_url() }
+            Arguments {
+                use_builtin_process_launcher: true,
+                root_component_url: dummy_url(),
+                ..Default::default()
+            }
+        );
+        assert_eq!(
+            Arguments::new(vec![dummy_url(), use_builtin_launcher(), use_builtin_vmex()])
+                .expect("Unexpected error with option"),
+            Arguments {
+                use_builtin_process_launcher: true,
+                use_builtin_vmex: true,
+                root_component_url: dummy_url()
+            }
         );
 
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn connect_to_builtin_service() -> Result<(), Error> {
+    async fn connect_to_builtin_launcher_service() -> Result<(), Error> {
         // The built-in process launcher won't work properly in all environments where we run this
         // test due to zx_process_create being disallowed, but this test doesn't actually need to
         // launch a process, just check that the launcher is served and we can connect to and
@@ -328,6 +377,19 @@ mod tests {
             launcher.launch(&mut launch_info).await.expect("FIDL call to launcher failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
         assert_eq!(process, None);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_builtin_vmex_service() -> Result<(), Error> {
+        if !root_resource_available() {
+            return Ok(());
+        }
+        let args = Arguments { use_builtin_vmex: true, ..Default::default() };
+        let builtin = BuiltinRootServices::new(&args)?;
+        let vmex = builtin.connect_to_service::<VmexMarker>()?;
+        let vmex_resource = vmex.get().await?;
+        assert_ne!(vmex_resource.raw_handle(), sys::ZX_HANDLE_INVALID);
         Ok(())
     }
 

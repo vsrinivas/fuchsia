@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
@@ -22,6 +19,10 @@
 #include <sstream>
 #include <thread>
 #include <utility>
+
+#include <fbl/string.h>
+#include <fbl/vector.h>
+#include <launchpad/launchpad.h>
 
 #include "bootfs-loader-service.h"
 #include "bootfs-service.h"
@@ -163,7 +164,8 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
     bootsvc_next =
         "bin/component_manager,"
         "fuchsia-boot:///#meta/root.cm,"
-        "--use-builtin-process-launcher";
+        "--use-builtin-process-launcher,"
+        "--use-builtin-vmex";
   }
 
   // Split the bootsvc.next value into 1 or more arguments using ',' as a

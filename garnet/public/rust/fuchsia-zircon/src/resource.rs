@@ -5,8 +5,9 @@
 //! Type-safe bindings for Zircon resources.
 
 use crate::ok;
+use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon_sys::{self as sys, ZX_MAX_NAME_LEN};
 
 /// An object representing a Zircon resource.
 ///
@@ -15,6 +16,20 @@ use fuchsia_zircon_sys as sys;
 #[repr(transparent)]
 pub struct Resource(Handle);
 impl_handle_based!(Resource);
+
+sys::zx_info_resource_t!(ResourceInfo);
+
+impl From<sys::zx_info_resource_t> for ResourceInfo {
+    fn from(info: sys::zx_info_resource_t) -> ResourceInfo {
+        let sys::zx_info_resource_t { kind, flags, base, size, name } = info;
+        ResourceInfo { kind, flags, base, size, name }
+    }
+}
+
+unsafe impl ObjectQuery for ResourceInfo {
+    const TOPIC: Topic = Topic::RESOURCE;
+    type InfoTy = ResourceInfo;
+}
 
 impl Resource {
     /// Create a child resource object.
@@ -45,6 +60,15 @@ impl Resource {
         };
         ok(status)?;
         unsafe { Ok(Resource::from(Handle::from_raw(resource_out))) }
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_RESOURCE topic.
+    pub fn info(&self) -> Result<ResourceInfo, Status> {
+        let mut info = ResourceInfo::default();
+        object_get_info::<ResourceInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
     }
 }
 

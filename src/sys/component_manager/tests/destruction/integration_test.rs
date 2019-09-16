@@ -32,7 +32,11 @@ async fn destruction() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm"
             .to_string();
-    let args = startup::Arguments { use_builtin_process_launcher: false, root_component_url };
+    let args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        use_builtin_vmex: false,
+        root_component_url,
+    };
     let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
     let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
     let resolver_registry = startup::available_resolvers()?;
