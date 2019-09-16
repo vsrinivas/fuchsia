@@ -223,7 +223,7 @@ zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioD
 
 zx_status_t IntelDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
                                           const CopierCfg& cfg) {
-  return DspInitModuleInstance(&ipc_.value(), module_ids_[Module::COPIER], instance_id,
+  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::COPIER], instance_id,
                                ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
 }
 
@@ -258,20 +258,20 @@ zx_status_t IntelDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
   auto copier_cfg = reinterpret_cast<CopierCfg*>(cfg_buf.get());
   copier_cfg->gtw_cfg.config_length = static_cast<uint32_t>(blob_size);
 
-  return DspInitModuleInstance(&ipc_.value(), module_ids_[Module::COPIER], instance_id,
+  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::COPIER], instance_id,
                                ProcDomain::LOW_LATENCY, 0, pipeline_id,
                                static_cast<uint16_t>(cfg_size), cfg_buf.get());
 }
 
 zx_status_t IntelDsp::CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
                                         const BaseModuleCfg& cfg) {
-  return DspInitModuleInstance(&ipc_.value(), module_ids_[Module::MIXIN], instance_id,
+  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::MIXIN], instance_id,
                                ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
 }
 
 zx_status_t IntelDsp::CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
                                          const BaseModuleCfg& cfg) {
-  return DspInitModuleInstance(&ipc_.value(), module_ids_[Module::MIXOUT], instance_id,
+  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::MIXOUT], instance_id,
                                ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
 }
 
@@ -284,7 +284,7 @@ zx_status_t IntelDsp::SetupPipelines() {
 
   // Create pipelines
   for (const auto& cfg : PIPELINE_CFG) {
-    st = DspCreatePipeline(&ipc_.value(), cfg.id, cfg.priority, cfg.mem_pages, cfg.lp);
+    st = DspCreatePipeline(ipc_.get(), cfg.id, cfg.priority, cfg.mem_pages, cfg.lp);
     if (st != ZX_OK) {
       return st;
     }
@@ -302,7 +302,7 @@ zx_status_t IntelDsp::SetupPipelines() {
   }
 
   // Bind pipeline 0
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::COPIER], HOST_OUT_COPIER_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], HOST_OUT_COPIER_ID, 0,
                       module_ids_[Module::MIXIN], HOST_OUT_MIXIN_ID, 0);
   if (st != ZX_OK) {
     return st;
@@ -321,7 +321,7 @@ zx_status_t IntelDsp::SetupPipelines() {
   }
 
   // Bind pipeline 1
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::MIXOUT], I2S0_OUT_MIXOUT_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXOUT], I2S0_OUT_MIXOUT_ID, 0,
                       module_ids_[Module::COPIER], I2S0_OUT_COPIER_ID, 0);
   if (st != ZX_OK) {
     return st;
@@ -339,7 +339,7 @@ zx_status_t IntelDsp::SetupPipelines() {
   }
 
   // Bind pipeline 2
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::COPIER], I2S0_IN_COPIER_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], I2S0_IN_COPIER_ID, 0,
                       module_ids_[Module::MIXIN], I2S0_IN_MIXIN_ID, 0);
   if (st != ZX_OK) {
     return st;
@@ -356,21 +356,21 @@ zx_status_t IntelDsp::SetupPipelines() {
   }
 
   // Bind pipeline 2
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::MIXOUT], HOST_IN_MIXOUT_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXOUT], HOST_IN_MIXOUT_ID, 0,
                       module_ids_[Module::COPIER], HOST_IN_COPIER_ID, 0);
   if (st != ZX_OK) {
     return st;
   }
 
   // Bind playback pipeline
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::MIXIN], HOST_OUT_MIXIN_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXIN], HOST_OUT_MIXIN_ID, 0,
                       module_ids_[Module::MIXOUT], I2S0_OUT_MIXOUT_ID, 0);
   if (st != ZX_OK) {
     return st;
   }
 
   // Bind capture pipeline
-  st = DspBindModules(&ipc_.value(), module_ids_[Module::MIXIN], I2S0_IN_MIXIN_ID, 0,
+  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXIN], I2S0_IN_MIXIN_ID, 0,
                       module_ids_[Module::MIXOUT], HOST_IN_MIXOUT_ID, 0);
   if (st != ZX_OK) {
     return st;
@@ -390,21 +390,20 @@ zx_status_t IntelDsp::StartPipeline(const DspPipeline& pipeline) {
 }
 
 zx_status_t IntelDsp::PausePipeline(const DspPipeline& pipeline) {
-  zx_status_t st =
-      DspSetPipelineState(&ipc_.value(), pipeline.pl_source, PipelineState::PAUSED, true);
+  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.pl_source, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
     return st;
   }
-  st = DspSetPipelineState(&ipc_.value(), pipeline.pl_sink, PipelineState::PAUSED, true);
+  st = DspSetPipelineState(ipc_.get(), pipeline.pl_sink, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
     return st;
   }
   // Reset DSP DMA
-  st = DspSetPipelineState(&ipc_.value(), pipeline.pl_source, PipelineState::RESET, true);
+  st = DspSetPipelineState(ipc_.get(), pipeline.pl_source, PipelineState::RESET, true);
   if (st != ZX_OK) {
     return st;
   }
-  return DspSetPipelineState(&ipc_.value(), pipeline.pl_sink, PipelineState::RESET, true);
+  return DspSetPipelineState(ipc_.get(), pipeline.pl_sink, PipelineState::RESET, true);
   // TODO Error recovery
 }
 

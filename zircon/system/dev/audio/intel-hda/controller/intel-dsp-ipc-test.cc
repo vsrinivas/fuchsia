@@ -72,7 +72,7 @@ void WaitForCond(F cond) {
 }
 
 // Simulate the hardware sending an IPC reply, and firing an interrupt.
-void SendReply(IntelDspIpc* dsp, adsp_registers_t* regs, const IpcMessage& reply) {
+void SendReply(DspChannel* dsp, adsp_registers_t* regs, const IpcMessage& reply) {
   // Send the reply.
   REG_WR(&regs->hipct, reply.primary | ADSP_REG_HIPCT_BUSY | (1 << IPC_PRI_RSP_SHIFT));
   REG_WR(&regs->hipcte, reply.extension);
@@ -81,7 +81,7 @@ void SendReply(IntelDspIpc* dsp, adsp_registers_t* regs, const IpcMessage& reply
 }
 
 // Simulate the hardware sending an IPC notification, and firing an interrupt.
-void SendNotification(IntelDspIpc* dsp, adsp_registers_t* regs, NotificationType type) {
+void SendNotification(DspChannel* dsp, adsp_registers_t* regs, NotificationType type) {
   REG_WR(&regs->hipct, static_cast<uint8_t>(MsgTarget::FW_GEN_MSG) << IPC_PRI_MSG_TGT_SHIFT |
                            static_cast<uint8_t>(MsgDir::MSG_NOTIFICATION) << IPC_PRI_RSP_SHIFT |
                            static_cast<uint8_t>(GlobalType::NOTIFICATION) << IPC_PRI_TYPE_SHIFT |
@@ -109,17 +109,19 @@ IpcMessage ReadMessage(adsp_registers_t* regs) {
 
 TEST(Ipc, ConstructDestruct) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 }
 
 TEST(Ipc, SimpleSend) {
   driver_set_log_flags(ZX_LOG_LEVEL_MASK);
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, give it a chance to run.
   auto worker = Thread([&]() {
-    Status result = dsp.Send(0xaa, 0x55);
+    Status result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.ok(), "Send failed: %s (code: %d)", result.ToString().c_str(),
                   result.code());
   });
@@ -131,19 +133,20 @@ TEST(Ipc, SimpleSend) {
 
   // Ensure the thread remains blocked on the send, even if we wait a little.
   zx::nanosleep(zx::deadline_after(zx::msec(10)));
-  EXPECT_TRUE(dsp.IsOperationPending());
+  EXPECT_TRUE(dsp->IsOperationPending());
 
   // Simulate the DSP sending a successful reply.
-  SendReply(&dsp, &regs, IpcMessage(0, 0));
+  SendReply(dsp.get(), &regs, IpcMessage(0, 0));
 }
 
 TEST(Ipc, ErrorReply) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread.
   auto worker = Thread([&]() {
-    Status result = dsp.Send(0xaa, 0x55);
+    Status result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.ToString() == "DSP returned error 42 (ZX_ERR_INTERNAL)",
                   "Got incorrect error message: %s", result.ToString().c_str());
   });
@@ -154,16 +157,17 @@ TEST(Ipc, ErrorReply) {
   // Simulate the DSP sending an error reply, with an arbitrary error code (42).
   //
   // The test will abort if the child thread gets the wrong error code.
-  SendReply(&dsp, &regs, IpcMessage(42, 0));
+  SendReply(dsp.get(), &regs, IpcMessage(42, 0));
 }
 
 TEST(Ipc, HardwareTimeout) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::usec(1));
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::usec(1));
 
   // Start a thread.
   auto worker = Thread([&]() {
-    Status result = dsp.Send(0xaa, 0x55);
+    Status result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.code() == ZX_ERR_TIMED_OUT, "Got incorrect error: %s",
                   result.ToString().c_str());
   });
@@ -174,22 +178,24 @@ TEST(Ipc, HardwareTimeout) {
 
 TEST(Ipc, UnsolicitedReply) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Ensuring sending a reply and an IRQ doesn't crash.
-  SendReply(&dsp, &regs, IpcMessage(42, 0));
+  SendReply(dsp.get(), &regs, IpcMessage(42, 0));
 }
 
 TEST(Ipc, QueuedMessages) {
   constexpr int kNumThreads = 10;
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start many threads, racing to send messages.
   std::array<std::unique_ptr<Thread>, kNumThreads> workers;
   for (int i = 0; i < kNumThreads; i++) {
     workers[i] = std::make_unique<Thread>([i, &dsp]() {
-      Status result = dsp.Send(0, i);
+      Status result = dsp->Send(0, i);
       ZX_ASSERT_MSG(result.ok(), "Send failed: %s (code: %d)", result.ToString().c_str(),
                     result.code());
     });
@@ -202,31 +208,32 @@ TEST(Ipc, QueuedMessages) {
     IpcMessage message = ReadMessage(&regs);
     EXPECT_TRUE(seen_messages.find(message.extension) == seen_messages.end());
     seen_messages.insert(message.extension);
-    SendReply(&dsp, &regs, IpcMessage(0, 0));
+    SendReply(dsp.get(), &regs, IpcMessage(0, 0));
   }
 }
 
 TEST(Ipc, ShutdownWithQueuedSend) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
-    Status result = dsp.Send(0, 0);
+    Status result = dsp->Send(0, 0);
     ZX_ASSERT_MSG(!result.ok() && result.code() == ZX_ERR_CANCELED,
                   "Expected send to fail with 'ZX_ERR_CANCELED', but got: %s",
                   result.ToString().c_str());
   });
-  WaitForCond([&]() { return dsp.IsOperationPending(); });
+  WaitForCond([&]() { return dsp->IsOperationPending(); });
 
   // Shut down the IPC object.
-  dsp.Shutdown();
+  dsp->Shutdown();
 }
 
 TEST(Ipc, DestructWithQueuedThread) {
   adsp_registers_t regs = {};
-  std::optional<IntelDspIpc> dsp;
-  dsp.emplace("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
@@ -243,23 +250,24 @@ TEST(Ipc, DestructWithQueuedThread) {
 
 TEST(Ipc, NotificationNoReceiver) {
   adsp_registers_t regs = {};
-  IntelDspIpc dsp("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp =
+      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
 
   // Ensure notifications without a receiver don't crash.
   for (int i = 0; i < 10; i++) {
-    SendNotification(&dsp, &regs, NotificationType::FW_READY);
+    SendNotification(dsp.get(), &regs, NotificationType::FW_READY);
   }
 }
 
 TEST(Ipc, NotificationReceived) {
   std::optional<NotificationType> received_notification;
   adsp_registers_t regs = {};
-  IntelDspIpc dsp(
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
       "UnitTests", &regs, [&](NotificationType type) { received_notification = type; },
       zx::duration::infinite());
 
   // Ensure a notification is sent and received.
-  SendNotification(&dsp, &regs, NotificationType::FW_READY);
+  SendNotification(dsp.get(), &regs, NotificationType::FW_READY);
   EXPECT_EQ(received_notification, NotificationType::FW_READY);
 }
 

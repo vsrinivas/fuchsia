@@ -141,8 +141,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   // PCI registers
   fzl::VmoMapper mapped_regs_;
 
-  // IPC
-  std::optional<IntelDspIpc> ipc_;
+  // IPC Channel to DSP hardware.
+  std::unique_ptr<DspChannel> ipc_;
 
   // Notified when the DSP has notified us that the DSP firmware is ready.
   sync_completion_t firmware_ready_;

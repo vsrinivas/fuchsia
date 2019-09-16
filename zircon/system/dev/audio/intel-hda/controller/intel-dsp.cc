@@ -432,8 +432,8 @@ Status IntelDsp::SetupDspDevice() {
   }
 
   // Initialize IPC.
-  ipc_.emplace(log_prefix_, regs(),
-               [this](NotificationType type) { DspNotificationReceived(type); });
+  ipc_ = CreateHardwareDspChannel(log_prefix_, regs(),
+                                  [this](NotificationType type) { DspNotificationReceived(type); });
 
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
@@ -575,7 +575,7 @@ zx_status_t IntelDsp::GetModulesInfo() {
   size_t bytes_received;
 
   // Fetch module information.
-  zx_status_t result = DspLargeConfigGet(&ipc_.value(), /*module_id=*/0, /*instance_id=*/0,
+  zx_status_t result = DspLargeConfigGet(ipc_.get(), /*module_id=*/0, /*instance_id=*/0,
                                          /*large_param_id=*/BaseFWParamType::MODULES_INFO,
                                          fbl::Span<uint8_t>(data), &bytes_received);
   if (result != ZX_OK) {
@@ -763,11 +763,11 @@ void IntelDsp::DspNotificationReceived(NotificationType type) {
 
 zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {
   // Pipeline must be paused before starting
-  zx_status_t st = DspSetPipelineState(&ipc_.value(), pipeline_id, PipelineState::PAUSED, true);
+  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline_id, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
     return st;
   }
-  return DspSetPipelineState(&ipc_.value(), pipeline_id, PipelineState::RUNNING, true);
+  return DspSetPipelineState(ipc_.get(), pipeline_id, PipelineState::RUNNING, true);
 }
 
 bool IntelDsp::IsCoreEnabled(uint8_t core_mask) {
@@ -834,7 +834,7 @@ void IntelDsp::ProcessIrq() {
   }
 
   // Allow the IPC module to check for incoming messages.
-  if (ipc_.has_value()) {
+  if (ipc_ != nullptr) {
     ipc_->ProcessIrq();
   }
 }

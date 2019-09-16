@@ -23,7 +23,7 @@ zx_status_t dsp_to_zx_status(MsgStatus status) {
 }
 }  // namespace
 
-zx_status_t DspInitModuleInstance(IntelDspIpc* ipc, uint16_t module_id, uint8_t instance_id,
+zx_status_t DspInitModuleInstance(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
                                   ProcDomain proc_domain, uint8_t core_id, uint8_t ppl_instance_id,
                                   uint16_t param_block_size, const void* param_data) {
   GLOBAL_LOG(DEBUG1, "INIT_INSTANCE (mod %u inst %u)\n", module_id, instance_id);
@@ -44,7 +44,7 @@ zx_status_t DspInitModuleInstance(IntelDspIpc* ipc, uint16_t module_id, uint8_t 
   return ZX_OK;
 }
 
-zx_status_t DspLargeConfigGet(IntelDspIpc* ipc, uint16_t module_id, uint8_t instance_id,
+zx_status_t DspLargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
                               BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
                               size_t* bytes_received) {
   GLOBAL_LOG(DEBUG1, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id,
@@ -76,7 +76,7 @@ zx_status_t DspLargeConfigGet(IntelDspIpc* ipc, uint16_t module_id, uint8_t inst
   return ZX_OK;
 }
 
-zx_status_t DspBindModules(IntelDspIpc* ipc, uint16_t src_module_id, uint8_t src_instance_id,
+zx_status_t DspBindModules(DspChannel* ipc, uint16_t src_module_id, uint8_t src_instance_id,
                            uint8_t src_queue, uint16_t dst_module_id, uint8_t dst_instance_id,
                            uint8_t dst_queue) {
   GLOBAL_LOG(DEBUG1, "BIND (mod %u inst %u -> mod %u inst %u)\n", src_module_id, src_instance_id,
@@ -97,7 +97,7 @@ zx_status_t DspBindModules(IntelDspIpc* ipc, uint16_t src_module_id, uint8_t src
   return ZX_OK;
 }
 
-zx_status_t DspCreatePipeline(IntelDspIpc* ipc, uint8_t instance_id, uint8_t ppl_priority,
+zx_status_t DspCreatePipeline(DspChannel* ipc, uint8_t instance_id, uint8_t ppl_priority,
                               uint16_t ppl_mem_size, bool lp) {
   GLOBAL_LOG(DEBUG1, "CREATE_PIPELINE (inst %u)\n", instance_id);
 
@@ -113,7 +113,7 @@ zx_status_t DspCreatePipeline(IntelDspIpc* ipc, uint8_t instance_id, uint8_t ppl
   return ZX_OK;
 }
 
-zx_status_t DspSetPipelineState(IntelDspIpc* ipc, uint8_t ppl_id, PipelineState state,
+zx_status_t DspSetPipelineState(DspChannel* ipc, uint8_t ppl_id, PipelineState state,
                                 bool sync_stop_start) {
   GLOBAL_LOG(DEBUG1, "SET_PIPELINE_STATE (inst %u)\n", ppl_id);
 

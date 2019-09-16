@@ -24,12 +24,134 @@
 namespace audio {
 namespace intel_hda {
 
+// Concrete Implementation of DspChannel.
+class HardwareDspChannel : public DspChannel {
+ public:
+  // Create an IPC object, able to send and receive messages to the SST DSP.
+  //
+  // |regs| is the address of the ADSP MMIO register set in our address space.
+  //
+  // |hardware_timeout| specifies how long we should wait for hardware to respond
+  // to our requests before failing operations.
+  HardwareDspChannel(
+      fbl::String log_prefix, adsp_registers_t* regs,
+      std::optional<std::function<void(NotificationType)>> notification_callback = std::nullopt,
+      zx::duration hardware_timeout = kDefaultTimeout);
+
+  // Will block until all pending operations have been cancelled and callbacks completed.
+  ~HardwareDspChannel();
+
+  // Implementation of DspChannel.
+  void Shutdown() override TA_EXCL(lock_);
+  void ProcessIrq() override;
+  Status Send(uint32_t primary, uint32_t extension) override;
+  Status SendWithData(uint32_t primary, uint32_t extension, fbl::Span<const uint8_t> payload,
+                      fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) override;
+
+  // Return true if at least one operation is pending.
+  bool IsOperationPending() const override;
+
+  const char* log_prefix() const { return log_prefix_.c_str(); }
+
+ private:
+  // In-flight IPC to the DSP.
+  class Txn : public fbl::DoublyLinkedListable<Txn*> {
+   public:
+    Txn(const void* tx, size_t txs, void* rx, size_t rxs)
+        : tx_data(tx), tx_size(txs), rx_data(rx), rx_size(rxs) {}
+    Txn(uint32_t pri, uint32_t ext, const void* tx, size_t txs, void* rx, size_t rxs)
+        : request(pri, ext), tx_data(tx), tx_size(txs), rx_data(rx), rx_size(rxs) {}
+
+    bool success() { return done && reply.status() == MsgStatus::IPC_SUCCESS; }
+
+    IpcMessage request;
+    IpcMessage reply;
+
+    bool done = false;
+
+    const void* tx_data = nullptr;
+    size_t tx_size = 0;
+    void* rx_data = nullptr;
+    size_t rx_size = 0;
+    size_t rx_actual = 0;
+
+    sync_completion_t completion;
+  };
+
+  // IPC Mailboxes
+  class Mailbox {
+   public:
+    void Initialize(void* base, size_t size) {
+      base_ = base;
+      size_ = size;
+    }
+
+    size_t size() const { return size_; }
+
+    void Write(const void* data, size_t size) {
+      // It is the caller's responsibility to ensure size fits in the mailbox.
+      ZX_DEBUG_ASSERT(size <= size_);
+      memcpy(base_, data, size);
+    }
+    void Read(void* data, size_t size) {
+      // It is the caller's responsibility to ensure size fits in the mailbox.
+      ZX_DEBUG_ASSERT(size <= size_);
+      memcpy(data, base_, size);
+    }
+
+   private:
+    void* base_;
+    size_t size_;
+  };
+
+  // Send an IPC message and wait for response
+  zx_status_t SendIpcWait(Txn* txn) TA_EXCL(lock_);
+
+  // Process a notification received from the DSP.
+  //
+  // We return a fit::inline_function which should be called outside |lock_| to
+  // notify the registered callback.
+  std::optional<fit::inline_function<void()>> CreateNotificationCallback(const IpcMessage& notif)
+      TA_REQ(lock_);
+
+  // Process responses from DSP
+  void ProcessIpcReply(const IpcMessage& reply) TA_REQ(lock_);
+  void ProcessLargeConfigGetReply(Txn* txn) TA_REQ(lock_);
+
+  void IpcMailboxWrite(const void* data, size_t size) TA_REQ(lock_);
+  void IpcMailboxRead(void* data, size_t size) TA_REQ(lock_);
+
+  void SendIpc(const Txn& txn) TA_REQ(lock_);
+
+  mutable fbl::Mutex lock_;
+  refcount::BlockingRefCount in_flight_callbacks_;  // Number of in-flight send operations
+
+  Mailbox mailbox_in_ TA_GUARDED(lock_);
+  Mailbox mailbox_out_ TA_GUARDED(lock_);
+
+  // Log prefix storage
+  const fbl::String log_prefix_;
+
+  // Pending IPC
+  fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(lock_);
+
+  // Hardware registers.
+  adsp_registers_t* const regs_ TA_GUARDED(lock_);
+
+  // Callback for unsolicited notifications from the DSP.
+  const std::optional<const std::function<void(NotificationType)>> callback_;
+
+  // Timeout for hardware responses.
+  const zx::duration hardware_timeout_;
+};
+
 // Mailbox constants
 constexpr size_t MAILBOX_SIZE = 0x1000;
 
-IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs,
-                         std::optional<std::function<void(NotificationType)>> notification_callback,
-                         zx::duration hardware_timeout)
+HardwareDspChannel::HardwareDspChannel(
+    fbl::String log_prefix, adsp_registers_t* regs,
+    std::optional<std::function<void(NotificationType)>> notification_callback,
+    zx::duration hardware_timeout)
     : log_prefix_(std::move(log_prefix)),
       regs_(regs),
       callback_(std::move(notification_callback)),
@@ -41,9 +163,9 @@ IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs,
   mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET), MAILBOX_SIZE);
 }
 
-IntelDspIpc::~IntelDspIpc() { Shutdown(); }
+HardwareDspChannel::~HardwareDspChannel() { Shutdown(); }
 
-void IntelDspIpc::Shutdown() {
+void HardwareDspChannel::Shutdown() {
   fbl::AutoLock ipc_lock(&lock_);
 
   // Fail all pending IPCs
@@ -55,9 +177,9 @@ void IntelDspIpc::Shutdown() {
   in_flight_callbacks_.WaitForZero();
 }
 
-Status IntelDspIpc::SendWithData(uint32_t primary, uint32_t extension,
-                                 fbl::Span<const uint8_t> payload, fbl::Span<uint8_t> recv_buffer,
-                                 size_t* bytes_received) {
+Status HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
+                                        fbl::Span<const uint8_t> payload,
+                                        fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) {
   Txn txn{primary,
           extension,
           payload.data(),
@@ -83,16 +205,16 @@ Status IntelDspIpc::SendWithData(uint32_t primary, uint32_t extension,
   return OkStatus();
 }
 
-Status IntelDspIpc::Send(uint32_t primary, uint32_t extension) {
+Status HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
   return SendWithData(primary, extension, fbl::Span<uint8_t>(), fbl::Span<uint8_t>(), nullptr);
 }
 
-bool IntelDspIpc::IsOperationPending() const {
+bool HardwareDspChannel::IsOperationPending() const {
   fbl::AutoLock ipc_lock(&lock_);
   return !ipc_queue_.is_empty();
 }
 
-void IntelDspIpc::SendIpc(const Txn& txn) {
+void HardwareDspChannel::SendIpc(const Txn& txn) {
   // Copy tx data to outbox
   if (txn.tx_size > 0) {
     IpcMailboxWrite(txn.tx_data, txn.tx_size);
@@ -103,7 +225,7 @@ void IntelDspIpc::SendIpc(const Txn& txn) {
   REG_WR(&regs_->hipci, txn.request.primary | ADSP_REG_HIPCI_BUSY);
 }
 
-zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
+zx_status_t HardwareDspChannel::SendIpcWait(Txn* txn) {
   in_flight_callbacks_.Inc();
   auto cleanup = fbl::MakeAutoCall([this]() { in_flight_callbacks_.Dec(); });
 
@@ -135,7 +257,7 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
   return res;
 }
 
-void IntelDspIpc::ProcessIrq() {
+void HardwareDspChannel::ProcessIrq() {
   std::optional<fit::inline_function<void()>> callback;
 
   // Process any pending IRQs.
@@ -171,7 +293,7 @@ void IntelDspIpc::ProcessIrq() {
   }
 }
 
-std::optional<fit::inline_function<void()>> IntelDspIpc::CreateNotificationCallback(
+std::optional<fit::inline_function<void()>> HardwareDspChannel::CreateNotificationCallback(
     const IpcMessage& notif) {
   if (!callback_.has_value()) {
     return std::nullopt;
@@ -185,7 +307,7 @@ std::optional<fit::inline_function<void()>> IntelDspIpc::CreateNotificationCallb
   });
 }
 
-void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {
+void HardwareDspChannel::ProcessIpcReply(const IpcMessage& reply) {
   if (ipc_queue_.is_empty()) {
     LOG(INFO, "got spurious reply message\n");
     return;
@@ -227,7 +349,7 @@ void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {
   }
 }
 
-void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {
+void HardwareDspChannel::ProcessLargeConfigGetReply(Txn* txn) {
   ZX_DEBUG_ASSERT_MSG(txn->request.large_param_id() == txn->reply.large_param_id(),
                       "large_param_id mismatch, expected %u got %u\n",
                       txn->request.large_param_id(), txn->reply.large_param_id());
@@ -251,9 +373,19 @@ void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {
   }
 }
 
-void IntelDspIpc::IpcMailboxWrite(const void* data, size_t size) { mailbox_out_.Write(data, size); }
+void HardwareDspChannel::IpcMailboxWrite(const void* data, size_t size) {
+  mailbox_out_.Write(data, size);
+}
 
-void IntelDspIpc::IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
+void HardwareDspChannel::IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
+
+std::unique_ptr<DspChannel> CreateHardwareDspChannel(
+    fbl::String log_prefix, adsp_registers_t* regs,
+    std::optional<std::function<void(NotificationType)>> notification_callback,
+    zx::duration hardware_timeout) {
+  return std::make_unique<HardwareDspChannel>(log_prefix, regs, std::move(notification_callback),
+                                              hardware_timeout);
+}
 
 }  // namespace intel_hda
 }  // namespace audio
