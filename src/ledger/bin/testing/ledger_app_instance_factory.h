@@ -14,6 +14,8 @@
 #include <functional>
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/testing/loop_controller.h"
@@ -29,6 +31,10 @@ class LedgerAppInstanceFactoryBuilder {
   virtual ~LedgerAppInstanceFactoryBuilder(){};
   // Returns a new LedgerAppInstanceFactory.
   virtual std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const = 0;
+
+  // Prints the factory builder parameters.
+  virtual std::string TestSuffix() const = 0;
+
 };
 
 // Base class for client tests.
@@ -102,6 +108,15 @@ enum class EnableSynchronization {
 // tests.
 std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders(
     EnableSynchronization sync_state = EnableSynchronization::SYNC_OR_OFFLINE);
+
+// Use as the third parameter of INSTANTIATE_TEST_SUITE_P to pretty-print a test suite parametrized
+// with LedgerAppInstanceFactoryBuilder pointers as returned by GetLedgerAppInstanceFactoryBuilders.
+struct PrintLedgerAppInstanceFactoryBuilder {
+  template <class ParamType>
+  std::string operator()(const ::testing::TestParamInfo<ParamType>& info) const {
+    return info.param->TestSuffix();
+  }
+};
 
 }  // namespace ledger
 

@@ -660,7 +660,8 @@ TEST_P(PageWatcherIntegrationTest, RollbackTransactionForwardState) {
 }
 
 INSTANTIATE_TEST_SUITE_P(PageWatcherIntegrationTest, PageWatcherIntegrationTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

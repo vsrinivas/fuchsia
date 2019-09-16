@@ -250,7 +250,8 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
 
 INSTANTIATE_TEST_SUITE_P(
     SyncIntegrationTest, SyncIntegrationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY)));
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY)),
+    PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

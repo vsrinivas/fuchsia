@@ -1785,7 +1785,8 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
 }
 
 INSTANTIATE_TEST_SUITE_P(MergingIntegrationTest, MergingIntegrationTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

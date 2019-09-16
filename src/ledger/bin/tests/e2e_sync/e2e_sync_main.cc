@@ -27,6 +27,13 @@ class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
     return std::make_unique<LedgerAppInstanceFactoryImpl>(
         std::make_unique<LoopControllerRealLoop>(), *sync_params_ptr);
   }
+
+  std::string TestSuffix() const override {
+    // E2E Sync tests only work with Firebase at the moment.
+    // Update based on the value of sync_params_ptr if we ever add more backends.
+    return "Firebase";
+  }
+
 };
 
 int Main(int argc, char** argv) {

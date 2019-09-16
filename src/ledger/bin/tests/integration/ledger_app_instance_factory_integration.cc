@@ -35,6 +35,7 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {
@@ -338,6 +339,13 @@ class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
 
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
     return std::make_unique<LedgerAppInstanceFactoryImpl>(enable_sync_, inject_error_, enable_p2p_);
+  }
+
+  std::string TestSuffix() const override {
+    return fxl::Concatenate(
+        {std::string(enable_sync_ == EnableSync::YES ? "Sync" : "NoSync"),
+         std::string(inject_error_ == InjectNetworkError::YES ? "WithNetworkError" : ""),
+         std::string(enable_p2p_ == EnableP2PMesh::YES ? "P2P" : "NoP2P")});
   }
 
  private:

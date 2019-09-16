@@ -14,6 +14,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/inspect.h"
+#include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
@@ -399,7 +400,8 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
 }
 
 INSTANTIATE_TEST_SUITE_P(InspectTest, InspectTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

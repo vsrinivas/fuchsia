@@ -29,7 +29,8 @@ TEST_P(IntegrationTestTests, MultipleLedgerAppInstances) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IntegrationTestTests, IntegrationTestTests,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

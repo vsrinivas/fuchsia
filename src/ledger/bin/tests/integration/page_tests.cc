@@ -98,7 +98,8 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
 }
 
 INSTANTIATE_TEST_SUITE_P(PageIntegrationTest, PageIntegrationTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

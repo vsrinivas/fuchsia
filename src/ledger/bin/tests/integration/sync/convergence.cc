@@ -19,8 +19,10 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
+#include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {
@@ -411,13 +413,20 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
 INSTANTIATE_TEST_SUITE_P(
     ManyLedgersConvergenceTest, ConvergenceTest,
-    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
-                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
-                       // Temporarily reduced the number of simulated Ledgers to reduce flaky
-                       // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
-                       ::testing::Range(2, 3),
-                       ::testing::ValuesIn(
-                           GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY))));
+    ::testing::Combine(
+        ::testing::Values(MergeType::LAST_ONE_WINS, MergeType::NON_ASSOCIATIVE_CUSTOM),
+        // Temporarily reduced the number of simulated Ledgers to reduce flaky
+        // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
+        ::testing::Range(2, 3),
+        ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY))),
+    [](const ::testing::TestParamInfo<ConvergenceTest::ParamType>& info) {
+      std::stringstream ss;
+      ss << (std::get<MergeType>(info.param) == MergeType::LAST_ONE_WINS ? "LastOneWins"
+                                                                         : "NonAssociativeCustom")
+         << "With" << std::get<int>(info.param) << "Ledgers"
+         << std::get<const LedgerAppInstanceFactoryBuilder*>(info.param)->TestSuffix();
+      return ss.str();
+    });
 
 }  // namespace
 }  // namespace ledger

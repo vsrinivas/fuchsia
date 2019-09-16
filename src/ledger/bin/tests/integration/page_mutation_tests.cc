@@ -182,7 +182,8 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
 }
 
 INSTANTIATE_TEST_SUITE_P(PageMutationTest, PageMutationTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger
