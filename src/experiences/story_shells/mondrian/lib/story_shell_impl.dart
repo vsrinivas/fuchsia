@@ -3,19 +3,15 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' show Timeline;
-import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_mem/fidl_async.dart' as fuchsia_mem;
 import 'package:fidl_fuchsia_modular/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewHolderToken;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_modular/lifecycle.dart' as lifecycle;
 import 'package:fuchsia_services/services.dart';
 import 'package:lib.story_shell/common.dart';
-import 'package:zircon/zircon.dart';
 
 import 'models/surface/surface_graph.dart';
 import 'models/surface/surface_properties.dart';
@@ -25,12 +21,10 @@ import 'visual_state_watcher.dart';
 class StoryShellImpl extends StoryShell {
   final StoryShellBinding _storyShellBinding = StoryShellBinding();
   final StoryShellContextProxy _storyShellContext = StoryShellContextProxy();
-  final LinkProxy _linkProxy = LinkProxy();
   final KeyListener keyListener;
   final StoryVisualStateWatcherBinding _visualStateWatcherBinding =
       StoryVisualStateWatcherBinding();
   final SurfaceGraph surfaceGraph;
-  final String _storyShellLinkName = 'story_shell_state';
   final StreamController<String> _focusEventStreamController =
       StreamController.broadcast();
   String _lastFocusedSurfaceId;
@@ -48,10 +42,6 @@ class StoryShellImpl extends StoryShell {
     _storyShellContext.ctrl.bind(contextHandle);
     await _storyShellContext.watchVisualState(
         _visualStateWatcherBinding.wrap(_storyVisualStateWatcher));
-    await _storyShellContext
-        .getLink(_linkProxy.ctrl.request())
-        .then((v) => reloadStoryState())
-        .then((onLinkContentsFetched));
     surfaceGraph.addListener(() {
       String surfaceId = surfaceGraph.focused?.node?.value;
       if (surfaceId != null && surfaceId != _lastFocusedSurfaceId) {
@@ -116,7 +106,6 @@ class StoryShellImpl extends StoryShell {
     Timeline.instantSync('focusing view',
         arguments: {'surfaceId': '$surfaceId'});
     surfaceGraph.focusSurface(surfaceId);
-    return persistStoryState();
   }
 
   /// Defocus the surface with this id
@@ -125,7 +114,6 @@ class StoryShellImpl extends StoryShell {
     Timeline.instantSync('defocusing view',
         arguments: {'surfaceId': '$surfaceId'});
     surfaceGraph.dismissSurface(surfaceId);
-    return persistStoryState();
   }
 
   @Deprecated('Deprecated')
@@ -211,30 +199,6 @@ class StoryShellImpl extends StoryShell {
     SurfaceInfo surfaceInfo,
   ) async {
     // TODO (jphsiao): implement
-  }
-
-  Future<fuchsia_mem.Buffer> reloadStoryState() async {
-    return _linkProxy.get([_storyShellLinkName]);
-  }
-
-  void onLinkContentsFetched(fuchsia_mem.Buffer buffer) {
-    var dataVmo = SizedVmo(buffer.vmo.handle, buffer.size);
-    var data = dataVmo.read(buffer.size);
-    dataVmo.close();
-    dynamic decoded = jsonDecode(utf8.decode(data.bytesAsUint8List()));
-    if (decoded is Map<String, dynamic>) {
-      surfaceGraph.reload(decoded.cast<String, dynamic>());
-    }
-  }
-
-  Future<void> persistStoryState() async {
-    String encoded = json.encode(surfaceGraph);
-    var jsonList = Uint8List.fromList(utf8.encode(encoded));
-    var data = fuchsia_mem.Buffer(
-      vmo: SizedVmo.fromUint8List(jsonList),
-      size: jsonList.length,
-    );
-    await _linkProxy.set([_storyShellLinkName], data);
   }
 
   @override
