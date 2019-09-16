@@ -575,6 +575,7 @@ static zx_status_t connect_driver(const char* tee_device, zx_handle_t* tee_chann
   return ZX_OK;
 }
 
+__EXPORT
 TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
   if (!context) {
     return TEEC_ERROR_BAD_PARAMETERS;
@@ -612,12 +613,14 @@ TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
   return TEEC_SUCCESS;
 }
 
+__EXPORT
 void TEEC_FinalizeContext(TEEC_Context* context) {
   if (context) {
     zx_handle_close(context->imp.tee_channel);
   }
 }
 
+__EXPORT
 TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context* context, TEEC_SharedMemory* sharedMem) {
   /* This function is supposed to register an existing buffer for use as shared memory. We don't
    * have a way of discovering the VMO handle for an arbitrary address, so implementing this would
@@ -627,6 +630,7 @@ TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context* context, TEEC_SharedMemory* 
   return TEEC_ERROR_NOT_IMPLEMENTED;
 }
 
+__EXPORT
 TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context* context, TEEC_SharedMemory* sharedMem) {
   if (!context || !sharedMem) {
     return TEEC_ERROR_BAD_PARAMETERS;
@@ -662,6 +666,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context* context, TEEC_SharedMemory* 
   return TEEC_SUCCESS;
 }
 
+__EXPORT
 void TEEC_ReleaseSharedMemory(TEEC_SharedMemory* sharedMem) {
   if (!sharedMem) {
     return;
@@ -670,6 +675,7 @@ void TEEC_ReleaseSharedMemory(TEEC_SharedMemory* sharedMem) {
   zx_handle_close(sharedMem->imp.vmo);
 }
 
+__EXPORT
 TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
                              const TEEC_UUID* destination, uint32_t connectionMethod,
                              const void* connectionData, TEEC_Operation* operation,
@@ -743,6 +749,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   return out_result.return_code;
 }
 
+__EXPORT
 void TEEC_CloseSession(TEEC_Session* session) {
   if (!session || !session->imp.context_imp) {
     return;
@@ -753,6 +760,7 @@ void TEEC_CloseSession(TEEC_Session* session) {
   session->imp.context_imp = NULL;
 }
 
+__EXPORT
 TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_Operation* operation,
                                uint32_t* returnOrigin) {
   if (!session || !session->imp.context_imp) {
@@ -809,4 +817,5 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
   return out_result.return_code;
 }
 
+__EXPORT
 void TEEC_RequestCancellation(TEEC_Operation* operation) {}

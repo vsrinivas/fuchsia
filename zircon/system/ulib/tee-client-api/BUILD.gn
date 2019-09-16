@@ -18,6 +18,7 @@ library("tee-client-api") {
   sources = [
     "tee-client-api.c",
   ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-tee:c",
     "$zx/system/fidl/fuchsia-tee:c",
