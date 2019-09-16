@@ -139,6 +139,20 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
     return watchpoints_;
   }
 
+  // Each time a thread attempts to step over a breakpoint, the breakpoint will enqueue itself and
+  // the thread into the step over queue. The step over queue is used so that there is only one
+  // breakpoint being stepped over at a time.
+  //
+  // Enqueuing the breakpoint does not mean that the step over begins immediately, but rather the
+  // process will call the |ExecuteStepOver| method on the breakpoint once its turn has come up in
+  // the queue.
+  void EnqueueStepOver(ProcessBreakpoint* process_breakpoint, DebuggedThread* thread);
+
+  // Called by the currently stepping over breakpoint when it's done. It will execute the next
+  // enqueued breakpoint. If there are no more breakpoints enqueued, this will let all the
+  // breakpoints know so that it can resume the stepped over threads.
+  void StepOverDone();
+
  protected:
   std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
@@ -168,6 +182,11 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // 3. Unbind the exception port.
   void DetachFromProcess();
 
+  // Deletes any elements in the step over queue that are no longer valid.
+  // This happens when either the thread or the breakpoint went away while the ticket was waiting
+  // within the queue.
+  void PruneStepOverQueue();
+
   // ProcessMemoryAccessor implementation.
   zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
                                 size_t* actual) override;
@@ -196,6 +215,16 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // Each watchpoint holds the information about what range of addresses
   // it spans. They're keyed by the first address of their range.
   std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>> watchpoints_;
+
+  // Queue of breakpoints that are currently being stepped over.
+  // As stepping over requires suspending all the threads, doing multiple at a time has a fair
+  // chance of introducing deadlocks. We use this queue to serialize the stepping over, so only
+  // one process breakpoint is being stepped over at a time.
+  struct StepOverTicket {
+    fxl::WeakPtr<ProcessBreakpoint> process_breakpoint;
+    fxl::WeakPtr<DebuggedThread> thread;
+  };
+  std::deque<StepOverTicket> step_over_queue_;
 
   debug_ipc::BufferedZxSocket stdout_;
   debug_ipc::BufferedZxSocket stderr_;

@@ -87,13 +87,17 @@ void SuspendAllOtherNonSteppingOverThreads(ProcessBreakpoint* b, DebuggedProcess
 
 ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
                                      ProcessMemoryAccessor* memory_accessor, uint64_t address)
-    : process_(process), memory_accessor_(memory_accessor), address_(address) {
+    : process_(process), memory_accessor_(memory_accessor), address_(address), weak_factory_(this) {
   breakpoints_.push_back(breakpoint);
 }
 
 ProcessBreakpoint::~ProcessBreakpoint() { Uninstall(); }
 
 zx_status_t ProcessBreakpoint::Init() { return Update(); }
+
+fxl::WeakPtr<ProcessBreakpoint> ProcessBreakpoint::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
 
 zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
   // Shouldn't get duplicates.
@@ -143,28 +147,12 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
 }
 
 void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
-  FXL_DCHECK(!CurrentlySteppingOver(thread_koid));
   DebuggedThread* thread = process_->GetThread(thread_koid);
   FXL_DCHECK(thread);
-  FXL_DCHECK(!thread->stepping_over_breakpoint());
-  thread->set_stepping_over_breakpoint(true);
 
-  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread_koid << " is stepping over.";
-
-  auto [_, inserted] = threads_stepping_over_.insert(thread_koid);
-  FXL_DCHECK(inserted);
-
-  LogThreadsSteppingOver(this, threads_stepping_over_);
-
-  SuspendAllOtherNonSteppingOverThreads(this, process_, thread_koid);
-
-  // If this is the first thread attempting to step over, we uninstall it.
-  if (threads_stepping_over_.size() == 1u)
-    Uninstall();
-
-  // This thread now has to continue running.
-  thread->ResumeException();
-  thread->ResumeSuspension();
+  // TODO(donosoc): For now, call the execution function immediatelly. This keeps feature parity.
+  //                Eventually this function will be called by the debugged process.
+  ExecuteStepOver(thread);
 }
 
 void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
@@ -194,6 +182,34 @@ void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
   // Otherwise this thread needs to wait until all other threads are done
   // stepping over.
   thread->Suspend();
+}
+
+void ProcessBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(!CurrentlySteppingOver(thread->koid()));
+  FXL_DCHECK(!thread->stepping_over_breakpoint());
+  thread->set_stepping_over_breakpoint(true);
+
+
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread->koid() << " is stepping over.";
+
+  auto [_, inserted] = threads_stepping_over_.insert(thread->koid());
+  FXL_DCHECK(inserted);
+
+  LogThreadsSteppingOver(this, threads_stepping_over_);
+
+  SuspendAllOtherNonSteppingOverThreads(this, process_, thread->koid());
+
+  // If this is the first thread attempting to step over, we uninstall it.
+  if (threads_stepping_over_.size() == 1u)
+    Uninstall();
+
+  // This thread now has to continue running.
+  thread->ResumeException();
+  thread->ResumeSuspension();
+}
+
+void ProcessBreakpoint::StepOverQueueDone() {
+  FXL_NOTIMPLEMENTED();
 }
 
 bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {

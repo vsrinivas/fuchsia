@@ -12,6 +12,8 @@
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
 
@@ -38,6 +40,8 @@ class ProcessBreakpoint {
   // Call immediately after construction. If it returns failure, the breakpoint
   // will not work.
   zx_status_t Init();
+
+  fxl::WeakPtr<ProcessBreakpoint> GetWeakPtr();
 
   zx_koid_t process_koid() const { return process_->koid(); }
   DebuggedProcess* process() const { return process_; }
@@ -95,6 +99,15 @@ class ProcessBreakpoint {
   //       still be stepping over, so the thread cannot be resumed just yet.
   //       The breakpoint will do this once all threads are done stepping over.
   void EndStepOver(zx_koid_t thread_koid);
+
+  // Called by the queue-owning debug process.
+  // This function actually sets up the stepping over and suspend all other threads.
+  // When the thread is done stepping over, it will call the process |StepOverDone| function.
+  void ExecuteStepOver(DebuggedThread* thread);
+
+  // Called by the debugged thread when a step over queue is emptied.
+  // This lets any breakpoint return a suspended thread after the step over is done.
+  void StepOverQueueDone();
 
   bool SoftwareBreakpointInstalled() const;
   bool HardwareBreakpointInstalled() const;
@@ -155,6 +168,8 @@ class ProcessBreakpoint {
   // check for mistakes. CurrentlySteppingOver() checks this list to see if
   // the breakpoint is disabled due to stepping.
   std::set<zx_koid_t> threads_stepping_over_;
+
+  fxl::WeakPtrFactory<ProcessBreakpoint> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };

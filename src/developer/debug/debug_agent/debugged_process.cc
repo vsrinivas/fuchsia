@@ -427,6 +427,42 @@ void DebuggedProcess::UnregisterWatchpoint(Watchpoint* wp, const debug_ipc::Addr
   FXL_DCHECK(!node.empty());
 }
 
+void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,
+                                        DebuggedThread* thread) {
+  PruneStepOverQueue();
+
+  StepOverTicket ticket = {};
+  ticket.process_breakpoint = process_breakpoint->GetWeakPtr();
+  ticket.thread = thread->GetWeakPtr();
+  step_over_queue_.push_back(std::move(ticket));
+
+  // If the queue already had an element, we wait until that element is done.
+  if (step_over_queue_.size() > 1u)
+    return;
+
+  // This is the first ticket in the queue. We start executing it immediatelly.
+  process_breakpoint->ExecuteStepOver(thread);
+}
+
+void DebuggedProcess::StepOverDone() {
+  step_over_queue_.pop_front();
+  PruneStepOverQueue();
+
+  // If there are still elements in the queue, we execute the next one.
+  // Since we already pruned the queue, we know that the ticket is valid.
+  if (!step_over_queue_.empty()) {
+    auto& ticket = step_over_queue_.front();
+    ticket.process_breakpoint->ExecuteStepOver(ticket.thread.get());
+    return;
+  }
+
+  // All the elements of the queue have been processed, so we let all the breakpoints know that they
+  // can resume any suspended threads that they have.
+  for (auto& [_, process_breakpoint] : breakpoints_) {
+    process_breakpoint->StepOverQueueDone();
+  }
+}
+
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
   DEBUG_LOG(Process) << LogPreamble(this) << "Terminating.";
   debug_ipc::NotifyProcessExiting notify;
@@ -625,6 +661,17 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
     debug_ipc::WriteNotifyIO(notify, &writer);
     debug_agent_->stream()->Write(writer.MessageComplete());
   }
+}
+
+void DebuggedProcess::PruneStepOverQueue() {
+  std::deque<StepOverTicket> pruned_tickets;
+  for (auto& ticket : step_over_queue_) {
+    if (!ticket.process_breakpoint || !ticket.thread)
+      continue;
+    pruned_tickets.push_back(std::move(ticket));
+  }
+
+  step_over_queue_ = std::move(pruned_tickets);
 }
 
 }  // namespace debug_agent
