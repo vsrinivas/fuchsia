@@ -283,6 +283,60 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearNxN;
 
   //
+  // Phase
+  //
+  // What is the delay, from input to output, of various frequencies as signals go through our
+  // resamplers? This characteristic of a system is called its phase response. Zero delay (phase
+  // response 0) is ideal; constant delay (constant phase response) is excellent; linear response
+  // (wrt frequency) is good. Phase response is measured in radians, for a given frequency.
+  //
+  // We display phase response within the range of (-PI, PI]. If a value lies outside that range,
+  // 2PI is added to, or subtracted from, that value until it is within this range. Keeping this
+  // "wraparound" in mind, we allow a certain phase tolerance when comparing to previous values.
+  static constexpr double kPhaseTolerance = 5e-06;
+
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUnity;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown0;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp3;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointMicro;
+
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUnity;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown0;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp3;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearMicro;
+
+  // For Phase, measured value must exceed or equal the below cached value.
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUnity;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown0;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp3;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointMicro;
+
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUnity;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown0;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp3;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearMicro;
+
+  // Phase results measured for a few frequencies during the NxN tests.
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointNxN;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearNxN;
+
+  //
   //
   // Scale
   //
@@ -494,6 +548,8 @@ class AudioResult {
  private:
   static void DumpFreqRespValues();
   static void DumpSinadValues();
+  static void DumpPhaseValues();
+
   static void DumpNoiseFloorValues();
   static void DumpLevelValues();
   static void DumpLevelToleranceValues();
@@ -501,6 +557,7 @@ class AudioResult {
 
   static void DumpFreqRespValueSet(double* freq_resp_vals, const std::string& arr_name);
   static void DumpSinadValueSet(double* sinad_vals, const std::string& arr_name);
+  static void DumpPhaseValueSet(double* phase_vals, const std::string& arr_name);
 };
 
 }  // namespace media::audio::test

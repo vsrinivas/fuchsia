@@ -280,7 +280,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, true, &info));
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(static_cast<uint32_t>(frac_src_offset), dest_offset << kPtsFractionalBits);
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;

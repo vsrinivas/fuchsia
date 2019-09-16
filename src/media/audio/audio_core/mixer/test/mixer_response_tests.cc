@@ -230,37 +230,46 @@ TEST(NoiseFloor, Output_Float) {
       << std::setprecision(10) << AudioResult::FloorOutputFloat;
 }
 
-// Ideal frequency response measurement is 0.00 dB across the audible spectrum. Ideal SINAD is at
-// least 6 dB per signal-bit (>96 dB, if 16-bit resolution). If UseFullFrequencySet is false, we
-// test at only three summary frequencies.
-void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db, double* sinad_db) {
+// Ideal frequency response measurement is 0.00 dB across the audible spectrum
+//
+// Ideal SINAD is at least 6 dB per signal-bit (>96 dB, if 16-bit resolution).
+//
+// Phase measurement is the amount that a certain frequency is delayed -- measured in radians,
+// because after a delay of more than its wavelength, a frequency's perceptible delay "wraps around"
+// to a value 2_PI less. Zero phase is ideal; constant phase is very good; linear is reasonable.
+//
+// If UseFullFrequencySet is false, we test at only three summary frequencies.
+void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* level_db,
+                               double* sinad_db, double* phase_rad) {
   if (!std::isnan(level_db[0])) {
-    // This run already has frequency response and SINAD test results for this sampler and
-    // resampling ratio; don't waste time and cycles rerunning it.
+    // This run already has frequency response/SINAD/phase results for this sampler and resampling
+    // ratio; don't waste time and cycles rerunning it.
     return;
   }
   // Set this to a valid (worst-case) value, so that (for any outcome) another test does not later
   // rerun this combination of sampler and resample ratio.
   level_db[0] = -INFINITY;
 
-  /// Vector source[] has additional elements because depending on resampling ratio, some resamplers
-  /// need them in order to produce the final dest value. All FFT inputs are considered periodic, so
-  /// to generate a periodic output from the resampler, these extra source elements should wrap
-  /// around to source[0], etc.
-  std::vector<float> source(src_buf_size);
-  std::vector<float> accum(kFreqTestBufSize);
+  auto num_dest_frames = kFreqTestBufSize;
+  // Some resamplers need additional data in order to produce the final values, and the amount of
+  // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
+  // so to generate a periodic output from the resampler, we can provide extra source elements to
+  // resamplers by simply wrapping around to source[0], etc.
+  std::vector<float> source(num_src_frames);
+  std::vector<float> accum(num_dest_frames);
 
+  // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
   Bookkeeping info;
-  info.step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
-  info.rate_modulo = (Mixer::FRAC_ONE * src_buf_size) - (info.step_size * kFreqTestBufSize);
-  info.denominator = kFreqTestBufSize;
+  info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
+  info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
+  info.denominator = num_dest_frames;
 
   // kReferenceFreqs[] contains the full set of test frequencies (47). kSummaryIdxs is a subset of
   // 3 -- each kSummaryIdxs[] value is an index (in kReferenceFreqs[]) to one of those frequencies.
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet ? FrequencySet::kReferenceFreqs.size()
                                                          : FrequencySet::kSummaryIdxs.size();
 
-  // Measure level response for each frequency.
+  // Generate signal, rate-convert, and measure level and phase responses -- for each frequency.
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     // If full-spectrum, test at all kReferenceFreqs[] values; else only use those in kSummaryIdxs[]
     uint32_t freq_idx = idx;
@@ -271,60 +280,66 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
 
     // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
     // buffer length must be at least 2x the frequency we want to measure.
-    if (frequency_to_measure * 2 > src_buf_size) {
+    if (frequency_to_measure * 2 > num_src_frames) {
       if (freq_idx < FrequencySet::kNumInBandReferenceFreqs) {
         level_db[freq_idx] = -INFINITY;
+        phase_rad[freq_idx] = -INFINITY;
       }
       sinad_db[freq_idx] = -INFINITY;
       continue;
     }
 
     // Populate the source buffer with a sinusoid at each reference frequency.
-    OverwriteCosine(source.data(), src_buf_size, frequency_to_measure);
-
-    // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
-    uint32_t dest_frames, dest_offset;
-    int32_t frac_src_offset;
-    uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
+    OverwriteCosine(source.data(), num_src_frames, frequency_to_measure);
 
     // Use this to keep ongoing src_pos_modulo across multiple Mix() calls, but then reset it each
     // time we start testing a new input signal frequency.
     info.src_pos_modulo = 0;
 
-    for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
-      dest_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
-      dest_offset = kFreqTestBufSize * packet / kResamplerTestNumPackets;
-      frac_src_offset = (static_cast<int64_t>(src_buf_size) * Mixer::FRAC_ONE * packet) /
-                        kResamplerTestNumPackets;
+    uint32_t dest_frames, dest_offset = 0;
+    int32_t frac_src_offset = 0;
+    uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
+    for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
+      // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
+      dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
       mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
                  &frac_src_offset, false, &info);
-
-      if (dest_offset < dest_frames) {
-        AUD_VLOG(SPEW) << "Performing wraparound mix: dest_frames " << dest_frames
-                       << ", dest_offset " << dest_offset << ", frac_src_frames " << std::hex
-                       << frac_src_frames << ", frac_src_offset " << frac_src_offset;
-        ASSERT_GE(frac_src_offset, 0);
-        EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width(),
-                  frac_src_frames)
-            << "src_off " << std::hex << frac_src_offset << ", pos_width "
-            << mixer->pos_filter_width() << ", src_frames " << frac_src_frames;
-        // Wrap around in the source buffer -- likely making the offset slightly negative. We can do
-        // this, within the positive filter width of this sampler.
-        frac_src_offset -= frac_src_frames;
-        mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
-                   &frac_src_offset, false, &info);
-      }
-      EXPECT_EQ(dest_offset, dest_frames);
     }
+
+    int32_t expected_frac_src_offset = frac_src_frames;
+    if (dest_offset < dest_frames) {
+      AUD_VLOG(SPEW) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
+                     << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
+                     << ", frac_src_offset " << frac_src_offset;
+      ASSERT_GE(frac_src_offset, 0);
+      EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width(), frac_src_frames)
+          << "src_off " << std::hex << frac_src_offset << ", pos_width "
+          << mixer->pos_filter_width() << ", src_frames " << frac_src_frames;
+
+      // Wrap around in the source buffer -- making the offset slightly negative. We can do
+      // this, within the positive filter width of this sampler.
+      frac_src_offset -= frac_src_frames;
+      mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
+                 &frac_src_offset, false, &info);
+      expected_frac_src_offset = 0;
+    }
+    EXPECT_EQ(dest_offset, dest_frames);
+    EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
+
+    // After running each frequency, clear the cached filter state. This is not strictly necessary
+    // today, since each frequency test starts precisely at buffer-start (thus for Point and Linear
+    // resamplers, no previously-cached state is needed). However, this IS a requirement for future
+    // resamplers with larger positive filter widths (they exposed the bug); address this now.
+    mixer->Reset();
 
     // Copy results to double[], for high-resolution frequency analysis (FFT).
     double magn_signal = -INFINITY, magn_other = INFINITY;
-    MeasureAudioFreq(accum.data(), kFreqTestBufSize, frequency_to_measure, &magn_signal,
-                     &magn_other);
+    MeasureAudioFreq(accum.data(), num_dest_frames, frequency_to_measure, &magn_signal, &magn_other,
+                     &phase_rad[freq_idx]);
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    if (frequency_to_measure * 2 > kFreqTestBufSize) {
+    if (frequency_to_measure * 2 > num_dest_frames) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
       auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
       sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
@@ -333,12 +348,6 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
       level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
       sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
     }
-
-    // After running each frequency, clear the cached filter state. This is not strictly necessary
-    // today, since each frequency test starts precisely at buffer-start (thus for Point and Linear
-    // resamplers, no previously-cached state is needed). However, this IS a requirement for future
-    // resamplers with larger positive filter widths (they exposed the bug); address this now.
-    mixer->Reset();
   }
 }
 
@@ -398,14 +407,45 @@ void EvaluateRejectionResults(double* rejection_results, const double* rejection
   }
 }
 
+// Given result and limit arrays, compare phase results (ensure that "was previously zero" stays
+// that way). If 'summary_only', limit evaluation to the three basic frequencies.
+void EvaluatePhaseResults(double* phase_results, const double* phase_limits,
+                          bool summary_only = false) {
+  auto use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
+  auto num_freqs =
+      use_full_set ? FrequencySet::kNumInBandReferenceFreqs : FrequencySet::kSummaryIdxs.size();
+
+  for (auto idx = 0u; idx < num_freqs; ++idx) {
+    auto freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+
+    if (phase_limits[freq] == -INFINITY) {
+      continue;
+    }
+
+    if ((phase_results[freq] - phase_limits[freq]) >= M_PI) {
+      EXPECT_NEAR(phase_results[freq], phase_limits[freq] + (2.0 * M_PI),
+                  AudioResult::kPhaseTolerance)
+          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
+    } else if ((phase_results[freq] - phase_limits[freq]) <= -M_PI) {
+      EXPECT_NEAR(phase_results[freq], phase_limits[freq] - (2.0 * M_PI),
+                  AudioResult::kPhaseTolerance)
+          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
+    } else {
+      EXPECT_NEAR(phase_results[freq], phase_limits[freq], AudioResult::kPhaseTolerance)
+          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
+    }
+  }
+}
+
 // For the given resampler, measure frequency response and sinad at unity (no SRC), articulated by
 // source buffer length equal to dest length.
-void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
-                          double* sinad_results) {
+void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                          double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), kFreqTestBufSize, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize, freq_resp_results, sinad_results,
+                            phase_results);
 }
 
 // For the given resampler, target a 4:1 downsampling ratio, articulated by specifying a source
@@ -413,77 +453,85 @@ void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
 // we may ultimately "wraparound" and feed in the initial source data if we have not yet received
 // the full amount of output data needed. The current buffer len (65536) x 8192 subframes/frame
 // limits us to <4x SRC ratios.
-void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results,
-                          double* sinad_results) {
+void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                          double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 191999, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), (kFreqTestBufSize << 2) - 1, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), (kFreqTestBufSize << 2) - 1, freq_resp_results,
+                            sinad_results, phase_results);
 }
 
 // For the given resampler, target a 2:1 downsampling ratio, articulated by specifying a source
 // buffer twice the length of the destination buffer.
-void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results,
-                          double* sinad_results) {
+void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                          double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000 * 2, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), kFreqTestBufSize << 1, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize << 1, freq_resp_results, sinad_results,
+                            phase_results);
 }
 
 // For the given resampler, target 88200->48000 downsampling, articulated by specifying a source
 // buffer longer than destination buffer by that ratio.
-void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results,
-                          double* sinad_results) {
+void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                          double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 88200, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), round(kFreqTestBufSize * 88200.0 / 48000.0), freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 88200.0 / 48000.0),
+                            freq_resp_results, sinad_results, phase_results);
 }
 
 // For the given resampler, target 44100->48000 upsampling, articulated by specifying a source
 // buffer shorter than destination buffer by that ratio.
-void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results, double* sinad_results) {
+void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                        double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), round(kFreqTestBufSize * 44100.0 / 48000.0), freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 44100.0 / 48000.0),
+                            freq_resp_results, sinad_results, phase_results);
 }
 
 // For the given resampler, target the 1:2 upsampling ratio, articulated by specifying a source
 // buffer at half the length of the destination buffer.
-void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results, double* sinad_results) {
+void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                        double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 24000, 1, 24000 * 2, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), kFreqTestBufSize >> 1, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize >> 1, freq_resp_results, sinad_results,
+                            phase_results);
 }
 
 // For this resampler, target the upsampling ratio "almost 1:4". EXACTLY 1:4 (combined with our
 // chosen buffer size, and the system definition of STEP_SIZE), would exceed MAX_INT for src_pos. We
 // specify a source buffer at _just_greater__than_ 1/4 the length of the destination buffer.
-void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results, double* sinad_results) {
+void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                        double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 12001, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), (kFreqTestBufSize >> 2) + 1, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), (kFreqTestBufSize >> 2) + 1, freq_resp_results,
+                            sinad_results, phase_results);
 }
 
 // For the given resampler, target micro-sampling -- with a 47999:48000 ratio.
-void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results,
-                          double* sinad_results) {
+void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
+                          double* phase_results) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 47999, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), kFreqTestBufSize - 1, freq_resp_results, sinad_results);
+  MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize - 1, freq_resp_results, sinad_results,
+                            phase_results);
 }
 
 // Measure Freq Response for Point sampler, no rate conversion.
 TEST(FrequencyResponse, Point_Unity) {
   TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
-                       AudioResult::SinadPointUnity.data());
+                       AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUnity.data(),
                           AudioResult::kPrevFreqRespPointUnity.data());
@@ -492,16 +540,25 @@ TEST(FrequencyResponse, Point_Unity) {
 // Measure SINAD for Point sampler, no rate conversion.
 TEST(Sinad, Point_Unity) {
   TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
-                       AudioResult::SinadPointUnity.data());
+                       AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluateSinadResults(AudioResult::SinadPointUnity.data(),
                        AudioResult::kPrevSinadPointUnity.data());
 }
 
+// Measure Phase Response for Point sampler, no rate conversion.
+TEST(Phase, Point_Unity) {
+  TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
+                       AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointUnity.data(),
+                       AudioResult::kPrevPhasePointUnity.data());
+}
+
 // Measure Freq Response for Point sampler for down-sampling ratio #0.
 TEST(FrequencyResponse, Point_DownSamp0) {
   TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data());
+                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointDown0.data(),
                           AudioResult::kPrevFreqRespPointDown0.data());
@@ -510,7 +567,7 @@ TEST(FrequencyResponse, Point_DownSamp0) {
 // Measure SINAD for Point sampler for down-sampling ratio #0.
 TEST(Sinad, Point_DownSamp0) {
   TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data());
+                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
 
   EvaluateSinadResults(AudioResult::SinadPointDown0.data(),
                        AudioResult::kPrevSinadPointDown0.data());
@@ -519,16 +576,25 @@ TEST(Sinad, Point_DownSamp0) {
 // Measure Out-of-band Rejection for Point sampler for down-sampling ratio #0.
 TEST(Rejection, Point_DownSamp0) {
   TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data());
+                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
 
   EvaluateRejectionResults(AudioResult::SinadPointDown0.data(),
                            AudioResult::kPrevSinadPointDown0.data());
 }
 
+// Measure Phase Response for Point sampler for down-sampling ratio #0.
+TEST(Phase, Point_DownSamp0) {
+  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
+                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointDown0.data(),
+                       AudioResult::kPrevPhasePointDown0.data());
+}
+
 // Measure Freq Response for Point sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data());
+                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointDown1.data(),
                           AudioResult::kPrevFreqRespPointDown1.data());
@@ -537,7 +603,7 @@ TEST(FrequencyResponse, Point_DownSamp1) {
 // Measure SINAD for Point sampler for down-sampling ratio #1.
 TEST(Sinad, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data());
+                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
 
   EvaluateSinadResults(AudioResult::SinadPointDown1.data(),
                        AudioResult::kPrevSinadPointDown1.data());
@@ -546,16 +612,25 @@ TEST(Sinad, Point_DownSamp1) {
 // Measure Out-of-band Rejection for Point sampler for down-sampling ratio #1.
 TEST(Rejection, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data());
+                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
 
   EvaluateRejectionResults(AudioResult::SinadPointDown1.data(),
                            AudioResult::kPrevSinadPointDown1.data());
 }
 
+// Measure Phase Response for Point sampler for down-sampling ratio #1.
+TEST(Phase, Point_DownSamp1) {
+  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
+                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointDown1.data(),
+                       AudioResult::kPrevPhasePointDown1.data());
+}
+
 // Measure Freq Response for Point sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data());
+                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointDown2.data(),
                           AudioResult::kPrevFreqRespPointDown2.data());
@@ -564,7 +639,7 @@ TEST(FrequencyResponse, Point_DownSamp2) {
 // Measure SINAD for Point sampler for down-sampling ratio #2.
 TEST(Sinad, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data());
+                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
 
   EvaluateSinadResults(AudioResult::SinadPointDown2.data(),
                        AudioResult::kPrevSinadPointDown2.data());
@@ -573,16 +648,25 @@ TEST(Sinad, Point_DownSamp2) {
 // Measure Out-of-band Rejection for Point sampler for down-sampling ratio #2.
 TEST(Rejection, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data());
+                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
 
   EvaluateRejectionResults(AudioResult::SinadPointDown2.data(),
                            AudioResult::kPrevSinadPointDown2.data());
 }
 
+// Measure Phase Response for Point sampler for down-sampling ratio #2.
+TEST(Phase, Point_DownSamp2) {
+  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
+                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointDown2.data(),
+                       AudioResult::kPrevPhasePointDown2.data());
+}
+
 // Measure Freq Response for Point sampler for up-sampling ratio #1.
 TEST(FrequencyResponse, Point_UpSamp1) {
   TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
-                     AudioResult::SinadPointUp1.data());
+                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUp1.data(),
                           AudioResult::kPrevFreqRespPointUp1.data());
@@ -591,15 +675,23 @@ TEST(FrequencyResponse, Point_UpSamp1) {
 // Measure SINAD for Point sampler for up-sampling ratio #1.
 TEST(Sinad, Point_UpSamp1) {
   TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
-                     AudioResult::SinadPointUp1.data());
+                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
 
   EvaluateSinadResults(AudioResult::SinadPointUp1.data(), AudioResult::kPrevSinadPointUp1.data());
+}
+
+// Measure Phase Response for Point sampler for up-sampling ratio #1.
+TEST(Phase, Point_UpSamp1) {
+  TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
+                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointUp1.data(), AudioResult::kPrevPhasePointUp1.data());
 }
 
 // Measure Freq Response for Point sampler for up-sampling ratio #2.
 TEST(FrequencyResponse, Point_UpSamp2) {
   TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
-                     AudioResult::SinadPointUp2.data());
+                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUp2.data(),
                           AudioResult::kPrevFreqRespPointUp2.data());
@@ -608,15 +700,23 @@ TEST(FrequencyResponse, Point_UpSamp2) {
 // Measure SINAD for Point sampler for up-sampling ratio #2.
 TEST(Sinad, Point_UpSamp2) {
   TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
-                     AudioResult::SinadPointUp2.data());
+                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
 
   EvaluateSinadResults(AudioResult::SinadPointUp2.data(), AudioResult::kPrevSinadPointUp2.data());
+}
+
+// Measure Phase Response for Point sampler for up-sampling ratio #2.
+TEST(Phase, Point_UpSamp2) {
+  TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
+                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointUp2.data(), AudioResult::kPrevPhasePointUp2.data());
 }
 
 // Measure Freq Response for Point sampler for up-sampling ratio #3.
 TEST(FrequencyResponse, Point_UpSamp3) {
   TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
-                     AudioResult::SinadPointUp3.data());
+                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUp3.data(),
                           AudioResult::kPrevFreqRespPointUp3.data());
@@ -625,15 +725,23 @@ TEST(FrequencyResponse, Point_UpSamp3) {
 // Measure SINAD for Point sampler for up-sampling ratio #3.
 TEST(Sinad, Point_UpSamp3) {
   TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
-                     AudioResult::SinadPointUp3.data());
+                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
 
   EvaluateSinadResults(AudioResult::SinadPointUp3.data(), AudioResult::kPrevSinadPointUp3.data());
+}
+
+// Measure Phase Response for Point sampler for up-sampling ratio #3.
+TEST(Phase, Point_UpSamp3) {
+  TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
+                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointUp3.data(), AudioResult::kPrevPhasePointUp3.data());
 }
 
 // Measure Freq Response for Point sampler with minimum rate change.
 TEST(FrequencyResponse, Point_MicroSRC) {
   TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data());
+                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointMicro.data(),
                           AudioResult::kPrevFreqRespPointMicro.data());
@@ -642,16 +750,25 @@ TEST(FrequencyResponse, Point_MicroSRC) {
 // Measure SINAD for Point sampler with minimum rate change.
 TEST(Sinad, Point_MicroSRC) {
   TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data());
+                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
 
   EvaluateSinadResults(AudioResult::SinadPointMicro.data(),
                        AudioResult::kPrevSinadPointMicro.data());
 }
 
+// Measure Phase Response for Point sampler with minimum rate change.
+TEST(Phase, Point_MicroSRC) {
+  TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
+                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
+
+  EvaluatePhaseResults(AudioResult::PhasePointMicro.data(),
+                       AudioResult::kPrevPhasePointMicro.data());
+}
+
 // Measure Freq Response for Linear sampler, no rate conversion.
 TEST(FrequencyResponse, Linear_Unity) {
   TestUnitySampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUnity.data(),
-                       AudioResult::SinadLinearUnity.data());
+                       AudioResult::SinadLinearUnity.data(), AudioResult::PhaseLinearUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearUnity.data(),
                           AudioResult::kPrevFreqRespLinearUnity.data());
@@ -660,16 +777,25 @@ TEST(FrequencyResponse, Linear_Unity) {
 // Measure SINAD for Linear sampler, no rate conversion.
 TEST(Sinad, Linear_Unity) {
   TestUnitySampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUnity.data(),
-                       AudioResult::SinadLinearUnity.data());
+                       AudioResult::SinadLinearUnity.data(), AudioResult::PhaseLinearUnity.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearUnity.data(),
                        AudioResult::kPrevSinadLinearUnity.data());
 }
 
+// Measure Phase Response for Linear sampler, no rate conversion.
+TEST(Phase, Linear_Unity) {
+  TestUnitySampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUnity.data(),
+                       AudioResult::SinadLinearUnity.data(), AudioResult::PhaseLinearUnity.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearUnity.data(),
+                       AudioResult::kPrevPhaseLinearUnity.data());
+}
+
 // Measure Freq Response for Linear sampler for down-sampling ratio #0.
 TEST(FrequencyResponse, Linear_DownSamp0) {
   TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown0.data(),
-                       AudioResult::SinadLinearDown0.data());
+                       AudioResult::SinadLinearDown0.data(), AudioResult::PhaseLinearDown0.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearDown0.data(),
                           AudioResult::kPrevFreqRespLinearDown0.data());
@@ -678,7 +804,7 @@ TEST(FrequencyResponse, Linear_DownSamp0) {
 // Measure SINAD for Linear sampler for down-sampling ratio #0.
 TEST(Sinad, Linear_DownSamp0) {
   TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown0.data(),
-                       AudioResult::SinadLinearDown0.data());
+                       AudioResult::SinadLinearDown0.data(), AudioResult::PhaseLinearDown0.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearDown0.data(),
                        AudioResult::kPrevSinadLinearDown0.data());
@@ -687,16 +813,25 @@ TEST(Sinad, Linear_DownSamp0) {
 // Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #0.
 TEST(Rejection, Linear_DownSamp0) {
   TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown0.data(),
-                       AudioResult::SinadLinearDown0.data());
+                       AudioResult::SinadLinearDown0.data(), AudioResult::PhaseLinearDown0.data());
 
   EvaluateRejectionResults(AudioResult::SinadLinearDown0.data(),
                            AudioResult::kPrevSinadLinearDown0.data());
 }
 
+// Measure Phase Response for Linear sampler for down-sampling ratio #0.
+TEST(Phase, Linear_DownSamp0) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown0.data(),
+                       AudioResult::SinadLinearDown0.data(), AudioResult::PhaseLinearDown0.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearDown0.data(),
+                       AudioResult::kPrevPhaseLinearDown0.data());
+}
+
 // Measure Freq Response for Linear sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Linear_DownSamp1) {
   TestDownSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
-                       AudioResult::SinadLinearDown1.data());
+                       AudioResult::SinadLinearDown1.data(), AudioResult::PhaseLinearDown1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearDown1.data(),
                           AudioResult::kPrevFreqRespLinearDown1.data());
@@ -705,7 +840,7 @@ TEST(FrequencyResponse, Linear_DownSamp1) {
 // Measure SINAD for Linear sampler for down-sampling ratio #1.
 TEST(Sinad, Linear_DownSamp1) {
   TestDownSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
-                       AudioResult::SinadLinearDown1.data());
+                       AudioResult::SinadLinearDown1.data(), AudioResult::PhaseLinearDown1.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearDown1.data(),
                        AudioResult::kPrevSinadLinearDown1.data());
@@ -714,16 +849,25 @@ TEST(Sinad, Linear_DownSamp1) {
 // Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #1.
 TEST(Rejection, Linear_DownSamp1) {
   TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
-                       AudioResult::SinadLinearDown1.data());
+                       AudioResult::SinadLinearDown1.data(), AudioResult::PhaseLinearDown1.data());
 
   EvaluateRejectionResults(AudioResult::SinadLinearDown1.data(),
                            AudioResult::kPrevSinadLinearDown1.data());
 }
 
+// Measure Phase Response for Linear sampler for down-sampling ratio #1.
+TEST(Phase, Linear_DownSamp1) {
+  TestDownSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
+                       AudioResult::SinadLinearDown1.data(), AudioResult::PhaseLinearDown1.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearDown1.data(),
+                       AudioResult::kPrevPhaseLinearDown1.data());
+}
+
 // Measure Freq Response for Linear sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Linear_DownSamp2) {
   TestDownSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
-                       AudioResult::SinadLinearDown2.data());
+                       AudioResult::SinadLinearDown2.data(), AudioResult::PhaseLinearDown2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearDown2.data(),
                           AudioResult::kPrevFreqRespLinearDown2.data());
@@ -732,7 +876,7 @@ TEST(FrequencyResponse, Linear_DownSamp2) {
 // Measure SINAD for Linear sampler for down-sampling ratio #2.
 TEST(Sinad, Linear_DownSamp2) {
   TestDownSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
-                       AudioResult::SinadLinearDown2.data());
+                       AudioResult::SinadLinearDown2.data(), AudioResult::PhaseLinearDown2.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearDown2.data(),
                        AudioResult::kPrevSinadLinearDown2.data());
@@ -741,16 +885,25 @@ TEST(Sinad, Linear_DownSamp2) {
 // Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #2.
 TEST(Rejection, Linear_DownSamp2) {
   TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
-                       AudioResult::SinadLinearDown2.data());
+                       AudioResult::SinadLinearDown2.data(), AudioResult::PhaseLinearDown2.data());
 
   EvaluateRejectionResults(AudioResult::SinadLinearDown2.data(),
                            AudioResult::kPrevSinadLinearDown2.data());
 }
 
+// Measure Phase Response for Linear sampler for down-sampling ratio #2.
+TEST(Phase, Linear_DownSamp2) {
+  TestDownSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
+                       AudioResult::SinadLinearDown2.data(), AudioResult::PhaseLinearDown2.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearDown2.data(),
+                       AudioResult::kPrevPhaseLinearDown2.data());
+}
+
 // Measure Freq Response for Linear sampler for up-sampling ratio #1.
 TEST(FrequencyResponse, Linear_UpSamp1) {
   TestUpSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp1.data(),
-                     AudioResult::SinadLinearUp1.data());
+                     AudioResult::SinadLinearUp1.data(), AudioResult::PhaseLinearUp1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearUp1.data(),
                           AudioResult::kPrevFreqRespLinearUp1.data());
@@ -759,15 +912,23 @@ TEST(FrequencyResponse, Linear_UpSamp1) {
 // Measure SINAD for Linear sampler for up-sampling ratio #1.
 TEST(Sinad, Linear_UpSamp1) {
   TestUpSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp1.data(),
-                     AudioResult::SinadLinearUp1.data());
+                     AudioResult::SinadLinearUp1.data(), AudioResult::PhaseLinearUp1.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearUp1.data(), AudioResult::kPrevSinadLinearUp1.data());
+}
+
+// Measure Phase Response for Linear sampler for up-sampling ratio #1.
+TEST(Phase, Linear_UpSamp1) {
+  TestUpSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp1.data(),
+                     AudioResult::SinadLinearUp1.data(), AudioResult::PhaseLinearUp1.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearUp1.data(), AudioResult::kPrevPhaseLinearUp1.data());
 }
 
 // Measure Freq Response for Linear sampler for up-sampling ratio #2.
 TEST(FrequencyResponse, Linear_UpSamp2) {
   TestUpSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp2.data(),
-                     AudioResult::SinadLinearUp2.data());
+                     AudioResult::SinadLinearUp2.data(), AudioResult::PhaseLinearUp2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearUp2.data(),
                           AudioResult::kPrevFreqRespLinearUp2.data());
@@ -776,15 +937,23 @@ TEST(FrequencyResponse, Linear_UpSamp2) {
 // Measure SINAD for Linear sampler for up-sampling ratio #2.
 TEST(Sinad, Linear_UpSamp2) {
   TestUpSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp2.data(),
-                     AudioResult::SinadLinearUp2.data());
+                     AudioResult::SinadLinearUp2.data(), AudioResult::PhaseLinearUp2.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearUp2.data(), AudioResult::kPrevSinadLinearUp2.data());
+}
+
+// Measure Phase Response for Linear sampler for up-sampling ratio #2.
+TEST(Phase, Linear_UpSamp2) {
+  TestUpSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp2.data(),
+                     AudioResult::SinadLinearUp2.data(), AudioResult::PhaseLinearUp2.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearUp2.data(), AudioResult::kPrevPhaseLinearUp2.data());
 }
 
 // Measure Freq Response for Linear sampler for up-sampling ratio #3.
 TEST(FrequencyResponse, Linear_UpSamp3) {
   TestUpSampleRatio3(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp3.data(),
-                     AudioResult::SinadLinearUp3.data());
+                     AudioResult::SinadLinearUp3.data(), AudioResult::PhaseLinearUp3.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearUp3.data(),
                           AudioResult::kPrevFreqRespLinearUp3.data());
@@ -793,15 +962,23 @@ TEST(FrequencyResponse, Linear_UpSamp3) {
 // Measure SINAD for Linear sampler for up-sampling ratio #3.
 TEST(Sinad, Linear_UpSamp3) {
   TestUpSampleRatio3(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp3.data(),
-                     AudioResult::SinadLinearUp3.data());
+                     AudioResult::SinadLinearUp3.data(), AudioResult::PhaseLinearUp3.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearUp3.data(), AudioResult::kPrevSinadLinearUp3.data());
+}
+
+// Measure Phase Response for Linear sampler for up-sampling ratio #3.
+TEST(Phase, Linear_UpSamp3) {
+  TestUpSampleRatio3(Resampler::LinearInterpolation, AudioResult::FreqRespLinearUp3.data(),
+                     AudioResult::SinadLinearUp3.data(), AudioResult::PhaseLinearUp3.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearUp3.data(), AudioResult::kPrevPhaseLinearUp3.data());
 }
 
 // Measure Freq Response for Linear sampler with minimum rate change.
 TEST(FrequencyResponse, Linear_MicroSRC) {
   TestMicroSampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearMicro.data(),
-                       AudioResult::SinadLinearMicro.data());
+                       AudioResult::SinadLinearMicro.data(), AudioResult::PhaseLinearMicro.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespLinearMicro.data(),
                           AudioResult::kPrevFreqRespLinearMicro.data());
@@ -810,10 +987,19 @@ TEST(FrequencyResponse, Linear_MicroSRC) {
 // Measure SINAD for Linear sampler with minimum rate change.
 TEST(Sinad, Linear_MicroSRC) {
   TestMicroSampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearMicro.data(),
-                       AudioResult::SinadLinearMicro.data());
+                       AudioResult::SinadLinearMicro.data(), AudioResult::PhaseLinearMicro.data());
 
   EvaluateSinadResults(AudioResult::SinadLinearMicro.data(),
                        AudioResult::kPrevSinadLinearMicro.data());
+}
+
+// Measure Phase Response for Linear sampler with minimum rate change.
+TEST(Phase, Linear_MicroSRC) {
+  TestMicroSampleRatio(Resampler::LinearInterpolation, AudioResult::FreqRespLinearMicro.data(),
+                       AudioResult::SinadLinearMicro.data(), AudioResult::PhaseLinearMicro.data());
+
+  EvaluatePhaseResults(AudioResult::PhaseLinearMicro.data(),
+                       AudioResult::kPrevPhaseLinearMicro.data());
 }
 
 // For each summary frequency, populate a sinusoid into a mono buffer, and copy-interleave mono[]
@@ -826,9 +1012,9 @@ void PopulateNxNSourceBuffer(float* source, uint32_t num_frames, uint32_t num_ch
   for (uint32_t idx = 0; idx < num_chans; ++idx) {
     uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
 
-    // If frequency is too high to be characterized in this buffer length, stop.
+    // If frequency is too high to be characterized in this buffer length, skip it.
     if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > num_frames) {
-      break;
+      continue;
     }
 
     // Populate mono[] with a sinusoid at this reference-frequency.
@@ -843,13 +1029,10 @@ void PopulateNxNSourceBuffer(float* source, uint32_t num_frames, uint32_t num_ch
 
 // For the given resampler, test NxN fidelity equivalence with mono/stereo.
 //
-// Populate a multi-channel buffer with sinusoids at the summary frequencies (one in each channel);
-// mix the multi-channel buffer (at micro-SRC); split the multi-channel result and analyze each,
-// comparing to existing mono results.
-void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_db) {
-  static_assert(FrequencySet::kNumSummaryIdxs <= fuchsia::media::MAX_PCM_CHANNEL_COUNT,
-                "Cannot allocate every summary frequency--rework this test.");
-
+// Populate a multi-channel buffer with sinusoids at summary frequencies (one in each channel); mix
+// the multi-chan buffer (at micro-SRC); compare each channel to existing mono results.
+void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_db,
+                        double* phase_rad) {
   if (!std::isnan(level_db[0])) {
     // This run already has NxN frequency response and SINAD results for this sampler and resampling
     // ratio; don't waste time and cycles rerunning it.
@@ -859,80 +1042,116 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // rerun this combination of sampler and resample ratio.
   level_db[0] = -INFINITY;
 
-  uint32_t source_rate = 47999;
-  uint32_t dest_rate = 48000;
-
-  uint32_t num_chans = FrequencySet::kNumSummaryIdxs;
-  uint32_t num_source_frames = kFreqTestBufSize - 1;
-  uint32_t num_dest_frames = kFreqTestBufSize;
-
-  // Populate different frequencies into each channel of N-channel source[]. source[] has an
-  // additional element because depending on resampling ratio, some resamplers need it in order to
-  // produce the final dest value.
-  auto source = std::make_unique<float[]>(num_chans * num_source_frames);
-  PopulateNxNSourceBuffer(source.get(), num_source_frames, num_chans);
+  // For this multi-channel cross-talk test, we put one of the summary frequencies in each channel.
+  // We micro-SRC these signals, and ensure that our frequency response, SINAD and phase response
+  // are the same as when we test these frequencies in isolation.
+  static_assert(FrequencySet::kNumSummaryIdxs <= fuchsia::media::MAX_PCM_CHANNEL_COUNT,
+                "Cannot allocate every summary frequency--rework this test.");
+  auto num_chans = FrequencySet::kNumSummaryIdxs;
+  auto source_rate = 47999;
+  auto dest_rate = 48000;
+  auto num_src_frames = kFreqTestBufSize - 1;
 
   // Mix the N-channel source[] into the N-channel accum[].
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, num_chans, source_rate,
                            num_chans, dest_rate, sampler_type);
-  uint32_t frac_src_frames = num_chans * num_source_frames * Mixer::FRAC_ONE;
 
-  // Use this to keep ongoing src_pos_modulo across multiple Mix() calls.
-  Bookkeeping info;
-  info.step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
-  info.rate_modulo = (Mixer::FRAC_ONE * num_source_frames) - (info.step_size * num_dest_frames);
-  info.denominator = num_dest_frames;
-
-  // Resample the source into the accumulation buffer, in pieces. (Why in pieces? See description of
-  // kResamplerTestNumPackets in frequency_set.h.)
+  auto num_dest_frames = kFreqTestBufSize;
+  // Some resamplers need additional data in order to produce the final values, and the amount of
+  // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
+  // so to generate a periodic output from the resampler, we can provide extra source elements to
+  // resamplers by simply wrapping around to source[0], etc.
+  auto source = std::make_unique<float[]>(num_chans * num_src_frames);
+  PopulateNxNSourceBuffer(source.get(), num_src_frames, num_chans);
   auto accum = std::make_unique<float[]>(num_chans * num_dest_frames);
 
-  for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
-    uint32_t dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-    uint32_t dest_offset = num_dest_frames * packet / kResamplerTestNumPackets;
-    int32_t frac_src_offset = (static_cast<int64_t>(num_source_frames) * Mixer::FRAC_ONE * packet) /
-                              kResamplerTestNumPackets;
+  // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
+  Bookkeeping info;
+  info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
+  info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
+  info.denominator = num_dest_frames;
+  info.src_pos_modulo = 0;
 
+  uint32_t dest_frames, dest_offset = 0;
+  int32_t frac_src_offset = 0;
+  uint32_t frac_src_frames = num_src_frames * Mixer::FRAC_ONE;
+
+  for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
+    // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
+    dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
     mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(), frac_src_frames,
                &frac_src_offset, false, &info);
-    EXPECT_EQ(dest_offset, dest_frames);
   }
+  int32_t expected_frac_src_offset = frac_src_frames;
+  if (dest_offset < dest_frames) {
+    AUD_LOG(WARNING) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
+                     << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
+                     << ", frac_src_offset " << frac_src_offset;
+    ASSERT_GE(frac_src_offset, 0);
+    EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width(), frac_src_frames)
+        << "src_off " << std::hex << frac_src_offset << ", pos_width " << mixer->pos_filter_width()
+        << ", src_frames " << frac_src_frames;
+
+    // Wrap around in the source buffer -- making the offset slightly negative. We can do
+    // this, within the positive filter width of this sampler.
+    frac_src_offset -= frac_src_frames;
+    mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(), frac_src_frames,
+               &frac_src_offset, false, &info);
+    expected_frac_src_offset = 0;
+  }
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
+
+  // After running each frequency, clear out any remained cached filter state.
+  // Currently, this is not strictly necessary since for each frequency test,
+  // our initial position is the exact beginning of the buffer (and hence for
+  // the Point and Linear resamplers, no previously-cached state is needed).
+  // However, this IS a requirement for upcoming resamplers with larger
+  // positive filter widths (they exposed the bug; thus addressing it now).
+  mixer->Reset();
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.
   auto mono = std::make_unique<float[]>(num_dest_frames);
   for (uint32_t idx = 0; idx < num_chans; ++idx) {
     uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
 
-    // If frequency is too high to be characterized in this buffer length, stop.
-    if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > num_source_frames) {
-      break;
+    auto frequency_to_measure = FrequencySet::kReferenceFreqs[freq_idx];
+    // If frequency is too high to be characterized in this buffer length, skip it.
+    if (frequency_to_measure * 2 > num_src_frames) {
+      if (freq_idx < FrequencySet::kNumInBandReferenceFreqs) {
+        level_db[freq_idx] = -INFINITY;
+        phase_rad[freq_idx] = -INFINITY;
+      }
+      sinad_db[freq_idx] = -INFINITY;
+      continue;
     }
 
-    for (uint32_t i = 0; i <= num_source_frames; ++i) {
+    for (uint32_t i = 0; i < num_dest_frames; ++i) {
       mono[i] = accum[i * num_chans + idx];
     }
 
+    // Copy results to double[], for high-resolution frequency analysis (FFT).
     double magn_signal = -INFINITY, magn_other = INFINITY;
-    MeasureAudioFreq(mono.get(), num_dest_frames, FrequencySet::kReferenceFreqs[freq_idx],
-                     &magn_signal, &magn_other);
+    MeasureAudioFreq(mono.get(), num_dest_frames, frequency_to_measure, &magn_signal, &magn_other,
+                     &phase_rad[freq_idx]);
 
-    level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
-    sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
-
-    // After running each frequency, clear out any remained cached filter state.
-    // Currently, this is not strictly necessary since for each frequency test,
-    // our initial position is the exact beginning of the buffer (and hence for
-    // the Point and Linear resamplers, no previously-cached state is needed).
-    // However, this IS a requirement for upcoming resamplers with larger
-    // positive filter widths (they exposed the bug; thus addressing it now).
-    mixer->Reset();
+    // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
+    if (frequency_to_measure * 2 > num_dest_frames) {
+      // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
+      auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
+      sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
+    } else {
+      // This frequency is in-band -- capture its level as well as the magnitude of all else.
+      level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
+      sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+    }
   }
 }
 
 // Measure Freq Response for NxN Point sampler, with minimum rate change.
 TEST(FrequencyResponse, Point_NxN) {
   TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
-                     AudioResult::SinadPointNxN.data());
+                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
 
   // Final param signals to evaluate only at summary frequencies.
   EvaluateFreqRespResults(AudioResult::FreqRespPointNxN.data(),
@@ -942,17 +1161,27 @@ TEST(FrequencyResponse, Point_NxN) {
 // Measure SINAD for NxN Point sampler, with minimum rate change.
 TEST(Sinad, Point_NxN) {
   TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
-                     AudioResult::SinadPointNxN.data());
+                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
 
   // Final param signals to evaluate only at summary frequencies.
   EvaluateSinadResults(AudioResult::SinadPointNxN.data(), AudioResult::kPrevSinadPointMicro.data(),
                        true);
 }
 
+// Measure Phase Response for NxN Point sampler, with minimum rate change.
+TEST(Phase, Point_NxN) {
+  TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
+                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluatePhaseResults(AudioResult::PhasePointNxN.data(), AudioResult::kPrevPhasePointMicro.data(),
+                       true);
+}
+
 // Measure Freq Response for NxN Linear sampler, with minimum rate change.
 TEST(FrequencyResponse, Linear_NxN) {
   TestNxNEquivalence(Resampler::LinearInterpolation, AudioResult::FreqRespLinearNxN.data(),
-                     AudioResult::SinadLinearNxN.data());
+                     AudioResult::SinadLinearNxN.data(), AudioResult::PhaseLinearNxN.data());
 
   // Final param signals to evaluate only at summary frequencies.
   EvaluateFreqRespResults(AudioResult::FreqRespLinearNxN.data(),
@@ -962,11 +1191,21 @@ TEST(FrequencyResponse, Linear_NxN) {
 // Measure SINAD for NxN Linear sampler, with minimum rate change.
 TEST(Sinad, Linear_NxN) {
   TestNxNEquivalence(Resampler::LinearInterpolation, AudioResult::FreqRespLinearNxN.data(),
-                     AudioResult::SinadLinearNxN.data());
+                     AudioResult::SinadLinearNxN.data(), AudioResult::PhaseLinearNxN.data());
 
   // Final param signals to evaluate only at summary frequencies.
   EvaluateSinadResults(AudioResult::SinadLinearNxN.data(),
                        AudioResult::kPrevSinadLinearMicro.data(), true);
+}
+
+// Measure Phase Response for NxN Linear sampler, with minimum rate change.
+TEST(Phase, Linear_NxN) {
+  TestNxNEquivalence(Resampler::LinearInterpolation, AudioResult::FreqRespLinearNxN.data(),
+                     AudioResult::SinadLinearNxN.data(), AudioResult::PhaseLinearNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluatePhaseResults(AudioResult::PhaseLinearNxN.data(),
+                       AudioResult::kPrevPhaseLinearMicro.data(), true);
 }
 
 }  // namespace media::audio::test

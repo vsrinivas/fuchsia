@@ -17,6 +17,7 @@ class MixerTestsRecap {
   static void PrintFrequencyResponseSummary();
   static void PrintSinadSummary();
   static void PrintOutOfBandRejectionSummary();
+  static void PrintPhaseResponseSummary();
   static void PrintNoiseFloorSummary();
   static void PrintDynamicRangeSummary();
 };
