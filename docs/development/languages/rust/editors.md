@@ -55,13 +55,16 @@ rustup toolchain link fuchsia $(scripts/youcompleteme/paths.py VSCODE_RUST_TOOLC
 rustup default fuchsia
 ```
 
-Rust this command to get the paths to use in the following step.
+Run this command to get the paths to use in the following step.
 ```sh
 ./scripts/youcompleteme/paths.py FUCHSIA_ROOT
 ./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
 ```
 
-From VS Code, Open File, then Preferences, and the Settings.
+Open VS Code settings
+  * MacOS X: Code>Preferences>Settings
+  * Linux: File>Preferences>Settings
+
 Note there are different settings defined for each environment (for example, user vs remote development server).
 In the upper right corner, click an icon whose mouse-over balloon tip says "Open Settings (JSON)".
 Add the following settings:
