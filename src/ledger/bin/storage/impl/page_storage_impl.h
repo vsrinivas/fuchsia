@@ -209,6 +209,12 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   void GetCommitRootIdentifier(CommitIdView commit_id,
                                fit::function<void(Status, ObjectIdentifier)> callback);
 
+  // Deletes the piece identifier by |object_digest| from local storage. On success, returns the
+  // references from the deleted piece to other pieces. Aborts if there is already a pending
+  // deletion of |object_digest|.
+  void DeleteObject(ObjectDigest object_digest,
+                    fit::function<void(Status, ObjectReferencesAndPriority references)> callback);
+
   // Synchronous versions of API methods using coroutines.
   FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler);
 
@@ -269,6 +275,8 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
   ObjectIdentifierFactoryImpl object_identifier_factory_;
+  // Objects currently handled by |DeleteObject|.
+  std::set<ObjectDigest> pending_garbage_collection_;
   CommitFactory commit_factory_;
   CommitPruner commit_pruner_;
   std::unique_ptr<PageDb> db_;

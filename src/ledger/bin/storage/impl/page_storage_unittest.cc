@@ -11,7 +11,9 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/timekeeper/test_clock.h>
 
+#include <algorithm>
 #include <chrono>
+#include <map>
 #include <memory>
 #include <queue>
 #include <set>
@@ -30,6 +32,7 @@
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
+#include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/impl/page_db_empty_impl.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
@@ -76,6 +79,17 @@ class PageStorageImplAccessorForTest {
                               fit::callback<void(Status, std::vector<CommitId>)> callback) {
     return storage->ChooseDiffBases(std::move(target_id), std::move(callback));
   }
+
+  static void DeleteObject(
+      const std::unique_ptr<PageStorageImpl>& storage, ObjectDigest object_digest,
+      fit::function<void(Status, ObjectReferencesAndPriority references)> callback) {
+    return storage->DeleteObject(std::move(object_digest), std::move(callback));
+  }
+
+  static long CountLiveReferences(const std::unique_ptr<PageStorageImpl>& storage,
+                                  const ObjectDigest& digest) {
+    return storage->object_identifier_factory_.count(digest);
+  }
 };
 
 namespace {
@@ -83,6 +97,7 @@ namespace {
 using ::coroutine::CoroutineHandler;
 using ::testing::_;
 using ::testing::AllOf;
+using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
@@ -1236,6 +1251,329 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::IO_ERROR);
+}
+
+TEST_F(PageStorageTest, DeleteObject) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    auto data = std::make_unique<ObjectData>(storage_->GetObjectIdentifierFactory(), "Some data",
+                                             InlineBehavior::PREVENT);
+    ObjectIdentifier object_identifier = data->object_identifier;
+    const ObjectDigest object_digest = object_identifier.object_digest();
+
+    // Add a local piece |data|.
+    bool called;
+    Status status;
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Check that the piece can be read back.
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+    // The piece is a BLOB CHUNK, it should have no reference.
+    ObjectReferencesAndPriority references;
+    ASSERT_EQ(piece->AppendReferences(&references), Status::OK);
+    EXPECT_THAT(references, IsEmpty());
+
+    // Remove live references to the identifier.
+    data.reset();
+    piece.reset();
+    UntrackIdentifier(&object_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
+
+    // Delete the piece.
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, object_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_THAT(references, IsEmpty());
+
+    // Check that the object is gone.
+    RetrackIdentifier(&object_identifier);
+    EXPECT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
+// Converts ObjectIdentifier into ObjectDigest in |references| and returns the result.
+ObjectReferencesAndPriority MakeObjectReferencesAndPriority(
+    std::set<std::pair<ObjectIdentifier, KeyPriority>> references) {
+  ObjectReferencesAndPriority result;
+  std::transform(references.begin(), references.end(), std::inserter(result, result.begin()),
+                 [](const std::pair<ObjectIdentifier, KeyPriority>& reference)
+                     -> std::pair<ObjectDigest, KeyPriority> {
+                   return {reference.first.object_digest(), reference.second};
+                 });
+  return result;
+}
+
+// Tests that DeleteObject deletes both piece references and tree references.
+TEST_F(PageStorageTest, DeleteObjectWithReferences) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    // Create a valid random tree node object, with tree references and large enough to be split
+    // into several pieces.
+    std::vector<Entry> entries;
+    std::map<size_t, ObjectIdentifier> children;
+    std::set<std::pair<ObjectIdentifier, KeyPriority>> references;
+    for (size_t i = 0; i < 100; ++i) {
+      // Add a random entry.
+      entries.push_back(Entry{RandomString(environment_.random(), 500), RandomObjectIdentifier(),
+                              i % 2 ? KeyPriority::EAGER : KeyPriority::LAZY,
+                              EntryId(RandomString(environment_.random(), 32))});
+      references.insert({entries.back().object_identifier, entries.back().priority});
+      // Add a random child.
+      children.emplace(i, RandomObjectIdentifier());
+      references.insert({children[i], KeyPriority::EAGER});
+    }
+    std::sort(entries.begin(), entries.end(),
+              [](const Entry& e1, const Entry& e2) { return e1.key < e2.key; });
+    std::string data_str = btree::EncodeNode(0, entries, children);
+    ASSERT_TRUE(btree::CheckValidTreeNodeSerialization(data_str));
+
+    // Add the tree node to local storage.
+    bool called;
+    Status status;
+    ObjectIdentifier object_identifier;
+    storage_->AddObjectFromLocal(
+        ObjectType::TREE_NODE,
+        MakeObject(std::move(data_str), ObjectType::TREE_NODE, InlineBehavior::PREVENT)
+            .ToDataSource(),
+        MakeObjectReferencesAndPriority(references),
+        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Check that we got an index piece, hence some piece references.
+    ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
+    std::unique_ptr<const Piece> piece = TryGetPiece(object_identifier);
+    ASSERT_NE(piece, nullptr);
+
+    // Add piece references to |references| to check both tree and piece references from now on.
+    ASSERT_EQ(ForEachIndexChild(
+                  piece->GetData(), &fake_factory_,
+                  [object_identifier, &references](ObjectIdentifier piece_identifier) {
+                    if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
+                      // References to inline pieces are not stored on disk.
+                      return Status::OK;
+                    }
+                    references.insert({piece_identifier, KeyPriority::EAGER});
+                    return Status::OK;
+                  }),
+              Status::OK);
+
+    // Check piece and tree have been written to local storage.
+    for (const auto& [identifier, priority] : references) {
+      CheckInboundObjectReferences(handler, identifier,
+                                   {{object_identifier.object_digest(), priority}});
+    }
+
+    // Remove live references to the identifier.
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    piece.reset();
+    UntrackIdentifier(&object_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
+
+    // Delete the piece.
+    ObjectReferencesAndPriority delete_references;
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, object_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &delete_references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_THAT(delete_references, ContainerEq(MakeObjectReferencesAndPriority(references)));
+
+    // Check that the object is gone.
+    RetrackIdentifier(&object_identifier);
+    EXPECT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+
+    // Check that references are gone.
+    for (const auto& [identifier, priority] : references) {
+      CheckInboundObjectReferences(handler, identifier, {});
+    }
+  });
+}
+
+// This test creates two commits, commit1 which associates "key" to some "Some data", and commit2
+// which associates "key" to a random piece.
+// It first attempts to delete the root piece of commit1 and the piece containing "Some data", which
+// is impossible because those pieces are referenced by commit1 and its root piece respectively.
+// It then marks the root piece of commit1 as synchronized.
+// This makes another attempt at the same deletions succeed: the root piece is now synchronized and
+// referenced by a non-head commit, and the piece containing "Some data" is not referenced by
+// anything (after the former deletion succeeds), making both of them garbage-collectable.
+TEST_F(PageStorageTest, DeleteObjectAbortsWhenOnDiskReference) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    auto data = std::make_unique<ObjectData>(&fake_factory_, "Some data", InlineBehavior::PREVENT);
+    ObjectIdentifier object_identifier = data->object_identifier;
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    RetrackIdentifier(&object_identifier);
+
+    // Add a local piece |data|.
+    bool called;
+    Status status;
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Add an object-object on-disk reference, as part of a commit.
+    std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+    journal->Put("key", object_identifier, KeyPriority::EAGER);
+    std::unique_ptr<const Commit> commit1;
+    storage_->CommitJournal(std::move(journal),
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Mark the commit as synced so that we do not need to keep its root commit alive to compute a
+    // cloud diff.
+    storage_->MarkCommitSynced(commit1->GetId(),
+                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Record the root piece of |commit1| to attempt deletion later.
+    ObjectIdentifier root_piece_identifier = commit1->GetRootIdentifier();
+    const ObjectDigest root_piece_digest = root_piece_identifier.object_digest();
+
+    // Remove live references to the identifiers.
+    data.reset();
+    commit1.reset();
+    UntrackIdentifier(&object_identifier);
+    UntrackIdentifier(&root_piece_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
+
+    // Add another commit so that the previous commit is not live anymore (otherwise it keeps a
+    // live reference to its root piece |root_piece_digest|).
+    EXPECT_NE(PageStorageImplAccessorForTest::CountLiveReferences(storage_, root_piece_digest), 0);
+    journal = storage_->StartCommit(GetFirstHead());
+    journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+    std::unique_ptr<const Commit> commit2;
+    storage_->CommitJournal(std::move(journal),
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Mark the commit as synced so that we do not need to keep its parent alive to compute a cloud
+    // diff (otherwise it will also keep a live reference to |root_piece_digest|).
+    storage_->MarkCommitSynced(commit2->GetId(),
+                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, root_piece_digest), 0);
+
+    // Attempt to delete the |data| piece.
+    ObjectReferencesAndPriority references;
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, object_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+
+    // Attempt to delete the root piece of |commit1|.
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, root_piece_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+
+    // Check that the pieces are is still there.
+    RetrackIdentifier(&object_identifier);
+    RetrackIdentifier(&root_piece_identifier);
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+    ASSERT_EQ(ReadObject(handler, root_piece_identifier, &piece), Status::OK);
+    piece.reset();
+
+    // Mark the root piece of |commit1| as synced, to make it garbage-collectable (commit-object
+    // references are ignored for synchronized pieces).
+    RunInCoroutine([this, root_piece_identifier](CoroutineHandler* handler) {
+      EXPECT_EQ(PageStorageImplAccessorForTest::GetDb(storage_).SetObjectStatus(
+                    handler, root_piece_identifier, PageDbObjectStatus::SYNCED),
+                Status::OK);
+    });
+
+    // Delete the root piece of |commit1|.
+    UntrackIdentifier(&root_piece_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, root_piece_digest), 0);
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, root_piece_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    RetrackIdentifier(&root_piece_identifier);
+    ASSERT_EQ(ReadObject(handler, root_piece_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+
+    // Since tree references are associated with the root piece, it is now possible to delete the
+    // |data| piece, which was only referenced at |commit1|.
+    UntrackIdentifier(&object_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, object_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    RetrackIdentifier(&object_identifier);
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
+TEST_F(PageStorageTest, DeleteObjectAbortsWhenLiveReference) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    auto data = std::make_unique<ObjectData>(&fake_factory_, "Some data", InlineBehavior::PREVENT);
+    ObjectIdentifier object_identifier = data->object_identifier;
+    const ObjectDigest object_digest = object_identifier.object_digest();
+
+    // Add a local piece |data|.
+    bool called;
+    Status status;
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Remove live references to the identifier.
+    data.reset();
+    UntrackIdentifier(&object_identifier);
+    EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
+
+    // Start deletion of the piece.
+    ObjectReferencesAndPriority references;
+    PageStorageImplAccessorForTest::DeleteObject(
+        storage_, object_digest,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+    ASSERT_FALSE(called);
+
+    // Make the identifier live again before deletion has gone through.
+    RetrackIdentifier(&object_identifier);
+
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+
+    // Check that the object is still there.
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+  });
 }
 
 TEST_F(PageStorageTest, AddLocalPiece) {

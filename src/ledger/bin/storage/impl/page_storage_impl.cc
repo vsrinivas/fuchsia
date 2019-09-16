@@ -9,6 +9,7 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
@@ -27,6 +28,8 @@
 
 #include <trace/event.h>
 
+#include "lib/async/cpp/task.h"
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
@@ -43,6 +46,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/lock.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -434,6 +438,77 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
                 callback(status, std::move(identifier));
               });
             });
+      });
+}
+
+void PageStorageImpl::DeleteObject(
+    ObjectDigest object_digest,
+    fit::function<void(Status, ObjectReferencesAndPriority references)> callback) {
+  if (GetObjectDigestInfo(object_digest).is_inlined()) {
+    FXL_VLOG(2) << "Object is inline, cannot be deleted: " << object_digest;
+    callback(Status::INTERNAL_NOT_FOUND, {});
+    return;
+  }
+  if (!pending_garbage_collection_.insert(object_digest).second) {
+    // Delete object is already in progress.
+    callback(Status::INTERRUPTED, {});
+    return;
+  }
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, object_digest = std::move(object_digest)](
+          CoroutineHandler* handler,
+          fit::function<void(Status, ObjectReferencesAndPriority)> callback) mutable {
+        auto cleanup_pending =
+            fit::defer(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
+              pending_garbage_collection_.erase(object_digest);
+            }));
+        // Collect outbound references from the deleted object. Scope ancillary variables to avoid
+        // live references to the object when calling |PageDb::DeleteObject| below, which would
+        // abort the deletion.
+        ObjectReferencesAndPriority references;
+        {
+          std::unique_ptr<const Piece> piece;
+          // This object identifier is used only to read piece data from storage. The key index can
+          // be arbitrary, it is ignored.
+          ObjectIdentifier identifier =
+              object_identifier_factory_.MakeObjectIdentifier(0u, object_digest);
+          Status status = db_->ReadObject(handler, identifier, &piece);
+          if (status != Status::OK) {
+            callback(status, {});
+            return;
+          }
+          status = piece->AppendReferences(&references);
+          if (status != Status::OK) {
+            callback(status, {});
+            return;
+          }
+          // Read tree references if necessary.
+          if (GetObjectDigestInfo(object_digest).object_type == ObjectType::TREE_NODE) {
+            std::unique_ptr<const Object> object;
+            if (coroutine::SyncCall(
+                    handler,
+                    [this, identifier](fit::function<void(Status, std::unique_ptr<const Object>)>
+                                           callback) mutable {
+                      GetObject(identifier, Location::Local(), std::move(callback));
+                    },
+                    &status, &object) == coroutine::ContinuationStatus::INTERRUPTED) {
+              callback(Status::INTERRUPTED, {});
+              return;
+            }
+            if (status != Status::OK) {
+              callback(status, {});
+              return;
+            }
+            status = object->AppendReferences(&references);
+            if (status != Status::OK) {
+              callback(status, {});
+              return;
+            }
+          }
+        }
+        Status status = db_->DeleteObject(handler, object_digest, references);
+        callback(status, references);
       });
 }
 
