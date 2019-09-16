@@ -24,9 +24,17 @@ class MockTransactionHandler : public fs::TransactionHandler {
   // fs::TransactionHandler Interface.
   uint32_t FsBlockSize() const { return kMinfsBlockSize; }
 
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   groupid_t BlockGroupID() final { return 0; }
 
   uint32_t DeviceBlockSize() const final { return kMinfsBlockSize; }
+
+  block_client::BlockDevice* GetDevice() final { return nullptr; }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
 };
@@ -216,21 +224,22 @@ TEST_F(TransactionTest, BlockAllocationSucceeds) {
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
 }
 
+using TransactionDeathTest = TransactionTest;
 
 // Attempts to allocate an inode when the transaction was not initialized properly.
-TEST_F(TransactionTest, AllocateInodeWithoutInitializationFails) {
+TEST_F(TransactionDeathTest, AllocateInodeWithoutInitializationFails) {
   Transaction transaction(&minfs_);
   ASSERT_DEATH([&transaction]() { transaction.AllocateInode(); });
 }
 
 // Attempts to allocate a block when the transaction was not initialized properly.
-TEST_F(TransactionTest, AllocateBlockWithoutInitializationFails) {
+TEST_F(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
   Transaction transaction(&minfs_);
   ASSERT_DEATH([&transaction]() { transaction.AllocateBlock(); });
 }
 
 // Attempts to allocate an inode when none have been reserved.
-TEST_F(TransactionTest, AllocateTooManyInodesFails) {
+TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
   fbl::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(1, 0, &transaction));
 
@@ -242,7 +251,7 @@ TEST_F(TransactionTest, AllocateTooManyInodesFails) {
 }
 
 // Attempts to allocate a block when none have been reserved.
-TEST_F(TransactionTest, AllocateTooManyBlocksFails) {
+TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
   fbl::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(0, 1, &transaction));
 

@@ -6,9 +6,16 @@
 
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
+#include <fs/buffer/block_buffer.h>
+#include <fs/operation/operation.h>
+
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#endif
 
 namespace fs {
 
@@ -40,23 +47,42 @@ class TransactionHandler {
   // Acquire the block size of the mounted filesystem.
   // It is assumed that all inputs to the TransactionHandler
   // interface are in |FsBlockSize()|-sized blocks.
+  // TODO(rvargas): Remove this method.
   virtual uint32_t FsBlockSize() const = 0;
+
+  // Translates a filesystem-level block number to a block-device-level block number.
+  virtual uint64_t BlockNumberToDevice(uint64_t block_num) const = 0;
+
+  // Runs the provided operation against the backing block device. |buffer| provides access to the
+  // memory buffer that is referenced by |operation|.
+  // The values inside |operation| are expected to be filesystem-level block numbers.
+  // This method blocks until the operation completes, so it is suitable for host-based reads and
+  // writes and for simple Fuchsia-based reads. Regular Fuchsia IO is expected to be issued against
+  // the FIFO exposed through GetDevice().
+  virtual zx_status_t RunOperation(const Operation& operation, BlockBuffer* buffer) = 0;
 
 #ifdef __Fuchsia__
   // Acquires the block group on which the transaction should be issued.
   virtual groupid_t BlockGroupID() = 0;
 
   // Acquires the block size of the underlying device.
+  // TODO(rvargas): Remove this method.
   virtual uint32_t DeviceBlockSize() const = 0;
+
+  // Returns the backing block device that is associated with this TransactionHandler.
+  virtual block_client::BlockDevice* GetDevice() = 0;
 
   // Issues a group of requests to the underlying device and waits
   // for them to complete.
+  // TODO(rvargas): Remove this method.
   virtual zx_status_t Transaction(block_fifo_request_t* requests, size_t count) = 0;
 #else
   // Reads block |bno| from the device into the buffer provided by |data|.
+  // TODO(rvargas): Remove this method.
   virtual zx_status_t Readblk(uint32_t bno, void* data) = 0;
 
   // Writes block |bno| from the buffer provided by |data| to the device.
+  // TODO(rvargas): Remove this method.
   virtual zx_status_t Writeblk(uint32_t bno, const void* data) = 0;
 #endif
 };

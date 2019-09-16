@@ -29,6 +29,7 @@
 #include <fs/buffer/vmoid_registry.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fs/buffer/vmoid_registry.h>
 #include <fvm/client.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
@@ -52,12 +53,17 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
 
   uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
 
-  // Acquires a Thread-local group that can be used for sending messages
-  // over the block I/O FIFO.
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
+    return block_num * kMinfsBlockSize / DeviceBlockSize();
+  }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
+
   groupid_t BlockGroupID() final;
 
-  // Return the block size of the underlying block device.
   uint32_t DeviceBlockSize() const final;
+
+  block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
     return device_->FifoTransaction(requests, count);
@@ -70,17 +76,20 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   zx_status_t Readblk(blk_t bno, void* data);
   zx_status_t Writeblk(blk_t bno, const void* data);
 
-  ////////////////
-  // fs::VmoidRegistry interface.
-
+  // TODO(rvargas): Move this to BlockDevice.
+  // VmoidRegistry interface:
   zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-
   zx_status_t DetachVmo(vmoid_t vmoid) final;
 
   ////////////////
   // Other methods.
 
+  // Use of this factory are discouraged. See the next one.
   static zx_status_t Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out);
+
+  // This factory allows building this object from a BlockDevice.
+  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device,
+                            uint32_t max_blocks, std::unique_ptr<Bcache>* out);
 
   // Returns the maximum number of available blocks,
   // assuming the filesystem is non-resizable.
@@ -93,6 +102,9 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
 
  private:
   Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
+
+  // Used during initialization of this object.
+  zx_status_t VerifyDeviceInfo();
 
   const fbl::unique_fd fd_;
   uint32_t max_blocks_;
@@ -114,6 +126,12 @@ class Bcache : public fs::TransactionHandler {
   // fs::TransactionHandler interface.
 
   uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
+
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
+    return block_num;
+  }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
 
   // Raw block read functions.
   // These do not track blocks (or attempt to access the block cache)

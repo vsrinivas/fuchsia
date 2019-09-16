@@ -17,6 +17,7 @@ library("transaction") {
   public_deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs/buffer:headers",
+    "$zx/system/ulib/fs/operation:headers",
   ]
 
   deps = [

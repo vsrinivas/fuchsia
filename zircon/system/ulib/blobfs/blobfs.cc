@@ -323,6 +323,30 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
   return ZX_OK;
 }
 
+zx_status_t Blobfs::RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) {
+  if (operation.type != fs::OperationType::kWrite && operation.type != fs::OperationType::kRead) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  block_fifo_request_t request;
+  request.group = BlockGroupID();
+  request.vmoid = buffer->vmoid();
+  request.opcode = operation.type == fs::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
+  request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
+  request.dev_offset = BlockNumberToDevice(operation.dev_offset);
+  uint64_t length = BlockNumberToDevice(operation.length);
+  ZX_ASSERT_MSG(length < UINT32_MAX, "Request size too large");
+  request.length = static_cast<uint32_t>(length);
+
+  return block_device_->FifoTransaction(&request, 1);
+}
+
+groupid_t Blobfs::BlockGroupID() {
+  thread_local groupid_t group_ = next_group_.fetch_add(1);
+  ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
+  return group_;
+}
+
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
   fuchsia_hardware_block_VmoID vmoid;
   zx_status_t status = Device()->BlockAttachVmo(vmo, &vmoid);

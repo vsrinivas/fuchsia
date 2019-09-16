@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <minfs/bcache.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,13 +15,29 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/buffer/block_buffer.h>
+#include <fs/operation/operation.h>
 #include <fs/trace.h>
-#include <minfs/bcache.h>
 #include <minfs/format.h>
 
 #include "minfs-private.h"
 
 namespace minfs {
+
+zx_status_t Bcache::RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) {
+  if (operation.type != fs::OperationType::kWrite && operation.type != fs::OperationType::kRead) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  blk_t block_num = static_cast<blk_t>(operation.dev_offset);
+  void* data = buffer->Data(operation.vmo_offset);
+
+  if (operation.type == fs::OperationType::kRead) {
+    return Readblk(block_num, data);
+  }
+
+  return Writeblk(block_num, data);
+}
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
   off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;

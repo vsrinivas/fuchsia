@@ -48,7 +48,17 @@ class MockTransactionManager : public TransactionManager {
 
   groupid_t BlockGroupID() final { return kGroupID; }
 
-  uint32_t DeviceBlockSize() const final { return kDeviceBlockSize; }
+  uint32_t DeviceBlockSize() const final { return kBlockSize; }
+
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
+    return block_num;
+  }
+
+  block_client::BlockDevice* GetDevice() final { return nullptr; }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+    return ZX_OK;
+  }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
 

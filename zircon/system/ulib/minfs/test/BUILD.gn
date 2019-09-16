@@ -13,6 +13,7 @@ group("test") {
 test("minfs-unit") {
   test_group = "fs"
   sources = [
+    "unit/bcache-test.cc",
     "unit/format-test.cc",
     "unit/inspector-test.cc",
     "unit/superblock-test.cc",
@@ -46,6 +47,16 @@ test("minfs-integration") {
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("minfs-host") {
+  sources = [
+    "host/bcache-test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/minfs",
     "$zx/system/ulib/zxtest",
   ]
 }

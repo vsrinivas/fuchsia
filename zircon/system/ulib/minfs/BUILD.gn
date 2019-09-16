@@ -51,6 +51,8 @@ library("minfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs/buffer",
+    "$zx/system/ulib/fs/operation",
     "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zircon-internal",

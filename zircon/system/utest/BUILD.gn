@@ -330,6 +330,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/libzbi/test",
+      "$zx/system/ulib/minfs/test:minfs-host",
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/zxtest/test",
       "cmdline",

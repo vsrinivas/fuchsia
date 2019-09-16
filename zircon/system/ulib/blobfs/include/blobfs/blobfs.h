@@ -105,11 +105,15 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   uint32_t DeviceBlockSize() const final { return block_info_.block_size; }
 
-  groupid_t BlockGroupID() final {
-    thread_local groupid_t group_ = next_group_.fetch_add(1);
-    ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
-    return group_;
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
+    return block_num * kBlobfsBlockSize / block_info_.block_size;
   }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
+
+  groupid_t BlockGroupID() final;
+
+  block_client::BlockDevice* GetDevice() final { return block_device_.get(); }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
     TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);

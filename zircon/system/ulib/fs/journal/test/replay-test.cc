@@ -528,6 +528,16 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
   uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
+    return block_num;
+  }
+
+  block_client::BlockDevice* GetDevice() final { return nullptr; }
+
+  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
     if (transactions_seen_ == transactions_expected_) {
