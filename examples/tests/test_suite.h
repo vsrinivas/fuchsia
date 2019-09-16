@@ -22,6 +22,10 @@ struct Options {
 struct TestInput {
   std::string name;
   fuchsia::test::Status status;
+  /// Skips OnTestCaseFinished if true
+  bool incomplete_test = false;
+  // will not set status if false.
+  bool set_outcome_status = true;
 };
 
 class TestSuite : public fuchsia::test::Suite {

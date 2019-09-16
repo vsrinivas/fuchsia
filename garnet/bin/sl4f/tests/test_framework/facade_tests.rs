@@ -44,6 +44,45 @@ async fn launch_and_test_failing_test() {
     assert!(steps.iter().find(|s| s["outcome"].as_str().unwrap() == "failed").is_some());
 }
 
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_incomplete_test() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/incomplete-test-example.cmx"
+                .to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["outcome"].as_str().unwrap(), "inconclusive");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert!(steps.len() > 0, "steps_len = {}", steps.len());
+
+    assert_eq!(
+        steps.iter().filter(|s| s["outcome"].as_str().unwrap() == "inconclusive").count(),
+        2
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_invalid_test() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/invalid-test-example.cmx"
+                .to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["outcome"].as_str().unwrap(), "error");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert!(steps.len() > 0, "steps_len = {}", steps.len());
+
+    assert_eq!(steps.iter().filter(|s| s["outcome"].as_str().unwrap() == "error").count(), 2);
+}
+
 fn get_outcome(result: &serde_json::value::Value) -> &serde_json::value::Value {
     return result["Result"].get("outcome").unwrap();
 }

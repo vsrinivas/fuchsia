@@ -14,6 +14,7 @@ use {
     fuchsia_syslog::macros::*,
     futures::TryStreamExt,
     serde_json::Value,
+    std::collections::HashMap,
     std::fmt,
 };
 
@@ -76,6 +77,7 @@ impl TestFacade {
             Passed,
             Failed,
             Inconclusive,
+            Error,
         };
 
         impl fmt::Display for TestOutcome {
@@ -84,6 +86,7 @@ impl TestFacade {
                     TestOutcome::Passed => write!(f, "passed"),
                     TestOutcome::Failed => write!(f, "failed"),
                     TestOutcome::Inconclusive => write!(f, "inconclusive"),
+                    TestOutcome::Error => write!(f, "error"),
                 }
             }
         }
@@ -91,37 +94,58 @@ impl TestFacade {
         let mut test_outcome = TestOutcome::Passed;
 
         let mut steps = Vec::<StepResultItem>::new();
-        let mut current_step = StepResult::default();
+        let mut current_step_map = HashMap::new();
         // TODO(anmittal): Use this to extract logs and show to user.
         // To store logger socket so that other end doesn't receive a PEER CLOSED error.
         let mut _logger = fuchsia_zircon::Socket::from(fuchsia_zircon::Handle::invalid());
         while let Some(result_event) = run_listener.try_next().await? {
             match result_event {
                 OnTestCaseStarted { name, primary_log, control_handle: _ } => {
-                    current_step = StepResult::default();
-                    current_step.name = name;
+                    let step = StepResult { name: name.clone(), ..StepResult::default() };
+                    current_step_map.insert(name, step);
                     _logger = primary_log;
                 }
-                OnTestCaseFinished { name: _, outcome, control_handle: _ } => {
-                    current_step.outcome = match outcome.status {
-                        Some(status) => match status {
-                            fidl_fuchsia_test::Status::Passed => "passed".to_string(),
-                            fidl_fuchsia_test::Status::Failed => {
-                                if test_outcome == TestOutcome::Passed {
-                                    test_outcome = TestOutcome::Failed;
+                OnTestCaseFinished { name, outcome, control_handle: _ } => {
+                    match current_step_map.get_mut(&name) {
+                        Some(step) => {
+                            step.outcome = match outcome.status {
+                                Some(status) => match status {
+                                    fidl_fuchsia_test::Status::Passed => "passed".to_string(),
+                                    fidl_fuchsia_test::Status::Failed => {
+                                        if test_outcome == TestOutcome::Passed {
+                                            test_outcome = TestOutcome::Failed;
+                                        }
+                                        "failed".to_string()
+                                    }
+                                },
+                                // This will happen when test protocol is not properly implemented
+                                // by the test and it forgets to set the outcome.
+                                None => {
+                                    test_outcome = TestOutcome::Error;
+                                    "error".to_string()
                                 }
-                                "failed".to_string()
-                            }
-                        },
-                        None => {
-                            test_outcome = TestOutcome::Inconclusive;
-                            "inconclusive".to_string()
+                            };
                         }
-                    };
-                    steps.push(StepResultItem::Result(current_step));
-                    current_step = StepResult::default();
+                        None => {
+                            return Err(format_err!("test case: '{}' not found", name));
+                        }
+                    }
                 }
             }
+        }
+
+        for (_, mut step) in current_step_map {
+            if step.outcome == "".to_string() {
+                // step not completed, test might have crashed.
+                match test_outcome {
+                    TestOutcome::Passed | TestOutcome::Failed => {
+                        test_outcome = TestOutcome::Inconclusive;
+                    }
+                    _ => {}
+                }
+                step.outcome = "inconclusive".to_string();
+            }
+            steps.push(StepResultItem::Result(step));
         }
 
         app.kill()?;

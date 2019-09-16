@@ -42,6 +42,28 @@ executable("failing-test-example") {
   ]
 }
 
+executable("incomplete-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "incomplete_test_example.cc",
+  ]
+}
+
+executable("invalid-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "invalid_test_example.cc",
+  ]
+}
+
 executable("no-test-example") {
   deps = [
     ":test_suite_lib",
@@ -102,15 +124,23 @@ executable("run-closes-channel-example") {
   ]
 }
 
-package("example-tests") {
-  deps = [
+group("all_bins") {
+  public_deps = [
     ":failing-test-example",
     ":get-tests-closes-channel-example",
     ":get-tests-hangs-example",
+    ":incomplete-test-example",
+    ":invalid-test-example",
     ":no-test-example",
     ":passing-test-example",
     ":run-closes-channel-example",
     ":run-hangs-example",
+  ]
+}
+
+package("example-tests") {
+  deps = [
+    ":all_bins",
   ]
 
   binaries = [
@@ -126,6 +156,9 @@ package("example-tests") {
       name = "failing-test-example"
     },
     {
+      name = "incomplete-test-example"
+    },
+    {
       name = "get-tests-hangs-example"
     },
     {
@@ -136,6 +169,9 @@ package("example-tests") {
     },
     {
       name = "run-closes-channel-example"
+    },
+    {
+      name = "invalid-test-example"
     },
   ]
 
@@ -157,6 +193,10 @@ package("example-tests") {
       dest = "failing-test-example.cmx"
     },
     {
+      path = "meta/incomplete-test-example.cmx"
+      dest = "incomplete-test-example.cmx"
+    },
+    {
       path = "meta/get-tests-hangs-example.cmx"
       dest = "get-tests-hangs-example.cmx"
     },
@@ -171,6 +211,10 @@ package("example-tests") {
     {
       path = "meta/run-hangs-example.cmx"
       dest = "run-hangs-example.cmx"
+    },
+    {
+      path = "meta/invalid-test-example.cmx"
+      dest = "invalid-test-example.cmx"
     },
   ]
 }

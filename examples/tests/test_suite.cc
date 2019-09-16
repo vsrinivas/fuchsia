@@ -14,12 +14,8 @@ namespace example {
 using fuchsia::test::Case;
 using fuchsia::test::Outcome;
 
-TestSuite::TestSuite(async::Loop* loop, std::vector<TestInput> inputs,
-                     Options options)
-    : binding_(this),
-      test_inputs_(std::move(inputs)),
-      options_(options),
-      loop_(loop) {}
+TestSuite::TestSuite(async::Loop* loop, std::vector<TestInput> inputs, Options options)
+    : binding_(this), test_inputs_(std::move(inputs)), options_(options), loop_(loop) {}
 
 void TestSuite::GetTests(GetTestsCallback callback) {
   if (options_.close_channel_get_tests) {
@@ -41,10 +37,9 @@ void TestSuite::GetTests(GetTestsCallback callback) {
   callback(std::move(cases));
 }
 
-void TestSuite::Run(
-    std::vector<fuchsia::test::Invocation> tests,
-    fuchsia::test::RunOptions /*unused*/,
-    fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) {
+void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
+                    fuchsia::test::RunOptions /*unused*/,
+                    fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) {
   if (options_.close_channel_run) {
     binding_.Close(ZX_ERR_PEER_CLOSED);
     return;
@@ -64,25 +59,28 @@ void TestSuite::Run(
     std::string msg2 = "log2 for " + test_case.name();
     std::string msg3 = "log3 for " + test_case.name();
     zx_status_t status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(),
-                                                     msg1.length(), nullptr)))
+    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
         << status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(),
-                                                     msg2.length(), nullptr)))
+    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
         << status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(),
-                                                     msg3.length(), nullptr)))
+    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
         << status;
     Outcome outcome;
 
+    bool send_finished_event = true;
     for (auto& test_input : test_inputs_) {
       if (test_input.name == test_case.name()) {
-        outcome.set_status(test_input.status);
+        if (test_input.set_outcome_status) {
+          outcome.set_status(test_input.status);
+        }
+        send_finished_event = !test_input.incomplete_test;
         break;
       }
     }
 
-    ptr->OnTestCaseFinished(test_case.name(), std::move(outcome));
+    if (send_finished_event) {
+      ptr->OnTestCaseFinished(test_case.name(), std::move(outcome));
+    }
   }
 }
 
@@ -91,8 +89,7 @@ fidl::InterfaceRequestHandler<fuchsia::test::Suite> TestSuite::GetHandler() {
     binding_.Bind(std::move(request));
   };
 
-  binding_.set_error_handler(
-      [this](zx_status_t /*unused*/) { loop_->Shutdown(); });
+  binding_.set_error_handler([this](zx_status_t /*unused*/) { loop_->Shutdown(); });
   return handler;
 }
 

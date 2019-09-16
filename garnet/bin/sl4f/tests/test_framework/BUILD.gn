@@ -22,8 +22,7 @@ rustc_test("facade_tests_bin") {
 test_package("sl4f_test_integration_tests") {
   deps = [
     ":facade_tests_bin",
-    "//examples/tests:failing-test-example",
-    "//examples/tests:passing-test-example",
+    "//examples/tests:all_bins",
   ]
 
   meta = [
@@ -35,6 +34,15 @@ test_package("sl4f_test_integration_tests") {
       path = rebase_path("//examples/tests/meta/failing-test-example.cmx")
       dest = "failing-test-example.cmx"
     },
+    {
+      path = rebase_path("//examples/tests/meta/incomplete-test-example.cmx")
+      dest = "incomplete-test-example.cmx"
+    },
+    {
+      path = rebase_path(
+              "//examples/tests/meta/invalid-test-example.cmx")
+      dest = "invalid-test-example.cmx"
+    },
   ]
 
   binaries = [
@@ -43,6 +51,12 @@ test_package("sl4f_test_integration_tests") {
     },
     {
       name = "failing-test-example"
+    },
+    {
+      name = "incomplete-test-example"
+    },
+    {
+      name = "invalid-test-example"
     },
   ]
 
