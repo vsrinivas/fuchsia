@@ -79,7 +79,7 @@ func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.Contr
 		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
 	}
 	{
-		controlInterface, err := newIostate(sp.ns, netProto, transProto, wq, ep, &sp.controlService)
+		controlInterface, err := newSocket(sp.ns, netProto, transProto, wq, ep, &sp.controlService)
 		return 0, controlInterface, err
 	}
 }
