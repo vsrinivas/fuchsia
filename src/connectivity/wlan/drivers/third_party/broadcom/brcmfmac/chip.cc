@@ -723,14 +723,6 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
   mem = brcmf_chip_get_core(&ci->pub, CHIPSET_ARM_CR4_CORE);
   if (mem) {
     mem_core = containerof(mem, struct brcmf_core_priv, pub);
-    if (mem_core->chip->pub.chip == BRCM_CC_4359_CHIP_ID) {
-      ci->pub.ramsize = 0xe0000;
-      ci->pub.rambase = 0x160000;
-      ci->pub.srsize = 0;  // TODO - probably wrong
-      BRCMF_DBG(TEMP, "4359: hardcoding ramsize 0x%x, rambase 0x%x, srsize 0x%x\n", ci->pub.ramsize,
-                ci->pub.rambase, ci->pub.srsize);
-      return ZX_OK;
-    }
     ci->pub.ramsize = brcmf_chip_tcm_ramsize(mem_core);
     ci->pub.rambase = brcmf_chip_tcm_rambase(ci);
     if (!ci->pub.rambase) {
