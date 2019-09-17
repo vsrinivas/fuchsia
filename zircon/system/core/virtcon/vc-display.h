@@ -7,7 +7,7 @@
 
 #include <zircon/listnode.h>
 
-#include "fuchsia/hardware/display/c/fidl.h"
+#include "fuchsia/hardware/display/llcpp/fidl.h"
 #include "vc.h"
 #include "zircon/types.h"
 
@@ -25,7 +25,7 @@ typedef struct display_info {
 
   // Only valid when |bound| is true.
   zx_handle_t image_vmo;
-  fuchsia_hardware_display_ImageConfig image_config;
+  llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
   vc_gfx_t* graphics;
 
@@ -39,23 +39,23 @@ void handle_display_removed(uint64_t id);
 
 zx_status_t rebind_display(bool use_all);
 
-zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
-                                 fuchsia_hardware_display_Mode* mode, int32_t pixel_format);
-
 zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id);
 void destroy_layer(uint64_t layer_id);
 void release_image(uint64_t image_id);
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id);
 zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
-                            fuchsia_hardware_display_ImageConfig* config);
+                            llcpp::fuchsia::hardware::display::ImageConfig* config);
 zx_status_t alloc_display_info_vmo(display_info_t* display);
 zx_status_t apply_configuration();
-zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* config, uint64_t* id);
+zx_status_t import_vmo(zx_handle_t vmo, llcpp::fuchsia::hardware::display::ImageConfig* config,
+                       uint64_t* id);
+zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 
 #if BUILD_FOR_DISPLAY_TEST
 
 bool is_primary_bound();
 struct list_node* get_display_list();
+void initialize_display_channel(zx::channel channel);
 
 #endif
 

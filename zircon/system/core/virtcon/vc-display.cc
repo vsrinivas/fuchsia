@@ -5,6 +5,7 @@
 #include "vc-display.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
@@ -23,13 +24,16 @@
 #include <fbl/unique_fd.h>
 #include <port/port.h>
 
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "vc.h"
+
+namespace fhd = ::llcpp::fuchsia::hardware::display;
 
 // At any point, |dc_ph| will either be waiting on the display controller device directory
 // for a display controller instance or it will be waiting on a display controller interface
 // for messages.
 static port_handler_t dc_ph;
+
+static std::unique_ptr<fhd::Controller::SyncClient> dc_client;
 
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
 static bool primary_bound = false;
@@ -47,20 +51,14 @@ struct list_node* get_display_list() {
   return &display_list;
 }
 
-#else
+#endif  // BUILD_FOR_DISPLAY_TEST
 
 static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
 static int dc_dir_fd;
 static zx_handle_t dc_device;
 
-#endif  // BUILD_FOR_DISPLAY_TEST
-
-static zx_status_t vc_set_mode(uint8_t mode) {
-  fuchsia_hardware_display_ControllerSetVirtconModeRequest request;
-  request.hdr.ordinal = fuchsia_hardware_display_ControllerSetVirtconModeOrdinal;
-  request.mode = mode;
-
-  return zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
+static zx_status_t vc_set_mode(fhd::VirtconMode mode) {
+  return dc_client->SetVirtconMode(static_cast<uint8_t>(mode)).status();
 }
 
 void vc_attach_to_main_display(vc_t* vc) {
@@ -78,107 +76,56 @@ void vc_toggle_framebuffer() {
   }
 
   zx_status_t status =
-      vc_set_mode(!g_vc_owns_display ? fuchsia_hardware_display_VirtconMode_FORCED
-                                     : fuchsia_hardware_display_VirtconMode_FALLBACK);
+      vc_set_mode(!g_vc_owns_display ? fhd::VirtconMode::FORCED : fhd::VirtconMode::FALLBACK);
   if (status != ZX_OK) {
     printf("vc: Failed to toggle ownership %d\n", status);
   }
 }
 
-static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
-  fidl_message_header_t* hdr = (fidl_message_header_t*)bytes;
-
-  if (num_bytes < sizeof(fidl_message_header_t)) {
-    printf("vc: Unexpected short message (size=%d)\n", num_bytes);
-    return ZX_ERR_INTERNAL;
-  }
-  zx_status_t res;
-
-  const fidl_type_t* table = nullptr;
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-  uint64_t ordinal = hdr->ordinal;
-  if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
-      ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
-    table = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
-  } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
-             ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
-    table = &fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
-  }
-  if (table != nullptr) {
-    const char* err;
-    if ((res = fidl_decode(table, bytes, num_bytes, nullptr, 0, &err)) != ZX_OK) {
-      printf("vc: Error decoding message %lu: %s\n", ordinal, err);
-    }
-  } else {
-    printf("vc: Error unknown ordinal %lu\n", ordinal);
-    res = ZX_ERR_NOT_SUPPORTED;
-  }
-  return res;
-}
+static void handle_ownership_change(bool has_ownership) {
+  g_vc_owns_display = has_ownership;
 
 #if !BUILD_FOR_DISPLAY_TEST
-static void handle_ownership_change(
-    fuchsia_hardware_display_ControllerClientOwnershipChangeEvent* evt) {
-  g_vc_owns_display = evt->has_ownership;
-
   // If we've gained it, repaint
   if (g_vc_owns_display && g_active_vc) {
     vc_full_repaint(g_active_vc);
     vc_render(g_active_vc);
   }
+#endif  // !BUILD_FOR_DISPLAY_TEST
 }
 
+#if !BUILD_FOR_DISPLAY_TEST
 zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
-  fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
-  create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
-
-  fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp;
-  zx_channel_call_args_t call_args = {};
-  call_args.wr_bytes = &create_layer_msg;
-  call_args.rd_bytes = &create_layer_rsp;
-  call_args.wr_num_bytes = sizeof(create_layer_msg);
-  call_args.rd_num_bytes = sizeof(create_layer_rsp);
-  uint32_t actual_bytes, actual_handles;
-  zx_status_t status;
-  if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
-    printf("vc: Create layer call failed: %d (%s)\n", status, zx_status_get_string(status));
-    return status;
+  auto rsp = dc_client->CreateLayer();
+  if (!rsp.ok()) {
+    printf("vc: Create layer call failed: %d (%s)\n", rsp.status(),
+           zx_status_get_string(rsp.status()));
+    return rsp.status();
   }
-  if (create_layer_rsp.res != ZX_OK) {
-    printf("vc: Failed to create layer %d\n", create_layer_rsp.res);
-    return create_layer_rsp.res;
+  if (rsp->res != ZX_OK) {
+    printf("vc: Failed to create layer %d\n", rsp->res);
+    return rsp->res;
   }
 
-  *layer_id = create_layer_rsp.layer_id;
+  *layer_id = rsp->layer_id;
   return ZX_OK;
 }
 
 void destroy_layer(uint64_t layer_id) {
-  fuchsia_hardware_display_ControllerDestroyLayerRequest destroy_msg;
-  destroy_msg.hdr.ordinal = fuchsia_hardware_display_ControllerDestroyLayerOrdinal;
-  destroy_msg.layer_id = layer_id;
-
-  if (zx_channel_write(dc_ph.handle, 0, &destroy_msg, sizeof(destroy_msg), nullptr, 0) != ZX_OK) {
+  if (!dc_client->DestroyLayer(layer_id).ok()) {
     printf("vc: Failed to destroy layer\n");
   }
 }
 
 void release_image(uint64_t image_id) {
-  fuchsia_hardware_display_ControllerReleaseImageRequest release_msg;
-  release_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseImageOrdinal;
-  release_msg.image_id = image_id;
-
-  if (zx_channel_write(dc_ph.handle, 0, &release_msg, sizeof(release_msg), nullptr, 0)) {
+  if (!dc_client->ReleaseImage(image_id).ok()) {
     printf("vc: Failed to release image\n");
   }
 }
 
 #endif  // !BUILD_FOR_DISPLAY_TEST
 
-zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
-                                 fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
+static zx_status_t handle_display_added(fhd::Info* info) {
   display_info_t* display_info =
       reinterpret_cast<display_info_t*>(calloc(1, sizeof(display_info_t)));
   if (!display_info) {
@@ -194,9 +141,9 @@ zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
   }
 
   display_info->id = info->id;
-  display_info->width = mode->horizontal_resolution;
-  display_info->height = mode->vertical_resolution;
-  display_info->format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
+  display_info->width = info->modes[0].horizontal_resolution;
+  display_info->height = info->modes[0].vertical_resolution;
+  display_info->format = static_cast<int32_t>(info->pixel_format[0]);
   display_info->image_id = 0;
   display_info->image_vmo = ZX_HANDLE_INVALID;
   display_info->bound = false;
@@ -241,70 +188,42 @@ void handle_display_removed(uint64_t id) {
 }
 
 static zx_status_t get_single_framebuffer(zx_handle_t* vmo_out, uint32_t* stride_out) {
-  zx::vmo vmo;
-  fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest framebuffer_msg;
-  framebuffer_msg.hdr.ordinal =
-      fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal;
-
-  fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponse framebuffer_rsp;
-  zx_channel_call_args_t framebuffer_call = {};
-  framebuffer_call.wr_bytes = &framebuffer_msg;
-  framebuffer_call.rd_bytes = &framebuffer_rsp;
-  framebuffer_call.wr_num_bytes = sizeof(framebuffer_msg);
-  framebuffer_call.rd_num_bytes = sizeof(framebuffer_rsp);
-  framebuffer_call.rd_handles = vmo.reset_and_get_address();
-  framebuffer_call.rd_num_handles = 1;
-  uint32_t actual_bytes, actual_handles;
-  zx_status_t status;
-  if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &framebuffer_call, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
-    printf("vc: Failed to get single framebuffer: %d (%s)\n", status, zx_status_get_string(status));
-    return status;
+  auto rsp = dc_client->GetSingleBufferFramebuffer();
+  if (!rsp.ok()) {
+    printf("vc: Failed to get single framebuffer: %d (%s)\n", rsp.status(),
+           zx_status_get_string(rsp.status()));
+    return rsp.status();
   }
-  if (framebuffer_rsp.res != ZX_OK) {
+  if (rsp->res != ZX_OK) {
     // Don't print an error since this can happen on non-single-framebuffer
     // systems.
-    return framebuffer_rsp.res;
+    return rsp->res;
   }
-  if (actual_handles != 1) {
+  if (!rsp->vmo) {
     return ZX_ERR_INTERNAL;
   }
 
-  *vmo_out = vmo.release();
-  *stride_out = framebuffer_rsp.stride;
+  *vmo_out = rsp->vmo.release();
+  *stride_out = rsp->stride;
   return ZX_OK;
 }
 
 static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
-  fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
-  alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
-  alloc_msg.size = size;
-
-  fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
-  zx_channel_call_args_t call_args = {};
-  call_args.wr_bytes = &alloc_msg;
-  call_args.rd_bytes = &alloc_rsp;
-  call_args.rd_handles = vmo_out;
-  call_args.wr_num_bytes = sizeof(alloc_msg);
-  call_args.rd_num_bytes = sizeof(alloc_rsp);
-  call_args.rd_num_handles = 1;
-  uint32_t actual_bytes, actual_handles;
-  zx_status_t status;
-  if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
-    printf("vc: Failed to alloc vmo: %d (%s)\n", status, zx_status_get_string(status));
-    return status;
+  auto rsp = dc_client->AllocateVmo(size);
+  if (!rsp.ok()) {
+    printf("vc: Failed to alloc vmo: %d (%s)\n", rsp.status(), zx_status_get_string(rsp.status()));
+    return rsp.status();
   }
-  if (alloc_rsp.res != ZX_OK) {
-    printf("vc: Failed to alloc vmo %d\n", alloc_rsp.res);
-    return alloc_rsp.res;
+  if (rsp->res != ZX_OK) {
+    printf("vc: Failed to alloc vmo %d\n", rsp->res);
+    return rsp->res;
   }
-  return actual_handles == 1 ? ZX_OK : ZX_ERR_INTERNAL;
+  *vmo_out = rsp->vmo.release();
+  return *vmo_out != ZX_HANDLE_INVALID ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
 #if !BUILD_FOR_DISPLAY_TEST
-zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* config,
-                       uint64_t* id) {
+zx_status_t import_vmo(zx_handle_t vmo, fhd::ImageConfig* config, uint64_t* id) {
   zx_handle_t vmo_dup;
   zx_status_t status;
   if ((status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup)) != ZX_OK) {
@@ -312,171 +231,100 @@ zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* co
     return status;
   }
 
-  fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg = {};
-  import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
-  import_msg.image_config = *config;
-  import_msg.vmo = FIDL_HANDLE_PRESENT;
-  import_msg.offset = 0;
-
-  fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp;
-  zx_channel_call_args_t call_args = {};
-  call_args.wr_bytes = &import_msg;
-  call_args.wr_handles = &vmo_dup;
-  call_args.rd_bytes = &import_rsp;
-  call_args.wr_num_bytes = sizeof(import_msg);
-  call_args.wr_num_handles = 1;
-  call_args.rd_num_bytes = sizeof(import_rsp);
-  uint32_t actual_bytes, actual_handles;
-  if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
+  auto import_rsp = dc_client->ImportVmoImage(*config, zx::vmo(vmo_dup), 0);
+  if (!import_rsp.ok()) {
+    zx_status_t status = import_rsp.status();
     printf("vc: Failed to import vmo call %d (%s)\n", status, zx_status_get_string(status));
     return status;
   }
 
-  if (import_rsp.res != ZX_OK) {
-    printf("vc: Failed to import vmo %d\n", import_rsp.res);
-    return import_rsp.res;
+  if (import_rsp->res != ZX_OK) {
+    printf("vc: Failed to import vmo %d\n", import_rsp->res);
+    return import_rsp->res;
   }
 
-  *id = import_rsp.image_id;
+  *id = import_rsp->image_id;
   return ZX_OK;
 }
 
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
-  zx_status_t status;
-  // Put the layer on the display
-  uint8_t fidl_bytes[sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
-                     FIDL_ALIGN(sizeof(uint64_t))];
-  auto set_display_layer_request =
-      reinterpret_cast<fuchsia_hardware_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
-
-  set_display_layer_request->hdr.ordinal =
-      fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
-  set_display_layer_request->display_id = display_id;
-  set_display_layer_request->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-
-  uint32_t size;
-  if (layer_id) {
-    set_display_layer_request->layer_ids.count = 1;
-    *reinterpret_cast<uint64_t*>(set_display_layer_request + 1) = layer_id;
-    size = sizeof(fidl_bytes);
-  } else {
-    set_display_layer_request->layer_ids.count = 0;
-    size = sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest);
-  }
-  if ((status = zx_channel_write(dc_ph.handle, 0, fidl_bytes, size, nullptr, 0)) != ZX_OK) {
-    printf("vc: Failed to set display layers %d\n", status);
-    return status;
+  auto rsp = dc_client->SetDisplayLayers(display_id,
+                                         fidl::VectorView<uint64_t>(&layer_id, layer_id ? 1 : 0));
+  if (!rsp.ok()) {
+    printf("vc: Failed to set display layers %d\n", rsp.status());
+    return rsp.status();
   }
 
   return ZX_OK;
 }
 
 zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
-                            fuchsia_hardware_display_ImageConfig* config) {
-  zx_status_t status;
-  fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
-  layer_cfg_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
-  layer_cfg_msg.layer_id = layer_id;
-  layer_cfg_msg.image_config = *config;
-  if ((status = zx_channel_write(dc_ph.handle, 0, &layer_cfg_msg, sizeof(layer_cfg_msg), nullptr,
-                                 0)) != ZX_OK) {
-    printf("vc: Failed to set layer config %d\n", status);
-    return status;
+                            fhd::ImageConfig* config) {
+  auto rsp = dc_client->SetLayerPrimaryConfig(layer_id, *config);
+  if (!rsp.ok()) {
+    printf("vc: Failed to set layer config %d\n", rsp.status());
+    return rsp.status();
   }
 
-  fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest layer_pos_msg = {};
-  layer_pos_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
-  layer_pos_msg.layer_id = layer_id;
-  layer_pos_msg.transform = fuchsia_hardware_display_Transform_IDENTITY;
-  layer_pos_msg.src_frame.width = config->width;
-  layer_pos_msg.src_frame.height = config->height;
-  layer_pos_msg.dest_frame.width = display->width;
-  layer_pos_msg.dest_frame.height = display->height;
-  if ((status = zx_channel_write(dc_ph.handle, 0, &layer_pos_msg, sizeof(layer_pos_msg), nullptr,
-                                 0)) != ZX_OK) {
-    printf("vc: Failed to set layer position %d\n", status);
-    return status;
+  auto pos_rsp = dc_client->SetLayerPrimaryPosition(
+      layer_id, fhd::Transform::IDENTITY,
+      fhd::Frame{.width = config->width, .height = config->height},
+      fhd::Frame{.width = display->width, .height = display->height});
+  if (!pos_rsp.ok()) {
+    printf("vc: Failed to set layer position %d\n", pos_rsp.status());
+    return pos_rsp.status();
   }
 
-  fuchsia_hardware_display_ControllerSetLayerImageRequest set_msg;
-  set_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
-  set_msg.layer_id = layer_id;
-  set_msg.image_id = image_id;
-  if ((status = zx_channel_write(dc_ph.handle, 0, &set_msg, sizeof(set_msg), nullptr, 0)) !=
-      ZX_OK) {
-    printf("vc: Failed to set image %d\n", status);
-    return status;
+  auto image_rsp = dc_client->SetLayerImage(layer_id, image_id, 0, 0);
+  if (!image_rsp.ok()) {
+    printf("vc: Failed to set image %d\n", image_rsp.status());
+    return image_rsp.status();
   }
   return ZX_OK;
 }
 
 zx_status_t apply_configuration() {
   // Validate and then apply the new configuration
-  zx_status_t status;
-  fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
-  uint8_t check_rsp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  auto check_rsp =
-      reinterpret_cast<fuchsia_hardware_display_ControllerCheckConfigResponse*>(check_rsp_bytes);
-  check_msg.discard = false;
-  check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
-  zx_channel_call_args_t call_args = {};
-  call_args.wr_bytes = &check_msg;
-  call_args.rd_bytes = check_rsp;
-  call_args.wr_num_bytes = sizeof(check_msg);
-  call_args.rd_num_bytes = sizeof(check_rsp_bytes);
-  uint32_t actual_bytes, actual_handles;
-  if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
-    printf("vc: Failed to validate display config: %d (%s)\n", status,
-           zx_status_get_string(status));
-    return status;
+  auto check_rsp = dc_client->CheckConfig(false);
+  if (!check_rsp.ok()) {
+    printf("vc: Failed to validate display config: %d (%s)\n", check_rsp.status(),
+           zx_status_get_string(check_rsp.status()));
+    return check_rsp.status();
   }
 
-  if (check_rsp->res != fuchsia_hardware_display_ConfigResult_OK) {
-    printf("vc: Config not valid %d\n", check_rsp->res);
+  if (check_rsp->res != fhd::ConfigResult::OK) {
+    printf("vc: Config not valid %d\n", static_cast<int>(check_rsp->res));
     return ZX_ERR_INTERNAL;
   }
 
-  fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg;
-  apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
-  if ((status = zx_channel_write(dc_ph.handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0)) !=
-      ZX_OK) {
-    printf("vc: Applying config failed %d\n", status);
-    return status;
+  auto rsp = dc_client->ApplyConfig();
+
+  if (!rsp.ok()) {
+    printf("vc: Applying config failed %d\n", rsp.status());
+    return rsp.status();
   }
 
   return ZX_OK;
 }
+#endif  // !BUILD_FOR_DISPLAY_TEST
 
 zx_status_t alloc_display_info_vmo(display_info_t* display) {
   if (get_single_framebuffer(&display->image_vmo, &display->stride) != ZX_OK) {
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
-    stride_msg.width = display->width;
-    stride_msg.pixel_format = display->format;
-
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
-    zx_channel_call_args_t stride_call = {};
-    stride_call.wr_bytes = &stride_msg;
-    stride_call.rd_bytes = &stride_rsp;
-    stride_call.wr_num_bytes = sizeof(stride_msg);
-    stride_call.rd_num_bytes = sizeof(stride_rsp);
-    uint32_t actual_bytes, actual_handles;
-    zx_status_t status;
-    if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call, &actual_bytes,
-                                  &actual_handles)) != ZX_OK) {
-      printf("vc: Failed to compute fb stride: %d (%s)\n", status, zx_status_get_string(status));
-      return status;
+    auto stride_rsp = dc_client->ComputeLinearImageStride(display->width, display->format);
+    if (!stride_rsp.ok()) {
+      printf("vc: Failed to compute fb stride: %d (%s)\n", stride_rsp.status(),
+             zx_status_get_string(stride_rsp.status()));
+      return stride_rsp.status();
     }
 
-    if (stride_rsp.stride < display->width) {
+    if (stride_rsp->stride < display->width) {
       printf("vc: Got bad stride\n");
       return ZX_ERR_INVALID_ARGS;
     }
 
-    display->stride = stride_rsp.stride;
+    display->stride = stride_rsp->stride;
     uint32_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
+    zx_status_t status;
     if ((status = allocate_vmo(size, &display->image_vmo)) != ZX_OK) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -487,7 +335,6 @@ zx_status_t alloc_display_info_vmo(display_info_t* display) {
   display->image_config.type = IMAGE_TYPE_SIMPLE;
   return ZX_OK;
 }
-#endif  // !BUILD_FOR_DISPLAY_TEST
 
 zx_status_t rebind_display(bool use_all) {
   // Arbitrarily pick the oldest display as the primary dispay
@@ -541,7 +388,11 @@ zx_status_t rebind_display(bool use_all) {
       }
       info->bound = true;
 
-      if ((status = import_vmo(info->image_vmo, &info->image_config, &info->image_id)) != ZX_OK) {
+      fhd::ImageConfig config = {.width = info->image_config.width,
+                                 .height = info->image_config.height,
+                                 .pixel_format = info->image_config.pixel_format,
+                                 .type = info->image_config.type};
+      if ((status = import_vmo(info->image_vmo, &config, &info->image_id)) != ZX_OK) {
         break;
       }
 
@@ -549,8 +400,7 @@ zx_status_t rebind_display(bool use_all) {
         break;
       }
 
-      if ((status = configure_layer(info, info->layer_id, info->image_id, &info->image_config) !=
-                    ZX_OK)) {
+      if ((status = configure_layer(info, info->layer_id, info->image_id, &config) != ZX_OK)) {
         break;
       }
     }
@@ -593,29 +443,23 @@ zx_status_t rebind_display(bool use_all) {
   }
 }
 
-static zx_status_t handle_display_changed(
-    fuchsia_hardware_display_ControllerDisplaysChangedEvent* evt) {
-  for (unsigned i = 0; i < evt->added.count; i++) {
-    fuchsia_hardware_display_Info* info =
-        reinterpret_cast<fuchsia_hardware_display_Info*>(evt->added.data) + i;
-    fuchsia_hardware_display_Mode* mode =
-        reinterpret_cast<fuchsia_hardware_display_Mode*>(info->modes.data);
-    int32_t pixel_format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
-    zx_status_t status = handle_display_added(info, mode, pixel_format);
+static zx_status_t handle_displays_changed(fidl::VectorView<fhd::Info> added,
+                                           fidl::VectorView<uint64_t> removed) {
+  for (auto& display : added) {
+    zx_status_t status = handle_display_added(&display);
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  for (unsigned i = 0; i < evt->removed.count; i++) {
-    handle_display_removed(reinterpret_cast<int32_t*>(evt->removed.data)[i]);
+  for (auto& display_id : removed) {
+    handle_display_removed(display_id);
   }
 
   return rebind_display(true);
 }
 
-#if !BUILD_FOR_DISPLAY_TEST
-static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
   if (signals & ZX_CHANNEL_PEER_CLOSED) {
     printf("vc: Displays lost\n");
     while (!list_is_empty(&display_list)) {
@@ -623,7 +467,8 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
     }
 
     zx_handle_close(dc_device);
-    zx_handle_close(dc_ph.handle);
+    dc_ph.handle = ZX_HANDLE_INVALID;
+    dc_client.reset();
 
     vc_find_display_controller();
 
@@ -631,38 +476,33 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
   }
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
 
-  zx_status_t status;
-  uint32_t actual_bytes, actual_handles;
-  uint8_t fidl_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  if ((status = zx_channel_read(dc_ph.handle, 0, fidl_buffer, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0,
-                                &actual_bytes, &actual_handles)) != ZX_OK) {
-    printf("vc: Error reading display message %d\n", status);
-    return ZX_OK;
-  }
-
-  if (decode_message(fidl_buffer, actual_bytes) != ZX_OK) {
-    return ZX_OK;
-  }
-
-  fidl_message_header_t* hdr = (fidl_message_header_t*)fidl_buffer;
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-  uint64_t ordinal = hdr->ordinal;
-  if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
-      ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
-    handle_display_changed(
-        reinterpret_cast<fuchsia_hardware_display_ControllerDisplaysChangedEvent*>(fidl_buffer));
-  } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
-             ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
-    auto evt = reinterpret_cast<fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*>(
-        fidl_buffer);
-    handle_ownership_change(evt);
-  } else {
-    printf("vc: Unknown display callback message %lu\n", ordinal);
-  }
-
-  return ZX_OK;
+  return dc_client->HandleEvents(fhd::Controller::EventHandlers{
+      .displays_changed =
+          [](fidl::VectorView<fhd::Info> added, fidl::VectorView<uint64_t> removed) {
+            handle_displays_changed(added, removed);
+            return ZX_OK;
+          },
+      .vsync = [](uint64_t display_id, uint64_t timestamp,
+                  fidl::VectorView<uint64_t> images) { return ZX_OK; },
+      .client_ownership_change =
+          [](bool has_ownership) {
+            handle_ownership_change(has_ownership);
+            return ZX_OK;
+          },
+      .unknown =
+          []() {
+            printf("vc: Unknown display callback message\n");
+            return ZX_OK;
+          }});
 }
+
+#if BUILD_FOR_DISPLAY_TEST
+void initialize_display_channel(zx::channel channel) {
+  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(channel));
+
+  dc_ph.handle = dc_client->channel().get();
+}
+#endif  // BUILD_FOR_DISPLAY_TEST
 
 static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
@@ -685,29 +525,30 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
     return status;
   }
 
-  zx::channel dc_server, dc_client;
-  status = zx::channel::create(0, &dc_server, &dc_client);
+  zx::channel dc_server, dc_client_channel;
+  status = zx::channel::create(0, &dc_server, &dc_client_channel);
   if (status != ZX_OK) {
     return status;
   }
 
   fzl::FdioCaller caller(std::move(fd));
-  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenVirtconController(
-      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+  auto open_rsp = fhd::Provider::Call::OpenVirtconController(
+      caller.channel(), std::move(device_server), std::move(dc_server));
+  if (!open_rsp.ok()) {
+    return open_rsp.status();
   }
-  if (status != ZX_OK) {
-    return status;
+  if (open_rsp->s != ZX_OK) {
+    return open_rsp->s;
   }
 
   dc_device = device_client.release();
   zx_handle_close(dc_ph.handle);
-  dc_ph.handle = dc_client.release();
+  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel));
 
-  status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr
-                           ? fuchsia_hardware_display_VirtconMode_FALLBACK
-                           : fuchsia_hardware_display_VirtconMode_INACTIVE);
+  dc_ph.handle = dc_client->channel().get();
+
+  status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ? fhd::VirtconMode::FALLBACK
+                                                                 : fhd::VirtconMode::INACTIVE);
   if (status != ZX_OK) {
     printf("vc: Failed to set initial ownership %d\n", status);
     vc_find_display_controller();
@@ -724,7 +565,11 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
 }
 
 static zx_status_t vc_dc_dir_event_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+#if BUILD_FOR_DISPLAY_TEST
+  return ZX_ERR_NOT_SUPPORTED;
+#else
   return handle_device_dir_event(ph, signals, vc_dc_event);
+#endif
 }
 
 static void vc_find_display_controller() {
@@ -745,6 +590,7 @@ static void vc_find_display_controller() {
     return;
   }
 
+  ZX_DEBUG_ASSERT(dc_ph.handle == ZX_HANDLE_INVALID);
   dc_ph.handle = client.release();
   dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
   dc_ph.func = vc_dc_dir_event_cb;
@@ -764,4 +610,3 @@ bool vc_display_init() {
 
   return true;
 }
-#endif  // !BUILD_FOR_DISPLAY_TEST
