@@ -136,7 +136,7 @@ zx_status_t WriteNewHeader(int file_desc, fuchsia::media::AudioSampleFormat samp
   lseek(file_desc, 0, SEEK_SET);
   RiffChunkHeader riff_header;
   riff_header.four_cc = RIFF_FOUR_CC;
-  riff_header.length = kWavHeaderOverhead;
+  riff_header.length = sizeof(WavHeader) + sizeof(RiffChunkHeader);
   riff_header.FixupEndian();
   if (write(file_desc, &riff_header, sizeof(riff_header)) < 0) {
     return ZX_ERR_IO;
@@ -175,11 +175,11 @@ zx_status_t WriteNewHeader(int file_desc, fuchsia::media::AudioSampleFormat samp
 
 // This function is used to update the 'length' fields in the WAV file header,
 // after audio data has been written into the file. Specifically, it updates the
-// total length of the 'RIFF' chunk (which includes the headers and all audio
-// data), as well as the length of the 'data' subchunk (which includes only the
-// audio data). Following this call, the file's write cursor is moved to the end
-// of any previously-written audio data, so that subsequent audio writes will be
-// correctly appended to the file.
+// total length of the 'RIFF' chunk (which includes the size of rest of the
+// headers and all audio data), as well as the length of the 'data' subchunk
+// (which includes only the audio data). Following this call, the file's write
+// cursor is moved to the end of any previously-written audio data, so that
+// subsequent audio writes will be correctly appended to the file.
 // This private function assumes the given file_desc is valid.
 zx_status_t UpdateHeaderLengths(int file_desc, size_t payload_len) {
   if (payload_len > (std::numeric_limits<uint32_t>::max() - kWavHeaderOverhead)) {
@@ -188,7 +188,8 @@ zx_status_t UpdateHeaderLengths(int file_desc, size_t payload_len) {
 
   uint32_t file_offset = offsetof(RiffChunkHeader, length);
   lseek(file_desc, file_offset, SEEK_SET);
-  auto new_length = htole32(static_cast<uint32_t>(kWavHeaderOverhead + payload_len));
+  auto new_length =
+      htole32(static_cast<uint32_t>(sizeof(WavHeader) + sizeof(RiffChunkHeader) + payload_len));
   if (write(file_desc, &new_length, sizeof(new_length)) < 0) {
     return ZX_ERR_IO;
   }

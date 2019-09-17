@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/audio_wav_writer_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}
