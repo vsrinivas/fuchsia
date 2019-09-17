@@ -592,9 +592,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
-  visible_stories_handler_ = std::make_unique<VisibleStoriesHandler>();
   AtEnd(Reset(&focus_handler_));
-  AtEnd(Reset(&visible_stories_handler_));
 }
 
 // TODO(MI4-2416): pass additional configuration.
@@ -806,11 +804,6 @@ void SessionmgrImpl::GetPresentation(
 void SessionmgrImpl::GetStoryProvider(
     fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   story_provider_impl_->Connect(std::move(request));
-}
-
-void SessionmgrImpl::GetVisibleStoriesController(
-    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request) {
-  visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
 void SessionmgrImpl::Logout() { session_context_->Logout(); }

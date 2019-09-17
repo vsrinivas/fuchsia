@@ -113,17 +113,4 @@ void FocusHandler::OnPageChange(const std::string& /*key*/, const std::string& v
   }
 }
 
-VisibleStoriesHandler::VisibleStoriesHandler() {}
-
-VisibleStoriesHandler::~VisibleStoriesHandler() = default;
-
-void VisibleStoriesHandler::AddControllerBinding(
-    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request) {
-  controller_bindings_.AddBinding(this, std::move(request));
-}
-
-void VisibleStoriesHandler::Set(fidl::VectorPtr<std::string> story_ids) {
-  visible_stories_ = std::move(story_ids);
-}
-
 }  // namespace modular

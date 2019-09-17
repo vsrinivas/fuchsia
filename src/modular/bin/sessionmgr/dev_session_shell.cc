@@ -54,7 +54,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     session_shell_context_->GetFocusController(focus_controller_.NewRequest());
-    session_shell_context_->GetVisibleStoriesController(visible_stories_controller_.NewRequest());
 
     component_context->outgoing()->AddPublicService(session_shell_bindings_.GetHandler(this));
 
@@ -121,9 +120,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     story_controller_->RequestStart();
     focus_controller_->Set(story_id);
-    std::vector<std::string> visible_stories;
-    visible_stories.push_back(story_id.value_or(""));
-    visible_stories_controller_->Set(std::move(visible_stories));
 
     if (!settings_.root_link.empty()) {
       fuchsia::modular::LinkPtr root;
@@ -181,7 +177,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::FocusControllerPtr focus_controller_;
-  fuchsia::modular::VisibleStoriesControllerPtr visible_stories_controller_;
 
   fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
 

@@ -124,8 +124,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
-  void GetVisibleStoriesController(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request) override;
   void Logout() override;
   void Shutdown();
 
@@ -244,7 +242,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;
 
   std::unique_ptr<FocusHandler> focus_handler_;
-  std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
   // Component context given to session shell so that it can run agents and
   // create message queues.

@@ -70,8 +70,3 @@ struct FocusInfo {
     /// changed. 0 if no focus has ever been set for device `device_id`.
     uint64 last_focus_change_timestamp;
 };
-
-/// Implemented by sessionmgr. Given to session shell through its namespace.
-protocol VisibleStoriesController {
-    Set(vector<string>? visible_story_ids);
-};

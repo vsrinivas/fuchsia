@@ -63,25 +63,6 @@ class FocusHandler : fuchsia::modular::FocusProvider,
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };
 
-class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesController {
- public:
-  VisibleStoriesHandler();
-  ~VisibleStoriesHandler() override;
-
-  void AddControllerBinding(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request);
-
- private:
-  // |fuchsia::modular::VisibleStoriesController|
-  void Set(fidl::VectorPtr<std::string> story_ids) override;
-
-  fidl::BindingSet<fuchsia::modular::VisibleStoriesController> controller_bindings_;
-
-  fidl::VectorPtr<std::string> visible_stories_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(VisibleStoriesHandler);
-};
-
 }  // namespace modular
 
 #endif  // SRC_MODULAR_BIN_SESSIONMGR_FOCUS_H_
