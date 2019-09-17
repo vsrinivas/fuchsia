@@ -56,7 +56,7 @@ impl KnownEssStore {
         tmp_storage_path: PathBuf,
     ) -> Result<Self, failure::Error> {
         let ess_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
-            Ok(file) => match serde_json::from_reader(file) {
+            Ok(file) => match serde_json::from_reader(io::BufReader::new(file)) {
                 Ok(list) => list,
                 Err(e) => {
                     error!(
@@ -112,7 +112,7 @@ impl KnownEssStore {
         for (ssid, ess) in guard.iter() {
             list.push(EssJsonWrite { ssid: &ssid[..], password: &ess.password[..] })
         }
-        serde_json::to_writer(&temp_file.file, &list).map_err(|e| {
+        serde_json::to_writer(io::BufWriter::new(&temp_file.file), &list).map_err(|e| {
             format_err!("Failed to serialize JSON into {}: {}", self.tmp_storage_path.display(), e)
         })?;
         temp_file.close_and_rename(&self.storage_path).map_err(|e| {
