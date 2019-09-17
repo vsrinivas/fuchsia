@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use crate::error::*;
+use crate::state::{Commit, CommitId, Fingerprint, ObjectId, PageId, Token};
 use fidl::encoding::Decodable;
-use fidl_fuchsia_ledger_cloud::{self as cloud, Status};
+use fidl_fuchsia_ledger_cloud as cloud;
 use fuchsia_zircon::Vmo;
 use std::convert::{TryFrom, TryInto};
-
-use crate::state::{CloudError, Commit, CommitId, Fingerprint, ObjectId, PageId, Token};
 
 impl From<Vec<u8>> for Fingerprint {
     fn from(bytes: Vec<u8>) -> Fingerprint {
@@ -28,25 +27,8 @@ impl PageId {
     }
 }
 
-/// Reads bytes from a fidl buffer into `result`.
-pub fn read_buffer(buffer: &fidl_fuchsia_mem::Buffer, output: &mut Vec<u8>) -> Result<(), Error> {
-    let size = buffer.size;
-    let vmo = &buffer.vmo;
-    output.resize(size as usize, 0);
-    vmo.read(output.as_mut_slice(), 0)?;
-    Ok(())
-}
-
-/// Writes bytes to a fidl buffer.
-pub fn write_buffer(data: &[u8]) -> Result<fidl_fuchsia_mem::Buffer, Error> {
-    let size = data.len() as u64;
-    let vmo = Vmo::create(size)?;
-    vmo.write(data, 0)?;
-    Ok(fidl_fuchsia_mem::Buffer { vmo, size })
-}
-
 impl TryFrom<Option<Box<fidl_fuchsia_ledger_cloud::PositionToken>>> for Token {
-    type Error = ();
+    type Error = ClientError;
     fn try_from(
         val: Option<Box<fidl_fuchsia_ledger_cloud::PositionToken>>,
     ) -> Result<Self, Self::Error> {
@@ -54,7 +36,9 @@ impl TryFrom<Option<Box<fidl_fuchsia_ledger_cloud::PositionToken>>> for Token {
             None => Ok(Token(0)),
             Some(t) => match t.opaque_id.as_slice().try_into().map(usize::from_le_bytes) {
                 Ok(v) => Ok(Token(v)),
-                Err(_) => Err(()),
+                Err(e) => {
+                    Err(e.client_error(Status::ArgumentError).with_explanation("invalid token"))
+                }
             },
         }
     }
@@ -68,33 +52,39 @@ impl Into<fidl_fuchsia_ledger_cloud::PositionToken> for Token {
     }
 }
 
-impl From<CloudError> for Status {
-    fn from(e: CloudError) -> Self {
-        match e {
-            CloudError::ObjectNotFound(_) | CloudError::FingerprintNotFound(_) => Status::NotFound,
-            CloudError::InvalidToken => Status::ArgumentError,
-            CloudError::ParseError => Status::ParseError,
-        }
-    }
+/// Reads bytes from a fidl buffer into `result`.
+pub fn read_buffer(
+    buffer: &fidl_fuchsia_mem::Buffer,
+    output: &mut Vec<u8>,
+) -> Result<(), ClientError> {
+    let size = buffer.size;
+    let vmo = &buffer.vmo;
+    output.resize(size as usize, 0);
+    vmo.read(output.as_mut_slice(), 0).map_err(|err| {
+        err.client_error(Status::ArgumentError)
+            .with_explanation("unable to read from fuchsia.mem.Buffer")
+    })
 }
 
-impl CloudError {
-    /// Converts a Result<(), CloudError> to a Ledger status.
-    pub fn status(res: Result<(), Self>) -> Status {
-        match res {
-            Ok(()) => Status::Ok,
-            Err(s) => Status::from(s),
-        }
-    }
+/// Writes bytes to a fidl buffer.
+pub fn write_buffer(data: &[u8]) -> fidl_fuchsia_mem::Buffer {
+    let size = data.len() as u64;
+    let vmo = Vmo::create(size).expect("write_buffer: unable to allocate VMO");
+    vmo.write(data, 0).expect("write_buffer: unable to write to VMO");
+    fidl_fuchsia_mem::Buffer { vmo, size }
 }
 
 impl TryFrom<cloud::Commit> for Commit {
-    type Error = CloudError;
+    type Error = ClientError;
 
-    fn try_from(commit: cloud::Commit) -> Result<Commit, CloudError> {
+    fn try_from(commit: cloud::Commit) -> Result<Self, Self::Error> {
         Ok(Commit {
-            id: CommitId(commit.id.ok_or(CloudError::ParseError)?),
-            data: commit.data.ok_or(CloudError::ParseError)?,
+            id: CommitId(commit.id.ok_or(
+                client_error(Status::ArgumentError).with_explanation("missing commit id"),
+            )?),
+            data: commit.data.ok_or(
+                client_error(Status::ArgumentError).with_explanation("missing commit data"),
+            )?,
         })
     }
 }
@@ -115,17 +105,21 @@ impl Commit {
         let mut serialized =
             cloud::Commits { commits: commits.into_iter().map(cloud::Commit::from).collect() };
         fidl::encoding::with_tls_encoded(&mut serialized, |data, _handles| {
-            write_buffer(data.as_slice())
+            Ok::<_, fidl::Error>(write_buffer(data.as_slice()))
         })
         .expect("Failed to write FIDL-encoded commit data to buffer")
     }
 
-    pub fn deserialize_vec(buf: &fidl_fuchsia_mem::Buffer) -> Result<Vec<Commit>, CloudError> {
+    pub fn deserialize_vec(buf: &fidl_fuchsia_mem::Buffer) -> Result<Vec<Commit>, ClientError> {
         fidl::encoding::with_tls_coding_bufs(|data, _handles| {
-            read_buffer(buf, data).map_err(|_| CloudError::ParseError)?;
+            read_buffer(buf, data)?;
             let mut serialized_commits = cloud::Commits { commits: vec![] };
-            fidl::encoding::Decoder::decode_into(&data, &mut [], &mut serialized_commits)
-                .map_err(|_| CloudError::ParseError)?;
+            fidl::encoding::Decoder::decode_into(&data, &mut [], &mut serialized_commits).map_err(
+                |err| {
+                    err.client_error(Status::ArgumentError)
+                        .with_explanation("couldn't decode commits from FIDL data")
+                },
+            )?;
             serialized_commits.commits.into_iter().map(Self::try_from).collect()
         })
     }

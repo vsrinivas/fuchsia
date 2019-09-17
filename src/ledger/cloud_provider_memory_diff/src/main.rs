@@ -9,6 +9,7 @@ use fidl_fuchsia_ledger_cloud::CloudProviderRequestStream;
 use fidl_fuchsia_ledger_cloud_test::CloudControllerFactoryRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_syslog;
 use futures::prelude::*;
 
 use cloud_provider_memory_diff_lib::{CloudControllerFactory, CloudFactory};
@@ -20,6 +21,8 @@ enum IncomingServices {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init()?;
+
     let cloud_factory = CloudFactory::new();
     let mut fs = ServiceFs::new_local();
     fs.dir("svc")

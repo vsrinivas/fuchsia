@@ -17,6 +17,7 @@ use std::cell::{Ref, RefCell};
 use std::convert::{Into, TryFrom};
 use std::rc::Rc;
 
+use crate::error::*;
 use crate::filter::{self, RequestFilter};
 use crate::serialization::*;
 use crate::state::*;
@@ -95,9 +96,13 @@ impl DeviceSetSession {
         let mut storage = self.shared.storage.borrow_mut();
         let device_set = storage.get_device_set();
         match req {
-            DeviceSetRequest::CheckFingerprint { fingerprint, responder } => responder.send(
-                CloudError::status(device_set.check_fingerprint(&Fingerprint::from(fingerprint))),
-            ),
+            DeviceSetRequest::CheckFingerprint { fingerprint, responder } => {
+                responder.send(if device_set.check_fingerprint(&Fingerprint::from(fingerprint)) {
+                    Status::Ok
+                } else {
+                    Status::NotFound
+                })
+            }
             DeviceSetRequest::SetFingerprint { fingerprint, responder } => {
                 device_set.set_fingerprint(Fingerprint::from(fingerprint));
                 responder.send(Status::Ok)
@@ -109,11 +114,11 @@ impl DeviceSetSession {
             DeviceSetRequest::SetWatcher { fingerprint, watcher: watcher_channel, responder } => {
                 let proxy = watcher_channel.into_proxy()?;
                 match device_set.watch(&Fingerprint::from(fingerprint)) {
-                    Err(e) => {
-                        responder.send(Status::from(e))?;
+                    None => {
+                        responder.send(Status::NotFound)?;
                         proxy.on_error(Status::NotFound)
                     }
-                    Ok(fut) => {
+                    Some(fut) => {
                         self.watcher.replace((fut.fuse(), proxy));
                         responder.send(Status::Ok)
                     }
@@ -213,9 +218,10 @@ impl PageSession {
                 // Release the storage before await-ing.
                 std::mem::drop(exclusive_storage);
 
-                match 
-                    proxy.on_new_commits(&mut CommitPack { buffer: buf }, &mut position.into(),)
-                .await {
+                match proxy
+                    .on_new_commits(&mut CommitPack { buffer: buf }, &mut position.into())
+                    .await
+                {
                     Ok(()) => {}
                     Err(_) => return (), // Assume the connection closed.
                 }
@@ -229,8 +235,8 @@ impl PageSession {
         match request {
             PageCloudRequest::AddCommits { commits, responder } => {
                 match Commit::deserialize_vec(&commits.buffer) {
-                    Err(e) => responder.send(Status::from(e)),
-                    Ok(commits) => responder.send(CloudError::status(page.add_commits(commits))),
+                    Err(e) => responder.send(e.report()),
+                    Ok(commits) => responder.send(page.add_commits(commits).report_if_error()),
                 }
             }
             PageCloudRequest::GetCommits { min_position_token, responder } => {
@@ -257,20 +263,16 @@ impl PageSession {
                 let mut data = Vec::new();
                 match read_buffer(&buffer, &mut data) {
                     Err(_) => responder.send(Status::ArgumentError),
-                    Ok(()) => responder.send(CloudError::status(
-                        page.add_object(ObjectId::from(id), Object { data }),
-                    )),
+                    Ok(()) => responder.send(
+                        page.add_object(ObjectId::from(id), Object { data }).report_if_error(),
+                    ),
                 }
             }
             PageCloudRequest::GetObject { id, responder } => {
                 match page.get_object(&ObjectId(id.clone())) {
-                    Err(e) => responder.send(Status::from(e), None),
-                    Ok(obj) => responder.send(
-                        Status::Ok,
-                        Some(OutOfLine(
-                            &mut write_buffer(obj.data.as_slice()).expect("Failed to write buffer"),
-                        )),
-                    ),
+                    Err(e) => responder.send(e.report(), None),
+                    Ok(obj) => responder
+                        .send(Status::Ok, Some(OutOfLine(&mut write_buffer(obj.data.as_slice())))),
                 }
             }
             PageCloudRequest::SetWatcher {
@@ -514,15 +516,15 @@ mod tests {
         let proxy = client.into_proxy().unwrap();
         let client_fut = async move {
             let fingerprint: Vec<u8> = vec![1, 2, 3];
-            let status =
-                proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
+            let status = proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
             assert_eq!(status, Status::Ok);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<DeviceSetWatcherMarker>().unwrap();
-            let status =
-                proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client).await
-                    .unwrap();
+            let status = proxy
+                .set_watcher(&mut fingerprint.clone().into_iter(), watcher_client)
+                .await
+                .unwrap();
             assert_eq!(status, Status::Ok);
 
             // The watcher will stay still until the cloud provider gets disconnected.
@@ -538,15 +540,15 @@ mod tests {
             assert!(message.is_none());
 
             // Requests return NetworkError.
-            let status =
-                proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
+            let status = proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
             assert_eq!(status, Status::NetworkError);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<DeviceSetWatcherMarker>().unwrap();
-            let status =
-                proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client).await
-                    .unwrap();
+            let status = proxy
+                .set_watcher(&mut fingerprint.clone().into_iter(), watcher_client)
+                .await
+                .unwrap();
             assert_eq!(status, Status::NetworkError);
 
             // The watcher also gets NetworkError.

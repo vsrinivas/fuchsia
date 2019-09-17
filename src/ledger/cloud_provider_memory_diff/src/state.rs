@@ -3,22 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::error::*,
     crate::utils::{Signal, SignalWatcher},
     std::collections::{HashMap, HashSet},
 };
-
-/// Representation of errors sent to the client.
-#[derive(PartialEq, Eq, Hash, Debug)]
-pub enum CloudError {
-    /// The requested object was not found.
-    ObjectNotFound(ObjectId),
-    /// The requested fingerprint is not present.
-    FingerprintNotFound(Fingerprint),
-    /// The token is invalid.
-    InvalidToken,
-    /// Data is malformed.
-    ParseError,
-}
 
 /// A wrapper for a position in the commit log.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -93,17 +81,18 @@ impl PageCloud {
     }
 
     /// Returns the given object, or ObjectNotFound.
-    pub fn get_object(&self, id: &ObjectId) -> Result<&Object, CloudError> {
+    pub fn get_object(&self, id: &ObjectId) -> Result<&Object, ClientError> {
         if let Some(object) = self.objects.get(id) {
             Ok(object)
         } else {
-            Err(CloudError::ObjectNotFound(id.clone()))
+            Err(client_error(Status::NotFound)
+                .with_explanation(format!("Object not found: {:?}", id)))
         }
     }
 
     /// Adds an object to the cloud. The object may already be
     /// present.
-    pub fn add_object(&mut self, id: ObjectId, object: Object) -> Result<(), CloudError> {
+    pub fn add_object(&mut self, id: ObjectId, object: Object) -> Result<(), ClientError> {
         self.objects.insert(id, object);
         Ok(())
     }
@@ -111,7 +100,7 @@ impl PageCloud {
     /// Atomically adds a series a commits to the cloud and updates
     /// the commit log. Commits that were already present are not
     /// re-added to the log.
-    pub fn add_commits(&mut self, commits: Vec<Commit>) -> Result<(), CloudError> {
+    pub fn add_commits(&mut self, commits: Vec<Commit>) -> Result<(), ClientError> {
         let mut will_insert = Vec::new();
 
         for commit in commits.iter() {
@@ -132,7 +121,8 @@ impl PageCloud {
         Ok(())
     }
 
-    /// Returns a future that will wake up on new commits, or None if position is not after the latest commit.
+    /// Returns a future that will wake up on new commits, or None if
+    /// position is not after the latest commit.
     pub fn watch(&self, position: Token) -> Option<PageCloudWatcher> {
         if position.0 < self.commit_log.len() {
             None
@@ -188,14 +178,9 @@ impl DeviceSet {
         self.fingerprints.insert(fingerprint);
     }
 
-    /// Checks that a fingerprint is present in the cloud, or returns
-    /// FingerprintNotFound.
-    pub fn check_fingerprint(&self, fingerprint: &Fingerprint) -> Result<(), CloudError> {
-        if self.fingerprints.contains(fingerprint) {
-            Ok(())
-        } else {
-            Err(CloudError::FingerprintNotFound(fingerprint.clone()))
-        }
+    /// Checks that a fingerprint is present in the cloud.
+    pub fn check_fingerprint(&self, fingerprint: &Fingerprint) -> bool {
+        self.fingerprints.contains(fingerprint)
     }
 
     /// Erases all fingerprints and calls the watchers.
@@ -206,11 +191,11 @@ impl DeviceSet {
 
     /// If `fingerprint` is present on the cloud, returns a future that
     /// completes when the cloud is erased. Otherwise, returns
-    /// `FingerprintNotFound`.
-    pub fn watch(&self, fingerprint: &Fingerprint) -> Result<DeviceSetWatcher, CloudError> {
+    /// `None`.
+    pub fn watch(&self, fingerprint: &Fingerprint) -> Option<DeviceSetWatcher> {
         if !self.fingerprints.contains(fingerprint) {
-            return Err(CloudError::FingerprintNotFound(fingerprint.clone()));
+            return None;
         }
-        Ok(self.erasure_signal.watch())
+        Some(self.erasure_signal.watch())
     }
 }

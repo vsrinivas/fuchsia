@@ -6,6 +6,7 @@
 #![recursion_limit = "256"]
 
 mod controller;
+mod error;
 mod filter;
 mod serialization;
 mod session;
