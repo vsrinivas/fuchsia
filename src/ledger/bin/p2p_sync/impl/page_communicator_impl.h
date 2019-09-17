@@ -111,6 +111,9 @@ class PageCommunicatorImpl : public PageCommunicator,
   // Sends a single message to all interested devices.
   void SendToInterestedDevices(convert::ExtendedStringView data);
 
+  // If the page is merged, send the head to |device|.
+  void SendHead(const p2p_provider::P2PClientId& device);
+
   // Map of pending requests for objects.
   callback::AutoCleanableMap<storage::ObjectIdentifier, PendingObjectRequestHolder>
       pending_object_requests_;

@@ -11,6 +11,7 @@
 #include "flatbuffers/flatbuffers.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -228,6 +229,16 @@ void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
           BuildWatchStartBuffer(&buffer);
           mesh_->Send(source, buffer);
         }
+
+        // If we have a single head commit, send it over so the peer can start downloading its
+        // backlog.
+        SendHead(source);
+
+        // Now that the client is marked as interested, process the commits it pushed.
+        auto batch_it = pending_commit_batches_.find(source);
+        if (batch_it != pending_commit_batches_.end()) {
+          batch_it->second.MarkPeerReady();
+        }
       });
       break;
     }
@@ -309,6 +320,9 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
       } else {
         auto it_pair = pending_commit_batches_.try_emplace(source, source, this, storage_);
         it_pair.first->second.AddToBatch(std::move(commits));
+        if (interested_devices_.find(source) != interested_devices_.end()) {
+          it_pair.first->second.MarkPeerReady();
+        }
       }
       break;
     }
@@ -661,6 +675,27 @@ void PageCommunicatorImpl::SendToInterestedDevices(convert::ExtendedStringView d
     auto device = it++;
     mesh_->Send(*device, data);
   }
+}
+
+void PageCommunicatorImpl::SendHead(const p2p_provider::P2PClientId& device) {
+  std::vector<std::unique_ptr<const storage::Commit>> head_commits;
+  ledger::Status status = storage_->GetHeadCommits(&head_commits);
+  if (status != ledger::Status::OK) {
+    return;
+  }
+  FXL_DCHECK(head_commits.size() > 0);
+  if (head_commits.size() != 1) {
+    // We'll wait for the merge to happen, and send the head when storage notifies us.
+    return;
+  }
+  if (head_commits[0]->GetId() == storage::kFirstPageCommitId) {
+    // We have nothing to send.
+    return;
+  }
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildCommitBuffer(&buffer, head_commits);
+
+  mesh_->Send(device, buffer);
 }
 
 }  // namespace p2p_sync

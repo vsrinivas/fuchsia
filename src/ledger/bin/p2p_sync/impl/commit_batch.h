@@ -44,10 +44,22 @@ class CommitBatch {
   // request additional commits through the |Delegate| if needed.
   void AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits);
 
+  // Marks the peer as ready: commits may now be added to the storage.
+  //
+  // We have to wait until a peer is marked as "interested" to add the commits it sent us:
+  // otherwise, we will try to request the objects referenced by the commits, but we will not
+  // request them from the peer that sent us the commits, so it is possible they are not found and
+  // adding the commits fails.
+  void MarkPeerReady();
+
  private:
+  // Adds the commits to local storage if possible.
+  void AddCommits();
+
   p2p_provider::P2PClientId const device_;
   Delegate* const delegate_;
   storage::PageStorage* const storage_;
+  bool peer_is_ready_ = false;
   std::list<storage::PageStorage::CommitIdAndBytes> commits_;
   fit::closure on_empty_;
 

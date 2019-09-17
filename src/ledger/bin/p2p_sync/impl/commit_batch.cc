@@ -25,6 +25,20 @@ void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes>
   // this information here.
   commits_.insert(commits_.begin(), std::make_move_iterator(new_commits.begin()),
                   std::make_move_iterator(new_commits.end()));
+  AddCommits();
+}
+
+void CommitBatch::MarkPeerReady() {
+  if (!peer_is_ready_) {
+    peer_is_ready_ = true;
+    AddCommits();
+  }
+}
+
+void CommitBatch::AddCommits() {
+  if (commits_.empty() || !peer_is_ready_) {
+    return;
+  }
 
   std::vector<storage::PageStorage::CommitIdAndBytes> out;
   out.reserve(commits_.size());
