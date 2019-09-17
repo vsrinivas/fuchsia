@@ -15,6 +15,7 @@ library("devmgr-integration-test") {
     "file-wait.cc",
     "launcher.cc",
   ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
     "$zx/system/ulib/devmgr-launcher:headers",

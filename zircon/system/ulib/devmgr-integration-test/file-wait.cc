@@ -15,6 +15,7 @@ namespace devmgr_integration_test {
 
 // Waits for |file| to appear in |dir|, and opens it when it does.  Times out if
 // the deadline passes.
+__EXPORT
 zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out) {
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
     auto file = reinterpret_cast<const char*>(cookie);
@@ -92,6 +93,7 @@ zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl:
 }  // namespace
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
+__EXPORT
 zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out) {
   char path_copy[PATH_MAX];
   if (strlen(path) >= sizeof(path_copy)) {

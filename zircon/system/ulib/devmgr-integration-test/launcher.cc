@@ -163,6 +163,7 @@ zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction g
 
 namespace devmgr_integration_test {
 
+__EXPORT
 devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
   devmgr_launcher::Args args;
   args.sys_device_driver = kSysdevDriver;
@@ -171,6 +172,7 @@ devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
   return args;
 }
 
+__EXPORT
 IsolatedDevmgr::~IsolatedDevmgr() {
   // Destroy the isolated devmgr
   if (job_.is_valid()) {
@@ -178,6 +180,7 @@ IsolatedDevmgr::~IsolatedDevmgr() {
   }
 }
 
+__EXPORT
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
   zx::channel svc_client, svc_server;
   zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
