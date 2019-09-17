@@ -52,6 +52,7 @@ enum class SyscallType {
   kUint64ArrayHexa,
   kUint128Hexa,
   kUint128ArrayHexa,
+  kBtiPerm,
   kCachePolicy,
   kClock,
   kDuration,
@@ -62,6 +63,8 @@ enum class SyscallType {
   kGpAddr,
   kHandle,
   kInfoMapsType,
+  kInterruptFlags,
+  kIommuType,
   kKoid,
   kKtraceControlAction,
   kMonotonicTime,
@@ -112,12 +115,15 @@ enum class SyscallReturnType {
   kUint64,
 };
 
+void BtiPermName(uint32_t perm, std::ostream& os);
 void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
 void ExceptionStateName(uint32_t state, std::ostream& os);
 void FeatureKindName(uint32_t feature_kind, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
+void InterruptFlagsName(uint32_t flags, std::ostream& os);
+void IommuTypeName(uint32_t type, std::ostream& os);
 void KtraceControlActionName(uint32_t action, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);

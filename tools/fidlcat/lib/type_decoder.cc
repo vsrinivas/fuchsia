@@ -7,6 +7,7 @@
 #include <zircon/system/public/zircon/features.h>
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
+#include <zircon/system/public/zircon/syscalls/iommu.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
 #include <zircon/system/public/zircon/syscalls/pci.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
@@ -20,6 +21,25 @@
 #include <ostream>
 
 namespace fidlcat {
+
+#define BtiPermNameCase(name)      \
+  if ((perm & (name)) == (name)) { \
+    os << separator << #name;      \
+    separator = " | ";             \
+  }
+
+void BtiPermName(uint32_t perm, std::ostream& os) {
+  if (perm == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
+  BtiPermNameCase(ZX_BTI_PERM_READ);
+  BtiPermNameCase(ZX_BTI_PERM_WRITE);
+  BtiPermNameCase(ZX_BTI_PERM_EXECUTE);
+  BtiPermNameCase(ZX_BTI_COMPRESS);
+  BtiPermNameCase(ZX_BTI_CONTIGUOUS);
+}
 
 #define CachePolicyNameCase(name) \
   case name:                      \
@@ -115,6 +135,47 @@ void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os) {
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_ASPACE);
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_VMAR);
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_MAPPING);
+    default:
+      os << type;
+      return;
+  }
+}
+
+#define InterruptFlagsCase(name) \
+  case name:                     \
+    os << #name;                 \
+    break
+
+#define InterruptFlagsNameFlag(name) \
+  if ((flags & (name)) == (name)) {  \
+    os << " | " << #name;            \
+  }
+
+void InterruptFlagsName(uint32_t flags, std::ostream& os) {
+  switch (flags & ZX_INTERRUPT_MODE_MASK) {
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_DEFAULT);
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_EDGE_LOW);
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_EDGE_HIGH);
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_LEVEL_LOW);
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_LEVEL_HIGH);
+    InterruptFlagsCase(ZX_INTERRUPT_MODE_EDGE_BOTH);
+    default:
+      os << (flags & ZX_INTERRUPT_MODE_MASK);
+      break;
+  }
+  InterruptFlagsNameFlag(ZX_INTERRUPT_REMAP_IRQ);
+  InterruptFlagsNameFlag(ZX_INTERRUPT_VIRTUAL);
+}
+
+#define IommuTypeNameCase(name) \
+  case name:                    \
+    os << #name;                \
+    return
+
+void IommuTypeName(uint32_t type, std::ostream& os) {
+  switch (type) {
+    IommuTypeNameCase(ZX_IOMMU_TYPE_DUMMY);
+    IommuTypeNameCase(ZX_IOMMU_TYPE_INTEL);
     default:
       os << type;
       return;
@@ -834,6 +895,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
     case SyscallType::kUint128ArrayHexa:
       os << ":" << colors.green << "uint128[]" << colors.reset << ": ";
       break;
+    case SyscallType::kBtiPerm:
+      os << ":" << colors.green << "zx_bti_perm_t" << colors.reset << ": ";
+      break;
     case SyscallType::kCachePolicy:
       os << ":" << colors.green << "zx_cache_policy_t" << colors.reset << ": ";
       break;
@@ -864,6 +928,12 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kInfoMapsType:
       os << ":" << colors.green << "zx_info_maps_type_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kInterruptFlags:
+      os << ":" << colors.green << "zx_interrupt_flags_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kIommuType:
+      os << ":" << colors.green << "zx_iommu_type_t" << colors.reset << ": ";
       break;
     case SyscallType::kKoid:
       os << ":" << colors.green << "zx_koid_t" << colors.reset << ": ";

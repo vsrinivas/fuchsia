@@ -9,6 +9,7 @@ if (current_toolchain == host_toolchain) {
     testonly = true
 
     sources = [
+      "bti_test.cc",
       "cache_test.cc",
       "channel_test.cc",
       "clock_test.cc",
@@ -18,12 +19,17 @@ if (current_toolchain == host_toolchain) {
       "event_test.cc",
       "exception_test.cc",
       "fifo_test.cc",
+      "framebuffer_test.cc",
       "futex_test.cc",
       "handle_test.cc",
       "interception_workflow_test.cc",
+      "interrupt_test.cc",
+      "iommu_test.cc",
+      "ioports_test.cc",
       "job_test.cc",
       "object_test.cc",
       "pci_test.cc",
+      "pmt_test.cc",
       "port_test.cc",
       "process_test.cc",
       "profile_test.cc",

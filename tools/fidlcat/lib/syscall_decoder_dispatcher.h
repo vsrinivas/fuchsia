@@ -239,6 +239,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
+    case SyscallType::kBtiPerm:
+      os << colors.blue;
+      BtiPermName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kCachePolicy:
       os << colors.red;
       CachePolicyName(value, os);
@@ -275,6 +280,16 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
     case SyscallType::kInfoMapsType:
       os << colors.red;
       InfoMapsTypeName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kInterruptFlags:
+      os << colors.red;
+      InterruptFlagsName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kIommuType:
+      os << colors.red;
+      IommuTypeName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kKtraceControlAction:
@@ -475,13 +490,13 @@ inline void DisplayValue<uint64_t>(const fidl_codec::Colors& colors, SyscallType
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
-#ifndef __MACH__
     case SyscallType::kPaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
+#ifndef __MACH__
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);

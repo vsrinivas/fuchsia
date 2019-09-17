@@ -4,6 +4,7 @@
 
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
+#include <zircon/system/public/zircon/syscalls/iommu.h>
 #include <zircon/system/public/zircon/syscalls/pci.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
@@ -904,6 +905,45 @@ ZxInfoVmo* ZxInfoVmo::instance_ = nullptr;
 const ZxInfoVmo* ZxInfoVmo::GetClass() {
   if (instance_ == nullptr) {
     instance_ = new ZxInfoVmo;
+  }
+  return instance_;
+}
+
+class ZxIommuDescIntel : public Class<zx_iommu_desc_intel_t> {
+ public:
+  static const ZxIommuDescIntel* GetClass();
+
+  static uint64_t register_base(const zx_iommu_desc_intel_t* from) { return from->register_base; }
+  static uint16_t pci_segment(const zx_iommu_desc_intel_t* from) { return from->pci_segment; }
+  static bool whole_segment(const zx_iommu_desc_intel_t* from) { return from->whole_segment; }
+  static uint8_t scope_bytes(const zx_iommu_desc_intel_t* from) { return from->scope_bytes; }
+  static uint16_t reserved_memory_bytes(const zx_iommu_desc_intel_t* from) {
+    return from->reserved_memory_bytes;
+  }
+
+ private:
+  ZxIommuDescIntel() : Class("zx_iommu_desc_intel_t") {
+    AddField(std::make_unique<ClassField<zx_iommu_desc_intel_t, uint64_t>>(
+        "register_base", SyscallType::kPaddr, register_base));
+    AddField(std::make_unique<ClassField<zx_iommu_desc_intel_t, uint16_t>>(
+        "pci_segment", SyscallType::kUint16, pci_segment));
+    AddField(std::make_unique<ClassField<zx_iommu_desc_intel_t, bool>>(
+        "whole_segment", SyscallType::kBool, whole_segment));
+    AddField(std::make_unique<ClassField<zx_iommu_desc_intel_t, uint8_t>>(
+        "scope_bytes", SyscallType::kUint8, scope_bytes));
+    AddField(std::make_unique<ClassField<zx_iommu_desc_intel_t, uint16_t>>(
+        "reserved_memory_bytes", SyscallType::kUint16, reserved_memory_bytes));
+  }
+  ZxIommuDescIntel(const ZxIommuDescIntel&) = delete;
+  ZxIommuDescIntel& operator=(const ZxIommuDescIntel&) = delete;
+  static ZxIommuDescIntel* instance_;
+};
+
+ZxIommuDescIntel* ZxIommuDescIntel::instance_ = nullptr;
+
+const ZxIommuDescIntel* ZxIommuDescIntel::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxIommuDescIntel;
   }
   return instance_;
 }
@@ -4433,6 +4473,263 @@ void SyscallDecoderDispatcher::Populate() {
     zx_debug_send_command->InputString<char>("buffer",
                                              std::make_unique<ArgumentAccess<char>>(buffer),
                                              std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_interrupt_create = Add("zx_interrupt_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto src_obj = zx_interrupt_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto src_num = zx_interrupt_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto options = zx_interrupt_create->Argument<uint32_t>(SyscallType::kInterruptFlags);
+    auto out_handle = zx_interrupt_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_interrupt_create->Input<zx_handle_t>("src_obj",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(src_obj));
+    zx_interrupt_create->Input<uint32_t>("src_num",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(src_num));
+    zx_interrupt_create->Input<uint32_t>("options",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_interrupt_create->Output<zx_handle_t>(
+        ZX_OK, "out_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(out_handle));
+  }
+
+  {
+    Syscall* zx_interrupt_bind = Add("zx_interrupt_bind", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_bind->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto port_handle = zx_interrupt_bind->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto key = zx_interrupt_bind->Argument<uint64_t>(SyscallType::kUint64);
+    auto options = zx_interrupt_bind->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_interrupt_bind->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_interrupt_bind->Input<zx_handle_t>(
+        "port_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(port_handle));
+    zx_interrupt_bind->Input<uint64_t>("key", std::make_unique<ArgumentAccess<uint64_t>>(key));
+    zx_interrupt_bind->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_interrupt_wait = Add("zx_interrupt_wait", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_wait->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto out_timestamp = zx_interrupt_wait->PointerArgument<zx_time_t>(SyscallType::kMonotonicTime);
+    // Inputs
+    zx_interrupt_wait->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_interrupt_wait->Output<zx_time_t>(
+        ZX_OK, "out_timestamp", std::make_unique<ArgumentAccess<zx_time_t>>(out_timestamp));
+  }
+
+  {
+    Syscall* zx_interrupt_destroy = Add("zx_interrupt_destroy", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_destroy->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_interrupt_destroy->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_interrupt_ack = Add("zx_interrupt_ack", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_ack->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_interrupt_ack->Input<zx_handle_t>("handle",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_interrupt_trigger = Add("zx_interrupt_trigger", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_trigger->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_interrupt_trigger->Argument<uint32_t>(SyscallType::kUint32);
+    auto timestamp = zx_interrupt_trigger->Argument<zx_time_t>(SyscallType::kMonotonicTime);
+    // Inputs
+    zx_interrupt_trigger->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_interrupt_trigger->Input<uint32_t>("options",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_interrupt_trigger->Input<zx_time_t>("timestamp",
+                                           std::make_unique<ArgumentAccess<zx_time_t>>(timestamp));
+  }
+
+  {
+    Syscall* zx_interrupt_bind_vcpu = Add("zx_interrupt_bind_vcpu", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_interrupt_bind_vcpu->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vcpu = zx_interrupt_bind_vcpu->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_interrupt_bind_vcpu->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_interrupt_bind_vcpu->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_interrupt_bind_vcpu->Input<zx_handle_t>("vcpu",
+                                               std::make_unique<ArgumentAccess<zx_handle_t>>(vcpu));
+    zx_interrupt_bind_vcpu->Input<uint32_t>("options",
+                                            std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_ioports_request = Add("zx_ioports_request", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_ioports_request->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto io_addr = zx_ioports_request->Argument<uint16_t>(SyscallType::kUint16Hexa);
+    auto len = zx_ioports_request->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_ioports_request->Input<zx_handle_t>("resource",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_ioports_request->Input<uint16_t>("io_addr",
+                                        std::make_unique<ArgumentAccess<uint16_t>>(io_addr));
+    zx_ioports_request->Input<uint32_t>("len", std::make_unique<ArgumentAccess<uint32_t>>(len));
+  }
+
+  {
+    Syscall* zx_ioports_release = Add("zx_ioports_release", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_ioports_release->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto io_addr = zx_ioports_release->Argument<uint16_t>(SyscallType::kUint16);
+    auto len = zx_ioports_release->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_ioports_release->Input<zx_handle_t>("resource",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_ioports_release->Input<uint16_t>("io_addr",
+                                        std::make_unique<ArgumentAccess<uint16_t>>(io_addr));
+    zx_ioports_release->Input<uint32_t>("len", std::make_unique<ArgumentAccess<uint32_t>>(len));
+  }
+
+  {
+    Syscall* zx_iommu_create = Add("zx_iommu_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_iommu_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto type = zx_iommu_create->Argument<uint32_t>(SyscallType::kIommuType);
+    auto desc = zx_iommu_create->PointerArgument<uint8_t>(SyscallType::kUint8);
+    zx_iommu_create->Argument<size_t>(SyscallType::kSize);
+    auto out = zx_iommu_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_iommu_create->Input<zx_handle_t>("resource",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_iommu_create->Input<uint32_t>("type", std::make_unique<ArgumentAccess<uint32_t>>(type));
+    zx_iommu_create
+        ->InputObject<zx_iommu_desc_intel_t>(
+            "desc", std::make_unique<ArgumentAccess<uint8_t>>(desc), ZxIommuDescIntel::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(type),
+                                   ZX_IOMMU_TYPE_INTEL);
+    // Outputs
+    zx_iommu_create->Output<zx_handle_t>(ZX_OK, "out",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_bti_create = Add("zx_bti_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto iommu = zx_bti_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_bti_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto bti_id = zx_bti_create->Argument<uint64_t>(SyscallType::kUint64);
+    auto out = zx_bti_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_bti_create->Input<zx_handle_t>("iommu",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(iommu));
+    zx_bti_create->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_bti_create->Input<uint64_t>("bti_id", std::make_unique<ArgumentAccess<uint64_t>>(bti_id));
+    // Outputs
+    zx_bti_create->Output<zx_handle_t>(ZX_OK, "out",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_bti_pin = Add("zx_bti_pin", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_bti_pin->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_bti_pin->Argument<uint32_t>(SyscallType::kBtiPerm);
+    auto vmo = zx_bti_pin->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto offset = zx_bti_pin->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_bti_pin->Argument<uint64_t>(SyscallType::kUint64);
+    auto addrs = zx_bti_pin->PointerArgument<zx_paddr_t>(SyscallType::kPaddr);
+    auto addrs_count = zx_bti_pin->Argument<size_t>(SyscallType::kSize);
+    auto pmt = zx_bti_pin->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_bti_pin->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_bti_pin->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_bti_pin->Input<zx_handle_t>("vmo", std::make_unique<ArgumentAccess<zx_handle_t>>(vmo));
+    zx_bti_pin->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_bti_pin->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+    // Outputs
+    zx_bti_pin->OutputBuffer<zx_paddr_t, zx_paddr_t>(
+        ZX_OK, "addrs", SyscallType::kPaddr, std::make_unique<ArgumentAccess<zx_paddr_t>>(addrs),
+        std::make_unique<ArgumentAccess<size_t>>(addrs_count));
+    zx_bti_pin->Output<zx_handle_t>(ZX_OK, "pmt",
+                                    std::make_unique<ArgumentAccess<zx_handle_t>>(pmt));
+  }
+
+  {
+    Syscall* zx_bti_release_quarantine =
+        Add("zx_bti_release_quarantine", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_bti_release_quarantine->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_bti_release_quarantine->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_pmt_unpin = Add("zx_pmt_unpin", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pmt_unpin->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pmt_unpin->Input<zx_handle_t>("handle",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_framebuffer_get_info = Add("zx_framebuffer_get_info", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_framebuffer_get_info->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto format = zx_framebuffer_get_info->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto width = zx_framebuffer_get_info->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto height = zx_framebuffer_get_info->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto stride = zx_framebuffer_get_info->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_framebuffer_get_info->Input<zx_handle_t>(
+        "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    // Outputs
+    zx_framebuffer_get_info->Output<uint32_t>(ZX_OK, "format",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(format));
+    zx_framebuffer_get_info->Output<uint32_t>(ZX_OK, "width",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(width));
+    zx_framebuffer_get_info->Output<uint32_t>(ZX_OK, "height",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(height));
+    zx_framebuffer_get_info->Output<uint32_t>(ZX_OK, "stride",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(stride));
+  }
+
+  {
+    Syscall* zx_framebuffer_set_range = Add("zx_framebuffer_set_range", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_framebuffer_set_range->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vmo = zx_framebuffer_set_range->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto len = zx_framebuffer_set_range->Argument<uint32_t>(SyscallType::kUint32);
+    auto format = zx_framebuffer_set_range->Argument<uint32_t>(SyscallType::kUint32);
+    auto width = zx_framebuffer_set_range->Argument<uint32_t>(SyscallType::kUint32);
+    auto height = zx_framebuffer_set_range->Argument<uint32_t>(SyscallType::kUint32);
+    auto stride = zx_framebuffer_set_range->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_framebuffer_set_range->Input<zx_handle_t>(
+        "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_framebuffer_set_range->Input<zx_handle_t>(
+        "vmo", std::make_unique<ArgumentAccess<zx_handle_t>>(vmo));
+    zx_framebuffer_set_range->Input<uint32_t>("len",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(len));
+    zx_framebuffer_set_range->Input<uint32_t>("format",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(format));
+    zx_framebuffer_set_range->Input<uint32_t>("width",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(width));
+    zx_framebuffer_set_range->Input<uint32_t>("height",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(height));
+    zx_framebuffer_set_range->Input<uint32_t>("stride",
+                                              std::make_unique<ArgumentAccess<uint32_t>>(stride));
   }
 
   {
