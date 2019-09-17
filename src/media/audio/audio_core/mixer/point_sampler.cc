@@ -39,7 +39,7 @@ template <typename SrcSampleType>
 class NxNPointSamplerImpl : public PointSampler {
  public:
   NxNPointSamplerImpl(uint32_t chan_count)
-      : PointSampler(0, FRAC_ONE - 1), chan_count_(chan_count) {}
+      : PointSampler(kPositiveFilterWidth, kNegativeFilterWidth), chan_count_(chan_count) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
            uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
@@ -77,25 +77,25 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  uint32_t dest_off = *dest_offset;
-  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+  auto dest_off = *dest_offset;
+  auto dest_off_start = dest_off;  // Only used when ramping.
 
   // Location of first dest frame to produce must be within the provided buffer.
   FXL_DCHECK(dest_off < dest_frames);
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
-  int32_t src_off = *frac_src_offset;
+  auto src_off = *frac_src_offset;
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
-  // "Source offset" can be negative within the bounds of pos_filter_width. Here, PointSampler has
-  // no memory: input frames only affect present/future output. That is: its "positive filter width"
-  // is zero. Thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error
-  // case.
-  FXL_DCHECK(src_off >= 0) << std::hex << "src_off: 0x" << src_off;
+  // "Source offset" can be negative within the bounds of pos_filter_width. PointSampler has no
+  // memory: input frames only affect present/future output. Its "positive filter width" is zero,
+  // thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error case.
+  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
+
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
-  // the past and irrelevant here.
-  auto src_end = static_cast<int32_t>(frac_src_frames - PointSamplerImpl::kPositiveFilterWidth - 1);
+  // the past -- they have no impact on any output we would produce here.
+  auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
@@ -103,7 +103,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   // Cache these locally, for the HasModulo specializations that use them. Only src_pos_modulo must
   // be written back before returning.
-  uint32_t step_size = info->step_size;
+  auto step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
@@ -136,13 +136,13 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      uint32_t src_iter = (src_off >> kPtsFractionalBits) * SrcChanCount;
+      uint32_t src_iter = ((src_off + kPositiveFilterWidth) >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
 
-      for (size_t dest_iter = 0; dest_iter < DestChanCount; ++dest_iter) {
-        auto src_chan_offset = dest_iter % SrcChanCount;
+      for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
+        auto src_chan_offset = dest_chan % SrcChanCount;
         float sample = SR::Read(src + src_iter + src_chan_offset);
-        out[dest_iter] = DM::Mix(out[dest_iter], sample, amplitude_scale);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;
@@ -284,26 +284,24 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  uint32_t dest_off = *dest_offset;
-  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+  auto dest_off = *dest_offset;
+  auto dest_off_start = dest_off;  // Only used when ramping.
 
   // Location of first dest frame to produce must be within the provided buffer.
   FXL_DCHECK(dest_off < dest_frames);
 
-  int32_t src_off = *frac_src_offset;
+  auto src_off = *frac_src_offset;
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
-  // "Source offset" can be negative within the bounds of pos_filter_width. Here, PointSampler has
-  // no memory: input frames only affect present/future output. That is: its "positive filter width"
-  // is zero. Thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error
-  // case.
-  FXL_DCHECK(src_off + static_cast<int32_t>(NxNPointSamplerImpl::kPositiveFilterWidth) >= 0)
-      << std::hex << "src_off: 0x" << src_off;
+  // "Source offset" can be negative within the bounds of pos_filter_width. PointSampler has no
+  // memory: input frames only affect present/future output. Its "positive filter width" is zero,
+  // thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error case.
+  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
+
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
-  // the past and irrelevant here.
-  auto src_end =
-      static_cast<int32_t>(frac_src_frames - NxNPointSamplerImpl::kPositiveFilterWidth - 1);
+  // the past -- they have no impact on any output we would produce here.
+  auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
@@ -311,7 +309,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
 
   // Cache these locally, in the template specialization that uses them. Only src_pos_modulo needs
   // to be written back before returning.
-  uint32_t step_size = info->step_size;
+  auto step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
@@ -345,12 +343,12 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      uint32_t src_iter = (src_off >> kPtsFractionalBits) * chan_count;
+      uint32_t src_iter = ((src_off + kPositiveFilterWidth) >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
 
-      for (size_t dest_iter = 0; dest_iter < chan_count; ++dest_iter) {
-        float sample = SampleNormalizer<SrcSampleType>::Read(src + src_iter + dest_iter);
-        out[dest_iter] = DM::Mix(out[dest_iter], sample, amplitude_scale);
+      for (size_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
+        float sample = SampleNormalizer<SrcSampleType>::Read(src + src_iter + dest_chan);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;

@@ -17,7 +17,7 @@ namespace media::audio::mixer {
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 class LinearSamplerImpl : public LinearSampler {
  public:
-  LinearSamplerImpl() : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) {}
+  LinearSamplerImpl() : LinearSampler(kPositiveFilterWidth, kNegativeFilterWidth) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
            uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
@@ -27,6 +27,9 @@ class LinearSamplerImpl : public LinearSampler {
   void Reset() override { memset(filter_data_, 0, sizeof(filter_data_)); }
 
  private:
+  static constexpr uint32_t kPositiveFilterWidth = FRAC_ONE - 1;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                   uint32_t frac_src_frames, int32_t* frac_src_offset, Bookkeeping* info);
@@ -40,7 +43,7 @@ template <typename SrcSampleType>
 class NxNLinearSamplerImpl : public LinearSampler {
  public:
   NxNLinearSamplerImpl(size_t channelCount)
-      : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1), chan_count_(channelCount) {
+      : LinearSampler(kPositiveFilterWidth, kNegativeFilterWidth), chan_count_(channelCount) {
     filter_data_u_ = std::make_unique<float[]>(chan_count_);
 
     memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
@@ -56,6 +59,9 @@ class NxNLinearSamplerImpl : public LinearSampler {
   }
 
  private:
+  static constexpr uint32_t kPositiveFilterWidth = FRAC_ONE - 1;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                   uint32_t frac_src_frames, int32_t* frac_src_offset, Bookkeeping* info,
@@ -86,25 +92,27 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  uint32_t dest_off = *dest_offset;
-  uint32_t dest_off_start = dest_off;  // Only used when ramping.
+  auto dest_off = *dest_offset;
+  auto dest_off_start = dest_off;  // Only used when ramping.
 
   // Location of first dest frame to produce must be within the provided buffer.
   FXL_DCHECK(dest_off < dest_frames);
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
-  int32_t src_off = *frac_src_offset;
+  auto src_off = *frac_src_offset;
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   // "Source offset" can be negative, but within the bounds of pos_filter_width. Otherwise, all
   // these src samples are in the future and irrelevant here. Callers explicitly avoid calling Mix
   // in this case, so we have detected an error. For linear_sampler, we require src_off > -FRAC_ONE.
-  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
-      << std::hex << "min allowed: 0x" << -pos_filter_width() << ", src_off: 0x" << src_off;
+  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0)
+      << std::hex << "min allowed: 0x" << -static_cast<int32_t>(kPositiveFilterWidth)
+      << ", src_off: 0x" << src_off;
+
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
-  // the past and irrelevant here.
-  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  // the past -- they have no impact on any output we would produce here.
+  auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
@@ -112,7 +120,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   // Cache these locally, in the template specialization that uses them. Only src_pos_modulo needs
   // to be written back before returning.
-  uint32_t step_size = info->step_size;
+  auto step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
@@ -211,8 +219,8 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     // the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
-      uint32_t dest_avail = dest_frames - dest_off;
-      uint32_t avail = std::min(src_avail, dest_avail);
+      auto dest_avail = dest_frames - dest_off;
+      auto avail = std::min(src_avail, dest_avail);
 
       src_off += (avail * step_size);
       dest_off += avail;
@@ -356,24 +364,23 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  uint32_t dest_off = *dest_offset;
-  uint32_t dest_off_start = dest_off;  // Only used when ramping
+  auto dest_off = *dest_offset;
+  auto dest_off_start = dest_off;  // Only used when ramping
 
   // Location of first dest frame to produce must be within the provided buffer.
   FXL_DCHECK(dest_off < dest_frames);
 
-  int32_t src_off = *frac_src_offset;
+  auto src_off = *frac_src_offset;
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   // "Source offset" can be negative, but within the bounds of pos_filter_width. Otherwise, all
   // these src samples are in the future and irrelevant here. Callers explicitly avoid calling Mix
   // in this case, so we have detected an error. For linear_sampler, we require src_off > -FRAC_ONE.
-  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
-      << std::hex << "src_off: 0x" << src_off;
+  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
   // the past and irrelevant here.
-  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
@@ -381,7 +388,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
 
   // Cache these locally, in the template specialization that uses them. Only src_pos_modulo must be
   // written back before returning.
-  uint32_t step_size = info->step_size;
+  auto step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
@@ -479,8 +486,8 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
     // the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
-      uint32_t dest_avail = dest_frames - dest_off;
-      uint32_t avail = std::min(src_avail, dest_avail);
+      auto dest_avail = dest_frames - dest_off;
+      auto avail = std::min(src_avail, dest_avail);
 
       src_off += (avail * step_size);
       dest_off += avail;

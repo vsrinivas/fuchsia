@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <limits>
+
 namespace media::audio {
 
 constexpr int32_t kMaxInt24In32 = std::numeric_limits<int32_t>::max() & ~0x0FF;
