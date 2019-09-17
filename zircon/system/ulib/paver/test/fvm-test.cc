@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/35941): Something about these headers is order dependent
-// clang-format off
-#include "paver.h"
+#include "fvm.h"
+
+#include <lib/devmgr-integration-test/fixture.h>
 
 #include <fs-management/fvm.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <zxtest/zxtest.h>
 
 #include "test/test-utils.h"
-// clang-format on
 
 namespace {
 

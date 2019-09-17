@@ -17,6 +17,7 @@
 
 #include "pave-logging.h"
 
+namespace {
 zx_status_t FlushClient(const block_client::Client& client) {
   block_fifo_request_t request;
   request.group = 0;
@@ -32,6 +33,7 @@ zx_status_t FlushClient(const block_client::Client& client) {
     return status;
   }
   return ZX_OK;
+}
 }
 
 zx_status_t FlushBlockDevice(const fbl::unique_fd& fd) {

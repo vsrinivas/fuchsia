@@ -8,6 +8,7 @@ library("paver") {
   sources = [
     "device-partitioner.cc",
     "pave-utils.cc",
+    "fvm.cc",
     "paver.cc",
     "provider.cc",
     "stream-reader.cc",
@@ -66,6 +67,7 @@ test("paver-test") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/block-client",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl-utils",
