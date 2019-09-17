@@ -15,12 +15,11 @@ import("//build/testing/platforms.gni")
 #   name (required)
 #     [string] The test's target name.
 #
-#   location (required)
-#     [string]: Unique reference to a test, e.g., a filesystem path or a
-#     fuchsia URI.
+#   install_path (required)
+#     [string]: The path on the target OS at which the test will be installed.
 #
 #   command (optional)
-#     [list of strings]: Command to invoke to run the test. If unset, location
+#     [list of strings]: Command to invoke to run the test. If unset, install_path
 #     will be invoked upon execution.
 #
 #   deps (optional)
@@ -44,7 +43,9 @@ import("//build/testing/platforms.gni")
 #
 template("test_spec") {
   assert(defined(invoker.name), "name must be defined.")
-  assert(defined(invoker.location), "location must be defined.")
+  assert(defined(invoker.install_path) || defined(invoker.location) ||
+             defined(invoker.command),
+         "install_path, location, or command must be defined.")
   forward_variables_from(invoker,
                          [
                            "environments",
@@ -229,15 +230,21 @@ template("test_spec") {
 
   test_spec = {
     test = {
+      forward_variables_from(invoker,
+                             [
+                               "command",
+                               "install_path",
+                             ])
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
-      location = invoker.location
-      if (is_linux || is_mac) {
+      if (!defined(install_path) && defined(invoker.location)) {
+        install_path = invoker.location
+      }
+      if ((defined(install_path) && is_linux) || is_mac) {
         # Trim leading //.
-        location = rebase_path(location, root_build_dir)
+        install_path = rebase_path(install_path, root_build_dir)
       }
       os = current_os
       cpu = current_cpu
-      forward_variables_from(invoker, [ "command" ])
       if (runtime_deps_file != "") {
         deps_file = rebase_path(runtime_deps_file, root_build_dir)
       }

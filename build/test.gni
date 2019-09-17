@@ -19,7 +19,7 @@ template("test") {
     test_spec("${target_name}_spec") {
       testonly = true
       name = invoker.target_name
-      location = "$root_out_dir/${invoker.target_name}"
+      install_path = "$root_out_dir/${invoker.target_name}"
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps

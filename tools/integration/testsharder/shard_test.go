@@ -28,7 +28,7 @@ func assertEqual(t *testing.T, expected, actual []*Shard) {
 func spec(id int, envs ...Environment) TestSpec {
 	return TestSpec{
 		Test: Test{
-			Location: fmt.Sprintf("/path/to/test/%d", id),
+			InstallPath: fmt.Sprintf("/path/to/test/%d", id),
 		},
 		Envs: envs,
 	}
@@ -192,9 +192,9 @@ func TestMultiplyShards(t *testing.T) {
 	}
 	makeTest := func(id int, os OS) Test {
 		return Test{
-			Name:     fmt.Sprintf("test%d", id),
-			Location: fmt.Sprintf("/path/to/test/%d", id),
-			OS:       os,
+			Name:        fmt.Sprintf("test%d", id),
+			InstallPath: fmt.Sprintf("/path/to/test/%d", id),
+			OS:          os,
 		}
 	}
 

@@ -40,14 +40,8 @@ type Test struct {
 	// (e.g., //garnet/bin/foo/tests:foo_tests).
 	Name string `json:"name"`
 
-	// TODO(joshuaseaton): Remove and replace by `Path`.
-	//
-	// Location is a unique reference to a test: for example, a filesystem
-	// path or a Fuchsia URI.
-	Location string `json:"location"`
-
-	// Path is the path to the test.
-	Path string `json:"path"`
+	// InstallPath is the path to the test on the target OS.
+	InstallPath string `json:"install_path"`
 
 	// OS is the operating system in which this test must be executed.
 	OS OS `json:"os"`
@@ -69,8 +63,8 @@ func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
 	if spec.Test.Name == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty name")
 	}
-	if len(spec.Command) == 0 && spec.Test.Path == "" && spec.Test.Location == "" {
-		return fmt.Errorf("A test spec's test must have one of a non-empty path, non-empty location, or non-empty command")
+	if len(spec.Command) == 0 && spec.Test.InstallPath == "" {
+		return fmt.Errorf("A test spec's test must a non-empty install path or non-empty command")
 	}
 	if spec.Test.OS == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty OS")
@@ -128,10 +122,6 @@ func LoadTestSpecs(fuchsiaBuildDir string) ([]TestSpec, error) {
 	}
 
 	for i := range specs {
-		if specs[i].Path == "" {
-			specs[i].Path = specs[i].Location
-		}
-
 		if specs[i].DepsFile == "" {
 			continue
 		}

@@ -5,7 +5,6 @@
 import("//build/board.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
-import("//build/disabled_for_asan.gni")
 import("//build/images/boot.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
@@ -738,29 +737,16 @@ template("package") {
 
       if (bootfs_only) {
         dest = "test/sys/$dest"
-        path = "/boot/$dest"
+        install_path = "/boot/$dest"
       } else {
         dest = "test/$dest"
         if (pkg.deprecated_system_image) {
-          path = "/system/$dest"
+          install_path = "/system/$dest"
         } else {
-          path =
+          install_path =
               "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
         }
       }
-
-      # TODO(TC-359): Remove this block once no more tests remain in
-      # disabled_for_asan.
-      is_asan = select_variant + [ "asan" ] - [ "asan" ] != select_variant
-      is_disabled_for_asan =
-          disabled_for_asan + [ path ] - [ path ] != disabled_for_asan
-      is_disabled = is_disabled || (is_asan && is_disabled_for_asan)
-
-      # In case of short-circuit evaluation, these values might go unused.
-      not_needed([
-                   "is_asan",
-                   "is_disabled_for_asan",
-                 ])
 
       if (!is_disabled) {
         test_spec_name = "${pkg.package_name}_${dest}_test_spec"
@@ -769,9 +755,11 @@ template("package") {
 
         test_spec(test_spec_name) {
           name = test.name
-          location = path
+          install_path = install_path
           forward_variables_from(test, [ "environments" ])
         }
+      } else {
+        not_needed([ "install_path" ])
       }
 
       pkg_manifest += [

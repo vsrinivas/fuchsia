@@ -53,7 +53,7 @@ template("go_test") {
       # TODO(BLD-493): testonly should be automatic here
       testonly = true
       name = _main_target_name
-      location = _output_path
+      install_path = _output_path
       command = [ rebase_path(_output_path, root_build_dir) ]
       timeout = "5m"
       if (defined(invoker.timeout)) {

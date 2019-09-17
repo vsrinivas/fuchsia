@@ -303,7 +303,7 @@ template("rustc_artifact") {
   if (with_unit_tests && (is_linux || is_mac)) {
     test_spec(test_spec_target_name) {
       name = invoker.target_name
-      location = test_output_file
+      install_path = test_output_file
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps
@@ -534,7 +534,8 @@ template("rustc_artifact") {
           binaries = [
             {
               type = "executable"
-              label = get_label_info(":$build_target_name", "label_with_toolchain")
+              label =
+                  get_label_info(":$build_target_name", "label_with_toolchain")
               cpu = current_cpu
               os = current_os
               debug = rebase_path(output_file, root_build_dir)
@@ -610,14 +611,15 @@ template("rustc_artifact") {
         binaries = [
           {
             type = "executable"
-            label = get_label_info(":$build_test_target_name", "label_with_toolchain")
+            label = get_label_info(":$build_test_target_name",
+                                   "label_with_toolchain")
             cpu = current_cpu
             os = current_os
             debug = rebase_path(test_output_file, root_build_dir)
             dist = rebase_path(test_output_path, root_build_dir)
             if (current_os != "mac" && current_os != "win") {
-              elf_build_id =
-                  rebase_path("$test_output_path.build-id.stamp", root_build_dir)
+              elf_build_id = rebase_path("$test_output_path.build-id.stamp",
+                                         root_build_dir)
             }
           },
         ]
