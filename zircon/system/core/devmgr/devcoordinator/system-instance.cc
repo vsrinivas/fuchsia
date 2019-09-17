@@ -221,8 +221,20 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   const uint32_t types[] = {PA_DIRECTORY_REQUEST};
   const char* args[] = {"/boot/bin/miscsvc", nullptr};
 
-  devmgr::devmgr_launch(svc_job, "miscsvc", args, nullptr, -1, handles, types, countof(handles),
-                        nullptr, FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
+  {
+    // TODO(34633): miscsvc needs access to /boot/lib/asan when devcoordinator runs in isolated
+    // devmgr mode.
+    zx::channel ldsvc;
+    zx_status_t status = clone_fshost_ldsvc(&ldsvc);
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to clone loader for miscsvc: %d\n", status);
+      return -1;
+    }
+
+    devmgr::devmgr_launch_with_loader(svc_job, "miscsvc", zx::vmo(), std::move(ldsvc), args,
+                                      nullptr, -1, handles, types, countof(handles), nullptr,
+                                      FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
+  }
 
   bool netboot = false;
   bool vruncmd = false;

@@ -85,6 +85,7 @@ group("ulib") {
     "image-format",
     "inet6",
     "inspect",
+    "inspect:inspect-common",
     "inspector",
     "intel-hda",
     "launchpad",

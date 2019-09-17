@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/fit/result.h>
+#include <lib/inspect/common.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 
-#include <atomic>
-#include <memory>
 #include <sstream>
 
 using inspect::internal::Heap;
@@ -87,9 +86,8 @@ std::vector<uint8_t> Inspector::CopyBytes() const {
 Node& Inspector::GetRoot() const { return *root_; }
 
 std::string UniqueName(const std::string& prefix) {
-  static std::atomic_uint_fast64_t next_id;
   std::ostringstream out;
-  auto value = next_id.fetch_add(1);
+  uint64_t value = inspect_counter_increment(kUniqueNameCounterId);
   out << prefix << "0x" << std::hex << value;
   return out.str();
 }
