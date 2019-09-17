@@ -247,23 +247,25 @@ impl Model {
     /// startup.
     async fn bind_inner<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-        let (decl, exposed_dir) = {
-            let mut state = realm.lock_state().await;
-            if !state.is_resolved() {
-                state.set(RealmState::new(&*realm, component.decl).await?);
-            }
-            let state = state.get();
-            if state.is_shut_down() {
-                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
-            }
-            if state.execution().is_some() {
-                // TODO: Add binding to the execution once we track bindings.
-                return Ok(vec![]);
-            }
-            let decl = state.decl().clone();
-            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
-            (decl, exposed_dir)
-        };
+        // The realm's lock needs to be held during `Runner::start` until the `Execution` is set in
+        // case there are concurrent calls to `bind_inner`.
+        //
+        // TODO: Restructure `RealmState` so it's not all held under a single lock. For example, we
+        // should be able to take a lock on `Execution` independent of the component declaration.
+        let mut state = realm.lock_state().await;
+        if !state.is_resolved() {
+            state.set(RealmState::new(&*realm, component.decl).await?);
+        }
+        let state = state.get_mut();
+        if state.is_shut_down() {
+            return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+        }
+        if state.execution().is_some() {
+            // TODO: Add binding to the execution once we track bindings.
+            return Ok(vec![]);
+        }
+        let decl = state.decl().clone();
+        let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
         let execution = if decl.program.is_some() {
             let (outgoing_dir_client, outgoing_dir_server) =
                 zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
@@ -297,8 +299,6 @@ impl Model {
             // consider the component to be "executing" in this case.
             Execution::start_from(component.resolved_url, None, None, None, exposed_dir)?
         };
-        let mut state = realm.lock_state().await;
-        let state = state.get_mut();
         state.set_execution(execution);
         let eager_child_realms: Vec<_> = state
             .live_child_realms()
