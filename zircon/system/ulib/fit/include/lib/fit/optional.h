@@ -293,7 +293,7 @@ class optional : private ::fit::internal::modulate_copy_and_move<T> {
 
   // Reset.
 
-  constexpr void reset() noexcept { storage_.reset(); }
+  void reset() noexcept { storage_.reset(); }
 
  private:
   ::fit::internal::storage_type<T> storage_;

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/optional.h>
+
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <lib/fit/optional.h>
 #include <unittest/unittest.h>
 
 #include "unittest_utils.h"
@@ -224,6 +225,19 @@ struct trivially_move_only {
   int value;
 };
 
+static_assert(std::is_trivially_copy_constructible<trivially_move_only>::value == false);
+static_assert(std::is_trivially_copy_assignable<trivially_move_only>::value == false);
+static_assert(std::is_trivially_move_constructible<trivially_move_only>::value == true);
+static_assert(std::is_trivially_move_assignable<trivially_move_only>::value == true);
+
+static_assert(std::is_trivially_copy_constructible<fit::optional<trivially_move_only>>::value ==
+              false);
+static_assert(std::is_trivially_copy_assignable<fit::optional<trivially_move_only>>::value ==
+              false);
+static_assert(std::is_trivially_move_constructible<fit::optional<trivially_move_only>>::value ==
+              true);
+static_assert(std::is_trivially_move_assignable<fit::optional<trivially_move_only>>::value == true);
+
 struct trivially_copyable {
   constexpr trivially_copyable(const trivially_copyable&) = default;
   constexpr trivially_copyable& operator=(const trivially_copyable&) = default;
@@ -231,32 +245,18 @@ struct trivially_copyable {
   int value;
 };
 
-template <typename T>
-static inline constexpr fit::optional<T> Return(fit::optional<T> value, bool empty) {
-  if (empty) {
-    value.reset();
-  }
-  return value;
-}
+static_assert(std::is_trivially_copy_constructible<trivially_copyable>::value == true);
+static_assert(std::is_trivially_copy_assignable<trivially_copyable>::value == true);
+static_assert(std::is_trivially_move_constructible<trivially_copyable>::value == true);
+static_assert(std::is_trivially_move_assignable<trivially_copyable>::value == true);
 
-static_assert(
-    Return(fit::optional<trivially_move_only>{trivially_move_only{10}}, false).has_value() == true,
-    "");
-static_assert(
-    Return(fit::optional<trivially_move_only>{trivially_move_only{10}}, false).value().value == 10,
-    "");
-static_assert(
-    Return(fit::optional<trivially_move_only>{trivially_move_only{10}}, true).has_value() == false,
-    "");
-static_assert(
-    Return(fit::optional<trivially_copyable>{trivially_copyable{10}}, false).has_value() == true,
-    "");
-static_assert(
-    Return(fit::optional<trivially_copyable>{trivially_copyable{10}}, false).value().value == 10,
-    "");
-static_assert(Return(fit::optional<trivially_copyable>{trivially_copyable{10}}, true).has_value() ==
-                  false,
-              "");
+static_assert(std::is_trivially_copy_constructible<fit::optional<trivially_copyable>>::value ==
+              true);
+static_assert(std::is_trivially_copy_assignable<fit::optional<trivially_copyable>>::value == true);
+static_assert(std::is_trivially_move_constructible<fit::optional<trivially_copyable>>::value ==
+              true);
+static_assert(std::is_trivially_move_assignable<fit::optional<trivially_copyable>>::value == true);
+
 }  // namespace trivial_copy_move_tests
 
 template <typename T>
