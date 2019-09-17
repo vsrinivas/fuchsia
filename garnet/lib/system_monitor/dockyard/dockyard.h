@@ -86,18 +86,52 @@ struct PathInfo {
   std::string path;
 };
 
+// Avoid removing elements from this enum.
+enum class MessageType : int64_t {
+  // A response to a k*Request message. Match request IDs to determine which
+  // request this is a response to.
+  kResponseOk = 0,
+  // The request (represented by the request ID) failed in some fundamental way.
+  // E.e. maybe the request never made it to the handler.
+  kRequestFailed = -1,
+  // The connection to the Harvester on Fuchsia device has broken. No further
+  // requests will work until a new connection is established.
+  kDisconnected = -2,
+  // The version of the Harvester is incompatible with the Dockyard.
+  kVersionMismatch = -3,
+
+  // Requests from the UI to the Dockyard.
+  kStreamSetsRequest = 1,
+  kDiscardSamplesRequest,
+  kIgnoreSamplesRequest,
+  kUnignoreSamplesRequest,
+  kConnectionRequest,
+};
+
 // A message to or from the dockyard.
 struct Message {
   // The request ID normally matches a request to a response. In the case of a
   // 'push' message with no request, the ID will be |NULL_REQUEST_ID|.
   static constexpr uint64_t NULL_REQUEST_ID = {0u};
 
-  Message(uint64_t id) : request_id_(id) {}
+  // Context identifier for a message. Used to match a response to a request.
+  // For matching against a MessageResponse::request_id.
+  Message(MessageType type, uint64_t id)
+      : message_type_(type), request_id_(id) {}
+
+  // The message type helps in routing the message. Expect to use both the
+  // message type and the request ID together (all current cases require both
+  // values).
+  MessageType GetMessageType() const { return message_type_; }
 
   // Context identifier for a message. Used to match a response to a request.
   uint64_t RequestId() const { return request_id_; }
 
  protected:
+  // Identifier used for message routing, i.e. which code should handle this
+  // message.
+  MessageType message_type_;
+
   // Context identifier for a message. Used to match a response to a request.
   uint64_t request_id_;
 };
@@ -105,7 +139,7 @@ struct Message {
 // A message to the dockyard. The response to this message will arrive as a
 // |MessageResponse| with a matching |RequestId()|.
 struct MessageRequest : public Message {
-  MessageRequest() : Message(++next_request_id_) {}
+  MessageRequest(MessageType type) : Message(type, ++next_request_id_) {}
 
  private:
   // There is no rollover (wrap around) guard for the ID value. It's expected
@@ -115,12 +149,38 @@ struct MessageRequest : public Message {
 
 // A message from the dockyard.
 struct MessageResponse : public Message {
-  MessageResponse() : Message(Message::NULL_REQUEST_ID) {}
+  MessageResponse()
+      : Message(MessageType::kResponseOk, Message::NULL_REQUEST_ID) {}
+
+  void SetMessageType(MessageType message_type) {
+    message_type_ = message_type;
+  }
+
+  bool Ok() const { return message_type_ == MessageType::kResponseOk; }
 
   // The request ID defaults to a 'push' message with a null request ID. If this
   // is a response to a specific request, set the request ID to the request's
   // request ID.
   void SetRequestId(uint64_t id) { request_id_ = id; }
+};
+
+// Ask that the Dockyard make a connection to a Harvester running on a Fuchsia
+// device.
+struct ConnectionRequest : public MessageRequest {
+  ConnectionRequest() : MessageRequest(MessageType::kConnectionRequest) {}
+
+  const std::string& DeviceName() const { return device_name_; }
+  void SetDeviceName(std::string name) { device_name_ = name; }
+
+ private:
+  std::string device_name_;
+};
+
+// A |ConnectionResponse| is a reply for an individual
+// |ConnectionRequest|.
+// See: ConnectionRequest.
+struct ConnectionResponse : public MessageResponse {
+  ConnectionResponse() = default;
 };
 
 // To delete/remove samples from a sample stream, create a DiscardSamplesRequest
@@ -135,7 +195,8 @@ struct MessageResponse : public Message {
 //       before using the request to be sure of getting the message that the
 //       request is complete.
 struct DiscardSamplesRequest : public MessageRequest {
-  DiscardSamplesRequest() = default;
+  DiscardSamplesRequest()
+      : MessageRequest(MessageType::kDiscardSamplesRequest) {}
 
   // Request that samples are for time range |start_time..end_time|. Defaults to
   // all samples (time zero to kSampleTimeInfinite). If there is no positive
@@ -154,7 +215,9 @@ struct DiscardSamplesRequest : public MessageRequest {
 // A |DiscardSamplesResponse| is a reply for an individual
 // |DiscardSamplesRequest|.
 // See: DiscardSamplesRequest.
-struct DiscardSamplesResponse : public MessageResponse {
+struct DiscardSamplesResponse : MessageResponse {
+  DiscardSamplesResponse() = default;
+
   friend std::ostream& operator<<(std::ostream& out,
                                   const DiscardSamplesResponse& response);
 };
@@ -162,9 +225,8 @@ struct DiscardSamplesResponse : public MessageResponse {
 // To ignore samples, i.e. prevent them from being tracked, create a
 // IgnoreSamplesRequest that will match the beginning and ending of the stream
 // paths to ignore.
-// See: IgnoreSamplesRequest.
 struct IgnoreSamplesRequest : public MessageRequest {
-  IgnoreSamplesRequest() = default;
+  IgnoreSamplesRequest() : MessageRequest(MessageType::kIgnoreSamplesRequest) {}
 
   std::string prefix;
   std::string suffix;
@@ -173,7 +235,9 @@ struct IgnoreSamplesRequest : public MessageRequest {
 // An |IgnoreSamplesResponse| is a reply for an individual
 // |IgnoreSamplesRequest|.
 // See: IgnoreSamplesRequest.
-struct IgnoreSamplesResponse : public MessageResponse {};
+struct IgnoreSamplesResponse : public MessageResponse {
+  IgnoreSamplesResponse() = default;
+};
 
 // A stream set is a portion of a sample stream. This request allows for
 // requesting multiple stream sets in a single request. The results will arrive
@@ -219,7 +283,8 @@ struct StreamSetsRequest : public MessageRequest {
   };
 
   StreamSetsRequest()
-      : start_time_ns(0),
+      : MessageRequest(MessageType::kStreamSetsRequest),
+        start_time_ns(0),
         end_time_ns(0),
         sample_count(0),
         min(0),
@@ -255,7 +320,9 @@ struct StreamSetsRequest : public MessageRequest {
 
 // A |StreamSetsResponse| is a reply for an individual |StreamSetsRequest|.
 // See: StreamSetsRequest.
-struct StreamSetsResponse : public MessageResponse {
+struct StreamSetsResponse : MessageResponse {
+  StreamSetsResponse() = default;
+
   // The low and high all-time values for all sample streams requested. All-time
   // means that these low and high points might not appear in the |data_sets|
   // below. "All sample streams" means that these points may not appear in the
@@ -273,6 +340,23 @@ struct StreamSetsResponse : public MessageResponse {
 
   friend std::ostream& operator<<(std::ostream& out,
                                   const StreamSetsResponse& response);
+};
+
+// To stop ignoring samples, create a  UnignoreSamplesRequest that will match
+// the |prefix| and |suffix| values from a prior IgnoreSamplesRequest.
+struct UnignoreSamplesRequest : public MessageRequest {
+  UnignoreSamplesRequest()
+      : MessageRequest(MessageType::kUnignoreSamplesRequest) {}
+
+  std::string prefix;
+  std::string suffix;
+};
+
+// An |UnignoreSamplesResponse| is a reply for an individual
+// |UnignoreSamplesRequest|.
+// See: UnignoreSamplesRequest.
+struct UnignoreSamplesResponse : MessageResponse {
+  UnignoreSamplesResponse() = default;
 };
 
 class SampleStreamMap

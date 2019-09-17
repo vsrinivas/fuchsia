@@ -881,5 +881,21 @@ TEST_F(SystemMonitorDockyardTest, Discard) {
   EXPECT_EQ(99ULL, response_.data_sets[0][39]);
 }
 
+TEST_F(SystemMonitorDockyardTest, MessageTypes) {
+#define TEST_MESSAGE_TYPES(x)                                             \
+  do {                                                                    \
+    dockyard::x##Request r1;                                              \
+    EXPECT_EQ(r1.GetMessageType(), dockyard::MessageType::k##x##Request); \
+  } while (false)
+
+  TEST_MESSAGE_TYPES(Connection);
+  TEST_MESSAGE_TYPES(DiscardSamples);
+  TEST_MESSAGE_TYPES(IgnoreSamples);
+  TEST_MESSAGE_TYPES(StreamSets);
+  TEST_MESSAGE_TYPES(UnignoreSamples);
+
+#undef TEST_MESSAGE_TYPES
+}
+
 }  // namespace
 }  // namespace dockyard
