@@ -833,15 +833,16 @@ zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Skip the upgrade path if we are not on Fuchsia.
 #ifdef __Fuchsia__
+  // Fuchsia-only: Format upgrade and journal replay.
   if (is_fs_writable) {
     if (out_info->version_major == kMinfsMajorVersionOld1) {
       FS_TRACE_INFO("minfs: Soft upgrade to version 8.\n");
       // Upgrade the superblock.
       status = UpgradeSuperblock(bc, bc->device(), out_info);
       if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %d\n", status);
+        FS_TRACE_ERROR("minfs: failed to upgrade filesystem format to newer version: %s\n",
+                       zx_status_get_string(status));
         return status;
       }
 
@@ -853,12 +854,31 @@ zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
       // Upgrade the journal.
       status = UpgradeJournal(bc, bc->device(), out_info);
       if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %d\n", status);
+        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %s\n",
+                       zx_status_get_string(status));
         return status;
       }
 
       ZX_ASSERT(out_info->version_major == kMinfsMajorVersion);
     }
+  }
+
+  // Replay the journal before proceeding further.
+  //
+  // Additionally, re-read the superblock to make sure we're starting from a
+  // consistent state.
+  fs::JournalSuperblock unused_journal_superblock;
+  status = ReplayJournal(bc, bc, *out_info, &unused_journal_superblock);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Fsck: Failed to replay journal: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+  status = bc->Readblk(kSuperblockStart, out_info);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: could not re-read superblock after replaying journal: %s\n",
+                   zx_status_get_string(status));
+    return status;
   }
 #endif
   DumpInfo(out_info);

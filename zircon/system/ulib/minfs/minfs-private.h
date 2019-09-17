@@ -472,11 +472,15 @@ zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
 zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info);
 #endif
 
+#ifdef __Fuchsia__
 // Upgrades superblock from older version 8 to newer version 9.
 // TODO(36164): Remove this code after migration to version 9.
-#ifdef __Fuchsia__
 zx_status_t UpgradeJournal(fs::TransactionHandler* transaction_handler,
                            block_client::BlockDevice* device, Superblock* out_info);
+
+// Replay the minfs journal, given the sizes provided within the superblock.
+zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
+                          const Superblock& info, fs::JournalSuperblock* out);
 #endif
 
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
