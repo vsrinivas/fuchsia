@@ -22,7 +22,7 @@ class MvmTest : public SingleApTest {
   ~MvmTest() {}
 };
 
-TEST_F(MvmTest, MvmTestFunction) {}
+TEST_F(MvmTest, GetMvm) { EXPECT_NE(iwl_trans_get_mvm(&trans_), nullptr); }
 
 }  // namespace
 }  // namespace testing

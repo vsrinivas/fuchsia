@@ -1203,6 +1203,27 @@ struct iwl_mvm {
 
 #define IWL_MAC80211_GET_MVM(_hw) IWL_OP_MODE_GET_MVM((struct iwl_op_mode*)((_hw)->priv))
 
+// Given a 'iwl_trans' pointer, this function will follow up the data structure to return the
+// 'iwl_mvm' pointer. It returns NULL if it fails to find out the MVM instance.
+static inline struct iwl_mvm* iwl_trans_get_mvm(void* ctx) {
+  struct iwl_trans* trans = (struct iwl_trans*)ctx;
+  if (!trans) {
+    return NULL;
+  }
+
+  struct iwl_op_mode* op_mode = trans->op_mode;
+  if (!op_mode) {
+    return NULL;
+  }
+
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(((struct iwl_trans*)ctx)->op_mode);
+  if (!mvm) {
+    return NULL;
+  }
+
+  return mvm;
+}
+
 /**
  * enum iwl_mvm_status - MVM status bits
  * @IWL_MVM_STATUS_HW_RFKILL: HW RF-kill is asserted
