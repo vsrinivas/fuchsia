@@ -173,20 +173,20 @@ The tests use the main function defined in
 See [Testing](testing.md) for documentation on different types of tests and how
 to run them.
 
-[auto_cleanable.h]: /garnet/public/lib/callback/auto_cleanable.h
-[callback]: /garnet/public/lib/callback
-[cancellable.h]: /garnet/public/lib/callback/cancellable.h
-[capture.h]: /garnet/public/lib/callback/capture.h
+[auto_cleanable.h]: /src/lib/callback/auto_cleanable.h
+[callback]: /src/lib/callback
+[cancellable.h]: /src/lib/callback/cancellable.h
+[capture.h]: /src/lib/callback/capture.h
 [defer.h]: /zircon/system/ulib/fit/include/lib/fit/defer.h
-[destruction_sentinel.h]: /garnet/public/lib/callback/destruction_sentinel.h
-[ensure_called.h]: /garnet/public/lib/callback/ensure_called.h
+[destruction_sentinel.h]: /src/lib/callback/destruction_sentinel.h
+[ensure_called.h]: /src/lib/callback/ensure_called.h
 [fit]: /zircon/system/ulib/fit
-[managed_container.h]: /garnet/public/lib/callback/managed_container.h
-[operation_serializer.h]: /garnet/public/lib/callback/operation_serializer.h
-[scoped_callback.h]: /garnet/public/lib/callback/scoped_callback.h
-[scoped_task_runner.h]: /garnet/public/lib/callback/scoped_task_runner.h
-[scoped_task_runner.h]: /garnet/public/lib/callback/scoped_task_runner.h
-[set_when_called.h]: /garnet/public/lib/callback/set_when_called.h
+[managed_container.h]: /src/lib/callback/managed_container.h
+[operation_serializer.h]: /src/lib/callback/operation_serializer.h
+[scoped_callback.h]: /src/lib/callback/scoped_callback.h
+[scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
+[scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
+[set_when_called.h]: /src/lib/callback/set_when_called.h
 [test_loop_fixture.h]: /garnet/public/lib/gtest/test_loop_fixture.h
-[trace_callback.h]: /garnet/public/lib/callback/trace_callback.h
-[waiter.h]: /garnet/public/lib/callback/waiter.h
+[trace_callback.h]: /src/lib/callback/trace_callback.h
+[waiter.h]: /src/lib/callback/waiter.h

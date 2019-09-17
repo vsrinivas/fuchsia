@@ -1,27 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef LIB_CALLBACK_CAPTURE_H_
 #define LIB_CALLBACK_CAPTURE_H_
 
-#include <functional>
-#include <tuple>
-#include <utility>
+// Do not use this header directly, instead use src/lib/callback/capture.h.
 
-namespace callback {
-
-// Takes a callback, and a list of pointers. Returns a lambda that takes a list
-// of objects, saves these in the pointed variables and runs the callback.
-// If one wants to ignore one of the captured value, one can pass &std::ignore.
-template <typename C, typename... T>
-auto Capture(C callback, T*... ptrs) {
-  return [callback = std::move(callback), ptrs...](auto&&... values) mutable {
-    std::tie(*ptrs...) = std::make_tuple(std::forward<decltype(values)>(values)...);
-    callback();
-  };
-}
-
-}  // namespace callback
+#include "src/lib/callback/capture.h"
 
 #endif  // LIB_CALLBACK_CAPTURE_H_

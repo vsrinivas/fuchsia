@@ -4,9 +4,9 @@
 
 #include "lib/callback/capture.h"
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 

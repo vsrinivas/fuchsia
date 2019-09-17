@@ -4,9 +4,9 @@
 
 #include "lib/callback/cancellable.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
+
+#include <utility>
 
 namespace callback {
 

@@ -4,9 +4,9 @@
 
 #include "lib/callback/managed_container.h"
 
-#include <algorithm>
-
 #include <lib/fit/function.h>
+
+#include <algorithm>
 
 #include "lib/callback/scoped_callback.h"
 
