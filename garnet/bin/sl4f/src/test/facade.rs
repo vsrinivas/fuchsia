@@ -36,12 +36,13 @@ impl TestFacade {
                 }
             }
         }
-        Ok(serde_json::to_value(results)?)
+        serde_json::to_value(results).map_err(|e| format_err!("Not able to format results: {}", e))
     }
 
     pub async fn run_test(&self, url: String) -> Result<Value, failure::Error> {
         let test_results = self.run_test_component(url).await?;
-        Ok(serde_json::to_value(test_results)?)
+        serde_json::to_value(test_results)
+            .map_err(|e| format_err!("Not able to format test results: {}", e))
     }
 
     async fn run_test_component(&self, url: String) -> Result<TestResult, failure::Error> {
@@ -60,29 +61,37 @@ impl TestFacade {
             app = fuchsia_component::client::launch(
                 &launcher,
                 component_manager_for_test.to_string(),
-                Some(vec![url]),
-            )?;
+                Some(vec![url.clone()]),
+            )
+            .map_err(|e| format_err!("Not able to launch v2 test:{}: {}", url, e))?;
         } else {
-            app = fuchsia_component::client::launch(&launcher, url, None)?;
+            app = fuchsia_component::client::launch(&launcher, url.clone(), None)
+                .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", url, e))?;
         }
 
         fx_log_info!("connecting to test service");
-        let suite = app.connect_to_service::<fidl_fuchsia_test::SuiteMarker>()?;
+        let suite = app
+            .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
+            .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
         fx_log_info!("enumerating tests");
-        let cases = suite.get_tests().await?;
+        let cases =
+            suite.get_tests().await.map_err(|e| format_err!("Error getting test steps: {}", e))?;
         fx_log_info!("got test list: {:#?}", cases);
         let mut invocations = Vec::<Invocation>::new();
         for case in cases {
             invocations.push(Invocation { case: Some(case) });
         }
         let (run_listener_client, mut run_listener) =
-            fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()?;
+            fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
+                .map_err(|e| format_err!("Error creating request stream: {}", e))?;
         fx_log_info!("running tests");
-        suite.run(
-            &mut invocations.into_iter().map(|i| i.into()),
-            fidl_fuchsia_test::RunOptions {},
-            run_listener_client,
-        )?;
+        suite
+            .run(
+                &mut invocations.into_iter().map(|i| i.into()),
+                fidl_fuchsia_test::RunOptions {},
+                run_listener_client,
+            )
+            .map_err(|e| format_err!("Error running tests in '{}': {}", url, e))?;
 
         #[derive(PartialEq)]
         enum TestOutcome {
@@ -110,7 +119,11 @@ impl TestFacade {
         // TODO(anmittal): Use this to extract logs and show to user.
         // To store logger socket so that other end doesn't receive a PEER CLOSED error.
         let mut _logger = fuchsia_zircon::Socket::from(fuchsia_zircon::Handle::invalid());
-        while let Some(result_event) = run_listener.try_next().await? {
+        while let Some(result_event) = run_listener
+            .try_next()
+            .await
+            .map_err(|e| format_err!("Error waiting for listener: {}", e))?
+        {
             match result_event {
                 OnTestCaseStarted { name, primary_log, control_handle: _ } => {
                     let step = StepResult { name: name.clone(), ..StepResult::default() };
@@ -160,7 +173,7 @@ impl TestFacade {
             steps.push(StepResultItem::Result(step));
         }
 
-        app.kill()?;
+        app.kill().map_err(|e| format_err!("Error killing test '{}': {}", url, e))?;
 
         let mut test_result = TestResult::default();
         test_result.outcome = test_outcome.to_string();
