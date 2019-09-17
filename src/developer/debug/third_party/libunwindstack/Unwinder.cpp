@@ -37,7 +37,7 @@
 #endif
 
 #ifdef FUCHSIA
-#include "garnet/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
+#include "src/developer/debug/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
 #endif
 
 namespace unwindstack {

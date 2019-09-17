@@ -10,11 +10,11 @@
 
 #include <algorithm>
 
-#include "garnet/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
-#include "garnet/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
-#include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/process_info.h"
+#include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
+#include "src/developer/debug/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 
 namespace debug_agent {
 

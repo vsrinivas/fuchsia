@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
+#include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
 
 #include <errno.h>
 #include <zircon/syscalls.h>

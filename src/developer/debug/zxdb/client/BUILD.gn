@@ -120,7 +120,7 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/third_party/libunwindstack",
+    "//src/developer/debug/third_party/libunwindstack",
     "//garnet/third_party/llvm:LLVMAArch64Desc",
     "//garnet/third_party/llvm:LLVMAArch64Disassembler",
     "//garnet/third_party/llvm:LLVMX86Desc",

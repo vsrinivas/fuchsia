@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/third_party/libunwindstack/include/unwindstack/Regs.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Regs.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"

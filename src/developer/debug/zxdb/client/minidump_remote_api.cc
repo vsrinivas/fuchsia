@@ -12,9 +12,9 @@
 #include <algorithm>
 #include <cstring>
 
-#include "garnet/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
-#include "garnet/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
-#include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/shared/message_loop.h"

@@ -81,10 +81,10 @@ static_library("lib") {
   public_deps = [
     "//garnet/lib/process",
     "//garnet/public/lib/svc/cpp",
-    "//garnet/third_party/libunwindstack",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
+    "//src/developer/debug/third_party/libunwindstack",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
