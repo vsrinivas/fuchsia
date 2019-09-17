@@ -1,0 +1,37 @@
+// Component test example which injects echo_server and launches echo_test_client
+// which is a test which connects to this injected server, tests it and
+// passes back result using `fuchsia.test.Suite`
+
+{
+    // Route Echo service from server to client.
+    "offer": [
+        {
+            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "from": "#echo_server",
+            "to": [
+                {
+                    "dest": "#echo_test_client",
+                },
+            ],
+        },
+    ],
+    "expose": [
+        {
+            "legacy_service": "/svc/fuchsia.test.Suite",
+            "from": "#echo_test_client",
+        },
+    ],
+    // Two children: a server and client. "echo_test_client" has "eager" startup so it
+    // will be started along with the realm.
+    "children": [
+        {
+            "name": "echo_server",
+            "url": "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/echo_server.cm",
+        },
+        {
+            "name": "echo_test_client",
+            "url": "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/echo_test_client.cm",
+            "startup": "eager",
+        },
+    ],
+}

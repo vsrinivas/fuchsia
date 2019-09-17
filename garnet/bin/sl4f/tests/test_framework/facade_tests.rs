@@ -129,3 +129,25 @@ async fn run_a_test_plan() {
     assert_eq!(outcome, "failed");
     assert!(iter.next().is_none());
 }
+
+// This test also acts an example on how to right a v2 test.
+// This will launch a echo_realm which will inject echo_server, launch v2 test which will
+// then test that server out and return back results.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_echo_test() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/echo_test_realm.cm"
+                .to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["outcome"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert_eq!(steps.len(), 1);
+    for step in steps.iter() {
+        assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+    }
+}
