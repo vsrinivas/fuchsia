@@ -20,7 +20,7 @@ protocol Gdc {
     InitTask(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
              zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
              handle<vmo> config_vmo,
-	     ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+             ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
     RemoveTask(uint32 task_index);

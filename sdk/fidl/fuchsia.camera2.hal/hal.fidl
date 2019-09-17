@@ -36,7 +36,7 @@ struct StreamConfig {
 /// Represents one configuration
 struct Config {
     // One configuration could have multiple streams.
-    vector<StreamConfig>:MAX_STREAMS stream_config;
+    vector<StreamConfig>:MAX_STREAMS stream_configs;
 };
 
 /// This is the interface to the camera driver
@@ -49,7 +49,7 @@ protocol Controller {
 
     /// Set a particular configuration and create the requested stream.
     /// |config_index| : Configuration index from the vector which needs to be applied.
-    /// |stream_type| : Stream types (one of more of |CameraStreamTypes|)
+    /// |stream_index| : Stream index from the vector of streams provided within a config.
     /// |buffer_collection| : Buffer collections for the stream.
     /// |stream| : Stream channel for the stream requested
     /// |image_format_index| : Image format index which needs to be set up upon creation.
@@ -59,9 +59,9 @@ protocol Controller {
     /// If the new stream requested is already part of the existing running configuration
     /// the HAL will just be creating this new stream while the other stream still exists as is.
     CreateStream(uint32 config_index,
-                 uint32 stream_type,
+                 uint32 stream_index,
                  uint32 image_format_index,
-                 fuchsia.sysmem.BufferCollectionInfo buffer_collection,
+                 fuchsia.sysmem.BufferCollectionInfo_2 buffer_collection,
                  request<fuchsia.camera2.Stream> stream);
 
     /// Enable/Disable Streaming
