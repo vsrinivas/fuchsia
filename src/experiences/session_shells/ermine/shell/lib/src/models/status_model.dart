@@ -5,7 +5,9 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:fidl_fuchsia_bluetooth_control/fidl_async.dart' as bluetooth;
 import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fidl_fuchsia_power/fidl_async.dart' as power;
@@ -36,6 +38,8 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   final int _fpsValue = 120;
   // Service values
   StartupContext startupContext;
+  final bluetooth.ControlProxy bluetoothControl;
+  final modular.PuppetMasterProxy puppetMaster;
   static const Duration _systemInformationUpdatePeriod =
       Duration(milliseconds: 500);
   // memory monitor
@@ -54,7 +58,12 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   /// The [GlobalKey] associated with [Status] widget.
   final GlobalKey key = GlobalKey(debugLabel: 'ask');
 
-  StatusModel({this.statusMemoryService, this.statusBatteryManager}) {
+  StatusModel({
+    this.statusMemoryService,
+    this.statusBatteryManager,
+    this.puppetMaster,
+    this.bluetoothControl,
+  }) {
     statusMemoryService
         .watch(_memoryServiceBinding.wrap(_MonitorWatcherImpl(this)));
     memoryModel = StatusProgressBarVisualizerModel(
@@ -103,13 +112,45 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
+    final bluetoothControl = bluetooth.ControlProxy();
+    startupContext.incoming.connectToService(bluetoothControl);
+    final puppetMaster = modular.PuppetMasterProxy();
+    startupContext.incoming.connectToService(puppetMaster);
     final statusMemoryService = mem.MonitorProxy();
     startupContext.incoming.connectToService(statusMemoryService);
     final statusBatteryManager = power.BatteryManagerProxy();
     startupContext.incoming.connectToService(statusBatteryManager);
+
     return StatusModel(
-        statusMemoryService: statusMemoryService,
-        statusBatteryManager: statusBatteryManager);
+      statusMemoryService: statusMemoryService,
+      statusBatteryManager: statusBatteryManager,
+      puppetMaster: puppetMaster,
+      bluetoothControl: bluetoothControl,
+    );
+  }
+
+  // Launch settings mod.
+  void launchSettings() {
+    final storyMaster = modular.StoryPuppetMasterProxy();
+    puppetMaster.controlStory('settings', storyMaster.ctrl.request());
+    final addMod = modular.AddMod(
+      intent: modular.Intent(
+          action: '',
+          handler: 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx'),
+      surfaceParentModName: [],
+      modName: ['root'],
+      surfaceRelation: modular.SurfaceRelation(),
+    );
+    storyMaster
+      ..enqueue([modular.StoryCommand.withAddMod(addMod)])
+      ..execute();
+  }
+
+  void refreshBluetoothDevices() async {
+    final remoteDevices = await bluetoothControl.getKnownRemoteDevices();
+    await Future.forEach(remoteDevices, (device) async {
+      await bluetoothControl.connect(device);
+    });
   }
 
   // Date
@@ -135,6 +176,8 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   void dispose() {
     statusMemoryService.ctrl.close();
     statusBatteryManager.ctrl.close();
+    puppetMaster.ctrl.close();
+    bluetoothControl.ctrl.close();
     super.dispose();
   }
 

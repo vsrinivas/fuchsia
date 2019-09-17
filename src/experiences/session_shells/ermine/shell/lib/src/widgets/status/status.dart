@@ -123,11 +123,11 @@ class Status extends StatelessWidget {
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: EdgeInsets.all(0),
                         child: Text(
-                          'USER-NAME',
+                          'SETTINGS',
                           style: _statusTextStyleBlack,
                           textAlign: TextAlign.left,
                         ),
-                        onPressed: null,
+                        onPressed: model.launchSettings,
                       ),
                     ),
                   ],

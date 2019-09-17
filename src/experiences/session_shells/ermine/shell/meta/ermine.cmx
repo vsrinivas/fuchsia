@@ -10,6 +10,7 @@
             "packages"
         ],
         "services": [
+            "fuchsia.bluetooth.control.Control",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
