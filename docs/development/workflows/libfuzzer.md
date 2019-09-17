@@ -186,8 +186,8 @@ similar directory for your fuzzing targets.  If not, make sure the file's name c
 is a fuzzer binary.  In general, use naming and location to make the fuzzer easy to find and its
 purpose clear.
 
-_Example:_ A fuzzer for `//garnet/lib/cmx` might be located at
-`//garnet/lib/cmx/cmx_fuzzer.cc`, to match `//garnet/lib/cmx/cmx_unittest.cc`.
+_Example:_ A fuzzer for `//src/lib/cmx` might be located at
+`//src/lib/cmx/cmx_fuzzer.cc`, to match `//src/lib/cmx/cmx_unittest.cc`.
 
 Libfuzzer already [provides tips][fuzz target] on writing the fuzz target function itself.
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace/event.h>
+#include "src/lib/cmx/runtime.h"
 
-#include "garnet/lib/cmx/runtime.h"
+#include <trace/event.h>
 
 #include "lib/json/json_parser.h"
 #include "rapidjson/document.h"

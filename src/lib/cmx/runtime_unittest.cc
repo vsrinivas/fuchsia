@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/cmx/runtime.h"
+#include "src/lib/cmx/runtime.h"
 
 #include <fcntl.h>
+
 #include <string>
 
-#include "lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/json/json_parser.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 

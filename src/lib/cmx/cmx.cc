@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/cmx/cmx.h"
-
-#include <trace/event.h>
+#include "src/lib/cmx/cmx.h"
 
 #include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
+
+#include <trace/event.h>
 
 #include "rapidjson/document.h"
 #include "src/lib/fxl/strings/substitute.h"

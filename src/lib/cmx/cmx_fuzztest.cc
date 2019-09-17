@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/cmx/cmx.h"
-
-#include <string>
-
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <string>
+
 #include "garnet/public/lib/json/json_parser.h"
+#include "src/lib/cmx/cmx.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
