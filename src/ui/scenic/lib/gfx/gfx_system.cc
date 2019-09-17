@@ -87,6 +87,7 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
        kRequiresSurface});
 
   auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
+  auto callback_handle = vulkan_instance->RegisterDebugReportCallback(HandleDebugReport);
 
   // Tell Escher not to filter out queues that don't support presentation.
   // The display manager only supports a single connection, so none of the
@@ -133,22 +134,6 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
     FXL_DCHECK(success) << "Failed to init shader files.";
   }
 
-  VkDebugReportCallbackEXT debug_report_callback;
-  {
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-    dbgCreateInfo.pNext = NULL;
-    dbgCreateInfo.pfnCallback = HandleDebugReport;
-    dbgCreateInfo.pUserData = NULL;
-    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
-                          VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-
-    // We use the C API here due to dynamically loading the extension function.
-    VkResult result = vulkan_instance->proc_addrs().CreateDebugReportCallbackEXT(
-        vulkan_instance->vk_instance(), &dbgCreateInfo, nullptr, &debug_report_callback);
-    FXL_CHECK(result == VK_SUCCESS);
-  }
-
   // Initialize Escher.
   escher::GlslangInitializeProcess();
   return escher::EscherUniquePtr(new escher::Escher(vulkan_device_queues, std::move(shader_fs)),
@@ -156,10 +141,8 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
                                  // The vulkan instance is a stack variable, but it is a
                                  // fxl::RefPtr, so we can store by value.
                                  [=](escher::Escher* escher) {
+                                   vulkan_instance->DeregisterDebugReportCallback(callback_handle);
                                    escher::GlslangFinalizeProcess();
-                                   vulkan_instance->proc_addrs().DestroyDebugReportCallbackEXT(
-                                       vulkan_instance->vk_instance(), debug_report_callback,
-                                       nullptr);
                                    delete escher;
                                  });
 }

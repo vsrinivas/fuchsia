@@ -115,10 +115,10 @@ SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilie
           // both graphics/compute and present.  In this case, we would need a
           // separate present queue.  For now, just look for a single queue that
           // meets all of our needs.
-          VkBool32 supports_present;
-          auto result = instance->proc_addrs().GetPhysicalDeviceSurfaceSupportKHR(
-              physical_device, i, params.surface, &supports_present);
-          FXL_CHECK(result == VK_SUCCESS);
+          auto get_surface_support_result =
+              physical_device.getSurfaceSupportKHR(i, params.surface, instance->proc_addrs());
+          FXL_CHECK(get_surface_support_result.result == vk::Result::eSuccess);
+          VkBool32 supports_present = get_surface_support_result.value;
           if (supports_present != VK_TRUE) {
             FXL_LOG(INFO) << "Queue supports graphics/compute, but not presentation";
             continue;

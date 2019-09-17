@@ -64,21 +64,7 @@ void DemoHarness::CreateInstance(InstanceParams params) {
   instance_ = escher::VulkanInstance::New(std::move(params));
   FXL_CHECK(instance_);
 
-  // Set up debug callback.
-  {
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-    dbgCreateInfo.pNext = NULL;
-    dbgCreateInfo.pfnCallback = RedirectDebugReport;
-    dbgCreateInfo.pUserData = this;
-    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
-                          VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-
-    // We use the C API here due to dynamically loading the extension function.
-    VkResult result = instance_proc_addrs().CreateDebugReportCallbackEXT(
-        instance(), &dbgCreateInfo, nullptr, &debug_report_callback_);
-    FXL_CHECK(result == VK_SUCCESS);
-  }
+  instance_->RegisterDebugReportCallback(RedirectDebugReport, this);
 }
 
 void DemoHarness::CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params) {
@@ -262,13 +248,7 @@ void DemoHarness::DestroyDevice() {
   device_queues_ = nullptr;
 }
 
-void DemoHarness::DestroyInstance() {
-  // Destroy the debug callback.  We use the C API here because we need to
-  // dynamically load the destruction function.
-  instance_proc_addrs().DestroyDebugReportCallbackEXT(instance(), debug_report_callback_, nullptr);
-
-  instance_ = nullptr;
-}
+void DemoHarness::DestroyInstance() { instance_ = nullptr; }
 
 VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
                                         VkDebugReportObjectTypeEXT object_type_in, uint64_t object,

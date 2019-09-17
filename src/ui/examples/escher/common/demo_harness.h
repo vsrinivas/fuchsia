@@ -6,7 +6,6 @@
 #define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
 
 #include <cstdint>
-#include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
@@ -14,6 +13,8 @@
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 #include "src/ui/lib/escher/vk/vulkan_swapchain.h"
+
+#include <vulkan/vulkan.hpp>
 
 class Demo;
 
@@ -132,8 +133,6 @@ class DemoHarness {
   escher::VulkanInstancePtr instance_;
   escher::VulkanDeviceQueuesPtr device_queues_;
   escher::VulkanSwapchain swapchain_;
-
-  VkDebugReportCallbackEXT debug_report_callback_;
 
   std::unique_ptr<SwapchainImageOwner> swapchain_image_owner_;
   uint32_t swapchain_image_count_ = 0;

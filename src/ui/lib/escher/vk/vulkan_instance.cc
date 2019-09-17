@@ -18,7 +18,7 @@ static FuncT GetInstanceProcAddr(vk::Instance inst, const char *func_name) {
   return func;
 }
 
-#define GET_INSTANCE_PROC_ADDR(XXX) XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
+#define GET_INSTANCE_PROC_ADDR(XXX) vk##XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
 
 VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance, bool requires_surface) {
   GET_INSTANCE_PROC_ADDR(CreateDebugReportCallbackEXT);
@@ -68,9 +68,31 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
     : instance_(instance),
       params_(std::move(params)),
-      proc_addrs_(instance_, params_.requires_surface) {}
+      proc_addrs_(instance_, params_.requires_surface) {
+  // Register global debug report callback function.
+  // Do this only if extension VK_EXT_debug_report is enabled.
+  if (HasDebugReportExt()) {
+    auto callback_flags = vk::DebugReportFlagBitsEXT::eError |
+                          vk::DebugReportFlagBitsEXT::eWarning |
+                          vk::DebugReportFlagBitsEXT::ePerformanceWarning;
+    vk::DebugReportCallbackCreateInfoEXT create_info(callback_flags, DebugReportCallbackEntrance,
+                                                     this);
+    auto create_callback_result =
+        vk_instance().createDebugReportCallbackEXT(create_info, nullptr, proc_addrs());
+    FXL_CHECK(create_callback_result.result == vk::Result::eSuccess);
+    vk_callback_entrance_handle_ = create_callback_result.value;
+  }
+}
 
-VulkanInstance::~VulkanInstance() { instance_.destroy(); }
+VulkanInstance::~VulkanInstance() {
+  // Unregister global debug report callback function.
+  // Do this only if extension VK_EXT_debug_report is enabled.
+  if (HasDebugReportExt()) {
+    vk_instance().destroyDebugReportCallbackEXT(vk_callback_entrance_handle_, nullptr,
+                                                proc_addrs());
+  }
+  instance_.destroy();
+}
 
 bool VulkanInstance::ValidateLayers(const std::set<std::string> &required_layer_names) {
   auto properties = ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceLayerProperties());
@@ -131,6 +153,30 @@ bool VulkanInstance::ValidateExtensions(const std::set<std::string> &required_ex
     }
   }
   return true;
+}
+
+VulkanInstance::DebugReportCallbackHandle VulkanInstance::RegisterDebugReportCallback(
+    VkDebugReportCallbackFn function, void *user_data) {
+  callbacks_.push_back({.function = std::move(function), .user_data = user_data});
+  return std::prev(callbacks_.end());
+}
+
+void VulkanInstance::DeregisterDebugReportCallback(
+    const VulkanInstance::DebugReportCallbackHandle &handle) {
+  callbacks_.erase(handle);
+}
+
+VkBool32 VulkanInstance::DebugReportCallbackEntrance(VkDebugReportFlagsEXT flags,
+                                                     VkDebugReportObjectTypeEXT objectType,
+                                                     uint64_t object, size_t location,
+                                                     int32_t messageCode, const char *pLayerPrefix,
+                                                     const char *pMessage, void *pUserData) {
+  auto *instance_ptr = reinterpret_cast<VulkanInstance *>(pUserData);
+  for (const auto &callback : instance_ptr->callbacks_) {
+    callback.function(flags, objectType, object, location, messageCode, pLayerPrefix, pMessage,
+                      callback.user_data);
+  }
+  return VK_FALSE;
 }
 
 };  // namespace escher
