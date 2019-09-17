@@ -163,14 +163,12 @@ PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x, float y)
 // Helper for EnqueueEventToView.
 // Builds a pointer event with local view coordinates.
 PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event,
-                                    const ViewStack::Entry& view_info) {
-  PointerEvent local;
+                                    const glm::mat4& global_transform) {
   const float global_x = pointer_event.x;
   const float global_y = pointer_event.y;
   escher::ray4 screen_ray = CreateScreenPerpendicularRay(global_x, global_y);
-  escher::vec2 hit = TransformPointerEvent(screen_ray, view_info.global_transform);
-  local = ClonePointerWithCoords(pointer_event, hit.x, hit.y);
-  return local;
+  escher::vec2 hit = TransformPointerEvent(screen_ray, global_transform);
+  return ClonePointerWithCoords(pointer_event, hit.x, hit.y);
 }
 
 // Helper for DispatchTouchCommand.
@@ -347,7 +345,8 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
       // Find the global transform for each hit, fill out hit_views.
       for (size_t i = 0; i < hits.size(); ++i) {
         if (gfx::ViewPtr view = views[i]) {
-          hit_views.stack.push_back({view->session_id(), view->event_reporter()->GetWeakPtr(),
+          hit_views.stack.push_back({view->view_ref_koid(), view->session_id(),
+                                     view->event_reporter()->GetWeakPtr(),
                                      FindGlobalTransform(view)});
           if (/*TODO(SCN-919): view_id may mask input */ false) {
             break;
@@ -384,6 +383,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
       }
     }
   }
+
   // Input delivery must be parallel; needed for gesture disambiguation.
   std::vector<std::pair<ViewStack::Entry, PointerEvent>> deferred_events;
   for (const auto& entry : touch_targets_[pointer_id].stack) {
@@ -398,19 +398,38 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
       break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
     }
   }
+
   FXL_DCHECK(a11y_enabled || deferred_events.empty())
       << "When a11y pointer forwarding is off, never defer events.";
   if (a11y_enabled && !deferred_events.empty()) {
-    // TODO(lucasradaelli): pass the viewref_koid once it exists.
-    const auto& local_pointer_event = BuildLocalPointerEvent(
-        /*pointer_event=*/deferred_events[0].second,
-        /*view_info=*/deferred_events[0].first);  // The top most hit.
-    AccessibilityPointerEvent accessibility_pointer_event =
-        BuildAccessibilityPointerEvent(command.pointer_event, local_pointer_event,
-                                       /*viewref_koid=*/ZX_KOID_INVALID);
-    pointer_event_buffer_->AddEvents(pointer_id, std::move(deferred_events),
-                                     std::move(accessibility_pointer_event));
+    // NOTE: Do not rely on the latched view stack for "top hit" information; elevation can change
+    // dynamically (it's only guaranteed correct for DOWN). Instead, perform an independent query
+    // for "top hit".
+    glm::mat4 view_global_transform(1.f);
+    zx_koid_t view_ref_koid = ZX_KOID_INVALID;
+    {
+      GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+      const std::vector<gfx::Hit> hits =
+          PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
+      // Find top-hit target and send it to accessibility.
+      // NOTE: We may hit various mouse cursors (owned by root presenter), so keep going until we
+      // find a hit with a valid owning View.
+      for (const gfx::Hit& hit : hits) {
+        FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
+        if (gfx::ViewPtr view = hit.node->FindOwningView()) {
+          view_global_transform = FindGlobalTransform(view);
+          view_ref_koid = view->view_ref_koid();
+          break;  // Just need the first one.
+        }
+      }
+    }
+    const auto& top_hit_view_local =
+        BuildLocalPointerEvent(/*pointer_event=*/command.pointer_event, view_global_transform);
+    AccessibilityPointerEvent packet =
+        BuildAccessibilityPointerEvent(command.pointer_event, top_hit_view_local, view_ref_koid);
+    pointer_event_buffer_->AddEvents(pointer_id, std::move(deferred_events), std::move(packet));
   }
+
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
     touch_targets_.erase(pointer_id);
   }
@@ -455,8 +474,8 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
       if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-        hit_view.stack.push_back(
-            {view->session_id(), view->event_reporter()->GetWeakPtr(), FindGlobalTransform(view)});
+        hit_view.stack.push_back({view->view_ref_koid(), view->session_id(),
+                                  view->event_reporter()->GetWeakPtr(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
         break;  // Just need the first one.
       }
@@ -570,7 +589,7 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
   trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
 
-  auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info);
+  auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info.global_transform);
   InputEvent event;
   event.set_pointer(std::move(local_pointer_event));
 
