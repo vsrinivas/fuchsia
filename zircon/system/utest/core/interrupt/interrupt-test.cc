@@ -288,4 +288,17 @@ TEST_F(InterruptTest, UnableToBindVcpuMultipleGuests) {
   ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_ERR_INVALID_ARGS);
 }
 
+// Tests support for null output timestamp
+// NOTE: Absent the changes to interrupt.h also submitted in this CL, this test invokes undefined
+//       behavior not detectable at runtime. See also TODO(36668): support ubsan checks
+TEST_F(InterruptTest, NullOutputTimestamp) {
+  zx::interrupt interrupt;
+
+  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+
+  ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
+
+  ASSERT_OK(interrupt.wait(nullptr));
+}
+
 }  // namespace

@@ -35,7 +35,7 @@ class interrupt final : public object<interrupt> {
                             interrupt* result);
 
   zx_status_t wait(zx::time* timestamp) const {
-    return zx_interrupt_wait(get(), timestamp->get_address());
+    return zx_interrupt_wait(get(), timestamp ? timestamp->get_address() : nullptr);
   }
 
   zx_status_t destroy() const { return zx_interrupt_destroy(get()); }
