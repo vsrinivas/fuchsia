@@ -283,13 +283,35 @@ impl HooksInner {
 mod tests {
     use {super::*, crate::model::testing::mocks, std::sync::Arc};
 
+    #[derive(Clone)]
+    struct EventLog {
+        log: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl EventLog {
+        pub fn new() -> Self {
+            Self { log: Arc::new(Mutex::new(Vec::new())) }
+        }
+
+        pub async fn append(&self, item: String) {
+            let mut log = self.log.lock().await;
+            log.push(item);
+        }
+
+        pub async fn get(&self) -> Vec<String> {
+            self.log.lock().await.clone()
+        }
+    }
+
     struct CallCounter {
+        name: String,
+        logger: Option<EventLog>,
         call_count: Mutex<i32>,
     }
 
     impl CallCounter {
-        pub fn new() -> Arc<Self> {
-            Arc::new(Self { call_count: Mutex::new(0) })
+        pub fn new(name: &str, logger: Option<EventLog>) -> Arc<Self> {
+            Arc::new(Self { name: name.to_string(), logger, call_count: Mutex::new(0) })
         }
 
         pub async fn count(&self) -> i32 {
@@ -299,6 +321,9 @@ mod tests {
         async fn on_add_dynamic_child_async(&self) -> Result<(), ModelError> {
             let mut call_count = self.call_count.lock().await;
             *call_count += 1;
+            if let Some(logger) = &self.logger {
+                logger.append(format!("{}::OnAddDynamicChild", self.name)).await;
+            }
             Ok(())
         }
     }
@@ -309,12 +334,16 @@ mod tests {
         }
     }
 
+    fn log(v: Vec<&str>) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
     // This test verifies that a hook cannot be installed twice.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn install_hook_twice() {
         // CallCounter counts the number of AddDynamicChild events it receives.
         // It should only ever receive one.
-        let call_counter = CallCounter::new();
+        let call_counter = CallCounter::new("CallCounter", None);
         let hooks = Hooks::new(None);
 
         // Attempt to install CallCounter twice.
@@ -337,8 +366,12 @@ mod tests {
         let parent_hooks = Hooks::new(None);
         let child_hooks = Hooks::new(Some(&parent_hooks));
 
-        let call_counter = CallCounter::new();
-        parent_hooks.install(vec![Hook::AddDynamicChild(call_counter.clone())]).await;
+        let event_log = EventLog::new();
+        let parent_call_counter = CallCounter::new("ParentCallCounter", Some(event_log.clone()));
+        parent_hooks.install(vec![Hook::AddDynamicChild(parent_call_counter.clone())]).await;
+
+        let child_call_counter = CallCounter::new("ChildCallCounter", Some(event_log.clone()));
+        child_hooks.install(vec![Hook::AddDynamicChild(child_call_counter.clone())]).await;
 
         let realm = {
             let resolver = ResolverRegistry::new();
@@ -347,8 +380,19 @@ mod tests {
             Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
         };
         child_hooks.on_add_dynamic_child(realm.clone()).await.expect("Unable to call hooks.");
-        // call_counter gets informed of the event on child_hooks even though it has
+        // parent_call_counter gets informed of the event on child_hooks even though it has
         // been installed on parent_hooks.
-        assert_eq!(1, call_counter.count().await);
+        assert_eq!(1, parent_call_counter.count().await);
+        // child_call_counter should be called only once.
+        assert_eq!(1, child_call_counter.count().await);
+
+        // ChildCallCounter should be called before ParentCallCounter.
+        assert_eq!(
+            log(vec![
+                "ChildCallCounter::OnAddDynamicChild",
+                "ParentCallCounter::OnAddDynamicChild"
+            ]),
+            event_log.get().await
+        );
     }
 }
