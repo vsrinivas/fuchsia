@@ -605,48 +605,6 @@ void StoryProviderImpl::GetStories2(
       WrapFutureAsOperation("StoryProviderImpl::GetStories2", on_run, done, std::move(callback)));
 }
 
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
-  auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
-  auto done = on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-                  ->Map([](std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
-                    std::vector<fuchsia::modular::StoryInfo> result;
-
-                    for (auto& story_data : all_story_data) {
-                      if (!story_data.story_options().kind_of_proto_story) {
-                        if (!story_data.has_story_info()) {
-                          continue;
-                        }
-                        result.push_back(StoryInfo2ToStoryInfo(story_data.story_info()));
-                      }
-                    }
-                    return result;
-                  });
-  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::PreviousStories", on_run, done,
-                                             std::move(callback)));
-}
-
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::PreviousStories2(PreviousStories2Callback callback) {
-  auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories2.on_run");
-  auto done = on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-                  ->Map([](std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
-                    std::vector<fuchsia::modular::StoryInfo2> result;
-
-                    for (auto& story_data : all_story_data) {
-                      if (!story_data.story_options().kind_of_proto_story) {
-                        if (!story_data.has_story_info()) {
-                          continue;
-                        }
-                        result.push_back(std::move(*story_data.mutable_story_info()));
-                      }
-                    }
-                    return result;
-                  });
-  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::PreviousStories2", on_run, done,
-                                             std::move(callback)));
-}
-
 void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
                                               fuchsia::modular::internal::StoryData story_data) {
   // If we have a StoryRuntimeContainer for this story id, update our cached

@@ -84,7 +84,6 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 
   void Cont(FlowToken flow) {
     // TODO(security), cf. FW-174. This ID is exposed in public services
-    // such as fuchsia::modular::StoryProvider.PreviousStories(),
     // fuchsia::modular::StoryController.GetInfo(),
     // fuchsia::modular::ModuleContext.GetStoryName(). We need to ensure this
     // doesn't expose internal information by being a page ID.

@@ -34,14 +34,6 @@ protocol StoryProvider {
     /// exist, the interface request is closed.
     GetController(string story_id, request<StoryController> request);
 
-    /// Returns info of known stories.
-    /// DEPRECATED: In favor of GetStories().
-    [Transitional = "Use PreviousStories2 instead"]
-    PreviousStories() -> (vector<StoryInfo> story_infos);
-    /// DEPRECATED: In favor of GetStories2(). For transition purposes only.
-    [Transitional = "Use only while PreviousStories is transitional"]
-    PreviousStories2() -> (vector<StoryInfo2> story_infos);
-
     /// Registers a watcher for changes in the story collection.
     /// DEPRECATED: In favor of GetStories().
     Watch(StoryProviderWatcher watcher);

@@ -188,12 +188,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                    GetStories2Callback callback) override;
 
   // |fuchsia::modular::StoryProvider|
-  void PreviousStories(PreviousStoriesCallback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
-  void PreviousStories2(PreviousStories2Callback callback) override;
-
-  // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
   // |fuchsia::modular::StoryProvider|

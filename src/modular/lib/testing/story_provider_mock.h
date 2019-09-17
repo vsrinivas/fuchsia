@@ -69,16 +69,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
-  // |fuchsia::modular::StoryProvider|
-  void PreviousStories(PreviousStoriesCallback callback) override {
-    callback(std::vector<fuchsia::modular::StoryInfo>());
-  }
-
-  // |fuchsia::modular::StoryProvider|
-  void PreviousStories2(PreviousStories2Callback callback) override {
-    callback(std::vector<fuchsia::modular::StoryInfo2>());
-  }
-
   std::string last_created_story_;
   std::string last_created_kind_of_proto_story_;
   std::string deleted_story_;
