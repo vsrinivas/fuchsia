@@ -36,6 +36,7 @@ table WorkRequest {
 /// Each scheduled work item is identified by a client-provided `WorkId`. Each scheduled work item
 /// has a `WorkId` that is unique with respect to scheduled work items belonging to the same
 /// component instance.
+[Discoverable]
 protocol WorkScheduler {
     /// Schedule a new work item identified by `work_id`. The work item is to be scheduled roughly
     /// at the time corresponding to `work_request.start`. When `work_request.period` is specified,
@@ -52,6 +53,26 @@ protocol WorkScheduler {
 ///
 /// Note: The intent of exposing this service is to expose it to the `WorkScheduler` service
 /// provider (i.e., the framework) and no one else.
+[Discoverable]
 protocol Worker {
     DoWork(WorkId work_id) -> () error Error;
+};
+
+/// Framework service: Administrative API for controlling parameters of the `WorkScheduler`
+/// framework service. So long as there are work items with deadlines in the next `batch_period`,
+/// the `WorkScheduler` will sleep for `batch_period`, then wake up and immediately dispatch a batch
+/// of work items: all those with past deadlines. It will repeat this process until no work items
+/// would be scheduled in the next `batch_period`, at which point it will go to sleep until the next
+/// deadline. This strategy ensures that each work item is dispatched approximately within
+/// `batch_period` of its deadline.
+[Discoverable]
+protocol WorkSchedulerControl {
+    /// Get the current period between `WorkScheduler` attempts to dispatch a batch of work.
+    /// `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing a
+    /// number of nanoseconds between dispatching batches of work.
+    GetBatchPeriod() -> (zx.duration batch_period) error Error;
+    /// Set the current period between `WorkScheduler` attempts to batch and dispatch a batch of
+    /// work. `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing
+    /// a number of nanoseconds between dispatching batches of work.
+    SetBatchPeriod(zx.duration batch_period) -> () error Error;
 };
