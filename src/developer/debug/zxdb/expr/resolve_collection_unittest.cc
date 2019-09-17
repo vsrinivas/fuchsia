@@ -348,4 +348,58 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   EXPECT_EQ(expected_base, base_value.value());
 }
 
+// Tests resolving datat members with "const values" given in the symbols.
+TEST_F(ResolveCollectionTest, ConstValue) {
+  // Regular member.
+  auto int32_type = MakeInt32Type();
+  auto int_member = fxl::MakeRefCounted<DataMember>("a", int32_type, 0);
+
+  // Const member. This one doesn't have the external flag set. That is normally the case since
+  // for these to be inlined as members they have to be static which will set the is_external()
+  // flag. But the spec doesn't require that so we need to handle ConstValue members based only
+  // on the presence of the ConstValue attribute.
+  const char kConstMemberName[] = "kMember";
+  auto const_int32_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, int32_type);
+  auto const_member = fxl::MakeRefCounted<DataMember>(kConstMemberName, const_int32_type, 0);
+  uint8_t kConstValue = 42;
+  const_member->set_const_value(ConstValue({kConstValue, 0, 0, 0}));
+
+  // Check an extern member. This is a different code path.
+  const char kExternConstMemberName[] = "kExternMember";
+  auto extern_const_member =
+      fxl::MakeRefCounted<DataMember>(kExternConstMemberName, const_int32_type, 0);
+  uint8_t kExternConstValue = 99;
+  extern_const_member->set_const_value(ConstValue({kExternConstValue, 0, 0, 0}));
+  extern_const_member->set_is_external(true);
+
+  auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "MyStruct");
+  collection->set_data_members(
+      std::vector<LazySymbol>{int_member, const_member, extern_const_member});
+
+  // The collection holds only the non-const-value integer.
+  collection->set_byte_size(4);
+  ExprValue coll_value(collection, {0xff, 0xff, 0xff, 0xff});
+
+  // Const one.
+  ErrOrValue result =
+      ResolveNonstaticMember(eval_context_, coll_value, ParsedIdentifier(kConstMemberName));
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(const_int32_type.get(), result.value().type());
+  EXPECT_EQ(kConstValue, result.value().GetAs<int32_t>());
+
+  // Extern const one. Have to use the non-nonstatic call to fully test the static codepath.
+  bool called = false;
+  ResolveMember(eval_context_, coll_value, ParsedIdentifier(kExternConstMemberName),
+                [&called, &result](ErrOrValue in_result) {
+                  called = true;
+                  result = std::move(in_result);
+                });
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(called);
+
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(const_int32_type.get(), result.value().type());
+  EXPECT_EQ(kExternConstValue, result.value().GetAs<int32_t>());
+}
+
 }  // namespace zxdb

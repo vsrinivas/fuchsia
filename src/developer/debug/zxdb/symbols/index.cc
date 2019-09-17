@@ -128,6 +128,9 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
 
+  bool has_const_value = false;
+  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_const_value, &has_const_value);
+
   llvm::Optional<bool> is_main_subprogram;
   decoder.AddBool(llvm::dwarf::DW_AT_main_subprogram, &is_main_subprogram);
 
@@ -137,6 +140,7 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
     decl_unit_offset.reset();
     decl_global_offset.reset();
     is_main_subprogram.reset();
+    has_const_value = false;
 
     const llvm::DWARFDebugInfoEntry* die = scanner->Prepare();
     const llvm::DWARFAbbreviationDeclaration* abbrev = die->getAbbreviationDeclarationPtr();
@@ -165,10 +169,20 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
       // disambiguated once the DIE is decoded below).
       ref_type = IndexNode::RefType::kType;
       should_index = true;
-    } else if (!scanner->is_inside_function() && tag == DwarfTag::kVariable &&
-               AbbrevHasLocation(abbrev)) {
+    } else if (!scanner->is_inside_function() &&
+               ((tag == DwarfTag::kVariable && AbbrevHasLocation(abbrev)) ||
+                (tag == DwarfTag::kMember && has_const_value))) {
       // Found variable storage outside of a function (variables inside functions are local so don't
       // get added to the global index).
+      //
+      // In C++ everything with a const_value will generally be external (i.e. "static") which
+      // are things we want to index. Theoretically the compiler could generated a const_value
+      // member if it notices the member is never modified and optimize it. In that case, the
+      // user would never expect to reference it outside of a known Collection object and it
+      // doesn't need to be in the index. But that requires some extra work checking for the
+      // external flag in this time-critical indexing step, and the worst thing that could happen is
+      // that "print MyClass::kMyConstant" evaluates to a correct value where it might not be
+      // allowed in the actual language.
       ref_type = IndexNode::RefType::kVariable;
       should_index = true;
     }

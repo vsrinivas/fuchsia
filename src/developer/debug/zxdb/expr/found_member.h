@@ -14,16 +14,20 @@ namespace zxdb {
 
 // The result of finding a member in a collection.
 //
-// This class consists of a DataMember and an offset within the containing object of that
-// DataMember. To actually resolve the value, the containing object needs to be known. Typically one
-// would have an object, find a member on it (producing a FoundMember), and then use that object and
-// the FoundMember to resolve its value.
+// This class consists of a DataMember and a possible offset within the containing object of that
+// DataMember.
+//
+// To actually resolve the value when the data_member is not static, the containing object needs to
+// be known. Typically one would have an object, find a member on it (producing a FoundMember), and
+// then use that object and the FoundMember to resolve its value.
+//
+// If the data member is static data_member()->is_external() will be set.
 class FoundMember {
  public:
   FoundMember();
 
   // Constructs from a data member with no additional offset. This means the DataMember must be
-  // a direct member of the collection it's referring to.
+  // a direct member of the collection it's referring to or it's external.
   explicit FoundMember(const DataMember* data_member);
 
   // Constructs from a data member and a computed offset. The data_member_offset will be used
@@ -36,6 +40,12 @@ class FoundMember {
   const DataMember* data_member() const { return data_member_.get(); }
   fxl::RefPtr<DataMember> data_member_ref() const { return data_member_; }
 
+  // Offset of this member in the containing object.
+  //
+  // This is valid only for non-static members.
+  //
+  // Static members will have data_member()->is_external() set and this offset will not apply
+  // (because there's no underlying object).
   uint32_t data_member_offset() const { return data_member_offset_; }
 
  private:

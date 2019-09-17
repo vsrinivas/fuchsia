@@ -22,6 +22,7 @@
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -76,6 +77,13 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
   if (const Variable* var = symbol->AsVariable()) {
     if (options.find_vars)
       return FoundName(var);
+    return FoundName();
+  }
+
+  if (const DataMember* dm = symbol->AsDataMember()) {
+    FXL_DCHECK(dm->is_external());  // Only static ("external") members should be in the index.
+    if (options.find_vars)
+      return FoundName(nullptr, FoundMember(dm));
     return FoundName();
   }
 

@@ -199,11 +199,9 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
 }
 
 void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
-  // fbl
-  /* FBL string is currently broken due to the inability to evaluate the constants like
-     kLengthFieldOffset. Uncomment when these are fixed.
-  #define FBL_STRING_LENGTH_EXPRESSION \
-    "*reinterpret_cast<size_t*>(data - kDataFieldOffset + kLengthFieldOffset)"
+// fbl
+#define FBL_STRING_LENGTH_EXPRESSION \
+  "*reinterpret_cast<size_t*>(data_ - kDataFieldOffset + kLengthFieldOffset)"
   cpp_.emplace_back(
       InternalGlob("fbl::String"),
       std::make_unique<PrettyHeapString>("data_", FBL_STRING_LENGTH_EXPRESSION,
@@ -212,7 +210,6 @@ void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
                                                     {"length", FBL_STRING_LENGTH_EXPRESSION},
                                                     {"size", FBL_STRING_LENGTH_EXPRESSION},
                                                     {"empty", "!" FBL_STRING_LENGTH_EXPRESSION}}));
-  */
   cpp_.emplace_back(InternalGlob("fbl::Span<*>"),
                     std::make_unique<PrettyArray>(
                         "ptr_", "size_",

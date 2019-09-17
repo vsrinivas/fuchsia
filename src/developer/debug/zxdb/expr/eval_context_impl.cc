@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
@@ -141,11 +142,15 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
 }
 
 void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallback cb) const {
+  // Handle const values.
+  if (input_val->const_value().has_value())
+    return cb(ResolveConstValue(RefPtrTo(this), input_val.get()), input_val);
+
   fxl::RefPtr<Variable> var;
   if (input_val->is_external()) {
     // Convert extern Variables and DataMembers to the actual variable memory.
     if (Err err = ResolveExternValue(input_val, &var); err.has_error())
-      return cb(err, nullptr);
+      return cb(err, input_val);
   } else {
     // Everything else should be a variable.
     var = RefPtrTo(input_val->AsVariable());

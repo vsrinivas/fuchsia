@@ -35,7 +35,8 @@ class EvalOperators : public TestWithLoop {
 
   ErrOrValue SyncEvalUnaryOperator(ExprTokenType op, const ExprValue& right) {
     ErrOrValue result((ExprValue()));
-    EvalUnaryOperator(ExprToken(op, "", 0), right, [&result](ErrOrValue value) { result = value; });
+    EvalUnaryOperator(eval_context(), ExprToken(op, "", 0), right,
+                      [&result](ErrOrValue value) { result = value; });
     return result;
   }
 
@@ -360,9 +361,16 @@ TEST_F(EvalOperators, UnaryBang) {
 
   // Try one that's not a number.
   auto coll = MakeCollectionType(DwarfTag::kStructureType, "Struct", {});
-  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(coll, {}));
+  coll->set_byte_size(4);
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(coll, {0, 0, 0, 0}));
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Invalid non-numeric type 'Struct' for operator.", out.err().msg());
+
+  // Use a typedef for the type to test concrete type resolution.
+  auto myint_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, MakeInt32Type());
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(myint_type, {42, 0, 0, 0}));
+  ASSERT_TRUE(out.ok());
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
 }
 
 TEST_F(EvalOperators, Comparison) {

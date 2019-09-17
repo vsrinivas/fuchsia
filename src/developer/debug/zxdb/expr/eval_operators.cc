@@ -664,12 +664,13 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefP
   });
 }
 
-void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb) {
+void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token,
+                       const ExprValue& value, EvalCallback cb) {
   if (!value.type())
     return cb(Err("No type information."));
 
-  MathRealm realm;
-  if (Err err = GetRealm(value.type(), &realm); err.has_error())
+  OpValue op_value;
+  if (Err err = FillOpValue(context.get(), value, &op_value); err.has_error())
     return cb(err);
 
     // Implements a unary operator that applies C rules for the 4 different sized types. The types
@@ -704,7 +705,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCa
   switch (op_token.type()) {
     // -
     case ExprTokenType::kMinus:
-      switch (realm) {
+      switch (op_value.realm) {
         case MathRealm::kSigned:
           IMPLEMENT_UNARY_INTEGER_OP(-, int8_t, int16_t, int32_t, int64_t);
           break;
@@ -720,7 +721,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCa
 
     // !
     case ExprTokenType::kBang:
-      switch (realm) {
+      switch (op_value.realm) {
         case MathRealm::kSigned:
           IMPLEMENT_UNARY_INTEGER_OP(!, int8_t, int16_t, int32_t, int64_t);
           break;

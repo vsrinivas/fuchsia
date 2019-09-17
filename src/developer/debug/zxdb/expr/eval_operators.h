@@ -27,7 +27,8 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
 void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb);
 
-void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb);
+void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token,
+                       const ExprValue& value, EvalCallback cb);
 
 }  // namespace zxdb
 

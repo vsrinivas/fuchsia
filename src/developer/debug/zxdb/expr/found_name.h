@@ -65,9 +65,10 @@ class FoundName {
   const Variable* variable() const { return variable_.get(); }
   fxl::RefPtr<Variable> variable_ref() { return variable_; }
 
-  // Valid when kind == kMemberVariable. Always use the data_member_offset()
-  // from this class rather than the offset in data_member() (see comment
-  // below for more).
+  // Used when kind == kMemberVariable. The object_ptr() will be valid if there's a variable
+  // associated with the member, and will be null otherwise.
+  //
+  // See FoundMember for how to resolve the value as there are some subtleties.
   const Variable* object_ptr() const { return object_ptr_.get(); }
   fxl::RefPtr<Variable> object_ptr_ref() const { return object_ptr_; }
   const FoundMember& member() const { return member_; }

@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -152,6 +153,10 @@ ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, con
   // Bitfields get special handling.
   if (member.data_member()->is_bitfield())
     return ResolveBitfieldMember(context, base, member);
+
+  // Constant value members.
+  if (member.data_member()->const_value().has_value())
+    return ResolveConstValue(context, member.data_member());
 
   fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
   const Collection* coll = nullptr;

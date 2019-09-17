@@ -431,12 +431,13 @@ void TypeExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void UnaryOpExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(context, [cb = std::move(cb), op = op_](ErrOrValue value) mutable {
-    if (value.has_error())
-      cb(value);
-    else
-      EvalUnaryOperator(op, value.value(), std::move(cb));
-  });
+  expr_->EvalFollowReferences(context,
+                              [context, cb = std::move(cb), op = op_](ErrOrValue value) mutable {
+                                if (value.has_error())
+                                  cb(value);
+                                else
+                                  EvalUnaryOperator(context, op, value.value(), std::move(cb));
+                              });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {
