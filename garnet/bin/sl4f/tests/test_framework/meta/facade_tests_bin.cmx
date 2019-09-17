@@ -1,10 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/facade_tests_bin"
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

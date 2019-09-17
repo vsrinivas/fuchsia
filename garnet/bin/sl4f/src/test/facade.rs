@@ -39,20 +39,32 @@ impl TestFacade {
         Ok(serde_json::to_value(results)?)
     }
 
-    pub async fn run_test(&self, name: String) -> Result<Value, failure::Error> {
-        let test_results = self.run_test_component(name).await?;
+    pub async fn run_test(&self, url: String) -> Result<Value, failure::Error> {
+        let test_results = self.run_test_component(url).await?;
         Ok(serde_json::to_value(test_results)?)
     }
 
-    async fn run_test_component(&self, name: String) -> Result<TestResult, failure::Error> {
+    async fn run_test_component(&self, url: String) -> Result<TestResult, failure::Error> {
+        let component_manager_for_test = "fuchsia-pkg://fuchsia.com/component_manager_for_test#\
+                                          meta/component_manager_for_test.cmx";
         let launcher = match fuchsia_component::client::connect_to_service::<
             fidl_fuchsia_sys::LauncherMarker,
         >() {
             Ok(l) => l,
             Err(e) => return Err(e),
         };
-        fx_log_info!("connecting to test component {}", name);
-        let mut app = fuchsia_component::client::launch(&launcher, name, None)?;
+        fx_log_info!("connecting to test component {}", url);
+        let is_v2_component = url.ends_with(".cm");
+        let mut app;
+        if is_v2_component {
+            app = fuchsia_component::client::launch(
+                &launcher,
+                component_manager_for_test.to_string(),
+                Some(vec![url]),
+            )?;
+        } else {
+            app = fuchsia_component::client::launch(&launcher, url, None)?;
+        }
 
         fx_log_info!("connecting to test service");
         let suite = app.connect_to_service::<fidl_fuchsia_test::SuiteMarker>()?;

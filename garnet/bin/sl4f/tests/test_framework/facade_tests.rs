@@ -27,6 +27,25 @@ async fn launch_and_test_passing_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_passing_v2_test() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example_v2.cm"
+                .to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["outcome"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert!(steps.len() > 0, "steps_len = {}", steps.len());
+    for step in steps.iter() {
+        assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+    }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade

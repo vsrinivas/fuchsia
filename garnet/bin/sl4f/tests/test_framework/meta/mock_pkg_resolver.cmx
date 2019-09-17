@@ -1,0 +1,13 @@
+{
+    "program": {
+        "args": [
+            "sl4f_test_integration_tests"
+        ],
+        "binary": "bin/mock_pkg_resolver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
