@@ -49,4 +49,5 @@ library("hid") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/zircon",
   ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
