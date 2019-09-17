@@ -56,6 +56,7 @@ enum class SyscallType {
   kClock,
   kDuration,
   kExceptionChannelType,
+  kExceptionState,
   kFeatureKind,
   kFutex,
   kGpAddr,
@@ -76,6 +77,7 @@ enum class SyscallType {
   kPolicyTopic,
   kPortPacketType,
   kProfileInfoFlags,
+  kPropType,
   kRights,
   kRsrcKind,
   kSignals,
@@ -113,6 +115,7 @@ enum class SyscallReturnType {
 void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
+void ExceptionStateName(uint32_t state, std::ostream& os);
 void FeatureKindName(uint32_t feature_kind, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
 void KtraceControlActionName(uint32_t action, std::ostream& os);
@@ -125,6 +128,7 @@ void PolicyConditionName(uint32_t condition, std::ostream& os);
 void PolicyTopicName(uint32_t topic, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
 void ProfileInfoFlagsName(uint32_t flags, std::ostream& os);
+void PropTypeName(uint32_t type, std::ostream& os);
 void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
 void SignalName(zx_signals_t signals, std::ostream& os);
 void SocketCreateOptionsName(uint32_t options, std::ostream& os);

@@ -39,6 +39,9 @@ class ClassField;
 template <typename ClassType>
 class Class;
 
+void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t size,
+                   std::ostream& os);
+
 // Display a value on a stream.
 template <typename ValueType>
 void DisplayValue(const fidl_codec::Colors& /*colors*/, SyscallType type, ValueType /*value*/,
@@ -251,6 +254,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       ExceptionChannelTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kExceptionState:
+      os << colors.blue;
+      ExceptionStateName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kFeatureKind:
       os << colors.red;
       FeatureKindName(value, os);
@@ -317,6 +325,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
     case SyscallType::kProfileInfoFlags:
       os << colors.blue;
       ProfileInfoFlagsName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kPropType:
+      os << colors.blue;
+      PropTypeName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kRights:
@@ -1489,10 +1502,11 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
 };
 
 // An input/output which is a string. This is always displayed inline.
+template <typename FromType>
 class SyscallInputOutputString : public SyscallInputOutputBase {
  public:
   SyscallInputOutputString(int64_t error_code, std::string_view name,
-                           std::unique_ptr<Access<char>> string,
+                           std::unique_ptr<Access<FromType>> string,
                            std::unique_ptr<Access<size_t>> string_size)
       : SyscallInputOutputBase(error_code, name),
         string_(std::move(string)),
@@ -1514,7 +1528,7 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
                             Stage stage, const char* separator, std::ostream& os) const override;
 
  private:
-  const std::unique_ptr<Access<char>> string_;
+  const std::unique_ptr<Access<FromType>> string_;
   const std::unique_ptr<Access<size_t>> string_size_;
 };
 
@@ -1777,10 +1791,15 @@ class Syscall {
   }
 
   // Adds an input string to display.
-  void InputString(std::string_view name, std::unique_ptr<Access<char>> string,
-                   std::unique_ptr<Access<size_t>> string_size) {
-    inputs_.push_back(std::make_unique<SyscallInputOutputString>(0, name, std::move(string),
-                                                                 std::move(string_size)));
+  template <typename FromType>
+  SyscallInputOutputString<FromType>* InputString(std::string_view name,
+                                                  std::unique_ptr<Access<FromType>> string,
+                                                  std::unique_ptr<Access<size_t>> string_size) {
+    auto object = std::make_unique<SyscallInputOutputString<FromType>>(0, name, std::move(string),
+                                                                       std::move(string_size));
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
   }
 
   // Adds a fixed size input string to display.
@@ -1891,10 +1910,15 @@ class Syscall {
   }
 
   // Adds an output string to display.
-  void OutputString(int64_t error_code, std::string_view name, std::unique_ptr<Access<char>> string,
-                    std::unique_ptr<Access<size_t>> string_size) {
-    outputs_.push_back(std::make_unique<SyscallInputOutputString>(
-        error_code, name, std::move(string), std::move(string_size)));
+  template <typename FromType>
+  SyscallInputOutputString<FromType>* OutputString(int64_t error_code, std::string_view name,
+                                                   std::unique_ptr<Access<FromType>> string,
+                                                   std::unique_ptr<Access<size_t>> string_size) {
+    auto object = std::make_unique<SyscallInputOutputString<FromType>>(
+        error_code, name, std::move(string), std::move(string_size));
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
   }
 
   // Adds an object output to display.
@@ -2198,6 +2222,20 @@ inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
     }
   }
   os << '\n';
+}
+
+template <typename FromType>
+const char* SyscallInputOutputString<FromType>::DisplayInline(SyscallDisplayDispatcher* dispatcher,
+                                                              SyscallDecoder* decoder, Stage stage,
+                                                              const char* separator,
+                                                              std::ostream& os) const {
+  const fidl_codec::Colors& colors = dispatcher->colors();
+  os << separator;
+  os << name() << ':' << colors.green << "string" << colors.reset << ": ";
+  const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
+  size_t string_size = string_size_->Value(decoder, stage);
+  DisplayString(colors, string, string_size, os);
+  return ", ";
 }
 
 template <typename ClassType, typename SizeType>

@@ -2383,9 +2383,9 @@ void SyscallDecoderDispatcher::Populate() {
     auto version = zx_system_get_version->PointerArgument<char>(SyscallType::kChar);
     auto version_size = zx_system_get_version->Argument<size_t>(SyscallType::kSize);
     // Outputs
-    zx_system_get_version->OutputString(ZX_OK, "version",
-                                        std::make_unique<ArgumentAccess<char>>(version),
-                                        std::make_unique<ArgumentAccess<size_t>>(version_size));
+    zx_system_get_version->OutputString<char>(
+        ZX_OK, "version", std::make_unique<ArgumentAccess<char>>(version),
+        std::make_unique<ArgumentAccess<size_t>>(version_size));
   }
 
   { Add("zx_system_get_physmem", SyscallReturnType::kUint64); }
@@ -2630,6 +2630,105 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
+    Syscall* zx_object_get_property = Add("zx_object_get_property", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_get_property->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto property = zx_object_get_property->Argument<uint32_t>(SyscallType::kPropType);
+    auto value = zx_object_get_property->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto value_size = zx_object_get_property->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_object_get_property->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_get_property->Input<uint32_t>("property",
+                                            std::make_unique<ArgumentAccess<uint32_t>>(property));
+    // Outputs
+    zx_object_get_property
+        ->OutputString<uint8_t>(ZX_OK, "value", std::make_unique<ArgumentAccess<uint8_t>>(value),
+                                std::make_unique<ArgumentAccess<size_t>>(value_size))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_NAME);
+    zx_object_get_property
+        ->OutputIndirect<uintptr_t, uint8_t>(ZX_OK, "value", SyscallType::kVaddr,
+                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_PROCESS_DEBUG_ADDR);
+    zx_object_get_property
+        ->OutputIndirect<uintptr_t, uint8_t>(ZX_OK, "value", SyscallType::kVaddr,
+                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
+    zx_object_get_property
+        ->OutputIndirect<size_t, uint8_t>(ZX_OK, "value", SyscallType::kSize,
+                                          std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_SOCKET_RX_THRESHOLD);
+    zx_object_get_property
+        ->OutputIndirect<size_t, uint8_t>(ZX_OK, "value", SyscallType::kSize,
+                                          std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_SOCKET_TX_THRESHOLD);
+    zx_object_get_property
+        ->OutputIndirect<uint32_t, uint8_t>(ZX_OK, "value", SyscallType::kExceptionState,
+                                            std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_EXCEPTION_STATE);
+  }
+
+  {
+    Syscall* zx_object_set_property = Add("zx_object_set_property", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_set_property->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto property = zx_object_set_property->Argument<uint32_t>(SyscallType::kPropType);
+    auto value = zx_object_set_property->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto value_size = zx_object_set_property->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_object_set_property->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_set_property->Input<uint32_t>("property",
+                                            std::make_unique<ArgumentAccess<uint32_t>>(property));
+    zx_object_set_property
+        ->InputString<uint8_t>("value", std::make_unique<ArgumentAccess<uint8_t>>(value),
+                               std::make_unique<ArgumentAccess<size_t>>(value_size))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_NAME);
+    zx_object_set_property
+        ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
+                                            std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_REGISTER_FS);
+    zx_object_set_property
+        ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
+                                            std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_REGISTER_GS);
+    zx_object_set_property
+        ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
+                                            std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_PROCESS_DEBUG_ADDR);
+    zx_object_set_property
+        ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
+                                         std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_SOCKET_RX_THRESHOLD);
+    zx_object_set_property
+        ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
+                                         std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_SOCKET_TX_THRESHOLD);
+    zx_object_set_property
+        ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
+                                         std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_JOB_KILL_ON_OOM);
+    zx_object_set_property
+        ->InputIndirect<uint32_t, uint8_t>("value", SyscallType::kExceptionState,
+                                           std::make_unique<ArgumentAccess<uint8_t>>(value))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
+                                   ZX_PROP_EXCEPTION_STATE);
+  }
+
+  {
     Syscall* zx_object_get_info = Add("zx_object_get_info", SyscallReturnType::kStatus);
     // Arguments
     auto handle = zx_object_get_info->Argument<zx_handle_t>(SyscallType::kHandle);
@@ -2819,6 +2918,21 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_object_get_child->Output<zx_handle_t>(ZX_OK, "out",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_object_set_profile = Add("zx_object_set_profile", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_set_profile->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto profile = zx_object_set_profile->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_object_set_profile->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_object_set_profile->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_set_profile->Input<zx_handle_t>(
+        "profile", std::make_unique<ArgumentAccess<zx_handle_t>>(profile));
+    zx_object_set_profile->Input<uint32_t>("options",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(options));
   }
 
   {
@@ -3062,8 +3176,8 @@ void SyscallDecoderDispatcher::Populate() {
     // Inputs
     zx_thread_create->Input<zx_handle_t>("process",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(process));
-    zx_thread_create->InputString("name", std::make_unique<ArgumentAccess<char>>(name),
-                                  std::make_unique<ArgumentAccess<size_t>>(name_size));
+    zx_thread_create->InputString<char>("name", std::make_unique<ArgumentAccess<char>>(name),
+                                        std::make_unique<ArgumentAccess<size_t>>(name_size));
     zx_thread_create->Input<uint32_t>("options",
                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
     // Outputs
@@ -3277,8 +3391,8 @@ void SyscallDecoderDispatcher::Populate() {
     // Inputs
     zx_process_create->Input<zx_handle_t>("job",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(job));
-    zx_process_create->InputString("name", std::make_unique<ArgumentAccess<char>>(name),
-                                   std::make_unique<ArgumentAccess<size_t>>(name_size));
+    zx_process_create->InputString<char>("name", std::make_unique<ArgumentAccess<char>>(name),
+                                         std::make_unique<ArgumentAccess<size_t>>(name_size));
     zx_process_create->Input<uint32_t>("options",
                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
     // Outputs
@@ -4292,8 +4406,9 @@ void SyscallDecoderDispatcher::Populate() {
     zx_debug_read->OutputActualAndRequested<size_t>(
         ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
-    zx_debug_read->OutputString(ZX_OK, "buffer", std::make_unique<ArgumentAccess<char>>(buffer),
-                                std::make_unique<ArgumentAccess<size_t>>(actual));
+    zx_debug_read->OutputString<char>(ZX_OK, "buffer",
+                                      std::make_unique<ArgumentAccess<char>>(buffer),
+                                      std::make_unique<ArgumentAccess<size_t>>(actual));
   }
 
   {
@@ -4302,8 +4417,8 @@ void SyscallDecoderDispatcher::Populate() {
     auto buffer = zx_debug_write->PointerArgument<char>(SyscallType::kChar);
     auto buffer_size = zx_debug_write->Argument<size_t>(SyscallType::kSize);
     // Inputs
-    zx_debug_write->InputString("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
-                                std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    zx_debug_write->InputString<char>("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
+                                      std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
 
   {
@@ -4315,8 +4430,9 @@ void SyscallDecoderDispatcher::Populate() {
     // Inputs
     zx_debug_send_command->Input<zx_handle_t>(
         "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
-    zx_debug_send_command->InputString("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
-                                       std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    zx_debug_send_command->InputString<char>("buffer",
+                                             std::make_unique<ArgumentAccess<char>>(buffer),
+                                             std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
 
   {

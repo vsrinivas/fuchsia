@@ -95,7 +95,8 @@ SYSTEM_GET_VERSION_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_version()\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "version:string: \x1B[31m\"git-8a07d52603404521038d8866b297f99de36f9162\"\x1B[0m\n)\n");
+    "version:\x1B[32mstring\x1B[0m: "
+    "\x1B[31m\"git-8a07d52603404521038d8866b297f99de36f9162\"\x1B[0m)\n");
 
 // zx_system_get_physmem tests.
 

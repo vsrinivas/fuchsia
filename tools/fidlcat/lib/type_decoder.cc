@@ -73,6 +73,21 @@ void ExceptionChannelTypeName(uint32_t type, std::ostream& os) {
   }
 }
 
+#define ExceptionStateNameCase(name) \
+  case name:                         \
+    os << #name;                     \
+    return
+
+void ExceptionStateName(uint32_t state, std::ostream& os) {
+  switch (state) {
+    ExceptionStateNameCase(ZX_EXCEPTION_STATE_TRY_NEXT);
+    ExceptionStateNameCase(ZX_EXCEPTION_STATE_HANDLED);
+    default:
+      os << static_cast<uint32_t>(state);
+      return;
+  }
+}
+
 #define FeatureKindNameCase(name) \
   case name:                      \
     os << #name;                  \
@@ -284,6 +299,28 @@ void ProfileInfoFlagsName(uint32_t flags, std::ostream& os) {
   const char* separator = "";
   ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_PRIORITY);
   ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_CPU_MASK);
+}
+
+#define PropTypeNameCase(name) \
+  case name:                   \
+    os << #name;               \
+    return
+
+void PropTypeName(uint32_t type, std::ostream& os) {
+  switch (type) {
+    PropTypeNameCase(ZX_PROP_NAME);
+    PropTypeNameCase(ZX_PROP_REGISTER_FS);
+    PropTypeNameCase(ZX_PROP_REGISTER_GS);
+    PropTypeNameCase(ZX_PROP_PROCESS_DEBUG_ADDR);
+    PropTypeNameCase(ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
+    PropTypeNameCase(ZX_PROP_SOCKET_RX_THRESHOLD);
+    PropTypeNameCase(ZX_PROP_SOCKET_TX_THRESHOLD);
+    PropTypeNameCase(ZX_PROP_JOB_KILL_ON_OOM);
+    PropTypeNameCase(ZX_PROP_EXCEPTION_STATE);
+    default:
+      os << type;
+      return;
+  }
 }
 
 #define RsrcKindNameCase(name) \
@@ -810,6 +847,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       os << ":" << colors.green << "zx_info_thread_t::wait_exception_port_type" << colors.reset
          << ": ";
       break;
+    case SyscallType::kExceptionState:
+      os << ":" << colors.green << "zx_exception_state_t" << colors.reset << ": ";
+      break;
     case SyscallType::kFeatureKind:
       os << ":" << colors.green << "zx_feature_kind_t" << colors.reset << ": ";
       break;
@@ -869,6 +909,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kProfileInfoFlags:
       os << ":" << colors.green << "zx_profile_info_flags_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kPropType:
+      os << ":" << colors.green << "zx_prop_type_t" << colors.reset << ": ";
       break;
     case SyscallType::kRights:
       os << ":" << colors.green << "zx_rights_t" << colors.reset << ": ";

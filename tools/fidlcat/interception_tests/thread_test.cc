@@ -58,7 +58,7 @@ THREAD_CREATE_DISPLAY_TEST(ZxThreadCreate, ZX_OK,
                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                            "zx_thread_create("
                            "process:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                           "name:string: \x1B[31m\"my_thread\"\x1B[0m\n, "
+                           "name:\x1B[32mstring\x1B[0m: \x1B[31m\"my_thread\"\x1B[0m, "
                            "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                            "  -> \x1B[32mZX_OK\x1B[0m ("
                            "out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");

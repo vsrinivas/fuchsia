@@ -294,6 +294,384 @@ OBJECT_SIGNAL_PEER_DISPLAY_TEST(
     "set_mask:\x1B[32msignals\x1B[0m: \x1B[34mZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
+// zx_object_get_property tests.
+
+std::unique_ptr<SystemCallTest> ZxObjectGetProperty(int64_t result, std::string_view result_name,
+                                                    zx_handle_t handle, uint32_t property,
+                                                    void* value, size_t value_size) {
+  auto syscall = std::make_unique<SystemCallTest>("zx_object_get_property", result, result_name);
+  syscall->AddInput(handle);
+  syscall->AddInput(property);
+  syscall->AddInput(reinterpret_cast<uint64_t>(value));
+  syscall->AddInput(value_size);
+  return syscall;
+}
+
+#define OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(result, expected)                          \
+  std::vector<char> buffer(ZX_MAX_NAME_LEN);                                                     \
+  std::string data = "My_name";                                                                  \
+  memcpy(buffer.data(), data.c_str(), data.size() + 1);                                          \
+  PerformDisplayTest(                                                                            \
+      "zx_object_get_property@plt",                                                              \
+      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_NAME, buffer.data(), buffer.size()), \
+      expected);
+
+#define OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                        \
+    OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                  \
+  TEST_F(InterceptionWorkflowTestArm, name) {                        \
+    OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(
+    ZxObjectGetPropertyName, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mstring\x1B[0m: \x1B[31m\"My_name\"\x1B[0m)\n");
+
+#define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
+  uintptr_t value = 0x45678;                                                                   \
+  PerformDisplayTest("zx_object_get_property@plt",                                             \
+                     ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_PROCESS_DEBUG_ADDR, \
+                                         &value, sizeof(value)),                               \
+                     expected);
+
+#define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                      \
+    OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                      \
+    OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
+    ZxObjectGetPropertyProcessDebugAddr, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx_vaddr_t\x1B[0m: "
+    "\x1B[34m0000000000045678\x1B[0m)\n");
+
+#define OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST_CONTENT(result, expected)   \
+  uintptr_t value = 0x45678;                                                                   \
+  PerformDisplayTest(                                                                          \
+      "zx_object_get_property@plt",                                                            \
+      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, &value, \
+                          sizeof(value)),                                                      \
+      expected);
+
+#define OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                             \
+    OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                       \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                             \
+    OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(
+    ZxObjectGetPropertyProcessVdsoBaseAddress, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_VDSO_BASE_ADDRESS\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx_vaddr_t\x1B[0m: "
+    "\x1B[34m0000000000045678\x1B[0m)\n");
+
+#define OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
+  size_t value = 1000;                                                                          \
+  PerformDisplayTest("zx_object_get_property@plt",                                              \
+                     ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_SOCKET_RX_THRESHOLD, \
+                                         &value, sizeof(value)),                                \
+                     expected);
+
+#define OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                       \
+    OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                 \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                       \
+    OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
+    ZxObjectGetPropertySocketRxThreshold, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n");
+
+#define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
+  size_t value = 1000;                                                                          \
+  PerformDisplayTest("zx_object_get_property@plt",                                              \
+                     ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_SOCKET_TX_THRESHOLD, \
+                                         &value, sizeof(value)),                                \
+                     expected);
+
+#define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                       \
+    OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                 \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                       \
+    OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
+    ZxObjectGetPropertySocketTxThreshold, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n");
+
+#define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
+  uint32_t value = ZX_EXCEPTION_STATE_HANDLED;                                              \
+  PerformDisplayTest("zx_object_get_property@plt",                                          \
+                     ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_EXCEPTION_STATE, \
+                                         &value, sizeof(value)),                            \
+                     expected);
+
+#define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                   \
+    OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                             \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                   \
+    OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
+    ZxObjectGetPropertyExceptionState, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m ("
+    "value:\x1B[32mzx_exception_state_t\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
+
+// zx_object_set_property tests.
+
+std::unique_ptr<SystemCallTest> ZxObjectSetProperty(int64_t result, std::string_view result_name,
+                                                    zx_handle_t handle, uint32_t property,
+                                                    const void* value, size_t value_size) {
+  auto syscall = std::make_unique<SystemCallTest>("zx_object_set_property", result, result_name);
+  syscall->AddInput(handle);
+  syscall->AddInput(property);
+  syscall->AddInput(reinterpret_cast<uint64_t>(value));
+  syscall->AddInput(value_size);
+  return syscall;
+}
+
+#define OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(result, expected)                          \
+  std::vector<char> buffer(ZX_MAX_NAME_LEN);                                                     \
+  std::string data = "My_name";                                                                  \
+  memcpy(buffer.data(), data.c_str(), data.size() + 1);                                          \
+  PerformDisplayTest(                                                                            \
+      "zx_object_set_property@plt",                                                              \
+      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_NAME, buffer.data(), buffer.size()), \
+      expected);
+
+#define OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                        \
+    OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                  \
+  TEST_F(InterceptionWorkflowTestArm, name) {                        \
+    OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(
+    ZxObjectSetPropertyName, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m, "
+    "value:\x1B[32mstring\x1B[0m: \x1B[31m\"My_name\"\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST_CONTENT(result, expected)                   \
+  uintptr_t value = 0x45678;                                                                     \
+  PerformDisplayTest(                                                                            \
+      "zx_object_set_property@plt",                                                              \
+      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_REGISTER_FS, &value, sizeof(value)), \
+      expected);
+
+#define OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                               \
+    OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                         \
+  TEST_F(InterceptionWorkflowTestArm, name) {                               \
+    OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(
+    ZxObjectSetPropertyRegisterFs, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_REGISTER_FS\x1B[0m, "
+    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(result, expected)                   \
+  uintptr_t value = 0x45678;                                                                     \
+  PerformDisplayTest(                                                                            \
+      "zx_object_set_property@plt",                                                              \
+      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_REGISTER_GS, &value, sizeof(value)), \
+      expected);
+
+#define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                               \
+    OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                         \
+  TEST_F(InterceptionWorkflowTestArm, name) {                               \
+    OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(
+    ZxObjectSetPropertyRegisterGs, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_REGISTER_GS\x1B[0m, "
+    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
+  uintptr_t value = 0x45678;                                                                   \
+  PerformDisplayTest("zx_object_set_property@plt",                                             \
+                     ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_PROCESS_DEBUG_ADDR, \
+                                         &value, sizeof(value)),                               \
+                     expected);
+
+#define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                      \
+    OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                      \
+    OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
+    ZxObjectSetPropertyProcessDebugAddr, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m, "
+    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
+  size_t value = 1000;                                                                          \
+  PerformDisplayTest("zx_object_set_property@plt",                                              \
+                     ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_SOCKET_RX_THRESHOLD, \
+                                         &value, sizeof(value)),                                \
+                     expected);
+
+#define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                       \
+    OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                 \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                       \
+    OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
+    ZxObjectSetPropertySocketRxThreshold, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m, "
+    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
+  size_t value = 1000;                                                                          \
+  PerformDisplayTest("zx_object_set_property@plt",                                              \
+                     ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_SOCKET_TX_THRESHOLD, \
+                                         &value, sizeof(value)),                                \
+                     expected);
+
+#define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                       \
+    OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                                 \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                       \
+    OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
+    ZxObjectSetPropertySocketTxThreshold, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m, "
+    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(result, expected)          \
+  size_t value = 1;                                                                         \
+  PerformDisplayTest("zx_object_set_property@plt",                                          \
+                     ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_JOB_KILL_ON_OOM, \
+                                         &value, sizeof(value)),                            \
+                     expected);
+
+#define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                   \
+    OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                             \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                   \
+    OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(
+    ZxObjectSetPropertyJobKillOnOom, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_JOB_KILL_ON_OOM\x1B[0m, "
+    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+#define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
+  uint32_t value = ZX_EXCEPTION_STATE_HANDLED;                                              \
+  PerformDisplayTest("zx_object_set_property@plt",                                          \
+                     ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_EXCEPTION_STATE, \
+                                         &value, sizeof(value)),                            \
+                     expected);
+
+#define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                   \
+    OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                             \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                   \
+    OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
+    ZxObjectSetPropertyExceptionState, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_property("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m, "
+    "value:\x1B[32mzx_exception_state_t\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
 // zx_object_get_info tests.
 
 std::unique_ptr<SystemCallTest> ZxObjectGetInfo(int64_t result, std::string_view result_name,
@@ -1273,5 +1651,38 @@ OBJECT_GET_CHILD_DISPLAY_TEST(
     "koid:\x1B[32muint64\x1B[0m: \x1B[34m4252\x1B[0m, "
     "rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+
+// zx_object_set_profile tests.
+
+std::unique_ptr<SystemCallTest> ZxObjectSetProfile(int64_t result, std::string_view result_name,
+                                                   zx_handle_t handle, zx_handle_t profile,
+                                                   uint32_t options) {
+  auto value = std::make_unique<SystemCallTest>("zx_object_set_profile", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(profile);
+  value->AddInput(options);
+  return value;
+}
+
+#define OBJECT_SET_PROFILE_DISPLAY_TEST_CONTENT(result, expected) \
+  PerformDisplayTest("zx_object_set_profile@plt",                 \
+                     ZxObjectSetProfile(result, #result, kHandle, kHandle2, 0), expected);
+
+#define OBJECT_SET_PROFILE_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                  \
+    OBJECT_SET_PROFILE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                            \
+  TEST_F(InterceptionWorkflowTestArm, name) {                  \
+    OBJECT_SET_PROFILE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_SET_PROFILE_DISPLAY_TEST(
+    ZxObjectSetProfile, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_set_profile(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "profile:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat
