@@ -105,32 +105,20 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
 func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData bool, sendTooShortData bool) devFinderCmd {
-	// Because mdnsAddrs have two addresses specified and mdnsPorts have
-	// two ports specified, four MDNS objects are created. To emulate the
-	// case where only one of them responds, create only one fake MDNS
-	// object with answers. The others wouldn't respond at all. See the
-	// Send() method above.
-	mdnsCount := 0
 	return devFinderCmd{
 		mdnsHandler: handler,
-		mdnsAddrs:   "224.0.0.251,224.0.0.250",
-		mdnsPorts:   "5353,5356",
+		mdnsAddrs:   "224.0.0.251",
+		mdnsPorts:   "5353",
 		timeout:     10,
 		newMDNSFunc: func(addr string) mdnsInterface {
-			mdnsCount++
-			switch mdnsCount {
-			case 1:
-				return &fakeMDNS{
-					answer: &fakeAnswer{
-						ip:      "192.168.0.42",
-						domains: answerDomains,
-					},
-					sendEmptyData:    sendEmptyData,
-					sendTooShortData: sendTooShortData,
-				}
-			default:
-				return &fakeMDNS{}
-			}
+            return &fakeMDNS{
+                answer: &fakeAnswer{
+                    ip:      "192.168.0.42",
+                    domains: answerDomains,
+                },
+                sendEmptyData:    sendEmptyData,
+                sendTooShortData: sendTooShortData,
+            }
 		},
 	}
 }
