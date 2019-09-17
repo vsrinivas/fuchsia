@@ -274,6 +274,34 @@ std::vector<std::unique_ptr<const Commit>> CommitFactory::GetHeads() const {
   return result;
 }
 
+void CommitFactory::AddCommitDependencies(CommitIdView commit_id,
+                                          std::vector<ObjectIdentifier> root_identifiers) {
+  auto [it, created] =
+      live_root_identifiers_.try_emplace(commit_id.ToString(), std::move(root_identifiers));
+  FXL_DCHECK(created || root_identifiers == live_root_identifiers_[commit_id.ToString()]);
+}
+
+void CommitFactory::RemoveCommitDependencies(CommitIdView commit_id) {
+  auto it = live_root_identifiers_.find(commit_id.ToString());
+  if (it != live_root_identifiers_.end()) {
+    live_root_identifiers_.erase(it);
+  }
+  // It is valid to try to delete an entry that was not inserted: Commits received from the cloud
+  // are always marked as synced, meaning that this method is eventually called, even though
+  // |AddCommitDependencies| was never called on them.
+}
+
+std::set<ObjectIdentifier> CommitFactory::GetLiveRootIdentifiers() const {
+  // This deduplicates identical ObjectIdentifiers.
+  std::set<ObjectIdentifier> result;
+  for (const auto& [commit_id, root_identifiers] : live_root_identifiers_) {
+    for (const auto& root_identifier : root_identifiers) {
+      result.insert(root_identifier);
+    }
+  }
+  return result;
+}
+
 void CommitFactory::RegisterCommit(Commit* commit) {
   auto result = live_commits_.insert(commit);
   // Verifies that this is indeed a new commit, and not an already known commit.

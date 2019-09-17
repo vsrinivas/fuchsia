@@ -262,6 +262,11 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   FXL_WARN_UNUSED_RESULT Status SynchronousGetEmptyNodeIdentifier(
       coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id);
 
+  // Returns the root identifier of the base parent of |commit|.
+  FXL_WARN_UNUSED_RESULT Status
+  GetBaseParentRootIdentifier(coroutine::CoroutineHandler* handler, const Commit& commit,
+                              ObjectIdentifier* base_parent_root_identifier);
+
   // Checks if a tracked object identifier is tracked by this PageStorage.
   // Returns true for all untracked object identifiers.
   bool IsTokenValid(const ObjectIdentifier& object_identifier);

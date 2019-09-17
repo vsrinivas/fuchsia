@@ -53,6 +53,19 @@ class CommitFactory : public LiveCommitTracker {
   // Returns the current heads of a page, ordered by their associated time.
   std::vector<std::unique_ptr<const Commit>> GetHeads() const;
 
+  // Adds a mapping from an unsynced commit with id |commit_id| to the identifiers it requires to be
+  // alive. This method should only be called on unsynced commits.
+  void AddCommitDependencies(CommitIdView commit_id,
+                             std::vector<ObjectIdentifier> root_identifiers);
+
+  // Removes the associated identifiers that were requested to be maintained alive for |commit_id|.
+  // It is not an error if the entry is not present. This method should only be called on
+  // successfully synced commits.
+  void RemoveCommitDependencies(CommitIdView commit_id);
+
+  // Returns the set of live root identifiers.
+  std::set<ObjectIdentifier> GetLiveRootIdentifiers() const;
+
   // LiveCommitTracker:
   std::vector<std::unique_ptr<const Commit>> GetLiveCommits() const override;
 
@@ -81,6 +94,12 @@ class CommitFactory : public LiveCommitTracker {
   std::set<const Commit*> live_commits_;
   // Set of the current heads of the page tracked by this object.
   std::set<std::unique_ptr<const Commit>, CommitComparator> heads_;
+
+  // When syncing commits, the diff between the commit's root identifier and its base parent is
+  // computed and sent to the cloud. |live_root_identifiers_| maps the ids of unsynced commits to
+  // their root identifier as well as that of their base commit, thus making sure these contents are
+  // not garbage collected.
+  std::map<CommitId, std::vector<ObjectIdentifier>> live_root_identifiers_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<CommitFactory> weak_factory_;

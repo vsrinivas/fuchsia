@@ -26,6 +26,9 @@
 namespace storage {
 namespace {
 
+using ::testing::Contains;
+using ::testing::IsEmpty;
+using ::testing::IsSupersetOf;
 using ::testing::Not;
 using ::testing::ResultOf;
 using ::testing::UnorderedElementsAre;
@@ -88,6 +91,26 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
   // Returns a randomly created new commit, child of |base|.
   std::unique_ptr<const Commit> CreateRandomCommit(std::unique_ptr<const Commit> base) {
     std::unique_ptr<Journal> journal = storage_->StartCommit(std::move(base));
+    journal->Put(
+        "key",
+        RandomObjectIdentifier(environment_.random(), storage_->GetObjectIdentifierFactory()),
+        KeyPriority::EAGER);
+    bool called;
+    Status status;
+    std::unique_ptr<const Commit> commit;
+    storage_->CommitJournal(std::move(journal),
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    return commit;
+  }
+
+  // Returns a randomly created merge commit, child of |base| and |other|.
+  std::unique_ptr<const Commit> CreateRandomMergeCommit(std::unique_ptr<const Commit> base,
+                                                        std::unique_ptr<const Commit> other) {
+    std::unique_ptr<Journal> journal =
+        storage_->StartMergeCommit(std::move(base), std::move(other));
     journal->Put(
         "key",
         RandomObjectIdentifier(environment_.random(), storage_->GetObjectIdentifierFactory()),
@@ -253,6 +276,132 @@ TEST_F(CommitFactoryTest, GetLiveCommits) {
   // longer live.
   journal.reset();
   EXPECT_THAT(ToCommitIdSet(factory->GetLiveCommits()), UnorderedElementsAre(new_id));
+}
+
+// Tests that GetLiveRootIdentifiers returns the correct set of root identifiers. During this test
+// the following commit graph is created:
+//
+//          -> commit2 -> commit3
+//        /
+// commit1 -> commit4
+TEST_F(CommitFactoryTest, GetLiveRootIdentifiers) {
+  CommitFactory* factory = storage_->GetCommitFactory();
+
+  std::unique_ptr<const Commit> commit1 = GetFirstHead();
+  ObjectIdentifier commit1_root = commit1->GetRootIdentifier();
+
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
+
+  // Add a commit and expect its root and that of its parent (commit1) to be found in
+  // GetLiveRootIdentifiers
+  std::unique_ptr<const Commit> commit2 = CreateRandomCommit(commit1->Clone());
+  ObjectIdentifier commit2_root = commit2->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), UnorderedElementsAre(commit1_root, commit2_root));
+
+  // Add another commit as child of commit2.
+  std::unique_ptr<const Commit> commit3 = CreateRandomCommit(commit2->Clone());
+  ObjectIdentifier commit3_root = commit3->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(commit1_root, commit2_root, commit3_root));
+
+  // Add another commit as child of commit1.
+  std::unique_ptr<const Commit> commit4 = CreateRandomCommit(commit1->Clone());
+  ObjectIdentifier commit4_root = commit4->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(commit1_root, commit2_root, commit3_root, commit4_root));
+
+  // Mark commit2 as synced. Nothing should change: commit2_root is also a dependency for commit3,
+  // and commit1_root is a dependency for commit4.
+  bool called;
+  Status status;
+  storage_->MarkCommitSynced(commit2->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(commit1_root, commit2_root, commit3_root, commit4_root));
+
+  // Mark commit4 as synced: both commit4_root and its parent's root (commit1_root) should be
+  // removed.
+  storage_->MarkCommitSynced(commit4->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), UnorderedElementsAre(commit2_root, commit3_root));
+
+  // Mark commit3 as synced. Now that all commits are synced the set should be empty.
+  storage_->MarkCommitSynced(commit3->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
+}
+
+// Tests that GetLiveRootIdentifiers returns the correct set of root identifiers. During this test
+// the following commit graph is created:
+//
+//          -> commit2 ---> mergeCommit
+//        /             /
+// commit1 --> commit3 /
+TEST_F(CommitFactoryTest, GetLiveRootIdentifiersOnMergeCommit) {
+  CommitFactory* factory = storage_->GetCommitFactory();
+
+  std::unique_ptr<const Commit> commit1 = GetFirstHead();
+  ObjectIdentifier commit1_root = commit1->GetRootIdentifier();
+
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
+
+  // Add a commit and expect its root and that of its parent (commit1) to be found in
+  // GetLiveRootIdentifiers
+  std::unique_ptr<const Commit> commit2 = CreateRandomCommit(commit1->Clone());
+  ObjectIdentifier commit2_root = commit2->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), UnorderedElementsAre(commit1_root, commit2_root));
+
+  // Add another commit as child of commit1.
+  std::unique_ptr<const Commit> commit3 = CreateRandomCommit(commit1->Clone());
+  ObjectIdentifier commit3_root = commit3->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(commit1_root, commit2_root, commit3_root));
+
+  // Create a merge commit from commit2 and commit3: only the base commit (commit2) should be added.
+  ObjectIdentifier base_root;
+  if (commit2->GetId() < commit3->GetId()) {
+    base_root = commit2->GetRootIdentifier();
+  } else {
+    base_root = commit3->GetRootIdentifier();
+  }
+  std::unique_ptr<const Commit> merge_commit =
+      CreateRandomMergeCommit(commit2->Clone(), commit3->Clone());
+  ObjectIdentifier merge_commit_root = merge_commit->GetRootIdentifier();
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(commit1_root, commit2_root, commit3_root, merge_commit_root));
+
+  // Mark commit2 and commit3 and merge_commit as synced.
+  bool called;
+  Status status;
+  storage_->MarkCommitSynced(commit2->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  storage_->MarkCommitSynced(commit3->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+              UnorderedElementsAre(base_root, merge_commit_root));
+
+  storage_->MarkCommitSynced(merge_commit->GetId(),
+                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
 }
 
 }  // namespace
