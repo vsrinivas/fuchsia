@@ -8,6 +8,8 @@ group("serial") {
     "ftdi",
     "ftdi:ftdi-fake-usb",
     "serial",
+    "usb-cdc-acm",
+    "usb-cdc-acm:fake-usb-cdc-acm",
   ]
   if (current_cpu == "x64") {
     deps += [ "intel-serialio" ]

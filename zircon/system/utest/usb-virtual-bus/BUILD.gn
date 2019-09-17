@@ -5,6 +5,7 @@
 group("test") {
   testonly = true
   deps = [
+    ":usb-virtual-bus-cdc-acm",
     ":usb-virtual-bus-ftdi",
     ":usb-virtual-bus-hid",
     ":usb-virtual-bus-ums",
@@ -57,6 +58,24 @@ test("usb-virtual-bus-hid") {
 test("usb-virtual-bus-ftdi") {
   sources = [
     "ftdi-test.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("usb-virtual-bus-cdc-acm") {
+  sources = [
+    "usb-cdc-acm-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",

@@ -1,0 +1,120 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <dirent.h>
+#include <endian.h>
+#include <fcntl.h>
+#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <lib/fdio/watcher.h>
+#include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
+#include <lib/zx/clock.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/cdc.h>
+#include <zircon/syscalls.h>
+
+#include <ddk/platform-defs.h>
+#include <fbl/string.h>
+#include <hid/boot.h>
+#include <zxtest/zxtest.h>
+
+namespace usb_virtual_bus {
+namespace {
+
+class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
+ public:
+  USBVirtualBus() = default;
+
+  // Initialize a USB CDC ACM device. Asserts on failure.
+  void InitUsbCdcAcm(fbl::String* devpath);
+};
+
+// Initialize a USB CDC ACM device. Asserts on failure.
+void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
+  namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+
+  usb_peripheral::DeviceDescriptor device_desc = {};
+  device_desc.bcdUSB = htole16(0x0200);
+  device_desc.bMaxPacketSize0 = 64;
+  device_desc.bcdDevice = htole16(0x0100);
+  device_desc.bNumConfigurations = 1;
+
+  usb_peripheral::FunctionDescriptor usb_cdc_acm_function_desc = {
+      .interface_class = USB_CLASS_COMM,
+      .interface_subclass = USB_CDC_SUBCLASS_ABSTRACT,
+      .interface_protocol = 0,
+  };
+
+  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  function_descs.push_back(usb_cdc_acm_function_desc);
+
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(device_desc, std::move(function_descs)));
+
+  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
+  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
+  }
+  *devpath = fbl::String::Concat({fbl::String("class/serial/"), *devpath});
+}
+
+class UsbCdcAcmTest : public zxtest::Test {
+ public:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURES(bus_.InitUsbCdcAcm(&devpath_)); }
+
+  void TearDown() override {
+    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
+
+    auto result2 = bus_.virtual_bus().Disable();
+    ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
+  }
+
+  zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {
+    // time out in 50 milliseconds.
+    const auto timeout = zx::deadline_after(zx::msec(50));
+    while (zx::clock::get_monotonic() < timeout) {
+      *actual = read(fd, data, size);
+      if (*actual != 0) {
+        return ZX_OK;
+      }
+    }
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
+ protected:
+  USBVirtualBus bus_;
+  fbl::String devpath_;
+};
+
+TEST_F(UsbCdcAcmTest, ReadAndWriteTest) {
+  fbl::unique_fd fd(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
+  ASSERT_GT(fd.get(), 0);
+
+  uint8_t write_data[] = {1, 2, 3};
+  size_t bytes_sent = write(fd.get(), write_data, sizeof(write_data));
+  ASSERT_EQ(bytes_sent, sizeof(write_data));
+
+  uint8_t read_data[3] = {};
+  zx_status_t status = ReadWithTimeout(fd.get(), read_data, sizeof(read_data), &bytes_sent);
+  ASSERT_OK(status);
+  ASSERT_EQ(bytes_sent, sizeof(read_data));
+  for (size_t i = 0; i < sizeof(write_data); i++) {
+    ASSERT_EQ(read_data[i], write_data[i]);
+  }
+
+  uint8_t write_data2[] = {5, 4, 3, 2, 1};
+  bytes_sent = write(fd.get(), write_data2, sizeof(write_data2));
+  ASSERT_EQ(bytes_sent, sizeof(write_data2));
+
+  uint8_t read_data2[5] = {};
+  status = ReadWithTimeout(fd.get(), read_data2, sizeof(read_data2), &bytes_sent);
+  ASSERT_OK(status);
+  ASSERT_EQ(bytes_sent, sizeof(read_data2));
+  for (size_t i = 0; i < sizeof(write_data2); i++) {
+    ASSERT_EQ(read_data2[i], write_data2[i]);
+  }
+}
+
+}  // namespace
+}  // namespace usb_virtual_bus
