@@ -15,16 +15,19 @@ static test_case_element* failed_test_case_list = nullptr;
 static unittest_help_printer_type* print_test_help = nullptr;
 
 // Registers a test case with the unit test framework.
+__EXPORT
 void unittest_register_test_case(test_case_element* elem) {
   elem->next = test_case_list;
   test_case_list = elem;
 }
 
+__EXPORT
 bool unittest_run_one_test(test_case_element* elem, test_type_t type) {
   utest_test_type = type;
   return elem->test_case(false, nullptr);
 }
 
+__EXPORT
 void unittest_register_test_help_printer(unittest_help_printer_type* func) {
   print_test_help = func;
 }
@@ -141,6 +144,7 @@ static void print_help(const char* prog_name, FILE* f) {
 /*
  * Runs all registered test cases.
  */
+__EXPORT
 bool unittest_run_all_tests(int argc, char** argv) {
   const char* prog_name = basename(argv[0]);
   bool list_tests_only = false;

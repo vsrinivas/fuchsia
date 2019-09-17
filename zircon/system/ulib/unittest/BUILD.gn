@@ -26,4 +26,5 @@ library("unittest") {
   if (is_fuchsia) {
     deps += [ "$zx/system/ulib/zx" ]
   }
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

@@ -67,11 +67,13 @@ static void* out_func_arg = nullptr;
 
 // Controls the behavior of unittest_printf.
 // To override, specify v=N on the command line.
+__EXPORT
 int utest_verbosity_level = 0;
 
 // Controls the types of tests which are executed.
 // Multiple test types can be "OR-ed" together to
 // run a subset of all tests.
+__EXPORT
 test_type_t utest_test_type = static_cast<test_type>(TEST_DEFAULT);
 
 /**
@@ -79,6 +81,7 @@ test_type_t utest_test_type = static_cast<test_type>(TEST_DEFAULT);
  *
  * This function will call the out_func callback
  */
+__EXPORT
 void unittest_printf_critical(const char* format, ...) {
   static char print_buffer[PRINT_BUFFER_SIZE];
 
@@ -94,6 +97,7 @@ void unittest_printf_critical(const char* format, ...) {
   va_end(argp);
 }
 
+__EXPORT
 bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
                               const char* msg) {
   if (memcmp(expected, actual, len)) {
@@ -106,6 +110,7 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
   return true;
 }
 
+__EXPORT
 bool unittest_expect_str_eq(const char* str1_value, const char* str2_value, const char* str1_expr,
                             const char* str2_expr, const char* msg, const char* source_filename,
                             int source_line_num, const char* source_function) {
@@ -124,6 +129,7 @@ bool unittest_expect_str_eq(const char* str1_value, const char* str2_value, cons
   return true;
 }
 
+__EXPORT
 bool unittest_expect_str_ne(const char* str1_value, const char* str2_value, const char* str1_expr,
                             const char* str2_expr, const char* msg, const char* source_filename,
                             int source_line_num, const char* source_function) {
@@ -142,6 +148,7 @@ bool unittest_expect_str_ne(const char* str1_value, const char* str2_value, cons
   return true;
 }
 
+__EXPORT
 bool unittest_expect_str_str(const char* str1_value, const char* str2_value, const char* str1_expr,
                              const char* str2_expr, const char* msg, const char* source_filename,
                              int source_line_num, const char* source_function) {
@@ -160,16 +167,19 @@ bool unittest_expect_str_str(const char* str1_value, const char* str2_value, con
   return true;
 }
 
+__EXPORT
 void unittest_set_output_function(test_output_func fun, void* arg) {
   out_func = fun;
   out_func_arg = arg;
 }
 
+__EXPORT
 void unittest_restore_output_function() {
   out_func = default_printf;
   out_func_arg = nullptr;
 }
 
+__EXPORT
 int unittest_set_verbosity_level(int new_level) {
   int out = utest_verbosity_level;
   utest_verbosity_level = new_level;
@@ -208,6 +218,7 @@ zx_status_t RunDeathFunction(void (*fn_to_run)(void*), void* arg, const zx::port
 
 }  // namespace
 
+__EXPORT
 death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
   zx::port port;
   zx_status_t status = zx::port::create(0, &port);
@@ -289,6 +300,7 @@ void run_with_watchdog(test_type_t test_type, const char* name, F fn) {
   }
 }
 
+__EXPORT
 void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_type,
                              struct test_info** current_test_info, bool* all_success) {
   if (utest_test_type & test_type) {
@@ -299,4 +311,5 @@ void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_
   }
 }
 
+__EXPORT
 void unittest_cancel_timeout(void) { watchdog_cancel(); }
