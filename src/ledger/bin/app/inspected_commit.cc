@@ -114,9 +114,8 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
     it->second.AddCallback(callback::EnsureCalled(std::move(callback), fit::closure([] {})));
     return;
   }
-  auto emplacement = inspected_entry_containers_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(key),
-      std::forward_as_tuple(callback::EnsureCalled(std::move(callback), fit::closure([] {}))));
+  auto emplacement = inspected_entry_containers_.try_emplace(
+      key, callback::EnsureCalled(std::move(callback), fit::closure([] {})));
   ongoing_storage_accesses_++;
   fxl::WeakPtr<InspectedCommit> weak_this = weak_factory_.GetWeakPtr();
   inspectable_page_->NewInspection(callback::MakeScoped(

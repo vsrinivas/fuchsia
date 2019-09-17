@@ -83,9 +83,8 @@ void CommitsChildrenManager::Attach(std::string name, fit::function<void(fit::cl
     it->second.AddCallback(callback::EnsureCalled(std::move(callback), fit::closure()));
     return;
   }
-  auto emplacement = inspected_commit_containers_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(commit_id),
-      std::forward_as_tuple(callback::EnsureCalled(std::move(callback), fit::closure())));
+  auto emplacement = inspected_commit_containers_.try_emplace(
+      commit_id, callback::EnsureCalled(std::move(callback), fit::closure()));
   inspectable_page_->NewInspection(
       [this, commit_display_name = std::move(name), commit_id = std::move(commit_id),
        emplacement = std::move(emplacement)](storage::Status status, ExpiringToken token,

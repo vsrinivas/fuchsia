@@ -176,9 +176,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 
   void NewConflictResolver(PageId page_id,
                            fidl::InterfaceRequest<ConflictResolver> resolver) override {
-    resolvers.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(convert::ToString(page_id.id)),
-                      std::forward_as_tuple(std::move(resolver)));
+    resolvers.try_emplace(convert::ToString(page_id.id), std::move(resolver));
   }
 
   std::map<storage::PageId, NonAssociativeConflictResolverImpl> resolvers;

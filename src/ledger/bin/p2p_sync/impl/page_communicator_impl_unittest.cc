@@ -89,8 +89,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   }
 
   const FakeCommit& AddCommit(std::string id, std::string data) {
-    auto commit = commits_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
-                                   std::forward_as_tuple(id, std::move(data)));
+    auto commit = commits_.try_emplace(id, id, std::move(data));
     return commit.first->second;
   }
 
@@ -144,9 +143,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       const storage::ChangeSource /*source*/,
       fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) override {
-    commits_from_sync_.emplace_back(std::piecewise_construct,
-                                    std::forward_as_tuple(std::move(ids_and_bytes)),
-                                    std::forward_as_tuple(std::move(callback)));
+    commits_from_sync_.emplace_back(std::move(ids_and_bytes), std::move(callback));
   }
 
   void AddCommitWatcher(storage::CommitWatcher* watcher) override {

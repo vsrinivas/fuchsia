@@ -290,9 +290,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     return;
   }
 
-  auto ret = repositories_.emplace(std::piecewise_construct,
-                                   std::forward_as_tuple(repository_information.name),
-                                   std::forward_as_tuple(std::move(root_fd)));
+  auto ret = repositories_.try_emplace(repository_information.name, std::move(root_fd));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 

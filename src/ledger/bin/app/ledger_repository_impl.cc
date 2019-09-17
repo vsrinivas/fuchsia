@@ -227,12 +227,10 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
   if (status != Status::OK) {
     return status;
   }
-  auto result = ledger_managers_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(name_as_string),
-      std::forward_as_tuple(environment_, name_as_string,
-                            ledgers_inspect_node_.CreateChild(name_as_string),
-                            std::move(encryption_service), std::move(ledger_storage),
-                            std::move(ledger_sync), page_usage_listeners_));
+  auto result = ledger_managers_.try_emplace(
+      name_as_string, environment_, name_as_string,
+      ledgers_inspect_node_.CreateChild(name_as_string), std::move(encryption_service),
+      std::move(ledger_storage), std::move(ledger_sync), page_usage_listeners_);
   FXL_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
   return Status::OK;

@@ -128,11 +128,10 @@ PageManager* LedgerManager::GetOrCreatePageManager(convert::ExtendedStringView p
     return &it->second;
   }
 
-  auto ret = page_managers_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(page_id.ToString()),
-      std::forward_as_tuple(environment_, ledger_name_, page_id.ToString(), page_usage_listeners_,
-                            storage_.get(), ledger_sync_.get(), &merge_manager_,
-                            pages_node_.CreateChild(PageIdToDisplayName(page_id.ToString()))));
+  auto ret = page_managers_.try_emplace(
+      page_id.ToString(), environment_, ledger_name_, page_id.ToString(), page_usage_listeners_,
+      storage_.get(), ledger_sync_.get(), &merge_manager_,
+      pages_node_.CreateChild(PageIdToDisplayName(page_id.ToString())));
   FXL_DCHECK(ret.second);
   return &ret.first->second;
 }

@@ -313,15 +313,11 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   void NewConflictResolver(PageId page_id,
                            fidl::InterfaceRequest<ConflictResolver> resolver) override {
     if (use_dummy_resolver_) {
-      dummy_resolvers_.emplace(std::piecewise_construct,
-                               std::forward_as_tuple(convert::ToString(page_id.id)),
-                               std::forward_as_tuple(std::move(resolver)));
+      dummy_resolvers_.try_emplace(convert::ToString(page_id.id), std::move(resolver));
       new_conflict_resolver_waiter_->GetCallback()();
       return;
     }
-    resolvers.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(convert::ToString(page_id.id)),
-                      std::forward_as_tuple(loop_controller_, std::move(resolver)));
+    resolvers.try_emplace(convert::ToString(page_id.id), loop_controller_, std::move(resolver));
     new_conflict_resolver_waiter_->GetCallback()();
   }
 

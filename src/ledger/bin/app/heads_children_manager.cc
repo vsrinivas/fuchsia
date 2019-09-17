@@ -91,8 +91,7 @@ void HeadsChildrenManager::Attach(std::string name, fit::function<void(fit::clos
   // |AttachHead|: that race is inherent; the page's heads can just as easily change
   // immediately after any storage read performed at this point in the code.
   inspect_deprecated::Node head_node = heads_node_->CreateChild(name);
-  auto emplacement = inspected_heads_.emplace(std::piecewise_construct, std::forward_as_tuple(head),
-                                              std::forward_as_tuple(std::move(head_node)));
+  auto emplacement = inspected_heads_.try_emplace(head, std::move(head_node));
   callback(emplacement.first->second.CreateDetacher());
 }
 }  // namespace ledger

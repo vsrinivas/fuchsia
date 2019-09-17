@@ -307,9 +307,7 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
       if (it != pending_commit_batches_.end()) {
         it->second.AddToBatch(std::move(commits));
       } else {
-        auto it_pair =
-            pending_commit_batches_.emplace(std::piecewise_construct, std::forward_as_tuple(source),
-                                            std::forward_as_tuple(source, this, storage_));
+        auto it_pair = pending_commit_batches_.try_emplace(source, source, this, storage_);
         it_pair.first->second.AddToBatch(std::move(commits));
       }
       break;

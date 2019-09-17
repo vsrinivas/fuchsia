@@ -171,8 +171,7 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
         fail_(-1) {
     for (const auto& [key, value] : entries) {
       uint32_t index = entries_.size();
-      entries_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
-                       std::forward_as_tuple(value, index));
+      entries_.try_emplace(key, value, index);
       keys_by_index_.emplace(index, key);
     }
   }

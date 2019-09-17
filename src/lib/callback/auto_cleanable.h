@@ -125,6 +125,20 @@ class AutoCleanableMap {
 
   bool empty() { return map_.empty(); }
 
+  template <typename Key, typename... Args>
+  std::pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
+    auto result = map_.try_emplace(std::forward<Key>(key), std::forward<Args>(args)...);
+    if (result.second) {
+      auto& key = result.first->first;
+      auto& value = result.first->second;
+      value.set_on_empty([this, key]() {
+        map_.erase(key);
+        CheckEmpty();
+      });
+    }
+    return result;
+  }
+
   template <typename... Args>
   std::pair<iterator, bool> emplace(Args&&... args) {
     auto result = map_.emplace(std::forward<Args>(args)...);

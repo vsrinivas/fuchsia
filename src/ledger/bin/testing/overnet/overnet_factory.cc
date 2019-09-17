@@ -62,9 +62,8 @@ OvernetFactory::~OvernetFactory() = default;
 
 void OvernetFactory::AddBinding(uint64_t node_id,
                                 fidl::InterfaceRequest<fuchsia::overnet::Overnet> request) {
-  net_connectors_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(node_id),
-      std::forward_as_tuple(this, std::move(request), node_id, [this] { UpdatedHostList(); }));
+  net_connectors_.try_emplace(node_id, this, std::move(request), node_id,
+                              [this] { UpdatedHostList(); });
   UpdatedHostList();
 }
 
