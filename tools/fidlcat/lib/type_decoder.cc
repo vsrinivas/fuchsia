@@ -8,6 +8,7 @@
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls/pci.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/syscalls/profile.h>
@@ -167,6 +168,22 @@ void PacketPageRequestCommandName(uint16_t command, std::ostream& os) {
     PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
     default:
       os << static_cast<uint32_t>(command);
+      return;
+  }
+}
+
+#define PciBarTypeNameCase(name) \
+  case name:                     \
+    os << #name;                 \
+    return
+
+void PciBarTypeName(uint32_t type, std::ostream& os) {
+  switch (type) {
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_UNUSED);
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_MMIO);
+    PciBarTypeNameCase(ZX_PCI_BAR_TYPE_PIO);
+    default:
+      os << static_cast<uint32_t>(type);
       return;
   }
 }
@@ -834,6 +851,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kPaddr:
       os << ":" << colors.green << "zx_paddr_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kPciBarType:
+      os << ":" << colors.green << "zx_pci_bar_type_t" << colors.reset << ": ";
       break;
     case SyscallType::kPolicyAction:
       os << ":" << colors.green << "zx_policy_action_t" << colors.reset << ": ";

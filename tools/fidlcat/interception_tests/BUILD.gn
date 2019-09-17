@@ -23,6 +23,7 @@ if (current_toolchain == host_toolchain) {
       "interception_workflow_test.cc",
       "job_test.cc",
       "object_test.cc",
+      "pci_test.cc",
       "port_test.cc",
       "process_test.cc",
       "profile_test.cc",

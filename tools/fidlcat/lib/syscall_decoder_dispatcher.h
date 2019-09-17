@@ -289,6 +289,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       fidl_codec::ObjTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kPciBarType:
+      os << colors.blue;
+      PciBarTypeName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kPolicyAction:
       os << colors.blue;
       PolicyActionName(value, os);
@@ -718,6 +723,35 @@ class ClassField : public ClassFieldBase<ClassType> {
   Type (*get_)(const ClassType* from);
 };
 
+// Define a class field which is an array of base type items.
+template <typename ClassType, typename Type>
+class ArrayField : public ClassFieldBase<ClassType> {
+ public:
+  ArrayField(std::string_view name, SyscallType syscall_type,
+             std::pair<const Type*, int> (*get)(const ClassType* from))
+      : ClassFieldBase<ClassType>(name, syscall_type), get_(get) {}
+
+  void Display(const ClassType* object, debug_ipc::Arch arch, const fidl_codec::Colors& colors,
+               std::string_view line_header, int tabs, std::ostream& os) const {
+    os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ')
+       << ClassFieldBase<ClassType>::name();
+    DisplayType(colors, ClassFieldBase<ClassType>::syscall_type(), os);
+    os << "[]: {";
+    const char* separator = " ";
+    std::pair<const Type*, int> array = get_(object);
+    for (int i = 0; i < array.second; ++i) {
+      os << separator;
+      DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), array.first[i], os);
+      separator = ", ";
+    }
+    os << " }\n";
+  }
+
+ private:
+  // Function which can extract the address of the field for a given object.
+  std::pair<const Type*, int> (*get_)(const ClassType* from);
+};
+
 // Define a class field which is a class.
 template <typename ClassType, typename Type>
 class ClassClassField : public ClassFieldBase<ClassType> {
@@ -756,6 +790,29 @@ class ArrayClassField : public ClassFieldBase<ClassType> {
   const Class<Type>* const sub_class_;
 };
 
+// Define a class field which is an array of objects. The size of the array is dynamic.
+template <typename ClassType, typename Type>
+class DynamicArrayClassField : public ClassFieldBase<ClassType> {
+ public:
+  DynamicArrayClassField(std::string_view name, const Type* (*get)(const ClassType* from),
+                         uint32_t (*get_size)(const ClassType* from), const Class<Type>* sub_class)
+      : ClassFieldBase<ClassType>(name, SyscallType::kStruct),
+        get_(get),
+        get_size_(get_size),
+        sub_class_(sub_class) {}
+
+  void Display(const ClassType* object, debug_ipc::Arch arch, const fidl_codec::Colors& colors,
+               std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Function which can extract the address of the field for a given object.
+  const Type* (*get_)(const ClassType* from);
+  // Function which can extract the size of the array for a given object.
+  uint32_t (*get_size_)(const ClassType* from);
+  // Definition of the array items' class.
+  const Class<Type>* const sub_class_;
+};
+
 // Define a class.
 template <typename ClassType>
 class Class {
@@ -782,6 +839,13 @@ class Class {
   }
 
   template <typename Type>
+  ArrayField<ClassType, Type>* AddField(std::unique_ptr<ArrayField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+  template <typename Type>
   ClassClassField<ClassType, Type>* AddField(
       std::unique_ptr<ClassClassField<ClassType, Type>> field) {
     auto result = field.get();
@@ -792,6 +856,14 @@ class Class {
   template <typename Type>
   ArrayClassField<ClassType, Type>* AddField(
       std::unique_ptr<ArrayClassField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+  template <typename Type>
+  DynamicArrayClassField<ClassType, Type>* AddField(
+      std::unique_ptr<DynamicArrayClassField<ClassType, Type>> field) {
     auto result = field.get();
     fields_.push_back(std::move(field));
     return result;
@@ -851,6 +923,24 @@ void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
   for (int i = 0; i < array.second; ++i) {
     os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ');
     sub_class_->DisplayObject(array.first + i, arch, colors, line_header, tabs + 1, os);
+    os << '\n';
+  }
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << "}\n";
+}
+
+template <typename ClassType, typename Type>
+void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
+                                                      const fidl_codec::Colors& colors,
+                                                      std::string_view line_header, int tabs,
+                                                      std::ostream& os) const {
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ')
+     << ClassFieldBase<ClassType>::name() << ':' << colors.green << sub_class_->name()
+     << colors.reset << "[]: {\n";
+  const Type* array = get_(object);
+  uint32_t size = get_size_(object);
+  for (uint32_t i = 0; i < size; ++i) {
+    os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ');
+    sub_class_->DisplayObject(array + i, arch, colors, line_header, tabs + 1, os);
     os << '\n';
   }
   os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << "}\n";
@@ -1451,19 +1541,29 @@ class SyscallInputOutputFixedSizeString : public SyscallInputOutputBase {
 };
 
 // An input/output which is an object. This is always displayed outline.
-template <typename ClassType>
+template <typename ClassType, typename SizeType>
 class SyscallInputOutputObject : public SyscallInputOutputBase {
  public:
   SyscallInputOutputObject(int64_t error_code, std::string_view name,
                            std::unique_ptr<AccessBase> buffer,
+                           std::unique_ptr<Access<SizeType>> buffer_size,
                            const Class<ClassType>* class_definition)
       : SyscallInputOutputBase(error_code, name),
         buffer_(std::move(buffer)),
+        buffer_size_(std::move(buffer_size)),
         class_definition_(class_definition) {}
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
-    buffer_->LoadArray(decoder, stage, sizeof(ClassType));
+    if (buffer_size_ != nullptr) {
+      buffer_size_->Load(decoder, stage);
+      if (buffer_size_->Loaded(decoder, stage)) {
+        size_t value = buffer_size_->Value(decoder, stage);
+        buffer_->LoadArray(decoder, stage, value);
+      }
+    } else {
+      buffer_->LoadArray(decoder, stage, sizeof(ClassType));
+    }
   }
 
   void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
@@ -1472,6 +1572,8 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
  private:
   // Access to the buffer (raw data) which contains the object.
   const std::unique_ptr<AccessBase> buffer_;
+  // Access to the buffer size. If nul, the size of the buffer is the size of ClassType.
+  const std::unique_ptr<Access<SizeType>> buffer_size_;
   // Class definition for the displayed object.
   const Class<ClassType>* class_definition_;
 };
@@ -1647,8 +1749,11 @@ class Syscall {
 
   // Adds an inline input to display.
   template <typename Type>
-  void Input(std::string_view name, std::unique_ptr<Access<Type>> access) {
-    inputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
+  SyscallInputOutput<Type>* Input(std::string_view name, std::unique_ptr<Access<Type>> access) {
+    auto object = std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access));
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
   }
 
   // Adds an indirect input to display.
@@ -1691,11 +1796,23 @@ class Syscall {
 
   // Adds an object input to display.
   template <typename ClassType>
-  SyscallInputOutputObject<ClassType>* InputObject(std::string_view name,
-                                                   std::unique_ptr<AccessBase> buffer,
-                                                   const Class<ClassType>* class_definition) {
-    auto object = std::make_unique<SyscallInputOutputObject<ClassType>>(0, name, std::move(buffer),
-                                                                        class_definition);
+  SyscallInputOutputObject<ClassType, size_t>* InputObject(
+      std::string_view name, std::unique_ptr<AccessBase> buffer,
+      const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObject<ClassType, size_t>>(
+        0, name, std::move(buffer), nullptr, class_definition);
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
+  }
+
+  // Adds an object input with a dynamic size to display.
+  template <typename ClassType, typename SizeType>
+  SyscallInputOutputObject<ClassType, SizeType>* InputObject(
+      std::string_view name, std::unique_ptr<AccessBase> buffer,
+      std::unique_ptr<Access<SizeType>> buffer_size, const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObject<ClassType, SizeType>>(
+        0, name, std::move(buffer), std::move(buffer_size), class_definition);
     auto result = object.get();
     inputs_.push_back(std::move(object));
     return result;
@@ -1727,9 +1844,12 @@ class Syscall {
 
   // Adds an inline output to display.
   template <typename Type>
-  void Output(int64_t error_code, std::string_view name, std::unique_ptr<Access<Type>> access) {
-    outputs_.push_back(
-        std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access)));
+  SyscallInputOutput<Type>* Output(int64_t error_code, std::string_view name,
+                                   std::unique_ptr<Access<Type>> access) {
+    auto object = std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access));
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
   }
 
   // Adds an inline output to display which is displayed like: actual/asked.
@@ -1779,11 +1899,11 @@ class Syscall {
 
   // Adds an object output to display.
   template <typename ClassType>
-  SyscallInputOutputObject<ClassType>* OutputObject(int64_t error_code, std::string_view name,
-                                                    std::unique_ptr<AccessBase> buffer,
-                                                    const Class<ClassType>* class_definition) {
-    auto object = std::make_unique<SyscallInputOutputObject<ClassType>>(
-        error_code, name, std::move(buffer), class_definition);
+  SyscallInputOutputObject<ClassType, size_t>* OutputObject(
+      int64_t error_code, std::string_view name, std::unique_ptr<AccessBase> buffer,
+      const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObject<ClassType, size_t>>(
+        error_code, name, std::move(buffer), nullptr, class_definition);
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -2080,11 +2200,10 @@ inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
   os << '\n';
 }
 
-template <typename ClassType>
-void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                         SyscallDecoder* decoder, Stage stage,
-                                                         std::string_view line_header, int tabs,
-                                                         std::ostream& os) const {
+template <typename ClassType, typename SizeType>
+void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    std::string_view line_header, int tabs, std::ostream& os) const {
   const fidl_codec::Colors& colors = dispatcher->colors();
   os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name() << ":"
      << colors.green << class_definition_->name() << colors.reset << ": ";

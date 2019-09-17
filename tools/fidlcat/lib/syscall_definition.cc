@@ -4,6 +4,7 @@
 
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
+#include <zircon/system/public/zircon/syscalls/pci.h>
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/syscalls/profile.h>
@@ -1387,6 +1388,215 @@ ZxPacketPageRequest* ZxPacketPageRequest::instance_ = nullptr;
 const ZxPacketPageRequest* ZxPacketPageRequest::GetClass() {
   if (instance_ == nullptr) {
     instance_ = new ZxPacketPageRequest;
+  }
+  return instance_;
+}
+
+class ZxPciBar : public Class<zx_pci_bar_t> {
+ public:
+  static const ZxPciBar* GetClass();
+
+  static uint32_t id(const zx_pci_bar_t* from) { return from->id; }
+  static uint32_t type(const zx_pci_bar_t* from) { return from->type; }
+  static size_t size(const zx_pci_bar_t* from) { return from->size; }
+  static uintptr_t addr(const zx_pci_bar_t* from) { return from->addr; }
+  static zx_handle_t handle(const zx_pci_bar_t* from) { return from->handle; }
+
+ private:
+  ZxPciBar() : Class("zx_pci_bar_t") {
+    AddField(std::make_unique<ClassField<zx_pci_bar_t, uint32_t>>("id", SyscallType::kUint32, id));
+    auto type_field = AddField(std::make_unique<ClassField<zx_pci_bar_t, uint32_t>>(
+        "type", SyscallType::kPciBarType, type));
+    AddField(std::make_unique<ClassField<zx_pci_bar_t, size_t>>("size", SyscallType::kSize, size))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PCI_BAR_TYPE_PIO));
+    AddField(
+        std::make_unique<ClassField<zx_pci_bar_t, uintptr_t>>("addr", SyscallType::kUintptr, addr))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PCI_BAR_TYPE_PIO));
+    AddField(std::make_unique<ClassField<zx_pci_bar_t, zx_handle_t>>("handle", SyscallType::kHandle,
+                                                                     handle))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PCI_BAR_TYPE_MMIO));
+  }
+  ZxPciBar(const ZxPciBar&) = delete;
+  ZxPciBar& operator=(const ZxPciBar&) = delete;
+  static ZxPciBar* instance_;
+};
+
+ZxPciBar* ZxPciBar::instance_ = nullptr;
+
+const ZxPciBar* ZxPciBar::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPciBar;
+  }
+  return instance_;
+}
+
+class ZxPcieDeviceInfo : public Class<zx_pcie_device_info_t> {
+ public:
+  static const ZxPcieDeviceInfo* GetClass();
+
+  static uint16_t vendor_id(const zx_pcie_device_info_t* from) { return from->vendor_id; }
+  static uint16_t device_id(const zx_pcie_device_info_t* from) { return from->device_id; }
+  static uint8_t base_class(const zx_pcie_device_info_t* from) { return from->base_class; }
+  static uint8_t sub_class(const zx_pcie_device_info_t* from) { return from->sub_class; }
+  static uint8_t program_interface(const zx_pcie_device_info_t* from) {
+    return from->program_interface;
+  }
+  static uint8_t revision_id(const zx_pcie_device_info_t* from) { return from->revision_id; }
+  static uint8_t bus_id(const zx_pcie_device_info_t* from) { return from->bus_id; }
+  static uint8_t dev_id(const zx_pcie_device_info_t* from) { return from->dev_id; }
+  static uint8_t func_id(const zx_pcie_device_info_t* from) { return from->func_id; }
+
+ private:
+  ZxPcieDeviceInfo() : Class("zx_pcie_device_info_t") {
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint16_t>>(
+        "vendor_id", SyscallType::kUint16, vendor_id));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint16_t>>(
+        "device_id", SyscallType::kUint16, device_id));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "base_class", SyscallType::kUint8, base_class));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "sub_class", SyscallType::kUint8, sub_class));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "program_interface", SyscallType::kUint8, program_interface));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "revision_id", SyscallType::kUint8, revision_id));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "bus_id", SyscallType::kUint8, bus_id));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "dev_id", SyscallType::kUint8, dev_id));
+    AddField(std::make_unique<ClassField<zx_pcie_device_info_t, uint8_t>>(
+        "func_id", SyscallType::kUint8, func_id));
+  }
+  ZxPcieDeviceInfo(const ZxPcieDeviceInfo&) = delete;
+  ZxPcieDeviceInfo& operator=(const ZxPcieDeviceInfo&) = delete;
+  static ZxPcieDeviceInfo* instance_;
+};
+
+ZxPcieDeviceInfo* ZxPcieDeviceInfo::instance_ = nullptr;
+
+const ZxPcieDeviceInfo* ZxPcieDeviceInfo::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPcieDeviceInfo;
+  }
+  return instance_;
+}
+
+class ZxPciInitArgIrq : public Class<zx_pci_init_arg_irq_t> {
+ public:
+  static const ZxPciInitArgIrq* GetClass();
+
+  static uint32_t global_irq(const zx_pci_init_arg_irq_t* from) { return from->global_irq; }
+  static bool level_triggered(const zx_pci_init_arg_irq_t* from) { return from->level_triggered; }
+  static bool active_high(const zx_pci_init_arg_irq_t* from) { return from->active_high; }
+
+ private:
+  ZxPciInitArgIrq() : Class("zx_pci_init_arg_irq_t") {
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_irq_t, uint32_t>>(
+        "global_irq", SyscallType::kUint32, global_irq));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_irq_t, bool>>(
+        "level_triggered", SyscallType::kBool, level_triggered));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_irq_t, bool>>(
+        "active_high", SyscallType::kBool, active_high));
+  }
+  ZxPciInitArgIrq(const ZxPciInitArgIrq&) = delete;
+  ZxPciInitArgIrq& operator=(const ZxPciInitArgIrq&) = delete;
+  static ZxPciInitArgIrq* instance_;
+};
+
+ZxPciInitArgIrq* ZxPciInitArgIrq::instance_ = nullptr;
+
+const ZxPciInitArgIrq* ZxPciInitArgIrq::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPciInitArgIrq;
+  }
+  return instance_;
+}
+
+class ZxPciInitArgAddrWindow : public Class<zx_pci_init_arg_addr_window_t> {
+ public:
+  static const ZxPciInitArgAddrWindow* GetClass();
+
+  static uint64_t base(const zx_pci_init_arg_addr_window_t* from) { return from->base; }
+  static size_t size(const zx_pci_init_arg_addr_window_t* from) { return from->size; }
+  static uint8_t bus_start(const zx_pci_init_arg_addr_window_t* from) { return from->bus_start; }
+  static uint8_t bus_end(const zx_pci_init_arg_addr_window_t* from) { return from->bus_end; }
+  static uint8_t cfg_space_type(const zx_pci_init_arg_addr_window_t* from) {
+    return from->cfg_space_type;
+  }
+  static bool has_ecam(const zx_pci_init_arg_addr_window_t* from) { return from->has_ecam; }
+
+ private:
+  ZxPciInitArgAddrWindow() : Class("zx_pci_init_arg_addr_window_t") {
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, uint64_t>>(
+        "base", SyscallType::kUint64, base));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, size_t>>(
+        "size", SyscallType::kSize, size));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, uint8_t>>(
+        "bus_start", SyscallType::kUint8, bus_start));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, uint8_t>>(
+        "bus_end", SyscallType::kUint8, bus_end));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, uint8_t>>(
+        "cfg_space_type", SyscallType::kUint8, cfg_space_type));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_addr_window_t, bool>>(
+        "has_ecam", SyscallType::kBool, has_ecam));
+  }
+  ZxPciInitArgAddrWindow(const ZxPciInitArgAddrWindow&) = delete;
+  ZxPciInitArgAddrWindow& operator=(const ZxPciInitArgAddrWindow&) = delete;
+  static ZxPciInitArgAddrWindow* instance_;
+};
+
+ZxPciInitArgAddrWindow* ZxPciInitArgAddrWindow::instance_ = nullptr;
+
+const ZxPciInitArgAddrWindow* ZxPciInitArgAddrWindow::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPciInitArgAddrWindow;
+  }
+  return instance_;
+}
+
+class ZxPciInitArg : public Class<zx_pci_init_arg_t> {
+ public:
+  static const ZxPciInitArg* GetClass();
+
+  static std::pair<const uint32_t*, int> dev_pin_to_global_irq(const zx_pci_init_arg_t* from) {
+    return std::make_pair(reinterpret_cast<const uint32_t*>(from->dev_pin_to_global_irq),
+                          sizeof(from->dev_pin_to_global_irq) / sizeof(uint32_t));
+  }
+  static uint32_t num_irqs(const zx_pci_init_arg_t* from) { return from->num_irqs; }
+  static const zx_pci_init_arg_irq_t* irqs(const zx_pci_init_arg_t* from) {
+    return reinterpret_cast<const zx_pci_init_arg_irq_t*>(from->irqs);
+  }
+  static uint32_t addr_window_count(const zx_pci_init_arg_t* from) {
+    return from->addr_window_count;
+  }
+  static const zx_pci_init_arg_addr_window_t* addr_windows(const zx_pci_init_arg_t* from) {
+    return reinterpret_cast<const zx_pci_init_arg_addr_window_t*>(from->addr_windows);
+  }
+
+ private:
+  ZxPciInitArg() : Class("zx_pci_init_arg_t") {
+    AddField(std::make_unique<ArrayField<zx_pci_init_arg_t, uint32_t>>(
+        "dev_pin_to_global_irq", SyscallType::kUint32Hexa, dev_pin_to_global_irq));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_t, uint32_t>>(
+        "num_irqs", SyscallType::kUint32, num_irqs));
+    AddField(std::make_unique<DynamicArrayClassField<zx_pci_init_arg_t, zx_pci_init_arg_irq_t>>(
+        "irqs", irqs, num_irqs, ZxPciInitArgIrq::GetClass()));
+    AddField(std::make_unique<ClassField<zx_pci_init_arg_t, uint32_t>>(
+        "addr_window_count", SyscallType::kUint32, addr_window_count));
+    AddField(
+        std::make_unique<DynamicArrayClassField<zx_pci_init_arg_t, zx_pci_init_arg_addr_window_t>>(
+            "addr_windows", addr_windows, addr_window_count, ZxPciInitArgAddrWindow::GetClass()));
+  }
+  ZxPciInitArg(const ZxPciInitArg&) = delete;
+  ZxPciInitArg& operator=(const ZxPciInitArg&) = delete;
+  static ZxPciInitArg* instance_;
+};
+
+ZxPciInitArg* ZxPciInitArg::instance_ = nullptr;
+
+const ZxPciInitArg* ZxPciInitArg::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPciInitArg;
   }
   return instance_;
 }
@@ -4107,6 +4317,209 @@ void SyscallDecoderDispatcher::Populate() {
         "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
     zx_debug_send_command->InputString("buffer", std::make_unique<ArgumentAccess<char>>(buffer),
                                        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_pci_get_nth_device = Add("zx_pci_get_nth_device", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_get_nth_device->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto index = zx_pci_get_nth_device->Argument<uint32_t>(SyscallType::kUint32);
+    auto out_info =
+        zx_pci_get_nth_device->PointerArgument<zx_pcie_device_info_t>(SyscallType::kStruct);
+    auto out_handle = zx_pci_get_nth_device->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pci_get_nth_device->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_get_nth_device->Input<uint32_t>("index",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(index));
+    // Outputs
+    zx_pci_get_nth_device->InputObject<zx_pcie_device_info_t>(
+        "out_info", std::make_unique<ArgumentAccess<zx_pcie_device_info_t>>(out_info),
+        ZxPcieDeviceInfo::GetClass());
+    zx_pci_get_nth_device->Output<zx_handle_t>(
+        ZX_OK, "out_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(out_handle));
+  }
+
+  {
+    Syscall* zx_pci_enable_bus_master = Add("zx_pci_enable_bus_master", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_enable_bus_master->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto enable = zx_pci_enable_bus_master->Argument<bool>(SyscallType::kBool);
+    // Inputs
+    zx_pci_enable_bus_master->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_enable_bus_master->Input<bool>("enable", std::make_unique<ArgumentAccess<bool>>(enable));
+  }
+
+  {
+    Syscall* zx_pci_reset_device = Add("zx_pci_reset_device", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_reset_device->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pci_reset_device->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_pci_config_read = Add("zx_pci_config_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_config_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto offset = zx_pci_config_read->Argument<uint16_t>(SyscallType::kUint16);
+    auto width = zx_pci_config_read->Argument<size_t>(SyscallType::kSize);
+    auto out_val = zx_pci_config_read->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_pci_config_read->Input<zx_handle_t>("handle",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_config_read->Input<uint16_t>("offset",
+                                        std::make_unique<ArgumentAccess<uint16_t>>(offset));
+    zx_pci_config_read->Input<size_t>("width", std::make_unique<ArgumentAccess<size_t>>(width));
+    // Outputs
+    zx_pci_config_read->Output<uint32_t>(ZX_OK, "out_val",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out_val));
+  }
+
+  {
+    Syscall* zx_pci_config_write = Add("zx_pci_config_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_config_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto offset = zx_pci_config_write->Argument<uint16_t>(SyscallType::kUint16);
+    auto width = zx_pci_config_write->Argument<size_t>(SyscallType::kSize);
+    auto val = zx_pci_config_write->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_pci_config_write->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_config_write->Input<uint16_t>("offset",
+                                         std::make_unique<ArgumentAccess<uint16_t>>(offset));
+    zx_pci_config_write->Input<size_t>("width", std::make_unique<ArgumentAccess<size_t>>(width));
+    zx_pci_config_write->Input<uint32_t>("val", std::make_unique<ArgumentAccess<uint32_t>>(val));
+  }
+
+  {
+    Syscall* zx_pci_cfg_pio_rw = Add("zx_pci_cfg_pio_rw", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_cfg_pio_rw->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto bus = zx_pci_cfg_pio_rw->Argument<uint8_t>(SyscallType::kUint8);
+    auto dev = zx_pci_cfg_pio_rw->Argument<uint8_t>(SyscallType::kUint8);
+    auto func = zx_pci_cfg_pio_rw->Argument<uint8_t>(SyscallType::kUint8);
+    auto offset = zx_pci_cfg_pio_rw->Argument<uint8_t>(SyscallType::kUint8);
+    auto val = zx_pci_cfg_pio_rw->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto width = zx_pci_cfg_pio_rw->Argument<size_t>(SyscallType::kSize);
+    auto write = zx_pci_cfg_pio_rw->Argument<bool>(SyscallType::kBool);
+    // Inputs
+    zx_pci_cfg_pio_rw->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_cfg_pio_rw->Input<uint8_t>("bus", std::make_unique<ArgumentAccess<uint8_t>>(bus));
+    zx_pci_cfg_pio_rw->Input<uint8_t>("dev", std::make_unique<ArgumentAccess<uint8_t>>(dev));
+    zx_pci_cfg_pio_rw->Input<uint8_t>("func", std::make_unique<ArgumentAccess<uint8_t>>(func));
+    zx_pci_cfg_pio_rw->Input<uint8_t>("offset", std::make_unique<ArgumentAccess<uint8_t>>(offset));
+    zx_pci_cfg_pio_rw->Input<size_t>("width", std::make_unique<ArgumentAccess<size_t>>(width));
+    zx_pci_cfg_pio_rw->Input<uint32_t>("val", std::make_unique<ArgumentAccess<uint32_t>>(val))
+        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), true);
+    zx_pci_cfg_pio_rw->Input<bool>("write", std::make_unique<ArgumentAccess<bool>>(write));
+    // Outputs
+    zx_pci_cfg_pio_rw
+        ->Output<uint32_t>(ZX_OK, "val", std::make_unique<ArgumentAccess<uint32_t>>(val))
+        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), false);
+  }
+
+  {
+    Syscall* zx_pci_get_bar = Add("zx_pci_get_bar", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_get_bar->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto bar_num = zx_pci_get_bar->Argument<uint32_t>(SyscallType::kUint32);
+    auto out_bar = zx_pci_get_bar->PointerArgument<zx_pci_bar_t>(SyscallType::kStruct);
+    auto out_handle = zx_pci_get_bar->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pci_get_bar->Input<zx_handle_t>("handle",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_get_bar->Input<uint32_t>("bar_num", std::make_unique<ArgumentAccess<uint32_t>>(bar_num));
+    // Outputs
+    zx_pci_get_bar->OutputObject<zx_pci_bar_t>(
+        ZX_OK, "out_bar", std::make_unique<ArgumentAccess<zx_pci_bar_t>>(out_bar),
+        ZxPciBar::GetClass());
+    zx_pci_get_bar->Output<zx_handle_t>(ZX_OK, "out_handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out_handle));
+  }
+
+  {
+    Syscall* zx_pci_map_interrupt = Add("zx_pci_map_interrupt", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_map_interrupt->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto which_irq = zx_pci_map_interrupt->Argument<int32_t>(SyscallType::kInt32);
+    auto out_handle = zx_pci_map_interrupt->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pci_map_interrupt->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_map_interrupt->Input<int32_t>("which_irq",
+                                         std::make_unique<ArgumentAccess<int32_t>>(which_irq));
+    // Outputs
+    zx_pci_map_interrupt->Output<zx_handle_t>(
+        ZX_OK, "out_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(out_handle));
+  }
+
+  {
+    Syscall* zx_pci_query_irq_mode = Add("zx_pci_query_irq_mode", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_query_irq_mode->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto mode = zx_pci_query_irq_mode->Argument<uint32_t>(SyscallType::kUint32);
+    auto out_max_irqs = zx_pci_query_irq_mode->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_pci_query_irq_mode->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_query_irq_mode->Input<uint32_t>("mode",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(mode));
+    // Outputs
+    zx_pci_query_irq_mode->Output<uint32_t>(
+        ZX_OK, "out_max_irqs", std::make_unique<ArgumentAccess<uint32_t>>(out_max_irqs));
+  }
+
+  {
+    Syscall* zx_pci_set_irq_mode = Add("zx_pci_set_irq_mode", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_set_irq_mode->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto mode = zx_pci_set_irq_mode->Argument<uint32_t>(SyscallType::kUint32);
+    auto requested_irq_count = zx_pci_set_irq_mode->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_pci_set_irq_mode->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_set_irq_mode->Input<uint32_t>("mode", std::make_unique<ArgumentAccess<uint32_t>>(mode));
+    zx_pci_set_irq_mode->Input<uint32_t>(
+        "requested_irq_count", std::make_unique<ArgumentAccess<uint32_t>>(requested_irq_count));
+  }
+
+  {
+    Syscall* zx_pci_init = Add("zx_pci_init", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_init->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto init_buf = zx_pci_init->PointerArgument<zx_pci_init_arg_t>(SyscallType::kStruct);
+    auto len = zx_pci_init->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_pci_init->Input<zx_handle_t>("handle",
+                                    std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_init->InputObject<zx_pci_init_arg_t, uint32_t>(
+        "init_buf", std::make_unique<ArgumentAccess<zx_pci_init_arg_t>>(init_buf),
+        std::make_unique<ArgumentAccess<uint32_t>>(len), ZxPciInitArg::GetClass());
+    zx_pci_init->Input<uint32_t>("len", std::make_unique<ArgumentAccess<uint32_t>>(len));
+  }
+
+  {
+    Syscall* zx_pci_add_subtract_io_range =
+        Add("zx_pci_add_subtract_io_range", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pci_add_subtract_io_range->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto mmio = zx_pci_add_subtract_io_range->Argument<bool>(SyscallType::kBool);
+    auto base = zx_pci_add_subtract_io_range->Argument<uint64_t>(SyscallType::kUint64);
+    auto len = zx_pci_add_subtract_io_range->Argument<uint64_t>(SyscallType::kUint64);
+    auto add = zx_pci_add_subtract_io_range->Argument<bool>(SyscallType::kBool);
+    // Inputs
+    zx_pci_add_subtract_io_range->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_pci_add_subtract_io_range->Input<bool>("mmio", std::make_unique<ArgumentAccess<bool>>(mmio));
+    zx_pci_add_subtract_io_range->Input<uint64_t>("base",
+                                                  std::make_unique<ArgumentAccess<uint64_t>>(base));
+    zx_pci_add_subtract_io_range->Input<uint64_t>("len",
+                                                  std::make_unique<ArgumentAccess<uint64_t>>(len));
+    zx_pci_add_subtract_io_range->Input<bool>("add", std::make_unique<ArgumentAccess<bool>>(add));
   }
 }
 

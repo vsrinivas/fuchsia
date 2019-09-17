@@ -70,6 +70,7 @@ enum class SyscallType {
   kPacketGuestVcpuType,
   kPacketPageRequestCommand,
   kPaddr,
+  kPciBarType,
   kPolicyAction,
   kPolicyCondition,
   kPolicyTopic,
@@ -118,6 +119,7 @@ void KtraceControlActionName(uint32_t action, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
 void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
+void PciBarTypeName(uint32_t type, std::ostream& os);
 void PolicyActionName(uint32_t action, std::ostream& os);
 void PolicyConditionName(uint32_t condition, std::ostream& os);
 void PolicyTopicName(uint32_t topic, std::ostream& os);
@@ -282,6 +284,25 @@ struct zx_packet_guest_mem_x86 {
   uint8_t reserved[7];
 };
 using zx_packet_guest_mem_x86_t = struct zx_packet_guest_mem_x86;
+
+// This this extracted from zx_pci_init_arg_t in the file
+// zircon/system/public/zircon/syscalls/pci.h
+struct zx_pci_init_arg_irq {
+  uint32_t global_irq;
+  bool level_triggered;
+  bool active_high;
+};
+using zx_pci_init_arg_irq_t = struct zx_pci_init_arg_irq;
+
+struct zx_pci_init_arg_addr_window {
+  uint64_t base;
+  size_t size;
+  uint8_t bus_start;
+  uint8_t bus_end;
+  uint8_t cfg_space_type;
+  bool has_ecam;
+};
+using zx_pci_init_arg_addr_window_t = struct zx_pci_init_arg_addr_window;
 
 // This is a copy of zx_thread_state_general_regs_t from
 // zircon/system/public/zircon/syscalls/debug.h for __aarch64__.
