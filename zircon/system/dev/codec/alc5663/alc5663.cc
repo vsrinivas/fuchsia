@@ -277,8 +277,8 @@ zx_status_t EnableAudioOutput(Alc5663Client* client) {
 
   // Set digital volume to mid-range.
   result = MapRegister<StereoDacDigitalVolumeReg>(client, [](auto reg) {
-    // 128 == ~ -17.625dB.
-    return reg.set_vol_dac1_l(128).set_vol_dac1_r(128);
+    return reg.set_vol_dac1_l(StereoDacDigitalVolumeReg::kMaxVolume)
+        .set_vol_dac1_r(StereoDacDigitalVolumeReg::kMaxVolume);
   });
 
   return ZX_OK;

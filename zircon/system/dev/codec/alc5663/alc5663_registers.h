@@ -71,6 +71,9 @@ struct StereoDacDigitalVolumeReg {
   DEF_SUBFIELD(data, 15, 8, vol_dac1_l);  // Left channel digital volume
   DEF_SUBFIELD(data, 7, 0, vol_dac1_r);   // Right channel digital volume
 
+  static constexpr uint8_t kMinVolume = 0x00;
+  static constexpr uint8_t kMaxVolume = 0xaf;
+
   static constexpr uint16_t kAddress = 0x19;
 };
 
