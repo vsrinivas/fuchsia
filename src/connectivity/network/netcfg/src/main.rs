@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
+use std::io;
 use std::os::unix::io::AsRawFd;
 use std::path;
 use std::sync::Arc;
@@ -59,7 +60,7 @@ impl Config {
         let path = path.as_ref();
         let file = fs::File::open(path)
             .with_context(|_| format!("could not open the config file {}", path.display()))?;
-        let config = serde_json::from_reader(file).with_context(|_| {
+        let config = serde_json::from_reader(io::BufReader::new(file)).with_context(|_| {
             format!("could not deserialize the config file {}", path.display())
         })?;
         Ok(config)
