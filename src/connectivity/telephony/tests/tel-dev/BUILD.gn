@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("tel_dev") {
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}

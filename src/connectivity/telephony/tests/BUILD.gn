@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
@@ -13,14 +12,19 @@ devmgr_manifest("devmgr-manifest") {
 test_package("telephony-tests") {
   package_name = "telephony-tests"
 
-  deps = [
+  public_deps = [
     ":devmgr-manifest",
+    "component-integration:simple-qmi-query",
     "driver-integration:telephony-qmi-usb-integration-test",
   ]
 
   tests = [
     {
       name = "telephony-qmi-usb-integration-test"
+      environments = basic_envs
+    },
+    {
+      name = "telephony_comp_int_test_simple_qmi_query"
       environments = basic_envs
     },
   ]

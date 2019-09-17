@@ -2,17 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("lib") {
+group("simple-qmi-query") {
   testonly = true
-  deps = [
-    "qmi",
-    "qmi-protocol",
-  ]
-}
-
-group("tel_devmgr") {
-  testonly = true
-  deps = [
-    "tel-devmgr:tel_devmgr_component_test",
+  public_deps = [
+    "simple-qmi-query:telephony-comp-int-test-simple-qmi-query",
   ]
 }

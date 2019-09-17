@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
 #include <fbl/unique_ptr.h>
 
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
 #define _ALL_SOURCE
-#include <threads.h>
-
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
 #include <fuchsia/telephony/snoop/llcpp/fidl.h>
+#include <threads.h>
 
 // port info
 #define CHANNEL_MSG 1
 #define INTERRUPT_MSG 2
+#define TERMINATE_MSG 3
 
 namespace qmi_fake {
 
@@ -45,6 +45,7 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
   zx_status_t CloseQmiChannel();
   zx_handle_t GetQmiChannel();
   zx_status_t SetAsyncWait();
+  zx_status_t EventLoopCleanup();
 
   uint32_t max_packet_size_;
   zx_handle_t qmi_channel_;

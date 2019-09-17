@@ -16,15 +16,18 @@ group("telephony") {
 
 group("tests") {
   testonly = true
-  data_deps = [
-    "telephony:tests",
+  public_deps = [
+    "//src/connectivity/telephony/drivers/qmi-fake-transport",
+    "//src/connectivity/telephony/lib:tel_devmgr",
+    "//src/connectivity/telephony/telephony:tests",
+    "//src/connectivity/telephony/tests:telephony-tests",
+    "//src/lib/isolated_devmgr",
   ]
 }
 
 group("drivers") {
   testonly = true
   public_deps = [
-    "//src/connectivity/telephony/drivers/qmi-fake-transport",
     "//src/connectivity/telephony/drivers/qmi-usb-transport",
   ]
 }

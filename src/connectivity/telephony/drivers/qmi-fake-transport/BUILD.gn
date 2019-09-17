@@ -31,10 +31,6 @@ driver_module("fake_qmi_driver") {
   ]
 
   deps = [
-    "../../lib/qmi-protocol",
-    "//zircon/system/banjo/ddk.protocol.test",
-    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
-    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/ddk",
@@ -43,6 +39,9 @@ driver_module("fake_qmi_driver") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.test",
+    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
+    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

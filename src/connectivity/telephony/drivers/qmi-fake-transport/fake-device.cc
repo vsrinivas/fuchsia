@@ -3,15 +3,18 @@
 // found in the LICENSE file.
 
 #include "fake-device.h"
-#include <ddktl/fidl.h>
+
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
 #include <cstdio>
 #include <future>
 #include <thread>
+
+#include <ddktl/fidl.h>
 
 #define QMI_INIT_REQ \
   { 1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 2 }
@@ -215,6 +218,10 @@ void Device::ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_
   }
 }
 
+zx_status_t Device::EventLoopCleanup() {
+  return zx_port_cancel(qmi_channel_port_, qmi_channel_, 0);
+}
+
 static int qmi_fake_transport_thread(void* cookie) {
   assert(cookie != NULL);
   Device* device_ptr = static_cast<Device*>(cookie);
@@ -232,7 +239,7 @@ static int qmi_fake_transport_thread(void* cookie) {
     zx_status_t status = zx_port_wait(device_ptr->qmi_channel_port_, ZX_TIME_INFINITE, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
       zxlogf(ERROR, "qmi-fake-transport: timed out: %s\n", zx_status_get_string(status));
-    } else {
+    } else if (status == ZX_OK) {
       if (packet.key == CHANNEL_MSG) {
         if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
           zxlogf(ERROR, "qmi-fake-transport: channel closed\n");
@@ -253,34 +260,28 @@ static int qmi_fake_transport_thread(void* cookie) {
         if (status != ZX_OK) {
           return status;
         }
+      } else if (packet.key == TERMINATE_MSG) {
+        device_ptr->EventLoopCleanup();
+        return 0;
+      } else {
+        zxlogf(ERROR, "qmi-fake-transport: qmi_port undefined key %lu\n", packet.key);
+        assert(0);
       }
+    } else {
+      zxlogf(ERROR, "qmi-fake-transport: qmi_port err %d\n", status);
+      assert(0);
     }
   }
   return 0;
 }
 
 zx_status_t Device::Bind() {
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "qmi-fake";
-  args.ctx = this;
-  args.ops = &qmi_fake_device_ops;
-  args.proto_id = ZX_PROTOCOL_QMI_TRANSPORT;
-
-  zx_status_t status = device_add(parent_, &args, &zxdev_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-fake: could not add device: %d\n", status);
-    return status;
-  }
-
   // create a port to watch qmi messages
-  if (qmi_channel_port_ == ZX_HANDLE_INVALID) {
-    status = zx_port_create(0, &qmi_channel_port_);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s\n",
-             zx_status_get_string(status));
-      return status;
-    }
+  zx_status_t status = zx_port_create(0, &qmi_channel_port_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s\n",
+           zx_status_get_string(status));
+    return status;
   }
 
   // create the handler thread
@@ -288,7 +289,26 @@ zx_status_t Device::Bind() {
                                             (void*)this, "qmi_fake_transport_thread");
   if (thread_result != thrd_success) {
     zxlogf(ERROR, "qmi-fake-transport: failed to create transport thread (%d)\n", thread_result);
+    EventLoopCleanup();
     status = ZX_ERR_INTERNAL;
+  }
+
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "qmi-fake";
+  args.ctx = this;
+  args.ops = &qmi_fake_device_ops;
+  args.proto_id = ZX_PROTOCOL_QMI_TRANSPORT;
+
+  status = device_add(parent_, &args, &zxdev_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "qmi-fake-transport: could not add device: %d\n", status);
+    zx_port_packet_t packet = {};
+    packet.key = TERMINATE_MSG;
+    zx_port_queue(qmi_channel_port_, &packet);
+    zxlogf(INFO, "qmi-fake-transport: joining thread\n");
+    thrd_join(fake_qmi_thread_, NULL);
+    return status;
   }
 
   // set max_packet_size_ to maximum for now
@@ -298,7 +318,14 @@ zx_status_t Device::Bind() {
 
 void Device::Release() { delete this; }
 
-void Device::Unbind() { device_remove(zxdev_); }
+void Device::Unbind() {
+  zx_port_packet_t packet = {};
+  packet.key = TERMINATE_MSG;
+  zx_port_queue(qmi_channel_port_, &packet);
+  zxlogf(INFO, "qmi-fake-transport: unbind(): joining thread\n");
+  thrd_join(fake_qmi_thread_, NULL);
+  device_remove(zxdev_);
+}
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_QMI_TRANSPORT) {

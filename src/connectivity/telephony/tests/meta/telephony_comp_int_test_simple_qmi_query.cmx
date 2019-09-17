@@ -1,0 +1,32 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tel.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/tel_devmgr_component_test#meta/tel_devmgr_component_test.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/telephony_comp_int_test_simple_qmi_query"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/qmi-transport",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tel.devmgr.IsolatedDevmgr"
+        ],
+        "system": [
+            "driver/qmi-fake-transport.so"
+        ]
+    }
+}
