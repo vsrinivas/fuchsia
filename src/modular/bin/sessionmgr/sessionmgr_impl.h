@@ -49,7 +49,6 @@ class ComponentContextImpl;
 class DeviceMapImpl;
 class FocusHandler;
 class LedgerClient;
-class LinkImpl;
 class MessageQueueManager;
 class PuppetMasterImpl;
 class SessionCtl;
@@ -123,7 +122,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetFocusController(
       fidl::InterfaceRequest<fuchsia::modular::FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
-  void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void GetVisibleStoriesController(
@@ -256,7 +254,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // shared between all session shells (so it's not private to the session shell
   // *app*).
   std::unique_ptr<StoryStorage> session_shell_storage_;
-  fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>> session_shell_link_bindings_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.
   std::vector<fit::function<void(fit::function<void()>)>> at_end_;

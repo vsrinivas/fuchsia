@@ -61,7 +61,6 @@ protocol SessionShellContext {
     GetComponentContext(request<ComponentContext> request);
     GetFocusController(request<FocusController> request);
     GetFocusProvider(request<FocusProvider> request);
-    GetLink(request<Link> request);
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
     GetStoryProvider(request<StoryProvider> request);
     GetVisibleStoriesController(request<VisibleStoriesController> request);

@@ -40,7 +40,6 @@
 #include "src/modular/bin/sessionmgr/session_ctl.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
-#include "src/modular/bin/sessionmgr/story_runner/link_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/device_info/device_info.h"
@@ -67,7 +66,6 @@ constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
-constexpr char kSessionShellLinkName[] = "user-shell-link";
 
 constexpr char kClipboardAgentUrl[] =
     "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
@@ -798,19 +796,6 @@ void SessionmgrImpl::GetFocusController(
 void SessionmgrImpl::GetFocusProvider(
     fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
   focus_handler_->AddProviderBinding(std::move(request));
-}
-
-void SessionmgrImpl::GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  if (!session_shell_storage_) {
-    session_shell_storage_ =
-        std::make_unique<StoryStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
-  }
-
-  fuchsia::modular::LinkPath link_path;
-  link_path.module_path.resize(0);
-  link_path.link_name = kSessionShellLinkName;
-  auto impl = std::make_unique<LinkImpl>(session_shell_storage_.get(), std::move(link_path));
-  session_shell_link_bindings_.AddBinding(std::move(impl), std::move(request));
 }
 
 void SessionmgrImpl::GetPresentation(

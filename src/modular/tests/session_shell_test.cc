@@ -66,23 +66,6 @@ TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   RunLoopUntil([&] { return tried_get_story_info; });
 }
 
-TEST_F(SessionShellTest, GetLink) {
-  RunHarnessAndInterceptSessionShell();
-
-  fuchsia::modular::SessionShellContext* session_shell_context;
-  session_shell_context = fake_session_shell_.session_shell_context();
-  ASSERT_TRUE(session_shell_context != nullptr);
-
-  fuchsia::modular::LinkPtr session_shell_link;
-  session_shell_context->GetLink(session_shell_link.NewRequest());
-  bool called_get_link = false;
-  session_shell_link->Get(nullptr, [&called_get_link](std::unique_ptr<fuchsia::mem::Buffer> value) {
-    called_get_link = true;
-  });
-
-  RunLoopUntil([&] { return called_get_link; });
-}
-
 TEST_F(SessionShellTest, GetStoriesEmpty) {
   RunHarnessAndInterceptSessionShell();
 
