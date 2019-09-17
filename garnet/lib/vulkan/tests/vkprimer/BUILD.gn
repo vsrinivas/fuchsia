@@ -56,13 +56,6 @@ executable("vkprimer") {
 
     if (is_linux) {
       configs += [ ":vulkan_sdk_linux_config($host_toolchain)" ]
-
-      libs = [
-        "X11",
-        "Xinerama",
-        "Xcursor",
-        "Xrandr",
-      ]
     } else if (is_mac) {
       include_dirs += [ "${vulkan_sdk}/include" ]
 

@@ -69,13 +69,6 @@ source_set("demo_harness_linux") {
   public_deps = [
     ":headers",
   ]
-  libs = [
-    "X11",
-    "Xinerama",
-    "Xcursor",
-    "Xrandr",
-  ]
-  include_dirs = [ "//third_party/glfw/include" ]
 }
 
 source_set("headers") {

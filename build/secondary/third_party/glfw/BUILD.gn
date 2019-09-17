@@ -69,6 +69,12 @@ static_library("glfw") {
       "src/x11_window.c",
       "src/xkb_unicode.c",
     ]
+    libs = [
+      "X11",
+      "Xinerama",
+      "Xcursor",
+      "Xrandr",
+    ]
   }
   public_configs = [ ":glfw_config" ]
 }
