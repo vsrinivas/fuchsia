@@ -124,10 +124,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo2(std::string story_id, GetStoryInfo2Callback callback) override;
 
-  // Called by StoryControllerImpl. Sends request to
-  // fuchsia::modular::FocusProvider
-  void RequestStoryFocus(fidl::StringPtr story_id);
-
   // Called by StoryControllerImpl. Sends, using AttachView(), a token for the
   // view of the story identified by |story_id| to the current session shell.
   void AttachView(fidl::StringPtr story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
@@ -136,11 +132,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // session shell that the view of the story identified by |story_id| is about
   // to close.
   void DetachView(fidl::StringPtr story_id, fit::function<void()> done);
-
-  // Called by StoryControllerImpl.
-  void NotifyStoryActivityChange(
-      fidl::StringPtr story_id,
-      fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities);
 
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::SessionShell through PresentationProvider.

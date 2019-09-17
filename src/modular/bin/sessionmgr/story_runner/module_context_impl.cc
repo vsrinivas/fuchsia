@@ -83,19 +83,8 @@ void ModuleContextImpl::AddModuleToStory(
                                            std::move(callback));
 }
 
-void ModuleContextImpl::RequestFocus() {
-  story_controller_impl_->FocusModule(module_data_->module_path());
-  story_controller_impl_->RequestStoryFocus();
-}
-
 void ModuleContextImpl::RemoveSelfFromStory() {
   story_controller_impl_->RemoveModuleFromStory(module_data_->module_path());
-}
-
-void ModuleContextImpl::StartOngoingActivity(
-    fuchsia::modular::OngoingActivityType ongoing_activity_type,
-    fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request) {
-  story_controller_impl_->StartOngoingActivity(ongoing_activity_type, std::move(request));
 }
 
 void ModuleContextImpl::CreateEntity(

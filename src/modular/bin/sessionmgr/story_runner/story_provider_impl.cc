@@ -155,7 +155,6 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
               container.story_node.get());
           container.entity_provider =
               std::make_unique<StoryEntityProvider>(container.storage.get());
-
           // Register a listener on the StoryModel so that we can signal
           // our watchers when relevant data changes.
           container.model_observer->RegisterListener(
@@ -380,13 +379,7 @@ void StoryProviderImpl::Watch(
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::WatchActivity(
     fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) {
-  auto watcher_ptr = watcher.Bind();
-  for (const auto& item : story_runtime_containers_) {
-    const auto& container = item.second;
-    watcher_ptr->OnStoryActivityChange(container.model_observer->model().name(),
-                                       container.controller_impl->GetOngoingActivities());
-  }
-  activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
+  FXL_LOG(WARNING) << "WatchActivity: DEPRECATED, will be removed";
 }
 
 std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
@@ -510,12 +503,6 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
       WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo2", on_run, done, std::move(callback)));
 }
 
-// Called by StoryControllerImpl on behalf of ModuleContextImpl
-void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
-  FXL_LOG(INFO) << "RequestStoryFocus() " << story_id;
-  focus_provider_->Request(story_id);
-}
-
 void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
   FXL_CHECK(session_shell_)
@@ -544,17 +531,6 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
                       it->second.model_observer->model().runtime_state(),
                       it->second.model_observer->model().visibility_state());
 }
-
-void StoryProviderImpl::NotifyStoryActivityChange(
-    fidl::StringPtr story_id,
-    fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities) {
-  const std::vector<fuchsia::modular::OngoingActivityType> activities(
-      ongoing_activities.value_or({}));
-  for (const auto& i : activity_watchers_.ptrs()) {
-    (*i)->OnStoryActivityChange(story_id.value_or(""), activities);
-  }
-}
-
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
     std::string story_id, fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {

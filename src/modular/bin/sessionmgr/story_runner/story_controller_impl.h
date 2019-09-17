@@ -72,11 +72,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by StoryProviderImpl.
   bool IsRunning();
 
-  // Called by StoryProviderImpl.
-  //
-  // Returns a list of the ongoing activities in this story.
-  std::vector<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
-
   void Sync(fit::function<void()> done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
@@ -96,9 +91,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
-
-  // Called by ModuleContextImpl.
-  void RequestStoryFocus();
 
   // Called by ModuleContextImpl.
   void ConnectLinkPath(fuchsia::modular::LinkPathPtr link_path,
@@ -124,10 +116,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(const std::vector<std::string>& module_path);
-
-  // Called by ModuleContextImpl.
-  void StartOngoingActivity(const fuchsia::modular::OngoingActivityType ongoing_activity_type,
-                            fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request);
 
   // Called by ModuleContextImpl.
   void CreateEntity(std::string type, fuchsia::mem::Buffer data,

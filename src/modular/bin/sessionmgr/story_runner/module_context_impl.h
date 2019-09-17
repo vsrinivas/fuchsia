@@ -64,15 +64,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
       AddModuleToStoryCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
-  void RequestFocus() override;
-
-  // |fuchsia::modular::ModuleContext|
   void RemoveSelfFromStory() override;
-
-  // |fuchsia::modular::ModuleContext|
-  void StartOngoingActivity(
-      fuchsia::modular::OngoingActivityType ongoing_activity_type,
-      fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request) override;
 
   // |fuchsia::modular::ModuleContext|
   void CreateEntity(std::string type, fuchsia::mem::Buffer data,
