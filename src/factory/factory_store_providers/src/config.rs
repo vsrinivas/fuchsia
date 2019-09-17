@@ -9,7 +9,7 @@ use {
     fuchsia_syslog as syslog,
     serde_derive::Deserialize,
     serde_json::{self, value::Value},
-    std::collections::HashMap,
+    std::{collections::HashMap, io},
 };
 
 /// Type that maps a file to a group of arguments passed to a validator.
@@ -49,7 +49,7 @@ pub struct Config {
 }
 impl Config {
     fn load_file(path: &str) -> Result<Self, Error> {
-        Ok(serde_json::from_reader(std::fs::File::open(path)?)?)
+        Ok(serde_json::from_reader(io::BufReader::new(std::fs::File::open(path)?))?)
     }
 
     pub fn load<T>() -> Result<Self, Error>
