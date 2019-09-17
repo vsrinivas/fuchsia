@@ -40,49 +40,6 @@ std::string Preamble(ProcessBreakpoint* b) {
   return ss.str();
 }
 
-void LogThreadsSteppingOver(ProcessBreakpoint* b, const std::set<zx_koid_t>& thread_koids) {
-  if (!debug_ipc::IsDebugModeActive())
-    return;
-
-  std::stringstream ss;
-  ss << "Current threads stepping over: ";
-  int count = 0;
-  for (zx_koid_t thread_koid : thread_koids) {
-    if (count++ > 0)
-      ss << ", ";
-    ss << thread_koid;
-  }
-
-  DEBUG_LOG(Breakpoint) << Preamble(b) << ss.str();
-}
-
-void SuspendAllOtherNonSteppingOverThreads(ProcessBreakpoint* b, DebuggedProcess* process,
-                                           zx_koid_t thread_koid) {
-  std::vector<DebuggedThread*> suspended_threads;
-  for (DebuggedThread* thread : process->GetThreads()) {
-    if (thread->stepping_over_breakpoint()) {
-      DEBUG_LOG(Breakpoint) << Preamble(b) << "Thread " << thread->koid()
-                            << " is currently stepping over.";
-      continue;
-    }
-
-    // We async suspend all the threads and then wait for all of them to signal.
-    if (thread->IsSuspended()) {
-      DEBUG_LOG(Breakpoint) << Preamble(b) << "Thread " << thread->koid()
-                            << " is already suspended.";
-      continue;
-    }
-
-    thread->Suspend(false);  // Async suspend.
-  }
-
-  // We wait on all the suspend signals to trigger.
-  for (DebuggedThread* thread : suspended_threads) {
-    bool suspended = thread->WaitForSuspension();
-    FXL_DCHECK(suspended) << "Thread " << thread_koid;
-  }
-}
-
 }  // namespace
 
 ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
@@ -146,70 +103,105 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
   }
 }
 
-void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
-  DebuggedThread* thread = process_->GetThread(thread_koid);
-  FXL_DCHECK(thread);
-
-  // TODO(donosoc): For now, call the execution function immediatelly. This keeps feature parity.
-  //                Eventually this function will be called by the debugged process.
-  ExecuteStepOver(thread);
-}
-
-void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
-  FXL_DCHECK(CurrentlySteppingOver(thread_koid));
-  DebuggedThread* thread = process_->GetThread(thread_koid);
-  FXL_DCHECK(thread);
-  FXL_DCHECK(thread->stepping_over_breakpoint());
-  thread->set_stepping_over_breakpoint(false);
-
-  threads_stepping_over_.erase(thread_koid);
-
-  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread_koid << " ending step over.";
-  LogThreadsSteppingOver(this, threads_stepping_over_);
-
-  // If all the threads have stepped over, we reinstall the breakpoint and
-  // resume all threads.
-  if (!CurrentlySteppingOver()) {
-    DEBUG_LOG(Breakpoint) << Preamble(this) << "No more threads left. Resuming.";
-    Update();
-    for (DebuggedThread* thread : process_->GetThreads()) {
-      thread->ResumeForRunMode();
-    }
-
-    return;
-  }
-
-  // Otherwise this thread needs to wait until all other threads are done
-  // stepping over.
-  thread->Suspend();
+void ProcessBreakpoint::BeginStepOver(DebuggedThread* thread) {
+  process_->EnqueueStepOver(this, thread);
 }
 
 void ProcessBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(!CurrentlySteppingOver(thread->koid()));
-  FXL_DCHECK(!thread->stepping_over_breakpoint());
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread->koid() << " is stepping over.";
+  currently_stepping_over_thread_ = thread->GetWeakPtr();
   thread->set_stepping_over_breakpoint(true);
 
+  SuspendAllOtherThreads(thread->koid());
 
-  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread->koid() << " is stepping over.";
-
-  auto [_, inserted] = threads_stepping_over_.insert(thread->koid());
-  FXL_DCHECK(inserted);
-
-  LogThreadsSteppingOver(this, threads_stepping_over_);
-
-  SuspendAllOtherNonSteppingOverThreads(this, process_, thread->koid());
-
-  // If this is the first thread attempting to step over, we uninstall it.
-  if (threads_stepping_over_.size() == 1u)
-    Uninstall();
+  Uninstall();
 
   // This thread now has to continue running.
   thread->ResumeException();
   thread->ResumeSuspension();
 }
 
-void ProcessBreakpoint::StepOverQueueDone() {
-  FXL_NOTIMPLEMENTED();
+void ProcessBreakpoint::EndStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(thread->stepping_over_breakpoint());
+  FXL_DCHECK(currently_stepping_over_thread_);
+  FXL_DCHECK(currently_stepping_over_thread_->koid() == thread->koid())
+      << " Expected " << currently_stepping_over_thread_->koid() << ", Got " << thread->koid();
+
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread->koid() << " ending step over.";
+  thread->set_stepping_over_breakpoint(false);
+  currently_stepping_over_thread_.reset();
+
+  // Install the breakpoint again.
+  // NOTE(donosoc): For multiple threads stepping over (queue), this is inefficient as threads are
+  //                suspended and there is no need to reinstall them every time, expect for
+  //                implementation simplicity. If performance becomes an issue, we could create a
+  //                notification that the process calls when the complete step queue has been done
+  //                that tells the breakpoints to reinstall themselves.
+  Update();
+
+  // Tell the process we're done stepping over.
+  process_->OnBreakpointFinishedSteppingOver();
+}
+
+void ProcessBreakpoint::StepOverCleanup(DebuggedThread* thread) {
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Finishing step over for thread " << thread->koid();
+
+  // We are done stepping over this thread, so we can remove the suspend tokens. Normally this means
+  // cleaning all the suspend tokens, if there is only one thread in the stepping over queue or the
+  // next step over is another breakpoint.
+  //
+  // But in the case that another thread is stepping over *the same* breakpoint, cleaning all the
+  // tokens would resume all the threads that have just been suspended by the next instance of the
+  // step over.
+  //
+  // For this case we need the ability to maintain more than one suspend tokens per thread: one for
+  // the first step over and another for the second, as they coincide between the process callind
+  // |ExecuteStepOver| on the second instance and callind |StepOverCleanup| on the first one.
+  auto it = suspend_tokens_.begin();
+  while (it != suspend_tokens_.end()) {
+    // Calculate the upper bound (so we skip over repeated keys).
+    auto cur_it = it;
+    it = suspend_tokens_.upper_bound(it->first);
+
+    // We do not erase a token for the thread we just stepped over, because it will be the only
+    // thread that will not have 2 suspend tokens: It will have the one taken by the next step over,
+    // as the first one didn't get one.
+    if (cur_it->first == thread->koid())
+      continue;
+
+    // All other threads would have 2 suspend tokens (one for the first step over and one for the
+    // second), meaning that we can safely remove the first one.
+    suspend_tokens_.erase(cur_it);
+  }
+
+  // Remote the thread from the exception.
+  thread->ResumeException();
+}
+
+void ProcessBreakpoint::SuspendAllOtherThreads(zx_koid_t stepping_over_koid) {
+  std::vector<DebuggedThread*> suspended_threads;
+  for (DebuggedThread* thread : process_->GetThreads()) {
+    // We do not suspend the stepping over thread.
+    if (thread->koid() == stepping_over_koid)
+      continue;
+
+    // Only one thread should be stepping over at a time.
+    if (thread->stepping_over_breakpoint() && thread->koid() != stepping_over_koid) {
+      FXL_NOTREACHED() << "Thread " << thread->koid() << " is stepping over. Only thread "
+                       << stepping_over_koid << " should be stepping over.";
+    }
+
+    // We keep every other thread suspended.
+    // If this is a re-entrant breakpoint (two threads in a row are stepping over the same
+    // breakpoint), we could have more than one token for each thread.
+    suspend_tokens_.insert({thread->koid(), thread->RefCountedSuspend(false)});
+  }
+
+  // We wait on all the suspend signals to trigger.
+  for (DebuggedThread* thread : suspended_threads) {
+    bool suspended = thread->WaitForSuspension();
+    FXL_DCHECK(suspended) << "Thread " << thread->koid();
+  }
 }
 
 bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
@@ -218,14 +210,6 @@ bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
 
 bool ProcessBreakpoint::HardwareBreakpointInstalled() const {
   return hardware_breakpoint_ != nullptr && !hardware_breakpoint_->installed_threads().empty();
-}
-
-bool ProcessBreakpoint::CurrentlySteppingOver(zx_koid_t thread_koid) const {
-  if (thread_koid == 0)
-    return !threads_stepping_over_.empty();
-
-  auto it = threads_stepping_over_.find(thread_koid);
-  return it != threads_stepping_over_.end();
 }
 
 zx_status_t ProcessBreakpoint::Update() {
@@ -265,6 +249,17 @@ zx_status_t ProcessBreakpoint::Update() {
 void ProcessBreakpoint::Uninstall() {
   software_breakpoint_.reset();
   hardware_breakpoint_.reset();
+}
+
+std::vector<zx_koid_t> ProcessBreakpoint::CurrentlySuspendedThreads() const {
+  std::vector<zx_koid_t> koids;
+  koids.reserve(suspend_tokens_.size());
+  for (auto& [thread_koid, _] : suspend_tokens_) {
+    koids.emplace_back(thread_koid);
+  }
+
+  std::sort(koids.begin(), koids.end());
+  return koids;
 }
 
 }  // namespace debug_agent

@@ -154,10 +154,14 @@ class DebuggedThread {
   virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
   virtual bool IsInException() const { return exception_token_.is_valid(); }
 
+  int ref_counted_suspend_count() const { return suspend_count_; }
+
   bool stepping_over_breakpoint() const { return stepping_over_breakpoint_; }
   void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
 
-  int ref_counted_suspend_count() const { return suspend_count_; }
+ protected:
+  virtual void IncreaseSuspend();
+  virtual void DecreaseSuspend();
 
  private:
   enum class OnStop {
@@ -165,9 +169,6 @@ class DebuggedThread {
     kNotify,  // Send client notification like normal.
     kResume,  // The thread should be resumed from this exception.
   };
-
-  void IncreaseSuspend();
-  void DecreaseSuspend();
 
   void HandleSingleStep(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
   void HandleGeneralException(debug_ipc::NotifyException*, zx_thread_state_general_regs*);

@@ -151,7 +151,19 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // Called by the currently stepping over breakpoint when it's done. It will execute the next
   // enqueued breakpoint. If there are no more breakpoints enqueued, this will let all the
   // breakpoints know so that it can resume the stepped over threads.
-  void StepOverDone();
+  void OnBreakpointFinishedSteppingOver();
+
+  // Queue of breakpoints that are currently being stepped over.
+  // As stepping over requires suspending all the threads, doing multiple at a time has a fair
+  // chance of introducing deadlocks. We use this queue to serialize the stepping over, so only
+  // one process breakpoint is being stepped over at a time.
+  struct StepOverTicket {
+    fxl::WeakPtr<ProcessBreakpoint> process_breakpoint;
+    fxl::WeakPtr<DebuggedThread> thread;
+
+    bool is_valid() const { return !!process_breakpoint && !!thread; }
+  };
+  const std::deque<StepOverTicket>& step_over_queue() const { return step_over_queue_; }
 
  protected:
   std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
@@ -216,14 +228,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // it spans. They're keyed by the first address of their range.
   std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>> watchpoints_;
 
-  // Queue of breakpoints that are currently being stepped over.
-  // As stepping over requires suspending all the threads, doing multiple at a time has a fair
-  // chance of introducing deadlocks. We use this queue to serialize the stepping over, so only
-  // one process breakpoint is being stepped over at a time.
-  struct StepOverTicket {
-    fxl::WeakPtr<ProcessBreakpoint> process_breakpoint;
-    fxl::WeakPtr<DebuggedThread> thread;
-  };
   std::deque<StepOverTicket> step_over_queue_;
 
   debug_ipc::BufferedZxSocket stdout_;

@@ -14,18 +14,18 @@ MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
                      ThreadCreationOption::kRunningKeepRunning, std::move(object_provider)) {}
 
 void MockThread::ResumeException() {
-  DEBUG_LOG(Test) << "ResumeException on " << koid();
+  DEBUG_LOG(Test) << "Thread " << koid() << ": Resuming exception.";
   in_exception_ = false;
 }
 
 void MockThread::ResumeSuspension() {
-  DEBUG_LOG(Test) << "ResumeSuspension on " << koid();
-  suspended_ = false;
+  DEBUG_LOG(Test) << "Thread " << koid() << ": Resuming suspension.";
+  internal_suspension_ = false;
 }
 
 bool MockThread::Suspend(bool synchronous) {
-  DEBUG_LOG(Test) << "Suspend on " << koid();
-  suspended_ = true;
+  DEBUG_LOG(Test) << "Thread " << koid() << ": Suspend on " << koid();
+  internal_suspension_ = true;
   return true;
 }
 
@@ -34,4 +34,14 @@ bool MockThread::WaitForSuspension(zx::time deadline) {
   return true;
 }
 
+void MockThread::IncreaseSuspend() {
+  suspend_count_++;
+  DEBUG_LOG(Test) << "Thread " << koid() << ": Increased suspend count to " << suspend_count_;
+}
+
+void MockThread::DecreaseSuspend() {
+  FXL_DCHECK(suspend_count_ > 0);
+  suspend_count_--;
+  DEBUG_LOG(Test) << "Thread " << koid() << ": Decreased suspend count to " << suspend_count_;
+}
 }  // namespace debug_agent

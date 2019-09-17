@@ -140,6 +140,32 @@ constexpr size_t BreakpointFakeMemory::kDataSize;
 const char BreakpointFakeMemory::kOriginalData[BreakpointFakeMemory::kDataSize] = {0x01, 0x02, 0x03,
                                                                                    0x04};
 
+template <typename T>
+std::string ToString(const std::vector<T>& v) {
+  std::stringstream ss;
+  for (size_t i = 0; i < v.size(); i++) {
+    if (i > 0)
+      ss << ", ";
+    ss << v[i];
+  }
+
+  return ss.str();
+}
+
+template <typename T>
+void CheckVectorContainsElements(const debug_ipc::FileLineFunction& location,
+                                 const std::vector<T>& got, const std::vector<T>& expected) {
+  ASSERT_EQ(expected.size(), got.size())
+      << location.ToString() << ": "
+      << "Expected (" << ToString(expected) << "), Got (" << ToString(got) << ").";
+
+  for (size_t i = 0; i < expected.size(); i++) {
+    ASSERT_TRUE(expected[i] == got[i])
+        << location.ToString() << ": "
+        << "Expected (" << ToString(expected) << "), Got (" << ToString(got) << ").";
+  }
+}
+
 }  // namespace
 
 TEST(ProcessBreakpoint, InstallAndFixup) {
@@ -175,9 +201,8 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
                       BreakpointFakeMemory::kDataSize));
 }
 
-// Attempts to step over the breakpoint from multiple threads at the same
-// time.
-TEST(ProcessBreakpoint, StepMultiple) {
+// clang-format off
+TEST(ProcessBreakpoint, StepSingle) {
   TestProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
@@ -212,14 +237,19 @@ TEST(ProcessBreakpoint, StepMultiple) {
   // The breakpoint should be installed.
   EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
 
-  // Begin stepping over the first thread.
-  // This should remove the breakpoint and suspend all the threads except 1,
-  // which should be stepping over.
-  bp.BeginStepOver(kThread1Koid);
+  // Thread 1 hits breakpoint ----------------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread1);
+
   // Breakpoint should be removed.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // Only thread 1 should be still running. The rest should be IsSuspended.
+  // There should be one enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+
+  // Only thread 1 should be still running. The rest should be suspended.
   EXPECT_TRUE(mock_thread1->running());
   EXPECT_TRUE(mock_thread2->IsSuspended());
   EXPECT_TRUE(mock_thread3->IsSuspended());
@@ -233,32 +263,83 @@ TEST(ProcessBreakpoint, StepMultiple) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  // Now the second thread gets the exception.
-  // Breakpoint should still remain removed.
-  bp.BeginStepOver(kThread2Koid);
-  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                          kThread3Koid,
+                                                                          kThread4Koid,
+                                                                          kThread5Koid});
 
-  // Thread 1 and 2 should remain running.
+  // Thread 2 hits breakpoint ----------------------------------------------------------------------
+
+  // Now the second thread gets the exception.
+  bp.BeginStepOver(mock_thread2);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread2);
+
+  // Only thread 1 should be running.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
   EXPECT_TRUE(mock_thread3->IsSuspended());
   EXPECT_TRUE(mock_thread4->IsSuspended());
   EXPECT_TRUE(mock_thread5->IsSuspended());
 
-  // Thread 1 and 2 should be stepping over.
+  // Only thread 1 should be stepping over.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
-  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  // Now thread 1 stops stepping over (somehow before thread 3).
-  // Breakpoint should still remain removed, as there are threads stepping over.
-  bp.EndStepOver(kThread1Koid);
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                          kThread3Koid,
+                                                                          kThread4Koid,
+                                                                          kThread5Koid});
+
+  // Thread 3 hits breakpoint ----------------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread3);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 3u);
+  ASSERT_EQ(process.step_over_queue()[2].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread3);
+
+  // Only thread 1 should be running.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 1 should be stepping over right now.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                          kThread3Koid,
+                                                                          kThread4Koid,
+                                                                          kThread5Koid});
+
+  // Breakpoint should still remain removed.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // Only thread 2 should be running. Thread 1 will be IsSuspended as we have to
-  // wait for *all* the threads to step over before resuming the threads.
+  // Thread 1 steps over ---------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread1);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread2);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread3);
+
+  // Only thread 2 should be running.
   EXPECT_TRUE(mock_thread1->IsSuspended());
   EXPECT_TRUE(mock_thread2->running());
   EXPECT_TRUE(mock_thread3->IsSuspended());
@@ -272,48 +353,51 @@ TEST(ProcessBreakpoint, StepMultiple) {
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  // Now thread 3 gets the exception that it hit this breakpoint.
-  // Breakpoint should still remain removed, as there are threads stepping over.
-  bp.BeginStepOver(kThread3Koid);
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                          kThread3Koid,
+                                                                          kThread4Koid,
+                                                                          kThread5Koid});
+
+  // The breakpoint should remain removed.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // Only thread 2 and 3 should be running.
+  // Thread 2 steps over ---------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread2);
+
+  // There should be 1 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread3);
+
+  // Only thread 3 should be running, as it's the only one stepping over.
   EXPECT_TRUE(mock_thread1->IsSuspended());
-  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
   EXPECT_TRUE(mock_thread3->running());
   EXPECT_TRUE(mock_thread4->IsSuspended());
   EXPECT_TRUE(mock_thread5->IsSuspended());
 
-  // Only thread 2 and 3 should be stepping over right now.
+  // Only thread 3 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
-  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
   EXPECT_TRUE(mock_thread3->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  // Now thread 3 stops stepping over.
-  // The breakpoint should remain removed.
-  bp.EndStepOver(kThread3Koid);
+  CheckVectorContainsElements(FROM_HERE, bp.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                          kThread2Koid,
+                                                                          kThread4Koid,
+                                                                          kThread5Koid});
+
+  // Breakpoint remains removed.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // Only thread 2 should be running, as it's the only one stepping over.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
-  EXPECT_TRUE(mock_thread2->running());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  // Thread 3 steps over ---------------------------------------------------------------------------
 
-  // Only thread 2 should be stepping over right now.
-  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
-  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
-  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
-  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
-  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+  bp.EndStepOver(mock_thread3);
 
-  // Now thread 2 finally ends the step over.
-  // The breakpoint should be installed once again.
-  bp.EndStepOver(kThread2Koid);
-  EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
+  // No more enqueued elements.
+  ASSERT_EQ(process.step_over_queue().size(), 0u);
 
   // All threads should be resumed except 5, which was paused by the client.
   EXPECT_TRUE(mock_thread1->running());
@@ -328,7 +412,361 @@ TEST(ProcessBreakpoint, StepMultiple) {
   EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  EXPECT_TRUE(bp.CurrentlySuspendedThreads().empty());
+
+  // Breakpoint is set again.
+  EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
 }
+// clang-format on
+
+// clang-format off
+TEST(ProcessBreakpoint, MultipleBreakpoints) {
+  TestProcessDelegate process_delegate1;
+  TestProcessDelegate process_delegate2;
+  TestProcessDelegate process_delegate3;
+
+  Breakpoint main_breakpoint1(&process_delegate1);
+  Breakpoint main_breakpoint2(&process_delegate2);
+  Breakpoint main_breakpoint3(&process_delegate3);
+
+  main_breakpoint1.set_type(debug_ipc::BreakpointType::kSoftware);
+  main_breakpoint2.set_type(debug_ipc::BreakpointType::kSoftware);
+  main_breakpoint3.set_type(debug_ipc::BreakpointType::kSoftware);
+
+  constexpr zx_koid_t process_koid = 0x1234;
+  MockProcess process(process_koid, ObjectProvider::Get());
+
+  // The step over strategy is as follows:
+  // 1. Thread 1 hits breakpoint 1.
+  // 2. Thread 2 hits breakpoint 2.
+  // 3. Thread 3 hits breakpoint 3.
+  // 4. Thread 1 finishes step over.
+  // 5. Thread 4 hits breakpoint 2 (somehow).
+  // 6. Thread 2 finishes step over.
+  // 7. Thread 3 finishes step over.
+  // 8. Thread 4 finishes step over.
+
+  constexpr zx_koid_t kThread1Koid = 1;
+  constexpr zx_koid_t kThread2Koid = 2;
+  constexpr zx_koid_t kThread3Koid = 3;
+  constexpr zx_koid_t kThread4Koid = 4;
+  constexpr zx_koid_t kThread5Koid = 5;
+  DebuggedThread* mock_thread1 = process.AddThread(kThread1Koid);
+  DebuggedThread* mock_thread2 = process.AddThread(kThread2Koid);
+  DebuggedThread* mock_thread3 = process.AddThread(kThread3Koid);
+  DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
+  DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
+
+  ProcessBreakpoint breakpoint1(&main_breakpoint1, &process, process_delegate1.mem().memory(),
+                                BreakpointFakeMemory::kAddress);
+  ProcessBreakpoint breakpoint2(&main_breakpoint2, &process, process_delegate2.mem().memory(),
+                                BreakpointFakeMemory::kAddress);
+  ProcessBreakpoint breakpoint3(&main_breakpoint3, &process, process_delegate3.mem().memory(),
+                                BreakpointFakeMemory::kAddress);
+
+  ASSERT_EQ(ZX_OK, breakpoint1.Init());
+  ASSERT_EQ(ZX_OK, breakpoint2.Init());
+  ASSERT_EQ(ZX_OK, breakpoint3.Init());
+
+  // The breakpoint should be installed
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 1 hits breakpoint 1 --------------------------------------------------------------------
+
+  breakpoint1.BeginStepOver(mock_thread1);
+
+  // There should be one enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint1);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+
+  // Only thread 1 should be still running. The rest should be suspended.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 1 should be stepping over.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint should be removed. Others breakpoints should remain set.
+  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 2 hits breakpoint 2 --------------------------------------------------------------------
+
+  // Now the second thread gets the exception.
+  breakpoint2.BeginStepOver(mock_thread2);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint1);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread2);
+
+  // Only thread 1 should be running.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 1 should be stepping over.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint should be removed. Others breakpoints should remain set.
+  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 3 hits breakpoint ----------------------------------------------------------------------
+
+  breakpoint3.BeginStepOver(mock_thread3);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 3u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint1);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread2);
+  ASSERT_EQ(process.step_over_queue()[2].process_breakpoint.get(), &breakpoint3);
+  ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread3);
+
+  // Only thread 1 should be running.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 1 should be stepping over right now.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {kThread2Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint should be removed. Others breakpoints should remain set.
+  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Breakpoint 1 should be removed. Others breakpoints should remain set.
+  EXPECT_TRUE(process_delegate1.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 1 steps over ---------------------------------------------------------------------------
+
+  breakpoint1.EndStepOver(mock_thread1);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread2);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &breakpoint3);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread3);
+
+  // Only thread 2 should be running.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 2 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint 2 should be the only one removed.
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 4 hits breakpoint 2 --------------------------------------------------------------------
+
+  breakpoint2.BeginStepOver(mock_thread4);
+
+  // There should be 3 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 3u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread2);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &breakpoint3);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread3);
+  ASSERT_EQ(process.step_over_queue()[2].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread4);
+
+  // Only thread 2 should be running.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 2 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint 2 should be the only one removed.
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 2 steps over ---------------------------------------------------------------------------
+
+  breakpoint2.EndStepOver(mock_thread2);
+
+  // There should be 2 enqueued step overs.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint3);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread3);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread4);
+
+  // Only thread 3 should be running, as it's the only one stepping over.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->running());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 3 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                                   kThread2Koid,
+                                                                                   kThread4Koid,
+                                                                                   kThread5Koid});
+  // Breakpoint 3 should be the only one removed.
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().IsOriginal());
+
+  // Thread 3 steps over ---------------------------------------------------------------------------
+
+  breakpoint3.EndStepOver(mock_thread3);
+
+  // No more enqueued elements.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &breakpoint2);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread4);
+
+  // Only thread 4 should be running, as it's the only one stepping over.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->running());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 3 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  CheckVectorContainsElements(FROM_HERE, breakpoint1.CurrentlySuspendedThreads(), {});
+  CheckVectorContainsElements(FROM_HERE, breakpoint2.CurrentlySuspendedThreads(), {kThread1Koid,
+                                                                                   kThread2Koid,
+                                                                                   kThread3Koid,
+                                                                                   kThread5Koid});
+  CheckVectorContainsElements(FROM_HERE, breakpoint3.CurrentlySuspendedThreads(), {});
+
+  // Breakpoint 2 should be the only one removed.
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().IsOriginal());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+
+  // Thread 4 steps over ---------------------------------------------------------------------------
+
+  breakpoint2.EndStepOver(mock_thread4);
+
+  // All threads should be resumed.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->running());
+  EXPECT_TRUE(mock_thread4->running());
+  EXPECT_TRUE(mock_thread5->running());
+
+  // No thread should be stepping over.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  EXPECT_TRUE(breakpoint1.CurrentlySuspendedThreads().empty());
+  EXPECT_TRUE(breakpoint2.CurrentlySuspendedThreads().empty());
+  EXPECT_TRUE(breakpoint3.CurrentlySuspendedThreads().empty());
+
+  // All breakpoints are set again.
+  EXPECT_TRUE(process_delegate1.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate2.mem().StartsWithBreak());
+  EXPECT_TRUE(process_delegate3.mem().StartsWithBreak());
+}
+// clang-format on
 
 // This also tests registration and unregistration of ProcessBreakpoints via
 // the Breakpoint object.

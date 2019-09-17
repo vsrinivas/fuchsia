@@ -210,7 +210,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     //       going over it, as it may call ResumeForRunMode, which could then again attempt to step
     //       over it.
     ResumeException();
-    current_breakpoint_->EndStepOver(koid_);
+    current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
     return;
   }
@@ -706,7 +706,7 @@ void DebuggedThread::ResumeForRunMode() {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over breakpoint: 0x" << std::hex
                       << current_breakpoint_->address();
     SetSingleStep(true);
-    current_breakpoint_->BeginStepOver(koid_);
+    current_breakpoint_->BeginStepOver(this);
 
     // In this case, the breakpoint takes control of the thread lifetime and has already set the
     // thread to resume.

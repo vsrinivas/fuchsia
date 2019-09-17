@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/debugged_process.h"
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <zircon/syscalls/exception.h>
 
 #include <utility>
@@ -428,13 +429,17 @@ void DebuggedProcess::UnregisterWatchpoint(Watchpoint* wp, const debug_ipc::Addr
 }
 
 void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,
-                                        DebuggedThread* thread) {
+                                      DebuggedThread* thread) {
   PruneStepOverQueue();
 
   StepOverTicket ticket = {};
   ticket.process_breakpoint = process_breakpoint->GetWeakPtr();
   ticket.thread = thread->GetWeakPtr();
   step_over_queue_.push_back(std::move(ticket));
+
+  DEBUG_LOG(Process) << LogPreamble(this) << "[PB: 0x" << std::hex << process_breakpoint->address()
+                     << "] Enqueing thread " << thread->koid()
+                     << " for step over. Queue size: " << step_over_queue_.size();
 
   // If the queue already had an element, we wait until that element is done.
   if (step_over_queue_.size() > 1u)
@@ -444,22 +449,32 @@ void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,
   process_breakpoint->ExecuteStepOver(thread);
 }
 
-void DebuggedProcess::StepOverDone() {
-  step_over_queue_.pop_front();
-  PruneStepOverQueue();
+void DebuggedProcess::OnBreakpointFinishedSteppingOver() {
+  {
+    // We always tell the current breakpoint to finish the stepping over after starting the new one.
+    // This will free the other suspended threads, letting the new stepping over thread continue.
+    //
+    // We need to do this *after* starting the following breakpoint, because otherwise we introduce
+    // a window where threads are unsuspeded between breakpoints.
+    auto prev_ticket = step_over_queue_.front();
+    auto post_execute_breakpoint = fit::defer([prev_ticket = std::move(prev_ticket)]() {
+      if (!prev_ticket.is_valid())
+        return;
 
-  // If there are still elements in the queue, we execute the next one.
-  // Since we already pruned the queue, we know that the ticket is valid.
-  if (!step_over_queue_.empty()) {
-    auto& ticket = step_over_queue_.front();
-    ticket.process_breakpoint->ExecuteStepOver(ticket.thread.get());
-    return;
-  }
+      prev_ticket.process_breakpoint->StepOverCleanup(prev_ticket.thread.get());
+    });
 
-  // All the elements of the queue have been processed, so we let all the breakpoints know that they
-  // can resume any suspended threads that they have.
-  for (auto& [_, process_breakpoint] : breakpoints_) {
-    process_breakpoint->StepOverQueueDone();
+    // Pop the previous ticket (the post-complete action is already set with the deferred action).
+    step_over_queue_.pop_front();
+
+    // If there are still elements in the queue, we execute the next one.
+    // Since the queue is pruned,
+    PruneStepOverQueue();
+    if (!step_over_queue_.empty()) {
+      auto& ticket = step_over_queue_.front();
+      ticket.process_breakpoint->ExecuteStepOver(ticket.thread.get());
+      return;
+    }
   }
 }
 
@@ -666,7 +681,7 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
 void DebuggedProcess::PruneStepOverQueue() {
   std::deque<StepOverTicket> pruned_tickets;
   for (auto& ticket : step_over_queue_) {
-    if (!ticket.process_breakpoint || !ticket.thread)
+    if (!ticket.is_valid())
       continue;
     pruned_tickets.push_back(std::move(ticket));
   }

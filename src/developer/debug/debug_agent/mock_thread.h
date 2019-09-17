@@ -19,11 +19,19 @@ class MockThread : public DebuggedThread {
   bool Suspend(bool synchronous = false) override;
   bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline()) override;
 
-  bool IsSuspended() const override { return suspended_; }
+  bool IsSuspended() const override { return internal_suspension_ || suspend_count_ > 0; }
   bool IsInException() const override { return in_exception_; }
 
+  bool internal_suspension() const { return internal_suspension_; }
+  int suspend_count() const { return suspend_count_; }
+
+ protected:
+  void IncreaseSuspend() override;
+  void DecreaseSuspend() override;
+
  private:
-  bool suspended_ = false;
+  bool internal_suspension_ = false;
+  int suspend_count_ = 0;
   bool in_exception_ = false;
 };
 

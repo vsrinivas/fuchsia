@@ -78,39 +78,69 @@ class ProcessBreakpoint {
   void OnHit(debug_ipc::BreakpointType exception_type,
              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  // Call before single-stepping over a breakpoint. This will remove the
-  // breakpoint such that it will be put back when the exception is hit and
-  // BreakpointStepHasException() is called.
+  // Call before single-stepping over a breakpoint. This will remove the breakpoint such that it
+  // will be put back when the exception is hit and BreakpointStepHasException() is called.
   //
-  // The thread must be put into single-step mode by the caller when this
-  // function is called.
+  // This will not execute the stepping over directly, but rather enqueue it within the process so
+  // that each stepping over is done one at a time.
+  //
+  // The actual stepping over logic is done by |ExecuteStepOver|, which is called by the process.
   //
   // NOTE: From this moment, the breakpoint "takes over" the "run-lifetime" of
   //       the thread. This means that it will suspend and resume it according
   //       to what threads are stepping over it.
-  void BeginStepOver(zx_koid_t thread_koid);
+  void BeginStepOver(DebuggedThread* thread);
 
   // When a thread has a "current breakpoint" its handling and gets a single
   // step exception, it means that it's done stepping over it and calls this
   // in order to resolve the stepping.
   //
-  // NOTE: Even though the thread is done stepping over, the breakpoint still
-  //       holds the step "run-lifetime". This is because other threads could
-  //       still be stepping over, so the thread cannot be resumed just yet.
-  //       The breakpoint will do this once all threads are done stepping over.
-  void EndStepOver(zx_koid_t thread_koid);
+  // This will tell the process that this stepping over instance is done and will call
+  // |OnBreakpointFinishedSteppingOver|, which will advance the queue so that the other queued
+  // step overs can occur.
+  //
+  // NOTE: Even though the thread is done stepping over, this will *not* resume the suspended
+  //       threads nor the excepted (stepping over) thread. This is done on |StepOverCleanup|.
+  //       This is because there might be another breakpoint queued up and that breakpoint needs a
+  //       chance to suspend the threads before these are unsuspended from the previous breakpoint.
+  //
+  //       Otherwise we introduce a race between the current step over breakpoint resuming the
+  //       threads and the next one suspending them.
+  //
+  //       With the new order, the process will first call the next process |ExecuteStepOver|, which
+  //       will suspend the corresponding threads and then |StepOverCleanup| will free the
+  //       threads suspended by the current one.
+  void EndStepOver(DebuggedThread* thread);
 
-  // Called by the queue-owning debug process.
-  // This function actually sets up the stepping over and suspend all other threads.
-  // When the thread is done stepping over, it will call the process |StepOverDone| function.
+  // Called by the queue-owning process.
+  //
+  // This function actually sets up the stepping over and suspend *all* other threads.
+  // When the thread is done stepping over, it will call the process
+  //|OnBreakpointFinishedSteppingOver| function.
   void ExecuteStepOver(DebuggedThread* thread);
 
-  // Called by the debugged thread when a step over queue is emptied.
-  // This lets any breakpoint return a suspended thread after the step over is done.
-  void StepOverQueueDone();
+  // Frees all the suspension and exception resources held by the breakpoint. This is called by the
+  // process.
+  //
+  // See the comments of |EndStepOver| for more details.
+  void StepOverCleanup(DebuggedThread* thread);
+
+  // As stepping over are queued, only one thread should be left running at a time. This makes the
+  // breakpoint get a suspend token for each other thread within the system.
+  void SuspendAllOtherThreads(zx_koid_t stepping_over_koid);
 
   bool SoftwareBreakpointInstalled() const;
   bool HardwareBreakpointInstalled() const;
+
+  const DebuggedThread* currently_stepping_over_thread() const {
+    return currently_stepping_over_thread_.get();
+  }
+
+  // Returns a sorted list of the koids associated with a currently held suspend token.
+  // If a thread has more than one suspend token, it wil appear twice.
+  //
+  // Exposed mostly for testing purposes (see process_breakpoint_unittest.cc).
+  std::vector<zx_koid_t> CurrentlySuspendedThreads() const;
 
  private:
   // A breakpoint could be removed in the middle of single-stepping it. We
@@ -120,10 +150,6 @@ class ProcessBreakpoint {
     kCurrent,  // Single-step currently valid.
     kObsolete  // Breakpoint was removed while single-stepping over.
   };
-
-  // Returns true if |thread_koid| is currently stepping over the breakpoint.
-  // Passing 0 as argument will ask if *any* thread is currently stepping over.
-  bool CurrentlySteppingOver(zx_koid_t thread_koid = 0) const;
 
   // Install or uninstall this breakpoint.
   zx_status_t Update();  // Will add/remove breakpoints as needed/
@@ -157,17 +183,24 @@ class ProcessBreakpoint {
   std::vector<Breakpoint*> breakpoints_;
 
   // Tracks the threads currently single-stepping over this breakpoint.
-  // Normally this will be empty (nobody) or have one thread, but could be more
-  // than one in rare cases. Maps thread koid to status.
+  // There can be only one thread stepping over, as they're serialized by the process so that only
+  // one thread is stepping at a time.
+  fxl::WeakPtr<DebuggedThread> currently_stepping_over_thread_;
+
+  // A step is executed by putting back the original instruction, stepping the thread, and then
+  // re-inserting the breakpoint instruction. The breakpoint instruction can't be put back until
+  // there are no more threads in this map.
   //
-  // A step is executed by putting back the original instruction, stepping the
-  // thread, and then re-inserting the breakpoint instruction. The breakpoint
-  // instruction can't be put back until there are no more threads in this map.
+  // It is a multimap because if two threads are queued on the same breakpoint (they both hit it at
+  // the same time), the breakpoint will get suspend tokens for all the threads (except the
+  // corresponding exception one) multiple times. If there is only one suspend token per koid, the
+  // breakpoint will uncorrectly resume the thread that just stepped over when the other would
+  // step over too, which is incorrect. We need the ability to have multiple tokens associated to
+  // a thread so that the interim between executing the second step over the same breakpoint can
+  // coincide with waiting for the resources of the first step over to be freed.
   //
-  // This could be a simple refcount, but is a set so we can more robustly
-  // check for mistakes. CurrentlySteppingOver() checks this list to see if
-  // the breakpoint is disabled due to stepping.
-  std::set<zx_koid_t> threads_stepping_over_;
+  // See the implementation of |StepOverCleanup| for more details.
+  std::multimap<zx_koid_t, std::unique_ptr<DebuggedThread::SuspendToken>> suspend_tokens_;
 
   fxl::WeakPtrFactory<ProcessBreakpoint> weak_factory_;
 
