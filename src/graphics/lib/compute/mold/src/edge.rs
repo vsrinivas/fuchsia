@@ -26,7 +26,8 @@ impl Edge<f32> {
     pub fn to_sp_edges(&self) -> Option<SubPixelEdges> {
         let aligned = self.to_subpixel();
 
-        if aligned.p0.y == aligned.p1.y {
+        if aligned.is_horizontal() {
+            // Skip horizontal edges
             return None;
         }
 
@@ -56,7 +57,7 @@ impl Edge<f32> {
             start_f: Point::new(aligned.p0.x as f32, aligned.p0.y as f32),
             current: aligned.p0,
             end: aligned.p1,
-            is_done: aligned.is_horizontal(), // Skip horizontal edges
+            is_done: false,
             axes,
             direction: (direction_x, direction_y),
             cached_x: None,
@@ -121,7 +122,7 @@ impl SubPixelEdges {
         self.axes.x += self.direction.0;
         let x0 = self.start_f.x;
         let y0 = self.start_f.y;
-        let y = (self.slope * (self.axes.x as f32 - x0) + y0).round();
+        let y = (self.slope * (self.axes.x as f32 - x0) + y0 + 0.5).floor();
 
         if !y.is_finite() {
             return None;
@@ -146,7 +147,7 @@ impl SubPixelEdges {
         self.axes.y += self.direction.1;
         let x0 = self.start_f.x;
         let y0 = self.start_f.y;
-        let x = (self.slope_recip * (self.axes.y as f32 - y0) + x0).round();
+        let x = (self.slope_recip * (self.axes.y as f32 - y0) + x0 + 0.5).floor();
 
         if !x.is_finite() {
             return None;
@@ -247,8 +248,8 @@ mod tests {
         assert_eq!(
             Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(8, 0),),
-                Edge::new(Point::new(8, 0), Point::new(8, -8),),
+                Edge::new(Point::new(8, 8), Point::new(8, 0)),
+                Edge::new(Point::new(8, 0), Point::new(8, -8)),
             ],
         );
     }
@@ -261,10 +262,10 @@ mod tests {
         assert_eq!(
             Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(8, 0),),
-                Edge::new(Point::new(8, 0), Point::new(8, -16),),
-                Edge::new(Point::new(8, -16), Point::new(8, -32),),
-                Edge::new(Point::new(8, -32), Point::new(8, -40),),
+                Edge::new(Point::new(8, 8), Point::new(8, 0)),
+                Edge::new(Point::new(8, 0), Point::new(8, -16)),
+                Edge::new(Point::new(8, -16), Point::new(8, -32)),
+                Edge::new(Point::new(8, -32), Point::new(8, -40)),
             ],
         );
     }
@@ -277,10 +278,10 @@ mod tests {
         assert_eq!(
             Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(0, 0),),
-                Edge::new(Point::new(0, 0), Point::new(-16, -16),),
-                Edge::new(Point::new(-16, -16), Point::new(-32, -32),),
-                Edge::new(Point::new(-32, -32), Point::new(-40, -40),),
+                Edge::new(Point::new(8, 8), Point::new(0, 0)),
+                Edge::new(Point::new(0, 0), Point::new(-16, -16)),
+                Edge::new(Point::new(-16, -16), Point::new(-32, -32)),
+                Edge::new(Point::new(-32, -32), Point::new(-40, -40)),
             ],
         );
     }
@@ -293,13 +294,13 @@ mod tests {
         assert_eq!(
             Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(12, 4), Point::new(8, 0),),
-                Edge::new(Point::new(8, 0), Point::new(0, -8),),
-                Edge::new(Point::new(0, -8), Point::new(-8, -16),),
-                Edge::new(Point::new(-8, -16), Point::new(-16, -24),),
-                Edge::new(Point::new(-16, -24), Point::new(-24, -32),),
-                Edge::new(Point::new(-24, -32), Point::new(-32, -40),),
-                Edge::new(Point::new(-32, -40), Point::new(-36, -44),),
+                Edge::new(Point::new(12, 4), Point::new(8, 0)),
+                Edge::new(Point::new(8, 0), Point::new(0, -8)),
+                Edge::new(Point::new(0, -8), Point::new(-8, -16)),
+                Edge::new(Point::new(-8, -16), Point::new(-16, -24)),
+                Edge::new(Point::new(-16, -24), Point::new(-24, -32)),
+                Edge::new(Point::new(-24, -32), Point::new(-32, -40)),
+                Edge::new(Point::new(-32, -40), Point::new(-36, -44)),
             ],
         );
     }

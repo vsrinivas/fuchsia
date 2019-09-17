@@ -614,7 +614,7 @@ mod tests {
             ])],
         };
 
-        assert_eq!(non_rational.edges().collect::<Vec<_>>(), rational.edges().collect::<Vec<_>>(),);
+        assert_eq!(non_rational.edges().collect::<Vec<_>>(), rational.edges().collect::<Vec<_>>());
     }
 
     #[test]

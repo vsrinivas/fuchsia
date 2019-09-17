@@ -2,32 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    cell::{Ref, RefCell},
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use crate::{
     edge::Edge,
     path::Path,
     point::Point,
     tile::{TileContour, TileContourBuilder},
-    PIXEL_WIDTH,
 };
 
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct RasterInner {
     edges: Vec<Edge<i32>>,
-    translation: Point<i32>,
-    new_edges: bool,
     tile_contour: TileContour,
 }
 
 #[derive(Clone, Debug)]
 pub struct Raster {
     #[doc(hidden)]
-    pub inner: Rc<RefCell<RasterInner>>,
+    pub inner: Rc<RasterInner>,
+    translation: Point<i32>,
+    translated_tile_contour: Option<TileContour>,
 }
 
 impl Raster {
@@ -41,12 +37,9 @@ impl Raster {
         let tile_contour = tile_contour_builder.build();
 
         Self {
-            inner: Rc::new(RefCell::new(RasterInner {
-                edges,
-                translation: Point::new(0, 0),
-                new_edges: true,
-                tile_contour,
-            })),
+            inner: Rc::new(RasterInner { edges, tile_contour }),
+            translation: Point::new(0, 0),
+            translated_tile_contour: None,
         }
     }
 
@@ -65,14 +58,9 @@ impl Raster {
     }
 
     pub(crate) fn maxed() -> Self {
-        let inner = RasterInner {
-            edges: vec![],
-            translation: Point::new(0, 0),
-            new_edges: true,
-            tile_contour: TileContourBuilder::maxed(),
-        };
+        let inner = RasterInner { edges: vec![], tile_contour: TileContourBuilder::maxed() };
 
-        Self { inner: Rc::new(RefCell::new(inner)) }
+        Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_tile_contour: None }
     }
 
     pub fn from_paths<'a, I>(paths: I) -> Self
@@ -106,69 +94,50 @@ impl Raster {
     }
 
     pub fn translate(&mut self, translation: Point<i32>) {
-        let translation = {
-            let inner = self.inner.borrow();
-            Point::new(inner.translation.x + translation.x, inner.translation.y + translation.y)
-        };
+        let translation =
+            { Point::new(self.translation.x + translation.x, self.translation.y + translation.y) };
         self.set_translation(translation);
     }
 
     pub fn set_translation(&mut self, translation: Point<i32>) {
-        let mut inner = self.inner.borrow_mut();
+        let inner = &self.inner;
 
-        if inner.translation != translation {
-            let delta = Point::new(
-                translation.x - inner.translation.x,
-                translation.y - inner.translation.y,
-            );
-
-            inner.translation = translation;
-            let translation = Point::new(delta.x * PIXEL_WIDTH, delta.y * PIXEL_WIDTH);
-
-            let mut tile_contour_builder = TileContourBuilder::new();
-
-            for edge in &mut inner.edges {
-                *edge = edge.translate(translation);
-                tile_contour_builder.enclose(edge);
-            }
-
-            inner.tile_contour = tile_contour_builder.build();
-            inner.new_edges = true;
+        if self.translation != translation {
+            self.translation = translation;
+            self.translated_tile_contour = Some(inner.tile_contour.translated(translation));
         }
     }
 
     pub fn union(&self, other: &Self) -> Self {
-        let inner = self.inner.borrow();
-        let other_inner = other.inner.borrow();
+        let inner = &self.inner;
+        let other_inner = &other.inner;
 
-        let edges = inner.edges.iter().cloned().chain(other_inner.edges.iter().cloned()).collect();
-        let new_edges = inner.new_edges || other_inner.new_edges;
+        let edges = inner
+            .edges
+            .iter()
+            .cloned()
+            .map(|edge| edge.translate(self.translation))
+            .chain(other_inner.edges.iter().cloned().map(|edge| edge.translate(other.translation)))
+            .collect();
         let tile_contour = inner.tile_contour.union(&other_inner.tile_contour);
 
         Self {
-            inner: Rc::new(RefCell::new(RasterInner {
-                edges,
-                translation: Point::new(0, 0),
-                new_edges,
-                tile_contour,
-            })),
+            inner: Rc::new(RasterInner { edges, tile_contour }),
+            translation: Point::new(0, 0),
+            translated_tile_contour: None,
         }
     }
 
-    pub(crate) fn new_edges(&self) -> bool {
-        let inner = self.inner.borrow();
-        inner.new_edges
+    pub(crate) fn edges(&self) -> &[Edge<i32>] {
+        &self.inner.edges[..]
     }
 
-    pub(crate) fn edges(&self) -> Ref<[Edge<i32>]> {
-        if self.inner.borrow().new_edges {
-            self.inner.borrow_mut().new_edges = false;
-        }
-        Ref::map(self.inner.borrow(), |inner| &inner.edges[..])
+    pub(crate) fn tile_contour(&self) -> &TileContour {
+        self.translated_tile_contour.as_ref().unwrap_or(&self.inner.tile_contour)
     }
 
-    pub(crate) fn tile_contour(&self) -> Ref<TileContour> {
-        Ref::map(self.inner.borrow(), |inner| &inner.tile_contour)
+    pub(crate) fn translation(&self) -> Point<i32> {
+        self.translation
     }
 }
 
@@ -176,6 +145,6 @@ impl Eq for Raster {}
 
 impl PartialEq for Raster {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
+        Rc::ptr_eq(&self.inner, &other.inner) && self.translation == other.translation
     }
 }

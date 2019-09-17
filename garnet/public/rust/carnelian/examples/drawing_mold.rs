@@ -209,20 +209,6 @@ impl ViewAssistant for DrawingViewAssistant {
             let mut map = Map::new(context.size.width as usize, context.size.height as usize);
             map.global(0, vec![TileOp::ColorAccZero]);
 
-            map.print(
-                1,
-                Layer {
-                    raster: self.rect.clone(),
-                    ops: vec![
-                        TileOp::CoverWipZero,
-                        TileOp::CoverWipNonZero,
-                        TileOp::ColorWipZero,
-                        TileOp::ColorWipFillSolid(0x7B68_EEFF),
-                        TileOp::ColorAccBlendOver,
-                    ],
-                },
-            );
-
             map.global(3, vec![TileOp::ColorAccBackground(0xEBD5_B3FF)]);
             self.map = Some(map);
         }
@@ -246,17 +232,31 @@ impl ViewAssistant for DrawingViewAssistant {
         raster.translate(mold::Point::new(100, 100));
 
         map.print(
+            1,
+            Layer::new(
+                self.rect.clone(),
+                vec![
+                    TileOp::CoverWipZero,
+                    TileOp::CoverWipNonZero,
+                    TileOp::ColorWipZero,
+                    TileOp::ColorWipFillSolid(0x7B68_EEFF),
+                    TileOp::ColorAccBlendOver,
+                ],
+            ),
+        );
+
+        map.print(
             2,
-            Layer {
+            Layer::new(
                 raster,
-                ops: vec![
+                vec![
                     TileOp::CoverWipZero,
                     TileOp::CoverWipNonZero,
                     TileOp::ColorWipZero,
                     TileOp::ColorWipFillSolid(0x0000_00FF),
                     TileOp::ColorAccBlendOver,
                 ],
-            },
+            ),
         );
 
         map.render(PixelSinkWrapper::new(

@@ -80,6 +80,7 @@ struct Edges<'t> {
     edges: &'t [Edge<i32>],
     index: usize,
     inner_index: Option<usize>,
+    pub translation: Point<i32>,
 }
 
 impl<'t> Iterator for Edges<'t> {
@@ -233,24 +234,24 @@ impl Painter {
     fn cover_wip(
         &mut self,
         edges: impl Iterator<Item = Edge<i32>> + Clone,
+        translation: Point<i32>,
         tile_i: usize,
         tile_j: usize,
         fill_rule: FillRule,
     ) {
+        let delta = Point::new(
+            (translation.x - (tile_i * TILE_SIZE) as i32) * PIXEL_WIDTH,
+            (translation.y - (tile_j * TILE_SIZE) as i32) * PIXEL_WIDTH,
+        );
+
         for i in 0..TILE_SIZE * (TILE_SIZE + 1) {
             self.cells[i] = Cell::default();
         }
 
         for edge in edges {
             let edge = Edge::new(
-                Point::new(
-                    edge.p0.x - (tile_i * TILE_SIZE) as i32 * PIXEL_WIDTH,
-                    edge.p0.y - (tile_j * TILE_SIZE) as i32 * PIXEL_WIDTH,
-                ),
-                Point::new(
-                    edge.p1.x - (tile_i * TILE_SIZE) as i32 * PIXEL_WIDTH,
-                    edge.p1.y - (tile_j * TILE_SIZE) as i32 * PIXEL_WIDTH,
-                ),
+                Point::new(edge.p0.x + delta.x, edge.p0.y + delta.y),
+                Point::new(edge.p1.x + delta.x, edge.p1.y + delta.y),
             );
             self.cover_line(&edge);
         }
@@ -394,16 +395,16 @@ impl Painter {
                 .iter()
                 .enumerate()
                 .find(|(_, layer)| match layer {
-                    LayerNode::Layer(_) => true,
+                    LayerNode::Layer(..) => true,
                     _ => false,
                 })
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| tile.layers.len() - self.layer_index);
 
-            let (edges, ops) = match layer {
-                LayerNode::Layer(id) => {
+            let (edges, translation, ops) = match layer {
+                LayerNode::Layer(id, translation) => {
                     if let (Some(edges), Some(ops)) = (context.edges.get(id), context.ops.get(id)) {
-                        (edges, ops)
+                        (edges, *translation, ops)
                     } else {
                         // Skip Layers that are not present in the Map anymore.
                         self.layer_index += next_index;
@@ -416,7 +417,8 @@ impl Painter {
                 ),
             };
 
-            let edges = Edges { tile, edges, index: self.layer_index, inner_index: None };
+            let edges =
+                Edges { tile, edges, index: self.layer_index, inner_index: None, translation };
 
             self.layer_index += next_index;
             return Some((edges, &ops));
@@ -467,12 +469,14 @@ impl Painter {
                     TileOp::CoverWipZero => self.cover_wip_zero(),
                     TileOp::CoverWipNonZero => self.cover_wip(
                         edges.clone(),
+                        edges.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::NonZero,
                     ),
                     TileOp::CoverWipEvenOdd => self.cover_wip(
                         edges.clone(),
+                        edges.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::EvenOdd,
@@ -541,7 +545,7 @@ mod tests {
     fn get_cover(width: usize, height: usize, raster: &Raster, fill_rule: FillRule) -> Vec<u8> {
         let mut painter = Painter::new();
 
-        painter.cover_wip(raster.edges().iter().cloned(), 0, 0, fill_rule);
+        painter.cover_wip(raster.edges().iter().cloned(), Point::new(0, 0), 0, 0, fill_rule);
 
         let mut cover = Vec::with_capacity(width * height);
 
@@ -637,29 +641,29 @@ mod tests {
         map.global(0, vec![TileOp::ColorAccZero]);
         map.print(
             1,
-            Layer {
-                raster: Raster::new(&band_vertical),
-                ops: vec![
+            Layer::new(
+                Raster::new(&band_vertical),
+                vec![
                     TileOp::CoverWipZero,
                     TileOp::CoverWipNonZero,
                     TileOp::ColorWipZero,
                     TileOp::ColorWipFillSolid(color_vertical),
                     blend_op,
                 ],
-            },
+            ),
         );
         map.print(
             2,
-            Layer {
-                raster: Raster::new(&band_horizontal),
-                ops: vec![
+            Layer::new(
+                Raster::new(&band_horizontal),
+                vec![
                     TileOp::CoverWipZero,
                     TileOp::CoverWipNonZero,
                     TileOp::ColorWipZero,
                     TileOp::ColorWipFillSolid(color_horizontal),
                     blend_op,
                 ],
-            },
+            ),
         );
         map.global(3, vec![TileOp::ColorAccBackground(color_background)]);
 
@@ -669,7 +673,7 @@ mod tests {
     #[test]
     fn blend_over() {
         assert_eq!(
-            draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, TileOp::ColorAccBlendOver,)
+            draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, TileOp::ColorAccBlendOver)
                 .render_to_bitmap(),
             vec![
                 0xFF22_0000,
@@ -725,13 +729,8 @@ mod tests {
     #[test]
     fn subtle_opacity_accumulation() {
         assert_eq!(
-            draw_bands(
-                0x0000_0001,
-                0x0000_0001,
-                0x0000_0001,
-                TileOp::ColorAccBlendOver,
-            )
-            .render_to_bitmap(),
+            draw_bands(0x0000_0001, 0x0000_0001, 0x0000_0001, TileOp::ColorAccBlendOver)
+                .render_to_bitmap(),
             vec![
                 0xFF00_0000,
                 0xFE00_0000,
