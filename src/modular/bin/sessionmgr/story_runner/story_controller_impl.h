@@ -194,8 +194,32 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     // Only set for non-embedded, non-pending modules.
     std::optional<fuchsia::modular::SurfaceInfo2> surface_info;
 
+    inspect::StringProperty module_source_property;
     inspect::Node mod_inspect_node;
     inspect::StringProperty is_embedded;
+
+    // Helper for initializing inspect nodes and properties.
+    void InitializeInspect(StoryControllerImpl* const story_controller_) {
+      mod_inspect_node =
+          story_controller_->story_inspect_node_->CreateChild(module_data->module_url());
+
+      std::string mod_source_string;
+      if (module_data->module_source() == fuchsia::modular::ModuleSource::INTERNAL) {
+        mod_source_string = "INTERNAL";
+      } else {
+        mod_source_string = "EXTERNAL";
+      }
+      module_source_property = mod_inspect_node.CreateString("Module Source", mod_source_string);
+
+      std::string is_embedded_str;
+      if (module_data->is_embedded()) {
+        is_embedded_str = "True";
+      } else {
+        is_embedded_str = "False";
+      }
+
+      is_embedded = mod_inspect_node.CreateString("is_embedded", is_embedded_str);
+    }
   };
 
   // A module's story shell-related information that we pend until we are able

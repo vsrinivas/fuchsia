@@ -227,18 +227,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         std::make_unique<ModuleContextImpl>(module_context_info, running_mod_info.module_data.get(),
                                             std::move(module_context_provider_request));
 
-    running_mod_info.mod_inspect_node =
-        story_controller_impl_->story_inspect_node_->CreateChild(module_data_.module_url());
-
-    std::string is_embedded_str;
-    if (module_data_.is_embedded()) {
-      is_embedded_str = "True";
-    } else {
-      is_embedded_str = "False";
-    }
-
-    running_mod_info.is_embedded =
-        running_mod_info.mod_inspect_node.CreateString("is_embedded", is_embedded_str);
+    running_mod_info.InitializeInspect(story_controller_impl_);
 
     NotifyModuleOfIntent(running_mod_info);
 
