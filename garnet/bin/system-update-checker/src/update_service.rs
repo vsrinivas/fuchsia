@@ -171,8 +171,8 @@ impl StateChangeCallback for MonitorControlHandle {
 mod tests {
     use super::*;
     use crate::update_manager::tests::{
-        BlockingUpdateChecker, FakeCurrentChannelUpdater, FakeTargetChannelUpdater,
-        FakeUpdateApplier, FakeUpdateChecker,
+        BlockingUpdateChecker, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
+        FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::ManagerState;
@@ -213,6 +213,7 @@ mod tests {
                     current_channel_updater,
                     update_checker,
                     update_applier,
+                    FakeLastUpdateStorage::new(),
                 ),
             ),
         };

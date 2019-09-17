@@ -18,6 +18,12 @@ pub enum ErrorKind {
     #[fail(display = "error parsing /system/meta merkle")]
     ParseSystemMeta,
 
+    #[fail(display = "error reading update package merkle")]
+    ReadUpdateMeta,
+
+    #[fail(display = "error parsing update package merkle")]
+    ParseUpdateMeta,
+
     #[fail(display = "error connecting to PackageResolver")]
     ConnectPackageResolver,
 
@@ -35,6 +41,9 @@ pub enum ErrorKind {
 
     #[fail(display = "error opening the update package's 'packages' file")]
     OpenUpdatePackagePackages,
+
+    #[fail(display = "error opening the update package's 'meta' file")]
+    OpenUpdatePackageMeta,
 
     #[fail(display = "error converting 'packages' handle into an fd")]
     CreatePackagesFd,

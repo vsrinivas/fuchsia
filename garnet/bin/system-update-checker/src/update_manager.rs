@@ -6,17 +6,22 @@ use crate::apply::{apply_system_update, Initiator};
 use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
+use crate::last_update_storage::{LastUpdateStorage, LastUpdateStorageFile};
 use crate::update_monitor::{State, StateChangeCallback, UpdateMonitor};
 use failure::{Error, ResultExt};
+use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fidl_fuchsia_update::{CheckStartedResult, ManagerState};
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_inspect as finspect;
 use fuchsia_merkle::Hash;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use futures::future::BoxFuture;
 use futures::lock::Mutex as AsyncMutex;
 use futures::prelude::*;
 use parking_lot::Mutex;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 
 /// Manages the lifecycle of an update attempt and notifies interested clients.
@@ -50,6 +55,8 @@ where
     current_channel_updater: Ch,
     update_checker: C,
     update_applier: A,
+    last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
+    last_known_update_package: Option<Hash>,
 }
 
 impl<T, Ch, S> UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, S>
@@ -58,19 +65,23 @@ where
     Ch: CurrentChannelUpdater,
     S: StateChangeCallback,
 {
-    pub fn new(
+    pub async fn new(
         target_channel_updater: T,
         current_channel_updater: Ch,
         node: finspect::Node,
     ) -> Self {
         Self {
             monitor: Arc::new(Mutex::new(UpdateMonitor::from_inspect_node(node))),
-            updater: Arc::new(AsyncMutex::new(SystemInterface::new(
-                target_channel_updater,
-                current_channel_updater,
-                RealUpdateChecker,
-                RealUpdateApplier,
-            ))),
+            updater: Arc::new(AsyncMutex::new(
+                SystemInterface::load(
+                    target_channel_updater,
+                    current_channel_updater,
+                    RealUpdateChecker,
+                    RealUpdateApplier,
+                    Arc::new(LastUpdateStorageFile { data_dir: "/data".into() }),
+                )
+                .await,
+            )),
         }
     }
 }
@@ -89,6 +100,7 @@ where
         current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
+        last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
     ) -> Self {
         Self {
             monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
@@ -97,6 +109,30 @@ where
                 current_channel_updater,
                 update_checker,
                 update_applier,
+                last_update_storage,
+                None,
+            ))),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn from_checker_and_applier_and_last_known_update_package(
+        target_channel_updater: T,
+        current_channel_updater: Ch,
+        update_checker: C,
+        update_applier: A,
+        last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
+        last_known_update_package: Option<Hash>,
+    ) -> Self {
+        Self {
+            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
+            updater: Arc::new(AsyncMutex::new(SystemInterface::new(
+                target_channel_updater,
+                current_channel_updater,
+                update_checker,
+                update_applier,
+                last_update_storage,
+                last_known_update_package,
             ))),
         }
     }
@@ -139,6 +175,49 @@ where
     }
 }
 
+async fn load_last_update_package(
+    last_update_storage: &(dyn LastUpdateStorage + Send + Sync),
+    pkgfs_path: &Path,
+    package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
+) -> Option<Hash> {
+    if let Some(update) = last_update_storage.load() {
+        return Some(update);
+    }
+    if let Some(update) = discover_last_update_package(pkgfs_path, package_resolver).await {
+        last_update_storage.store(&update);
+        return Some(update);
+    }
+    None
+}
+
+async fn discover_last_update_package(
+    pkgfs_path: &Path,
+    package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
+) -> Option<Hash> {
+    fn check_dynamic_index(pkgfs_path: &Path) -> Result<Hash, failure::Error> {
+        let bytes = fs::read(pkgfs_path.join("packages/update/0/meta"))?;
+        let hex_str = std::str::from_utf8(&bytes)?;
+        Ok(hex_str.parse()?)
+    }
+    match check_dynamic_index(pkgfs_path) {
+        Ok(hash) => return Some(hash),
+        Err(err) => fx_log_warn!("error finding update package in dynamic index: {:?}", err),
+    }
+
+    async fn fetch_update_merkle(
+        package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
+    ) -> Result<Hash, failure::Error> {
+        let package_resolver = package_resolver?;
+        Ok(crate::check::latest_update_merkle(&package_resolver).await?)
+    }
+    match fetch_update_merkle(package_resolver).await {
+        Ok(hash) => return Some(hash),
+        Err(err) => fx_log_warn!("error resolving update package: {:?}", err),
+    }
+
+    None
+}
+
 impl<T, Ch, C, A> SystemInterface<T, Ch, C, A>
 where
     T: TargetChannelUpdater,
@@ -146,13 +225,47 @@ where
     C: UpdateChecker,
     A: UpdateApplier,
 {
-    pub fn new(
+    fn new(
         target_channel_updater: T,
         current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
+        last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
+        last_known_update_package: Option<Hash>,
     ) -> Self {
-        Self { target_channel_updater, current_channel_updater, update_checker, update_applier }
+        Self {
+            target_channel_updater,
+            current_channel_updater,
+            update_checker,
+            update_applier,
+            last_known_update_package,
+            last_update_storage,
+        }
+    }
+
+    pub async fn load(
+        target_channel_updater: T,
+        current_channel_updater: Ch,
+        update_checker: C,
+        update_applier: A,
+        last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
+    ) -> Self {
+        let package_resolver = connect_to_service::<PackageResolverMarker>();
+
+        let last_known_update_package = load_last_update_package(
+            last_update_storage.as_ref(),
+            Path::new("/pkgfs"),
+            package_resolver,
+        )
+        .await;
+        Self::new(
+            target_channel_updater,
+            current_channel_updater,
+            update_checker,
+            update_applier,
+            last_update_storage,
+            last_known_update_package,
+        )
     }
 
     async fn do_system_update_check_and_return_to_idle<S: StateChangeCallback>(
@@ -192,14 +305,30 @@ where
 
         self.target_channel_updater.update().await;
 
-        match self.update_checker.check().await.context("check_for_system_update failed")? {
-            SystemUpdateStatus::UpToDate { system_image } => {
+        match self
+            .update_checker
+            .check(self.last_known_update_package.as_ref())
+            .await
+            .context("check_for_system_update failed")?
+        {
+            SystemUpdateStatus::UpToDate { system_image, update_package } => {
                 fx_log_info!("current system_image merkle: {}", system_image);
                 fx_log_info!("system_image is already up-to-date");
+
+                if self.last_known_update_package.is_none() {
+                    self.last_known_update_package = Some(update_package);
+                    self.last_update_storage.store(&update_package);
+                }
+
                 self.current_channel_updater.update().await;
+
                 return Ok(());
             }
-            SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image } => {
+            SystemUpdateStatus::UpdateAvailable {
+                current_system_image,
+                latest_system_image,
+                latest_update_package,
+            } => {
                 fx_log_info!("current system_image merkle: {}", current_system_image);
                 fx_log_info!("new system_image available: {}", latest_system_image);
                 {
@@ -207,6 +336,9 @@ where
                     monitor.set_version_available(latest_system_image.to_string());
                     monitor.advance_manager_state(ManagerState::PerformingUpdate);
                 }
+
+                self.last_update_storage.store(&latest_update_package);
+
                 self.update_applier
                     .apply(current_system_image, latest_system_image, initiator)
                     .await
@@ -223,14 +355,20 @@ where
 
 // For mocking
 pub trait UpdateChecker: Send + Sync + 'static {
-    fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>>;
+    fn check<'a>(
+        &self,
+        last_known_update_merkle: Option<&'a Hash>,
+    ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>>;
 }
 
 pub struct RealUpdateChecker;
 
 impl UpdateChecker for RealUpdateChecker {
-    fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
-        check_for_system_update().boxed()
+    fn check<'a>(
+        &self,
+        last_known_update_merkle: Option<&'a Hash>,
+    ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
+        check_for_system_update(last_known_update_merkle).boxed()
     }
 }
 
@@ -296,6 +434,10 @@ pub(crate) mod tests {
         "0000000000000000000000000000000000000000000000000000000000000000";
     pub const LATEST_SYSTEM_IMAGE: &str =
         "1111111111111111111111111111111111111111111111111111111111111111";
+    pub const CURRENT_UPDATE_PACKAGE: &str =
+        "2222222222222222222222222222222222222222222222222222222222222222";
+    pub const LATEST_UPDATE_PACKAGE: &str =
+        "3333333333333333333333333333333333333333333333333333333333333333";
 
     #[derive(Clone)]
     pub struct FakeUpdateChecker {
@@ -315,12 +457,14 @@ pub(crate) mod tests {
         pub fn new_up_to_date() -> Self {
             Self::new(Ok(SystemUpdateStatus::UpToDate {
                 system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                update_package: CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle"),
             }))
         }
         pub fn new_update_available() -> Self {
             Self::new(Ok(SystemUpdateStatus::UpdateAvailable {
                 current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
                 latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                latest_update_package: LATEST_UPDATE_PACKAGE.parse().expect("valid merkle"),
             }))
         }
         pub fn new_error() -> Self {
@@ -334,7 +478,10 @@ pub(crate) mod tests {
         }
     }
     impl UpdateChecker for FakeUpdateChecker {
-        fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
+        fn check<'a>(
+            &self,
+            _last_known_update_merkle: Option<&'a Hash>,
+        ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
             let check_blocked = Arc::clone(&self.check_blocked);
             let result = self.result.clone();
             self.call_count.fetch_add(1, Ordering::SeqCst);
@@ -481,6 +628,24 @@ pub(crate) mod tests {
         }
     }
 
+    #[derive(Default)]
+    pub struct FakeLastUpdateStorage {
+        store: Mutex<Option<Hash>>,
+    }
+    impl FakeLastUpdateStorage {
+        pub fn new() -> Arc<Self> {
+            Arc::new(Self::default())
+        }
+    }
+    impl LastUpdateStorage for FakeLastUpdateStorage {
+        fn load(&self) -> Option<Hash> {
+            *self.store.lock()
+        }
+        fn store(&self, value: &Hash) {
+            *self.store.lock() = Some(*value);
+        }
+    }
+
     type FakeUpdateManager = UpdateManager<
         FakeTargetChannelUpdater,
         FakeCurrentChannelUpdater,
@@ -545,6 +710,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
         );
 
         assert_eq!(manager.get_state(), Default::default());
@@ -558,6 +724,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
         );
 
         assert_eq!(manager.try_start_update(Initiator::Manual, None), CheckStartedResult::Started);
@@ -570,6 +737,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback0, mut receiver0) = FakeStateChangeCallback::new_callback_and_receiver();
         let (callback1, mut receiver1) = FakeStateChangeCallback::new_callback_and_receiver();
@@ -598,6 +766,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -620,6 +789,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -644,6 +814,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -667,6 +838,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -692,6 +864,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -732,6 +905,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             UnreachableUpdateApplier,
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -749,6 +923,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -756,6 +931,29 @@ pub(crate) mod tests {
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_last_update_channel_stored_when_update_applied() {
+        let last_update_storage = FakeLastUpdateStorage::new();
+
+        let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_error(),
+            last_update_storage.clone(),
+            Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.try_start_update(Initiator::Manual, Some(callback));
+        receiver.collect::<Vec<State>>().await;
+
+        assert_eq!(
+            last_update_storage.load(),
+            Some(LATEST_UPDATE_PACKAGE.parse().expect("valid merkle"))
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -767,6 +965,7 @@ pub(crate) mod tests {
             current_channel_updater.clone(),
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -778,12 +977,56 @@ pub(crate) mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_last_update_channel_stored_during_check_when_unknown() {
+        let last_update_storage = FakeLastUpdateStorage::new();
+
+        let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_up_to_date(),
+            FakeUpdateApplier::new_error(),
+            last_update_storage.clone(),
+            None,
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.try_start_update(Initiator::Manual, Some(callback));
+        receiver.collect::<Vec<State>>().await;
+
+        assert_eq!(
+            last_update_storage.load(),
+            Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle"))
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_last_update_channel_not_stored_during_check_when_known() {
+        let last_update_storage = FakeLastUpdateStorage::new();
+
+        let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_up_to_date(),
+            FakeUpdateApplier::new_error(),
+            last_update_storage.clone(),
+            Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.try_start_update(Initiator::Manual, Some(callback));
+        receiver.collect::<Vec<State>>().await;
+
+        assert_eq!(last_update_storage.load(), None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_check_error() {
         let manager = FakeUpdateManager::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -800,6 +1043,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -821,13 +1065,17 @@ pub(crate) mod tests {
         }
     }
     impl UpdateChecker for BlockingUpdateChecker {
-        fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
+        fn check<'a>(
+            &self,
+            _last_known_update_merkle: Option<&'a Hash>,
+        ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
             let blocker = self.blocker.clone();
             async move {
                 assert!(blocker.await.is_ok(), "blocking future cancelled");
                 Ok(SystemUpdateStatus::UpdateAvailable {
                     current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
                     latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                    latest_update_package: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
                 })
             }
                 .boxed()
@@ -842,6 +1090,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
         );
 
         manager.try_start_update(Initiator::Manual, None);
@@ -858,6 +1107,7 @@ pub(crate) mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             update_applier.clone(),
+            FakeLastUpdateStorage::new(),
         );
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
@@ -871,5 +1121,65 @@ pub(crate) mod tests {
         assert_eq!(res0, CheckStartedResult::Started);
         assert_eq!(res1, CheckStartedResult::InProgress);
         assert_eq!(update_applier.call_count(), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_last_update_merkle() {
+        let storage_merkle = Hash::from([0x11; 32]);
+        let index_merkle = Hash::from([0x22; 32]);
+        let resolver_merkle = Hash::from([0x33; 32]);
+
+        let last_update_storage = FakeLastUpdateStorage::default();
+        last_update_storage.store(&storage_merkle);
+
+        let pkgfs_dir = tempfile::tempdir().expect("create temp dir");
+        fs::create_dir_all(pkgfs_dir.path().join("packages/update/0")).expect("mkdir");
+        fs::write(pkgfs_dir.path().join("packages/update/0/meta"), index_merkle.to_string())
+            .expect("write meta");
+
+        let package_resolver = Ok(
+            crate::check::test_check_for_system_update_impl::PackageResolverProxyTempDir::new_with_merkle(&resolver_merkle));
+
+        let result =
+            load_last_update_package(&last_update_storage, pkgfs_dir.path(), package_resolver)
+                .await;
+        assert_eq!(result, Some(storage_merkle))
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_last_update_merkle_from_dynamic_index() {
+        let index_merkle = Hash::from([0x22; 32]);
+        let resolver_merkle = Hash::from([0x33; 32]);
+
+        let last_update_storage = FakeLastUpdateStorage::default();
+
+        let pkgfs_dir = tempfile::tempdir().expect("create temp dir");
+        fs::create_dir_all(pkgfs_dir.path().join("packages/update/0")).expect("mkdir");
+        fs::write(pkgfs_dir.path().join("packages/update/0/meta"), index_merkle.to_string())
+            .expect("write meta");
+
+        let package_resolver = Ok(
+            crate::check::test_check_for_system_update_impl::PackageResolverProxyTempDir::new_with_merkle(&resolver_merkle));
+
+        let result =
+            load_last_update_package(&last_update_storage, pkgfs_dir.path(), package_resolver)
+                .await;
+        assert_eq!(result, Some(index_merkle))
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_last_update_merkle_from_package_resolver() {
+        let resolver_merkle = Hash::from([0x33; 32]);
+
+        let last_update_storage = FakeLastUpdateStorage::default();
+        let pkgfs_dir = tempfile::tempdir().expect("create temp dir");
+
+        let package_resolver = Ok(
+            crate::check::test_check_for_system_update_impl::PackageResolverProxyTempDir::new_with_merkle(&resolver_merkle));
+
+        let result =
+            load_last_update_package(&last_update_storage, pkgfs_dir.path(), package_resolver)
+                .await;
+        assert_eq!(result, Some(resolver_merkle))
     }
 }

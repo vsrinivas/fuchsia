@@ -52,8 +52,9 @@ mod tests {
     use super::*;
     use crate::config::ConfigBuilder;
     use crate::update_manager::tests::{
-        FakeCurrentChannelUpdater, FakeTargetChannelUpdater, FakeUpdateChecker,
-        StateChangeCollector, UnreachableStateChangeCallback, UnreachableUpdateApplier,
+        FakeCurrentChannelUpdater, FakeLastUpdateStorage, FakeTargetChannelUpdater,
+        FakeUpdateChecker, StateChangeCollector, UnreachableStateChangeCallback,
+        UnreachableUpdateApplier,
     };
     use fidl_fuchsia_update::ManagerState;
     use fuchsia_async::DurationExt;
@@ -71,6 +72,7 @@ mod tests {
                 FakeCurrentChannelUpdater::new(),
                 checker.clone(),
                 UnreachableUpdateApplier,
+                FakeLastUpdateStorage::new(),
             );
 
         let mut cron = run_periodic_update_check(Arc::new(manager), &Config::default()).boxed();
@@ -91,6 +93,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
+            FakeLastUpdateStorage::new(),
         );
         manager.add_permanent_callback(callback.clone());
 
@@ -141,6 +144,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
+            FakeLastUpdateStorage::new(),
         );
         let manager = Arc::new(manager);
         manager.add_permanent_callback(callback.clone());

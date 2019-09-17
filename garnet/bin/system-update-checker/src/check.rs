@@ -9,21 +9,31 @@ use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface, Upd
 use fuchsia_component::client::connect_to_service;
 use fuchsia_merkle::Hash;
 use fuchsia_zircon as zx;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Read};
 
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SystemUpdateStatus {
-    UpToDate { system_image: Hash },
-    UpdateAvailable { current_system_image: Hash, latest_system_image: Hash },
+    UpToDate {
+        system_image: Hash,
+        update_package: Hash,
+    },
+    UpdateAvailable {
+        current_system_image: Hash,
+        latest_system_image: Hash,
+        latest_update_package: Hash,
+    },
 }
 
-pub async fn check_for_system_update() -> Result<SystemUpdateStatus, Error> {
+pub async fn check_for_system_update(
+    last_known_update_merkle: Option<&Hash>,
+) -> Result<SystemUpdateStatus, Error> {
     let mut file_system = RealFileSystem;
     let package_resolver =
         connect_to_service::<PackageResolverMarker>().context(ErrorKind::ConnectPackageResolver)?;
-    check_for_system_update_impl(&mut file_system, &package_resolver).await
+    check_for_system_update_impl(&mut file_system, &package_resolver, last_known_update_merkle)
+        .await
 }
 
 // For mocking
@@ -46,15 +56,33 @@ impl FileSystem for RealFileSystem {
 async fn check_for_system_update_impl(
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
+    last_known_update_merkle: Option<&Hash>,
 ) -> Result<SystemUpdateStatus, Error> {
+    let update = latest_update_package(package_resolver).await?;
+    let latest_update_merkle = update_package_merkle(&update).await?;
     let current = current_system_image_merkle(file_system)?;
-    let latest = latest_system_image_merkle(package_resolver).await?;
+    let latest = latest_system_image_merkle(&update).await?;
+
+    if let Some(last_known_update_merkle) = last_known_update_merkle {
+        if *last_known_update_merkle != latest_update_merkle {
+            return Ok(SystemUpdateStatus::UpdateAvailable {
+                current_system_image: current,
+                latest_system_image: latest,
+                latest_update_package: latest_update_merkle,
+            });
+        }
+    }
+
     if current == latest {
-        Ok(SystemUpdateStatus::UpToDate { system_image: current })
+        Ok(SystemUpdateStatus::UpToDate {
+            system_image: current,
+            update_package: latest_update_merkle,
+        })
     } else {
         Ok(SystemUpdateStatus::UpdateAvailable {
             current_system_image: current,
             latest_system_image: latest,
+            latest_update_package: latest_update_merkle,
         })
     }
 }
@@ -67,9 +95,9 @@ fn current_system_image_merkle(file_system: &impl FileSystem) -> Result<Hash, Er
         .context(ErrorKind::ParseSystemMeta)?)
 }
 
-async fn latest_system_image_merkle(
+async fn latest_update_package(
     package_resolver: &impl PackageResolverProxyInterface,
-) -> Result<Hash, Error> {
+) -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().context(ErrorKind::CreateUpdatePackageDirectoryProxy)?;
     let status = package_resolver
@@ -82,10 +110,44 @@ async fn latest_system_image_merkle(
         .await
         .context(ErrorKind::ResolveUpdatePackageFidl)?;
     zx::Status::ok(status).context(ErrorKind::ResolveUpdatePackage)?;
+    Ok(dir_proxy)
+}
 
+async fn update_package_merkle(
+    update_package: &fidl_fuchsia_io::DirectoryProxy,
+) -> Result<Hash, Error> {
     let (file_end, file_server_end) = fidl::endpoints::create_endpoints()
         .context(ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
-    dir_proxy
+    update_package
+        .open(
+            fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            0,
+            "meta",
+            file_server_end,
+        )
+        .context(ErrorKind::OpenUpdatePackageMeta)?;
+
+    // danger: synchronous io in async
+    let mut meta_file =
+        fdio::create_fd(file_end.into_channel().into()).context(ErrorKind::ReadUpdateMeta)?;
+    let mut contents = String::new();
+    meta_file.read_to_string(&mut contents).context(ErrorKind::ReadUpdateMeta)?;
+    Ok(contents.parse::<Hash>().context(ErrorKind::ParseUpdateMeta)?)
+}
+
+pub async fn latest_update_merkle(
+    package_resolver: &impl PackageResolverProxyInterface,
+) -> Result<Hash, Error> {
+    let update = latest_update_package(package_resolver).await?;
+    update_package_merkle(&update).await
+}
+
+async fn latest_system_image_merkle(
+    update_package: &fidl_fuchsia_io::DirectoryProxy,
+) -> Result<Hash, Error> {
+    let (file_end, file_server_end) = fidl::endpoints::create_endpoints()
+        .context(ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
+    update_package
         .open(
             fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             0,
@@ -116,9 +178,10 @@ fn extract_system_image_merkle_from_update_packages(reader: impl io::Read) -> Re
 }
 
 #[cfg(test)]
-mod test_check_for_system_update_impl {
+pub mod test_check_for_system_update_impl {
     use super::*;
     use fuchsia_async::{self as fasync, futures::future};
+    use lazy_static::lazy_static;
     use maplit::hashmap;
     use matches::assert_matches;
     use std::collections::hash_map::HashMap;
@@ -129,6 +192,10 @@ mod test_check_for_system_update_impl {
         "0000000000000000000000000000000000000000000000000000000000000000";
     const NEW_SYSTEM_IMAGE_MERKLE: &str =
         "1111111111111111111111111111111111111111111111111111111111111111";
+
+    lazy_static! {
+        static ref UPDATE_PACKAGE_MERKLE: Hash = { [0x22; 32].into() };
+    }
 
     struct FakeFileSystem {
         contents: HashMap<String, String>,
@@ -160,15 +227,25 @@ mod test_check_for_system_update_impl {
         }
     }
 
-    struct PackageResolverProxyTempDir {
+    pub struct PackageResolverProxyTempDir {
         temp_dir: tempfile::TempDir,
     }
     impl PackageResolverProxyTempDir {
-        fn new_with_empty_dir() -> PackageResolverProxyTempDir {
-            PackageResolverProxyTempDir { temp_dir: tempfile::tempdir().expect("create temp dir") }
+        fn new_with_default_meta() -> PackageResolverProxyTempDir {
+            let temp_dir = tempfile::tempdir().expect("create temp dir");
+            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
+                .expect("write meta");
+            PackageResolverProxyTempDir { temp_dir }
+        }
+        pub fn new_with_merkle(merkle: &Hash) -> PackageResolverProxyTempDir {
+            let temp_dir = tempfile::tempdir().expect("create temp dir");
+            fs::write(temp_dir.path().join("meta"), merkle.to_string()).expect("write meta");
+            PackageResolverProxyTempDir { temp_dir }
         }
         fn new_with_empty_packages_file() -> PackageResolverProxyTempDir {
             let temp_dir = tempfile::tempdir().expect("create temp dir");
+            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
+                .expect("write meta");
             fs::File::create(format!(
                 "{}/packages",
                 temp_dir.path().to_str().expect("path is utf8")
@@ -178,6 +255,8 @@ mod test_check_for_system_update_impl {
         }
         fn new_with_latest_system_image_merkle(merkle: &str) -> PackageResolverProxyTempDir {
             let temp_dir = tempfile::tempdir().expect("create temp dir");
+            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
+                .expect("write meta");
             let mut packages_file = fs::File::create(format!(
                 "{}/packages",
                 temp_dir.path().to_str().expect("path is utf8")
@@ -215,9 +294,9 @@ mod test_check_for_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_system_meta_file() {
         let mut file_system = FakeFileSystem { contents: hashmap![] };
-        let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
+        let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ReadSystemMeta));
     }
@@ -229,9 +308,9 @@ mod test_check_for_system_update_impl {
                 "/system/meta".to_string() => "not-a-merkle".to_string()
             ],
         };
-        let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
+        let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ParseSystemMeta));
     }
@@ -255,7 +334,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyFidlError;
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackageFidl));
     }
@@ -279,7 +358,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyZxError;
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackage));
     }
@@ -303,17 +382,17 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyDirectoryCloser;
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::OpenUpdatePackagePackages));
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::OpenUpdatePackageMeta));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_update_package_missing_packages_file() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
+        let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::CreatePackagesFd));
     }
@@ -323,7 +402,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_file();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(
             result.map_err(|e| e.kind()),
@@ -337,7 +416,7 @@ mod test_check_for_system_update_impl {
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image_merkle("bad-merkle");
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(
             result.map_err(|e| e.kind()),
@@ -355,11 +434,15 @@ mod test_check_for_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE,
         );
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
-
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            Some(&UPDATE_PACKAGE_MERKLE),
+        )
+        .await;
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpToDate { system_image })
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
             if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                 .parse()
                 .expect("active system image string literal")
@@ -373,11 +456,11 @@ mod test_check_for_system_update_impl {
             NEW_SYSTEM_IMAGE_MERKLE,
         );
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package: _ })
             if
                 current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
@@ -385,6 +468,35 @@ mod test_check_for_system_update_impl {
                 latest_system_image == NEW_SYSTEM_IMAGE_MERKLE
                     .parse()
                     .expect("new system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_package_only_update_available() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_latest_system_image_merkle(
+            ACTIVE_SYSTEM_IMAGE_MERKLE,
+        );
+
+        let previous_update_package = Hash::from([0x44; 32]);
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            Some(&previous_update_package),
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal") &&
+                latest_update_package == *UPDATE_PACKAGE_MERKLE
         );
     }
 }

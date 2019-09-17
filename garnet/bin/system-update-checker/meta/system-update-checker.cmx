@@ -9,7 +9,8 @@
             "isolated-persistent-storage"
         ],
         "pkgfs": [
-            "ctl"
+            "ctl",
+            "packages"
         ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",

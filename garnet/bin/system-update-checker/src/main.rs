@@ -11,6 +11,7 @@ mod config;
 mod connect;
 mod errors;
 mod inspect;
+mod last_update_storage;
 mod poller;
 mod provider_handler;
 mod update_manager;
@@ -60,11 +61,14 @@ async fn main() -> Result<(), Error> {
         )?;
     let channel_fut = current_channel_notifier.run();
 
-    let update_manager = Arc::new(RealUpdateManager::new(
-        target_channel_manager,
-        current_channel_manager,
-        inspector.root().create_child("update-manager"),
-    ));
+    let update_manager = Arc::new(
+        RealUpdateManager::new(
+            target_channel_manager,
+            current_channel_manager,
+            inspector.root().create_child("update-manager"),
+        )
+        .await,
+    );
     let info_handler = ProviderHandler::default();
 
     let mut fs = ServiceFs::new();
