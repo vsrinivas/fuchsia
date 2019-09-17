@@ -4,11 +4,12 @@
 
 #include "lib/cmx_facet_parser/cmx_facet_parser.h"
 
-#include <trace/event.h>
 #include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
+
+#include <trace/event.h>
 
 #include "rapidjson/document.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"

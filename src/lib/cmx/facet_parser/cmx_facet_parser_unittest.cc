@@ -5,14 +5,14 @@
 #include "lib/cmx_facet_parser/cmx_facet_parser.h"
 
 #include <fcntl.h>
+
 #include <string>
 #include <tuple>
 
 #include "gtest/gtest.h"
-
-#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
 namespace {
