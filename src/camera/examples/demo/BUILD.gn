@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/graphics/lib/vulkan/layers.gni")
+
+demo_name = "camera_demo"
+
+executable("demo_bin") {
+  output_name = demo_name
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/lib/ui/scenic/cpp",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/fidl/fuchsia-camera-common",
+    "//zircon/system/fidl/fuchsia-camera-test:fuchsia-camera-test_c",
+  ]
+}
+
+package("${demo_name}") {
+  deps = [
+    ":demo_bin",
+  ]
+
+  binary = demo_name
+
+  meta = [
+    {
+      path = rebase_path("meta/demo.cmx")
+      dest = "${demo_name}.cmx"
+    },
+  ]
+}
+
+group("demo") {
+  deps = [
+    ":${demo_name}",
+  ]
+}

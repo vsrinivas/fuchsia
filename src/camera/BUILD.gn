@@ -22,6 +22,7 @@ group("tests") {
     "drivers/isp/mali-009/test:mali_009_test",
     "drivers/isp/modules/test:modules_bin",
     "drivers/test_utils/test:test_utils_test",
+    "examples/demo",
   ]
 }
 

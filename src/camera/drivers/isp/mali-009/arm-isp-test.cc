@@ -11,6 +11,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
+#include <src/lib/fxl/logging.h>
 
 #include "arm-isp.h"
 #include "src/camera/drivers/test_utils/fake-buffer-collection.h"
@@ -40,6 +41,8 @@ zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp, fit::callback<void()>*
 
   return status;
 }
+
+zx::bti& ArmIspDeviceTester::GetBti() { return isp_->bti_; }
 
 // Methods required by the ddk.
 void ArmIspDeviceTester::DdkRelease() { delete this; }
@@ -287,6 +290,79 @@ zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
   TestConnectStream(&report);
   TestCallbacks(&report);
   return fuchsia_camera_test_IspTesterRunTests_reply(txn, ZX_OK, &report);
+}
+
+zx_status_t ArmIspDeviceTester::CreateStreamServer() {
+  zx_status_t status = ZX_OK;
+  StreamServer* server = nullptr;
+
+  fuchsia_sysmem_BufferCollectionInfo buffers{};
+  status = StreamServer::Create(this, &server, &buffers);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to create StreamServer";
+    return status;
+  }
+  server_.reset(server);
+
+  fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
+                                          .frames_per_sec_denominator = 1};
+  output_stream_callback cb{};
+  cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
+    static_cast<StreamServer*>(ctx)->FrameAvailable(buffer_id);
+  };
+  cb.ctx = server_.get();
+  output_stream_protocol output_stream{};
+  output_stream_protocol_ops_t ops{};
+  output_stream.ops = &ops;
+
+  fbl::AutoLock guard(&isp_lock_);
+  if (!isp_) {
+    FXL_LOG(ERROR) << "ISP not initialized";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  status = isp_->IspCreateOutputStream(&buffers, &rate, STREAM_TYPE_FULL_RESOLUTION, &cb,
+                                       &output_stream);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "IspCreateOutputStream failed";
+    return status;
+  }
+
+  // Start streaming.
+  if (!output_stream.ops || !output_stream.ops->start) {
+    FXL_LOG(ERROR) << "IspCreateOutputStream failed to set ops.start";
+    return ZX_ERR_INTERNAL;
+  }
+  status = output_stream.ops->start(output_stream.ctx);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to start streaming";
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ArmIspDeviceTester::CreateStream(zx_handle_t stream, fidl_txn_t* txn) {
+  zx_status_t status = ZX_OK;
+  fbl::AutoLock server_guard(&server_lock_);
+  // Deferred-create the primary stream.
+  if (!server_) {
+    status = CreateStreamServer();
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to create stream server";
+      return status;
+    }
+  }
+
+  // Register the client with the primary stream.
+  fuchsia_sysmem_BufferCollectionInfo buffers{};
+  status = server_->AddClient(zx::channel(stream), &buffers);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to add client";
+    return status;
+  }
+
+  return fuchsia_camera_test_IspTesterCreateStream_reply(txn, &buffers);
 }
 
 }  // namespace camera

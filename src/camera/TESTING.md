@@ -2,11 +2,19 @@
 
 ## To test the on-device functionality:
 
-1. `fx set smart_display.sherlock --with //bundles:tests`
+1. `fx set [product].[board] --with //bundles:tests`
 2. You may have to re-flash zedboot if you flashed with a different fx set command
 3. `fx serve`
-4. Restart your Sherlock device in the netboot cable configuration
+4. Restart the target device in the netboot cable configuration
 5. Run `fx run-test camera_full_on_device_test`
+
+
+## To test camera functionality manually:
+
+1. Follow steps 1 throuh 4 for on-device test setup
+2. Run `fx shell tiles_ctl start`
+3. Run `fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cmx`
+
 
 ## To test camera libraries off-device:
 You can follow the directions above to test on the device, and run:

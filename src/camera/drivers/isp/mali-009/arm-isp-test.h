@@ -18,6 +18,7 @@
 
 #include "global_regs.h"
 #include "pingpong_regs.h"
+#include "stream_server.h"
 
 namespace camera {
 // |ArmIspDeviceTester| is spawned by the driver in |arm-isp.cc|
@@ -49,6 +50,9 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // ArmIspDeviceTester that it is going away.
   static zx_status_t Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind);
 
+  // Returns the ISP's BTI. Avoids the need to add more friend classes to the ISP.
+  zx::bti& GetBti() __TA_REQUIRES(isp_lock_);
+
   // Methods required by the ddk.
   void DdkRelease();
   void DdkUnbind();
@@ -57,6 +61,12 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
  private:
   // DDKMessage Helper Functions.
   zx_status_t RunTests(fidl_txn_t* txn);
+  // Add a client to the existing primary full-resolution stream.
+  zx_status_t CreateStream(zx_handle_t stream, fidl_txn_t* txn);
+
+  // Create the single full-resolution stream for the ISP.
+  // Clients can request the interface via CreateStream.
+  zx_status_t CreateStreamServer() __TA_REQUIRES(server_lock_);
 
   // Disconnects this instance from the ArmIspDevice it is testing.
   // This should only be called when the ArmIspDevice is going away, because
@@ -65,6 +75,8 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
 
   static constexpr fuchsia_camera_test_IspTester_ops isp_tester_ops = {
       .RunTests = fidl::Binder<ArmIspDeviceTester>::BindMember<&ArmIspDeviceTester::RunTests>,
+      .CreateStream =
+          fidl::Binder<ArmIspDeviceTester>::BindMember<&ArmIspDeviceTester::CreateStream>,
   };
 
   // ISP Tests:
@@ -86,6 +98,13 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // are using it.
   fbl::Mutex isp_lock_;
   ArmIspDevice* isp_ __TA_GUARDED(isp_lock_);
+
+  // The StreamServer creates an event loop to handle new frames coming from the ISP.
+  // It also serves the Stream interface to any number of clients.
+  fbl::Mutex server_lock_;
+  std::unique_ptr<camera::StreamServer> server_ __TA_GUARDED(server_lock_);
+
+  friend class camera::StreamServer;
 };
 
 }  // namespace camera

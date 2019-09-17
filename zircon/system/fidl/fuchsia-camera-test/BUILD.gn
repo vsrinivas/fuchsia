@@ -9,4 +9,7 @@ fidl_library("fuchsia-camera-test") {
   sources = [
     "isp.fidl",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-camera-common",
+  ]
 }

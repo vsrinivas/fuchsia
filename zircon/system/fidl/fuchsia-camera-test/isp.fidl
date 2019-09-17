@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 library fuchsia.camera.test;
+using fuchsia.camera.common;
+using fuchsia.sysmem;
 
 using zx;
 
@@ -29,5 +31,7 @@ protocol IspTester {
     /// Execute the tests for this device.  Tests will be run on the ISP.
     /// Returns the status from the test.
     RunTests() -> (zx.status status, TestReport report);
-};
 
+    /// Acquire a stream from the ISP.
+    CreateStream(request<fuchsia.camera.common.Stream> stream) -> (fuchsia.sysmem.BufferCollectionInfo buffers);
+};
