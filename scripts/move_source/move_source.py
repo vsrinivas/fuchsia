@@ -324,8 +324,14 @@ Moves everything from the directory 'source' to 'dest'
 """
 
 
-def move_directory(source, dest, dry_run):
-    run_command(['git', 'mv', source, dest], dry_run)
+def move_directory(source, dest, dry_run, repository=fuchsia_root):
+    # git mv requires the parent of the destination directory to exist in
+    # order to move a directory.
+    dest_parent = os.path.dirname(dest)
+    dest_parent_abs = os.path.join(repository, dest_parent)
+    if not os.path.exists(dest_parent_abs):
+        os.makedirs(dest_parent_abs)
+    run_command(['git', 'mv', source, dest], dry_run, cwd=repository)
 
 """
 Updates all references to 'source' in files in the directory 'dest'.
@@ -359,10 +365,10 @@ Logs a command and then runs it in the Fuchsia root if dry_run is false.
 """
 
 
-def run_command(command, dry_run):
-    logging.debug('Running %s' % command)
+def run_command(command, dry_run, cwd=fuchsia_root):
+    logging.debug('Running %s in cwd %s' % (command, cwd))
     if not dry_run:
-        subprocess.check_call(command, cwd=fuchsia_root)
+        subprocess.check_call(command, cwd=cwd)
 
 
 def main():
