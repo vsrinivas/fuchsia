@@ -11,6 +11,18 @@ import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:webview/webview.dart';
 import '../models/webpage_action.dart';
 
+enum PageType { empty, normal, error }
+PageType pageTypeForWebPageType(web.PageType pageType) {
+  switch (pageType) {
+    case web.PageType.normal:
+      return PageType.normal;
+    case web.PageType.error:
+      return PageType.error;
+    default:
+      return PageType.empty;
+  }
+}
+
 // Business logic for the webpage.
 // Sinks:
 //   WebPageAction: a browsing action - url request, prev/next page, etc.
@@ -25,23 +37,26 @@ class WebPageBloc extends web.NavigationEventListener {
   ChildViewConnection get childViewConnection => _webView.childViewConnection;
 
   // Value Notifiers
-  final ValueNotifier<String> _url = ValueNotifier<String>('');
-  final ValueNotifier<bool> _forwardState = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> _backState = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> _isLoadedState = ValueNotifier<bool>(true);
-  final ValueNotifier<String> _pageTitle = ValueNotifier<String>(null);
+  final _url = ValueNotifier<String>('');
+  final _forwardState = ValueNotifier<bool>(false);
+  final _backState = ValueNotifier<bool>(false);
+  final _isLoadedState = ValueNotifier<bool>(true);
+  final _pageTitle = ValueNotifier<String>(null);
+  final _pageType = ValueNotifier<PageType>(PageType.empty);
 
   ChangeNotifier get urlNotifier => _url;
   ChangeNotifier get forwardStateNotifier => _forwardState;
   ChangeNotifier get backStateNotifier => _backState;
   ChangeNotifier get isLoadedStateNotifier => _isLoadedState;
   ChangeNotifier get pageTitleNotifier => _pageTitle;
+  ChangeNotifier get pageTypeNotifier => _pageType;
 
   String get url => _url.value;
   bool get forwardState => _forwardState.value;
   bool get backState => _backState.value;
   bool get isLoadedState => _isLoadedState.value;
   String get pageTitle => _pageTitle.value;
+  PageType get pageType => _pageType.value ?? PageType.empty;
 
   // Sinks
   final _webPageActionController = StreamController<WebPageAction>();
@@ -81,6 +96,9 @@ class WebPageBloc extends web.NavigationEventListener {
     }
     if (event.title != null) {
       _pageTitle.value = event.title;
+    }
+    if (event.pageType != null) {
+      _pageType.value = pageTypeForWebPageType(event.pageType);
     }
   }
 

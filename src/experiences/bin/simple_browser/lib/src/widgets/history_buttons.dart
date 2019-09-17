@@ -38,7 +38,7 @@ class HistoryButtons extends StatelessWidget {
               builder: (_, __) => _HistoryButton(
                   title: 'RFRSH',
                   onTap: () => bloc.request.add(RefreshAction()),
-                  isEnabled: (bloc.url ?? '').isNotEmpty)),
+                  isEnabled: bloc.pageType == PageType.normal)),
         ],
       );
 }

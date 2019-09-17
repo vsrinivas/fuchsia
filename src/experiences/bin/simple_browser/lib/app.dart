@@ -7,6 +7,7 @@ import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'src/blocs/tabs_bloc.dart';
 import 'src/models/tabs_action.dart';
+import 'src/widgets/error_page.dart';
 import 'src/widgets/navigation_bar.dart';
 import 'src/widgets/tabs_widget.dart';
 
@@ -21,26 +22,24 @@ class App extends StatelessWidget {
   const App({@required this.tabsBloc});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        fontFamily: 'RobotoMono',
-        textSelectionColor: _kSelectionColor,
-        textSelectionHandleColor: _kForegroundColor,
-        hintColor: _kForegroundColor,
-        cursorColor: _kForegroundColor,
-        primaryColor: _kBackgroundColor,
-        canvasColor: _kBackgroundColor,
-        accentColor: _kForegroundColor,
-        textTheme: TextTheme(
-          body1: _kTextStyle,
-          subhead: _kTextStyle,
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Browser',
+        theme: ThemeData(
+          fontFamily: 'RobotoMono',
+          textSelectionColor: _kSelectionColor,
+          textSelectionHandleColor: _kForegroundColor,
+          hintColor: _kForegroundColor,
+          cursorColor: _kForegroundColor,
+          primaryColor: _kBackgroundColor,
+          canvasColor: _kBackgroundColor,
+          accentColor: _kForegroundColor,
+          textTheme: TextTheme(
+            body1: _kTextStyle,
+            subhead: _kTextStyle,
+          ),
         ),
-      ),
-      title: 'Browser',
-      home: Scaffold(
-        body: Container(
-          child: Column(
+        home: Scaffold(
+          body: Column(
             children: <Widget>[
               AnimatedBuilder(
                 animation: tabsBloc.currentTabNotifier,
@@ -48,33 +47,40 @@ class App extends StatelessWidget {
                     NavigationBar(bloc: tabsBloc.currentTab, newTab: newTab),
               ),
               TabsWidget(bloc: tabsBloc),
-              Expanded(
-                child: _buildContent(),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildContent() => AnimatedBuilder(
-        // hide if no tabs
-        animation: tabsBloc.currentTabNotifier,
-        builder: (_, __) => tabsBloc.currentTab != null
-            ? AnimatedBuilder(
-                // hide if no content in tab
-                animation: tabsBloc.currentTab.urlNotifier,
-                builder: (_, __) => tabsBloc.currentTab.url.isNotEmpty
-                    ? ChildView(
-                        connection: tabsBloc.currentTab.childViewConnection,
-                      )
-                    : Container(),
-              )
-            : Container(),
       );
 
-  void newTab() {
-    tabsBloc.request.add(NewTabAction<WebPageBloc>());
+  Widget _buildContent() => AnimatedBuilder(
+        animation: tabsBloc.currentTabNotifier,
+        builder: (_, __) => tabsBloc.currentTab == null
+            // hide if no tab selected
+            ? _buildEmptyPage()
+            : AnimatedBuilder(
+                animation: tabsBloc.currentTab.pageTypeNotifier,
+                builder: (_, __) => _buildPage(tabsBloc.currentTab.pageType),
+              ),
+      );
+
+  Widget _buildPage(PageType pageType) {
+    switch (pageType) {
+      case PageType.normal:
+        return _buildNormalPage();
+      case PageType.error:
+        // show error for error state
+        return _buildErrorPage();
+      default:
+        // hide if no content in tab
+        return _buildEmptyPage();
+    }
   }
+
+  Widget _buildNormalPage() =>
+      ChildView(connection: tabsBloc.currentTab.childViewConnection);
+  Widget _buildErrorPage() => ErrorPage();
+  Widget _buildEmptyPage() => Container();
+
+  void newTab() => tabsBloc.request.add(NewTabAction<WebPageBloc>());
 }
