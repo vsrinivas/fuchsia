@@ -123,7 +123,7 @@ pub enum SuggestedAction {
 }
 
 impl SuggestedAction {
-    fn restore_story(story_name: String) -> SuggestedAction {
+    fn restore_story(story_name: impl Into<String>) -> SuggestedAction {
         SuggestedAction::RestoreStory(RestoreStoryInfo::new(story_name))
     }
 
@@ -169,7 +169,7 @@ impl Suggestion {
         }
     }
 
-    pub fn new_story_suggestion(story_name: String, display_info: DisplayInfo) -> Self {
+    pub fn new_story_suggestion(story_name: impl Into<String>, display_info: DisplayInfo) -> Self {
         Suggestion {
             id: Uuid::new_v4().to_string(),
             display_info,

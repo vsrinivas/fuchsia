@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        constants::EMPTY_STORY_TITLE,
         models::{DisplayInfo, Suggestion},
         story_context_store::ContextEntity,
         story_manager::StoryManager,
@@ -24,10 +25,10 @@ impl StorySuggestionsProvider {
         StorySuggestionsProvider { story_manager }
     }
 
-    fn new_story_suggestion(story_name: String, story_title: String) -> Suggestion {
+    fn new_story_suggestion(story_name: impl Into<String>, story_title: &str) -> Suggestion {
         Suggestion::new_story_suggestion(
-            story_name,
-            DisplayInfo::new().with_title(format!("Restore {}", story_title).as_str()),
+            story_name.into(),
+            DisplayInfo::new().with_title(&format!("Restore {}", story_title)),
         )
     }
 }
@@ -44,10 +45,11 @@ impl SearchSuggestionsProvider for StorySuggestionsProvider {
             stories.sort_by(|a, b| b.last_executed_timestamp.cmp(&a.last_executed_timestamp));
             let result = stories
                 .into_iter()
+                .filter(|story| story.story_title != EMPTY_STORY_TITLE)
                 .map(|story| {
                     StorySuggestionsProvider::new_story_suggestion(
                         story.story_name,
-                        story.story_title,
+                        &story.story_title,
                     )
                 })
                 .collect::<Vec<Suggestion>>();
@@ -61,6 +63,7 @@ mod tests {
     use {
         super::*,
         crate::{
+            constants::TITLE_KEY,
             models::{AddModInfo, Intent, SuggestedAction},
             story_storage::MemoryStorage,
         },
@@ -69,17 +72,12 @@ mod tests {
 
     #[test]
     fn new_story_suggestion() {
-        let suggestion = StorySuggestionsProvider::new_story_suggestion(
-            "story_name".to_string(),
-            "story_title".to_string(),
-        );
-        assert_eq!(
-            suggestion.display_info().title.clone().unwrap(),
-            "Restore story_title".to_string()
-        );
+        let suggestion =
+            StorySuggestionsProvider::new_story_suggestion("story_name", "story_title");
+        assert_eq!(suggestion.display_info().title.as_ref().unwrap(), "Restore story_title");
         match suggestion.action() {
             SuggestedAction::RestoreStory(restore_story_info) => {
-                assert_eq!(restore_story_info.story_name.to_string(), "story_name");
+                assert_eq!(restore_story_info.story_name, "story_name");
             }
             SuggestedAction::AddMod(_) => {
                 assert!(false);
@@ -95,8 +93,14 @@ mod tests {
             let mut story_manager = story_manager_arc.lock();
             let add_mod_info_1 = AddModInfo::new(Intent::new(), Some("story-1".to_string()), None);
             let add_mod_info_2 = AddModInfo::new(Intent::new(), Some("story-2".to_string()), None);
+            let add_mod_info_3 = AddModInfo::new(Intent::new(), Some("story-3".to_string()), None);
             story_manager.add_to_story_graph(&add_mod_info_1, vec![]).await?;
             story_manager.add_to_story_graph(&add_mod_info_2, vec![]).await?;
+            story_manager.add_to_story_graph(&add_mod_info_3, vec![]).await?;
+
+            // The third story won't have a title, so it shouldn't show up.
+            story_manager.set_property("story-1", TITLE_KEY, "story one").await.unwrap();
+            story_manager.set_property("story-2", TITLE_KEY, "story two").await.unwrap();
         }
 
         let story_suggestions_provider = StorySuggestionsProvider::new(story_manager_arc);
@@ -111,12 +115,20 @@ mod tests {
             }
             _ => assert!(false),
         }
+        assert_eq!(
+            story_suggestions[0].display_info().title.as_ref().unwrap(),
+            "Restore story two"
+        );
         match story_suggestions[1].action() {
             SuggestedAction::RestoreStory(restore_story_info) => {
                 assert_eq!(restore_story_info.story_name.to_string(), "story-1");
             }
             _ => assert!(false),
         }
+        assert_eq!(
+            story_suggestions[1].display_info().title.as_ref().unwrap(),
+            "Restore story one"
+        );
         Ok(())
     }
 }

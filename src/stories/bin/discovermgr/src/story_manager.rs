@@ -4,13 +4,12 @@
 
 use {
     crate::{
-        constants::{GRAPH_KEY, STATE_KEY, TIME_KEY, TITLE_KEY},
+        constants::{EMPTY_STORY_TITLE, GRAPH_KEY, STATE_KEY, TIME_KEY, TITLE_KEY},
         models::{AddModInfo, OutputConsumer, StoryMetadata},
         story_context_store::Contributor,
         story_graph::{Module, StoryGraph},
         story_storage::{StoryName, StoryStorage},
     },
-    chrono::{Datelike, Timelike, Utc},
     failure::{format_err, Error},
     fidl_fuchsia_app_discover::StoryDiscoverError,
     std::{
@@ -41,7 +40,7 @@ impl StoryManager {
     // Set property of given story with key & value.
     pub async fn set_property(
         &mut self,
-        story_name: &StoryName,
+        story_name: &str,
         key: &str,
         value: impl Into<String>,
     ) -> Result<(), StoryDiscoverError> {
@@ -55,7 +54,7 @@ impl StoryManager {
     // Get property of given story with key.
     pub async fn get_property(
         &self,
-        story_name: &StoryName,
+        story_name: &str,
         key: &str,
     ) -> Result<String, StoryDiscoverError> {
         self.story_storage.get_property(story_name, &key).await
@@ -209,19 +208,8 @@ impl StoryManager {
         if story_title.is_ok() {
             return Ok(());
         }
-        let now = Utc::now();
         self.story_storage
-            .set_property(
-                action.story_name(),
-                TITLE_KEY,
-                format!(
-                    "a story from {:?} {:02}:{:02}:{:02}",
-                    now.weekday(),
-                    now.hour(),
-                    now.minute(),
-                    now.second(),
-                ),
-            )
+            .set_property(action.story_name(), TITLE_KEY, EMPTY_STORY_TITLE.to_string())
             .await
             .map_err(StoryManager::error_mapping)?;
         self.update_timestamp(action.story_name()).await
@@ -306,6 +294,10 @@ mod tests {
         )
         .unwrap_or(StoryGraph::new());
         assert_eq!(story_graph.get_module_count(), 1);
+        assert_eq!(
+            story_manager.story_storage.get_property("story_name_1", TITLE_KEY).await.unwrap(),
+            EMPTY_STORY_TITLE
+        );
 
         // story_name_1 already saved
         assert_eq!(
