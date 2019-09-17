@@ -9,8 +9,6 @@ executable("devcoordinator") {
 
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "$zx/system/ulib/devmgr-launcher",
     "../shared",
   ]
@@ -57,6 +55,8 @@ source_set("common") {
     "driver.h",
     "fidl.cc",
     "suspend-task.cc",
+    "system-instance.cc",
+    "system-instance.h",
     "task.cc",
     "unbind-task.cc",
     "vmo-writer.cc",
@@ -67,6 +67,7 @@ source_set("common") {
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-device-manager:llcpp",
     "$zx/system/fidl/fuchsia-driver-test:c",
+    "$zx/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-ldsvc:llcpp",
     "$zx/system/fidl/fuchsia-mem:c",
@@ -106,6 +107,6 @@ test("devcoordinator-test") {
   deps = [
     ":common",
     "$zx/system/ulib/zxtest",
-    "../shared:env",
+    "../shared",
   ]
 }
