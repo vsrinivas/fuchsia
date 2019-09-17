@@ -7,10 +7,8 @@
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-
-  escher::test::SetUpEscher();
+  escher::test::EscherEnvironment::RegisterGlobalTestEnvironment();
   int result = RUN_ALL_TESTS();
-  escher::test::TearDownEscher();
 
   return result;
 }

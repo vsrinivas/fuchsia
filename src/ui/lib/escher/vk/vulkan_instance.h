@@ -48,6 +48,9 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   struct DebugReportCallback {
     VkDebugReportCallbackFn function = nullptr;
     void* user_data = nullptr;
+
+    DebugReportCallback(VkDebugReportCallbackFn function_, void* user_data_)
+        : function(std::move(function_)), user_data(user_data_) {}
   };
   using DebugReportCallbackList = std::list<DebugReportCallback>;
   using DebugReportCallbackHandle = DebugReportCallbackList::iterator;

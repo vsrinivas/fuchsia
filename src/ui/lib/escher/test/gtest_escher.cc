@@ -11,18 +11,24 @@
 namespace escher {
 namespace test {
 
-static std::unique_ptr<Escher> g_escher;
-
 Escher* GetEscher() {
   EXPECT_FALSE(VK_TESTS_SUPPRESSED());
-  EXPECT_NE(g_escher.get(), nullptr);
-  return g_escher.get();
+  return EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
 }
 
-void SetUpEscher() {
-  if (!VK_TESTS_SUPPRESSED()) {
-    ASSERT_EQ(g_escher.get(), nullptr);
+void EscherEnvironment::RegisterGlobalTestEnvironment() {
+  FXL_CHECK(global_escher_environment_ == nullptr);
+  global_escher_environment_ = static_cast<escher::test::EscherEnvironment*>(
+      testing::AddGlobalTestEnvironment(new escher::test::EscherEnvironment));
+}
 
+EscherEnvironment* EscherEnvironment::GetGlobalTestEnvironment() {
+  FXL_CHECK(global_escher_environment_ != nullptr);
+  return global_escher_environment_;
+}
+
+void EscherEnvironment::SetUp() {
+  if (!VK_TESTS_SUPPRESSED()) {
     VulkanInstance::Params instance_params({{"VK_LAYER_KHRONOS_validation"},
                                             {VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
                                              VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
@@ -32,26 +38,24 @@ void SetUpEscher() {
           VK_KHR_BIND_MEMORY_2_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME},
          {},
          vk::SurfaceKHR()});
-
 #ifdef OS_FUCHSIA
     device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
+    vulkan_instance_ = VulkanInstance::New(instance_params);
+    vulkan_device_ = VulkanDeviceQueues::New(vulkan_instance_, device_params);
+    escher_ = std::make_unique<Escher>(vulkan_device_);
 
-    auto vulkan_instance = VulkanInstance::New(instance_params);
-
-    auto vulkan_device = VulkanDeviceQueues::New(vulkan_instance, device_params);
-
-    g_escher = std::make_unique<Escher>(vulkan_device);
+    escher::GlslangInitializeProcess();
   }
-
-  escher::GlslangInitializeProcess();
 }
 
-void TearDownEscher() {
-  escher::GlslangFinalizeProcess();
-
+void EscherEnvironment::TearDown() {
   if (!VK_TESTS_SUPPRESSED()) {
-    g_escher = nullptr;
+    escher::GlslangFinalizeProcess();
+
+    escher_.reset();
+    vulkan_device_.reset();
+    vulkan_instance_.reset();
   }
 }
 

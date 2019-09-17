@@ -8,6 +8,8 @@
 #include "src/ui/lib/escher/test/gtest_vulkan_internal.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"
 
+#include <vulkan/vulkan.hpp>
+
 // Tests declared using this macro are only registered with GTest when Vulkan is available.
 #define VK_TEST(test_case_name, test_name) \
   VK_GTEST_TEST_(test_case_name, test_name, ::testing::Test, ::testing::internal::GetTestTypeId())

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace testing {
 namespace internal {
@@ -32,24 +32,28 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
 }  // namespace testing
 
 // Helper macro for defining tests.
-#define VK_GTEST_TEST_(test_case_name, test_name, parent_class, parent_id)                      \
-  class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {               \
-   public:                                                                                      \
-    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}                                      \
-                                                                                                \
-   private:                                                                                     \
-    virtual void TestBody();                                                                    \
-    static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;                       \
-    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_case_name, test_name));         \
-  };                                                                                            \
-                                                                                                \
-  ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::test_info_ =    \
-      ::testing::RegisterTest(                                                                  \
-          #test_case_name,                                                                      \
-          ::testing::internal::escher::PrependDisabledIfNecessary(#test_name).c_str(), nullptr, \
-          nullptr, __FILE__, __LINE__, []() -> parent_class* {                                  \
-            return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name);                       \
-          });                                                                                   \
+#define VK_GTEST_TEST_(test_case_name, test_name, parent_class, parent_id)                       \
+  class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {                \
+   public:                                                                                       \
+    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}                                       \
+                                                                                                 \
+   private:                                                                                      \
+    virtual void TestBody();                                                                     \
+    static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;                        \
+    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_case_name, test_name));          \
+  };                                                                                             \
+                                                                                                 \
+  ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::test_info_ =     \
+      ::testing::internal::MakeAndRegisterTestInfo(                                              \
+          #test_case_name,                                                                       \
+          ::testing::internal::escher::PrependDisabledIfNecessary(#test_name).c_str(), nullptr,  \
+          nullptr, ::testing::internal::CodeLocation(__FILE__, __LINE__), (parent_id),           \
+          ::testing::internal::SuiteApiResolver<parent_class>::GetSetUpCaseOrSuite(__FILE__,     \
+                                                                                   __LINE__),    \
+          ::testing::internal::SuiteApiResolver<parent_class>::GetTearDownCaseOrSuite(__FILE__,  \
+                                                                                      __LINE__), \
+          new ::testing::internal::TestFactoryImpl<GTEST_TEST_CLASS_NAME_(test_case_name,        \
+                                                                          test_name)>);          \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
 #define VK_GTEST_TEST_P_(test_suite_name, test_name)                                           \

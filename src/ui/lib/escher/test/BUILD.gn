@@ -76,6 +76,7 @@ if (is_mac) {
       "vk/render_pass_cache_unittest.cc",
       "vk/shader_module_template_unittest.cc",
       "vk/shader_program_unittest.cc",
+      "vk/validation_layer_test.cc",
       "vk/vulkan_tester.h",
       "vk/vulkan_utils_unittest.cc",
     ]
@@ -157,6 +158,12 @@ source_set("gtest_escher") {
   sources = [
     "gtest_escher.cc",
     "gtest_escher.h",
+    "test_with_vk_validation_layer_macros.h",
+    "test_with_vk_validation_layer_macros_internal.h",
+    "test_with_vk_validation_layer.cc",
+    "test_with_vk_validation_layer.h",
+    "test_with_vk_validation_layer_base.cc",
+    "test_with_vk_validation_layer_base.h",
   ]
 }
 

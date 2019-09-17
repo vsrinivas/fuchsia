@@ -157,7 +157,7 @@ bool VulkanInstance::ValidateExtensions(const std::set<std::string> &required_ex
 
 VulkanInstance::DebugReportCallbackHandle VulkanInstance::RegisterDebugReportCallback(
     VkDebugReportCallbackFn function, void *user_data) {
-  callbacks_.push_back({.function = std::move(function), .user_data = user_data});
+  callbacks_.emplace_back(std::move(function), user_data);
   return std::prev(callbacks_.end());
 }
 
