@@ -38,9 +38,9 @@ struct ParsedNode {
   BlockIndex parent;
 
   // Initializes the stored node with the given name and parent.
-  void InitializeNode(std::string name, BlockIndex parent) {
+  void InitializeNode(std::string name, BlockIndex new_parent) {
     hierarchy.node_ptr()->set_name(std::move(name));
-    this->parent = parent;
+    parent = new_parent;
     initialized_ = true;
   }
 
@@ -154,8 +154,7 @@ fit::result<Hierarchy> Reader::Read() {
   // Iterate over the map of parsed nodes and find those nodes that are
   // already "complete." These nodes are moved to the complete_nodes map for
   // bottom-up processing.
-  auto it = parsed_nodes_.begin();
-  while (it != parsed_nodes_.end()) {
+  for (auto it = parsed_nodes_.begin(); it != parsed_nodes_.end();) {
     if (!it->second) {
       // The node is not valid, ignore.
       it = parsed_nodes_.erase(it);

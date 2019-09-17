@@ -1,0 +1,13 @@
+{
+  "pkg/inspect/include/lib/inspect/cpp/health.h": "f92fcc7be5bba6566a2e124cbd1e74ce",
+  "pkg/inspect/include/lib/inspect/cpp/hierarchy.h": "23ba53082f2c611b718eebe981102563",
+  "pkg/inspect/include/lib/inspect/cpp/inspect.h": "c064dac0f918013f8ed3cd8512700e9d",
+  "pkg/inspect/include/lib/inspect/cpp/reader.h": "dc9f17a71014900864a08f795653438b",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/block.h": "7084738248a150b944d9dc5357c58ccb",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/heap.h": "88dcfbfcce7592f0f84bad9200efe135",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/limits.h": "88ef78884a24023435b1a2cad3f64317",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/scanner.h": "eddde27e2cc24b722fea75cdc024a850",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/snapshot.h": "a77091533a8f46e54ee50d06fb153add",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/state.h": "ade33911e03e2108a021ee332736f52a",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/types.h": "117594ff262d72cff26beb142730a861"
+}
