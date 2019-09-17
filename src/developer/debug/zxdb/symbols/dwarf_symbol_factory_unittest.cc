@@ -322,8 +322,8 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 
-  // The struct has three data members and two base classes.
-  ASSERT_EQ(3u, struct_type->data_members().size());
+  // The struct has five data members and two base classes.
+  ASSERT_EQ(5u, struct_type->data_members().size());
   ASSERT_EQ(2u, struct_type->inherited_from().size());
 
   // The first thing should be Base1 at offset 0.
@@ -366,6 +366,33 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_EQ("const void*", member_v_type->GetFullName());
   EXPECT_LT(member_b->member_location(), member_v->member_location());
   EXPECT_TRUE(member_v->member_location() % 4 == 0);
+
+  // The next data member should be kConstInt = -2. This is stored in a ConstValue as a
+  // little-endian 64-bit signed value.
+  //
+  // This assumes the compiler has encoded the constexpr as a DW_AT_const_value. It's theoretically
+  // possible for the constant value to be encoded as a DWARF expression but none of our compilers
+  // currently do that and we really want to test ConstValue here.
+  auto* member_ci = struct_type->data_members()[3].Get()->AsDataMember();
+  ASSERT_TRUE(member_ci);
+  EXPECT_TRUE(member_ci->is_external());
+  EXPECT_EQ("const int", member_ci->type().Get()->AsType()->GetFullName());
+  EXPECT_TRUE(member_ci->const_value().has_value());
+  std::vector<uint8_t> expected_minus_two{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+  EXPECT_EQ(expected_minus_two, member_ci->const_value().GetConstValue(8));
+
+  // kConstLongDouble (see kConstInt above for notes).
+  auto* member_cd = struct_type->data_members()[4].Get()->AsDataMember();
+  ASSERT_TRUE(member_cd);
+  EXPECT_TRUE(member_cd->is_external());
+  EXPECT_EQ("const long double", member_cd->type().Get()->AsType()->GetFullName());
+  EXPECT_TRUE(member_cd->const_value().has_value());
+  // This is a "long double" which on x86 is 80 bits, but on ARM is the same as a double. Accept
+  // either encoding of "3.14". We want to test non-integer, > 64-bit values here if possible.
+  std::vector<uint8_t> expected_80bit{0, 0xf8, 0x28, 0x5c, 0x8f, 0xc2, 0xf5, 0xc8, 0, 0x40};
+  std::vector<uint8_t> expected_64bit{0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x09, 0x40};
+  EXPECT_TRUE(expected_64bit == member_cd->const_value().GetConstValue(8) ||
+              expected_80bit == member_cd->const_value().GetConstValue(10));
 }
 
 TEST(DwarfSymbolFactory, Enum) {

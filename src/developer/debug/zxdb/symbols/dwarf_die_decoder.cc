@@ -6,6 +6,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "src/developer/debug/zxdb/symbols/const_value.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -118,6 +119,30 @@ void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
                                      output->getValue());
     });
   }
+}
+
+void DwarfDieDecoder::AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* output) {
+  // The ConstValue already holds an "unset" state so we don't need an optional. Assume it's already
+  // in the unset state when adding.
+  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+    if (form.getForm() == llvm::dwarf::DW_FORM_udata) {
+      if (auto opt_unsigned = form.getAsUnsignedConstant()) {
+        *output = ConstValue(*opt_unsigned);
+        return;
+      }
+    } else if (form.getForm() == llvm::dwarf::DW_FORM_sdata) {
+      if (auto opt_signed = form.getAsSignedConstant()) {
+        *output = ConstValue(static_cast<int64_t>(*opt_signed));
+        return;
+      }
+    } else if (form.isFormClass(llvm::DWARFFormValue::FC_Block)) {
+      llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
+      if (block.size() > 0) {
+        *output = ConstValue(std::vector<uint8_t>(block.data(), block.data() + block.size()));
+        return;
+      }
+    }
+  });
 }
 
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,

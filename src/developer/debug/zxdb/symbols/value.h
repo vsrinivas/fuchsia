@@ -7,12 +7,14 @@
 
 #include <string>
 
+#include "src/developer/debug/zxdb/symbols/const_value.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 namespace zxdb {
 
-// A value is the base class for data with names: Variable objects (for stack vars and function
-// parameters), and DataMember objects (for struct/class members).
+// A value is the base class for data with names:
+//  - Variable: Globals, stack variables, and function parameters.
+//  - DataMember: Struct, class, and union members, including static members.
 class Value : public Symbol {
  public:
   // Don't construct by itself, used as a base class for Variable and DataMember.
@@ -45,6 +47,11 @@ class Value : public Symbol {
   bool artificial() const { return artificial_; }
   void set_artificial(bool a) { artificial_ = a; }
 
+  // The variable may have a constant value. If so, const_value().has_value() will be set and the
+  // value will be contained within this ConstValue object.
+  const ConstValue& const_value() const { return const_value_; }
+  void set_const_value(ConstValue cv) { const_value_ = cv; }
+
   // This could add the decl_file/line if we need it since normally such entries have this
   // information.
 
@@ -59,6 +66,8 @@ class Value : public Symbol {
 
   bool is_external_ = false;
   bool artificial_ = false;
+
+  ConstValue const_value_;
 };
 
 }  // namespace zxdb

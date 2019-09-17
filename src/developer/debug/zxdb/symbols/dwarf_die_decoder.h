@@ -25,6 +25,8 @@ class DWARFFormValue;
 
 namespace zxdb {
 
+class ConstValue;
+
 // Decodes the desired attributes of a given DWARF Debug Info Entry ("DIE").
 //
 // This transparently follows DW_AT_abstract_origin attributes. This is used
@@ -75,6 +77,7 @@ class DwarfDieDecoder {
   void AddHighPC(llvm::Optional<HighPC>* output);
   void AddCString(llvm::dwarf::Attribute attribute, llvm::Optional<const char*>* output);
   void AddLineTableFile(llvm::dwarf::Attribute attribute, llvm::Optional<std::string>* output);
+  void AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* const_value);
 
   // For cross-DIE references. These references can be within the current
   // unit (byte offsets, not DIE indices), or from within the object file.

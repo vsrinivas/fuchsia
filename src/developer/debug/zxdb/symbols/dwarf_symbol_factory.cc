@@ -587,6 +587,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
   llvm::Optional<uint64_t> data_bit_offset;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_bit_offset, &data_bit_offset);
 
+  ConstValue const_value;
+  decoder.AddConstValue(llvm::dwarf::DW_AT_const_value, &const_value);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -609,6 +612,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
     result->set_bit_size(static_cast<uint32_t>(*bit_size));
   if (data_bit_offset)
     result->set_data_bit_offset(static_cast<uint32_t>(*data_bit_offset));
+  result->set_const_value(std::move(const_value));
+
   return result;
 }
 
@@ -644,6 +649,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   // for the underlying types. Since there are many values, we set the "signed" flag if any of them
   // were signed, since a small positive integer could be represented either way but a signed value
   // must be encoded differently.
+  //
+  // This could be enhanced by using ConstValues directly. See the enumeration header file for more.
   llvm::Optional<uint64_t> enumerator_value;
   bool is_signed = false;
   enumerator_decoder.AddCustom(llvm::dwarf::DW_AT_const_value,
@@ -937,6 +944,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
   llvm::Optional<bool> artificial;
   decoder.AddBool(llvm::dwarf::DW_AT_artificial, &artificial);
 
+  ConstValue const_value;
+  decoder.AddConstValue(llvm::dwarf::DW_AT_const_value, &const_value);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -966,6 +976,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
   if (artificial)
     variable->set_artificial(*artificial);
   variable->set_location(std::move(location));
+  variable->set_const_value(std::move(const_value));
 
   if (!variable->parent()) {
     // Set the parent symbol when it hasn't already been set. As with functions, we always want the

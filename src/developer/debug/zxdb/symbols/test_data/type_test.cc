@@ -33,6 +33,11 @@ struct Struct : public Base1, private Base2 {
   Struct* member_b;
   const void* v;
 
+  static constexpr int kConstInt = -2;
+
+  // This is a "long double" which forces x86 to use 80-bits and a different encoding.
+  static constexpr long double kConstLongDouble = 3.14;
+
   int MyFunc(char p) { return 1; }
 };
 

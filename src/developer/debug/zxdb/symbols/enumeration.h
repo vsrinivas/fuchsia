@@ -14,7 +14,14 @@
 
 namespace zxdb {
 
-// The "value" types of the enum are stored in uint64_t
+// The "value" types of the enum are stored in uint64_t.
+//
+// FUTURE ENHANCEMENTS
+// -------------------
+// This seems to be sufficient for now but DWARF can express more. If this is too limiting or
+// ambiguous, we should probably enhance ConstValue (which is how DWARF stores the enumeration
+// values in the first place) to have the capabilities we want (better number support, comparison
+// operators) and use that directly from here.
 class Enumeration final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().

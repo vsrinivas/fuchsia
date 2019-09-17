@@ -22,6 +22,14 @@ class Variable : public Value {
   // Symbol overrides.
   const Variable* AsVariable() const override;
 
+  // Holds the location of the variable value if it has a memory or register value. The symbols
+  // could also be encoded to express a constant value as a DWARF expression which will be stored
+  // here.
+  //
+  // If value is constant and optimized out, Value::const_value() (on the base class) may contain
+  // the literal value instead and there will be no location.
+  //
+  // Generally one should check const_value().has_value() and fall back to location() if not.
   const VariableLocation& location() const { return location_; }
   void set_location(VariableLocation loc) { location_ = std::move(loc); }
 
