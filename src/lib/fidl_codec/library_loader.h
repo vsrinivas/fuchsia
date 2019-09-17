@@ -416,10 +416,17 @@ class Library {
 class LibraryLoader {
  public:
   friend class Library;
+  // Creates a LibraryLoader populated by the given library streams.
   LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
+
+  // Creates a LibraryLoader with no libraries
+  LibraryLoader() = default;
 
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;
+
+  // Adds a single library (read from library_stream) to this Loader. Sets err as appropriate.
+  void Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err);
 
   // Returns a pointer to a set of methods that have this ordinal.  There may be
   // more than one if the method was composed into multiple protocols.  For

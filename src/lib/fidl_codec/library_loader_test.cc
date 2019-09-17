@@ -42,6 +42,33 @@ TEST(LibraryLoader, LoadSimple) {
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
 
+// Makes sure that loading works when you load one IR at a time, instead of in a bunch.
+TEST(LibraryLoader, LoadSimpleOneAtATime) {
+  fidl_codec_test::ExampleMap examples;
+  LibraryLoader loader;
+  LibraryReadError err;
+  for (const auto& element : examples.map()) {
+    std::unique_ptr<std::istream> file =
+        std::make_unique<std::istringstream>(std::istringstream(element.second));
+    loader.Add(&file, &err);
+    ASSERT_EQ(LibraryReadError::kOk, err.value);
+  }
+
+  Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
+
+  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
+  const Interface* found_interface = nullptr;
+  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+
+  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
+
+  std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
+  const InterfaceMethod* found_method = nullptr;
+  found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
+
+  ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
+}
+
 // Ensure that, if you load two libraries with the same name, the last one in the list is the one
 // that sticks.
 TEST(LibraryLoader, LoadSecondWins) {

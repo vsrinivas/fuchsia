@@ -334,19 +334,25 @@ LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library
   // Go backwards through the streams; we refuse to load the same library twice, and the last one
   // wins.
   for (auto i = library_streams->rbegin(); i != library_streams->rend(); ++i) {
-    const auto& stream = *i;
-    std::string ir(std::istreambuf_iterator<char>(*stream), {});
-    if (stream->fail()) {
-      err->value = LibraryReadError ::kIoError;
-      return;
-    }
-    Add(ir, err);
+    Add(&(*i), err);
     if (err->value != LibraryReadError::kOk) {
-      FXL_LOG(ERROR) << "JSON parse error: "
-                     << rapidjson::GetParseError_En(err->parse_result.Code()) << " at offset "
-                     << err->parse_result.Offset();
       return;
     }
+  }
+}
+
+void LibraryLoader::Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err) {
+  err->value = LibraryReadError::kOk;
+  std::string ir(std::istreambuf_iterator<char>(**library_stream), {});
+  if ((*library_stream)->fail()) {
+    err->value = LibraryReadError ::kIoError;
+    return;
+  }
+  Add(ir, err);
+  if (err->value != LibraryReadError::kOk) {
+    FXL_LOG(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(err->parse_result.Code())
+                   << " at offset " << err->parse_result.Offset();
+    return;
   }
 }
 
