@@ -77,6 +77,28 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
     hub_test_hook
 }
 
+async fn verify_directory_contents(
+    hub_test_hook: &Arc<HubTestHook>,
+    hub_proxy: &DirectoryProxy,
+    directory_path: &str,
+    expected_contents: Vec<&str>,
+) -> Result<(), Error> {
+    let full_path = format!("/hub/{}", directory_path);
+
+    // Verify from the child's perspective
+    assert_eq!(
+        hub_directory_listing(expected_contents.clone()),
+        hub_test_hook.observe(&full_path).await
+    );
+
+    // Verify from the global view
+    let children_dir_proxy =
+        io_util::open_directory(&hub_proxy, &PathBuf::from(directory_path), OPEN_RIGHT_READABLE)?;
+    assert_eq!(expected_contents, list_directory(&children_dir_proxy).await);
+
+    Ok(())
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {
     let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm";
@@ -125,7 +147,7 @@ async fn test() -> Result<(), Error> {
         test_helpers::list_directory(&svc_dir_proxy).await
     );
 
-    // Verify that the 'pkg' directory is avaialble.
+    // Verify that the 'pkg' directory is available.
     let pkg_dir = format!("{}/{}", in_dir, "pkg");
     let pkg_dir_proxy =
         io_util::open_directory(&hub_proxy, &PathBuf::from(pkg_dir), OPEN_RIGHT_READABLE)?;
@@ -189,30 +211,41 @@ async fn dynamic_children_test() -> Result<(), Error> {
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
     // Verify that collection_realm can see the child in the Hub
-    assert_eq!(
-        hub_directory_listing(vec!["coll:simple_instance:1"]),
-        hub_test_hook.observe("/hub/children").await
-    );
-
-    // Verify that the global view also shows one dynamic child for the component.
-    let children_dir_proxy =
-        io_util::open_directory(&hub_proxy, &PathBuf::from("children"), OPEN_RIGHT_READABLE)?;
-    assert_eq!(vec!["coll:simple_instance:1"], list_directory(&children_dir_proxy).await);
+    verify_directory_contents(
+        &hub_test_hook,
+        &hub_proxy,
+        "children",
+        vec!["coll:simple_instance:1"],
+    )
+    .await?;
 
     // Verify that the dynamic child's hub (as seen by collection_realm) has the directories we expect
     // i.e. "children" and "url" but no "exec" because the child has not been bound.
-    assert_eq!(
-        hub_directory_listing(vec!["children", "url"]),
-        hub_test_hook.observe("/hub/children/coll:simple_instance:1").await
-    );
-
-    // Verify that the external view also shows the same hub for the dynamic child.
-    let children_dir_proxy = io_util::open_directory(
+    verify_directory_contents(
+        &hub_test_hook,
         &hub_proxy,
-        &PathBuf::from("children/coll:simple_instance:1"),
-        OPEN_RIGHT_READABLE,
-    )?;
-    assert_eq!(vec!["children", "url"], list_directory(&children_dir_proxy).await);
+        "children/coll:simple_instance:1",
+        vec!["children", "url"],
+    )
+    .await?;
+
+    // Verify that before binding, the dynamic child's children are invisible
+    verify_directory_contents(
+        &hub_test_hook,
+        &hub_proxy,
+        "children/coll:simple_instance:1/children",
+        vec![],
+    )
+    .await?;
+
+    // Verify that after binding, the dynamic child's children are visible
+    verify_directory_contents(
+        &hub_test_hook,
+        &hub_proxy,
+        "children/coll:simple_instance:1/children",
+        vec!["child_1:0", "child_2:0"],
+    )
+    .await?;
 
     Ok(())
 }
@@ -230,44 +263,20 @@ async fn grandchild_of_lazy_child_is_not_shown() -> Result<(), Error> {
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
     // Verify that parent can see the child in the Hub
-    assert_eq!(
-        hub_directory_listing(vec!["child:0"]),
-        hub_test_hook.observe("/hub/children").await
-    );
-
-    // Verify that the global view also shows one child for the component.
-    let children_dir_proxy =
-        io_util::open_directory(&hub_proxy, &PathBuf::from("children"), OPEN_RIGHT_READABLE)?;
-    assert_eq!(vec!["child:0"], list_directory(&children_dir_proxy).await);
+    verify_directory_contents(&hub_test_hook, &hub_proxy, "children", vec!["child:0"]).await?;
 
     // Verify that the child's hub (as seen by parent) has the directories we expect
     // i.e. "children" and "url" but no "exec" because the child has not been bound.
-    assert_eq!(
-        hub_directory_listing(vec!["children", "url"]),
-        hub_test_hook.observe("/hub/children/child:0").await
-    );
-
-    // Verify that the external view also shows the same hub for the child.
-    let children_dir_proxy = io_util::open_directory(
+    verify_directory_contents(
+        &hub_test_hook,
         &hub_proxy,
-        &PathBuf::from("children/child:0"),
-        OPEN_RIGHT_READABLE,
-    )?;
-    assert_eq!(vec!["children", "url"], list_directory(&children_dir_proxy).await);
+        "children/child:0",
+        vec!["children", "url"],
+    )
+    .await?;
 
     // Verify that the grandchild is not shown because the child is lazy
-    assert_eq!(
-        hub_directory_listing(vec![]),
-        hub_test_hook.observe("/hub/children/child:0/children").await
-    );
-
-    // Verify that the external view also shows the same hub for the dynamic child.
-    let children_dir_proxy = io_util::open_directory(
-        &hub_proxy,
-        &PathBuf::from("children/child:0/children"),
-        OPEN_RIGHT_READABLE,
-    )?;
-    let res: Vec<&str> = vec![];
-    assert_eq!(res, list_directory(&children_dir_proxy).await);
+    verify_directory_contents(&hub_test_hook, &hub_proxy, "children/child:0/children", vec![])
+        .await?;
     Ok(())
 }

@@ -6,6 +6,8 @@
 
 use {
     failure::{Error, ResultExt},
+    fidl::endpoints,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
@@ -55,6 +57,22 @@ async fn main() -> Result<(), Error> {
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
     report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1").await?;
+
+    // Read the children of the dynamic child and pass the results to the integration test
+    // via HubReport
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1/children").await?;
+
+    // Bind to the dynamic child
+    let mut child_ref = fsys::ChildRef {
+        name: "simple_instance".to_string(),
+        collection: Some("coll".to_string()),
+    };
+    let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    realm.bind_child(&mut child_ref, server_end).await?.expect("failed to bind to child");
+
+    // Read the children of the dynamic child and pass the results to the integration test
+    // via HubReport
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1/children").await?;
 
     Ok(())
 }
