@@ -41,6 +41,11 @@ pub struct Arguments {
     /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
     /// launcher for the built-in ELF component runner. The root component can additionally
     /// use and/or offer this service using '/builtin/fuchsia.process.Launcher' from realm.
+    // This argument exists because the built-in process launcher *only* works when
+    // component_manager runs under a job that has ZX_POL_NEW_PROCESS set to allow, like the root
+    // job. Otherwise, the component_manager process cannot directly create process through
+    // zx_process_create. When we run component_manager elsewhere, like in test environments, it
+    // has to use the fuchsia.process.Launcher service provided through its namespace instead.
     pub use_builtin_process_launcher: bool,
 
     /// If true, component_manager will serve an instance of fuchsia.security.resource.Vmex to the
