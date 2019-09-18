@@ -51,11 +51,12 @@ pub struct Cell {
     pub cover: i8,
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Color {
-    pub red: u8,
-    pub green: u8,
     pub blue: u8,
+    pub green: u8,
+    pub red: u8,
     pub alpha: u8,
 }
 
@@ -429,20 +430,20 @@ impl Painter {
 
     unsafe fn write_row<B: ColorBuffer>(buffer: &mut B, index: usize, row: &[Color]) {
         match buffer.pixel_format() {
-            PixelFormat::RGBA8888 => buffer.write_color_at(index, row),
-            PixelFormat::BGRA8888 => {
+            PixelFormat::RGBA8888 => {
                 let mut new_row = [ZERO; TILE_SIZE];
                 for (i, color) in row.iter().enumerate() {
                     new_row[i] = Color {
-                        red: color.blue,
-                        green: color.green,
                         blue: color.red,
+                        green: color.green,
+                        red: color.blue,
                         alpha: color.alpha,
                     }
                 }
 
                 buffer.write_color_at(index, &new_row[0..row.len()]);
             }
+            PixelFormat::BGRA8888 => buffer.write_color_at(index, row),
             PixelFormat::RGB565 => {
                 let mut new_row = [0u16; TILE_SIZE];
                 for (i, color) in row.iter().enumerate() {
@@ -742,6 +743,75 @@ mod tests {
                 0xFE00_0000,
                 0xFF00_0000,
             ],
+        );
+    }
+
+    #[derive(Clone)]
+    struct DebugBuffer {
+        buffer: [u8; 4],
+        format: PixelFormat,
+    }
+
+    impl DebugBuffer {
+        fn new(format: PixelFormat) -> Self {
+            Self { buffer: [0; 4], format }
+        }
+
+        fn write(&mut self, color: Color) -> [u8; 4] {
+            unsafe {
+                Painter::write_row(self, 0, &[color]);
+            }
+            self.buffer
+        }
+    }
+
+    impl ColorBuffer for DebugBuffer {
+        fn pixel_format(&self) -> PixelFormat {
+            self.format
+        }
+
+        fn stride(&self) -> usize {
+            0
+        }
+
+        unsafe fn write_at(&mut self, _: usize, mut src: *const u8, len: usize) {
+            for i in 0..4.min(len) {
+                self.buffer[i] = src.read();
+                src = src.add(1);
+            }
+        }
+    }
+
+    #[test]
+    fn pixel_formats() {
+        assert_eq!(
+            DebugBuffer::new(PixelFormat::RGBA8888).write(Color {
+                red: 10,
+                green: 20,
+                blue: 30,
+                alpha: 255,
+            }),
+            [10, 20, 30, 255]
+        );
+
+        assert_eq!(
+            DebugBuffer::new(PixelFormat::BGRA8888).write(Color {
+                red: 10,
+                green: 20,
+                blue: 30,
+                alpha: 255,
+            }),
+            [30, 20, 10, 255]
+        );
+
+        assert_eq!(
+            DebugBuffer::new(PixelFormat::RGB565).write(Color {
+                red: 10,
+                green: 20,
+                blue: 30,
+                alpha: 255,
+            }),
+            [163, 8, 0, 0]
         );
     }
 }
