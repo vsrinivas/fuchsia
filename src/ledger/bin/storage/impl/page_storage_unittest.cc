@@ -196,6 +196,10 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
 
   std::set<std::pair<ObjectIdentifier, RetrievedObjectType>> object_requests;
 
+  void set_on_get_object(fit::function<void(fit::closure)> callback) {
+    on_get_object_ = std::move(callback);
+  }
+
  private:
   fit::function<void(fit::closure)> on_get_object_;
   std::map<ObjectIdentifier, std::string> digest_to_value_;
@@ -233,6 +237,9 @@ class ControlledLevelDb : public Db {
       }
       if (controller_->fail_batch_execute_after_ > 0) {
         controller_->fail_batch_execute_after_--;
+      }
+      if (controller_->on_execute_) {
+        controller_->on_execute_();
       }
       return batch_->Execute(handler);
     }
@@ -300,11 +307,15 @@ class ControlledLevelDb : public Db {
     return leveldb_.GetIteratorAtPrefix(handler, prefix, iterator);
   }
 
+  // Sets a callback triggered before each |Batch::Execute|.
+  void set_on_execute(fit::closure callback) { on_execute_ = std::move(callback); }
+
  private:
   // Number of calls to |Batch::Execute()| before they start failing. If
   // negative, |Batch::Execute()| calls will never fail.
   int fail_batch_execute_after_ = -1;
   LevelDb leveldb_;
+  fit::closure on_execute_;
 };
 
 class PageStorageTest : public StorageTest {
@@ -1206,6 +1217,62 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   });
 }
 
+TEST_F(PageStorageTest, AddHugeObjectFromLocal) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    // Create data large enough to be split into pieces (and trigger potential garbage-collection
+    // bugs: the more pieces, the more likely we are to hit them).
+    ObjectData data = MakeObject(RandomString(environment_.random(), 1 << 20));
+    ASSERT_FALSE(GetObjectDigestInfo(data.object_identifier.object_digest()).is_inlined());
+    ASSERT_FALSE(GetObjectDigestInfo(data.object_identifier.object_digest()).is_chunk());
+
+    // Build a set of the pieces |data| is made of.
+    std::set<ObjectDigest> digests;
+    ForEachPiece(data.value, ObjectType::BLOB, &fake_factory_,
+                 [&digests](std::unique_ptr<const Piece> piece) {
+                   ObjectDigest digest = piece->GetIdentifier().object_digest();
+                   if (GetObjectDigestInfo(digest).is_inlined()) {
+                     return;
+                   }
+                   digests.insert(digest);
+                 });
+
+    // Trigger deletion of *all* pieces from storage immediately before *any* of them is written to
+    // disk. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
+    // enough before writing them to disk.
+    leveldb_->set_on_execute([this, digests = std::move(digests)]() {
+      for (const auto& digest : digests) {
+        PageStorageImplAccessorForTest::DeleteObject(
+            storage_, digest,
+            [digest = digest](Status status, ObjectReferencesAndPriority references) {
+              EXPECT_NE(status, Status::OK)
+                  << "DeleteObject succeeded; missing a live reference for " << digest;
+            });
+      }
+    });
+
+    bool called;
+    Status status;
+    ObjectIdentifier object_identifier;
+    storage_->AddObjectFromLocal(
+        ObjectType::BLOB, data.ToDataSource(), {},
+        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(object_identifier, data.object_identifier);
+
+    std::unique_ptr<const Object> object =
+        TryGetObject(object_identifier, PageStorage::Location::Local());
+    ASSERT_NE(object, nullptr);
+    EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
+    fxl::StringView object_data;
+    ASSERT_EQ(object->GetData(&object_data), Status::OK);
+    EXPECT_EQ(convert::ToString(object_data), data.value);
+    EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(object_identifier, false));
+  });
+}
+
 TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data = MakeObject("Some data");
@@ -1901,8 +1968,8 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   int64_t offset = 28672;
   int64_t size = 128;
 
-  FakeSyncDelegate sync;
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
+  FakeSyncDelegate sync;
   ObjectIdentifier object_identifier =
       ForEachPiece(data_str, ObjectType::BLOB, &fake_factory_,
                    [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
@@ -1914,6 +1981,20 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
                      sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
+  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved from
+  // cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
+  // enough before writing them to disk.
+  sync.set_on_get_object([this, &digest_to_identifier](fit::closure callback) {
+    callback();
+    for (const auto& [digest, identifier] : digest_to_identifier) {
+      PageStorageImplAccessorForTest::DeleteObject(
+          storage_, digest,
+          [digest = digest](Status status, ObjectReferencesAndPriority references) {
+            EXPECT_NE(status, Status::OK)
+                << "DeleteObject succeeded; missing a live reference for " << digest;
+          });
+    }
+  });
   storage_->SetSyncDelegate(&sync);
 
   // Add a commit lazily referencing the object to keep it alive once downloaded.
@@ -2153,8 +2234,8 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   // Split the tree node content into pieces, add them to a SyncDelegate to be
   // retrieved by GetObject, and store inbound piece references into a map to
   // check them later.
-  FakeSyncDelegate sync;
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
+  FakeSyncDelegate sync;
   std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
   ObjectIdentifier object_identifier = ForEachPiece(
       data_str, ObjectType::TREE_NODE, &fake_factory_,
@@ -2177,6 +2258,20 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
         sync.AddObject(std::move(piece_identifier), piece->GetData().ToString());
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
+  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved from
+  // cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
+  // enough before writing them to disk.
+  sync.set_on_get_object([this, &digest_to_identifier](fit::closure callback) {
+    callback();
+    for (const auto& [digest, identifier] : digest_to_identifier) {
+      PageStorageImplAccessorForTest::DeleteObject(
+          storage_, digest,
+          [digest = digest](Status status, ObjectReferencesAndPriority references) {
+            EXPECT_NE(status, Status::OK)
+                << "DeleteObject succeeded; missing a live reference for " << digest;
+          });
+    }
+  });
   storage_->SetSyncDelegate(&sync);
 
   // Add object references to the inbound references map.

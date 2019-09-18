@@ -176,26 +176,26 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)> callback);
 
-  // Reads the content of a piece into a provided VMO. Takes into account the
-  // global offset and size in order to be able to read only the requested part
-  // of an object.
-  // |global_offset| is the offset from the beginning of the full object in
-  // bytes. |global_size| is the maximum size requested to be read into the vmo.
-  // |current_position| is the position of the currently read piece (defined by
-  // |object_identifier|) in the full object. |object_size| is the size of the
-  // currently read piece.
-  // |location| is either LOCAL and NETWORK and defines the behavior in the case
-  // where the object is not found locally.
+  // Reads the content of a piece into a provided VMO. Takes into account the global offset and size
+  // in order to be able to read only the requested part of an object.
+  // |global_offset| is the offset from the beginning of the full object in bytes. |global_size| is
+  // the maximum size requested to be read into the vmo. |current_position| is the position of the
+  // currently read piece (defined by |object_identifier|) in the full object. |object_size| is the
+  // size of the currently read piece.
+  // |location| is either LOCAL and NETWORK and defines the behavior in the case where the object is
+  // not found locally.
   void FillBufferWithObjectContent(const Piece& piece, fsl::SizedVmo vmo, int64_t global_offset,
                                    int64_t global_size, int64_t current_position,
                                    int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
 
-  // Treating the |piece| as FileIndex, initializes a VMO of a needed size and
-  // calls FillBufferWithObjectContent on it.
-  // |offset| and |max_size| are used to denote partial mapping (see
-  // GetObjectPart for details).
+  // Treating the |piece| as FileIndex, initializes a VMO of a needed size and calls
+  // FillBufferWithObjectContent on it.
+  // |offset| and |max_size| are used to denote partial mapping (see GetObjectPart for details).
+  // This method fills |child_identifiers|, if not nullptr, with the identifiers of the direct
+  // children of |piece|.
   void GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size, Location location,
+                      std::vector<ObjectIdentifier>* child_identifiers,
                       fit::function<void(Status, fsl::SizedVmo)> callback);
 
   // Notifies the registered watchers of |new_commits|.

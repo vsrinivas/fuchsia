@@ -392,6 +392,8 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
           callback(Status::INTERNAL_ERROR, ObjectIdentifier());
           return;
         }
+        // Container to hold intermediate split pieces alive until the root piece has been written.
+        auto live_pieces = std::make_unique<std::vector<ObjectIdentifier>>();
         SplitDataSource(
             managed_data_source_ptr, object_type,
             [this](ObjectDigest object_digest) {
@@ -401,8 +403,9 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
             },
             std::move(chunking_permutation),
             [this, waiter, managed_data_source = std::move(managed_data_source),
-             tree_references = std::move(tree_references), callback = std::move(callback)](
-                IterationStatus status, std::unique_ptr<Piece> piece) mutable {
+             tree_references = std::move(tree_references), live_pieces = std::move(live_pieces),
+             callback = std::move(callback)](IterationStatus status,
+                                             std::unique_ptr<Piece> piece) mutable {
               if (status == IterationStatus::ERROR) {
                 callback(Status::IO_ERROR, ObjectIdentifier());
                 return;
@@ -426,6 +429,8 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
                   piece_references.insert(std::make_move_iterator(tree_references.begin()),
                                           std::make_move_iterator(tree_references.end()));
                 }
+                // Keep the piece alive through the shared container before yielding it to AddPiece.
+                live_pieces->push_back(piece->GetIdentifier());
                 AddPiece(std::move(piece), ChangeSource::LOCAL, IsObjectSynced::NO,
                          std::move(piece_references), waiter->NewCallback());
               }
@@ -434,8 +439,11 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
 
               FXL_DCHECK(status == IterationStatus::DONE);
               waiter->Finalize([identifier = std::move(identifier),
+                                live_pieces = std::move(live_pieces),
                                 callback = std::move(callback)](Status status) mutable {
                 callback(status, std::move(identifier));
+                // At this point, all pieces have been written and we can release |live_pieces|
+                // safely.
               });
             });
       });
@@ -561,14 +569,18 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
         }
 
         FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
-        GetIndexObject(*piece, offset, max_size, location, std::move(callback));
+        // We do not need to keep children pieces alive with in-memory references because we have
+        // already the root piece to disk, creating on-disk references.
+        GetIndexObject(*piece, offset, max_size, location, /*child_identifiers=*/nullptr,
+                       std::move(callback));
       });
 }
 
 void PageStorageImpl::GetObject(
     ObjectIdentifier object_identifier, Location location,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  auto traced_callback = TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
+  fit::function<void(Status, std::unique_ptr<const Object>)> traced_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
   FXL_DCHECK(IsTokenValid(object_identifier));
   GetOrDownloadPiece(
@@ -591,11 +603,23 @@ void PageStorageImpl::GetObject(
         }
 
         FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+        // A container which will be filled with the identifiers of the children of |piece|, to keep
+        // them alive until write_callback has completed, ie. until |piece| has been written to
+        // disk with its references and |callback| is called.
+        std::vector<ObjectIdentifier>* child_identifiers = nullptr;
+        if (write_callback) {
+          auto keep_alive = std::make_unique<std::vector<ObjectIdentifier>>();
+          child_identifiers = keep_alive.get();
+          callback = [keep_alive = std::move(keep_alive), callback = std::move(callback)](
+                         Status status, std::unique_ptr<const Object> object) {
+            callback(status, std::move(object));
+          };
+        }
         // This reference remains valid as long as |piece| is valid. The latter
         // is owned by the final callback passed to GetIndexObject, so it
         // outlives the former.
         const Piece& piece_ref = *piece;
-        GetIndexObject(piece_ref, 0, -1, location,
+        GetIndexObject(piece_ref, 0, -1, location, child_identifiers,
                        [piece = std::move(piece), object_identifier,
                         write_callback = std::move(write_callback),
                         callback = std::move(callback)](Status status, fsl::SizedVmo vmo) mutable {
@@ -937,6 +961,7 @@ std::string PageStorageImpl::GetEntryIdForMerge(fxl::StringView entry_name,
 
 void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size,
                                      Location location,
+                                     std::vector<ObjectIdentifier>* child_identifiers,
                                      fit::function<void(Status, fsl::SizedVmo)> callback) {
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
 
@@ -966,6 +991,15 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
     FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
+  }
+
+  // Keep the children of the index object alive before getting them recursively in
+  // FillBufferWithObjectContent.
+  if (child_identifiers) {
+    for (const auto* child : *file_index->children()) {
+      child_identifiers->push_back(
+          ToObjectIdentifier(child->object_identifier(), &object_identifier_factory_));
+    }
   }
 
   FillBufferWithObjectContent(
@@ -1029,8 +1063,6 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, fsl::Sized
 
   // Iterate over the children pieces, recursing into the ones corresponding to
   // the part of the object to be copied to the VMO.
-  // TODO(LE-702): ensure that all intermediate pieces are kept alive until the finalization
-  // callback has run, which will write the current piece to disk if necessary.
   int64_t sub_offset = 0;
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (const auto* child : *file_index->children()) {
@@ -1062,27 +1094,27 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, fsl::Sized
     // nodes.
     FXL_DCHECK(GetObjectDigestInfo(child_identifier.object_digest()).object_type ==
                ObjectType::BLOB);
-    GetOrDownloadPiece(child_identifier, location,
-                       [this, child_identifier, vmo = std::move(vmo_copy), global_offset,
-                        global_size, child_position, child_size = child->size(), location,
-                        child_callback = waiter->NewCallback()](
-                           Status status, std::unique_ptr<const Piece> child_piece,
-                           WritePieceCallback write_callback) mutable {
-                         if (status != Status::OK) {
-                           child_callback(status);
-                           return;
-                         }
-                         FXL_DCHECK(child_piece);
-                         // The |child_piece| is necessarily a blob, so it must have been read
-                         // from or written to disk already.
-                         FXL_DCHECK(!write_callback);
-                         FillBufferWithObjectContent(
-                             *child_piece, std::move(vmo), global_offset, global_size,
-                             child_position, child_size, location,
-                             [child_callback = std::move(child_callback)](Status status) mutable {
-                               child_callback(status);
-                             });
-                       });
+    GetOrDownloadPiece(
+        child_identifier, location,
+        [this, vmo = std::move(vmo_copy), global_offset, global_size, child_position,
+         child_size = child->size(), location, child_callback = waiter->NewCallback()](
+            Status status, std::unique_ptr<const Piece> child_piece,
+            WritePieceCallback write_callback) mutable {
+          if (status != Status::OK) {
+            child_callback(status);
+            return;
+          }
+          FXL_DCHECK(child_piece);
+          FXL_DCHECK(!write_callback);
+          // The |child_piece| is necessarily a blob, so it must have been read from
+          // or written to disk already. As such, its children will be kept alive by
+          // on-disk references when we get them recursively.
+          FillBufferWithObjectContent(
+              *child_piece, std::move(vmo), global_offset, global_size, child_position, child_size,
+              location, [child_callback = std::move(child_callback)](Status status) mutable {
+                child_callback(status);
+              });
+        });
     sub_offset += child->size();
   }
   waiter->Finalize(std::move(callback));

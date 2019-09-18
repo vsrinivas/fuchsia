@@ -571,6 +571,10 @@ void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source
             fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
         for (const ObjectId* object_id : *request->object_ids()) {
           storage::ObjectIdentifier identifier = ToObjectIdentifier(object_id, storage_);
+          // The identifier held by |object_responses| ensures that the piece will not be
+          // garbage-collected while we try to retrieve it along with its synchronisation status
+          // (therefore, if one of the calls returns NOT_FOUND, it means the piece was missing
+          // before we tried to get it, not in-between due to a race condition).
           object_responses.emplace_back(identifier);
           auto& response = object_responses.back();
           storage_->GetPiece(identifier, [callback = response_waiter->NewCallback(), &response](
@@ -596,8 +600,6 @@ void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source
                                       callback(ledger::Status::OK);
                                       return;
                                     }
-                                    // TODO(LE-788): there is a race-condition here, the piece may
-                                    // disappear while we're fetching it.
                                     response.is_synced = is_synced;
                                     callback(status);
                                   });
