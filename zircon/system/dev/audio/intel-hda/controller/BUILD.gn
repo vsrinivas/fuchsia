@@ -63,7 +63,6 @@ source_set("src") {
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/driver",
-    "$zx/system/ulib/fzl",
   ]
   public_deps = [
     "$zx/system/ulib/ddk",
@@ -94,6 +93,7 @@ test("controller_test") {
   sources = [
     "binary_decoder_test.cc",
     "intel-dsp-ipc-test.cc",
+    "intel-dsp-test.cc",
     "nhlt_test.cc",
   ]
   deps = [

@@ -91,6 +91,30 @@ TEST(BinaryDecoder, ReadStruct) {
   }
 }
 
+TEST(BinaryDecoder, ReadIntoPointerSuccess) {
+  struct MyStruct {
+    char a, b;
+  };
+
+  std::array<uint8_t, 2> correct_buffer = {1, 2};
+  BinaryDecoder decoderB{fbl::Span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
+  MyStruct value;
+  EXPECT_TRUE(decoderB.Read<MyStruct>(&value).ok());
+  EXPECT_EQ(value.a, 1);
+  EXPECT_EQ(value.b, 2);
+}
+
+TEST(BinaryDecoder, ReadIntoPointerFailure) {
+  struct MyStruct {
+    char a, b;
+  };
+
+  std::array<uint8_t, 1> small_buffer = {1};
+  BinaryDecoder decoderC{fbl::Span<uint8_t>(small_buffer.begin(), small_buffer.size())};
+  MyStruct value;
+  EXPECT_FALSE(decoderC.Read<MyStruct>(&value).ok());
+}
+
 TEST(BinaryDecoder, VarLengthRead) {
   struct VarLength {
     char size;
@@ -131,6 +155,41 @@ TEST(BinaryDecoder, VarLengthRead) {
     EXPECT_EQ(payload.size(), 1);
     EXPECT_EQ(payload.begin(), &buffer[2]);
   }
+}
+
+TEST(ParseUnpaddedString, Empty) {
+  char buff[2] = "";
+  EXPECT_EQ("", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, SingleChar) {
+  char buff[2] = "A";
+  EXPECT_EQ("A", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, ConstChar) {
+  const char buff[2] = "A";
+  EXPECT_EQ("A", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, FillArray) {
+  char buff[2] = {'A', 'A'};
+  EXPECT_EQ("AA", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, InvalidDataAfterNul) {
+  char buff[10] = "A\0BCDEF";
+  EXPECT_EQ("A", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, Uint8Bytes) {
+  uint8_t buff[2] = "A";
+  EXPECT_EQ("A", ParseUnpaddedString(buff));
+}
+
+TEST(ParseUnpaddedString, Uint8BytesFullWidth) {
+  uint8_t buff[3] = {'A', 'B', 'C'};
+  EXPECT_EQ("ABC", ParseUnpaddedString(buff));
 }
 
 }  // namespace

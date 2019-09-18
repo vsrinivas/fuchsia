@@ -62,11 +62,13 @@ class BinaryDecoder {
     return result;
   }
 
-  // Fetch a structure of type |T| from the buffer.
+  // Fetch a structure of type |T| from the buffer, and write it to |result|.
+  //
+  // |result| will contain unpacked data iff Status is ok.
   //
   // |T| should be a POD type that can be initialized via memcpy().
   template <typename T>
-  StatusOr<T> Read() {
+  Status Read(T* result) {
     static_assert(std::is_pod<T>::value, "Function only supports POD types.");
     StatusOr<fbl::Span<const uint8_t>> maybe_bytes = Read(sizeof(T));
     if (!maybe_bytes.ok()) {
@@ -74,8 +76,20 @@ class BinaryDecoder {
     }
     fbl::Span<const uint8_t> bytes = maybe_bytes.ValueOrDie();
     ZX_DEBUG_ASSERT(bytes.size_bytes() == sizeof(T));
+    memcpy(result, bytes.data(), sizeof(T));
+    return OkStatus();
+  }
+
+  // Fetch a structure of type |T| from the buffer.
+  //
+  // |T| should be a POD type that can be initialized via memcpy().
+  template <typename T>
+  StatusOr<T> Read() {
     T result;
-    memcpy(&result, bytes.data(), sizeof(T));
+    Status status = Read(&result);
+    if (!status.ok()) {
+      return status;
+    }
     return result;
   }
 
@@ -124,6 +138,20 @@ class BinaryDecoder {
  private:
   fbl::Span<const uint8_t> buffer_;
 };
+
+// Parse a string in an array, where the string may either:
+//
+//   * Be NUL terminated; or
+//   * Take up all the elements of the array, and have no NUL termination.
+//
+template <size_t BufferSize>
+fbl::String ParseUnpaddedString(const char (&s)[BufferSize]) {
+  return fbl::String(s, strnlen(s, BufferSize));
+}
+template <size_t BufferSize>
+fbl::String ParseUnpaddedString(const uint8_t (&s)[BufferSize]) {
+  return ParseUnpaddedString(reinterpret_cast<const char(&)[BufferSize]>(s));
+}
 
 }  // namespace audio::intel_hda
 

@@ -7,6 +7,8 @@
 #include <string.h>
 #include <zircon/errors.h>
 
+#include <cstring>
+#include <map>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -16,6 +18,7 @@
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/nhlt.h>
 
+#include "binary_decoder.h"
 #include "intel-dsp-code-loader.h"
 #include "intel-dsp-modules.h"
 #include "intel-hda-controller.h"
@@ -569,55 +572,85 @@ zx_status_t IntelDsp::Boot() {
   return ZX_OK;
 }
 
+// Parse the module list returned from the DSP.
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+    fbl::Span<const uint8_t> data) {
+  BinaryDecoder decoder(data);
+
+  // Parse returned module information.
+  StatusOr<ModulesInfo> header_or_err = decoder.Read<ModulesInfo>();
+  if (!header_or_err.ok()) {
+    return PrependMessage("Could not read DSP module information", header_or_err.status());
+  }
+
+  // Read modules.
+  uint32_t count = header_or_err.ValueOrDie().module_count;
+  std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules;
+  for (uint32_t i = 0; i < count; i++) {
+    // Parse the next module.
+    auto entry = std::make_unique<ModuleEntry>();
+    Status status = decoder.Read<ModuleEntry>(entry.get());
+    if (!status.ok()) {
+      return PrependMessage("Could not read module entry: ", status);
+    }
+
+    // Add it to the dictionary, ensuring it is not already there.
+    fbl::String name = ParseUnpaddedString(entry->name);
+    auto [_, success] = modules.insert({name, std::move(entry)});
+    if (!success) {
+      return Status(ZX_ERR_INTERNAL,
+                    fbl::StringPrintf("Duplicate module name: '%s'.\n", name.c_str()));
+    }
+  }
+
+  return modules;
+}
+
 zx_status_t IntelDsp::GetModulesInfo() {
   constexpr int kMaxModules = 32;
-  uint8_t data[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
-  size_t bytes_received;
+  uint8_t buffer[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
+  fbl::Span data{buffer};
 
   // Fetch module information.
-  zx_status_t result = DspLargeConfigGet(ipc_.get(), /*module_id=*/0, /*instance_id=*/0,
-                                         /*large_param_id=*/BaseFWParamType::MODULES_INFO,
-                                         fbl::Span<uint8_t>(data), &bytes_received);
+  size_t bytes_received;
+  zx_status_t result =
+      DspLargeConfigGet(ipc_.get(), /*module_id=*/0, /*instance_id=*/0,
+                        /*large_param_id=*/BaseFWParamType::MODULES_INFO, data, &bytes_received);
   if (result != ZX_OK) {
     return result;
   }
 
-  // Parse returned module information.
-  if (bytes_received < sizeof(ModulesInfo)) {
-    LOG(ERROR,
-        "DSP returned less data than expected when trying to fetch module info. Bytes returned: "
-        "%ld\n",
-        bytes_received);
-    return ZX_ERR_INTERNAL;
+  // Parse DSP's module list.
+  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules_or_err =
+      ParseModules(data.subspan(0, bytes_received));
+  if (!modules_or_err.ok()) {
+    LOG(ERROR, "Could not parse DSP's module list: %s\n",
+        modules_or_err.status().ToString().c_str());
+    return modules_or_err.status().code();
   }
-  auto info = reinterpret_cast<const ModulesInfo*>(data);
-  uint32_t count = info->module_count;
-  if (bytes_received < sizeof(ModulesInfo) + (count * sizeof(ModuleEntry))) {
-    LOG(ERROR,
-        "DSP returned less data than expected when trying to fetch module info. Bytes expected: "
-        "%ld, bytes returned: %ld\n",
-        sizeof(ModulesInfo) + (count * sizeof(ModuleEntry)), bytes_received);
-    return ZX_ERR_INTERNAL;
-  }
+  std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules = modules_or_err.ConsumeValueOrDie();
 
-  static constexpr const char* MODULE_NAMES[] = {
-      [COPIER] = "COPIER",
-      [MIXIN] = "MIXIN",
-      [MIXOUT] = "MIXOUT",
-  };
-  static_assert(countof(MODULE_NAMES) == countof(module_ids_), "invalid module id count\n");
-
-  for (uint32_t i = 0; i < count; i++) {
-    for (size_t j = 0; j < countof(MODULE_NAMES); j++) {
-      if (!strncmp(reinterpret_cast<const char*>(info->module_info[i].name), MODULE_NAMES[j],
-                   strlen(MODULE_NAMES[j]))) {
-        if (module_ids_[j] == MODULE_ID_INVALID) {
-          module_ids_[j] = info->module_info[i].module_id;
-        } else {
-          LOG(ERROR, "Found duplicate module id %hu\n", info->module_info[i].module_id);
-        }
-      }
+  // If tracing is enabled, print basic module information.
+  if (zxlog_level_enabled(TRACE)) {
+    LOG(TRACE, "DSP firmware has %ld module(s) configured.\n", modules.size());
+    for (const auto& elem : modules) {
+      LOG(TRACE, "  module %s (id=%d)\n", elem.first.c_str(), elem.second->module_id);
     }
+  }
+
+  // Fetch out the IDs of modules we care about.
+  struct DesiredModule {
+    const Module id;
+    const char* name;
+  };
+  for (DesiredModule desired :
+       {DesiredModule{COPIER, "COPIER"}, {MIXIN, "MIXIN"}, {MIXOUT, "MIXOUT"}}) {
+    auto it = modules.find(desired.name);
+    if (it == modules.end()) {
+      LOG(ERROR, "Could not find required DSP module '%s'.\n", desired.name);
+      return ZX_ERR_INTERNAL;
+    }
+    module_ids_[desired.id] = it->second->module_id;
   }
 
   return ZX_OK;

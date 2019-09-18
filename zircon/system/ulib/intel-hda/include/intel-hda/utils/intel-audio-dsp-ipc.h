@@ -550,7 +550,7 @@ struct ModuleEntry {
 
 struct ModulesInfo {
   uint32_t module_count;
-  ModuleEntry module_info[];
+  // Followed by "module_count" packed instances of "ModuleEntry".
 } __PACKED;
 
 // Base FW Pipeline List Info

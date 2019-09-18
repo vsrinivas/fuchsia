@@ -11,17 +11,20 @@
 #include <string.h>
 #include <threads.h>
 
+#include <map>
 #include <optional>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
 #include <fbl/mutex.h>
+#include <fbl/string.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/nhlt.h>
 #include <intel-hda/utils/status.h>
+#include <intel-hda/utils/status_or.h>
 #include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
@@ -172,6 +175,10 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   fbl::Mutex active_streams_lock_;
   IntelHDAStream::Tree active_streams_ TA_GUARDED(active_streams_lock_);
 };
+
+// Exposed for testing.
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+    fbl::Span<const uint8_t> data);
 
 }  // namespace intel_hda
 }  // namespace audio
