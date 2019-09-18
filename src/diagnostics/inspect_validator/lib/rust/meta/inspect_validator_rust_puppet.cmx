@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/inspect_validator_puppet"
+        "binary": "bin/inspect_validator_rust_puppet"
     },
     "sandbox": {
         "services": [

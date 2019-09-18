@@ -26,8 +26,8 @@ enum TestResult {
     ILLEGAL = 3;
 };
 
-/// The data in the VMO is tree-structured, so some nodes are under the root.
-/// ROOT_ID identifies the root node.
+/// The data in the VMO is tree-structured, and
+/// ROOT_ID identifies the (virtual) root node.
 const uint32 ROOT_ID = 0;
 
 /// Tells the puppet to create a Node with the given name, parentage, and ID

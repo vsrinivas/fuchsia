@@ -8,7 +8,6 @@ use {
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
     fuchsia_zircon::{self as zx, Vmo},
-    log::*,
 };
 
 const VMO_SIZE: u64 = 4096;
@@ -35,6 +34,7 @@ impl Puppet {
         Puppet::initialize_with_connection(Connection::start_and_connect(server_url).await?).await
     }
 
+    #[cfg(test)]
     pub async fn connect_local(local_fidl: validate::ValidateProxy) -> Result<Puppet, Error> {
         Puppet::initialize_with_connection(Connection::new(local_fidl, None)).await
     }
@@ -75,7 +75,6 @@ impl Connection {
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
         let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
         let out = self.fidl.initialize(params).await.context("Calling vmo init")?;
-        info!("Out from initialize: {:?}", out);
         let handle: Option<zx::Handle>;
         if let (Some(out_handle), _) = out {
             handle = Some(out_handle);
@@ -102,6 +101,7 @@ pub(crate) mod tests {
         fuchsia_async as fasync,
         fuchsia_inspect::{Inspector, IntProperty, Node},
         futures::prelude::*,
+        log::*,
         std::collections::HashMap,
     };
 
@@ -188,7 +188,7 @@ pub(crate) mod tests {
                 Ok(())
             }
                 .unwrap_or_else(|e: failure::Error| {
-                    error!("error running validate interface: {:?}", e)
+                    info!("error running validate interface: {:?}", e)
                 }),
         );
     }

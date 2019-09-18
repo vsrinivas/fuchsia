@@ -12,6 +12,7 @@ use {
     failure::{bail, Error},
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
+    structopt::StructOpt,
 };
 
 fn init_syslog() {
@@ -19,36 +20,26 @@ fn init_syslog() {
     debug!("Driver did init logger");
 }
 
-// TBD whether to launch driver from test or from main.
-fn main() {
+#[derive(StructOpt, Debug)]
+/// Validate Inspect VMO formats written by 'puppet' programs controlled by
+/// this Validator program and exercising Inspect library implementations.
+struct Opt {
+    /// Required (positional) arg(s): The URL(s) of the puppet(s).
+    #[structopt()]
+    puppet_urls: Vec<String>,
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     init_syslog();
-    println!("Hello, world!");
-    info!("Hi World!")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_main() -> Result<(), Error> {
-        crate::init_syslog();
-        run_all_puppets().await
-    }
-}
-
-async fn run_all_puppets() -> Result<(), Error> {
     let mut results = results::Results::new();
-    // There will be a puppet for each Inspect library being validated.
-    launch_and_run_puppet(
-        "fuchsia-pkg://fuchsia.com/inspect_validator_puppet_rust\
-         #meta/inspect_validator_puppet_rust.cmx",
-        &mut results,
-    )
-    .await?;
-    info!("Result: {:?}", results.to_json());
+    let args = Opt::from_args();
+    println!("Puppet URLs {:?}", args.puppet_urls);
+    if args.puppet_urls.len() == 0 {
+        bail!("At least one component URL is required.");
+    }
+    run_all_puppets(args.puppet_urls, &mut results).await?;
     println!("{}", results.to_json());
-    println!("**DONE**");
     if results.failed() {
         bail!("A test failed")
     } else {
@@ -56,20 +47,28 @@ async fn run_all_puppets() -> Result<(), Error> {
     }
 }
 
+async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) -> Result<(), Error> {
+    for url in urls {
+        launch_and_run_puppet(&url, results).await?;
+    }
+    Ok(())
+}
+
 // Coming soon: Quirks (e.g. are duplicate names replaced)
 async fn launch_and_run_puppet(
     server_url: &str,
     results: &mut results::Results,
 ) -> Result<(), Error> {
-    info!("URL string {}", server_url);
     let trials = trials::trial_set();
-    if let Ok(mut puppet) = puppet::Puppet::connect(server_url).await {
-        match runner::run(&mut puppet, trials, results).await {
+    match puppet::Puppet::connect(server_url).await {
+        Ok(mut puppet) => match runner::run(&mut puppet, trials, results).await {
             Err(e) => results.error(format!("Test failed: {}", e)),
             _ => {}
-        }
-    } else {
-        results.error(format!("Failed to connect - check logs - trying puppet {}.", server_url));
+        },
+        Err(e) => results.error(format!(
+            "Failed to form Puppet - error {:?} - check logs - trying puppet {}.",
+            e, server_url
+        )),
     }
     Ok(())
 }

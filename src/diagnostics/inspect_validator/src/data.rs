@@ -15,13 +15,15 @@ use {
     },
     fuchsia_zircon::Vmo,
     num_derive::{FromPrimitive, ToPrimitive},
-    num_traits::ToPrimitive,
     std::{
         cmp::min,
         collections::{HashMap, HashSet},
         convert::TryFrom,
     },
 };
+
+#[cfg(test)]
+use num_traits::ToPrimitive;
 
 /// A local store of Inspect-like data which can be built by Action or filled
 /// from a VMO.
@@ -30,7 +32,6 @@ use {
 /// properties with the same name, and does not truncate any data or names.
 #[derive(Debug)]
 pub struct Data {
-    root: u32,
     nodes: HashMap<u32, Node>,
     properties: HashMap<u32, Property>,
 }
@@ -66,18 +67,10 @@ pub struct Data {
 //   hold the hierarchical information; instead, each Node contains a HashSet of
 //   the keys of its children and properties.
 //
-// There's another wrinkle. Validator assumes that every valid VMO will contain
-// exactly one highest-level Node, with parent index of 0 and name of "root".
-// This is the "root" node that's obtained from the Inspect API, and Nodes and
-// Properties are added under it.
-//   In a Data scanned from a VMO, the keys are the indexes of the Blocks in the VMO.
-// So the "root" node will typically have a key of 2 (but this is not required).
-//   In a Data built from Actions, the Actions specify "add under root" as
-// "parent = 0" and thus the "root" node is at key 0 and is added automatically
-// before any Actions are applied.
-//   To make things just a bit more confusing, the ScannedData of a valid VMO
-// will have a non-validated ScannedNode appearing at key 0 which points to the
-// real "root" node. (The ScannedNode at key 0 must have exactly 1 child and 0 properties.)
+// In both Data-from-Actions and Data-from-VMO, the "root" node is virtual; nodes
+// and properties with a "parent" ID of 0 are directly under the "root" of the tree.
+// A placeholder Node is placed at index 0 upon creation to hold the real Nodes and
+// properties added during scanning VMO or processing Actions.
 
 #[derive(Debug)]
 struct Node {
@@ -266,7 +259,7 @@ impl Data {
 
     /// Generates a string fully representing the Inspect data.
     pub fn to_string(&self) -> String {
-        if let Some(node) = self.nodes.get(&self.root) {
+        if let Some(node) = self.nodes.get(&0) {
             node.to_string(&"".to_owned(), self)
         } else {
             "No root node; internal error\n".to_owned()
@@ -274,9 +267,9 @@ impl Data {
     }
 
     /// This creates a new Data. Note that the standard "root" node of the VMO API
-    /// is the index-0 node added here.
+    /// corresponds to the index-0 node added here.
     pub fn new() -> Data {
-        let mut ret = Data { root: 0, nodes: HashMap::new(), properties: HashMap::new() };
+        let mut ret = Data { nodes: HashMap::new(), properties: HashMap::new() };
         ret.nodes.insert(
             0,
             Node {
@@ -292,6 +285,7 @@ impl Data {
     // ***** These functions load from a VMO or byte array.
 
     /// Loads the Inspect tree data from a byte array in Inspect file format.
+    #[cfg(test)]
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Data, Error> {
         let snapshot = ireader::snapshot::Snapshot::try_from(bytes);
         match snapshot {
@@ -328,15 +322,7 @@ impl Data {
                 Err(error) => return Err(error),
             }
         }
-        let scanned_base = objects.get_node(ROOT_ID)?;
-        if scanned_base.children.len() != 1 {
-            bail!("Incorrect number of root nodes: {}", scanned_base.children.len());
-        }
-        if scanned_base.properties.len() != 0 {
-            bail!("Root properties are illegal but there are {}", scanned_base.properties.len());
-        }
-        let root_index = scanned_base.children.iter().next().unwrap();
-        let (mut new_nodes, mut new_properties) = objects.make_valid_node_tree(*root_index)?;
+        let (mut new_nodes, mut new_properties) = objects.make_valid_node_tree(ROOT_ID)?;
         let mut nodes = HashMap::new();
         for (node, id) in new_nodes.drain(..) {
             nodes.insert(id, node);
@@ -345,7 +331,7 @@ impl Data {
         for (property, id) in new_properties.drain(..) {
             properties.insert(id, property);
         }
-        Ok(Data { root: *root_index, nodes, properties })
+        Ok(Data { nodes, properties })
     }
 }
 
@@ -367,9 +353,8 @@ impl ScannedObjects {
             properties: HashMap::new(),
             extents: HashMap::new(),
         };
-        // The ScannedNode at 0 is _not_ the "root" node. In a real VMO, the "root"
-        // node has a _parent_ of 0. So this 0 node exists to receive a pointer to the "root"
-        // when the "root" is encountered while scanning the VMO.
+        // The ScannedNode at 0 is the "root" node. It exists to receive pointers to objects
+        // whose parent is 0 while scanning the VMO.
         objects.nodes.insert(
             0,
             ScannedNode {
@@ -559,7 +544,8 @@ impl ScannedObjects {
         for property_id in scanned_node.properties.iter() {
             properties_under.push((self.make_valid_property(*property_id)?, *property_id));
         }
-        let name = self.get_owned_name(scanned_node.name)?;
+        let name =
+            if id == 0 { "root".to_owned() } else { self.get_owned_name(scanned_node.name)? };
         let this_node = Node {
             name,
             parent: scanned_node.parent,
@@ -883,18 +869,18 @@ mod tests {
         header.set_block_type(BlockType::Name.to_u8().unwrap());
         header.set_name_length(4);
         put_header(&header, &mut buffer, ROOT_NAME);
-        copy_into(b"root", &mut buffer, ROOT_NAME * 16 + 8);
-        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n\n\n"));
+        copy_into(b"node", &mut buffer, ROOT_NAME * 16 + 8);
+        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n\n>  node ->\n\n\n\n"));
         // Mess up HEADER_MAGIC_NUMBER - it should fail to load.
         try_byte(&mut buffer, (HEADER, 7), 0, None);
-        // Mess up root's parent; should fail.
-        try_byte(&mut buffer, (ROOT, 1), 1, None);
+        // Mess up node's parent; should disappear.
+        try_byte(&mut buffer, (ROOT, 1), 1, Some(" root ->\n\n\n"));
         // Mess up root's name; should fail.
         try_byte(&mut buffer, (ROOT, 5), 1, None);
         // Mess up generation count; should fail (and not hang).
         try_byte(&mut buffer, (HEADER, 8), 1, None);
         // But an even generation count should work.
-        try_byte(&mut buffer, (HEADER, 8), 2, Some(" root ->\n\n\n"));
+        try_byte(&mut buffer, (HEADER, 8), 2, Some(" root ->\n\n>  node ->\n\n\n\n"));
         // Let's give it a property.
         const NUMBER: usize = 3;
         let mut header = BlockHeader(0);
@@ -910,10 +896,30 @@ mod tests {
         header.set_name_length(6);
         put_header(&header, &mut buffer, NUMBER_NAME);
         copy_into(b"number", &mut buffer, NUMBER_NAME * 16 + 8);
-        try_byte(&mut buffer, (HEADER, 8), 2, Some(" root ->\n>  number: Int(0)\n\n"));
-        try_byte(&mut buffer, (NUMBER, 0), 0x50, Some(" root ->\n>  number: Uint(0)\n\n"));
-        try_byte(&mut buffer, (NUMBER, 0), 0x60, Some(" root ->\n>  number: Double(0.0)\n\n"));
-        try_byte(&mut buffer, (NUMBER, 0), 0x70, Some(" root ->\n>  number: String(\"\")\n\n"));
+        try_byte(
+            &mut buffer,
+            (HEADER, 8),
+            2,
+            Some(" root ->\n\n>  node ->\n> >  number: Int(0)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 0),
+            0x50,
+            Some(" root ->\n\n>  node ->\n> >  number: Uint(0)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 0),
+            0x60,
+            Some(" root ->\n\n>  node ->\n> >  number: Double(0.0)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 0),
+            0x70,
+            Some(" root ->\n\n>  node ->\n> >  number: String(\"\")\n\n\n"),
+        );
         // Array block will have illegal Array Entry Type of 0.
         try_byte(&mut buffer, (NUMBER, 0), 0xb0, None);
         // 15 is an illegal block type.
