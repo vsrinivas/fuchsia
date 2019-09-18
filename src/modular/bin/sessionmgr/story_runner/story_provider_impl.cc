@@ -376,12 +376,6 @@ void StoryProviderImpl::Watch(
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::WatchActivity(
-    fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) {
-  FXL_LOG(WARNING) << "WatchActivity: DEPRECATED, will be removed";
-}
-
 std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
     fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request) {
@@ -531,6 +525,7 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
                       it->second.model_observer->model().runtime_state(),
                       it->second.model_observer->model().visibility_state());
 }
+
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
     std::string story_id, fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {

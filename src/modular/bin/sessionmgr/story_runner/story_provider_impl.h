@@ -190,10 +190,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
-  // |fuchsia::modular::StoryProvider|
-  void WatchActivity(
-      fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) override;
-
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
@@ -244,7 +240,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   const bool enable_story_shell_preload_;
 
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
-  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher> activity_watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.

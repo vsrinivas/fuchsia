@@ -37,11 +37,6 @@ protocol StoryProvider {
     /// Registers a watcher for changes in the story collection.
     /// DEPRECATED: In favor of GetStories().
     Watch(StoryProviderWatcher watcher);
-
-    /// Registers a watcher for ongoing story activity. Upon registration,
-    /// StoryActivityWatcher.OnStoryActivity() will be called to update clients
-    /// with the initial data. See StoryActivityWatcher for motivations.
-    WatchActivity(StoryActivityWatcher watcher);
 };
 
 /// Implemented by clients of StoryProvider.
@@ -89,19 +84,4 @@ protocol StoryProviderWatcher {
     /// If the story is running on this device at the time it is deleted,
     /// OnChange() will not be called first.
     OnDelete(string story_id);
-};
-
-/// Implemented by clients of StoryProvider in order to inform them about ongoing
-/// activities in stories. `activities` is the entire list of ongoing activities
-/// (represented by its type) within the story by the given `story_id`. If
-/// `activities` is empty, it means that there is no ongoing activity within the
-/// story.
-///
-/// Clients can expect this event whenever there is a newly started/stopped
-/// ongoing activity, as well as when the client first registers for updates
-/// via StoryProvider.WatchActivity(). `activities` can contain duplicate
-/// OngoingActivityType's, ex. if a story is playing 2 videos at once.
-protocol StoryActivityWatcher {
-    OnStoryActivityChange(string story_id,
-                          vector<OngoingActivityType> activities);
 };
