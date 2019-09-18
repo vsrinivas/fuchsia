@@ -438,6 +438,9 @@ Status IntelDsp::SetupDspDevice() {
   ipc_ = CreateHardwareDspChannel(log_prefix_, regs(),
                                   [this](NotificationType type) { DspNotificationReceived(type); });
 
+  // Initialize DSP module controller.
+  module_controller_ = std::make_unique<DspModuleController>(ipc_.get());
+
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
 
@@ -516,14 +519,15 @@ int IntelDsp::InitThread() {
     LOG(ERROR, "Error getting DSP modules info\n");
     return -1;
   }
-  st = SetupPipelines();
-  if (st != ZX_OK) {
-    LOG(ERROR, "Error initializing DSP pipelines\n");
+  StatusOr<SystemPipelines> system_pipelines = SetupPipelines();
+  if (!system_pipelines.ok()) {
+    LOG(ERROR, "Error initializing DSP pipelines: %s\n",
+        system_pipelines.status().ToString().c_str());
     return -1;
   }
 
   // Create and publish streams.
-  st = CreateAndStartStreams();
+  st = CreateAndStartStreams(system_pipelines.ValueOrDie());
   if (st != ZX_OK) {
     LOG(ERROR, "Error starting DSP streams\n");
     return -1;
@@ -792,15 +796,6 @@ void IntelDsp::DspNotificationReceived(NotificationType type) {
       LOG(TRACE, "Received unknown notification type %d from DSP.\n", static_cast<int>(type));
       break;
   }
-}
-
-zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {
-  // Pipeline must be paused before starting
-  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline_id, PipelineState::PAUSED, true);
-  if (st != ZX_OK) {
-    return st;
-  }
-  return DspSetPipelineState(ipc_.get(), pipeline_id, PipelineState::RUNNING, true);
 }
 
 bool IntelDsp::IsCoreEnabled(uint8_t core_mask) {

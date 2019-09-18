@@ -63,6 +63,14 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
 
  private:
+  // Pipeline identifiers for the system's playback pipeline and capture pipeline.
+  //
+  // TODO(fxb/31426): Generalise to multiple pipelines.
+  struct SystemPipelines {
+    DspPipeline playback;
+    DspPipeline capture;
+  };
+
   // Accessor for our mapped registers
   adsp_registers_t* regs() const;
   adsp_fw_registers_t* fw_regs() const;
@@ -80,11 +88,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
                          const void** out_blob, size_t* out_size);
 
   zx_status_t GetModulesInfo();
-  zx_status_t CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id, const CopierCfg& cfg);
-  zx_status_t CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id, uint8_t i2s_instance_id,
-                              uint8_t direction, const CopierCfg& cfg);
-  zx_status_t SetupPipelines();
-  zx_status_t RunPipeline(uint8_t pipeline_id);
+  StatusOr<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
+                                                    const CopierCfg& base_cfg);
+  StatusOr<SystemPipelines> SetupPipelines();
 
   bool IsCoreEnabled(uint8_t core_mask);
 
@@ -112,7 +118,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
                                   const ihda_proto::SetStreamFmtReq& req);
 
-  zx_status_t CreateAndStartStreams();
+  zx_status_t CreateAndStartStreams(const SystemPipelines& pipelines);
 
   // Receive a notification from the DSP.
   void DspNotificationReceived(NotificationType type);
@@ -143,8 +149,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   // PCI registers
   fzl::VmoMapper mapped_regs_;
 
-  // IPC Channel to DSP hardware.
+  // IPC Channel and controller for DSP hardware.
   std::unique_ptr<DspChannel> ipc_;
+  std::unique_ptr<DspModuleController> module_controller_;
 
   // Notified when the DSP has notified us that the DSP firmware is ready.
   sync_completion_t firmware_ready_;

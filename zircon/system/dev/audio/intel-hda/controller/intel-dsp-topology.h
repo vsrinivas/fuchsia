@@ -14,7 +14,7 @@ namespace intel_hda {
 
 // Represents a pipeline backing an audio stream.
 struct DspPipeline {
-  uint8_t id;
+  DspPipelineId id;
 };
 
 }  // namespace intel_hda

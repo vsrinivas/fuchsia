@@ -51,34 +51,6 @@ namespace {
 //
 //    Playback: [host DMA gateway] -> copier -> copier -> [I2S gateway]
 //    Capture:  [I2S gateway] -> copier -> copier -> [host DMA gateway]
-constexpr uint8_t kPlaybackPipelineId = 0;
-constexpr uint8_t kCapturePipelineId = 1;
-
-// Module instance IDs.
-constexpr uint8_t HOST_OUT_COPIER_ID = 0;
-constexpr uint8_t I2S0_OUT_COPIER_ID = 1;
-constexpr uint8_t I2S0_IN_COPIER_ID = 2;
-constexpr uint8_t HOST_IN_COPIER_ID = 3;
-
-const struct PipelineConfig {
-  uint8_t id;
-  uint8_t priority;
-  uint8_t mem_pages;
-  bool lp;
-} PIPELINE_CFG[] = {
-    {
-        .id = kPlaybackPipelineId,
-        .priority = 0,
-        .mem_pages = 2,
-        .lp = true,  // false in config, keep running in low power mode for dev
-    },
-    {
-        .id = kCapturePipelineId,
-        .priority = 0,
-        .mem_pages = 2,
-        .lp = true,
-    },
-};
 
 // Use 48khz 16-bit stereo throughout
 constexpr AudioDataFormat FMT_HOST = {
@@ -198,6 +170,20 @@ const CopierCfg I2S_IN_COPIER_CFG = {
         },
 };
 
+// Copy the given ranges of bytes into a new std::vector<uint8_t>.
+std::vector<uint8_t> RawBytesOf(const uint8_t* object, size_t size) {
+  std::vector<uint8_t> result;
+  result.resize(size);
+  memcpy(result.data(), object, size);
+  return result;
+}
+
+// Copy the underlying bytes of the given object to a new std::vector<uint8_t>.
+template <typename T>
+std::vector<uint8_t> RawBytesOf(const T* object) {
+  return RawBytesOf(reinterpret_cast<const uint8_t*>(object), sizeof(*object));
+}
+
 }  // namespace
 
 zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioDataFormat& format,
@@ -219,129 +205,119 @@ zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioD
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t IntelDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
-                                          const CopierCfg& cfg) {
-  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::COPIER], instance_id,
-                               ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
-}
-
-zx_status_t IntelDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
-                                      uint8_t i2s_instance_id, uint8_t direction,
-                                      const CopierCfg& cfg) {
+StatusOr<std::vector<uint8_t>> IntelDsp::GetI2SModuleConfig(uint8_t i2s_instance_id,
+                                                            uint8_t direction,
+                                                            const CopierCfg& base_cfg) {
   const void* blob;
   size_t blob_size;
-  zx_status_t st =
-      GetI2SBlob(i2s_instance_id, direction,
-                 (direction == NHLT_DIRECTION_RENDER) ? cfg.out_fmt : cfg.base_cfg.audio_fmt, &blob,
-                 &blob_size);
+  zx_status_t st = GetI2SBlob(
+      i2s_instance_id, direction,
+      (direction == NHLT_DIRECTION_RENDER) ? base_cfg.out_fmt : base_cfg.base_cfg.audio_fmt, &blob,
+      &blob_size);
   if (st != ZX_OK) {
     LOG(ERROR, "I2S config (instance %u direction %u) not found\n", i2s_instance_id, direction);
-    return st;
+    return Status(st);
   }
 
   // Copy the I2S config blob
-  size_t cfg_size = sizeof(cfg) + blob_size;
+  size_t cfg_size = sizeof(base_cfg) + blob_size;
   ZX_DEBUG_ASSERT(cfg_size <= UINT16_MAX);
 
   fbl::AllocChecker ac;
   fbl::unique_ptr<uint8_t[]> cfg_buf(new (&ac) uint8_t[cfg_size]);
   if (!ac.check()) {
-    LOG(ERROR, "out of memory while attempting to allocate copier config buffer\n");
-    return ZX_ERR_NO_MEMORY;
+    return Status(ZX_ERR_NO_MEMORY,
+                  "out of memory while attempting to allocate copier config buffer");
   }
-  memcpy(cfg_buf.get() + sizeof(cfg), blob, blob_size);
+  memcpy(cfg_buf.get() + sizeof(base_cfg), blob, blob_size);
 
   // Copy the copier config
-  memcpy(cfg_buf.get(), &cfg, sizeof(cfg));
+  memcpy(cfg_buf.get(), &base_cfg, sizeof(base_cfg));
   auto copier_cfg = reinterpret_cast<CopierCfg*>(cfg_buf.get());
   copier_cfg->gtw_cfg.config_length = static_cast<uint32_t>(blob_size);
 
-  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::COPIER], instance_id,
-                               ProcDomain::LOW_LATENCY, 0, pipeline_id,
-                               static_cast<uint16_t>(cfg_size), cfg_buf.get());
+  return RawBytesOf(cfg_buf.get(), cfg_size);
 }
 
-zx_status_t IntelDsp::SetupPipelines() {
+StatusOr<IntelDsp::SystemPipelines> IntelDsp::SetupPipelines() {
   ZX_DEBUG_ASSERT(module_ids_[Module::COPIER] != 0);
   ZX_DEBUG_ASSERT(module_ids_[Module::MIXIN] != 0);
   ZX_DEBUG_ASSERT(module_ids_[Module::MIXOUT] != 0);
 
-  zx_status_t st = ZX_OK;
-
-  // Create pipelines
-  for (const auto& cfg : PIPELINE_CFG) {
-    st = DspCreatePipeline(ipc_.get(), cfg.id, cfg.priority, cfg.mem_pages, cfg.lp);
-    if (st != ZX_OK) {
-      return st;
-    }
+  // Create output pipeline.
+  StatusOr<std::vector<uint8_t>> i2s0_out_gateway_cfg =
+      GetI2SModuleConfig(I2S_OUT_INSTANCE_ID, NHLT_DIRECTION_RENDER, I2S_OUT_COPIER_CFG);
+  if (!i2s0_out_gateway_cfg.ok()) {
+    return i2s0_out_gateway_cfg.status();
+  }
+  StatusOr<DspPipelineId> playback_pipeline = CreateSimplePipeline(
+      module_controller_.get(),
+      {
+          // Copy from host DMA.
+          {module_ids_[Module::COPIER], RawBytesOf(&HOST_OUT_COPIER_CFG)},
+          // Copy to I2S.
+          {module_ids_[Module::COPIER], i2s0_out_gateway_cfg.ConsumeValueOrDie()},
+      });
+  if (!playback_pipeline.ok()) {
+    return playback_pipeline.status();
   }
 
-  // Create playback pipeline modules. Host DMA -> I2S DMA.
-  // Modules must be created in order of source -> sink
-  st = CreateHostDmaModule(HOST_OUT_COPIER_ID, kPlaybackPipelineId, HOST_OUT_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
+  // Create input pipeline.
+  StatusOr<std::vector<uint8_t>> i2s0_in_gateway_cfg =
+      GetI2SModuleConfig(I2S_IN_INSTANCE_ID, NHLT_DIRECTION_CAPTURE, I2S_IN_COPIER_CFG);
+  if (!i2s0_in_gateway_cfg.ok()) {
+    return i2s0_in_gateway_cfg.status();
   }
-  st = CreateI2SModule(I2S0_OUT_COPIER_ID, kPlaybackPipelineId, I2S_OUT_INSTANCE_ID,
-                       NHLT_DIRECTION_RENDER, I2S_OUT_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-  st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], HOST_OUT_COPIER_ID, 0,
-                      module_ids_[Module::COPIER], I2S0_OUT_COPIER_ID, 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Create capture pipeline modules. I2S DMA -> Host DMA.
-  st = CreateI2SModule(I2S0_IN_COPIER_ID, kCapturePipelineId, I2S_IN_INSTANCE_ID,
-                       NHLT_DIRECTION_CAPTURE, I2S_IN_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-  st = CreateHostDmaModule(HOST_IN_COPIER_ID, kCapturePipelineId, HOST_IN_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-  st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], I2S0_IN_COPIER_ID, 0,
-                      module_ids_[Module::COPIER], HOST_IN_COPIER_ID, 0);
-  if (st != ZX_OK) {
-    return st;
+  StatusOr<DspPipelineId> capture_pipeline = CreateSimplePipeline(
+      module_controller_.get(),
+      {
+          // Copy from I2S.
+          {module_ids_[Module::COPIER], i2s0_in_gateway_cfg.ConsumeValueOrDie()},
+          // Copy to host DMA.
+          {module_ids_[Module::COPIER], RawBytesOf(&HOST_IN_COPIER_CFG)},
+      });
+  if (!capture_pipeline.ok()) {
+    return capture_pipeline.status();
   }
 
-  return ZX_OK;
+  return SystemPipelines{DspPipeline{playback_pipeline.ValueOrDie()},
+                         DspPipeline{capture_pipeline.ValueOrDie()}};
 }
 
 Status IntelDsp::StartPipeline(DspPipeline pipeline) {
-  // Pipeline must be paused before starting
-  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::PAUSED, true);
-  if (st != ZX_OK) {
-    return Status(st);
+  // Pipeline must be paused before starting.
+  if (Status status =
+          module_controller_->SetPipelineState(pipeline.id, PipelineState::PAUSED, true);
+      !status.ok()) {
+    return status;
   }
 
-  st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::RUNNING, true);
-  if (st != ZX_OK) {
-    return Status(st);
+  // Start the pipeline.
+  if (Status status =
+          module_controller_->SetPipelineState(pipeline.id, PipelineState::RUNNING, true);
+      !status.ok()) {
+    return status;
   }
+
   return OkStatus();
 }
 
 Status IntelDsp::PausePipeline(DspPipeline pipeline) {
-  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::PAUSED, true);
-  if (st != ZX_OK) {
-    return Status(st);
+  if (Status status =
+          module_controller_->SetPipelineState(pipeline.id, PipelineState::PAUSED, true);
+      !status.ok()) {
+    return status;
   }
 
-  // Reset DSP DMA
-  st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::RESET, true);
-  if (st != ZX_OK) {
-    return Status(st);
+  if (Status status = module_controller_->SetPipelineState(pipeline.id, PipelineState::RESET, true);
+      !status.ok()) {
+    return status;
   }
 
   return OkStatus();
 }
 
-zx_status_t IntelDsp::CreateAndStartStreams() {
+zx_status_t IntelDsp::CreateAndStartStreams(const SystemPipelines& pipelines) {
   zx_status_t res = ZX_OK;
 
   // Create and publish the streams we will use.
@@ -355,14 +331,14 @@ zx_status_t IntelDsp::CreateAndStartStreams() {
       {
           .stream_id = 1,
           .is_input = false,
-          .pipeline = {kPlaybackPipelineId},
+          .pipeline = pipelines.playback,
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
       },
       // DMIC
       {
           .stream_id = 2,
           .is_input = true,
-          .pipeline = {kCapturePipelineId},
+          .pipeline = pipelines.capture,
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
       },
   };

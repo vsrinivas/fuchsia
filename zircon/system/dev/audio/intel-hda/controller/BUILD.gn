@@ -93,6 +93,7 @@ test("controller_test") {
   sources = [
     "binary_decoder_test.cc",
     "intel-dsp-ipc-test.cc",
+    "intel-dsp-modules-test.cc",
     "intel-dsp-test.cc",
     "nhlt_test.cc",
   ]
