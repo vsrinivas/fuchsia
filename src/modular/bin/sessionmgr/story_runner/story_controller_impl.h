@@ -234,6 +234,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
+  // |StoryController|
+  void Annotate(std::vector<fuchsia::modular::Annotation> annotations,
+                AnnotateCallback callback) override;
+
   // Communicates with SessionShell.
   void StartStoryShell();
   void DetachView(fit::function<void()> done);

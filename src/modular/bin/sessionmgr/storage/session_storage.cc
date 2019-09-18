@@ -12,6 +12,7 @@
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage_xdr.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -286,6 +287,37 @@ FuturePtr<> SessionStorage::UpdateStoryAnnotations(
   };
   operation_queue_.Add(std::make_unique<MutateStoryDataCall>(page(), story_name, std::move(mutate),
                                                              ret->Completer()));
+  return ret;
+}
+
+FuturePtr<std::optional<fuchsia::modular::AnnotationError>> SessionStorage::MergeStoryAnnotations(
+    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
+  auto ret = Future<std::optional<fuchsia::modular::AnnotationError>>::Create(
+      "SessionStorage.MergeStoryAnnotations.ret");
+  // On success, this optional AnnotationError response will have no value (!has_value()).
+  // Otherwise, the error will be set explicitly, or it is assumed the story is no longer viable
+  // (default NOT_FOUND).
+  auto error_ptr = std::make_unique<std::optional<fuchsia::modular::AnnotationError>>(
+      fuchsia::modular::AnnotationError::NOT_FOUND);
+  auto mutate = [error_ptr = error_ptr.get(), annotations = std::move(annotations)](
+                    fuchsia::modular::internal::StoryData* story_data) mutable {
+    auto new_annotations =
+        story_data->story_info().has_annotations()
+            ? annotations::Merge(
+                  std::move(*story_data->mutable_story_info()->mutable_annotations()),
+                  std::move(annotations))
+            : std::move(annotations);
+    if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
+      *error_ptr = fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
+      return false;
+    }
+    story_data->mutable_story_info()->set_annotations(std::move(new_annotations));
+    error_ptr->reset();
+    return true;
+  };
+  operation_queue_.Add(std::make_unique<MutateStoryDataCall>(
+      page(), story_name, std::move(mutate),
+      [ret, error_ptr = std::move(error_ptr)]() mutable { ret->Complete(std::move(*error_ptr)); }));
   return ret;
 }
 

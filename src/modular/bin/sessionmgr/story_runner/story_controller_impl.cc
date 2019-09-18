@@ -1187,6 +1187,11 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
 }
 
 void StoryControllerImpl::GetInfo2(GetInfo2Callback callback) {
+  // Synced such that if GetInfo() is called after Start() or Stop(), the
+  // state after the previously invoked operation is returned.
+  //
+  // If this call enters a race with a StoryProvider.DeleteStory() call,
+  // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
     auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FXL_CHECK(story_info_2);
@@ -1365,6 +1370,41 @@ void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));
   }
+}
+
+void StoryControllerImpl::Annotate(std::vector<fuchsia::modular::Annotation> annotations,
+                                   AnnotateCallback callback) {
+  operation_queue_.Add(std::make_unique<SyncCall>([weak_this = weak_factory_.GetWeakPtr(),
+                                                   annotations = std::move(annotations),
+                                                   callback = std::move(callback)]() mutable {
+    if (!weak_this) {
+      fuchsia::modular::StoryController_Annotate_Result result{};
+      result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
+      callback(std::move(result));
+      return;
+    }
+    for (auto const& annotation : annotations) {
+      if (annotation.value && annotation.value->is_buffer() &&
+          annotation.value->buffer().size >
+              fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES) {
+        fuchsia::modular::StoryController_Annotate_Result result{};
+        result.set_err(fuchsia::modular::AnnotationError::VALUE_TOO_BIG);
+        callback(std::move(result));
+        return;
+      }
+    }
+    weak_this->session_storage_->MergeStoryAnnotations(weak_this->story_id_, std::move(annotations))
+        ->WeakThen(weak_this, [callback = std::move(callback)](
+                                  std::optional<fuchsia::modular::AnnotationError> error) {
+          fuchsia::modular::StoryController_Annotate_Result result{};
+          if (error.has_value()) {
+            result.set_err(error.value());
+          } else {
+            result.set_response({});
+          }
+          callback(std::move(result));
+        });
+  }));
 }
 
 }  // namespace modular

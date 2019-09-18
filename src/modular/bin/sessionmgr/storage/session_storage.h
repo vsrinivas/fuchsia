@@ -8,6 +8,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 
+#include <optional>
+
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -98,9 +100,23 @@ class SessionStorage : public PageClient {
   FuturePtr<> UpdateStoryOptions(fidl::StringPtr story_id,
                                  fuchsia::modular::StoryOptions story_options);
 
+  // DEPRECATED: Use MergeStoryAnnotations.
   // Sets the annotations for |story_id| to |annotations|. This overwrites all existing annotations.
   FuturePtr<> UpdateStoryAnnotations(fidl::StringPtr story_name,
                                      std::vector<fuchsia::modular::Annotation> annotations);
+
+  // Adds the given annotations for |story_id| to |annotations|. Existing annotations are not
+  // removed, but existing annotations with the same key as a given annotation will be updated
+  // with the value of the given annotation.
+  //
+  // Returns a FuturePtr that resolves to one of:
+  //  * optional<AnnotationError> has no value - successful merge
+  //  * AnnotationError::TOO_MANY_ANNOTATIONS - the merge operation would result in too many
+  //    annotations
+  //  * AnnotationError::NOT_FOUND - the story was deleted, or could not be found or updated for
+  //    some other reason
+  FuturePtr<std::optional<fuchsia::modular::AnnotationError>> MergeStoryAnnotations(
+      fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.

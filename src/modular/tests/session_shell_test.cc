@@ -3,24 +3,29 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 
 #include "gmock/gmock.h"
+#include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
+
+#define TEST_NAME(SUFFIX) \
+  std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" #SUFFIX;
 
 // TODO(MF-435): Use modular::testing::AddModToStory() throughout the test.
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
-using fuchsia::modular::StoryInfo;
 using fuchsia::modular::StoryInfo2;
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
-using testing::IsNull;
-using testing::Not;
+using testing::ByRef;
+using testing::Pointee;
+using testing::UnorderedElementsAre;
 
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
@@ -45,6 +50,39 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
 
     // Wait for our session shell to start.
     RunLoopUntil([&] { return fake_session_shell_.is_running(); });
+  }
+
+  void RunHarnessAndInterceptSessionShellAndFakeModule(const std::string& story_name) {
+    modular_testing::TestHarnessBuilder builder;
+    builder.InterceptSessionShell(fake_session_shell_.GetOnCreateHandler(),
+                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext",
+                                                        "fuchsia.modular.PuppetMaster"}});
+    // Listen for the module we're going to create.
+    modular::testing::FakeComponent test_module;
+    const auto test_module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
+    builder.InterceptComponent(test_module.GetOnCreateHandler(), {.url = test_module_url});
+
+    // Start the session shell
+    builder.BuildAndRun(test_harness());
+
+    // Create a new story using PuppetMaster and start a new story shell.
+    fuchsia::modular::testing::ModularService svc;
+    fuchsia::modular::PuppetMasterPtr puppet_master;
+    svc.set_puppet_master(puppet_master.NewRequest());
+    test_harness()->ConnectToModularService(std::move(svc));
+
+    fuchsia::modular::StoryPuppetMasterPtr story_master;
+    puppet_master->ControlStory(story_name, story_master.NewRequest());
+
+    // Add at least one module to the story
+    fuchsia::modular::Intent intent;
+    intent.handler = test_module_url;
+    intent.action = "action";
+
+    modular::testing::AddModToStory(test_harness(), story_name, "modname", std::move(intent));
+
+    // Wait for the session shell and test module
+    RunLoopUntil([&] { return test_module.is_running(); });
   }
 
   modular::testing::FakeSessionShell fake_session_shell_;
@@ -519,6 +557,260 @@ TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
   story_master->Execute([](fuchsia::modular::ExecuteResult result) {});
 
   RunLoopUntil([&] { return called_on_change_2; });
+}
+
+TEST_F(SessionShellTest, StoryControllerAnnotate) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider->GetController(story_name, story_controller.NewRequest());
+
+  // Create some annotations, one for each variant of AnnotationValue.
+  auto text_annotation_value = fuchsia::modular::AnnotationValue{};
+  text_annotation_value.set_text("text_value");
+  auto text_annotation = fuchsia::modular::Annotation{
+      .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_annotation_value))};
+
+  auto bytes_annotation_value = fuchsia::modular::AnnotationValue{};
+  bytes_annotation_value.set_bytes({0x01, 0x02, 0x03, 0x04});
+  auto bytes_annotation = fuchsia::modular::Annotation{
+      .key = "bytes_key", .value = fidl::MakeOptional(fidl::Clone(bytes_annotation_value))};
+
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_value = "buffer_value";
+  ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
+  auto buffer_annotation_value = fuchsia::modular::AnnotationValue{};
+  buffer_annotation_value.set_buffer(std::move(buffer));
+  auto buffer_annotation = fuchsia::modular::Annotation{
+      .key = "buffer_key", .value = fidl::MakeOptional(fidl::Clone(buffer_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(text_annotation));
+  annotations.push_back(fidl::Clone(bytes_annotation));
+  annotations.push_back(fidl::Clone(buffer_annotation));
+
+  // Annotate the story.
+  bool done_annotating{false};
+  story_controller->Annotate(std::move(annotations),
+                             [&](fuchsia::modular::StoryController_Annotate_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               done_annotating = true;
+                             });
+  RunLoopUntil([&] { return done_annotating; });
+
+  // GetStoryInfo should contain the annotations.
+  fuchsia::modular::StoryInfo2 story_info;
+  bool done_getting_story_info = false;
+
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 data) {
+    done_getting_story_info = true;
+    story_info = std::move(data);
+  });
+  RunLoopUntil([&] { return done_getting_story_info; });
+
+  EXPECT_FALSE(story_info.IsEmpty());
+  EXPECT_TRUE(story_info.has_annotations());
+
+  EXPECT_EQ(3u, story_info.annotations().size());
+
+  EXPECT_THAT(
+      story_info.mutable_annotations(),
+      Pointee(UnorderedElementsAre(modular::annotations::AnnotationEq(ByRef(text_annotation)),
+                                   modular::annotations::AnnotationEq(ByRef(bytes_annotation)),
+                                   modular::annotations::AnnotationEq(ByRef(buffer_annotation)))));
+}
+
+// Verifies that Annotate merges new annotations, preserving existing ones.
+TEST_F(SessionShellTest, StoryControllerAnnotateMerge) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider->GetController(story_name, story_controller.NewRequest());
+
+  // Create the initial set of annotations.
+  auto first_annotation_value = fuchsia::modular::AnnotationValue{};
+  first_annotation_value.set_text("first_value");
+  auto first_annotation = fuchsia::modular::Annotation{
+      .key = "first_key", .value = fidl::MakeOptional(fidl::Clone(first_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(first_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story_controller->Annotate(std::move(annotations),
+                             [&](fuchsia::modular::StoryController_Annotate_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               done = true;
+                             });
+  RunLoopUntil([&] { return done; });
+
+  // GetStoryData should contain the first annotation.
+  done = false;
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 story_info) {
+    EXPECT_FALSE(story_info.IsEmpty());
+    EXPECT_TRUE(story_info.has_annotations());
+
+    EXPECT_EQ(1u, story_info.annotations().size());
+
+    EXPECT_EQ(story_info.annotations().at(0).key, first_annotation.key);
+    EXPECT_EQ(story_info.annotations().at(0).value->text(), first_annotation_value.text());
+
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+
+  // Create another set of annotations that should be merged into the initial one.
+  auto second_annotation_value = fuchsia::modular::AnnotationValue{};
+  second_annotation_value.set_text("second_value");
+  auto second_annotation = fuchsia::modular::Annotation{
+      .key = "second_key", .value = fidl::MakeOptional(fidl::Clone(second_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations_2;
+  annotations_2.push_back(fidl::Clone(second_annotation));
+
+  // Annotate the story with the second set of annotations.
+  done = false;
+  story_controller->Annotate(std::move(annotations_2),
+                             [&](fuchsia::modular::StoryController_Annotate_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               done = true;
+                             });
+  RunLoopUntil([&] { return done; });
+
+  // GetStoryData should now return annotations from both the first and second set.
+  done = false;
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 story_info) {
+    EXPECT_FALSE(story_info.IsEmpty());
+
+    EXPECT_EQ(2u, story_info.annotations().size());
+
+    EXPECT_THAT(story_info.mutable_annotations(),
+                Pointee(UnorderedElementsAre(
+                    modular::annotations::AnnotationEq(ByRef(first_annotation)),
+                    modular::annotations::AnnotationEq(ByRef(second_annotation)))));
+
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that Annotate returns an error when one of the annotations has a buffer value that
+// exceeds MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES.
+TEST_F(SessionShellTest, StoryControllerAnnotateBufferValueTooBig) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider->GetController(story_name, story_controller.NewRequest());
+
+  // Create an annotation with a large buffer value.
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_value(fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES + 1, 'x');
+  ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
+
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_buffer(std::move(buffer));
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "buffer_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story_controller->Annotate(
+      std::move(annotations), [&](fuchsia::modular::StoryController_Annotate_Result result) {
+        EXPECT_TRUE(result.is_err());
+        EXPECT_EQ(fuchsia::modular::AnnotationError::VALUE_TOO_BIG, result.err());
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that Annotate returns an error when adding new annotations to exceeds
+// MAX_ANNOTATIONS_PER_STORY.
+TEST_F(SessionShellTest, StoryControllerAnnotateTooMany) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider->GetController(story_name, story_controller.NewRequest());
+
+  // A single Annotate call should not accept more annotations than allowed on a single story.
+  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY, fuchsia::modular::MAX_ANNOTATE_SIZE);
+
+  // Annotate the story repeatedly, in batches of MAX_ANNOTATE_SIZE items, in order
+  // to reach, but not exceed the MAX_ANNOTATIONS_PER_STORY limit.
+  for (unsigned int num_annotate_calls = 0;
+       num_annotate_calls <
+       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATE_SIZE;
+       ++num_annotate_calls) {
+    std::vector<fuchsia::modular::Annotation> annotations;
+
+    // Create MAX_ANNOTATE_SIZE annotations for each call to Annotate.
+    for (unsigned int num_annotations = 0; num_annotations < fuchsia::modular::MAX_ANNOTATE_SIZE;
+         ++num_annotations) {
+      auto annotation_value = fuchsia::modular::AnnotationValue{};
+      annotation_value.set_text("test_annotation_value");
+      auto annotation =
+          fuchsia::modular::Annotation{.key = "annotation_" + std::to_string(num_annotate_calls) +
+                                              "_" + std::to_string(num_annotations),
+                                       .value = fidl::MakeOptional(std::move(annotation_value))};
+      annotations.push_back(std::move(annotation));
+    }
+
+    // Annotate the story.
+    bool done{false};
+    story_controller->Annotate(
+        std::move(annotations), [&](fuchsia::modular::StoryController_Annotate_Result result) {
+          EXPECT_FALSE(result.is_err())
+              << "Annotate call #" << num_annotate_calls << " returned an error when trying to add "
+              << std::to_string(fuchsia::modular::MAX_ANNOTATE_SIZE)
+              << " annotations to the story.";
+          done = true;
+        });
+    RunLoopUntil([&] { return done; });
+  }
+
+  // Create some more annotations for a total of (MAX_ANNOTATIONS_PER_STORY + 1) on the story.
+  std::vector<fuchsia::modular::Annotation> annotations;
+
+  for (unsigned int num_annotations = 0;
+       num_annotations <
+       (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY % fuchsia::modular::MAX_ANNOTATE_SIZE) + 1;
+       ++num_annotations) {
+    auto annotation_value = fuchsia::modular::AnnotationValue{};
+    annotation_value.set_text("test_annotation_value");
+    auto annotation =
+        fuchsia::modular::Annotation{.key = "excess_annotation_" + std::to_string(num_annotations),
+                                     .value = fidl::MakeOptional(std::move(annotation_value))};
+    annotations.push_back(std::move(annotation));
+  }
+
+  // Annotate the story.
+  bool done{false};
+  story_controller->Annotate(
+      std::move(annotations), [&](fuchsia::modular::StoryController_Annotate_Result result) {
+        EXPECT_TRUE(result.is_err());
+        EXPECT_EQ(fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS, result.err());
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
 }
 
 }  // namespace

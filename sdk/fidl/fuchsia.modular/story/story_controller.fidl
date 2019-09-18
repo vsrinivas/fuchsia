@@ -55,6 +55,12 @@ protocol StoryController {
 
     /// DEPRECATED
     GetLink(LinkPath link_path, request<Link> link);
+
+    /// Attach the `annotations` to the story.
+    ///
+    /// Existing annotations with the same key will be overwritten.
+    Annotate(vector<Annotation>:MAX_ANNOTATE_SIZE annotations)
+        -> () error AnnotationError;
 };
 
 /// Implemented by the client calling StoryController.Watch().

@@ -74,6 +74,7 @@ source_set("session_storage") {
     "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/lib/async/cpp:future",
   ]
 }
