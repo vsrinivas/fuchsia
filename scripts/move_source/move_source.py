@@ -47,10 +47,41 @@ def create_branch_for_move(source, dest, dry_run):
     run_command(['git', 'checkout', '-b', branch_name, '--track',
                  'origin/master'], dry_run)
 
+"""
+Guess if a target is a go library target, which requires a specialized
+forwarding target type.
+"""
+
+
+def is_go_library_target(target):
+    return (target['type'] == 'action' and
+            target['script'] == '//build/go/gen_library_metadata.py')
+
 
 """
-Finds all external references to GN targets in the source directory.
-Also records if the target is marked testonly.
+Stores information about a forwarding GN target to generate.
+"""
+
+
+class ForwardingTarget:
+
+    def __init__(self, label, target):
+        self.label = label
+        self.testonly = target['testonly']
+        self.is_go_library = is_go_library_target(target)
+
+    def __repr__(self):
+        return 'ForwardingTarget(%s, %s, %s)' % (self.label, self.testonly,
+                                                 self.is_go_library)
+
+    def __str__(self):
+        return '%s testonly %s go_library %s' % (
+               self.label, self.testonly, self.is_go_library)
+
+
+"""
+Finds all external references to GN targets in the source directory and
+records information needed to generate forwarding targets.
 """
 
 
@@ -65,7 +96,7 @@ def find_referenced_targets(build_graph, source):
 
     for label, target in build_graph.items():
         if label.startswith('//' + source):
-            targets_in_source.append((label, target['testonly']))
+            targets_in_source.append(ForwardingTarget(label, target))
         else:
             all_deps = target['deps']
             if 'public_deps' in target:
@@ -82,12 +113,11 @@ def find_referenced_targets(build_graph, source):
 
     forwarding_targets = []
     # compute forwarding targets to create
-    for label, testonly in targets_in_source:
-        if label in referenced_targets:
+    for target in sorted(targets_in_source):
+        if target.label in referenced_targets:
             logging.debug(
-                    'Need to generate forwarding target for %s testonly = %s' %
-                    (label, testonly))
-            forwarding_targets.append((label, testonly))
+                'Need to generate forwarding target for %s' % target)
+            forwarding_targets.append(target)
 
     return forwarding_targets
 
@@ -115,15 +145,46 @@ def find_unknown_references(source):
 
 
 """
-Generates a forwarding target for the given label
+Partial information about the contents of a build file. Can be combined with
+other instances and written out to a file object.
 """
 
 
-def generate_forwarding_target(label, testonly, source, dest, dry_run):
-    label_path, target_name = label.split(':')
+class PartialBuildFile():
+
+    def __init__(self):
+        self.imports = set()
+        self.snippet = ''
+
+    def merge(self, other):
+        self.imports |= other.imports
+        self.snippet += '\n' + other.snippet
+
+    def write(self, f):
+        for import_path in sorted(self.imports):
+            f.write('''
+import("%s")''' % import_path)
+        f.write(self.snippet)
+
+
+"""
+Generates a partial build file representing a forwarding target.
+Returns:
+
+    - path to BUILD.gn file
+    - partial GN build file contents
+"""
+
+
+def generate_forwarding_target(target, source, dest):
+    label_path, target_name = target.label.split(':')
+    containing_directory = label_path[2:]
+    build_file_path = os.path.join(
+        fuchsia_root, containing_directory, 'BUILD.gn')
+    imports = set()
     # compute label relative to directory. This will be the same in the
     # source and destination
-    relative_label = os.path.relpath(label_path[2:], source)
+    relative_label = os.path.relpath(containing_directory, source)
 
     dest_path = os.path.normpath(os.path.join(dest, relative_label))
     dest_label = '//%s:%s' % (dest_path, target_name)
@@ -131,22 +192,65 @@ def generate_forwarding_target(label, testonly, source, dest, dry_run):
     logging.debug('relative_label %s dest_label %s target_name %s' % (
         relative_label, dest_label, target_name))
 
-    forwarding_group = '''
+    build = PartialBuildFile()
+
+    build.snippet = '''
 # Do not use this target directly, instead depend on %s.''' % dest_label
 
-    forwarding_group += '''
+    if target.is_go_library:
+        build.imports.add('//build/go/go_library.gni')
+        build.snippet += '''
+go_library("%s") {
+  name = "%s_forwarding_target"
+
+  deps = [
+''' % (target_name, target_name)
+
+    else:
+        build.snippet += '''
 group("%s") {
-  public_deps = [ "%s" ]
-''' % (target_name, dest_label)
-    if testonly:
-        forwarding_group += '''
-  testonly = true
+  public_deps = [
+''' % target_name
+
+    build.snippet += '''    "%s"
+  ]
+''' % dest_label
+
+    if target.testonly:
+        build.snippet += '''  testonly = true
 '''
-    forwarding_group += '''
-}
+
+    build.snippet += '''}
 '''
-    if not dry_run:
-        append_to_gn_file(label_path[2:], forwarding_group)
+
+    return build_file_path, build
+
+
+"""
+Write out forwarding build rules for a set of forwarding targets.
+"""
+
+
+def write_forwarding_build_rules(forwarding_targets, source, dest, dry_run):
+    build_files = {}
+    for target in forwarding_targets:
+        path, build = generate_forwarding_target(target, source, dest)
+        if path not in build_files:
+            build_files[path] = PartialBuildFile()
+
+        build_files[path].merge(build)
+
+    for path, build in build_files.iteritems():
+        if not dry_run:
+            if not os.path.exists(path):
+                dest_dir = os.path.dirname(path)
+                if not os.path.exists(dest_dir):
+                    os.makedirs(dest_dir)
+                with open(path, 'w') as f:
+                    write_copyright_header(f, '#')
+            with open(path, 'a') as f:
+                build.write(f)
+            run_command(['git', 'add', path], dry_run)
 
 
 """
@@ -244,7 +348,7 @@ transition to the new layout:
 
 '''
         for target in sorted(forwarding_targets):
-            commit_message += '  %s\n' % target[0]
+            commit_message += '  %s\n' % target.label
         commit_message += '''
 New code should rely on the new paths for these targets. A follow up commit
 will remove the forwarding targets once all references are updated.
@@ -425,13 +529,16 @@ def main():
     # Libraries in garnet/public/lib use //garnet/public:config which adds
     # //garnet/public to the include path, so includes will look like
     # #include <lib/foo/...>. Look for includes of that type as well, and
-    # generate forwarding headers as if these were fully qualified includes.
+    # generate forwarding headers as if these were fully qualified includes
+    # if that header exists in garnet/public/lib
     garnet_public_prefix = 'garnet/public/'
     if source.startswith(garnet_public_prefix):
         relative_source = source[len(garnet_public_prefix):]
         relative_headers = find_externally_referenced_headers(relative_source)
         for relative_header in relative_headers:
-            forwarding_headers.add(garnet_public_prefix + relative_header)
+            relative_path = garnet_public_prefix + relative_header
+            if os.path.exists(os.path.join(fuchsia_root, relative_path)):
+                forwarding_headers.add(garnet_public_prefix + relative_header)
 
     # search for other references to old path
     other_references = find_unknown_references(source)
@@ -440,9 +547,8 @@ def main():
     move_directory(source, dest, args.dry_run)
 
     # generate forwarding targets
-    for target in forwarding_targets:
-        generate_forwarding_target(
-            target[0], target[1], source, dest, args.dry_run)
+    write_forwarding_build_rules(
+        forwarding_targets, source, dest, args.dry_run)
 
     # generate forwarding headers
     for header in forwarding_headers:
@@ -459,6 +565,8 @@ def main():
                                              forwarding_targets,
                                              forwarding_headers,
                                              args.change_id)
+
+    logging.debug(commit_message)
 
     # commit with message
     commit_with_message(commit_message, args.dry_run, args.no_commit)
