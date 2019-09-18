@@ -752,11 +752,11 @@ void IntelDsp::DspNotificationReceived(NotificationType type) {
       break;
 
     case NotificationType::EXCEPTION_CAUGHT:
-      LOG(ERROR, "DSP reported exception.");
+      LOG(ERROR, "DSP reported exception.\n");
       break;
 
     default:
-      LOG(TRACE, "Received unknown notification type %d from DSP.", static_cast<int>(type));
+      LOG(TRACE, "Received unknown notification type %d from DSP.\n", static_cast<int>(type));
       break;
   }
 }
