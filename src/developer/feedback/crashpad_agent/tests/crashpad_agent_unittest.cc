@@ -7,33 +7,30 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/inspect_deprecated/component.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/process.h>
-#include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <zircon/errors.h>
-#include <zircon/time.h>
 
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
-#include "src/developer/feedback/testing/gmatchers.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -58,7 +55,19 @@ using fuchsia::feedback::GenericCrashReport;
 using fuchsia::feedback::NativeCrashReport;
 using fuchsia::feedback::RuntimeCrashReport;
 using fuchsia::feedback::SpecificCrashReport;
+using inspect::testing::ChildrenMatch;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using inspect::testing::PropertyList;
+using inspect::testing::StringIs;
+using inspect::testing::UintIs;
+using testing::Contains;
+using testing::ElementsAre;
+using testing::IsEmpty;
 using testing::Matches;
+using testing::Not;
+using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 // We keep the local Crashpad database size under a certain value. As we want to check the produced
 // attachments in the database, we should set the size to be at least the total size for a single
@@ -127,8 +136,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ = files::JoinPath(config.crashpad_database.path, "attachments");
-    inspect_node_ = ::inspect_deprecated::Node("root");
-    inspect_manager_ = std::make_unique<InspectManager>(&inspect_node_);
+    inspector_ = std::make_unique<inspect::Inspector>();
+    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot());
     agent_ = CrashpadAgent::TryCreate(dispatcher(), service_directory_provider_.service_directory(),
                                       std::move(config), std::move(crash_server_),
                                       inspect_manager_.get());
@@ -292,6 +301,12 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     return FileOneCrashReport(std::move(report));
   }
 
+  inspect::Hierarchy InspectTree() {
+    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
+    FXL_CHECK(result.is_ok());
+    return result.take_value();
+  }
+
   uint64_t total_num_feedback_data_provider_bindings() {
     if (!stub_feedback_data_provider_) {
       return 0u;
@@ -305,19 +320,21 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     return stub_feedback_data_provider_->current_num_bindings();
   }
 
-  std::unique_ptr<CrashpadAgent> agent_;
-  files::ScopedTempDir database_path_;
-  std::unique_ptr<StubCrashServer> crash_server_;
-  ::inspect_deprecated::Node inspect_node_;
-
  private:
   void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
     dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
   }
 
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+ protected:
+  std::unique_ptr<CrashpadAgent> agent_;
+  files::ScopedTempDir database_path_;
+  std::unique_ptr<StubCrashServer> crash_server_;
+
+ private:
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
+  std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<InspectManager> inspect_manager_;
 };
 
@@ -520,150 +537,30 @@ TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
   EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
-TEST_F(CrashpadAgentTest, Check_InspectStateAfterSuccessfulUpload) {
-  EXPECT_TRUE(FileOneCrashReport().is_response());
-
-  std::shared_ptr<component::Object> crash_reports =
-      inspect_node_.object_dir().object()->GetChild(kInspectReportsName);
-
-  ASSERT_NE(nullptr, crash_reports);
-
-  std::shared_ptr<component::Object> program = crash_reports->GetChild(kProgramName);
-
-  ASSERT_NE(nullptr, program);
-  EXPECT_EQ(kProgramName, program->name());
-
-  // "program" node contains a node for the crash report, with a "creation_time" property.
-  component::Object::StringOutputVector report_ids = program->GetChildren();
-  EXPECT_EQ(1u, report_ids->size());
-  std::string report_id = report_ids->front();
-  std::shared_ptr<component::Object> report = program->GetChild(report_id);
-  ASSERT_NE(nullptr, report);
-  EXPECT_EQ(report_id, report->name());
-
-  fidl::VectorPtr<fuchsia::inspect::Property> props = report->ToFidl().properties;
-  EXPECT_EQ(1u, props->size());
-  EXPECT_EQ("creation_time", props->front().key);
-
-  // Upload is enabled so we expect crash server-related properties.
-  //
-  // Report node contains a child "crash_server" node with "id" and "creation_time" properties.
-  EXPECT_THAT(*report->GetChildren(), testing::ElementsAre("crash_server"));
-  std::shared_ptr<component::Object> crash_server = report->GetChild("crash_server");
-  ASSERT_NE(nullptr, crash_server);
-  EXPECT_EQ("crash_server", crash_server->name());
-
-  props = crash_server->ToFidl().properties;
-  EXPECT_EQ(2u, props->size());
-
-  // Sort by keys to make them easier to test.
-  std::sort(props->begin(), props->end(),
-            [](const fuchsia::inspect::Property& lhs, const fuchsia::inspect::Property& rhs) {
-              return lhs.key < rhs.key;
-            });
-  EXPECT_EQ("creation_time", (*props)[0].key);
-  EXPECT_EQ("id", (*props)[1].key);
-  EXPECT_EQ(kStubServerReportId, (*props)[1].value.str());
+TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadEnabled) {
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(UnorderedElementsAre(
+          AllOf(NodeMatches(AllOf(
+                    NameMatches(kInspectConfigName),
+                    PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey,
+                                                 kFeedbackDataCollectionTimeout.to_msecs()))))),
+                ChildrenMatch(UnorderedElementsAre(
+                    NodeMatches(
+                        AllOf(NameMatches(kCrashpadDatabaseKey),
+                              PropertyList(UnorderedElementsAreArray({
+                                  StringIs(kCrashpadDatabasePathKey, database_path_.path()),
+                                  UintIs(kCrashpadDatabaseMaxSizeInKbKey, kMaxTotalReportSizeInKb),
+                              })))),
+                    NodeMatches(AllOf(NameMatches(kCrashServerKey),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          StringIs(kCrashServerEnableUploadKey, "true"),
+                                          StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
+                                      }))))))),
+          NodeMatches(NameMatches(kInspectReportsName)))));
 }
 
-TEST_F(CrashpadAgentTest, Check_InspectTreeStructureNoReports) {
-  EXPECT_THAT(*inspect_node_.children(), testing::UnorderedElementsAreArray({
-                                             kInspectConfigName,
-                                             kInspectReportsName,
-                                         }));
-
-  std::shared_ptr<component::Object> config =
-      inspect_node_.object_dir().object()->GetChild(kInspectConfigName);
-
-  ASSERT_NE(nullptr, config);
-
-  EXPECT_THAT(config->GetChildren().value(), testing::UnorderedElementsAreArray({
-                                                 kCrashpadDatabaseKey,
-                                                 kCrashServerKey,
-                                             }));
-}
-
-TEST_F(CrashpadAgentTest, Check_InspectFeedbackTimeout) {
-  ResetAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*path=*/database_path_.path(),
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
-             {
-                 /*enable_upload=*/true,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             },
-             /*feedback_data_collection_timeout=*/
-             kFeedbackDataCollectionTimeout},
-      std::make_unique<StubCrashServer>(alwaysReturnSuccess));
-
-  std::shared_ptr<component::Object> config =
-      inspect_node_.object_dir().object()->GetChild(kInspectConfigName);
-
-  ASSERT_NE(nullptr, config);
-
-  fidl::VectorPtr<fuchsia::inspect::Property> config_properties = config->ToFidl().properties;
-  fidl::VectorPtr<fuchsia::inspect::Metric> config_metrics = config->ToFidl().metrics;
-
-  EXPECT_EQ(0u, config_properties->size());
-  EXPECT_EQ(1u, config_metrics->size());
-
-  EXPECT_EQ(kFeedbackDataCollectionTimeoutInMillisecondsKey, config_metrics->front().key);
-  EXPECT_EQ(static_cast<uint64_t>(kFeedbackDataCollectionTimeout.to_msecs()),
-            config_metrics->front().value.uint_value());
-}
-
-TEST_F(CrashpadAgentTest, Check_InspectDatabaseConfig) {
-  std::shared_ptr<component::Object> config =
-      inspect_node_.object_dir().object()->GetChild(kInspectConfigName);
-
-  ASSERT_NE(nullptr, config);
-
-  std::shared_ptr<component::Object> database_config = config->GetChild(kCrashpadDatabaseKey);
-
-  ASSERT_NE(nullptr, database_config);
-
-  fidl::VectorPtr<fuchsia::inspect::Property> database_properties =
-      database_config->ToFidl().properties;
-  fidl::VectorPtr<fuchsia::inspect::Metric> database_metrics = database_config->ToFidl().metrics;
-
-  EXPECT_EQ(1u, database_properties->size());
-  EXPECT_EQ(1u, database_metrics->size());
-
-  EXPECT_EQ(kCrashpadDatabasePathKey, database_properties->front().key);
-  EXPECT_EQ(database_path_.path(), database_properties->front().value.str());
-
-  EXPECT_EQ(kCrashpadDatabaseMaxSizeInKbKey, database_metrics->front().key);
-  EXPECT_EQ(kMaxTotalReportSizeInKb, database_metrics->front().value.uint_value());
-}
-
-TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadTrue) {
-  std::shared_ptr<component::Object> config =
-      inspect_node_.object_dir().object()->GetChild(kInspectConfigName);
-
-  ASSERT_NE(nullptr, config);
-
-  std::shared_ptr<component::Object> server_config = config->GetChild(kCrashServerKey);
-
-  ASSERT_NE(nullptr, server_config);
-
-  fidl::VectorPtr<fuchsia::inspect::Property> server_properties =
-      server_config->ToFidl().properties;
-  fidl::VectorPtr<fuchsia::inspect::Metric> server_metrics = server_config->ToFidl().metrics;
-
-  EXPECT_EQ(2u, server_properties->size());
-  EXPECT_EQ(0u, server_metrics->size());
-
-  EXPECT_THAT(server_properties.value(),
-              testing::UnorderedElementsAreArray({
-                  MatchesProperty(kCrashServerEnableUploadKey, "true"),
-                  MatchesProperty(kCrashServerUrlKey, kStubCrashServerUrl),
-              }));
-}
-
-TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadFalse) {
+TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadDisabled) {
   ResetAgent(Config{/*crashpad_database=*/
                     {
                         /*path=*/database_path_.path(),
@@ -677,24 +574,28 @@ TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadFalse) {
                     /*feedback_data_collection_timeout=*/
                     kFeedbackDataCollectionTimeout});
 
-  std::shared_ptr<component::Object> config =
-      inspect_node_.object_dir().object()->GetChild(kInspectConfigName);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(ChildrenMatch(Contains(NodeMatches(AllOf(
+                  NameMatches(kCrashServerKey),
+                  PropertyList(ElementsAre(StringIs(kCrashServerEnableUploadKey, "false"))))))))));
+}
 
-  ASSERT_NE(nullptr, config);
+TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
+  EXPECT_TRUE(FileOneCrashReport().is_response());
 
-  std::shared_ptr<component::Object> server_config = config->GetChild(kCrashServerKey);
-
-  ASSERT_NE(nullptr, server_config);
-
-  fidl::VectorPtr<fuchsia::inspect::Property> server_properties =
-      server_config->ToFidl().properties;
-  fidl::VectorPtr<fuchsia::inspect::Metric> server_metrics = server_config->ToFidl().metrics;
-
-  EXPECT_EQ(1u, server_properties->size());
-  EXPECT_EQ(0u, server_metrics->size());
-
-  EXPECT_EQ(kCrashServerEnableUploadKey, server_properties->front().key);
-  EXPECT_EQ("false", server_properties->front().value.str());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches(kInspectReportsName)),
+          ChildrenMatch(ElementsAre(AllOf(
+              NodeMatches(NameMatches(kProgramName)),
+              ChildrenMatch(ElementsAre(AllOf(
+                  NodeMatches(PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty()))))),
+                  ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                      NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
+                                                       StringIs("creation_time", Not(IsEmpty())),
+                                                       StringIs("id", kStubServerReportId),
+                                                   }))))))))))))))));
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {

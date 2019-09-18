@@ -24,20 +24,18 @@ std::string GetCurrentTimeString() {
 
 }  // namespace
 
-InspectManager::Report::Report(::inspect_deprecated::Node* parent_node,
-                               const crashpad::UUID& local_report_id) {
+InspectManager::Report::Report(inspect::Node* parent_node, const crashpad::UUID& local_report_id) {
   node_ = parent_node->CreateChild(local_report_id.ToString());
-  creation_time_ = node_.CreateStringProperty("creation_time", GetCurrentTimeString());
+  creation_time_ = node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
 void InspectManager::Report::MarkUploaded(std::string server_id) {
   server_node_ = node_.CreateChild("crash_server");
-  server_id_ = server_node_.CreateStringProperty("id", std::move(server_id));
-  server_creation_time_ =
-      server_node_.CreateStringProperty("creation_time", GetCurrentTimeString());
+  server_id_ = server_node_.CreateString("id", std::move(server_id));
+  server_creation_time_ = server_node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
-InspectManager::InspectManager(::inspect_deprecated::Node* root_node) : root_node_(root_node) {
+InspectManager::InspectManager(inspect::Node* root_node) : root_node_(root_node) {
   config_.node = root_node->CreateChild(kInspectConfigName);
   crash_reports_.node = root_node_->CreateChild(kInspectReportsName);
 }
@@ -65,23 +63,23 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   auto* crash_server = &config_.crash_server;
 
   crashpad_database->node = config_.node.CreateChild(kCrashpadDatabaseKey);
-  crashpad_database->path = config_.crashpad_database.node.CreateStringProperty(
+  crashpad_database->path = config_.crashpad_database.node.CreateString(
       kCrashpadDatabasePathKey, config.crashpad_database.path);
-  crashpad_database->max_size_in_kb = crashpad_database->node.CreateUIntMetric(
+  crashpad_database->max_size_in_kb = crashpad_database->node.CreateUint(
       kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
   crash_server->node = config_.node.CreateChild(kCrashServerKey);
-  crash_server->enable_upload = crash_server->node.CreateStringProperty(
+  crash_server->enable_upload = crash_server->node.CreateString(
       kCrashServerEnableUploadKey, (config.crash_server.enable_upload ? "true" : "false"));
 
   if (config.crash_server.enable_upload) {
     crash_server->url =
-        crash_server->node.CreateStringProperty(kCrashServerUrlKey, *config.crash_server.url.get());
+        crash_server->node.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
   }
 
   config_.feedback_data_collection_timeout_in_milliseconds =
-      config_.node.CreateUIntMetric(kFeedbackDataCollectionTimeoutInMillisecondsKey,
-                                    config.feedback_data_collection_timeout.to_msecs());
+      config_.node.CreateUint(kFeedbackDataCollectionTimeoutInMillisecondsKey,
+                              config.feedback_data_collection_timeout.to_msecs());
 }
 
 }  // namespace feedback

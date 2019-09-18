@@ -7,8 +7,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/inspect_deprecated/component.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include <utility>
@@ -21,8 +22,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
-  auto inspector = ::inspect_deprecated::ComponentInspector::Initialize(context.get());
-  ::inspect_deprecated::Node& root_node = inspector->root_tree()->GetRoot();
+  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
+  inspect::Node& root_node = inspector->root();
   feedback::InspectManager inspect_manager(&root_node);
 
   std::unique_ptr<feedback::CrashpadAgent> agent =

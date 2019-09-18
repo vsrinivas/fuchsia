@@ -13,7 +13,6 @@ source_set("gmatchers") {
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-inspect",
   ]
 }
 
@@ -29,7 +28,6 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-inspect",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }
