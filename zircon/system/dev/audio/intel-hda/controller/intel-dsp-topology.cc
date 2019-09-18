@@ -16,31 +16,49 @@ namespace intel_hda {
 namespace {
 // Module config parameters extracted from kbl_i2s_chrome.conf
 
-// Set up 2 pipelines for system playback:
-// 1. copier[host DMA]->mixin
-// 2. mixout->copier[I2S DMA]
-// 2 Pipelines are needed because only one instance of a module can exist in a pipeline.
-constexpr uint8_t PIPELINE0_ID = 0;
-constexpr uint8_t PIPELINE1_ID = 1;
-
-// Set up 2 pipelines for system capture:
-// 2. copier[I2S DMA]->mixin
-// 3. mixout->copier[host DMA]
-// 2 Pipelines are needed because only one instance of a module can exist in a pipeline.
-constexpr uint8_t PIPELINE2_ID = 2;
-constexpr uint8_t PIPELINE3_ID = 3;
+// To route audio from the system memory to the audio codecs, we must
+// set up an appropriate _topology_ inside the DSP. Topologies consist
+// of _pipelines_ and _modules_.
+//
+// Each module performs some operation on the audio, such as copying it
+// to/from a DMA gateway; mixing the output of other modules together;
+// modifying the volume of the stream; etc. Each module is given
+// a unique name of the form (<module type>, <id>). For example,
+// (<COPIER>, 0), (<COPIER>, 1) and (<DEMUX>, 0) are three unique names.
+//
+// Pipelines are used to instruct the DSP how to schedule modules. Every
+// module needs to be inside a pipeline. Each pipeline can have an
+// arbitrary number of modules, with the following constraints:
+//
+//   * If a module connects to another module in the same pipeline, it must
+//     use output pin 0.
+//
+//   * A pipeline can only have a single linear series of modules (i.e., no
+//     forking within the pipeline, but forking to another pipeline is permitted).
+//
+// Currently, the only type of module we use in our topology is
+// a _Copier_ module. Copiers are a type of module which may be
+// configured to copy audio data from:
+//
+//   * A DMA gateway to another module
+//   * a module to another module
+//   * a module to a DMA gateway
+//
+// but cannot copy directly from DMA to DMA.
+//
+// We currently set up a default topology consisting of two pipelines,
+// as follows:
+//
+//    Playback: [host DMA gateway] -> copier -> copier -> [I2S gateway]
+//    Capture:  [I2S gateway] -> copier -> copier -> [host DMA gateway]
+constexpr uint8_t kPlaybackPipelineId = 0;
+constexpr uint8_t kCapturePipelineId = 1;
 
 // Module instance IDs.
 constexpr uint8_t HOST_OUT_COPIER_ID = 0;
 constexpr uint8_t I2S0_OUT_COPIER_ID = 1;
 constexpr uint8_t I2S0_IN_COPIER_ID = 2;
 constexpr uint8_t HOST_IN_COPIER_ID = 3;
-
-constexpr uint8_t HOST_OUT_MIXIN_ID = 0;
-constexpr uint8_t I2S0_IN_MIXIN_ID = 1;
-
-constexpr uint8_t I2S0_OUT_MIXOUT_ID = 0;
-constexpr uint8_t HOST_IN_MIXOUT_ID = 1;
 
 const struct PipelineConfig {
   uint8_t id;
@@ -49,25 +67,13 @@ const struct PipelineConfig {
   bool lp;
 } PIPELINE_CFG[] = {
     {
-        .id = PIPELINE0_ID,
+        .id = kPlaybackPipelineId,
         .priority = 0,
         .mem_pages = 2,
         .lp = true,  // false in config, keep running in low power mode for dev
     },
     {
-        .id = PIPELINE1_ID,
-        .priority = 0,
-        .mem_pages = 4,
-        .lp = true,
-    },
-    {
-        .id = PIPELINE2_ID,
-        .priority = 0,
-        .mem_pages = 2,
-        .lp = true,
-    },
-    {
-        .id = PIPELINE3_ID,
+        .id = kCapturePipelineId,
         .priority = 0,
         .mem_pages = 2,
         .lp = true,
@@ -138,7 +144,7 @@ const CopierCfg HOST_IN_COPIER_CFG = {
             .ibs = 384,
             .obs = 384,
             .is_pages = 0,
-            .audio_fmt = FMT_MIXER,
+            .audio_fmt = FMT_HOST,
         },
     .out_fmt = FMT_HOST,
     .copier_feature_mask = 0,
@@ -182,7 +188,7 @@ const CopierCfg I2S_IN_COPIER_CFG = {
             .is_pages = 0,
             .audio_fmt = FMT_I2S,
         },
-    .out_fmt = FMT_MIXER,
+    .out_fmt = FMT_HOST,
     .copier_feature_mask = 0,
     .gtw_cfg =
         {
@@ -190,14 +196,6 @@ const CopierCfg I2S_IN_COPIER_CFG = {
             .dma_buffer_size = 2 * 384,
             .config_length = 0,
         },
-};
-
-const BaseModuleCfg MIXER_CFG = {
-    .cpc = 100000,
-    .ibs = 384,
-    .obs = 384,
-    .is_pages = 0,
-    .audio_fmt = FMT_MIXER,
 };
 
 }  // namespace
@@ -263,18 +261,6 @@ zx_status_t IntelDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
                                static_cast<uint16_t>(cfg_size), cfg_buf.get());
 }
 
-zx_status_t IntelDsp::CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
-                                        const BaseModuleCfg& cfg) {
-  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::MIXIN], instance_id,
-                               ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
-}
-
-zx_status_t IntelDsp::CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
-                                         const BaseModuleCfg& cfg) {
-  return DspInitModuleInstance(ipc_.get(), module_ids_[Module::MIXOUT], instance_id,
-                               ProcDomain::LOW_LATENCY, 0, pipeline_id, sizeof(cfg), &cfg);
-}
-
 zx_status_t IntelDsp::SetupPipelines() {
   ZX_DEBUG_ASSERT(module_ids_[Module::COPIER] != 0);
   ZX_DEBUG_ASSERT(module_ids_[Module::MIXIN] != 0);
@@ -290,88 +276,35 @@ zx_status_t IntelDsp::SetupPipelines() {
     }
   }
 
-  // Create pipeline 0 modules. Host DMA -> mixin
+  // Create playback pipeline modules. Host DMA -> I2S DMA.
   // Modules must be created in order of source -> sink
-  st = CreateHostDmaModule(HOST_OUT_COPIER_ID, PIPELINE0_ID, HOST_OUT_COPIER_CFG);
+  st = CreateHostDmaModule(HOST_OUT_COPIER_ID, kPlaybackPipelineId, HOST_OUT_COPIER_CFG);
   if (st != ZX_OK) {
     return st;
   }
-  st = CreateMixinModule(HOST_OUT_MIXIN_ID, PIPELINE0_ID, MIXER_CFG);
+  st = CreateI2SModule(I2S0_OUT_COPIER_ID, kPlaybackPipelineId, I2S_OUT_INSTANCE_ID,
+                       NHLT_DIRECTION_RENDER, I2S_OUT_COPIER_CFG);
   if (st != ZX_OK) {
     return st;
   }
-
-  // Bind pipeline 0
   st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], HOST_OUT_COPIER_ID, 0,
-                      module_ids_[Module::MIXIN], HOST_OUT_MIXIN_ID, 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Create pipeline 1 modules. mixout -> I2S DMA
-  st = CreateMixoutModule(I2S0_OUT_MIXOUT_ID, PIPELINE1_ID, MIXER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  st = CreateI2SModule(I2S0_OUT_COPIER_ID, PIPELINE1_ID, I2S_OUT_INSTANCE_ID, NHLT_DIRECTION_RENDER,
-                       I2S_OUT_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Bind pipeline 1
-  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXOUT], I2S0_OUT_MIXOUT_ID, 0,
                       module_ids_[Module::COPIER], I2S0_OUT_COPIER_ID, 0);
   if (st != ZX_OK) {
     return st;
   }
 
-  // Create pipeline 2 modules. I2S DMA -> mixin
-  st = CreateI2SModule(I2S0_IN_COPIER_ID, PIPELINE2_ID, I2S_IN_INSTANCE_ID, NHLT_DIRECTION_CAPTURE,
-                       I2S_IN_COPIER_CFG);
+  // Create capture pipeline modules. I2S DMA -> Host DMA.
+  st = CreateI2SModule(I2S0_IN_COPIER_ID, kCapturePipelineId, I2S_IN_INSTANCE_ID,
+                       NHLT_DIRECTION_CAPTURE, I2S_IN_COPIER_CFG);
   if (st != ZX_OK) {
     return st;
   }
-  st = CreateMixinModule(I2S0_IN_MIXIN_ID, PIPELINE2_ID, MIXER_CFG);
+  st = CreateHostDmaModule(HOST_IN_COPIER_ID, kCapturePipelineId, HOST_IN_COPIER_CFG);
   if (st != ZX_OK) {
     return st;
   }
-
-  // Bind pipeline 2
   st = DspBindModules(ipc_.get(), module_ids_[Module::COPIER], I2S0_IN_COPIER_ID, 0,
-                      module_ids_[Module::MIXIN], I2S0_IN_MIXIN_ID, 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Create pipeline 3 modules. mixout -> Host DMA
-  st = CreateMixoutModule(HOST_IN_MIXOUT_ID, PIPELINE3_ID, MIXER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-  st = CreateHostDmaModule(HOST_IN_COPIER_ID, PIPELINE3_ID, HOST_IN_COPIER_CFG);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Bind pipeline 2
-  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXOUT], HOST_IN_MIXOUT_ID, 0,
                       module_ids_[Module::COPIER], HOST_IN_COPIER_ID, 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Bind playback pipeline
-  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXIN], HOST_OUT_MIXIN_ID, 0,
-                      module_ids_[Module::MIXOUT], I2S0_OUT_MIXOUT_ID, 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  // Bind capture pipeline
-  st = DspBindModules(ipc_.get(), module_ids_[Module::MIXIN], I2S0_IN_MIXIN_ID, 0,
-                      module_ids_[Module::MIXOUT], HOST_IN_MIXOUT_ID, 0);
   if (st != ZX_OK) {
     return st;
   }
@@ -379,32 +312,33 @@ zx_status_t IntelDsp::SetupPipelines() {
   return ZX_OK;
 }
 
-zx_status_t IntelDsp::StartPipeline(const DspPipeline& pipeline) {
-  // Sink first and then source
-  zx_status_t st = RunPipeline(pipeline.pl_sink);
+Status IntelDsp::StartPipeline(DspPipeline pipeline) {
+  // Pipeline must be paused before starting
+  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
-    return st;
+    return Status(st);
   }
-  return RunPipeline(pipeline.pl_source);
-  // TODO Error recovery
+
+  st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::RUNNING, true);
+  if (st != ZX_OK) {
+    return Status(st);
+  }
+  return OkStatus();
 }
 
-zx_status_t IntelDsp::PausePipeline(const DspPipeline& pipeline) {
-  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.pl_source, PipelineState::PAUSED, true);
+Status IntelDsp::PausePipeline(DspPipeline pipeline) {
+  zx_status_t st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
-    return st;
+    return Status(st);
   }
-  st = DspSetPipelineState(ipc_.get(), pipeline.pl_sink, PipelineState::PAUSED, true);
-  if (st != ZX_OK) {
-    return st;
-  }
+
   // Reset DSP DMA
-  st = DspSetPipelineState(ipc_.get(), pipeline.pl_source, PipelineState::RESET, true);
+  st = DspSetPipelineState(ipc_.get(), pipeline.id, PipelineState::RESET, true);
   if (st != ZX_OK) {
-    return st;
+    return Status(st);
   }
-  return DspSetPipelineState(ipc_.get(), pipeline.pl_sink, PipelineState::RESET, true);
-  // TODO Error recovery
+
+  return OkStatus();
 }
 
 zx_status_t IntelDsp::CreateAndStartStreams() {
@@ -414,29 +348,21 @@ zx_status_t IntelDsp::CreateAndStartStreams() {
   static struct {
     uint32_t stream_id;
     bool is_input;
-    struct DspPipeline pipeline;
+    DspPipeline pipeline;
     audio_stream_unique_id_t uid;
   } STREAMS[] = {
       // Speakers
       {
           .stream_id = 1,
           .is_input = false,
-          .pipeline =
-              {
-                  .pl_source = PIPELINE0_ID,
-                  .pl_sink = PIPELINE1_ID,
-              },
+          .pipeline = {kPlaybackPipelineId},
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
       },
       // DMIC
       {
           .stream_id = 2,
           .is_input = true,
-          .pipeline =
-              {
-                  .pl_source = PIPELINE3_ID,
-                  .pl_sink = PIPELINE2_ID,
-              },
+          .pipeline = {kCapturePipelineId},
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
       },
   };

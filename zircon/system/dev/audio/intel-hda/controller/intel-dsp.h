@@ -26,6 +26,7 @@
 
 #include "debug-logging.h"
 #include "intel-dsp-ipc.h"
+#include "intel-dsp-modules.h"
 #include "intel-dsp-stream.h"
 #include "intel-dsp-topology.h"
 #include "intel-hda-stream.h"
@@ -48,8 +49,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   // Interrupt handler.
   void ProcessIrq();
 
-  zx_status_t StartPipeline(const DspPipeline& pipeline);
-  zx_status_t PausePipeline(const DspPipeline& pipeline);
+  // Start and stop DSP pipelines.
+  Status StartPipeline(DspPipeline pipeline);
+  Status PausePipeline(DspPipeline pipeline);
 
   void DeviceShutdown();
   zx_status_t Suspend(uint32_t flags) override final;
@@ -78,9 +80,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id, const CopierCfg& cfg);
   zx_status_t CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id, uint8_t i2s_instance_id,
                               uint8_t direction, const CopierCfg& cfg);
-  zx_status_t CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id, const BaseModuleCfg& cfg);
-  zx_status_t CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
-                                 const BaseModuleCfg& cfg);
   zx_status_t SetupPipelines();
   zx_status_t RunPipeline(uint8_t pipeline_id);
 

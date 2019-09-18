@@ -195,11 +195,12 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
   switch (req.hdr.cmd) {
     case AUDIO_RB_CMD_START: {
       auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-      zx_status_t st = dsp->StartPipeline(pipeline_);
-      if (st != ZX_OK) {
+      Status status = dsp->StartPipeline(pipeline_);
+      if (!status.ok()) {
+        LOG(ERROR, "Failed to start ring buffer: %s\n", status.ToString().c_str());
         audio_proto::RingBufStartResp resp = {};
         resp.hdr = req.hdr;
-        resp.result = st;
+        resp.result = status.code();
         return client_rb_channel_->Write(&resp, sizeof(resp));
       }
       break;
@@ -258,11 +259,12 @@ zx_status_t IntelDspStream::ProcessClientRbRequest(dispatcher::Channel* channel)
   switch (req.hdr.cmd) {
     case AUDIO_RB_CMD_STOP: {
       auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-      zx_status_t st = dsp->PausePipeline(pipeline_);
-      if (st != ZX_OK) {
+      Status status = dsp->PausePipeline(pipeline_);
+      if (!status.ok()) {
+        LOG(ERROR, "Failed to stop ring buffer: %s\n", status.ToString().c_str());
         audio_proto::RingBufStopResp resp = {};
         resp.hdr = req.hdr;
-        resp.result = st;
+        resp.result = status.code();
         return channel->Write(&resp, sizeof(resp));
       }
       break;
