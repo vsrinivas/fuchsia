@@ -1384,6 +1384,16 @@ func TestCompileConstant(t *testing.T) {
 			typ:      makePrimitiveType(types.Float32),
 			expected: "1.23",
 		},
+		{
+			input:    makeLiteralConstant("-9223372036854775808"),
+			typ:      makePrimitiveType(types.Int64),
+			expected: "(-9223372036854775807ll-1)",
+		},
+		{
+			input:    makeLiteralConstant("0x8000000000000000"),
+			typ:      makePrimitiveType(types.Int64),
+			expected: "(-9223372036854775807ll-1)",
+		},
 	}
 	for _, ex := range cases {
 		actual := c.compileConstant(ex.input, nil, ex.typ, "")
