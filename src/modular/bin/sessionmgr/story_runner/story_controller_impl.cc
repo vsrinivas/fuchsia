@@ -983,7 +983,7 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_inspect_node_(story_inspect_node),
       story_mutator_(std::move(story_mutator)),
       story_observer_(std::move(story_observer)),
-      story_shell_context_impl_{story_id_, story_provider_impl, this},
+      story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
   story_storage_->set_on_module_data_updated([this](fuchsia::modular::ModuleData module_data) {
     OnModuleDataUpdated(std::move(module_data));

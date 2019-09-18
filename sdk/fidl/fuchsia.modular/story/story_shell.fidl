@@ -198,9 +198,6 @@ protocol StoryShellContext {
     /// Starts watching Story shell's visual state.
     WatchVisualState(StoryVisualStateWatcher watcher);
 
-    /// Gets a Link instance that the story shell can use for persisting metadata.
-    GetLink(request<Link> request);
-
     /// Requests a view for a Surface.
     /// Requests that a view for `surface_id` is provided through
     /// StoryShell.ReconnectView().

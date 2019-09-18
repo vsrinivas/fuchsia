@@ -16,8 +16,7 @@ class StoryProviderImpl;
 
 class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
  public:
-  StoryShellContextImpl(fidl::StringPtr story_id, StoryProviderImpl* story_provider_impl,
-                        StoryControllerImpl* story_controller_impl);
+  StoryShellContextImpl(fidl::StringPtr story_id, StoryProviderImpl* story_provider_impl);
   ~StoryShellContextImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryShellContext> request);
@@ -27,15 +26,11 @@ class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void WatchVisualState(
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override;
-  void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void RequestView(std::string surface_id) override;
 
   const fidl::StringPtr story_id_;
   // Not owned. The StoryProviderImpl corresponding to this context.
   StoryProviderImpl* const story_provider_impl_;
-  // Not owned. The StoryControllerImpl for the Story corresponding to this
-  // context.
-  StoryControllerImpl* const story_controller_impl_;
 
   fidl::BindingSet<fuchsia::modular::StoryShellContext> bindings_;
 };

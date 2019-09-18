@@ -93,57 +93,6 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
   std::string fake_module_url_;
 };
 
-// Verifies that when the StoryShell writes content to its Link, those data
-// are persisted such that when it is restarted it can retrieve the data again.
-TEST_F(StoryShellTest, LinkIsPersistent) {
-  StartSession();
-
-  AddModToStory("story1", "a_mod");
-  // Wait for our story shell to start and initialize.
-  RunLoopUntil([&] { return story_shell_.is_initialized(); });
-
-  // Write link data.
-  fuchsia::modular::LinkPtr link;
-  story_shell_.story_shell_context()->GetLink(link.NewRequest());
-  {
-    fuchsia::mem::Buffer buffer;
-    ASSERT_TRUE(fsl::VmoFromString("42", &buffer));
-    link->Set(/*path=*/nullptr, std::move(buffer));
-  }
-
-  // Wait for confirmation that the write was successful.
-  bool got_content = false;
-  std::string content;
-  link->Get(/*path=*/nullptr, [&](std::unique_ptr<fuchsia::mem::Buffer> buffer) {
-    got_content = true;
-    ASSERT_NE(nullptr, buffer.get());
-    ASSERT_TRUE(fsl::StringFromVmo(*buffer, &content));
-  });
-  RunLoopUntil([&] { return got_content; });
-  EXPECT_EQ("42", content);
-
-  // Restart the story.
-  bool story_shell_destroyed = false;
-  story_shell_.set_on_destroy([&] { story_shell_destroyed = true; });
-  RestartStory("story1");
-
-  // Wait for it to die and then restart again.
-  RunLoopUntil([&] { return story_shell_destroyed; });
-  RunLoopUntil([&] { return story_shell_.is_running(); });
-
-  // Show that the contents of the Link are still accessible after a restart.
-  story_shell_.story_shell_context()->GetLink(link.NewRequest());
-  got_content = false;
-  content.clear();
-  link->Get(/*path=*/nullptr, [&](std::unique_ptr<fuchsia::mem::Buffer> buffer) {
-    got_content = true;
-    ASSERT_NE(nullptr, buffer.get());
-    fsl::StringFromVmo(*buffer, &content);
-  });
-  RunLoopUntil([&] { return got_content; });
-  EXPECT_EQ("42", content);
-}
-
 TEST_F(StoryShellTest, GetsModuleMetadata) {
   StartSession();
 
