@@ -257,6 +257,10 @@ config("default_warnings") {
     "-Wno-unknown-warning-option",
     "-Wno-c99-designator",
     "-Wno-reorder-init-list",
+
+    # TODO(36439): Temporarily disable -Wno-sizeof-array-div until we clear
+    # all instances this appears.
+    "-Wno-sizeof-array-div",
   ]
 }
 
