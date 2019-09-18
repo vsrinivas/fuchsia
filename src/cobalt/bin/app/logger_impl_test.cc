@@ -14,7 +14,6 @@
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/logger_test_utils.h"
-#include "third_party/cobalt/src/registry/client_config.h"
 
 namespace cobalt {
 
