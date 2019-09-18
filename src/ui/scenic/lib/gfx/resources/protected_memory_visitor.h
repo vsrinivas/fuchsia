@@ -11,6 +11,7 @@ namespace scenic_impl {
 namespace gfx {
 
 class Node;
+class Resource;
 
 // Traverses resources for content using protected memory.
 class ProtectedMemoryVisitor : public ResourceVisitor {
@@ -50,6 +51,7 @@ class ProtectedMemoryVisitor : public ResourceVisitor {
 
  private:
   void VisitNode(Node* r);
+  void VisitResource(Resource* r);
 
   bool has_protected_memory_use_ = false;
 };

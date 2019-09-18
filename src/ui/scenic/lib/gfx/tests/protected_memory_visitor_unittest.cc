@@ -8,8 +8,11 @@
 
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
+#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/opacity_node.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl::gfx::test {
@@ -66,6 +69,47 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForProtectedImage) {
   protected_material->SetTexture(protected_image);
 
   visitor.Visit(protected_material.get());
+  ASSERT_TRUE(visitor.HasProtectedMemoryUse());
+}
+
+TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForChildProtectedImage) {
+  ProtectedMemoryVisitor visitor;
+
+  ResourceId next_id = 1;
+  MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
+  protected_material->SetTexture(protected_image);
+
+  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), next_id++);
+  shape_node->SetMaterial(protected_material);
+
+  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), next_id++);
+  opacity_node->AddChild(shape_node, session()->error_reporter());
+
+  visitor.Visit(opacity_node.get());
+  ASSERT_TRUE(visitor.HasProtectedMemoryUse());
+}
+
+TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForImportedProtectedImage) {
+  ProtectedMemoryVisitor visitor;
+
+  ResourceId next_id = 1;
+  MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
+  protected_material->SetTexture(protected_image);
+  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), next_id++);
+  shape_node->SetMaterial(protected_material);
+
+  auto resource_linker = std::make_unique<ResourceLinker>();
+  auto kImportSpec = fuchsia::ui::gfx::ImportSpec::NODE;
+  auto import_node =
+      fxl::MakeRefCounted<Import>(session(), next_id++, kImportSpec, resource_linker->GetWeakPtr());
+
+  fxl::RefPtr<EntityNode> entity_node = import_node->delegate()->As<EntityNode>();
+  ASSERT_TRUE(entity_node);
+  entity_node->AddChild(shape_node, session()->error_reporter());
+
+  visitor.Visit(import_node.get());
   ASSERT_TRUE(visitor.HasProtectedMemoryUse());
 }
 
