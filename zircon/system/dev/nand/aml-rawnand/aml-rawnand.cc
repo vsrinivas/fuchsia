@@ -188,19 +188,23 @@ void AmlRawNand::AmlCmdIdle(uint32_t time) {
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
 }
 
-zx_status_t AmlRawNand::AmlWaitCmdFinish(unsigned int timeout_ms) {
+zx_status_t AmlRawNand::AmlWaitCmdFinish(zx::duration timeout, zx::duration first_interval,
+                                         zx::duration polling_interval) {
   zx_status_t ret = ZX_OK;
-  uint64_t total_time = 0;
+  zx::duration total_time;
 
   // Wait until cmd fifo is empty.
+  bool first = true;
   while (true) {
     uint32_t cmd_size = mmio_nandreg_.Read32(P_NAND_CMD);
     uint32_t numcmds = (cmd_size >> 22) & 0x1f;
     if (numcmds == 0)
       break;
-    usleep(10);
-    total_time += 10;
-    if (total_time > (timeout_ms * 1000)) {
+    zx::duration sleep_interval = first ? first_interval : polling_interval;
+    first = false;
+    zx::nanosleep(zx::deadline_after(sleep_interval));
+    total_time += sleep_interval;
+    if (total_time > timeout) {
       ret = ZX_ERR_TIMED_OUT;
       break;
     }
@@ -247,7 +251,8 @@ zx_status_t AmlRawNand::AmlWaitDmaFinish() {
   AmlCmdIdle(0);
   // This timeout was 1048 seconds. Make this 1 second, similar
   // to other codepaths where we wait for the cmd fifo to drain.
-  return AmlWaitCmdFinish(CMD_FINISH_TIMEOUT_MS);
+  return AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), polling_timings_.cmd_flush.min,
+                          polling_timings_.cmd_flush.interval);
 }
 
 void* AmlRawNand::AmlInfoPtr(int i) {
@@ -384,7 +389,7 @@ uint8_t AmlRawNand::AmlReadByte() {
 
   AmlCmdIdle(0);
   AmlCmdIdle(0);
-  AmlWaitCmdFinish(CMD_FINISH_TIMEOUT_MS);
+  AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), zx::sec(10), zx::sec(10));
   // There is no mmio interface to read a byte (?), so get the
   // underlying reg and do this manually.
   auto reg = reinterpret_cast<volatile uint8_t*>(mmio_nandreg_.get());
@@ -568,7 +573,8 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
   }
   onfi_.OnfiCommand(NAND_CMD_PAGEPROG, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
                     (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_.OnfiWait(AML_WRITE_PAGE_TIMEOUT);
+  status = onfi_.OnfiWait(zx::msec(AML_WRITE_PAGE_TIMEOUT), polling_timings_.write.min,
+                          polling_timings_.write.interval);
 
   return status;
 }
@@ -586,7 +592,8 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
                     (controller_params_.options & NAND_BUSWIDTH_16));
   onfi_.OnfiCommand(NAND_CMD_ERASE2, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
                     (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_.OnfiWait(AML_ERASE_BLOCK_TIMEOUT);
+  status = onfi_.OnfiWait(zx::msec(AML_ERASE_BLOCK_TIMEOUT), polling_timings_.write.min,
+                          polling_timings_.write.interval);
   return status;
 }
 
@@ -648,6 +655,7 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   erasesize_pages_ = erasesize_ / writesize_;
   chipsize_ = nand_chip->chipsize;
   page_shift_ = ffs(writesize_) - 1;
+  polling_timings_ = nand_chip->polling_timings;
 
   // We found a matching device in our database, use it to
   // initialize. Adjust timings and set various parameters.
