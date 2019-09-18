@@ -84,7 +84,7 @@ impl FontPackageManagerBuilder {
 fn load_font_packages_registry<P: AsRef<Path>>(path: P) -> Result<Vec<PkgUrl>, Vec<LoadError>> {
     let file_path = path.as_ref();
     match fs::File::open(&file_path) {
-        Ok(f) => match serde_json::from_reader(f) {
+        Ok(f) => match serde_json::from_reader(io::BufReader::new(f)) {
             Ok(package_urls) => {
                 let package_urls: Vec<PkgUrl> = package_urls;
                 match validate_package_urls(file_path, &package_urls) {
@@ -219,7 +219,7 @@ pub mod tests {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join(file_name);
         let f = File::create(&path)?;
-        serde_json::to_writer(f, &contents)?;
+        serde_json::to_writer(io::BufWriter::new(f), &contents)?;
 
         Ok((dir, path))
     }

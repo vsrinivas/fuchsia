@@ -35,7 +35,7 @@ where
     for (name, config) in iter {
         let path = dir.path().join(name);
         let f = File::create(path).unwrap();
-        serde_json::to_writer(f, &config).unwrap();
+        serde_json::to_writer(io::BufWriter::new(f), &config).unwrap();
     }
 
     dir

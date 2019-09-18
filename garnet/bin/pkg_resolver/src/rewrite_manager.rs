@@ -76,7 +76,7 @@ impl RewriteManager {
             let temp_path = PathBuf::from(temp_path);
             {
                 let f = File::create(&temp_path)?;
-                serde_json::to_writer(f, &config)?;
+                serde_json::to_writer(io::BufWriter::new(f), &config)?;
             };
             fs::rename(temp_path, &self.dynamic_rules_path)
         })();
@@ -248,7 +248,7 @@ impl<N> RewriteManagerBuilder<N> {
         T: AsRef<Path>,
     {
         let f = File::open(path.as_ref())?;
-        let RuleConfig::Version1(rules) = serde_json::from_reader(f)?;
+        let RuleConfig::Version1(rules) = serde_json::from_reader(io::BufReader::new(f))?;
         Ok(rules)
     }
 

@@ -118,7 +118,10 @@ impl<A: AmberConnect> RepositoryManager<A> {
             let temp_path = PathBuf::from(temp_path);
             {
                 let f = fs::File::create(&temp_path)?;
-                serde_json::to_writer(f, &RepositoryConfigs::Version1(configs))?;
+                serde_json::to_writer(
+                    io::BufWriter::new(f),
+                    &RepositoryConfigs::Version1(configs),
+                )?;
             }
             fs::rename(temp_path, &self.dynamic_configs_path)
         })();
@@ -473,7 +476,7 @@ fn load_configs_dir<T: AsRef<Path>>(
 fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, LoadError> {
     let path = path.as_ref();
     match fs::File::open(&path) {
-        Ok(f) => match serde_json::from_reader(f) {
+        Ok(f) => match serde_json::from_reader(io::BufReader::new(f)) {
             Ok(RepositoryConfigs::Version1(configs)) => Ok(configs),
             Err(err) => Err(LoadError::Parse { path: path.into(), error: err }),
         },
@@ -742,12 +745,18 @@ mod tests {
             f.write(b"hello world").unwrap();
 
             let f = File::create(dir.path().join("a")).unwrap();
-            serde_json::to_writer(f, &RepositoryConfigs::Version1(vec![example_config.clone()]))
-                .unwrap();
+            serde_json::to_writer(
+                io::BufWriter::new(f),
+                &RepositoryConfigs::Version1(vec![example_config.clone()]),
+            )
+            .unwrap();
 
             let f = File::create(dir.path().join("z")).unwrap();
-            serde_json::to_writer(f, &RepositoryConfigs::Version1(vec![fuchsia_config.clone()]))
-                .unwrap();
+            serde_json::to_writer(
+                io::BufWriter::new(f),
+                &RepositoryConfigs::Version1(vec![fuchsia_config.clone()]),
+            )
+            .unwrap();
         }
 
         let dynamic_dir = tempfile::tempdir().unwrap();
@@ -997,7 +1006,7 @@ mod tests {
 
         // make sure the dynamic config file didn't change just from opening it.
         let f = File::open(&dynamic_configs_path).unwrap();
-        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(io::BufReader::new(f)).unwrap();
         assert_eq!(actual, old_dynamic_configs);
 
         let new_dynamic_config = Arc::new(
@@ -1010,13 +1019,13 @@ mod tests {
         // Inserting a new repo should update the config file.
         assert_eq!(repomgr.insert(new_dynamic_config.clone()), Some(old_dynamic_config));
         let f = File::open(&dynamic_configs_path).unwrap();
-        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(io::BufReader::new(f)).unwrap();
         assert_eq!(actual, new_dynamic_configs);
 
         // Removing the repo should empty out the file.
         assert_eq!(repomgr.remove(&fuchsia_url), Ok(Some(new_dynamic_config)));
         let f = File::open(&dynamic_configs_path).unwrap();
-        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(io::BufReader::new(f)).unwrap();
         assert_eq!(actual, RepositoryConfigs::Version1(vec![]));
 
         // We should now be back to the static config.
