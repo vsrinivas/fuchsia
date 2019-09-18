@@ -27,5 +27,40 @@ source_set("cpp") {
     "//zircon/public/lib/zx",
   ]
 
+  # fxb/36788 this target is deprecated
+  # Please use //sdk/lib/sys or //sdk/lib/svc as appropriate.
+  visibility = [
+    "//garnet/bin/debugserver:bin",
+    "//garnet/bin/developer/tiles:tiles_lib",
+    "//garnet/bin/insntrace:bin",
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/bin/ui/present_view:present_view",
+    "//garnet/examples/ui/tile:tile",
+    "//garnet/public/lib/component/cpp:cpp",
+    "//garnet/public/lib/component/cpp/testing:testing",
+    "//garnet/public/lib/test_runner/cpp:cpp",
+    "//src/cobalt/bin/testapp:cobalt_testapp",
+    "//src/cobalt/bin/utils:cobalt_utils_unittests",
+    "//src/connectivity/network/mdns/service:source_set",
+    "//src/connectivity/wlan/drivers/mediatek/ralink:ralink_driver",
+    "//src/developer/debug/debug_agent:lib",
+    "//src/developer/debug/debug_agent/integration_tests:integration_tests",
+    "//src/ledger/bin/fidl_helpers:message_relay",
+    "//src/ledger/bin/testing:memory_usage_test_benchmark",
+    "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider_bin",
+    "//src/lib/cobalt/cpp:unittests",
+    "//src/modular/bin/sessionmgr:user_intelligence_provider",
+    "//src/modular/lib/agent/cpp:agent_impl",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/lifecycle/cpp:lifecycle_impl",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/tests:queue_persistence_test",
+    "//src/virtualization/bin/guest:bin",
+    "//src/virtualization/bin/guest_manager:lib",
+    "//src/virtualization/lib/guest_interaction:guest_interaction_service_test",
+    "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests:lib",
+  ]
+
   public_configs = [ "//garnet/public:config" ]
 }
