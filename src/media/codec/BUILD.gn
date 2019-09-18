@@ -12,20 +12,20 @@ group("media") {
     ":codec_runner_sw_ffmpeg",
     ":codec_runner_sw_sbc",
     ":services",
-    "codec_factory",
     "codecs",
+    "factory",
   ]
 }
 
 group("services") {
   public_deps = [
-    "//src/media/codec/codec_factory",
+    "//src/media/codec/factory",
   ]
 }
 
 package("codec_factory") {
   deps = [
-    "//src/media/codec/codec_factory:codec_factory",
+    "//src/media/codec/factory",
   ]
 
   binaries = [
@@ -36,7 +36,7 @@ package("codec_factory") {
 
   meta = [
     {
-      path = rebase_path("codec_factory/meta/codec_factory.cmx")
+      path = rebase_path("factory/meta/codec_factory.cmx")
       dest = "codec_factory.cmx"
     },
   ]

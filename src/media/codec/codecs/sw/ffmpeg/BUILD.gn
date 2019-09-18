@@ -14,7 +14,7 @@ group("ffmpeg") {
 
 executable("codec_runner_sw_ffmpeg") {
   visibility = [
-    "//src/media/codec/codec_factory",
+    "//src/media/codec/factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec:codec_runner_sw_ffmpeg.manifest",
     "//src/media/codec/*",  # TODO(CF-235): Dep shouldn't be needed
