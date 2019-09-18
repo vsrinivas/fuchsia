@@ -7,11 +7,36 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
 
 namespace virtual_camera {
+
+// To fill an ARGB32 image, you have the following offsets:
+static constexpr uint8_t kAlphaShift = 24;
+static constexpr uint8_t kRedShift = 16;
+static constexpr uint8_t kGreenShift = 8;
+// Set the alpha value to 100%:
+static constexpr uint8_t kAlphaValue = 0xff;
+
+static constexpr uint32_t kLowByteMask = 0xff;
+static constexpr uint32_t kLowThreeBitMask = 0x7;
+static constexpr uint32_t kUint8Max = 0xff;
+
+// Every new frame, we increment by kFrameColorInc.  There are kNumberOfPhases, and each phase
+// takes 2^kIndexDownshift steps.
+static constexpr uint32_t kFrameColorInc = 0x01;
+static constexpr uint8_t kIndexDownshift = 8;
+static constexpr uint8_t kNumberOfPhases = 6;
+// The cycle repeats after kNumberOfPhases * 2^kIndexDownshift steps.
+static constexpr uint32_t kMaxFrameColor = kNumberOfPhases << kIndexDownshift;
+// To cover the HSV color space, R,G,B go through the phases offset by the following:
+static constexpr uint8_t kRedPhaseOffset = 1;
+static constexpr uint8_t kGreenPhaseOffset = 5;
+static constexpr uint8_t kBluePhaseOffset = 3;
 
 void ColorSource::FillARGB(void* start, size_t buffer_size) {
   if (!start) {
@@ -20,11 +45,12 @@ void ColorSource::FillARGB(void* start, size_t buffer_size) {
   }
   uint8_t r, g, b;
   hsv_color(frame_color_, &r, &g, &b);
-  FXL_VLOG(4) << "Filling with " << (int)r << " " << (int)g << " " << (int)b;
-  uint32_t color = 0xff << 24 | r << 16 | g << 8 | b;
+  FXL_VLOG(4) << "Filling with " << static_cast<int>(r) << " " << static_cast<int>(g) << " "
+              << static_cast<int>(b);
+  uint32_t color = kAlphaValue << kAlphaShift | r << kRedShift | g << kGreenShift | b;
   ZX_DEBUG_ASSERT(buffer_size % 4 == 0);
   uint32_t num_pixels = buffer_size / 4;
-  uint32_t* pixels = reinterpret_cast<uint32_t*>(start);
+  auto* pixels = reinterpret_cast<uint32_t*>(start);
   for (unsigned int i = 0; i < num_pixels; i++) {
     pixels[i] = color;
   }
@@ -38,13 +64,13 @@ void ColorSource::FillARGB(void* start, size_t buffer_size) {
 }
 
 void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b) {
-  uint8_t pos = index & 0xff;
-  uint8_t neg = 0xff - (index & 0xff);
-  uint8_t phase = (index >> 8) & 0x7;
-  uint8_t phases[6] = {0xff, 0xff, neg, 0x00, 0x00, pos};
-  *r = phases[(phase + 1) % arraysize(phases)];
-  *g = phases[(phase + 5) % arraysize(phases)];
-  *b = phases[(phase + 3) % arraysize(phases)];
+  uint8_t pos = index & kLowByteMask;
+  uint8_t neg = kLowByteMask - (index & kLowByteMask);
+  uint8_t phase = (index >> kIndexDownshift) & kLowThreeBitMask;
+  std::array<uint8_t, kNumberOfPhases> phases = {kUint8Max, kUint8Max, neg, 0x00, 0x00, pos};
+  *r = phases[(phase + kRedPhaseOffset) % phases.size()];
+  *g = phases[(phase + kGreenPhaseOffset) % phases.size()];
+  *b = phases[(phase + kBluePhaseOffset) % phases.size()];
 }
 
 }  // namespace virtual_camera

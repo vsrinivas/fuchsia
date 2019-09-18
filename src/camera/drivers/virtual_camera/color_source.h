@@ -23,8 +23,6 @@ class ColorSource {
 
   static constexpr uint32_t kStartingFrameColor = 0x80;
   uint32_t frame_color_ = kStartingFrameColor;
-  static constexpr uint32_t kFrameColorInc = 0x01;
-  static constexpr uint32_t kMaxFrameColor = 0x600;
 };
 
 }  // namespace virtual_camera
