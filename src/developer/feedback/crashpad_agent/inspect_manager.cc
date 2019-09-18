@@ -24,14 +24,14 @@ std::string GetCurrentTimeString() {
 
 }  // namespace
 
-InspectManager::Report::Report(inspect::Node* parent_node, const crashpad::UUID& local_report_id) {
-  node_ = parent_node->CreateChild(local_report_id.ToString());
+InspectManager::Report::Report(inspect::Node* parent_node, const std::string& local_report_id) {
+  node_ = parent_node->CreateChild(local_report_id);
   creation_time_ = node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
-void InspectManager::Report::MarkUploaded(std::string server_id) {
+void InspectManager::Report::MarkAsUploaded(std::string server_report_id) {
   server_node_ = node_.CreateChild("crash_server");
-  server_id_ = server_node_.CreateString("id", std::move(server_id));
+  server_id_ = server_node_.CreateString("id", std::move(server_report_id));
   server_creation_time_ = server_node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
@@ -41,7 +41,7 @@ InspectManager::InspectManager(inspect::Node* root_node) : root_node_(root_node)
 }
 
 InspectManager::Report* InspectManager::AddReport(const std::string& program_name,
-                                                  const crashpad::UUID& local_report_id) {
+                                                  const std::string& local_report_id) {
   // Find or create a Node for this program.
   InspectManager::ReportList* report_list;
   auto* report_lists = &crash_reports_.report_lists;

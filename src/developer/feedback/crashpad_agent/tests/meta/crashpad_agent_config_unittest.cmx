@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/crashpad_config_unittest"
+        "binary": "test/crashpad_agent_config_unittest"
     },
     "sandbox": {
         "services": [

@@ -286,7 +286,7 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
                                  const std::string& program_name,
                                  const std::map<std::string, std::string>& annotations) {
   InspectManager::Report* inspect_report =
-      inspect_manager_->AddReport(program_name, local_report_id);
+      inspect_manager_->AddReport(program_name, local_report_id.ToString());
 
   if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
@@ -342,7 +342,7 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     return false;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
-  inspect_report->MarkUploaded(server_report_id);
+  inspect_report->MarkAsUploaded(server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;

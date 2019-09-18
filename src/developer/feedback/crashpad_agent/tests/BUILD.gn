@@ -33,7 +33,7 @@ test_package("crashpad_agent_tests") {
       environments = basic_envs
     },
     {
-      name = "crashpad_config_unittest"
+      name = "crashpad_agent_config_unittest"
       environments = basic_envs
     },
     {
@@ -55,6 +55,9 @@ test_package("crashpad_agent_tests") {
       name = "crashpad_agent_integration_test"
       dest = "crashpad_agent_integration_test_invalid_override_config"
       environments = basic_envs
+    },
+    {
+      name = "crashpad_agent_inspect_manager_unittest"
     },
     {
       name = "privacy_settings_ptr_unittest"
@@ -103,6 +106,7 @@ test_package("crashpad_agent_tests") {
     ":config_unittest",
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
+    ":inspect_manager_unittest",
     ":privacy_settings_ptr_unittest",
   ]
 }
@@ -110,7 +114,7 @@ test_package("crashpad_agent_tests") {
 executable("config_unittest") {
   testonly = true
 
-  output_name = "crashpad_config_unittest"
+  output_name = "crashpad_agent_config_unittest"
 
   sources = [
     "config_unittest.cc",
@@ -172,6 +176,27 @@ executable("crashpad_agent_integration_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-crash",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("inspect_manager_unittest") {
+  testonly = true
+
+  output_name = "crashpad_agent_inspect_manager_unittest"
+
+  sources = [
+    "inspect_manager_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/crashpad_agent:constants",
+    "//src/developer/feedback/crashpad_agent:src",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 

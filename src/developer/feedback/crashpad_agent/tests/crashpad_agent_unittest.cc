@@ -64,9 +64,7 @@ using inspect::testing::UintIs;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
-using testing::Matches;
 using testing::Not;
-using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
 // We keep the local Crashpad database size under a certain value. As we want to check the produced
@@ -537,7 +535,7 @@ TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
   EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
-TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadEnabled) {
+TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(
@@ -545,7 +543,7 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadEnabled) {
                     NameMatches(kInspectConfigName),
                     PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey,
                                                  kFeedbackDataCollectionTimeout.to_msecs()))))),
-                ChildrenMatch(UnorderedElementsAre(
+                ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(
                         AllOf(NameMatches(kCrashpadDatabaseKey),
                               PropertyList(UnorderedElementsAreArray({
@@ -556,28 +554,9 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadEnabled) {
                                       PropertyList(UnorderedElementsAreArray({
                                           StringIs(kCrashServerEnableUploadKey, "true"),
                                           StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
-                                      }))))))),
+                                      })))),
+                }))),
           NodeMatches(NameMatches(kInspectReportsName)))));
-}
-
-TEST_F(CrashpadAgentTest, Check_InitialInspectTree_UploadDisabled) {
-  ResetAgent(Config{/*crashpad_database=*/
-                    {
-                        /*path=*/database_path_.path(),
-                        /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-                    },
-                    /*crash_server=*/
-                    {
-                        /*enable_upload=*/false,
-                        /*url=*/nullptr,
-                    },
-                    /*feedback_data_collection_timeout=*/
-                    kFeedbackDataCollectionTimeout});
-
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(ChildrenMatch(Contains(NodeMatches(AllOf(
-                  NameMatches(kCrashServerKey),
-                  PropertyList(ElementsAre(StringIs(kCrashServerEnableUploadKey, "false"))))))))));
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {

@@ -15,20 +15,19 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace feedback {
 
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
  public:
-  // Inspect node for a single crash report.
+  // Inspect node for a single report.
   struct Report {
-    Report(inspect::Node* parent_node, const crashpad::UUID& local_report_id);
+    Report(inspect::Node* parent_node, const std::string& local_report_id);
     Report(Report&&) = default;
 
     // Add the |crash_server| entry after receiving a server response.
-    void MarkUploaded(std::string server_id);
+    void MarkAsUploaded(std::string server_report_id);
 
    private:
     inspect::Node node_;
@@ -43,8 +42,8 @@ class InspectManager {
 
   InspectManager(inspect::Node* root_node);
 
-  // Adds a new entry to the crash-list of a program, and returns it.
-  Report* AddReport(const std::string& program_name, const crashpad::UUID& local_report_id);
+  // Adds a new entry to the report-list of a program, and returns it.
+  Report* AddReport(const std::string& program_name, const std::string& local_report_id);
 
   // Records the configuration file of the CrashpadAgent.
   void ExposeConfig(const feedback::Config& config);
