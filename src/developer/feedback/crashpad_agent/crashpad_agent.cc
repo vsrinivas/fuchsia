@@ -9,7 +9,6 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/time.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/errors.h>
@@ -216,8 +215,7 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
   }
 
   // Prepare annotations and attachments.
-  return GetFeedbackData(dispatcher_, services_,
-                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+  return GetFeedbackData(dispatcher_, services_, config_.feedback_data_collection_timeout)
       .then([this, component_url, exception = std::move(exception),
              report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
@@ -256,8 +254,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
     return fit::make_error_promise();
   }
 
-  return GetFeedbackData(dispatcher_, services_,
-                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+  return GetFeedbackData(dispatcher_, services_, config_.feedback_data_collection_timeout)
       .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
                 fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;

@@ -16,11 +16,13 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -64,8 +66,8 @@ using testing::Matches;
 // a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
-// A full second should be enough for the stub feedback data provider to return its result.
-constexpr uint64_t kFeedbackDataCollectionTimeoutInMillisecondsKey = 1000u;
+// The actual value does not matter as we are using a test loop with a fake clock.
+constexpr zx::duration kFeedbackDataCollectionTimeout = zx::msec(10);
 
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
@@ -111,8 +113,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
                    /*enable_upload=*/true,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
                },
-               /*feedback_data_collection_timeout_in_milliseconds=*/
-               kFeedbackDataCollectionTimeoutInMillisecondsKey},
+               /*feedback_data_collection_timeout=*/
+               kFeedbackDataCollectionTimeout},
         std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
@@ -375,8 +377,8 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                         /*enable_upload=*/false,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
+                    /*feedback_data_collection_timeout=*/
+                    kFeedbackDataCollectionTimeout});
 
   // We generate a crash report.
   EXPECT_TRUE(FileOneCrashReport().is_response());
@@ -409,8 +411,8 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                         /*enable_upload=*/false,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
+                    /*feedback_data_collection_timeout=*/
+                    kFeedbackDataCollectionTimeout});
 
   // We generate a first crash report.
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_response());
@@ -446,8 +448,8 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
                  /*enable_upload=*/true,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
-             /*feedback_data_collection_timeout_in_milliseconds=*/
-             kFeedbackDataCollectionTimeoutInMillisecondsKey},
+             /*feedback_data_collection_timeout=*/
+             kFeedbackDataCollectionTimeout},
       std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
   EXPECT_TRUE(FileOneCrashReport().is_err());
@@ -465,8 +467,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                         /*enable_upload=*/false,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
+                    /*feedback_data_collection_timeout=*/
+                    kFeedbackDataCollectionTimeout});
 
   EXPECT_TRUE(FileOneCrashReport().is_response());
 }
@@ -498,26 +500,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
 
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
-  // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
-  // set it arbitrary long.
-  const zx::duration feedback_data_collection_timeout = zx::sec(1);
-  ResetAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*path=*/database_path_.path(),
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
-             {
-                 /*enable_upload=*/true,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             },
-             /*feedback_data_collection_timeout_in_milliseconds=*/
-             static_cast<uint64_t>(feedback_data_collection_timeout.to_msecs())},
-      std::make_unique<StubCrashServer>(alwaysReturnSuccess));
-
   CrashReporter_File_Result result = FileOneCrashReportWithSingleAttachment();
-  RunLoopFor(feedback_data_collection_timeout);
+  RunLoopFor(kFeedbackDataCollectionTimeout);
   EXPECT_TRUE(result.is_response());
   CheckAttachments({kSingleAttachmentKey});
 }
@@ -611,8 +595,8 @@ TEST_F(CrashpadAgentTest, Check_InspectFeedbackTimeout) {
                  /*enable_upload=*/true,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
-             /*feedback_data_collection_timeout_in_milliseconds=*/
-             kFeedbackDataCollectionTimeoutInMillisecondsKey},
+             /*feedback_data_collection_timeout=*/
+             kFeedbackDataCollectionTimeout},
       std::make_unique<StubCrashServer>(alwaysReturnSuccess));
 
   std::shared_ptr<component::Object> config =
@@ -626,8 +610,8 @@ TEST_F(CrashpadAgentTest, Check_InspectFeedbackTimeout) {
   EXPECT_EQ(0u, config_properties->size());
   EXPECT_EQ(1u, config_metrics->size());
 
-  EXPECT_EQ(kFeedbackDataCollectionTimeoutInSecondsKey, config_metrics->front().key);
-  EXPECT_EQ(kFeedbackDataCollectionTimeoutInMillisecondsKey,
+  EXPECT_EQ(kFeedbackDataCollectionTimeoutInMillisecondsKey, config_metrics->front().key);
+  EXPECT_EQ(static_cast<uint64_t>(kFeedbackDataCollectionTimeout.to_msecs()),
             config_metrics->front().value.uint_value());
 }
 
@@ -690,8 +674,8 @@ TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadFalse) {
                         /*enable_upload=*/false,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
+                    /*feedback_data_collection_timeout=*/
+                    kFeedbackDataCollectionTimeout});
 
   std::shared_ptr<component::Object> config =
       inspect_node_.object_dir().object()->GetChild(kInspectConfigName);

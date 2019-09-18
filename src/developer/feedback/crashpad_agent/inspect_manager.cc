@@ -80,8 +80,8 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   }
 
   config_.feedback_data_collection_timeout_in_milliseconds =
-      config_.node.CreateUIntMetric(kFeedbackDataCollectionTimeoutInSecondsKey,
-                                    config.feedback_data_collection_timeout_in_milliseconds);
+      config_.node.CreateUIntMetric(kFeedbackDataCollectionTimeoutInMillisecondsKey,
+                                    config.feedback_data_collection_timeout.to_msecs());
 }
 
 }  // namespace feedback

@@ -9,13 +9,14 @@ namespace feedback {
 
 constexpr char kInspectConfigName[] = "config";
 constexpr char kInspectReportsName[] = "reports";
-const char kCrashpadDatabaseKey[] = "crashpad_database";
-const char kCrashpadDatabasePathKey[] = "path";
-const char kCrashpadDatabaseMaxSizeInKbKey[] = "max_size_in_kb";
-const char kCrashServerKey[] = "crash_server";
-const char kCrashServerEnableUploadKey[] = "enable_upload";
-const char kCrashServerUrlKey[] = "url";
-const char kFeedbackDataCollectionTimeoutInSecondsKey[] =
+
+constexpr char kCrashpadDatabaseKey[] = "crashpad_database";
+constexpr char kCrashpadDatabasePathKey[] = "path";
+constexpr char kCrashpadDatabaseMaxSizeInKbKey[] = "max_size_in_kb";
+constexpr char kCrashServerKey[] = "crash_server";
+constexpr char kCrashServerEnableUploadKey[] = "enable_upload";
+constexpr char kCrashServerUrlKey[] = "url";
+constexpr char kFeedbackDataCollectionTimeoutInMillisecondsKey[] =
     "feedback_data_collection_timeout_in_milliseconds";
 
 }  // namespace feedback
