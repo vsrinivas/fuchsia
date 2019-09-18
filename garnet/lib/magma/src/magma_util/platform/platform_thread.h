@@ -5,6 +5,8 @@
 #ifndef PLATFORM_THREAD_H
 #define PLATFORM_THREAD_H
 
+#include <threads.h>
+
 #include <cstdint>
 #include <string>
 
@@ -35,6 +37,7 @@ class PlatformThreadHelper {
   static std::string GetCurrentThreadName();
 
   static bool SetProfile(PlatformHandle* profile);
+  static bool SetThreadProfile(thrd_t thread, PlatformHandle* profile);
 };
 
 class PlatformProcessHelper {

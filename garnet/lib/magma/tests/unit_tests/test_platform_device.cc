@@ -52,6 +52,22 @@ TEST(PlatformDevice, SchedulerProfile) {
   test_thread.join();
 }
 
+static int thread_function(void* input) { return 0; }
+
+TEST(PlatformDevice, SchedulerThreadProfile) {
+  magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+  ASSERT_TRUE(platform_device);
+
+  auto profile = platform_device->GetSchedulerProfile(magma::PlatformDevice::kPriorityHigher,
+                                                      "msd/test-profile");
+  ASSERT_TRUE(profile);
+
+  thrd_t thread;
+  ASSERT_EQ(0, thrd_create(&thread, &thread_function, nullptr));
+  EXPECT_TRUE(magma::PlatformThreadHelper::SetThreadProfile(thread, profile.get()));
+  thrd_join(thread, nullptr);
+}
+
 TEST(PlatformDevice, FirmwareLoader) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
   ASSERT_TRUE(platform_device);
