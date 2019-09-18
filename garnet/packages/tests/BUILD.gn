@@ -916,6 +916,7 @@ group("kms") {
   testonly = true
   public_deps = [
     "//garnet/bin/kms:kms_tests",
+    "//garnet/bin/kms_test_client:kms_test_client_pkg",
   ]
 }
 
