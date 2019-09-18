@@ -25,6 +25,8 @@ use {
 #[cfg(test)]
 use num_traits::ToPrimitive;
 
+const ROOT_NAME: &str = "root";
+
 /// A local store of Inspect-like data which can be built by Action or filled
 /// from a VMO.
 ///
@@ -141,7 +143,7 @@ impl Data {
                 self.create_node(*parent, *id, name.to_owned())
             }
             validate::Action::DeleteNode(validate::DeleteNode { id }) => self.delete_node(*id),
-            validate::Action::CreateIntProperty(validate::CreateIntProperty {
+            validate::Action::CreateNumericProperty(validate::CreateNumericProperty {
                 parent,
                 id,
                 name,
@@ -150,7 +152,25 @@ impl Data {
                 name: name.to_string(),
                 id: *id,
                 parent: *parent,
-                payload: { Payload::Int(*value) },
+                payload: {
+                    match value {
+                        validate::Number::IntT(value) => Payload::Int(*value),
+                        validate::Number::UintT(value) => Payload::Uint(*value),
+                        validate::Number::DoubleT(value) => Payload::Double(*value),
+                        unknown => bail!("Unknown number type {:?}", unknown),
+                    }
+                },
+            }),
+            validate::Action::CreateBytesProperty(validate::CreateBytesProperty {
+                parent,
+                id,
+                name,
+                value,
+            }) => self.add_property(Property {
+                name: name.to_string(),
+                id: *id,
+                parent: *parent,
+                payload: { Payload::Bytes(value.clone()) },
             }),
             validate::Action::CreateStringProperty(validate::CreateStringProperty {
                 parent,
@@ -259,7 +279,7 @@ impl Data {
 
     /// Generates a string fully representing the Inspect data.
     pub fn to_string(&self) -> String {
-        if let Some(node) = self.nodes.get(&0) {
+        if let Some(node) = self.nodes.get(&ROOT_ID) {
             node.to_string(&"".to_owned(), self)
         } else {
             "No root node; internal error\n".to_owned()
@@ -273,7 +293,7 @@ impl Data {
         ret.nodes.insert(
             0,
             Node {
-                name: "root".into(),
+                name: ROOT_NAME.into(),
                 parent: 0,
                 children: HashSet::new(),
                 properties: HashSet::new(),
@@ -545,7 +565,7 @@ impl ScannedObjects {
             properties_under.push((self.make_valid_property(*property_id)?, *property_id));
         }
         let name =
-            if id == 0 { "root".to_owned() } else { self.get_owned_name(scanned_node.name)? };
+            if id == 0 { ROOT_NAME.to_owned() } else { self.get_owned_name(scanned_node.name)? };
         let this_node = Node {
             name,
             parent: scanned_node.parent,
@@ -661,10 +681,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            create_int_property, create_node, create_string_property, delete_node, delete_property,
-            puppet,
+            create_bytes_property, create_node, create_numeric_property, create_string_property,
+            delete_node, delete_property, puppet,
         },
-        fidl_test_inspect_validate::ROOT_ID,
+        fidl_test_inspect_validate::{Number, ROOT_ID},
         fuchsia_async as fasync,
         fuchsia_inspect::format::{bitfields::BlockHeader, constants},
     };
@@ -691,18 +711,34 @@ mod tests {
         assert!(
             info.to_string().contains("grandchild ->") && info.to_string().contains("child ->")
         );
-        info.apply(&create_int_property!(parent: ROOT_ID, id: 3, name: "int42", value: 42))?;
-        assert!(info.to_string().contains("int42") && info.to_string().contains("Int(42)"));
+        info.apply(
+            &create_numeric_property!(parent: ROOT_ID, id: 3, name: "int42", value: Number::IntT(42)),
+        )?;
+        assert!(info.to_string().contains("int42: Int(42)"));
         info.apply(&create_string_property!(parent: 1, id: 4, name: "stringfoo", value: "foo"))?;
         assert_eq!(
             info.to_string(),
             " root ->\n>  int42: Int(42)\n>  child ->\
              \n> >  stringfoo: String(\"foo\")\n> >  grandchild ->\n\n\n\n\n"
         );
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1024)))?;
+        assert!(info.to_string().contains("uint: Uint(1024)"));
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 6, name: "frac", value: Number::DoubleT(0.5)))?;
+        assert!(info.to_string().contains("frac: Double(0.5)"));
+        info.apply(
+            &create_bytes_property!(parent: ROOT_ID, id: 7, name: "bytes", value: vec!(1u8, 2u8)),
+        )?;
+        assert!(info.to_string().contains("bytes: Bytes([1, 2])"));
         info.apply(&delete_property!(id: 3))?;
         assert!(!info.to_string().contains("int42") && info.to_string().contains("stringfoo"));
         info.apply(&delete_property!(id: 4))?;
         assert!(!info.to_string().contains("stringfoo"));
+        info.apply(&delete_property!(id: 5))?;
+        assert!(!info.to_string().contains("uint"));
+        info.apply(&delete_property!(id: 6))?;
+        assert!(!info.to_string().contains("frac"));
+        info.apply(&delete_property!(id: 7))?;
+        assert!(!info.to_string().contains("bytes"));
         info.apply(&delete_node!(id:2))?;
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
@@ -733,13 +769,15 @@ mod tests {
         let mut info = Data::new();
         // Parent must exist
         assert!(info
-            .apply(&create_int_property!(parent: 42, id: 1, name: "answer", value:42))
+            .apply(
+                &create_numeric_property!(parent: 42, id: 1, name: "answer", value: Number::IntT(42))
+            )
             .is_err());
         // Can't reuse property IDs
         info = Data::new();
-        info.apply(&create_int_property!(parent: ROOT_ID, id: 1, name: "answer", value: 42))?;
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 1, name: "answer", value: Number::IntT(42)))?;
         assert!(info
-            .apply(&create_int_property!(parent: ROOT_ID, id: 1, name: "another_answer", value: 7))
+            .apply(&create_numeric_property!(parent: ROOT_ID, id: 1, name: "another_answer", value: Number::IntT(7)))
             .is_err());
         // Can't delete nonexistent property
         info = Data::new();
@@ -960,8 +998,10 @@ mod tests {
         let mut puppet1 = puppet::tests::local_incomplete_puppet().await?;
         let mut child1_action = create_node!(parent:0, id:1, name:"child1");
         let mut child2_action = create_node!(parent:0, id:2, name:"child2");
-        let mut property1_action = create_int_property!(parent:0, id:1, name:"prop1", value:1);
-        let mut property2_action = create_int_property!(parent:0, id:2, name:"prop2", value:2);
+        let mut property1_action =
+            create_numeric_property!(parent:0, id:1, name:"prop1", value: Number::IntT(1));
+        let mut property2_action =
+            create_numeric_property!(parent:0, id:2, name:"prop2", value: Number::IntT(2));
         puppet1.apply(&mut child1_action).await?;
         puppet1.apply(&mut child2_action).await?;
         let mut puppet2 = puppet::tests::local_incomplete_puppet().await?;
@@ -983,7 +1023,8 @@ mod tests {
         puppet2.apply(&mut subchild2_action).await?;
         assert_ne!(puppet1.read_data()?.to_string(), puppet2.read_data()?.to_string());
         // ... and property position
-        let mut subproperty2_action = create_int_property!(parent:1, id:2, name:"prop2", value:1);
+        let mut subproperty2_action =
+            create_numeric_property!(parent:1, id:2, name:"prop2", value: Number::IntT(1));
         puppet1.apply(&mut child1_action).await?;
         puppet2.apply(&mut child1_action).await?;
         puppet1.apply(&mut property2_action).await?;

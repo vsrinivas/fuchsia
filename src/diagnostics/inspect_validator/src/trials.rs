@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate::{self, ROOT_ID};
+use super::validate::{self, Number, ROOT_ID};
 
 pub struct Step {
     pub actions: Vec<validate::Action>,
@@ -89,13 +89,25 @@ macro_rules! delete_node {
 }
 
 #[macro_export]
-macro_rules! create_int_property {
+macro_rules! create_numeric_property {
     (parent: $parent:expr, id: $id:expr, name: $name:expr, value: $value:expr) => {
-        validate::Action::CreateIntProperty(validate::CreateIntProperty {
+        validate::Action::CreateNumericProperty(validate::CreateNumericProperty {
             parent: $parent,
             id: $id,
             name: $name.into(),
             value: $value,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! create_bytes_property {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, value: $value:expr) => {
+        validate::Action::CreateBytesProperty(validate::CreateBytesProperty {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            value: $value.into(),
         })
     };
 }
@@ -126,14 +138,20 @@ fn basic_trial() -> Trial {
             actions: vec![
                 create_node!(parent: ROOT_ID, id: 1, name: "child"),
                 create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
-                create_int_property!(parent: ROOT_ID, id:2, name: "answer", value: 42),
+                create_numeric_property!(parent: ROOT_ID, id:2, name: "answer", value: Number::IntT(42)),
                 create_node!(parent: ROOT_ID, id: 2, name: "grandchild"),
                 create_string_property!(parent: 1, id:3, name: "str2", value: "bar"),
-                create_int_property!(parent: 2, id:4, name: "question", value: 7),
+                create_numeric_property!(parent: 2, id:4, name: "question", value: Number::IntT(7)),
+                create_numeric_property!(parent: 2, id:5, name: "uint", value: Number::UintT(8)),
+                create_numeric_property!(parent: 2, id: 6, name: "double-double", value: Number::DoubleT(0.5)),
+                create_bytes_property!(parent: 2, id: 7, name: "byte byte byte", value: vec![1, 2, 3]),
                 delete_property!(id: 1),
                 delete_property!(id: 2),
                 delete_property!(id: 3),
                 delete_property!(id: 4),
+                delete_property!(id: 5),
+                delete_property!(id: 6),
+                delete_property!(id: 7),
                 delete_node!( id: 2),
                 delete_node!( id: 1 ),
             ],

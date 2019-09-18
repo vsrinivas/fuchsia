@@ -23,6 +23,9 @@ use {
 enum Property {
     String(StringProperty),
     Int(IntProperty),
+    Uint(UintProperty),
+    Double(DoubleProperty),
+    Bytes(BytesProperty),
 }
 
 struct Actor {
@@ -40,9 +43,28 @@ impl Actor {
             Action::DeleteNode(DeleteNode { id }) => {
                 self.nodes.remove(&id);
             }
-            Action::CreateIntProperty(CreateIntProperty { parent, id, name, value }) => {
-                self.properties
-                    .insert(id, Property::Int(self.find_parent(parent)?.create_int(name, value)));
+            Action::CreateNumericProperty(CreateNumericProperty { parent, id, name, value }) => {
+                self.properties.insert(
+                    id,
+                    match value {
+                        Number::IntT(n) => {
+                            Property::Int(self.find_parent(parent)?.create_int(name, n))
+                        }
+                        Number::UintT(n) => {
+                            Property::Uint(self.find_parent(parent)?.create_uint(name, n))
+                        }
+                        Number::DoubleT(n) => {
+                            Property::Double(self.find_parent(parent)?.create_double(name, n))
+                        }
+                        unknown => bail!("Unknown number type {:?}", unknown),
+                    },
+                );
+            }
+            Action::CreateBytesProperty(CreateBytesProperty { parent, id, name, value }) => {
+                self.properties.insert(
+                    id,
+                    Property::Bytes(self.find_parent(parent)?.create_bytes(name, value)),
+                );
             }
             Action::CreateStringProperty(CreateStringProperty { parent, id, name, value }) => {
                 self.properties.insert(
@@ -61,7 +83,7 @@ impl Actor {
     }
 
     fn find_parent<'a>(&'a self, id: u32) -> Result<&'a Node, Error> {
-        if id == 0 {
+        if id == ROOT_ID {
             Ok(self.inspector.root())
         } else {
             self.nodes.get(&id).ok_or_else(|| format_err!("Node {} not found", id))

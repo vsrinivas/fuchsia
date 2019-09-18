@@ -43,12 +43,26 @@ struct DeleteNode {
     uint32 id;
 };
 
-/// Tells the puppet to create a property with the given int value.
-struct CreateIntProperty {
+xunion Number {
+    int64 int_t;
+    uint64 uint_t;
+    float64 double_t;
+};
+
+/// Tells the puppet to create a property with the given numeric value.
+struct CreateNumericProperty {
     uint32 parent;
     uint32 id;
     string name;
-    int64 value;
+    Number value;
+};
+
+/// Tells the puppet to create a property with the given byte array value.
+struct CreateBytesProperty {
+    uint32 parent;
+    uint32 id;
+    string name;
+    vector<uint8> value;
 };
 
 /// Tells the puppet to create a property with the given string value.
@@ -68,7 +82,8 @@ struct DeleteProperty {
 xunion Action {
     CreateNode create_node;
     DeleteNode delete_node;
-    CreateIntProperty create_int_property;
+    CreateNumericProperty create_numeric_property;
+    CreateBytesProperty create_bytes_property;
     CreateStringProperty create_string_property;
     DeleteProperty delete_property;
 };

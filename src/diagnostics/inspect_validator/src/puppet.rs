@@ -113,7 +113,7 @@ pub(crate) mod tests {
         assert_eq!(tree.to_string(), " root ->\n\n\n".to_string());
         let mut data = Data::new();
         tree.compare(&data)?;
-        let mut action = create_node!(parent: 0, id: 1, name: "child");
+        let mut action = create_node!(parent: ROOT_ID, id: 1, name: "child");
         puppet.apply(&mut action).await?;
         data.apply(&action)?;
         let tree = Data::try_from_vmo(&puppet.vmo)?;
@@ -155,7 +155,7 @@ pub(crate) mod tests {
                         ValidateRequest::Act { action, responder } => match action {
                             Action::CreateNode(CreateNode { parent, id, name }) => {
                                 inspector_maybe.as_ref().map(|i| {
-                                    let parent_node = if parent == 0 {
+                                    let parent_node = if parent == ROOT_ID {
                                         i.root()
                                     } else {
                                         nodes.get(&parent).unwrap()
@@ -165,11 +165,11 @@ pub(crate) mod tests {
                                 });
                                 responder.send(TestResult::Ok)?;
                             }
-                            Action::CreateIntProperty(CreateIntProperty {
+                            Action::CreateNumericProperty(CreateNumericProperty {
                                 parent,
                                 id,
                                 name,
-                                value,
+                                value: Number::IntT(value),
                             }) => {
                                 inspector_maybe.as_ref().map(|i| {
                                     let parent_node = if parent == 0 {
