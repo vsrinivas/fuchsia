@@ -8,8 +8,7 @@ use {
     fuchsia_syslog::fx_log_warn,
     futures::prelude::*,
     serde_derive::{Deserialize, Serialize},
-    std::fs::File,
-    std::path::PathBuf,
+    std::{fs::File, io, path::PathBuf},
 };
 
 #[derive(Clone)]
@@ -48,8 +47,8 @@ impl ProviderHandler {
         // TODO: use async IO instead of sync IO once async IO is easy.
         let file = File::open(self.misc_info_dir.join("current_channel.json"))
             .context("opening current_channel.json")?;
-        let contents: ChannelProviderContents =
-            serde_json::from_reader(file).context("reading current_channel.json")?;
+        let contents: ChannelProviderContents = serde_json::from_reader(io::BufReader::new(file))
+            .context("reading current_channel.json")?;
         let ChannelProviderContents::Version1(info) = contents;
         Ok(info.legacy_amber_source_name.unwrap_or_else(|| "".into()))
     }

@@ -222,7 +222,7 @@ fn read_current_channel(p: &Path) -> Result<String, Error> {
 
 fn read_channel(path: impl AsRef<Path>) -> Result<String, Error> {
     let f = fs::File::open(path.as_ref())?;
-    match serde_json::from_reader(f)? {
+    match serde_json::from_reader(io::BufReader::new(f))? {
         Channel::Version1 { legacy_amber_source_name } => Ok(legacy_amber_source_name),
     }
 }
@@ -239,7 +239,7 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
             fs::create_dir_all(dir)?;
         }
         let f = fs::File::create(&temp_path)?;
-        serde_json::to_writer(f, &channel)?;
+        serde_json::to_writer(io::BufWriter::new(f), &channel)?;
     };
     fs::rename(temp_path, path)
 }
