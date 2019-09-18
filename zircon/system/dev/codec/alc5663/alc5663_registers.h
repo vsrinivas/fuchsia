@@ -72,7 +72,15 @@ struct StereoDacDigitalVolumeReg {
   DEF_SUBFIELD(data, 7, 0, vol_dac1_r);   // Right channel digital volume
 
   static constexpr uint8_t kMinVolume = 0x00;
-  static constexpr uint8_t kMaxVolume = 0xaf;
+
+  // Volume we set the hardware to. (-6.0dB).
+  static constexpr uint8_t kTargetVolume = 0x9f;
+
+  // Max volume according to the ALC5663 datasheet.
+  //
+  // While we should be able to run with no digital volume change, in practice, we have observed
+  // distortion of the signal with values this high. We use kTargetVolume instead.
+  static constexpr uint8_t kHardwareMaxVolume = 0xaf;
 
   static constexpr uint16_t kAddress = 0x19;
 };
