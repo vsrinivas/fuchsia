@@ -120,20 +120,20 @@ impl SourceConfig {
     }
 }
 
-impl Into<fidl::SourceConfig> for SourceConfig {
-    fn into(self) -> fidl::SourceConfig {
-        fidl::SourceConfig {
-            id: self.id,
-            repo_url: self.repo_url,
-            blob_repo_url: self.blob_repo_url,
-            rate_limit: self.rate_limit,
-            rate_period: self.rate_period,
-            root_keys: self.root_keys.into_iter().map(|key| key.into()).collect(),
-            transport_config: self.transport_config.map(|cfg| Box::new(cfg.into())),
+impl From<SourceConfig> for fidl::SourceConfig {
+    fn from(config: SourceConfig) -> Self {
+        Self {
+            id: config.id,
+            repo_url: config.repo_url,
+            blob_repo_url: config.blob_repo_url,
+            rate_limit: config.rate_limit,
+            rate_period: config.rate_period,
+            root_keys: config.root_keys.into_iter().map(|key| key.into()).collect(),
+            transport_config: config.transport_config.map(|cfg| Box::new(cfg.into())),
             oauth2_config: None,
-            status_config: self.status_config.map(|cfg| Box::new(cfg.into())),
-            auto: self.auto,
-            blob_key: self.blob_key.map(|key| Box::new(key.into())),
+            status_config: config.status_config.map(|cfg| Box::new(cfg.into())),
+            auto: config.auto,
+            blob_key: config.blob_key.map(|key| Box::new(key.into())),
         }
     }
 }
@@ -191,19 +191,19 @@ pub struct TransportConfig {
     tls_handshake_timeout: i32,
 }
 
-impl Into<fidl::TransportConfig> for TransportConfig {
-    fn into(self) -> fidl::TransportConfig {
-        fidl::TransportConfig {
-            disable_keep_alives: self.disable_keep_alives,
-            keep_alive: self.keep_alive,
-            max_idle_conns: self.max_idle_conns,
-            max_idle_conns_per_host: self.max_idle_conns_per_host,
-            connect_timeout: self.connect_timeout,
-            request_timeout: self.request_timeout,
-            idle_conn_timeout: self.idle_conn_timeout,
-            response_header_timeout: self.response_header_timeout,
-            expect_continue_timeout: self.expect_continue_timeout,
-            tls_handshake_timeout: self.tls_handshake_timeout,
+impl From<TransportConfig> for fidl::TransportConfig {
+    fn from(config: TransportConfig) -> Self {
+        Self {
+            disable_keep_alives: config.disable_keep_alives,
+            keep_alive: config.keep_alive,
+            max_idle_conns: config.max_idle_conns,
+            max_idle_conns_per_host: config.max_idle_conns_per_host,
+            connect_timeout: config.connect_timeout,
+            request_timeout: config.request_timeout,
+            idle_conn_timeout: config.idle_conn_timeout,
+            response_header_timeout: config.response_header_timeout,
+            expect_continue_timeout: config.expect_continue_timeout,
+            tls_handshake_timeout: config.tls_handshake_timeout,
             tls_client_config: None,
         }
     }
@@ -237,10 +237,10 @@ pub enum KeyConfig {
     Ed25519(#[serde(with = "hex_serde")] Vec<u8>),
 }
 
-impl Into<fidl::KeyConfig> for KeyConfig {
-    fn into(self) -> fidl::KeyConfig {
-        let KeyConfig::Ed25519(value) = self;
-        fidl::KeyConfig { type_: "ed25519".to_owned(), value: hex::encode(value) }
+impl From<KeyConfig> for fidl::KeyConfig {
+    fn from(config: KeyConfig) -> Self {
+        let KeyConfig::Ed25519(value) = config;
+        Self { type_: "ed25519".to_owned(), value: hex::encode(value) }
     }
 }
 
@@ -267,9 +267,9 @@ pub struct StatusConfig {
     enabled: bool,
 }
 
-impl Into<fidl::StatusConfig> for StatusConfig {
-    fn into(self) -> fidl::StatusConfig {
-        fidl::StatusConfig { enabled: self.enabled }
+impl From<StatusConfig> for fidl::StatusConfig {
+    fn from(config: StatusConfig) -> Self {
+        Self { enabled: config.enabled }
     }
 }
 
@@ -286,9 +286,9 @@ pub struct BlobEncryptionKey {
     data: [u8; 32],
 }
 
-impl Into<fidl::BlobEncryptionKey> for BlobEncryptionKey {
-    fn into(self) -> fidl::BlobEncryptionKey {
-        fidl::BlobEncryptionKey { data: self.data }
+impl From<BlobEncryptionKey> for fidl::BlobEncryptionKey {
+    fn from(key: BlobEncryptionKey) -> Self {
+        Self { data: key.data }
     }
 }
 

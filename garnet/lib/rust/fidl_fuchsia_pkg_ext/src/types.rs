@@ -70,9 +70,9 @@ impl From<fidl::BlobId> for BlobId {
     }
 }
 
-impl Into<fidl::BlobId> for BlobId {
-    fn into(self: Self) -> fidl::BlobId {
-        fidl::BlobId { merkle_root: self.0 }
+impl From<BlobId> for fidl::BlobId {
+    fn from(id: BlobId) -> Self {
+        Self { merkle_root: id.0 }
     }
 }
 
@@ -107,9 +107,9 @@ impl From<fidl::BlobInfo> for BlobInfo {
     }
 }
 
-impl Into<fidl::BlobInfo> for BlobInfo {
-    fn into(self: Self) -> fidl::BlobInfo {
-        fidl::BlobInfo { blob_id: self.blob_id.into(), length: self.length }
+impl From<BlobInfo> for fidl::BlobInfo {
+    fn from(info: BlobInfo) -> Self {
+        Self { blob_id: info.blob_id.into(), length: info.length }
     }
 }
 

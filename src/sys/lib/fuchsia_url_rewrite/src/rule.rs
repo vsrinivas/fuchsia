@@ -171,13 +171,13 @@ impl TryFrom<fidl::Rule> for Rule {
     }
 }
 
-impl Into<fidl::Rule> for Rule {
-    fn into(self) -> fidl::Rule {
+impl From<Rule> for fidl::Rule {
+    fn from(rule: Rule) -> Self {
         fidl::Rule::Literal(fidl::LiteralRule {
-            host_match: self.host_match,
-            host_replacement: self.host_replacement,
-            path_prefix_match: self.path_prefix_match,
-            path_prefix_replacement: self.path_prefix_replacement,
+            host_match: rule.host_match,
+            host_replacement: rule.host_replacement,
+            path_prefix_match: rule.path_prefix_match,
+            path_prefix_replacement: rule.path_prefix_replacement,
         })
     }
 }

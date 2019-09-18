@@ -136,9 +136,9 @@ impl MirrorConfigBuilder {
     }
 }
 
-impl Into<MirrorConfig> for MirrorConfigBuilder {
-    fn into(self) -> MirrorConfig {
-        self.build()
+impl From<MirrorConfigBuilder> for MirrorConfig {
+    fn from(builder: MirrorConfigBuilder) -> Self {
+        builder.build()
     }
 }
 
@@ -157,13 +157,13 @@ impl TryFrom<fidl::MirrorConfig> for MirrorConfig {
     }
 }
 
-impl Into<fidl::MirrorConfig> for MirrorConfig {
-    fn into(self: Self) -> fidl::MirrorConfig {
-        let blob_mirror_url = normalize_blob_mirror_url(&self.mirror_url, self.blob_mirror_url);
-        fidl::MirrorConfig {
-            mirror_url: Some(self.mirror_url),
-            subscribe: Some(self.subscribe),
-            blob_key: self.blob_key.map(|k| k.into()),
+impl From<MirrorConfig> for fidl::MirrorConfig {
+    fn from(config: MirrorConfig) -> Self {
+        let blob_mirror_url = normalize_blob_mirror_url(&config.mirror_url, config.blob_mirror_url);
+        Self {
+            mirror_url: Some(config.mirror_url),
+            subscribe: Some(config.subscribe),
+            blob_key: config.blob_key.map(|k| k.into()),
             blob_mirror_url,
         }
     }
@@ -262,13 +262,13 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
     }
 }
 
-impl Into<fidl::RepositoryConfig> for RepositoryConfig {
-    fn into(self: Self) -> fidl::RepositoryConfig {
-        fidl::RepositoryConfig {
-            repo_url: Some(self.repo_url.to_string()),
-            root_keys: Some(self.root_keys.into_iter().map(RepositoryKey::into).collect()),
-            mirrors: Some(self.mirrors.into_iter().map(MirrorConfig::into).collect()),
-            update_package_url: self.update_package_url.map(|url| url.to_string()),
+impl From<RepositoryConfig> for fidl::RepositoryConfig {
+    fn from(config: RepositoryConfig) -> Self {
+        Self {
+            repo_url: Some(config.repo_url.to_string()),
+            root_keys: Some(config.root_keys.into_iter().map(RepositoryKey::into).collect()),
+            mirrors: Some(config.mirrors.into_iter().map(MirrorConfig::into).collect()),
+            update_package_url: config.update_package_url.map(|url| url.to_string()),
         }
     }
 }
@@ -316,9 +316,9 @@ impl RepositoryConfigBuilder {
     }
 }
 
-impl Into<RepositoryConfig> for RepositoryConfigBuilder {
-    fn into(self) -> RepositoryConfig {
-        self.build()
+impl From<RepositoryConfigBuilder> for RepositoryConfig {
+    fn from(builder: RepositoryConfigBuilder) -> Self {
+        builder.build()
     }
 }
 
@@ -340,9 +340,9 @@ impl TryFrom<fidl::RepositoryKeyConfig> for RepositoryKey {
     }
 }
 
-impl Into<fidl::RepositoryKeyConfig> for RepositoryKey {
-    fn into(self: Self) -> fidl::RepositoryKeyConfig {
-        match self {
+impl From<RepositoryKey> for fidl::RepositoryKeyConfig {
+    fn from(key: RepositoryKey) -> Self {
+        match key {
             RepositoryKey::Ed25519(key) => fidl::RepositoryKeyConfig::Ed25519Key(key),
         }
     }
@@ -365,9 +365,9 @@ impl TryFrom<fidl::RepositoryBlobKey> for RepositoryBlobKey {
     }
 }
 
-impl Into<fidl::RepositoryBlobKey> for RepositoryBlobKey {
-    fn into(self: Self) -> fidl::RepositoryBlobKey {
-        match self {
+impl From<RepositoryBlobKey> for fidl::RepositoryBlobKey {
+    fn from(key: RepositoryBlobKey) -> Self {
+        match key {
             RepositoryBlobKey::Aes(key) => fidl::RepositoryBlobKey::AesKey(key),
         }
     }
