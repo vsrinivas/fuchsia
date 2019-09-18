@@ -18,12 +18,7 @@ import 'package:ermine_library/src/widgets/ask/ask.dart';
 void main() {
   testWidgets('Create Ask Widget', (tester) async {
     final suggestionService = MockSuggestionService();
-    final model = AskModel(
-      visibility: ValueNotifier<bool>(false),
-      suggestionService: suggestionService,
-    );
-
-    final widget = MaterialApp(home: Ask(model: model));
+    final widget = MaterialApp(home: Ask(suggestionService: suggestionService));
     await tester.pumpWidget(widget);
 
     final hintFinder = find.text('TYPE TO ASK');
@@ -32,31 +27,29 @@ void main() {
 
   testWidgets('Hide Ask Widget', (tester) async {
     final suggestionService = MockSuggestionService();
-    final model = AskModel(
-      visibility: ValueNotifier<bool>(false),
-      suggestionService: suggestionService,
+    final key = GlobalKey<AskState>();
+    bool visible;
+    final widget = MaterialApp(
+      home: Ask(
+        key: key,
+        suggestionService: suggestionService,
+        onDismiss: () => visible = false,
+      ),
     );
-
-    final widget = MaterialApp(home: Ask(model: model));
     await tester.pumpWidget(widget);
 
     // Press Esc.
-    model.handleKey(RawKeyDownEvent(
+    key.currentState.model.handleKey(RawKeyDownEvent(
       data: RawKeyEventDataFuchsia(
         hidUsage: AskModel.kEsc,
       ),
     ));
-    expect(model.visibility.value, false);
+    expect(visible, false);
   });
 
   testWidgets('Hide hint text on typing', (tester) async {
     final suggestionService = MockSuggestionService();
-    final model = AskModel(
-      visibility: ValueNotifier<bool>(false),
-      suggestionService: suggestionService,
-    );
-
-    final widget = MaterialApp(home: Ask(model: model));
+    final widget = MaterialApp(home: Ask(suggestionService: suggestionService));
     await tester.pumpWidget(widget);
 
     final textFieldFinder = find.byType(TextField);
@@ -69,12 +62,10 @@ void main() {
 
   testWidgets('Displays suggestions', (tester) async {
     final suggestionService = MockSuggestionService();
-    final model = AskModel(
-      visibility: ValueNotifier<bool>(false),
-      suggestionService: suggestionService,
+    final key = GlobalKey<AskState>();
+    final widget = MaterialApp(
+      home: Ask(key: key, suggestionService: suggestionService),
     );
-
-    final widget = MaterialApp(home: Ask(model: model));
     await tester.pumpWidget(widget);
 
     when(suggestionService.getSuggestions('hello'))
@@ -84,6 +75,7 @@ void main() {
             ]));
 
     final completer = Completer();
+    final model = key.currentState.model;
     model.suggestions.addListener(completer.complete);
 
     final textFieldFinder = find.byType(TextField);

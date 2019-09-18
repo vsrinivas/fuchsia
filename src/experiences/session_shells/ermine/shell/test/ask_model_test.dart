@@ -21,6 +21,8 @@ void main() {
   Completer suggestionsCompleter;
   Completer selectionCompleter;
 
+  void onDismiss() => visibility.value = false;
+
   setUp(() {
     visibility = ValueNotifier<bool>(false);
     suggestionService = MockSuggestionService();
@@ -28,10 +30,8 @@ void main() {
     selectionCompleter = Completer();
 
     model = AskModel(
-      visibility: visibility,
+      onDismiss: onDismiss,
       suggestionService: suggestionService,
-      onInsertItem: (_) {},
-      onRemoveItem: (_) {},
     );
     model.suggestions.addListener(() => suggestionsCompleter.complete());
     model.selection.addListener(() => selectionCompleter.complete());
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('Create AskModel', () {
-    expect(model.visibility.value, false);
+    expect(visibility.value, false);
     expect(model.selection.value, -1);
     expect(model.suggestions.value.length, 0);
   });
@@ -117,7 +117,7 @@ void main() {
         hidUsage: AskModel.kEsc,
       ),
     ));
-    expect(model.visibility.value, false);
+    expect(visibility.value, false);
   });
 
   test('Select Suggestion', () {

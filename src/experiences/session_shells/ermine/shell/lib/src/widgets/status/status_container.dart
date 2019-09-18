@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/elevations.dart';
 import '../../utils/styles.dart';
 import '../support/animation_driver.dart';
 import 'status.dart';
@@ -24,10 +25,19 @@ class StatusContainer extends StatelessWidget {
         : MediaQuery.of(context).size.height -
             ErmineStyle.kTopBarHeight -
             ErmineStyle.kStoryTitleHeight;
-    final status = Container(
-      width: 377,
-      height: 432,
-      child: Status(model: model.status),
+    final status = Material(
+      key: model.status.key,
+      color: ErmineStyle.kBackgroundColor,
+      elevation: Elevations.systemOverlayElevation,
+      child: Container(
+        width: 377,
+        height: 432,
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: ErmineStyle.kOverlayBorderColor),
+        ),
+        child: Status(model: model.status),
+      ),
     );
     return RepaintBoundary(
       child: Stack(

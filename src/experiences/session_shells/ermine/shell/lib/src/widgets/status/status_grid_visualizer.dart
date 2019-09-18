@@ -33,16 +33,7 @@ class StatusGridVisualizer extends StatelessWidget {
               SizedBox(
                 height: titleHeight / 2,
               ),
-              Row(
-                children: [
-                  SizedBox(
-                    width: model.gridIndent,
-                  ),
-                  SizedBox(
-                    child: title,
-                  ),
-                ],
-              ),
+              title,
               _buildGrid()
             ],
           );
@@ -66,9 +57,7 @@ class StatusGridVisualizer extends StatelessWidget {
     List<Widget> columns = List(model.gridColumns * 2 + 2);
     List<Widget> dataColumns = _packageValues();
     int dataIndex = 0;
-    columns[0] = SizedBox(
-      width: model.gridIndent,
-    );
+    columns[0] = SizedBox.shrink();
     columns[1] = _packageHeaders();
     columns[2] = SizedBox(
       width: model.gridDataOffset,

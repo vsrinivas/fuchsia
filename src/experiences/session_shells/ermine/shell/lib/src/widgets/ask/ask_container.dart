@@ -26,7 +26,11 @@ class AskContainer extends StatelessWidget {
             ErmineStyle.kStoryTitleHeight;
     return AnimatedBuilder(
       animation: model.askVisibility,
-      child: Ask(model: model.askModel),
+      child: Ask(
+        key: model.askKey,
+        suggestionService: model.suggestions,
+        onDismiss: () => model.askVisibility.value = false,
+      ),
       builder: (context, child) => model.askVisibility.value
           ? Positioned(
               bottom: bottom(),

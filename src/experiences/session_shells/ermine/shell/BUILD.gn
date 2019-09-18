@@ -87,6 +87,7 @@ dart_library("ermine_library") {
     "src/widgets/support/app_container.dart",
     "src/widgets/support/get_bounds.dart",
     "src/widgets/support/keyboard_help.dart",
+    "src/widgets/support/overview.dart",
     "src/widgets/support/scrim.dart",
     "src/widgets/topbar/button.dart",
     "src/widgets/topbar/topbar.dart",

@@ -22,7 +22,7 @@ import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
 import '../utils/keyboard_shortcuts.dart' show KeyboardShortcuts;
 import '../utils/suggestions.dart';
-import 'ask_model.dart';
+import '../widgets/ask/ask.dart';
 import 'cluster_model.dart';
 import 'status_model.dart';
 import 'topbar_model.dart';
@@ -35,6 +35,9 @@ class AppModel {
 
   SessionShell sessionShell;
 
+  /// The [GlobalKey] associated with [Ask] widget.
+  final GlobalKey<AskState> askKey = GlobalKey(debugLabel: 'ask');
+
   final String backgroundImageUrl = 'assets/images/fuchsia.png';
   final Color backgroundColor = Colors.grey[850];
   final _startupContext = StartupContext.fromStartupInfo();
@@ -43,13 +46,12 @@ class AppModel {
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
-
+  ValueNotifier<bool> overviewVisibility = ValueNotifier(false);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   KeyboardShortcuts _keyboardShortcuts;
   StatusModel status;
-  AskModel askModel;
   TopbarModel topbarModel;
   String keyboardShortcuts = 'Help Me!';
 
@@ -79,15 +81,9 @@ class AppModel {
     topbarModel = TopbarModel(appModel: this);
 
     status = StatusModel.fromStartupContext(_startupContext);
-
-    final suggestions = SuggestionsProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(suggestions);
-
-    askModel = AskModel(
-      visibility: askVisibility,
-      suggestionService: SuggestionService(suggestions),
-    );
   }
+
+  SuggestionService get suggestions => SuggestionService(_suggestionsService);
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
 
@@ -105,6 +101,7 @@ class AppModel {
         actions: {
           'shortcuts': onKeyboard,
           'ask': onMeta,
+          'overview': onOverview,
           'fullscreen': onFullscreen,
           'cancel': onCancel,
           'close': onClose,
@@ -162,6 +159,16 @@ class AppModel {
     }
   }
 
+  /// Toggles overview.
+  void onOverview() {
+    if (overviewVisibility.value == false) {
+      // Close other system overlays.
+      onCancel();
+    }
+    // Toggle overview visibility.
+    overviewVisibility.value = !overviewVisibility.value;
+  }
+
   /// Toggles the Status menu on/off.
   void onStatus() {
     if (statusVisibility.value == false) {
@@ -177,6 +184,7 @@ class AppModel {
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
+    overviewVisibility.value = false;
   }
 
   /// Called when the user wants to delete the story.
@@ -199,7 +207,6 @@ class AppModel {
     _pointerEventsListener.stop();
 
     _suggestionsService.ctrl.close();
-    askModel.dispose();
     status.dispose();
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();
@@ -261,7 +268,7 @@ class AppModel {
     node.stringProperty('session').setValue('started');
 
     // Ask.
-    askModel.onInspect(node.child('ask'));
+    askKey.currentState?.onInspect(node.child('ask'));
 
     // Status.
     status.onInspect(node.child('status'));

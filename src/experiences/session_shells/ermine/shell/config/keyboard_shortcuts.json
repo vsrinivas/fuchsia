@@ -10,12 +10,6 @@
   "ask": [
     {
       "char": "space",
-      "modifier": "meta",
-      "chord": "Meta + Space bar",
-      "description": "Launch Ask"
-    },
-    {
-      "char": "space",
       "modifier": "alt",
       "chord": "Alt + Space bar",
       "description": "Launch Ask"
@@ -24,6 +18,14 @@
       "char": "f1",
       "chord": "F1",
       "description": "Launch Ask"
+    }
+  ],
+  "overview": [
+    {
+      "char": "space",
+      "modifier": "meta",
+      "chord": "Meta + Space bar",
+      "description": "Toggle Overview"
     }
   ],
   "shortcuts": [

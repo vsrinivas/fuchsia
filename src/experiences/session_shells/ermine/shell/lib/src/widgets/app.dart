@@ -13,6 +13,7 @@ import 'story/clusters.dart';
 import 'story/fullscreen_story.dart';
 import 'support/app_container.dart';
 import 'support/keyboard_help.dart';
+import 'support/overview.dart';
 import 'support/scrim.dart';
 import 'topbar/topbar.dart';
 
@@ -31,37 +32,45 @@ class App extends StatelessWidget {
         color: ErmineStyle.kBackgroundColor,
         child: AppContainer(
           model: model,
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: <Widget>[
-              // Topbar.
-              Topbar(model: model.topbarModel),
+              Column(
+                children: <Widget>[
+                  // Topbar.
+                  Topbar(model: model.topbarModel),
 
-              // The rest.
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  overflow: Overflow.visible,
-                  children: <Widget>[
-                    // Story Clusters.
-                    Clusters(model: model.clustersModel),
+                  // The rest.
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      overflow: Overflow.visible,
+                      children: <Widget>[
+                        // Story Clusters.
+                        Clusters(model: model),
 
-                    // Fullscreen story.
-                    FullscreenStory(model),
+                        // Fullscreen story.
+                        FullscreenStory(model),
 
-                    // Scrim to dismiss system overlays.
-                    Scrim(model: model),
+                        // Scrim to dismiss system overlays.
+                        Scrim(model: model),
 
-                    // Keyboard shortcuts help.
-                    KeyboardHelp(model: model),
+                        // Keyboard shortcuts help.
+                        KeyboardHelp(model: model),
 
-                    // Ask.
-                    AskContainer(model: model),
+                        // Ask.
+                        AskContainer(model: model),
 
-                    // Status.
-                    StatusContainer(model: model),
-                  ],
-                ),
+                        // Status.
+                        StatusContainer(model: model),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+
+              // Overview.
+              OverviewContainer(model: model),
             ],
           ),
         ),

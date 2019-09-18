@@ -4,24 +4,26 @@
 
 import 'package:flutter/material.dart';
 
-import '../../models/cluster_model.dart';
+import '../../models/app_model.dart';
 import 'cluster.dart';
 
 /// Defines a [PageView] to hold a [Cluster] widget per screen.
 class Clusters extends StatelessWidget {
-  final ClustersModel model;
+  final AppModel model;
 
   const Clusters({this.model});
 
   @override
   Widget build(BuildContext context) {
+    final clustersModel = model.clustersModel;
     final pageController = PageController();
-    model.currentCluster.addListener(() {
+    clustersModel.currentCluster.addListener(() {
       if (pageController.hasClients) {
-        int index = model.clusters.indexOf(model.currentCluster.value);
+        int index =
+            clustersModel.clusters.indexOf(clustersModel.currentCluster.value);
         if (index != pageController.page) {
-          if (model.clusters[index].isEmpty &&
-              model.clusters[pageController.page.toInt()].isEmpty) {
+          if (clustersModel.clusters[index].isEmpty &&
+              clustersModel.clusters[pageController.page.toInt()].isEmpty) {
             pageController.jumpToPage(index);
           } else {
             pageController.animateToPage(
@@ -34,22 +36,25 @@ class Clusters extends StatelessWidget {
       }
     });
     return AnimatedBuilder(
-      animation: model.fullscreenStoryNotifier,
+      animation: Listenable.merge([
+        model.overviewVisibility,
+        clustersModel.fullscreenStoryNotifier,
+      ]),
       child: AnimatedBuilder(
-        animation: model,
+        animation: clustersModel,
         builder: (context, child) => Stack(
           children: <Widget>[
             Positioned.fill(
               child: PageView.builder(
                 controller: pageController,
                 scrollDirection: Axis.horizontal,
-                itemCount: model.clusters.length,
+                itemCount: clustersModel.clusters.length,
                 onPageChanged: (page) {
-                  final cluster = model.clusters[page];
-                  model.currentCluster.value = cluster;
+                  final cluster = clustersModel.clusters[page];
+                  clustersModel.currentCluster.value = cluster;
                 },
                 itemBuilder: (context, index) {
-                  final cluster = model.clusters[index];
+                  final cluster = clustersModel.clusters[index];
                   return Cluster(model: cluster);
                 },
               ),
@@ -58,7 +63,9 @@ class Clusters extends StatelessWidget {
         ),
       ),
       builder: (context, child) =>
-          model.fullscreenStory == null ? child : Offstage(),
+          model.isFullscreen || model.overviewVisibility.value
+              ? Offstage()
+              : child,
     );
   }
 }

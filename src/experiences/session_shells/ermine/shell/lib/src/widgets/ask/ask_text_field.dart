@@ -38,6 +38,7 @@ class AskTextField extends StatelessWidget {
           cursorColor: Colors.black,
           cursorRadius: Radius.zero,
           cursorWidth: 10.0,
+          enableInteractiveSelection: true,
           style: Theme.of(context).textTheme.subhead.merge(
                 TextStyle(
                   color: Colors.black,

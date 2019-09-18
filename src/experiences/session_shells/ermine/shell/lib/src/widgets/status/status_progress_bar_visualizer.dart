@@ -23,17 +23,19 @@ class StatusProgressBarVisualizer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (model.barFirst)
+    if (model.barFirst) {
       return AnimatedBuilder(
           animation: model,
           builder: (BuildContext context, Widget child) {
             return _buildBarLeft(context);
           });
-    return AnimatedBuilder(
-        animation: model,
-        builder: (BuildContext context, Widget child) {
-          return _buildBarRight(context);
-        });
+    } else {
+      return AnimatedBuilder(
+          animation: model,
+          builder: (BuildContext context, Widget child) {
+            return _buildBarRight(context);
+          });
+    }
   }
 
   Widget _buildBarLeft(BuildContext context) {

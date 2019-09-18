@@ -7,17 +7,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
-import 'package:fuchsia_inspect/inspect.dart';
 
 import '../utils/styles.dart';
 import '../utils/suggestions.dart';
-import '../utils/utils.dart';
 
 /// Defines a model that holds the state for the [Ask] widget.
 ///
 /// Holds the list of suggestions and auto-complete entries retrieved from the
 /// suggestion engine.
-class AskModel extends ChangeNotifier implements Inspectable {
+class AskModel extends ChangeNotifier {
   /// The [TextEditingController] used by Ask [TextField] widget.
   final TextEditingController controller = TextEditingController();
 
@@ -28,24 +26,12 @@ class AskModel extends ChangeNotifier implements Inspectable {
   final GlobalKey<AnimatedListState> suggestionsListKey =
       GlobalKey(debugLabel: 'suggestionsList');
 
-  /// Callback to set focus on Ask by injecting a tap pointer event.
-  // final void Function(Offset offset) onFocusTap;
-  final ValueNotifier<bool> visibility;
+  /// Callback when Ask is dismissed by the user.
+  final VoidCallback onDismiss;
 
   final ValueNotifier<List<Suggestion>> suggestions =
       ValueNotifier(<Suggestion>[]);
   final ValueNotifier<int> selection = ValueNotifier(-1);
-
-  /// Callback when a suggestion item needs to inserted into an
-  /// [AnimatedListState].
-  final ValueChanged<int> onInsertItem;
-
-  /// Callback when a suggestion item needs to be removed from an
-  /// [AnimatedListState].
-  final ValueChanged<int> onRemoveItem;
-
-  /// The [GlobalKey] associated with [Ask] widget.
-  final GlobalKey key = GlobalKey(debugLabel: 'ask');
 
   // Keyboard HID usage values defined in:
   // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
@@ -61,19 +47,20 @@ class AskModel extends ChangeNotifier implements Inspectable {
 
   /// Constructor.
   AskModel({
-    @required this.visibility,
     @required SuggestionService suggestionService,
-    this.onInsertItem,
-    this.onRemoveItem,
+    this.onDismiss,
   }) : _suggestionService = suggestionService {
-    visibility.addListener(_onVisibilityChanged);
+    // Request focus on our focusNode.
+    if (WidgetsBinding.instance != null) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => focusNode.requestFocus());
+    }
   }
 
   @override
   void dispose() {
     super.dispose();
     controller.dispose();
-    visibility.removeListener(_onVisibilityChanged);
   }
 
   /// Called by [TextField]'s [onChanged] callback when text changes.
@@ -93,14 +80,14 @@ class AskModel extends ChangeNotifier implements Inspectable {
         _suggestionService.getSuggestions(text).asStream().listen((result) {
       // Remove existing entries from [AnimatedListState].
       for (int index = 0; index < suggestions.value.length; index++) {
-        onRemoveItem != null ? onRemoveItem(index) : _removeItem(index);
+        _removeItem(index);
       }
 
       suggestions.value = result.toList();
 
       // Insert the suggestion in [AnimatedListState].
       for (int index = 0; index < result.length; index++) {
-        onInsertItem != null ? onInsertItem(index) : _insertItem(index);
+        _insertItem(index);
       }
 
       if (result.isNotEmpty) {
@@ -115,8 +102,9 @@ class AskModel extends ChangeNotifier implements Inspectable {
   ///
   /// Invokes the selected suggestion.
   void submit(String query) {
-    // If there are no suggestions, do nothing.
+    // If there are no suggestions, set focus back on text field.
     if (suggestions.value.isEmpty) {
+      focusNode.requestFocus();
       return;
     }
     // Use the top suggestion (highest confidence) if user did not select
@@ -127,7 +115,7 @@ class AskModel extends ChangeNotifier implements Inspectable {
     handleSuggestion(suggestion);
 
     // Dismiss Ask.
-    visibility.value = false;
+    onDismiss?.call();
   }
 
   /// Called by [RawKeyboardListener]'s [onKey] callback.
@@ -138,12 +126,11 @@ class AskModel extends ChangeNotifier implements Inspectable {
     // We only process pure key down events: codePoint = 0 and modifiers = 0.
     int newSelection = selection.value;
     if (event is RawKeyDownEvent &&
-        suggestions.value.isNotEmpty &&
         data.codePoint == 0 &&
         data.modifiers == 0) {
       switch (data.hidUsage) {
         case kEsc:
-          visibility.value = false;
+          onDismiss?.call();
           return;
         case kDownArrow:
           newSelection++;
@@ -160,26 +147,23 @@ class AskModel extends ChangeNotifier implements Inspectable {
         default:
           return;
       }
-      selection.value = newSelection.clamp(0, suggestions.value.length - 1);
-      controller.value = controller.value.copyWith(
-        text: suggestions.value[selection.value].displayInfo.title,
-        selection: TextSelection(
-          baseOffset: 0,
-          extentOffset:
-              suggestions.value[selection.value].displayInfo.title.length,
-        ),
-      );
+      if (suggestions.value.isNotEmpty) {
+        selection.value = newSelection.clamp(0, suggestions.value.length - 1);
+        controller.value = controller.value.copyWith(
+          text: suggestions.value[selection.value].displayInfo.title,
+          selection: TextSelection(
+            baseOffset: 0,
+            extentOffset:
+                suggestions.value[selection.value].displayInfo.title.length,
+          ),
+        );
+      }
     }
   }
 
   /// Called when a suggestion was tapped/clicked by the user.
   void handleSuggestion(Suggestion suggestion) {
     _suggestionService.invokeSuggestion(suggestion);
-  }
-
-  void _onVisibilityChanged() {
-    controller.text = '';
-    _clear();
   }
 
   void _insertItem(int index) {
@@ -196,25 +180,6 @@ class AskModel extends ChangeNotifier implements Inspectable {
         (context, animation) => Offstage(),
         duration: Duration.zero,
       );
-    }
-  }
-
-  void _clear() {
-    for (int index = 0; index < suggestions.value.length; index++) {
-      onRemoveItem != null ? onRemoveItem(index) : _removeItem(index);
-    }
-    suggestions.value = <Suggestion>[];
-  }
-
-  @override
-  void onInspect(Node node) {
-    if (visibility.value) {
-      final rect = rectFromGlobalKey(key);
-      node
-          .stringProperty('rect')
-          .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
-    } else {
-      node.delete();
     }
   }
 }

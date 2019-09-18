@@ -56,7 +56,7 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   StatusGraphVisualizerModel dummyCpuModel;
 
   /// The [GlobalKey] associated with [Status] widget.
-  final GlobalKey key = GlobalKey(debugLabel: 'ask');
+  final GlobalKey key = GlobalKey(debugLabel: 'status');
 
   StatusModel({
     this.statusMemoryService,
@@ -259,13 +259,15 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   }
 
   void _updateBattery(power.BatteryInfo info) {
-    _batteryLevel = info.levelPercent;
-    String chargeState = _chargeStatusToText(info.chargeStatus);
-    _batteryText = '${_batteryLevel.toStringAsFixed(0)}% $chargeState';
-    batteryModel
-      ..barValue = _batteryText
-      ..barFill = _batteryLevel
-      ..barMax = _batteryMax; // 100%
+    if (info.status == power.BatteryStatus.ok) {
+      _batteryLevel = info.levelPercent;
+      String chargeState = _chargeStatusToText(info.chargeStatus);
+      _batteryText = '${_batteryLevel.toStringAsFixed(0)}% $chargeState';
+      batteryModel
+        ..barValue = _batteryText
+        ..barFill = _batteryLevel
+        ..barMax = _batteryMax; // 100%
+    }
   }
 
   String _chargeStatusToText(power.ChargeStatus chargeStatus) {

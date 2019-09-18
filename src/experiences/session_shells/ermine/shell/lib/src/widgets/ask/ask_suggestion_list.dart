@@ -17,8 +17,9 @@ class AskSuggestionList extends StatelessWidget {
 
   /// The model that holds the state for this widget.
   final AskModel model;
+  final bool unbounded;
 
-  const AskSuggestionList({@required this.model});
+  const AskSuggestionList({@required this.model, this.unbounded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -30,12 +31,11 @@ class AskSuggestionList extends StatelessWidget {
         final scrollOffset = controller.position.pixels;
         final viewport = controller.position.viewportDimension;
         bool above = itemOffset < scrollOffset;
-        bool below = itemOffset > scrollOffset + viewport;
+        bool below = itemOffset + _kListItemHeight > scrollOffset + viewport;
         bool visible = !above && !below;
         if (!visible) {
-          final newOffset = above
-              ? itemOffset
-              : itemOffset - _kListItemHeight * (_kListItemCount - 1);
+          final newOffset =
+              above ? itemOffset : itemOffset - viewport + _kListItemHeight;
           controller.jumpTo(newOffset);
         }
       }
@@ -47,7 +47,7 @@ class AskSuggestionList extends StatelessWidget {
           animation: model.suggestions,
           builder: (context, child) {
             return Container(
-              decoration: model.suggestions.value.isNotEmpty
+              decoration: model.suggestions.value.isNotEmpty && !unbounded
                   ? BoxDecoration(
                       color: ErmineStyle.kOverlayBackgroundColor,
                       border: Border.all(
@@ -57,7 +57,9 @@ class AskSuggestionList extends StatelessWidget {
                       borderRadius: BorderRadius.all(Radius.zero),
                     )
                   : null,
-              constraints: BoxConstraints(maxHeight: _kListViewHeight),
+              constraints: unbounded
+                  ? null
+                  : BoxConstraints(maxHeight: _kListViewHeight),
               child: AnimatedList(
                 controller: controller,
                 key: model.suggestionsListKey,

@@ -58,4 +58,7 @@ class ErmineStyle {
 
   /// Ask bar width.
   static const double kAskBarWidth = 500;
+
+  /// Overview padding around shellements: Ask and Status.
+  static const EdgeInsets kOverviewElementPadding = EdgeInsets.all(36);
 }
