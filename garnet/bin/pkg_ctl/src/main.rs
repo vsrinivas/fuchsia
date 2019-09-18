@@ -21,7 +21,7 @@ use {
         convert::{TryFrom, TryInto},
         env,
         fs::File,
-        process,
+        io, process,
     },
 };
 
@@ -98,7 +98,8 @@ fn main() -> Result<(), failure::Error> {
 
                 match cmd {
                     RepoCommand::Add { file } => {
-                        let repo: RepositoryConfig = serde_json::from_reader(File::open(file)?)?;
+                        let repo: RepositoryConfig =
+                            serde_json::from_reader(io::BufReader::new(File::open(file)?))?;
 
                         let res = repo_manager.add(repo.into()).await?;
                         zx::Status::ok(res)?;
@@ -172,7 +173,7 @@ fn main() -> Result<(), failure::Error> {
                     RuleCommand::Replace { input_type } => {
                         let RuleConfig::Version1(ref rules) = match input_type {
                             RuleConfigInputType::File { path } => {
-                                serde_json::from_reader(File::open(path)?)?
+                                serde_json::from_reader(io::BufReader::new(File::open(path)?))?
                             }
                             RuleConfigInputType::Json { config } => config,
                         };
