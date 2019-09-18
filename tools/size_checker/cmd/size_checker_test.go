@@ -5,7 +5,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path"
 	"reflect"
 	"strings"
 	"testing"
@@ -185,7 +189,7 @@ func Test_checkLimit(t *testing.T) {
 			"Size Greater Than Limit",
 			3,
 			json.Number("2"),
-			"foo (3.00 bytes) had exceeded its allocated limit of 2.00 bytes.",
+			"foo (3.00 bytes) has exceeded its limit of 2.00 bytes.",
 		},
 	}
 
@@ -253,5 +257,99 @@ func Test_nodeFind(t *testing.T) {
 				t.Fatalf("node.find(%s) = %+v; expect %+v", test.path, node, test.expected)
 			}
 		})
+	}
+}
+
+func Test_processInput(t *testing.T) {
+	fooSrcRelPath := "foo.src"
+	input := Input{
+		AssetLimit: json.Number("1"),
+		CoreLimit:  json.Number("1"),
+		AssetExt:   []string{".txt"},
+		Components: []Component{
+			Component{
+				Component: "foo",
+				Limit:     json.Number("1"),
+				Src:       []string{"foo-pkg"},
+			},
+		},
+	}
+	buildDir, err := ioutil.TempDir("", "out")
+	if err != nil {
+		t.Fatalf("Failed to create build dir: %v", err)
+	}
+	defer os.RemoveAll(buildDir)
+	pkgDir := path.Join(buildDir, "foo-pkg")
+	if err := os.Mkdir(pkgDir, 0777); err != nil {
+
+	}
+	blobsJSONF, err := os.Create(path.Join(pkgDir, BlobsJSON))
+	if err != nil {
+		t.Fatalf("Failed to create %s: %v", BlobsJSON, err)
+	}
+	metaFarRelPath := path.Join("foo-pkg", MetaFar)
+	blobs := []BlobFromJSON{
+		BlobFromJSON{
+			Merkle:     "deadbeef",
+			Path:       "meta/",
+			SourcePath: metaFarRelPath,
+		},
+		BlobFromJSON{
+			Merkle:     "abc123",
+			Path:       fooSrcRelPath,
+			SourcePath: fooSrcRelPath,
+		},
+	}
+	blobsJSONBytes, err := json.Marshal(blobs)
+	if err != nil {
+		t.Fatalf("Failed to marshal JSON for %s: %v", BlobsJSON, err)
+	}
+	if _, err := blobsJSONF.Write(blobsJSONBytes); err != nil {
+		t.Fatalf("Failed to write %s: %v", BlobsJSON, err)
+	}
+	blobsJSONF.Close()
+	blobManifestRelPath := "foo-pkg/blobs.manifest"
+	blobManifestF, err := os.Create(path.Join(buildDir, blobManifestRelPath))
+	if err != nil {
+		t.Fatalf("Failed to create blob manifest file: %v", err)
+	}
+	blobManifest := fmt.Sprintf("deadbeef=%s\nabc123=%s\n", metaFarRelPath, fooSrcRelPath)
+	if _, err := blobManifestF.Write([]byte(blobManifest)); err != nil {
+		t.Fatalf("Failed to write blob manifest: %v", err)
+	}
+	blobManifestF.Close()
+	blobListRelPath := "blob.manifest.list"
+	blobListF, err := os.Create(path.Join(buildDir, blobListRelPath))
+	if err != nil {
+		t.Fatalf("Failed to create blob list file: %v", err)
+	}
+	if _, err := blobListF.Write([]byte(blobManifestRelPath)); err != nil {
+		t.Fatalf("Failed to write blob list: %v", err)
+	}
+	blobListF.Close()
+	blobSizeRelPath := "blob.sizes"
+	blobSizeF, err := os.Create(path.Join(buildDir, blobSizeRelPath))
+	if err != nil {
+		t.Fatalf("Failed to create blob size file: %v", err)
+	}
+	const singleBlobSize = 4096
+	if _, err := blobSizeF.Write([]byte(fmt.Sprintf("deadbeef=%d\nabc123=%d\n", singleBlobSize, singleBlobSize))); err != nil {
+		t.Fatalf("Failed to write blob sizes: %v", err)
+	}
+	blobSizeF.Close()
+	sizes, err := processInput(&input, buildDir, blobListRelPath, blobSizeRelPath)
+	if err == nil {
+		t.Fatalf("Expected processInput to return an error because size is above limit")
+	} else if !strings.Contains(err.Error(), "foo") {
+		t.Fatalf("Expected error message to mention component name \"foo\". Actual error: %v", err)
+	} else {
+		t.Logf("Error returned from processInput (probably expected): %v", err)
+	}
+	fooSize, ok := sizes["foo"]
+	if !ok {
+		t.Fatalf("Failed to find foo in sizes: %v", sizes)
+	}
+	if fooSize != int64(2*singleBlobSize) {
+		t.Fatalf("Unexpected size for component foo: %v", fooSize)
 	}
 }

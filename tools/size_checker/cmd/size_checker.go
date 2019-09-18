@@ -121,15 +121,15 @@ func formatSize(s int64) string {
 
 // Extract all the packages from a given blob.manifest.list and blob.sizes.
 // It also returns a map containing all blobs, with the merkle root as the key.
-func extractPackages(blobList, blobSize string) (blobMap map[string]*Blob, packages []string, err error) {
+func extractPackages(buildDir, blobList, blobSize string) (blobMap map[string]*Blob, packages []string, err error) {
 	blobMap = make(map[string]*Blob)
 
 	var sizeMap map[string]int64
-	if sizeMap, err = processBlobSizes(blobSize); err != nil {
+	if sizeMap, err = processBlobSizes(filepath.Join(buildDir, blobSize)); err != nil {
 		return
 	}
 
-	f, err := os.Open(blobList)
+	f, err := os.Open(filepath.Join(buildDir, blobList))
 	if err != nil {
 		return
 	}
@@ -137,7 +137,7 @@ func extractPackages(blobList, blobSize string) (blobMap map[string]*Blob, packa
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		pkg, err := processBlobsManifest(blobMap, sizeMap, scanner.Text())
+		pkg, err := processBlobsManifest(blobMap, sizeMap, buildDir, scanner.Text())
 		if err != nil {
 			return blobMap, packages, err
 		}
@@ -154,7 +154,7 @@ func extractPackages(blobList, blobSize string) (blobMap map[string]*Blob, packa
 func processBlobsManifest(
 	blobMap map[string]*Blob,
 	sizeMap map[string]int64,
-	manifest string) ([]string, error) {
+	buildDir, manifest string) ([]string, error) {
 	f, err := os.Open(filepath.Join(buildDir, manifest))
 	if err != nil {
 		return nil, err
@@ -216,7 +216,10 @@ func processSizes(r io.Reader) map[string]int64 {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		temp := strings.Split(scanner.Text(), "=")
-		sz, _ := strconv.ParseInt(temp[1], 10, 64)
+		sz, err := strconv.ParseInt(temp[1], 10, 64)
+		if err != nil {
+			log.Fatalf("bad input to ParseInt in blob sizes: %v: %v", temp[1], err)
+		}
 		m[temp[0]] = sz
 	}
 	return m
@@ -225,6 +228,7 @@ func processSizes(r io.Reader) map[string]int64 {
 // Process the packages extracted from blob.manifest.list and process the blobs.json file to build a
 // tree of packages.
 func processPackages(
+	buildDir string,
 	blobMap map[string]*Blob,
 	assetMap map[string]bool,
 	assetSize *int64,
@@ -233,15 +237,15 @@ func processPackages(
 	for _, metaFar := range packages {
 		// From the meta.far file, we can get the path to the blobs.json for that package.
 		dir := filepath.Dir(metaFar)
-		blobJson := filepath.Join(buildDir, dir, BlobsJSON)
+		blobJSON := filepath.Join(buildDir, dir, BlobsJSON)
 		// We then parse the blobs.json
 		blobs := []BlobFromJSON{}
-		data, err := ioutil.ReadFile(blobJson)
+		data, err := ioutil.ReadFile(blobJSON)
 		if err != nil {
-			return fmt.Errorf(readError(blobJson, err))
+			return fmt.Errorf(readError(blobJSON, err))
 		}
 		if err := json.Unmarshal(data, &blobs); err != nil {
-			return fmt.Errorf(unmarshalError(blobJson, err))
+			return fmt.Errorf(unmarshalError(blobJSON, err))
 		}
 		// Finally, we add the blob and the package to the tree.
 		processBlobsJSON(blobMap, assetMap, assetSize, blobs, root, dir)
@@ -277,10 +281,11 @@ func processBlobsJSON(
 
 // Processes the given input and throws an error if any component in the input is above its
 // allocated space limit.
-func processInput(input *Input, blobList, blobSize string) error {
-	blobMap, packages, err := extractPackages(blobList, blobSize)
+func processInput(input *Input, buildDir, blobList, blobSize string) (map[string]int64, error) {
+	outputSizes := map[string]int64{}
+	blobMap, packages, err := extractPackages(buildDir, blobList, blobSize)
 	if err != nil {
-		return err
+		return outputSizes, err
 	}
 
 	// We create a set of extensions that should be considered as assets.
@@ -292,8 +297,8 @@ func processInput(input *Input, blobList, blobSize string) error {
 	dummy := newDummyNode()
 	var assetSize int64
 	// We process the meta.far files that were found in the blobs.manifest here.
-	if err := processPackages(blobMap, assetMap, &assetSize, packages, dummy); err != nil {
-		return fmt.Errorf("error processing packages: %s", err)
+	if err := processPackages(buildDir, blobMap, assetMap, &assetSize, packages, dummy); err != nil {
+		return outputSizes, fmt.Errorf("error processing packages: %s", err)
 	}
 
 	var total int64
@@ -304,19 +309,21 @@ func processInput(input *Input, blobList, blobSize string) error {
 		for _, src := range component.Src {
 			node := dummy.find(src)
 			if node == nil {
-				return fmt.Errorf("cannot find a folder called %s", src)
+				return map[string]int64{}, fmt.Errorf("cannot find a folder called %s", src)
 			}
 			size += node.size
 		}
 		total += size
-
+		outputSizes[component.Component] = size
 		if s := checkLimit(component.Component, size, component.Limit); s != "" {
 			noSpace = true
 			report.WriteString(s + "\n")
 		}
 	}
 
-	if s := checkLimit("Assets (Fonts / Strings / Images)", assetSize, input.AssetLimit); s != "" {
+	const assetsName = "Assets (Fonts / Strings / Images)"
+	outputSizes[assetsName] = assetSize
+	if s := checkLimit(assetsName, assetSize, input.AssetLimit); s != "" {
 		noSpace = true
 		report.WriteString(s + "\n")
 	}
@@ -327,16 +334,18 @@ func processInput(input *Input, blobList, blobSize string) error {
 		root = node
 	}
 
-	if s := checkLimit("Core system+services", root.size-total, input.CoreLimit); s != "" {
+	const coreName = "Core system+services"
+	outputSizes[coreName] = root.size - total
+	if s := checkLimit(coreName, root.size-total, input.CoreLimit); s != "" {
 		noSpace = true
 		report.WriteString(s + "\n")
 	}
 
 	if noSpace {
-		return fmt.Errorf(report.String())
+		return outputSizes, fmt.Errorf(report.String())
 	}
 
-	return nil
+	return outputSizes, nil
 }
 
 // Checks a given component to see if its size is greater than its allocated space limit as defined
@@ -348,7 +357,7 @@ func checkLimit(name string, size int64, limit json.Number) string {
 	}
 
 	if size > l {
-		return fmt.Sprintf("%s (%s) had exceeded its allocated limit of %s.", name, formatSize(size), formatSize(l))
+		return fmt.Sprintf("%s (%s) has exceeded its limit of %s.", name, formatSize(size), formatSize(l))
 	}
 
 	return ""
@@ -366,18 +375,34 @@ func verbError(verb, file string, err error) string {
 	return fmt.Sprintf("Failed to %s %s: %s", verb, file, err)
 }
 
-var buildDir string
+func writeOutputSizes(sizes map[string]int64, outPath string) error {
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(&sizes); err != nil {
+		log.Fatal("failed to encode sizes: ", err)
+	}
+	return nil
+}
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Usage: size_checker --build-dir
+		fmt.Fprintln(os.Stderr, `Usage: size_checker --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
 
-A executable that checks if a build had exceeded its allocated space limit.
+A executable that checks if any component from a build has exceeded its allocated space limit.
 
 See //tools/size_checker for more details.`)
 		flag.PrintDefaults()
 	}
+	var buildDir string
 	flag.StringVar(&buildDir, "build-dir", "", `(required) the output directory of a Fuchsia build.`)
+	var fileSizeOutPath string
+	flag.StringVar(&fileSizeOutPath, "sizes-json-out", "", "If set, will write a json object to this path with schema { <name (str)>: <file size (int)> }.")
 	flag.Parse()
 
 	if buildDir == "" {
@@ -399,7 +424,13 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	if err := processInput(&input, filepath.Join(buildDir, BlobList), filepath.Join(buildDir, BlobSizes)); err != nil {
-		log.Fatal(err)
+	outputSizes, processErr := processInput(&input, buildDir, BlobList, BlobSizes)
+	if len(fileSizeOutPath) > 0 {
+		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if processErr != nil {
+		log.Fatal(processErr)
 	}
 }
