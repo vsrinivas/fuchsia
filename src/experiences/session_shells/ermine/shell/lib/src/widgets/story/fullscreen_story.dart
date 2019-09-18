@@ -28,7 +28,7 @@ class FullscreenStory extends StatelessWidget {
         builder: (context, child) {
           final story = model.clustersModel.fullscreenStory;
           final confirmEditNotifier = ValueNotifier<bool>(null);
-          final titleFieldController = TextEditingController(text: story?.name);
+          final titleFieldController = TextEditingController(text: '');
           return story != null
               ? AnimatedBuilder(
                   animation: Listenable.merge([

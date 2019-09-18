@@ -50,7 +50,7 @@ class Cluster extends StatelessWidget {
       {bool custom = false}) {
     final story = tile.content;
     final confirmEditNotifier = ValueNotifier<bool>(null);
-    final titleFieldController = TextEditingController(text: story?.name);
+    final titleFieldController = TextEditingController(text: '');
     return AnimatedBuilder(
       animation: story.childViewConnectionNotifier,
       builder: (context, child) {

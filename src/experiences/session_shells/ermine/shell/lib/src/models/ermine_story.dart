@@ -15,7 +15,7 @@ import 'package:fidl_fuchsia_modular/fidl_async.dart'
         StoryController,
         StoryState,
         StoryVisibilityState;
-import 'package:fidl_fuchsia_mem/fidl_async.dart';
+import 'package:fidl_fuchsia_mem/fidl_async.dart' as fidl_mem;
 import 'package:fuchsia_modular_flutter/session_shell.dart'
     show SessionShell, Story;
 import 'package:fuchsia_modular_flutter/story_shell.dart'
@@ -171,11 +171,12 @@ class ErmineStory implements Story, StoryShell, StoryShellTransitional {
   StoryDiscoverContext discoverContext;
 
   set title(String value) {
-    if (discoverContext != null && value.isNotEmpty) {
-      var data = utf8.encode(value);
+    final title = value.trim();
+    if (discoverContext != null && title.isNotEmpty && title != info.id) {
+      final data = utf8.encode(title);
       discoverContext.setProperty(
           'title',
-          Buffer(
+          fidl_mem.Buffer(
             vmo: SizedVmo.fromUint8List(data),
             size: data.length,
           ));
