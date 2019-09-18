@@ -18,6 +18,13 @@ struct PredictedTimes {
   zx::time latch_point_time;
   // The predicted presentation time. This corresponds to a future VSYNC.
   zx::time presentation_time;
+
+  constexpr bool operator==(PredictedTimes other) const {
+    return latch_point_time == other.latch_point_time &&
+           presentation_time == other.presentation_time;
+  }
+
+  constexpr bool operator!=(PredictedTimes other) const { return !(*this == other); }
 };
 
 struct PredictionRequest {

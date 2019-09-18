@@ -50,11 +50,14 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
   if (!valid_)
     return;
   // TODO(SCN-469): Move Present logic into Session.
-  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate = static_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->Present(presentation_time, std::move(acquire_fences), std::move(release_fences),
-                    std::move(callback));
+  GetTempSessionDelegate()->Present(presentation_time, std::move(acquire_fences),
+                                    std::move(release_fences), std::move(callback));
+}
+
+void Session::RequestPresentationTimes(uint64_t requested_prediction_span,
+                                       RequestPresentationTimesCallback callback) {
+  GetTempSessionDelegate()->RequestPresentationTimes(requested_prediction_span,
+                                                     std::move(callback));
 }
 
 void Session::SetCommandDispatchers(
@@ -69,10 +72,7 @@ void Session::SetDebugName(std::string debug_name) {
   // calling into us during destruction.
   if (!valid_)
     return;
-  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate = static_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->SetDebugName(debug_name);
+  GetTempSessionDelegate()->SetDebugName(debug_name);
 }
 
 Session::EventAndErrorReporter::EventAndErrorReporter(Session* session)
@@ -178,6 +178,12 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
       // Invalid severity.
       FXL_DCHECK(false);
   }
+}
+
+TempSessionDelegate* Session::GetTempSessionDelegate() {
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
+  FXL_DCHECK(dispatcher);
+  return static_cast<TempSessionDelegate*>(dispatcher.get());
 }
 
 }  // namespace scenic_impl

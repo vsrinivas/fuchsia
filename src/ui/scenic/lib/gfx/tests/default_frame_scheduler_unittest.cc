@@ -499,6 +499,115 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
 }
 
+TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+
+  zx::time next_vsync = fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval();
+
+  // Ask for a prediction for one frame into the future.
+  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
+
+  EXPECT_GE(predicted_presents.size(), 1u);
+  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(next_vsync.get()));
+
+  for (size_t i = 0; i < predicted_presents.size(); i++) {
+    auto current = predicted_presents[i];
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+  }
+}
+
+TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
+  // The main and only difference between this test and
+  // "SinglePredictedPresentation_ShouldBeReasonable" above is that we advance the clock before
+  // asking for a prediction, to ensure that GetPredictions() works in a more general sense.
+
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+
+  // Advance the clock to vsync1.
+  zx::time vsync0 = fake_display_->GetLastVsyncTime();
+  zx::time vsync1 = vsync0 + fake_display_->GetVsyncInterval();
+  zx::time vsync2 = vsync1 + fake_display_->GetVsyncInterval();
+
+  EXPECT_GT(fake_display_->GetVsyncInterval(), zx::duration(0));
+  EXPECT_EQ(vsync0, Now());
+
+  RunLoopUntil(vsync1);
+
+  // Ask for a prediction.
+  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
+
+  EXPECT_GE(predicted_presents.size(), 1u);
+  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(vsync2.get()));
+
+  for (size_t i = 0; i < predicted_presents.size(); i++) {
+    auto current = predicted_presents[i];
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+  }
+}
+
+TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+
+  zx::time vsync0 = fake_display_->GetLastVsyncTime();
+  zx::time vsync1 = vsync0 + fake_display_->GetVsyncInterval();
+  zx::time vsync2 = vsync1 + fake_display_->GetVsyncInterval();
+  zx::time vsync3 = vsync2 + fake_display_->GetVsyncInterval();
+  zx::time vsync4 = vsync3 + fake_display_->GetVsyncInterval();
+
+  // What we really want is a positive difference between each vsync.
+  EXPECT_GT(fake_display_->GetVsyncInterval(), zx::duration(0));
+
+  // Ask for a prediction a few frames into the future.
+  auto predicted_presents =
+      scheduler->GetFuturePresentationTimes(zx::duration((vsync4 - vsync0).get()));
+
+  // Expect at least one frame of prediction.
+  EXPECT_GE(predicted_presents.size(), 1u);
+
+  auto past_prediction = predicted_presents[0];
+
+  for (size_t i = 0; i < predicted_presents.size(); i++) {
+    auto current = predicted_presents[i];
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+
+    if (i > 0)
+      EXPECT_LT(past_prediction.presentation_time, current.presentation_time);
+
+    past_prediction = current;
+  }
+}
+
+TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+
+  zx::time next_vsync = fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval();
+
+  // Ask for an extremely large prediction duration.
+  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(INTMAX_MAX));
+
+  constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
+
+  EXPECT_LE(predicted_presents.size(), kOverlyLargeRequestCount);
+  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(next_vsync.get()));
+
+  for (size_t i = 0; i < predicted_presents.size(); i++) {
+    auto current = predicted_presents[i];
+    EXPECT_LT(current.latch_point, current.presentation_time);
+    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+  }
+}
+
 // Without calling UpdateManager::RatchetPresentCallbacks(), updates can be applied but the present
 // callbacks will never be invoked.
 TEST(UpdateManagerTest, NoRatchetingMeansNoCallbacks) {

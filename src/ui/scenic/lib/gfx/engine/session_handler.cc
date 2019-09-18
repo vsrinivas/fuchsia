@@ -26,13 +26,19 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
 void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                              std::vector<zx::event> release_fences,
                              fuchsia::ui::scenic::Session::PresentCallback callback) {
-  if (!session_->ScheduleUpdate(zx::time(presentation_time), std::move(buffered_commands_),
-                                std::move(acquire_fences), std::move(release_fences),
-                                std::move(callback))) {
+  if (!session_->ScheduleUpdateForPresent(zx::time(presentation_time),
+                                          std::move(buffered_commands_), std::move(acquire_fences),
+                                          std::move(release_fences), std::move(callback))) {
     KillSession();
   } else {
     buffered_commands_.clear();
   }
+}
+
+void SessionHandler::RequestPresentationTimes(
+    uint64_t requested_prediction_span,
+    fuchsia::ui::scenic::Session::RequestPresentationTimesCallback callback) {
+  callback(session_->GetFuturePresentationTimes(zx::duration(requested_prediction_span)));
 }
 
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {

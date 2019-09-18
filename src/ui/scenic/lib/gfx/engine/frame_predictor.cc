@@ -78,9 +78,8 @@ PredictedTimes FramePredictor::GetPrediction(PredictionRequest request) const {
       ComputeNextSyncTime(request.last_vsync_time, request.vsync_interval, min_sync_time);
 
   // Ensure the requested presentation time is current.
-  zx::time target_presentation_time = request.requested_presentation_time < request.now
-                                          ? request.now
-                                          : request.requested_presentation_time;
+  zx::time target_presentation_time = std::max(request.requested_presentation_time, request.now);
+
   // Compute the next presentation time from the target vsync time (inclusive),
   // that is at least the current requested present time.
   target_presentation_time =

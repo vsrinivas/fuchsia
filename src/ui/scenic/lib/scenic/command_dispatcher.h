@@ -69,6 +69,10 @@ class TempSessionDelegate : public CommandDispatcher {
 
   virtual void SetDebugName(const std::string& debug_name) = 0;
 
+  virtual void RequestPresentationTimes(
+      uint64_t requested_prediction_span,
+      fuchsia::ui::scenic::Session::RequestPresentationTimesCallback callback) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };

@@ -147,6 +147,13 @@ void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acq
   });
 }
 
+void FakeSession::RequestPresentationTimes(uint64_t prediction_time_span,
+                                           FakeSession::RequestPresentationTimesCallback callback) {
+  // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning we
+  // are providing no information.
+  callback({.remaining_presents_in_flight_allowed = 1, .future_presentations = {}});
+}
+
 FakeSession::Resource* FakeSession::FindResource(uint32_t id) {
   auto iter = resources_by_id_.find(id);
   return (iter == resources_by_id_.end()) ? nullptr : &iter->second;

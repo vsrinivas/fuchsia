@@ -91,9 +91,10 @@ class Session {
 
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
-  bool ScheduleUpdate(zx::time presentation_time, std::vector<::fuchsia::ui::gfx::Command> commands,
-                      std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
-                      PresentCallback callback);
+  bool ScheduleUpdateForPresent(zx::time presentation_time,
+                                std::vector<::fuchsia::ui::gfx::Command> commands,
+                                std::vector<zx::event> acquire_fences,
+                                std::vector<zx::event> release_fences, PresentCallback callback);
 
   // Called by Engine() when it is notified by the FrameScheduler that
   // a frame should be rendered for the specified |actual_presentation_time|.
@@ -112,7 +113,18 @@ class Session {
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
 
+  // Returns information about future presentation times, and their respective latch points.
+  //
+  // See fuchsia::ui::scenic::RequestPresentationTimes for more details.
+  fuchsia::scenic::scheduling::FuturePresentationTimes GetFuturePresentationTimes(
+      zx::duration requested_prediction_span);
+
   void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
+
+  // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
+  // uses this to apply backpressure to clients.
+  static constexpr int64_t kMaxPresentsInFlight = 5;
+  int64_t presents_in_flight() { return presents_in_flight_; }
 
  private:
   friend class Resource;
@@ -136,6 +148,7 @@ class Session {
    public:
     ViewTreeUpdateFinalizer(Session* session, SceneGraph* scene_graph);
     ~ViewTreeUpdateFinalizer();
+
    private:
     Session* const session_ = nullptr;
     SceneGraph* const scene_graph_ = nullptr;
@@ -183,7 +196,6 @@ class Session {
   // details.
   fxl::WeakPtr<View> root_view_;
 
-
   struct ViewHolderStatus {
     fxl::WeakPtr<ViewHolder> view_holder;
     // Three cases:
@@ -205,6 +217,12 @@ class Session {
   uint64_t applied_update_count_ = 0;
 
   std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
+
+  // Combined with |kMaxFramesInFlight|, track how many Present()s the client can still call. We use
+  // this for throttling clients.
+  //
+  // It is incremented on every Present(), and decremented on every OnPresentedCallback().
+  int64_t presents_in_flight_ = 0;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::UIntMetric inspect_resource_count_;

@@ -52,6 +52,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   void ScheduleUpdateForSession(zx::time presentation_time,
                                 scenic_impl::SessionId session) override;
 
+  // |FrameScheduler|
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationTimes(
+      zx::duration requested_prediction_span) override;
+
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
 

@@ -52,6 +52,11 @@ class SessionHandler : public TempSessionDelegate {
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void SetDebugName(const std::string& debug_name) override { session_->SetDebugName(debug_name); }
 
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
+  void RequestPresentationTimes(
+      uint64_t requested_prediction_span,
+      fuchsia::ui::scenic::Session::RequestPresentationTimesCallback callback) override;
+
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 

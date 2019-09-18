@@ -37,12 +37,12 @@ TEST_F(SessionTest, TakeSnapshot_ShouldReturnFalse) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
-  EXPECT_FALSE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
+  EXPECT_FALSE(session()->ScheduleUpdateForPresent(
+      zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -51,19 +51,19 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
-  EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
 TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
-  EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(100), std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+      zx::time(100), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
@@ -128,6 +128,100 @@ TEST_F(SessionTest, Labeling) {
   // Bypass the truncation performed by session helpers.
   shape_node->SetLabel(kTooLongLabel);
   EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength), shape_node->label());
+}
+
+// TODO(35521) Re-enable.
+TEST_F(SessionTest, DISABLED_TooManyPresentsInFlight_ShouldNotWork) {
+  const zx::time presentation_time = zx::time(1);
+
+  // Max out the maximum allotted presents in flight.
+  for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+        std::vector<zx::event>(), [](auto) {}));
+  }
+
+  EXPECT_EQ(session()->presents_in_flight(), session()->kMaxPresentsInFlight);
+
+  // This should fail.
+  EXPECT_FALSE(session()->ScheduleUpdateForPresent(
+      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
+}
+
+// TODO(35521) Re-enable.
+TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
+  const zx::time presentation_time = zx::time(1);
+
+  // Max out the maximum allotted presents in flight.
+  for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+        std::vector<zx::event>(), [](auto) {}));
+  }
+
+  sys::testing::ComponentContextProvider app_context;
+  SceneGraph scene_graph(app_context.context());
+  auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                        /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
+  auto update_result = session()->ApplyScheduledUpdates(&command_context, presentation_time);
+
+  EXPECT_TRUE(update_result.success);
+  EXPECT_TRUE(update_result.needs_render);
+
+  fuchsia::images::PresentationInfo presentation_info = {};
+
+  // Fire some of the callbacks ourselves.
+  size_t updated_count = 0;
+  while (!update_result.callbacks.empty() && updated_count < 2) {
+    update_result.callbacks.front()(presentation_info);
+    update_result.callbacks.pop();
+
+    ++updated_count;
+  }
+
+  EXPECT_EQ(session()->presents_in_flight(), 3);
+
+  // Present exactly twice more successfully. This would only work if we succesfully decremented
+  // |presents_in_flight_|.
+  for (int i = session()->presents_in_flight(); i < session()->kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+        std::vector<zx::event>(), [](auto) {}));
+  }
+
+  // TODO(35521) Re-enable.
+  /*
+  // This should fail.
+  EXPECT_FALSE(session()->ScheduleUpdateForPresent(
+      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
+  */
+}
+
+TEST_F(SessionTest, FuturePresentationTimes_ShouldReflectPresentsInFlight) {
+  auto last_vsync = display()->GetLastVsyncTime();
+  auto vsync_interval = display()->GetVsyncInterval();
+  auto next_vsync = last_vsync + vsync_interval;
+  EXPECT_GT(vsync_interval, zx::duration(0));
+
+  fuchsia::scenic::scheduling::FuturePresentationTimes presentation_times =
+      session()->GetFuturePresentationTimes(zx::duration(0));
+
+  EXPECT_GE(presentation_times.future_presentations.size(), 1u);
+  EXPECT_EQ(presentation_times.remaining_presents_in_flight_allowed,
+            session()->kMaxPresentsInFlight);
+
+  // Max out the maximum allotted presents in flight.
+  for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
+        next_vsync, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+        std::vector<zx::event>(), [](auto) {}));
+  }
+
+  presentation_times = session()->GetFuturePresentationTimes(zx::duration(vsync_interval.get()));
+  EXPECT_GE(presentation_times.future_presentations.size(), 1u);
+  EXPECT_EQ(presentation_times.remaining_presents_in_flight_allowed, 0);
 }
 
 using BufferSessionTest = VkSessionTest;

@@ -230,6 +230,56 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
   RequestFrame();
 }
 
+std::vector<fuchsia::scenic::scheduling::PresentationInfo>
+DefaultFrameScheduler::GetFuturePresentationTimes(zx::duration requested_prediction_span) {
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+
+  PredictionRequest request;
+  request.now = zx::time(async_now(dispatcher_));
+  request.last_vsync_time = display_->GetLastVsyncTime();
+
+  // We assume this value is constant, at least for the near future.
+  request.vsync_interval = display_->GetVsyncInterval();
+
+  constexpr static const uint64_t kMaxPredictionCount = 8;
+  uint64_t count = 0;
+
+  zx::time prediction_limit = request.now + requested_prediction_span;
+  while (request.now <= prediction_limit && count < kMaxPredictionCount) {
+    // We ask for a "0 time" in order to give us the next possible presentation time. It also fits
+    // the Present() pattern most Scenic clients currently use.
+    request.requested_presentation_time = zx::time(0);
+
+    PredictedTimes times = frame_predictor_->GetPrediction(request);
+    infos.push_back({.latch_point = static_cast<uint64_t>(times.latch_point_time.get()),
+                     .presentation_time = static_cast<uint64_t>(times.presentation_time.get())});
+
+    // The new now time is one tick after the returned latch point. This ensures uniqueness in the
+    // results we give to the client since we know we cannot schedule a frame for a latch point in
+    // the past.
+    //
+    // We also guarantee loop termination by the same token. Latch points are monotonically
+    // increasing, which means so is |request.now| so it will eventually reach prediction_limit.
+    request.now = times.latch_point_time + zx::duration(1);
+
+    // last_vsync_time should be the greatest value less than request.now where a vsync
+    // occurred. We can calculate this inductively by adding vsync_intervals to last_vsync_time.
+    // Therefore what we add to last_vsync_time is the difference between now and
+    // last_vsync_time, integer divided by vsync_interval, then multipled by vsync_interval.
+    //
+    // Because now' is the latch_point, and latch points are monotonically increasing, we guarantee
+    // that |difference| and therefore last_vsync_time is also monotonically increasing.
+    zx::duration difference = request.now - request.last_vsync_time;
+    uint64_t num_intervals = difference / request.vsync_interval;
+    request.last_vsync_time += request.vsync_interval * num_intervals;
+
+    ++count;
+  }
+
+  ZX_DEBUG_ASSERT(infos.size() >= 1);
+  return infos;
+}
+
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::ApplyUpdates(
     zx::time presentation_time) {
   // Logging the first few frames to find common startup bugs.

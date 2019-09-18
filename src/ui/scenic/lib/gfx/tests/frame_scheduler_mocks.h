@@ -27,6 +27,11 @@ class MockFrameScheduler : public FrameScheduler {
   void ScheduleUpdateForSession(zx::time presentation_time,
                                 scenic_impl::SessionId session) override {}
 
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationTimes(
+      zx::duration requested_prediction_span) override {
+    return {{}};
+  }
+
   void OnFramePresented(const FrameTimings& timings) override { ++frame_presented_call_count_; }
   void OnFrameRendered(const FrameTimings& timings) override { ++frame_rendered_call_count_; }
 

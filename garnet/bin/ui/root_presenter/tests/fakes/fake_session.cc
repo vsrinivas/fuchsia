@@ -25,5 +25,8 @@ void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acq
                           std::vector<zx::event> release_fences, PresentCallback callback) {}
 
 void FakeSession::Present(uint64_t presentation_time, PresentCallback callback) {}
+
+void FakeSession::RequestPresentationTimes(uint64_t request_prediction_span,
+                                           RequestPresentationTimesCallback callback) {}
 }  // namespace testing
 }  // namespace root_presenter

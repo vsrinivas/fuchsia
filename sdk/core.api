@@ -52,6 +52,7 @@ sdk://fidl/fuchsia.netstack
 sdk://fidl/fuchsia.posix.socket
 sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.settings
+sdk://fidl/fuchsia.scenic.scheduling
 sdk://fidl/fuchsia.simplecamera
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sys.test

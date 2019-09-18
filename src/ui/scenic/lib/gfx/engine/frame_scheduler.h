@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_FRAME_SCHEDULER_H_
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/scenic/scheduling/cpp/fidl.h>
 #include <lib/zx/time.h>
 
 #include <queue>
@@ -101,6 +102,11 @@ class FrameScheduler {
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
   virtual void ScheduleUpdateForSession(zx::time presentation_time,
                                         scenic_impl::SessionId session) = 0;
+
+  // Gets the predicted latch points and presentation times for the frames at or before the next
+  // |requested_prediction_span| time span. Uses the FramePredictor to do so.
+  virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationTimes(
+      zx::duration requested_prediction_span) = 0;
 
  protected:
   friend class FrameTimings;

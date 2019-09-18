@@ -309,6 +309,7 @@ source_set("frame_scheduler") {
     ":util",
     "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
 
     # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.

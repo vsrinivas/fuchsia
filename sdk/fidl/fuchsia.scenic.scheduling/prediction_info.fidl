@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.scenic.scheduling;
+
+struct PresentationInfo {
+    /// The |latch_point| is guaranteed to be less than |presentation_time|. The
+    /// latch point is the time where clients should aim to have their updates
+    /// and fences ready in order for the content to be presented at the
+    /// corresponding presentation time.
+    uint64 latch_point;
+
+    /// The predicted time in which the enqueued operations are anticipated to take
+    /// visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+    uint64 presentation_time;
+};
+
+/// The data type returned in |fuchsia.ui.scenic::RequestPresentationTimes|. See
+/// that method description for more information.
+struct FuturePresentationTimes {
+    /// The future estimated presentation times. They represent the times Scenic
+    /// intends to let the client's work be presented over the next few frames.
+    /// These values may change after they are queried.
+    ///
+    /// Clients who wish to minimize latency should use these values to schedule
+    /// their work accordingly.
+    vector<PresentationInfo>:8 future_presentations;
+
+    /// The amount of Present() calls the client is currently allowed. If the
+    /// client calls Present() when this number is zero, the session will be
+    /// shut down.
+    ///
+    /// This value is decremented every Present() call, and is incremented every
+    /// OnFramePresented() event.
+    int64 remaining_presents_in_flight_allowed;
+};

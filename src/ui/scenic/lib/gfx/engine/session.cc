@@ -96,13 +96,19 @@ Session::~Session() {
 
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
-bool Session::ScheduleUpdate(zx::time requested_presentation_time,
-                             std::vector<::fuchsia::ui::gfx::Command> commands,
-                             std::vector<zx::event> acquire_fences,
-                             std::vector<zx::event> release_events,
-                             fuchsia::ui::scenic::Session::PresentCallback callback) {
+bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
+                                       std::vector<::fuchsia::ui::gfx::Command> commands,
+                                       std::vector<zx::event> acquire_fences,
+                                       std::vector<zx::event> release_events,
+                                       fuchsia::ui::scenic::Session::PresentCallback callback) {
   TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
                  debug_name_, "requested time", requested_presentation_time.get());
+
+  // TODO(35521) If the client has no Present()s left, kill the session.
+  if (++presents_in_flight_ > kMaxPresentsInFlight) {
+    error_reporter_->ERROR() << "Present() called with no more presents left. In the future (Bug "
+                                "35521) this will terminate the session.";
+  }
 
   // Logic verifying client requests presents in-order.
   zx::time last_scheduled_presentation_time = last_applied_update_presentation_time_;
@@ -134,9 +140,17 @@ bool Session::ScheduleUpdate(zx::time requested_presentation_time,
   ++scheduled_update_count_;
   TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, scheduled_update_count_));
 
+  // When we call the PresentCallback, decrement the number of remaining times the client can call
+  // Present().
+  fuchsia::ui::scenic::Session::PresentCallback new_callback =
+      [this, callback = std::move(callback)](fuchsia::images::PresentationInfo info) {
+        --presents_in_flight_;
+        callback(info);
+      };
+
   scheduled_updates_.push(Update{requested_presentation_time, std::move(commands),
                                  std::move(acquire_fence_set), std::move(release_events),
-                                 std::move(callback)});
+                                 std::move(new_callback)});
 
   inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
 
@@ -216,6 +230,13 @@ void Session::EnqueueEvent(::fuchsia::ui::gfx::Event event) {
 
 void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
+}
+
+fuchsia::scenic::scheduling::FuturePresentationTimes Session::GetFuturePresentationTimes(
+    zx::duration requested_prediction_span) {
+  return {.remaining_presents_in_flight_allowed = kMaxPresentsInFlight - presents_in_flight_,
+          .future_presentations = session_context_.frame_scheduler->GetFuturePresentationTimes(
+              requested_prediction_span)};
 }
 
 bool Session::SetRootView(fxl::WeakPtr<View> view) {

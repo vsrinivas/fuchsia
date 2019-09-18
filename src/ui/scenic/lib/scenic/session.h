@@ -43,6 +43,10 @@ class Session final : public fuchsia::ui::scenic::Session {
                std::vector<zx::event> release_fences, PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
+  void RequestPresentationTimes(uint64_t requested_prediction_span,
+                                RequestPresentationTimesCallback callback) override;
+
+  // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
 
   SessionId id() const { return id_; }
@@ -136,6 +140,8 @@ class Session final : public fuchsia::ui::scenic::Session {
   // trace id that begins at 0, and is incremented each |Session::Present|
   // call.
   uint64_t next_present_trace_id_ = 0;
+
+  TempSessionDelegate* GetTempSessionDelegate();
 
   std::shared_ptr<EventAndErrorReporter> reporter_;
 
