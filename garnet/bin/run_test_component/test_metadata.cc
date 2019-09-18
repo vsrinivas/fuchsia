@@ -13,6 +13,8 @@
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 
 #include <unordered_set>
 
@@ -33,8 +35,9 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::net::Connectivity::Name_,       fuchsia::net::NameLookup::Name_,
     fuchsia::net::stack::Stack::Name_,       fuchsia::netstack::Netstack::Name_,
     fuchsia::posix::socket::Provider::Name_, fuchsia::scheduler::ProfileProvider::Name_,
-    fuchsia::sys::test::CacheControl::Name_, fuchsia::ui::policy::Presenter::Name_,
-    fuchsia::ui::scenic::Scenic::Name_,
+    fuchsia::sysmem::Allocator::Name_,       fuchsia::sys::test::CacheControl::Name_,
+    fuchsia::ui::policy::Presenter::Name_,   fuchsia::ui::scenic::Scenic::Name_,
+    fuchsia::vulkan::loader::Loader::Name_,
 };
 
 }  // namespace

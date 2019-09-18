@@ -25,6 +25,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
@@ -37,6 +38,7 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-net-stack",
     "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 
@@ -53,11 +55,11 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-debugdata",
     "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/fidl/fuchsia-process",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
   ]
 }
 

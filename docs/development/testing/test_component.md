@@ -130,8 +130,10 @@ There are some services, such as network, that cannot be faked or mocked. Howeve
 ```text
 "fuchsia.scheduler.ProfileProvider"
 "fuchsia.sys.test.CacheControl"
+"fuchsia.sysmem.Allocator"
 "fuchsia.ui.policy.Presenter"
 "fuchsia.ui.scenic.Scenic"
+"fuchsia.vulkan.loader.Loader"
 ```
 
 Depending on your use case you can include one or more of the services above.

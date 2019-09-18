@@ -8,6 +8,8 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 
 #include <string>
 #include <utility>
@@ -233,8 +235,10 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
         "fuchsia.net.Connectivity",
         "fuchsia.net.stack.Stack",
         "fuchsia.netstack.Netstack",
+        "fuchsia.sysmem.Allocator",
         "fuchsia.ui.scenic.Scenic",
-        "fuchsia.ui.policy.Presenter"
+        "fuchsia.ui.policy.Presenter",
+        "fuchsia.vulkan.loader.Loader"
       ]
     }
   })");
@@ -242,12 +246,13 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 5u);
+    EXPECT_EQ(tm.system_services().size(), 7u);
     EXPECT_THAT(tm.system_services(),
                 ::testing::ElementsAre(
                     fuchsia::net::Connectivity::Name_, fuchsia::net::stack::Stack::Name_,
-                    fuchsia::netstack::Netstack::Name_, fuchsia::ui::scenic::Scenic::Name_,
-                    fuchsia::ui::policy::Presenter::Name_));
+                    fuchsia::netstack::Netstack::Name_, fuchsia::sysmem::Allocator::Name_,
+                    fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_,
+                    fuchsia::vulkan::loader::Loader::Name_));
   }
 
   json = CreateManifestJson(R"(
