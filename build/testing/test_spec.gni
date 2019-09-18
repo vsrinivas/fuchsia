@@ -43,9 +43,8 @@ import("//build/testing/platforms.gni")
 #
 template("test_spec") {
   assert(defined(invoker.name), "name must be defined.")
-  assert(defined(invoker.install_path) || defined(invoker.location) ||
-             defined(invoker.command),
-         "install_path, location, or command must be defined.")
+  assert(defined(invoker.install_path) || defined(invoker.command),
+         "install_path or command must be defined.")
   forward_variables_from(invoker,
                          [
                            "environments",
@@ -236,9 +235,6 @@ template("test_spec") {
                                "install_path",
                              ])
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
-      if (!defined(install_path) && defined(invoker.location)) {
-        install_path = invoker.location
-      }
       if ((defined(install_path) && is_linux) || is_mac) {
         # Trim leading //.
         install_path = rebase_path(install_path, root_build_dir)
