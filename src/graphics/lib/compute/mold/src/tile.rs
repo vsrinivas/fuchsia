@@ -110,8 +110,15 @@ fn edge_tile(edge: &Edge<i32>) -> (i32, i32) {
     let min_x = p0.x.min(p1.x);
     let min_y = p0.y.min(p1.y);
 
-    let i = min_x / TILE_SIZE as i32;
-    let j = min_y / TILE_SIZE as i32;
+    let mut i = min_x / TILE_SIZE as i32;
+    let mut j = min_y / TILE_SIZE as i32;
+
+    if min_x < 0 {
+        i -= 1;
+    }
+    if min_y < 0 {
+        j -= 1;
+    }
 
     (i, j)
 }
@@ -885,6 +892,27 @@ mod tests {
         assert_eq!(
             all_tiles(&*raster.tile_contour(), &mut map, None),
             vec![(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2)],
+        );
+    }
+
+    #[test]
+    fn tile_contour_translate_from_negative() {
+        let mut map = Map::new(TILE_SIZE * 2, TILE_SIZE * 2);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(-1.5, -1.5), (-1.5, -0.5), (-0.5, -0.5), (-0.5, -1.5)]);
+
+        let mut raster = Raster::new(&path);
+
+        assert_eq!(
+            all_tiles(&*raster.tile_contour(), &mut map, None),
+            vec![],
+        );
+
+        raster.set_translation(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
+        assert_eq!(
+            all_tiles(&*raster.tile_contour(), &mut map, None),
+            vec![(0, 0)],
         );
     }
 }
