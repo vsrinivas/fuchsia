@@ -7,7 +7,7 @@
 use {
     failure::Fail,
     fidl_fuchsia_diagnostics::{ComponentSelector, PathSelectionNode, PatternMatcher},
-    fidl_fuchsia_diagnostics_inspect::{PropertySelector, TreeSelector},
+    fidl_fuchsia_diagnostics_inspect::{PropertySelector, Selector, TreeSelector},
 };
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
@@ -179,17 +179,15 @@ pub fn parse_tree_selector(
 }
 
 /// Converts an unparsed Inspect selector into a ComponentSelector and TreeSelector.
-pub fn parse_selector(
-    unparsed_selector: &str,
-) -> Result<(ComponentSelector, TreeSelector), SelectorParserError> {
+pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, SelectorParserError> {
     // Tokenize the selector by `:` char in order to process each subselector separately.
     let selector_sections = tokenize_string(unparsed_selector, SELECTOR_DELIMITER)?;
 
     match selector_sections.as_slice() {
-        [component_selector, inspect_node_selector, property_selector] => Ok((
-            parse_component_selector(component_selector)?,
-            parse_tree_selector(inspect_node_selector, property_selector)?,
-        )),
+        [component_selector, inspect_node_selector, property_selector] => Ok(Selector {
+            component_selector: parse_component_selector(component_selector)?,
+            tree_selector: parse_tree_selector(inspect_node_selector, property_selector)?,
+        }),
         _ => Err(SelectorParserError(
             "Selector format requires exactly 3 subselectors delimited by a `:`.".to_string(),
         )),

@@ -44,6 +44,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:timebomb",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

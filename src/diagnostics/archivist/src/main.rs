@@ -58,12 +58,9 @@ fn main() -> Result<(), Error> {
         )?,
     );
 
-    let log_manager2 = log_manager.clone();
-    let log_manager3 = log_manager.clone();
-    fs.dir("svc")
-        .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
-        .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream));
-    fs.take_and_serve_directory_handle()?;
+    // The repository that will serve as the data transfer between the archivist server
+    // and all services needing access to inspect data.
+    let inspect_repository = Arc::new(Mutex::new(inspect::InspectDataRepository::new()));
 
     let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)
     {
@@ -74,22 +71,50 @@ fn main() -> Result<(), Error> {
     let archivist_threads: usize =
         archivist_configuration.num_threads.unwrap_or(DEFAULT_NUM_THREADS);
 
+    let archivist_state = ArchivistState::new(archivist_configuration, inspect_repository.clone())?;
+
+    let log_manager2 = log_manager.clone();
+    let log_manager3 = log_manager.clone();
+    fs.dir("svc")
+        .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
+        .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream))
+        .add_fidl_service(move |stream| {
+            // Every reader session gets their own clone of the inspect repository.
+            // This ends up functioning like a SPMC channel, in which only the archivist
+            // pushes updates to the repository, but multiple inspect Reader sessions
+            // read the data.
+            let reader_inspect_repository = inspect_repository.clone();
+            let inspect_reader_server = inspect::ReaderServer::new(reader_inspect_repository);
+
+            inspect_reader_server.spawn_reader_server(stream)
+        });
+
+    fs.take_and_serve_directory_handle()?;
+
     executor.run(
-        future::try_join(fs.collect::<()>().map(Ok), run_archivist(archivist_configuration)),
+        future::try_join(fs.collect::<()>().map(Ok), run_archivist(archivist_state)),
         archivist_threads,
     )?;
     Ok(())
 }
 
+/// ArchivistState owns the tools needed to persist data
+/// to the archive, as well as the service-specific repositories
+/// that are populated by the archivist server and exposed in the
+/// service sessions.
 struct ArchivistState {
     writer: archive::ArchiveWriter,
     group_stats: archive::EventFileGroupStatsMap,
     log_node: BoundedListNode,
     configuration: configs::Config,
+    inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
 }
 
 impl ArchivistState {
-    fn new(configuration: configs::Config) -> Result<Self, Error> {
+    fn new(
+        configuration: configs::Config,
+        inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
+    ) -> Result<Self, Error> {
         let mut writer = archive::ArchiveWriter::open(ARCHIVE_PATH)?;
         let mut group_stats = writer.get_archive().get_event_group_stats()?;
 
@@ -115,7 +140,7 @@ impl ArchivistState {
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState { writer, group_stats, log_node, configuration })
+        Ok(ArchivistState { writer, group_stats, log_node, configuration, inspect_repository })
     }
 
     fn add_group_stat(&mut self, log_file_path: &Path, stat: archive::EventFileGroupStats) {
@@ -137,8 +162,8 @@ impl ArchivistState {
     }
 }
 
-async fn run_archivist(archivist_configuration: configs::Config) -> Result<(), Error> {
-    let state = Arc::new(Mutex::new(ArchivistState::new(archivist_configuration)?));
+async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
+    let state = Arc::new(Mutex::new(archivist_state));
     component::health().set_starting_up();
 
     let mut collector = collection::HubCollector::new("/hub")?;
@@ -168,17 +193,12 @@ async fn run_archivist(archivist_configuration: configs::Config) -> Result<(), E
     Ok(())
 }
 
-async fn process_event(
-    state: Arc<Mutex<ArchivistState>>,
-    event: collection::ComponentEvent,
+async fn archive_event(
+    state: &mut Arc<Mutex<ArchivistState>>,
+    event_name: &str,
+    event_data: collection::ComponentEventData,
 ) -> Result<(), Error> {
     let mut state = state.lock().unwrap();
-
-    let (event_name, event_data) = match event {
-        collection::ComponentEvent::Existing(data) => ("EXISTING", data),
-        collection::ComponentEvent::Start(data) => ("START", data),
-        collection::ComponentEvent::Stop(data) => ("STOP", data),
-    };
 
     let mut log = state.writer.get_log().new_event(
         event_name,
@@ -276,4 +296,37 @@ async fn process_event(
     }
 
     Ok(())
+}
+
+fn populate_inspect_repo(
+    state: &mut Arc<Mutex<ArchivistState>>,
+    inspect_reader_data: collection::InspectReaderData,
+) -> Result<(), Error> {
+    let state = state.lock().unwrap();
+    let mut inspect_repo = state.inspect_repository.lock().unwrap();
+    inspect_repo.add(
+        inspect_reader_data.component_hierarchy_path,
+        inspect_reader_data.data_directory_proxy,
+    );
+    Ok(())
+}
+
+async fn process_event(
+    mut state: Arc<Mutex<ArchivistState>>,
+    event: collection::ComponentEvent,
+) -> Result<(), Error> {
+    match event {
+        collection::ComponentEvent::Existing(data) => {
+            return archive_event(&mut state, "EXISTING", data).await
+        }
+        collection::ComponentEvent::Start(data) => {
+            return archive_event(&mut state, "START", data).await
+        }
+        collection::ComponentEvent::Stop(data) => {
+            return archive_event(&mut state, "STOP", data).await
+        }
+        collection::ComponentEvent::OutDirectoryAppeared(data) => {
+            return populate_inspect_repo(&mut state, data)
+        }
+    };
 }

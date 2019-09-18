@@ -12,6 +12,7 @@
 use {
     crate::inspect,
     failure::{self, format_err, Error},
+    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_watch::{self, NodeType, PathEvent},
     fuchsia_zircon as zx,
@@ -61,6 +62,22 @@ pub struct ComponentEventData {
     pub component_data_map: Option<DataMap>,
 }
 
+#[derive(Debug)]
+pub struct InspectReaderData {
+    /// Path through the component hierarchy to the component
+    /// that this data packet is about.
+    pub component_hierarchy_path: PathBuf,
+
+    /// The name of the component.
+    pub component_name: String,
+
+    /// The instance ID of the component.
+    pub component_id: String,
+
+    /// Proxy to the inspect data host.
+    pub data_directory_proxy: DirectoryProxy,
+}
+
 pub type DataMap = HashMap<String, Data>;
 
 /// Data associated with a component.
@@ -79,7 +96,7 @@ pub enum Data {
 }
 
 /// An event that occurred to a component.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum ComponentEvent {
     /// The component existed when the collection process started.
     Existing(ComponentEventData),
@@ -89,6 +106,9 @@ pub enum ComponentEvent {
 
     /// We observed the component stopping.
     Stop(ComponentEventData),
+
+    /// We observed the creation of a new `out` directory.
+    OutDirectoryAppeared(InspectReaderData),
 }
 
 /// A realm path is a vector of realm names.
@@ -345,7 +365,11 @@ impl HubCollector {
         Ok(())
     }
 
-    fn add_out_watcher<'a>(&'a mut self, path: PathBuf) {
+    async fn add_out_watcher<'a>(
+        &'a mut self,
+        path: PathBuf,
+        data: ComponentEventData,
+    ) -> Result<(), Error> {
         // Clone the original collector to create a conceptual channel between the
         // producer of data and the consumer. This relies on the collector managing its
         // data with an ARC.
@@ -365,16 +389,35 @@ impl HubCollector {
         let component_path = match path.parent() {
             Some(parent) => parent,
             None => {
-                return;
+                return Err(format_err!("Cannot process out directory with no parent."));
             }
         };
+
+        let component_path_buf = component_path.to_path_buf();
 
         // Store the receiving end of the extra data collectors in the
         // component map, to be retrieved by the archivist when the
         // component dies.
         self.component_extra_data
-            .entry(component_path.to_path_buf())
+            .entry(component_path_buf.clone())
             .and_modify(|v| *v = Some(extra_data_receiver));
+
+        let inspect_data_proxy =
+            match inspect::InspectDataCollector::find_directory_proxy(&component_path_buf).await {
+                Ok(dir_proxy) => dir_proxy,
+                Err(e) => return Err(e),
+            };
+
+        let inspect_reader_data = InspectReaderData {
+            component_hierarchy_path: component_path_buf,
+            component_name: data.component_name,
+            component_id: data.component_id,
+            data_directory_proxy: inspect_data_proxy,
+        };
+
+        self.component_event_sender
+            .send(ComponentEvent::OutDirectoryAppeared(inspect_reader_data))
+            .await?;
 
         // The incoming path is relative to the hub, we need to rejoin with the hub path to get an
         // absolute path.
@@ -383,6 +426,8 @@ impl HubCollector {
                 .collect(self.path.join(path))
                 .then(|_| futures::future::ready(())),
         );
+
+        return Ok(());
     }
 
     fn check_if_out_directory(path: &Path) -> Option<ComponentEventData> {
@@ -425,7 +470,9 @@ impl HubCollector {
                 PathEvent::Added(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
                         if data.component_name != ARCHIVIST_NAME {
-                            self.add_out_watcher(relative_path);
+                            self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
+                                eprintln!("Error reprocessing out directory: {:?}", e);
+                            });
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
                         self.add_component(relative_path, data, ExistingPath(false))
@@ -438,7 +485,9 @@ impl HubCollector {
                 PathEvent::Existing(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
                         if data.component_name != ARCHIVIST_NAME {
-                            self.add_out_watcher(relative_path);
+                            self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
+                                eprintln!("Error reprocessing out directory: {:?}", e);
+                            });
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
                         self.add_component(relative_path, data, ExistingPath(true))
@@ -503,6 +552,23 @@ mod tests {
     make_component_event!(start, Start);
     make_component_event!(stop, Stop);
 
+    fn compare_component_events(x: ComponentEvent, y: ComponentEvent) -> bool {
+        match (x, y) {
+            (ComponentEvent::Existing(a), ComponentEvent::Existing(b)) => {
+                return a == b;
+            }
+            (ComponentEvent::Start(a), ComponentEvent::Start(b)) => {
+                return a == b;
+            }
+            (ComponentEvent::Stop(a), ComponentEvent::Stop(b)) => {
+                return a == b;
+            }
+            (ComponentEvent::OutDirectoryAppeared(_), ComponentEvent::OutDirectoryAppeared(_)) => {
+                panic!("Cannot compare OutDirectoryEvents due to directory proxies.");
+            }
+            _ => false,
+        }
+    }
     #[derive(Debug)]
     enum DirectoryOperation {
         None,
@@ -592,13 +658,13 @@ mod tests {
 
         fs::create_dir_all(path.join("c/my_component.cmx/10/out")).unwrap();
 
-        assert_eq!(
+        assert!(compare_component_events(
             make_existing("my_component.cmx", "10", None),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::create_dir_all(path.join("r/app/1/r/test/2/c/other_component.cmx/11/out")).unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_start_with_realm(
                 vec!["app".to_string(), "test".to_string()],
                 "other_component.cmx",
@@ -606,10 +672,10 @@ mod tests {
                 None
             ),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::remove_dir_all(path.join("r")).unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_stop_with_realm(
                 vec!["app".to_string(), "test".to_string()],
                 "other_component.cmx",
@@ -617,33 +683,33 @@ mod tests {
                 None
             ),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::remove_dir_all(path.join("c")).unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_stop("my_component.cmx", "10", Some(HashMap::new())),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::create_dir_all(path.join("r/app/1/c/runner_component.cmx/12/out")).unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_start_with_realm(vec!["app".to_string()], "runner_component.cmx", "12", None),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::create_dir_all(path.join("r/app/1/c/runner_component.cmx/12/c/with_runner.cmx/1"))
             .unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_start_with_realm(vec!["app".to_string()], "with_runner.cmx", "1", None),
             component_events.next().await.unwrap()
-        );
+        ));
 
         fs::remove_dir_all(&path).unwrap();
-        assert_eq!(
+        assert!(compare_component_events(
             make_stop_with_realm(vec!["app".to_string()], "with_runner.cmx", "1", None),
             component_events.next().await.unwrap()
-        );
-        assert_eq!(
+        ));
+        assert!(compare_component_events(
             make_stop_with_realm(
                 vec!["app".to_string()],
                 "runner_component.cmx",
@@ -651,7 +717,7 @@ mod tests {
                 Some(HashMap::new())
             ),
             component_events.next().await.unwrap()
-        );
+        ));
     }
 
     #[test]
