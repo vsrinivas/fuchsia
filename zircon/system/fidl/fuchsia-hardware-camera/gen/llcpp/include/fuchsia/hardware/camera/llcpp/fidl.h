@@ -42,6 +42,7 @@ class Control;
 class ControlV2;
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannel2RequestTable;
 
 class Device final {
   Device() = delete;
@@ -53,6 +54,20 @@ class Device final {
     ::zx::channel ch;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_DeviceGetChannelRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+  struct GetChannel2Request final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel ch;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_DeviceGetChannel2RequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -77,9 +92,21 @@ class Device final {
       using Super::error;
       using Super::ok;
     };
+    class GetChannel2_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel2_Impl(zx::unowned_channel _client_end, ::zx::channel ch);
+      ~GetChannel2_Impl() = default;
+      GetChannel2_Impl(GetChannel2_Impl&& other) = default;
+      GetChannel2_Impl& operator=(GetChannel2_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using GetChannel = GetChannel_Impl;
+    using GetChannel2 = GetChannel2_Impl;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -98,9 +125,21 @@ class Device final {
       using Super::error;
       using Super::ok;
     };
+    class GetChannel2_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel2_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
+      ~GetChannel2_Impl() = default;
+      GetChannel2_Impl(GetChannel2_Impl&& other) = default;
+      GetChannel2_Impl& operator=(GetChannel2_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using GetChannel = GetChannel_Impl;
+    using GetChannel2 = GetChannel2_Impl;
   };
 
   class SyncClient final {
@@ -114,21 +153,31 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
+    // Note: this method obtains a channel to the capture device which
+    // communicates using a non-simple fidl interface.  Once the
+    // system has been updated to support normal fidl protocols, this method
+    // can be replaced with the protocol itself.
+    // Additionally, while the camera stack is migrating from camera to
+    // camera2, two methods are available, corresponding to the two
+    // versions of the protocol.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetChannel GetChannel(::zx::channel ch);
 
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
+    // Note: this method obtains a channel to the capture device which
+    // communicates using a non-simple fidl interface.  Once the
+    // system has been updated to support normal fidl protocols, this method
+    // can be replaced with the protocol itself.
+    // Additionally, while the camera stack is migrating from camera to
+    // camera2, two methods are available, corresponding to the two
+    // versions of the protocol.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetChannel GetChannel(::fidl::BytePart _request_buffer, ::zx::channel ch);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetChannel2 GetChannel2(::zx::channel ch);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetChannel2 GetChannel2(::fidl::BytePart _request_buffer, ::zx::channel ch);
 
    private:
     ::zx::channel channel_;
@@ -139,21 +188,31 @@ class Device final {
     Call() = delete;
    public:
 
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
+    // Note: this method obtains a channel to the capture device which
+    // communicates using a non-simple fidl interface.  Once the
+    // system has been updated to support normal fidl protocols, this method
+    // can be replaced with the protocol itself.
+    // Additionally, while the camera stack is migrating from camera to
+    // camera2, two methods are available, corresponding to the two
+    // versions of the protocol.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel ch);
 
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
+    // Note: this method obtains a channel to the capture device which
+    // communicates using a non-simple fidl interface.  Once the
+    // system has been updated to support normal fidl protocols, this method
+    // can be replaced with the protocol itself.
+    // Additionally, while the camera stack is migrating from camera to
+    // camera2, two methods are available, corresponding to the two
+    // versions of the protocol.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetChannel2 GetChannel2(zx::unowned_channel _client_end, ::zx::channel ch);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetChannel2 GetChannel2(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
 
   };
 
@@ -163,12 +222,16 @@ class Device final {
     InPlace() = delete;
    public:
 
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
+    // Note: this method obtains a channel to the capture device which
+    // communicates using a non-simple fidl interface.  Once the
+    // system has been updated to support normal fidl protocols, this method
+    // can be replaced with the protocol itself.
+    // Additionally, while the camera stack is migrating from camera to
+    // camera2, two methods are available, corresponding to the two
+    // versions of the protocol.
     static ::fidl::internal::StatusAndError GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
+
+    static ::fidl::internal::StatusAndError GetChannel2(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannel2Request> params);
 
   };
 
@@ -183,6 +246,10 @@ class Device final {
     using GetChannelCompleter = ::fidl::Completer<>;
 
     virtual void GetChannel(::zx::channel ch, GetChannelCompleter::Sync _completer) = 0;
+
+    using GetChannel2Completer = ::fidl::Completer<>;
+
+    virtual void GetChannel2(::zx::channel ch, GetChannel2Completer::Sync _completer) = 0;
 
   };
 
@@ -1255,6 +1322,14 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::Device::GetChannelReque
 static_assert(sizeof(::llcpp::fuchsia::hardware::camera::Device::GetChannelRequest)
     == ::llcpp::fuchsia::hardware::camera::Device::GetChannelRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::camera::Device::GetChannelRequest, ch) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::Device::GetChannel2Request> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::Device::GetChannel2Request> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::Device::GetChannel2Request)
+    == ::llcpp::fuchsia::hardware::camera::Device::GetChannel2Request::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::Device::GetChannel2Request, ch) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::camera::Metadata> : public std::true_type {};

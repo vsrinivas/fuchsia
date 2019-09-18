@@ -14,6 +14,9 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetChannel_Ordinal = 0x762bbdf400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetChannel2_Ordinal = 0xdfb206d00000000lu;
+extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannel2RequestTable;
 
 }  // namespace
 
@@ -81,6 +84,70 @@ Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel
 }
 
 
+Device::ResultOf::GetChannel2_Impl::GetChannel2_Impl(zx::unowned_channel _client_end, ::zx::channel ch) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannel2Request, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetChannel2Request::PrimarySize);
+  auto& _request = *reinterpret_cast<GetChannel2Request*>(_write_bytes);
+  _request.ch = std::move(ch);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannel2Request));
+  ::fidl::DecodedMessage<GetChannel2Request> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Device::InPlace::GetChannel2(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Device::ResultOf::GetChannel2 Device::SyncClient::GetChannel2(::zx::channel ch) {
+  return ResultOf::GetChannel2(zx::unowned_channel(this->channel_), std::move(ch));
+}
+
+Device::ResultOf::GetChannel2 Device::Call::GetChannel2(zx::unowned_channel _client_end, ::zx::channel ch) {
+  return ResultOf::GetChannel2(std::move(_client_end), std::move(ch));
+}
+
+
+Device::UnownedResultOf::GetChannel2_Impl::GetChannel2_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch) {
+  if (_request_buffer.capacity() < GetChannel2Request::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, GetChannel2Request::PrimarySize);
+  auto& _request = *reinterpret_cast<GetChannel2Request*>(_request_buffer.data());
+  _request.ch = std::move(ch);
+  _request_buffer.set_actual(sizeof(GetChannel2Request));
+  ::fidl::DecodedMessage<GetChannel2Request> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      Device::InPlace::GetChannel2(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Device::UnownedResultOf::GetChannel2 Device::SyncClient::GetChannel2(::fidl::BytePart _request_buffer, ::zx::channel ch) {
+  return UnownedResultOf::GetChannel2(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(ch));
+}
+
+Device::UnownedResultOf::GetChannel2 Device::Call::GetChannel2(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch) {
+  return UnownedResultOf::GetChannel2(std::move(_client_end), std::move(_request_buffer), std::move(ch));
+}
+
+::fidl::internal::StatusAndError Device::InPlace::GetChannel2(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannel2Request> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kDevice_GetChannel2_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
 bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -99,6 +166,18 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       auto message = result.message.message();
       impl->GetChannel(std::move(message->ch),
         Interface::GetChannelCompleter::Sync(txn));
+      return true;
+    }
+    case kDevice_GetChannel2_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetChannel2Request>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->GetChannel2(std::move(message->ch),
+        Interface::GetChannel2Completer::Sync(txn));
       return true;
     }
     default: {

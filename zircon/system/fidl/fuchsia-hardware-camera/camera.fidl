@@ -6,10 +6,13 @@ library fuchsia.hardware.camera;
 
 [Layout = "Simple"]
 protocol Device {
-    /// Note: this method obtains a channel to the codec device which
-    /// communicates using a legacy custom binary serialized format.  Once the
-    /// system has been updated to use FIDL as its serialization format instead
-    /// of the legacy custom format, this method can be updated to use an
-    /// interface request instead of returning a channel.
+    /// Note: this method obtains a channel to the capture device which
+    /// communicates using a non-simple fidl interface.  Once the
+    /// system has been updated to support normal fidl protocols, this method
+    /// can be replaced with the protocol itself.
+    /// Additionally, while the camera stack is migrating from camera to
+    /// camera2, two methods are available, corresponding to the two
+    /// versions of the protocol.
     GetChannel(handle<channel> ch);
+    GetChannel2(handle<channel> ch);
 };
