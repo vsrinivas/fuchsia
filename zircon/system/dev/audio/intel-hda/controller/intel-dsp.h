@@ -63,14 +63,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
 
  private:
-  // Pipeline identifiers for the system's playback pipeline and capture pipeline.
-  //
-  // TODO(fxb/31426): Generalise to multiple pipelines.
-  struct SystemPipelines {
-    DspPipeline playback;
-    DspPipeline capture;
-  };
-
   // Accessor for our mapped registers
   adsp_registers_t* regs() const;
   adsp_fw_registers_t* fw_regs() const;
@@ -90,8 +82,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t GetModulesInfo();
   StatusOr<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
                                                     const CopierCfg& base_cfg);
-  StatusOr<SystemPipelines> SetupPipelines();
-
   bool IsCoreEnabled(uint8_t core_mask);
 
   zx_status_t ResetCore(uint8_t core_mask);
@@ -118,7 +108,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
                                   const ihda_proto::SetStreamFmtReq& req);
 
-  zx_status_t CreateAndStartStreams(const SystemPipelines& pipelines);
+  zx_status_t CreateAndStartStreams();
 
   // Receive a notification from the DSP.
   void DspNotificationReceived(NotificationType type);
@@ -158,16 +148,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   std::unique_ptr<Nhlt> nhlt_;
 
-  // Module IDs
-  enum Module {
-    COPIER,
-    MIXIN,
-    MIXOUT,
-    MODULE_COUNT,
-  };
-  static constexpr uint16_t MODULE_ID_INVALID = 0xFFFF;
-  uint16_t module_ids_[to_underlying(Module::MODULE_COUNT)];
-
   // Init thread
   thrd_t init_thread_;
 
@@ -182,10 +162,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   fbl::Mutex active_streams_lock_;
   IntelHDAStream::Tree active_streams_ TA_GUARDED(active_streams_lock_);
 };
-
-// Exposed for testing.
-StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
-    fbl::Span<const uint8_t> data);
 
 }  // namespace intel_hda
 }  // namespace audio

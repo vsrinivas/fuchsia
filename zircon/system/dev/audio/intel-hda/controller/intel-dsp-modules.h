@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -21,6 +22,7 @@
 namespace audio {
 namespace intel_hda {
 
+// Module type.
 using DspModuleType = uint16_t;
 
 // Name of a module instance.
@@ -66,6 +68,9 @@ class DspModuleController {
   // Enable/disable the given pipeline.
   Status SetPipelineState(DspPipelineId pipeline, PipelineState state, bool sync_stop_start);
 
+  // Fetch details about modules available on the DSP.
+  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ReadModuleDetails();
+
  private:
   // Allocate an instance ID for module of type |type|.
   StatusOr<uint8_t> AllocateInstanceId(DspModuleType type);
@@ -90,10 +95,9 @@ class DspModuleController {
 StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
                                              std::initializer_list<DspModule> modules);
 
-// Library & Module Management IPC
-zx_status_t DspLargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
-                              BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
-                              size_t* bytes_received);
+// Exposed for testing.
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+    fbl::Span<const uint8_t> data);
 
 }  // namespace intel_hda
 }  // namespace audio

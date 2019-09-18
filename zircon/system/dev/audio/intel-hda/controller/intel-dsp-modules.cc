@@ -5,13 +5,17 @@
 #include "intel-dsp-modules.h"
 
 #include <cstdint>
+#include <map>
+#include <unordered_map>
 
 #include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
 
+#include "binary_decoder.h"
 #include "debug-logging.h"
 #include "intel-dsp-ipc.h"
 
@@ -27,14 +31,9 @@ constexpr int kMaxInstancesPerModule = 255;
 constexpr int kMaxPipelines = 255;
 
 namespace {
-zx_status_t dsp_to_zx_status(MsgStatus status) {
-  return (status == MsgStatus::IPC_SUCCESS) ? ZX_OK : ZX_ERR_INTERNAL;
-}
-}  // namespace
-
-zx_status_t DspLargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
-                              BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
-                              size_t* bytes_received) {
+zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
+                           BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
+                           size_t* bytes_received) {
   GLOBAL_LOG(DEBUG1, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id,
              instance_id, to_underlying(large_param_id));
 
@@ -62,6 +61,41 @@ zx_status_t DspLargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t insta
     *bytes_received = bytes_received_local;
   }
   return ZX_OK;
+}
+}  // namespace
+
+// Parse the module list returned from the DSP.
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+    fbl::Span<const uint8_t> data) {
+  BinaryDecoder decoder(data);
+
+  // Parse returned module information.
+  StatusOr<ModulesInfo> header_or_err = decoder.Read<ModulesInfo>();
+  if (!header_or_err.ok()) {
+    return PrependMessage("Could not read DSP module information", header_or_err.status());
+  }
+
+  // Read modules.
+  uint32_t count = header_or_err.ValueOrDie().module_count;
+  std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules;
+  for (uint32_t i = 0; i < count; i++) {
+    // Parse the next module.
+    auto entry = std::make_unique<ModuleEntry>();
+    Status status = decoder.Read<ModuleEntry>(entry.get());
+    if (!status.ok()) {
+      return PrependMessage("Could not read module entry: ", status);
+    }
+
+    // Add it to the dictionary, ensuring it is not already there.
+    fbl::String name = ParseUnpaddedString(entry->name);
+    auto [_, success] = modules.insert({name, std::move(entry)});
+    if (!success) {
+      return Status(ZX_ERR_INTERNAL,
+                    fbl::StringPrintf("Duplicate module name: '%s'.\n", name.c_str()));
+    }
+  }
+
+  return modules;
 }
 
 DspModuleController::DspModuleController(DspChannel* channel) : channel_(channel) {}
@@ -168,6 +202,40 @@ StatusOr<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) {
   uint8_t result = instance_count;
   instance_count++;
   return result;
+}
+
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
+DspModuleController::ReadModuleDetails() {
+  constexpr int kMaxModules = 64;
+  uint8_t buffer[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
+  fbl::Span data{buffer};
+
+  // Fetch module information.
+  size_t bytes_received;
+  zx_status_t result =
+      LargeConfigGet(channel_, /*module_id=*/0, /*instance_id=*/0,
+                     /*large_param_id=*/BaseFWParamType::MODULES_INFO, data, &bytes_received);
+  if (result != ZX_OK) {
+    return Status(result, "Failed to fetch module information from DSP");
+  }
+
+  // Parse DSP's module list.
+  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules_or_err =
+      ParseModules(data.subspan(0, bytes_received));
+  if (!modules_or_err.ok()) {
+    return PrependMessage("Could not parse DSP's module list", (modules_or_err.status()));
+  }
+  std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules = modules_or_err.ConsumeValueOrDie();
+
+  // If tracing is enabled, print basic module information.
+  if (zxlog_level_enabled(TRACE)) {
+    GLOBAL_LOG(TRACE, "DSP firmware has %ld module(s) configured.\n", modules.size());
+    for (const auto& elem : modules) {
+      GLOBAL_LOG(TRACE, "  module %s (id=%d)\n", elem.first.c_str(), elem.second->module_id);
+    }
+  }
+
+  return modules;
 }
 
 StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
