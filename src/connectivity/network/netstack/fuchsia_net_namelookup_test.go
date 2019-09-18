@@ -20,12 +20,13 @@ import (
 )
 
 func TestLookupHostname(t *testing.T) {
-	ns := stack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, stack.Options{})
+	ns := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+	})
 	dnsClient := dns.NewClient(ns)
 	ni := nameLookupImpl{dnsClient: dnsClient}
 
@@ -65,12 +66,13 @@ func TestLookupHostname(t *testing.T) {
 }
 
 func TestLookupIpLocalhost(t *testing.T) {
-	ns := stack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, stack.Options{})
+	ns := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+	})
 	dnsClient := dns.NewClient(ns)
 	ni := nameLookupImpl{dnsClient: dnsClient}
 
@@ -94,12 +96,13 @@ func TestLookupIpLocalhost(t *testing.T) {
 }
 
 func TestLookupIp(t *testing.T) {
-	ns := stack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, stack.Options{})
+	ns := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+	})
 	dnsClient := dns.NewClient(ns)
 	testaddr := [4]byte{192, 0, 2, 1}
 	dnsClient.SetResolver(func(c *dns.Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {

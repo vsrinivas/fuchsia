@@ -23,8 +23,8 @@ type stateTest struct {
 	dir         Direction
 	netProto    tcpip.NetworkProtocolNumber
 	packet      func() (buffer.Prependable, buffer.VectorisedView)
-	localState  EndpointState
-	remoteState EndpointState
+	localState  endpointState
+	remoteState endpointState
 }
 
 func TestFindStateICMPv4(t *testing.T) {

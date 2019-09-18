@@ -63,20 +63,22 @@ func Main() {
 	log.SetOutput(&syslog.Writer{Logger: l})
 	log.SetFlags(log.Lshortfile)
 
-	stk := tcpipstack.New([]string{
-		ipv4.ProtocolName,
-		ipv6.ProtocolName,
-		arp.ProtocolName,
-	}, []string{
-		icmp.ProtocolName4,
-		tcp.ProtocolName,
-		udp.ProtocolName,
-	}, tcpipstack.Options{
+	stk := tcpipstack.New(tcpipstack.Options{
+		NetworkProtocols: []tcpipstack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+		TransportProtocols: []tcpipstack.TransportProtocol{
+			icmp.NewProtocol4(),
+			tcp.NewProtocol(),
+			udp.NewProtocol(),
+		},
 		HandleLocal: true,
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
-		Raw: false,
+		UnassociatedFactory: nil,
 	})
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)

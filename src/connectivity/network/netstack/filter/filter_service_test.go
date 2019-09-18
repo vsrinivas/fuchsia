@@ -20,7 +20,14 @@ import (
 )
 
 func TestGetAndUpdateRules(t *testing.T) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+	})
 	fi := &filterImpl{filter: New(s.PortManager)}
 
 	// 0. Prepare test rules.
@@ -133,7 +140,14 @@ func TestGetAndUpdateRules(t *testing.T) {
 }
 
 func TestGetAndUpdateNatRules(t *testing.T) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+	})
 	fi := &filterImpl{filter: New(s.PortManager)}
 
 	// 0. Prepare test rules.
@@ -240,7 +254,14 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 }
 
 func TestGetAndUpdateRdrRules(t *testing.T) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+	})
 	fi := &filterImpl{filter: New(s.PortManager)}
 
 	// 0. Prepare test rules.

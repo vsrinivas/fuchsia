@@ -39,10 +39,8 @@ func TestEndpointAttributes(t *testing.T) {
 		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", loopback, zero, got, zero)
 	}
 
-	linkID1, _ := channel.New(1, 101, "")
-	linkID2, _ := channel.New(1, 100, "")
-	linkID1, ep1 := bridge.NewEndpoint(linkID1)
-	linkID2, ep2 := bridge.NewEndpoint(linkID2)
+	ep1 := bridge.NewEndpoint(channel.New(1, 101, ""))
+	ep2 := bridge.NewEndpoint(channel.New(1, 100, ""))
 	bridge := bridge.New([]*bridge.BridgeableEndpoint{ep1, ep2})
 	if bridge.MTU() != 100 {
 		t.Errorf("got bridge.MTU() == %d but want 100", bridge.MTU())
@@ -50,6 +48,51 @@ func TestEndpointAttributes(t *testing.T) {
 
 	if linkAddr := bridge.LinkAddress(); linkAddr[0]&0x2 == 0 {
 		t.Errorf("bridge.LinkAddress() expected to be locally administered MAC address, got: %s", linkAddr)
+	}
+}
+
+type waitingEndpoint struct {
+	stack.LinkEndpoint
+	ch chan struct{}
+}
+
+func (we *waitingEndpoint) Wait() {
+	<-we.ch
+}
+
+func TestEndpoint_Wait(t *testing.T) {
+	ep := channel.New(0, 0, "link address")
+	ep1 := waitingEndpoint{
+		LinkEndpoint: ep,
+		ch:           make(chan struct{}),
+	}
+	ep2 := waitingEndpoint{
+		LinkEndpoint: ep,
+		ch:           make(chan struct{}),
+	}
+	bridge := bridge.New([]*bridge.BridgeableEndpoint{
+		bridge.NewEndpoint(&ep1),
+		bridge.NewEndpoint(&ep2),
+	})
+	ch := make(chan struct{})
+	go func() {
+		bridge.Wait()
+		close(ch)
+	}()
+
+	for _, ep := range []waitingEndpoint{ep1, ep2} {
+		select {
+		case <-ch:
+			t.Fatal("bridge wait completed before constituent links")
+		case <-time.After(100 * time.Millisecond):
+		}
+		close(ep.ch)
+	}
+
+	select {
+	case <-ch:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("bridge wait pending after constituent links completed")
 	}
 }
 
@@ -281,6 +324,8 @@ func pipe(addr1, addr2 tcpip.LinkAddress) (*endpoint, *endpoint) {
 	return ep1, ep2
 }
 
+var _ stack.LinkEndpoint = (*endpoint)(nil)
+
 // Use our own endpoint fake because we'd like to report
 // CapabilityResolutionRequired and trigger link address resolution.
 //
@@ -319,6 +364,8 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
+func (*endpoint) Wait() {}
+
 func (*endpoint) MTU() uint32 {
 	// This value is used by IPv4 fragmentation.  It must be at least 68 bytes as
 	// required by RFC 791.
@@ -337,11 +384,18 @@ func (e *endpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func makeStackWithEndpoint(ep *endpoint, addr tcpip.Address) (*stack.Stack, error) {
-	s := stack.New([]string{ipv4.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
-	id := stack.RegisterLinkEndpoint(ep)
-	id, _ = bridge.NewEndpoint(id)
-	if err := s.CreateNIC(1, id); err != nil {
+func makeStackWithEndpoint(ep stack.LinkEndpoint, addr tcpip.Address) (*stack.Stack, error) {
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			tcp.NewProtocol(),
+		},
+	})
+	ep = bridge.NewEndpoint(ep)
+	if err := s.CreateNIC(1, ep); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := s.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
@@ -354,21 +408,27 @@ func makeStackWithEndpoint(ep *endpoint, addr tcpip.Address) (*stack.Stack, erro
 }
 
 func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*stack.Stack, *bridge.Endpoint, error) {
-	linkID1 := stack.RegisterLinkEndpoint(ep1)
-	linkID2 := stack.RegisterLinkEndpoint(ep2)
-	linkID1, bep1 := bridge.NewEndpoint(linkID1)
-	linkID2, bep2 := bridge.NewEndpoint(linkID2)
+	bep1 := bridge.NewEndpoint(ep1)
+	bep2 := bridge.NewEndpoint(ep2)
 
-	stk := stack.New([]string{ipv4.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
-	if err := stk.CreateNIC(1, linkID1); err != nil {
+	stk := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			tcp.NewProtocol(),
+		},
+	})
+	if err := stk.CreateNIC(1, bep1); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	if err := stk.CreateNIC(2, linkID2); err != nil {
+	if err := stk.CreateNIC(2, bep2); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	bridge := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
 	bID := tcpip.NICID(3)
-	if err := stk.CreateNIC(bID, stack.RegisterLinkEndpoint(bridge)); err != nil {
+	if err := stk.CreateNIC(bID, bridge); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.IPv4ProtocolNumber, baddr); err != nil {

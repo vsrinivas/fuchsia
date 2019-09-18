@@ -254,3 +254,10 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 		}
 	}
 }
+
+// Wait implements stack.LinkEndpoint.
+func (ep *Endpoint) Wait() {
+	for _, e := range ep.links {
+		e.Wait()
+	}
+}

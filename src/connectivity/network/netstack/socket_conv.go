@@ -115,8 +115,8 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 		return int32(v), nil
 
 	case C.SO_SNDBUF:
-		var size tcpip.SendBufferSizeOption
-		if err := ep.GetSockOpt(&size); err != nil {
+		size, err := ep.GetSockOptInt(tcpip.SendBufferSizeOption)
+		if err != nil {
 			return nil, err
 		}
 
@@ -127,8 +127,8 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 		return int32(size), nil
 
 	case C.SO_RCVBUF:
-		var size tcpip.ReceiveBufferSizeOption
-		if err := ep.GetSockOpt(&size); err != nil {
+		size, err := ep.GetSockOptInt(tcpip.ReceiveBufferSizeOption)
+		if err != nil {
 			return nil, err
 		}
 
@@ -356,7 +356,7 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOpt(tcpip.SendBufferSizeOption(v))
+		return ep.SetSockOptInt(tcpip.SendBufferSizeOption, int(v))
 
 	case C.SO_RCVBUF:
 		if len(optVal) < sizeOfInt32 {
@@ -364,7 +364,7 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOpt(tcpip.ReceiveBufferSizeOption(v))
+		return ep.SetSockOptInt(tcpip.ReceiveBufferSizeOption, int(v))
 
 	case C.SO_REUSEADDR:
 		if len(optVal) < sizeOfInt32 {

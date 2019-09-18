@@ -15,7 +15,14 @@ import (
 )
 
 func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *channel.Endpoint) {
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+	})
 
 	f := New(s.PortManager)
 	f.rulesetRDR.Lock()
@@ -29,9 +36,9 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	}
 	f.rulesetRDR.Unlock()
 
-	id1, linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
+	linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
-	filtered1, _ := NewFilterEndpoint(f, id1)
+	filtered1 := NewEndpoint(f, linkEP1)
 	err := s.CreateDisabledNIC(nic1, filtered1)
 	if err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
@@ -39,9 +46,9 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	s.EnableNIC(nic1)
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
-	id2, linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
+	linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
-	filtered2, _ := NewFilterEndpoint(f, id2)
+	filtered2 := NewEndpoint(f, linkEP2)
 	err = s.CreateDisabledNIC(nic2, filtered2)
 	if err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)

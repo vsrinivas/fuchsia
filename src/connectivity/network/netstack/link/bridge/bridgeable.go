@@ -8,6 +8,9 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
+var _ stack.LinkEndpoint = (*BridgeableEndpoint)(nil)
+var _ stack.NetworkDispatcher = (*Endpoint)(nil)
+
 type BridgeableEndpoint struct {
 	stack.LinkEndpoint
 	dispatcher stack.NetworkDispatcher
@@ -17,11 +20,10 @@ type BridgeableEndpoint struct {
 	}
 }
 
-func NewEndpoint(lower tcpip.LinkEndpointID) (tcpip.LinkEndpointID, *BridgeableEndpoint) {
-	e := &BridgeableEndpoint{
-		LinkEndpoint: stack.FindLinkEndpoint(lower),
+func NewEndpoint(lower stack.LinkEndpoint) *BridgeableEndpoint {
+	return &BridgeableEndpoint{
+		LinkEndpoint: lower,
 	}
-	return stack.RegisterLinkEndpoint(e), e
 }
 
 func (e *BridgeableEndpoint) IsAttached() bool {

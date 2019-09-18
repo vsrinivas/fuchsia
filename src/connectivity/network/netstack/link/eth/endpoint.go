@@ -5,7 +5,9 @@
 package eth
 
 import (
+	"sync"
 	"syscall/zx"
+
 	"syslog"
 
 	"github.com/google/netstack/tcpip"
@@ -19,6 +21,8 @@ var _ stack.LinkEndpoint = (*endpoint)(nil)
 type endpoint struct {
 	client     *Client
 	dispatcher stack.NetworkDispatcher
+
+	wg sync.WaitGroup
 }
 
 func (e *endpoint) MTU() uint32 { return e.client.Info.Mtu }
@@ -73,7 +77,9 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 }
 
 func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
+	e.wg.Add(1)
 	go func() {
+		defer e.wg.Done()
 		if err := func() error {
 			for {
 				b, err := e.client.Recv()
@@ -99,6 +105,12 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	}()
 
 	e.dispatcher = dispatcher
+}
+
+// Wait implements stack.LinkEndpoint. It blocks until an error in the dispatch
+// goroutine(s) spawned in Attach occurs.
+func (e *endpoint) Wait() {
+	e.wg.Wait()
 }
 
 func NewLinkEndpoint(client *Client) *endpoint {

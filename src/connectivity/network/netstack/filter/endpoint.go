@@ -15,7 +15,10 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
-type FilterEndpoint struct {
+var _ stack.LinkEndpoint = (*Endpoint)(nil)
+var _ stack.NetworkDispatcher = (*Endpoint)(nil)
+
+type Endpoint struct {
 	filter     *Filter
 	dispatcher stack.NetworkDispatcher
 	enabled    uint32
@@ -23,30 +26,29 @@ type FilterEndpoint struct {
 }
 
 // New creates a new Filter endpoint by wrapping a lower LinkEndpoint.
-func NewFilterEndpoint(filter *Filter, lower tcpip.LinkEndpointID) (tcpip.LinkEndpointID, *FilterEndpoint) {
-	e := &FilterEndpoint{
+func NewEndpoint(filter *Filter, lower stack.LinkEndpoint) *Endpoint {
+	return &Endpoint{
 		filter:       filter,
-		LinkEndpoint: stack.FindLinkEndpoint(lower),
+		LinkEndpoint: lower,
 		enabled:      1,
 	}
-	return stack.RegisterLinkEndpoint(e), e
 }
 
-func (e *FilterEndpoint) Enable() {
+func (e *Endpoint) Enable() {
 	atomic.StoreUint32(&e.enabled, 1)
 }
 
-func (e *FilterEndpoint) Disable() {
+func (e *Endpoint) Disable() {
 	atomic.StoreUint32(&e.enabled, 0)
 }
 
-func (e *FilterEndpoint) IsEnabled() bool {
+func (e *Endpoint) IsEnabled() bool {
 	return atomic.LoadUint32(&e.enabled) == 1
 }
 
 // DeliverNetworkPacket is called when a packet arrives at the lower endpoint.
 // It calls Run before dispatching the packet to the upper endpoint.
-func (e *FilterEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
 	if atomic.LoadUint32(&e.enabled) == 1 {
 		hdr := buffer.NewPrependableFromView(vv.First())
 		payload := vv
@@ -60,14 +62,14 @@ func (e *FilterEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLink
 }
 
 // Attach sets a dispatcher and call Attach on the lower endpoint.
-func (e *FilterEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
+func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.dispatcher = dispatcher
 	e.LinkEndpoint.Attach(e)
 }
 
 // WritePacket is called when a packet arrives is written to the lower
 // endpoint. It calls Run to what to do with the packet.
-func (e *FilterEndpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	if atomic.LoadUint32(&e.enabled) == 1 {
 		if e.filter.Run(Outgoing, protocol, hdr, payload) != Pass {
 			return nil

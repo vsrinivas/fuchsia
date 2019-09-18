@@ -43,14 +43,22 @@ func createTestStack(t *testing.T) *stack.Stack {
 
 func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) {
 	const defaultMTU = 65536
-	id, linkEP := channel.New(256, defaultMTU, "")
+	ch := channel.New(256, defaultMTU, "")
+	var linkEP stack.LinkEndpoint = ch
 	if testing.Verbose() {
-		id = sniffer.New(id)
+		linkEP = sniffer.New(linkEP)
 	}
 
-	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName}, stack.Options{})
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			ipv4.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+	})
 
-	if err := s.CreateNIC(nicid, id); err != nil {
+	if err := s.CreateNIC(nicid, linkEP); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.AddAddress(nicid, ipv4.ProtocolNumber, serverAddr); err != nil {
@@ -62,7 +70,7 @@ func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) 
 		NIC:         nicid,
 	}})
 
-	return s, linkEP
+	return s, ch
 }
 
 // TestSimultaneousDHCPClients makes two clients that are trying to get DHCP
@@ -89,10 +97,10 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	defer cancel()
 	for i := 0; i < clientCount; i++ {
 		const defaultMTU = 65536
-		id, clientLinkEP := channel.New(256, defaultMTU, "")
+		clientLinkEP := channel.New(256, defaultMTU, "")
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
 		clientNicid := tcpip.NICID(100 + i)
-		if err := s.CreateNIC(clientNicid, id); err != nil {
+		if err := s.CreateNIC(clientNicid, clientLinkEP); err != nil {
 			t.Fatalf("could not create NIC: %s", err)
 		}
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")

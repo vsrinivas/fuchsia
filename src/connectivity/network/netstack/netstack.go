@@ -118,7 +118,7 @@ type ifState struct {
 
 	bridgeable *bridge.BridgeableEndpoint
 
-	filterEndpoint *filter.FilterEndpoint
+	filterEndpoint *filter.Endpoint
 }
 
 // defaultRoutes returns the IPv4 and IPv6 default routes.
@@ -541,7 +541,7 @@ func (ns *Netstack) getDeviceName() string {
 func (ns *Netstack) addLoopback() error {
 	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
 		return "lo"
-	}, stack.FindLinkEndpoint(loopback.New()), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]")
+	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]")
 	if err != nil {
 		return err
 	}
@@ -639,21 +639,22 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.dhcp.cancel = func() {}
 
 	ifs.eth.SetOnStateChange(ifs.stateChange)
-	linkID := stack.RegisterLinkEndpoint(ep)
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
 	if ns.sniff {
 		// A wrapper LinkEndpoint should encapsulate the underlying
 		// one, and manifest itself to 3rd party netstack.
-		linkID = sniffer.New(linkID)
+		ep = sniffer.New(ep)
 	}
 
 	if doFilter {
-		linkID, ifs.filterEndpoint = filter.NewFilterEndpoint(ns.filter, linkID)
+		ifs.filterEndpoint = filter.NewEndpoint(ns.filter, ep)
+		ep = ifs.filterEndpoint
 	}
-	linkID, ifs.bridgeable = bridge.NewEndpoint(linkID)
-	ifs.endpoint = ifs.bridgeable
+	ifs.bridgeable = bridge.NewEndpoint(ep)
+	ep = ifs.bridgeable
+	ifs.endpoint = ep
 
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
@@ -665,7 +666,7 @@ func (ns *Netstack) addEndpoint(
 
 	syslog.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
 
-	if err := createFn(ifs.nicid, name, linkID); err != nil {
+	if err := createFn(ifs.nicid, name, ep); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
 	}
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
@@ -677,14 +678,11 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
+	// TODO(cl/268322915): remove this.
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
 		lladdr := header.LinkLocalAddr(linkAddr)
 		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil {
 			return nil, fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %s", name, lladdr, err)
-		}
-		snaddr := header.SolicitedNodeAddr(lladdr)
-		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, snaddr); err != nil {
-			return nil, fmt.Errorf("NIC %s: adding solicited-node IPv6 %s (link-local IPv6 %s) failed: %s", name, snaddr, lladdr, err)
 		}
 
 		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquireTimeout, dhcpRetryTime, ifs.dhcpAcquired)

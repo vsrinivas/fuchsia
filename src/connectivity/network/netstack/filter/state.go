@@ -39,8 +39,8 @@ type State struct {
 	extPort    uint16
 	rsvdAddr   tcpip.Address
 	rsvdPort   uint16
-	srcEp      *Endpoint
-	dstEp      *Endpoint
+	srcEp      *endpoint
+	dstEp      *endpoint
 	createTime time.Time
 	expireTime time.Time
 	packets    uint32
@@ -76,20 +76,20 @@ const (
 	ExpireIntervalMin = 10 * time.Second
 )
 
-// EndpointState represents the connection state of an Endpoint.
-type EndpointState int
+// endpointState represents the connection state of an endpoint.
+type endpointState int
 
 const (
 	// Note that we currently allow numeric comparison between two
 	// EndpointStates so that the state related logic can be described
-	// compactly. We assume an EndpointState's numeric value will only
+	// compactly. We assume an endpointState's numeric value will only
 	// increase monotonically during the lifetime of the endpoint
 	// (e.g. TCPFirstPacket => TCPOpening => TCPEstablished => TCPClosing =>
 	// TCPFinWait => TCPClosed).
 
 	// ICMP states.
 	// (TODO: consider more definitions.)
-	ICMPFirstPacket EndpointState = iota
+	ICMPFirstPacket endpointState = iota
 
 	// UDP states.
 	UDPFirstPacket
@@ -105,7 +105,7 @@ const (
 	TCPClosed
 )
 
-func (state EndpointState) String() string {
+func (state endpointState) String() string {
 	switch state {
 	case ICMPFirstPacket:
 		return "ICMPFirstPacket"
@@ -132,13 +132,13 @@ func (state EndpointState) String() string {
 	}
 }
 
-// Endpoint maintains the current state and the sequence number information of an endpoint.
-type Endpoint struct {
+// endpoint maintains the current state and the sequence number information of an endpoint.
+type endpoint struct {
 	seqLo  seqnum // Max seqnum sent.
 	seqHi  seqnum // Max seqnum the peer ACK'ed + win.
 	maxWin uint16
 	wscale int8 // 0 to 14. -1 means wscale is not supported.
-	state  EndpointState
+	state  endpointState
 }
 
 func (s *State) updateStateICMPv4(dir Direction, dataLen uint16) error {
@@ -149,7 +149,7 @@ func (s *State) updateStateICMPv4(dir Direction, dataLen uint16) error {
 }
 
 func (s *State) updateStateUDP(dir Direction, dataLen uint16) error {
-	var srcEp, dstEp *Endpoint
+	var srcEp, dstEp *endpoint
 	if dir == s.dir {
 		srcEp = s.srcEp
 		dstEp = s.dstEp
@@ -190,7 +190,7 @@ func (s *State) updateStateTCP(dir Direction, dataLen uint16, win uint16, seq, a
 		end++
 	}
 
-	var srcEp, dstEp *Endpoint
+	var srcEp, dstEp *endpoint
 	if dir == s.dir {
 		srcEp = s.srcEp
 		dstEp = s.dstEp
@@ -309,7 +309,7 @@ func (s *State) updateStateTCP(dir Direction, dataLen uint16, win uint16, seq, a
 
 // updateStateTCPinICMP is a subset of updateStateTCP, which just checks seq.
 func (s *State) updateStateTCPinICMP(dir Direction, seq seqnum) error {
-	var srcEp, dstEp *Endpoint
+	var srcEp, dstEp *endpoint
 	if dir == s.dir {
 		srcEp = s.srcEp
 		dstEp = s.dstEp
@@ -459,7 +459,7 @@ func (ss *States) getState(dir Direction, transProto tcpip.TransportProtocolNumb
 }
 
 func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, origAddr tcpip.Address, origPort uint16, rsvdAddr tcpip.Address, rsvdPort uint16, isNAT bool, isRDR bool, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) *State {
-	var srcEp, dstEp *Endpoint
+	var srcEp, dstEp *endpoint
 	var createTime, expireTime time.Time
 	var dataLen uint16
 	switch transProto {
@@ -481,13 +481,13 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 		}
 		srcPort = id
 		dstPort = id
-		srcEp = &Endpoint{
+		srcEp = &endpoint{
 			seqLo:  0,
 			seqHi:  0,
 			maxWin: 0,
 			state:  ICMPFirstPacket,
 		}
-		dstEp = &Endpoint{
+		dstEp = &endpoint{
 			seqLo:  0,
 			seqHi:  0,
 			maxWin: 0,
@@ -497,13 +497,13 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 		expireTime = createTime.Add(20 * time.Second)
 	case header.UDPProtocolNumber:
 		dataLen = payloadLength - header.UDPMinimumSize
-		srcEp = &Endpoint{
+		srcEp = &endpoint{
 			seqLo:  0,
 			seqHi:  0,
 			maxWin: 0,
 			state:  UDPSingle,
 		}
-		dstEp = &Endpoint{
+		dstEp = &endpoint{
 			seqLo:  0,
 			seqHi:  0,
 			maxWin: 0,
@@ -529,14 +529,14 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 		if maxWin < TCPMaxZWPDataLen {
 			maxWin = TCPMaxZWPDataLen
 		}
-		srcEp = &Endpoint{
+		srcEp = &endpoint{
 			seqLo:  seqLo,
 			seqHi:  seqLo + TCPMaxZWPDataLen,
 			maxWin: maxWin,
 			wscale: int8(wscale),
 			state:  TCPOpening,
 		}
-		dstEp = &Endpoint{ // Assign temporary values as we haven't seen a packet.
+		dstEp = &endpoint{ // Assign temporary values as we haven't seen a packet.
 			seqLo:  0,
 			seqHi:  TCPMaxZWPDataLen,
 			maxWin: TCPMaxZWPDataLen,

@@ -137,6 +137,7 @@ go_library("netstack_lib") {
     "//third_party/golibs:github.com/google/netstack",
     "//third_party/golibs:github.com/pkg/errors",
     "//third_party/golibs:golang.org/x/net",
+    "//third_party/golibs:golang.org/x/time",
     "//zircon/system/fidl/fuchsia-device($go_toolchain)",
     "//zircon/system/fidl/fuchsia-hardware-ethernet($go_toolchain)",
     "//zircon/system/fidl/fuchsia-inspect($go_toolchain)",

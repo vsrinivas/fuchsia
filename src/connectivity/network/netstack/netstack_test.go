@@ -25,7 +25,6 @@ import (
 	"netstack/util"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -264,12 +263,13 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		arena: arena,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = tcpipstack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, tcpipstack.Options{})
+	ns.mu.stack = tcpipstack.New(tcpipstack.Options{
+		NetworkProtocols: []tcpipstack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+	})
 
 	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	addr := fidlconv.ToNetIpAddress(testV4Address)
@@ -301,12 +301,13 @@ func newNetstack(t *testing.T) *Netstack {
 		arena: arena,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = tcpipstack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, tcpipstack.Options{})
+	ns.mu.stack = tcpipstack.New(tcpipstack.Options{
+		NetworkProtocols: []tcpipstack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+	})
 
 	// We need to initialize the DNS client, since adding/removing interfaces
 	// sets the DNS servers on that interface, which requires that dnsClient
@@ -420,7 +421,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr);
+				result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
 				AssertNoError(t, err)
 				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
@@ -442,7 +443,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr);
+				result, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr)
 				AssertNoError(t, err)
 				if result != stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.DelInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)

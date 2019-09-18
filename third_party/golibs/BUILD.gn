@@ -102,6 +102,7 @@ golib("github.com/google/go-cmp") {
 golib("github.com/google/netstack") {
   deps = [
     ":golang.org/x/sys",
+    ":golang.org/x/time",
   ]
 }
 golib("github.com/golang/groupcache/lru") {
@@ -162,6 +163,8 @@ golib("golang.org/x/net") {
   deps = [
     ":golang.org/x/text",
   ]
+}
+golib("golang.org/x/time") {
 }
 golib("golang.org/x/oauth2") {
   deps = [

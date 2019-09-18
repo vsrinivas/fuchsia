@@ -80,12 +80,13 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	addrWithPrefix, err := ifs.ns.mu.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
 	// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
 	// network protocol.
-	if err == tcpip.ErrNoLinkAddress {
-		addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
-	} else if err == tcpip.ErrUnknownNICID {
+	if err == tcpip.ErrUnknownNICID {
 		panic(fmt.Sprintf("stack.GetMainNICAddress(%d, ...): %s", ifs.nicid, err))
 	} else if err != nil {
 		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
+	}
+	if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
+		addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
 	}
 
 	mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)

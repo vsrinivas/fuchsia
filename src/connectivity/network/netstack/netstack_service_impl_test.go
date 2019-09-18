@@ -37,7 +37,7 @@ func toIpAddress(addr net.IP) netfidl.IpAddress {
 
 func MakeNetstackService() netstackImpl {
 	var ns Netstack
-	ns.mu.stack = stack.New(nil, nil, stack.Options{})
+	ns.mu.stack = stack.New(stack.Options{})
 	return netstackImpl{
 		ns: &ns,
 	}
