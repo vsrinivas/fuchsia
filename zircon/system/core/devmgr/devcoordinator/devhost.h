@@ -62,7 +62,6 @@ class Devhost {
   }
 
  private:
-  async::Wait wait_;
   zx_handle_t hrpc_ = ZX_HANDLE_INVALID;
   zx::process proc_;
   zx_koid_t koid_ = 0;
