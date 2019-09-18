@@ -180,6 +180,10 @@ void HardwareDspChannel::Shutdown() {
 Status HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
                                         fbl::Span<const uint8_t> payload,
                                         fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) {
+  if (payload.size() > MAILBOX_SIZE) {
+    return Status(ZX_ERR_INVALID_ARGS);
+  }
+
   Txn txn{primary,
           extension,
           payload.data(),

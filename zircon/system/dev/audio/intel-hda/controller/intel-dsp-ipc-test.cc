@@ -271,5 +271,17 @@ TEST(Ipc, NotificationReceived) {
   EXPECT_EQ(received_notification, NotificationType::FW_READY);
 }
 
+TEST(Ipc, SendBigData) {
+  adsp_registers_t regs = {};
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel("UnitTests", &regs);
+
+  // Create a large amount of data.
+  std::vector<uint8_t> data;
+  data.resize(1'000'000);
+
+  // Ensure we get a valid error trying to send it.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, dsp->SendWithData(0, 0, data, {}, nullptr).code());
+}
+
 }  // namespace
 }  // namespace audio::intel_hda
