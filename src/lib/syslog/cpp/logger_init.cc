@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "logger.h"
+#include <lib/syslog/global.h>
+#include <lib/syslog/logger.h>
 
 #include <initializer_list>
 #include <string>
 
-#include <lib/syslog/global.h>
-#include <lib/syslog/logger.h>
+#include "logger.h"
 
 namespace syslog {
 

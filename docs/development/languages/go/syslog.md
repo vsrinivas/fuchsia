@@ -8,7 +8,7 @@ This document explains how to use the golang syslog library.
 ```
 deps = [
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/syslog/go/src/syslog",
+    "//src/lib/syslog/go/src/syslog",
 ]
 ```
 
@@ -56,4 +56,4 @@ syslog.VLogTf(1, "tag", "my msg: %d", 10); // verbose logs
 ```
 
 ### Reference
-[Golang APIs](/garnet/public/lib/syslog/go/src/syslog/logger.go)
+[Golang APIs](/src/lib/syslog/go/src/syslog/logger.go)

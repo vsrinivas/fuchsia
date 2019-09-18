@@ -32,7 +32,7 @@ func TestLogSimple(t *testing.T) {
 		options :=
 			syslog.LogInitOptions{
 				MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-				Writer: tmpFile,
+				Writer:                        tmpFile,
 			}
 		if logToSocket {
 			options.Socket = sout
@@ -72,8 +72,8 @@ func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
 	}
 	log, err := syslog.NewLogger(syslog.LogInitOptions{
 		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-		Socket: sout,
-		Tags:   tags,
+		Socket:                        sout,
+		Tags:                          tags,
 	})
 	if err != nil {
 		t.Fatal(err)

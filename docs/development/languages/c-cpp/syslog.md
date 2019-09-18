@@ -53,12 +53,10 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 
 ## In C++
 
-From garnet and above layers.
-
 ### BUILD.gn dependency
 
 ```gn
-//garnet/public/lib/syslog/cpp
+//src/lib/syslog/cpp
 ```
 
 ### sandboxing dependency
@@ -118,6 +116,6 @@ FX_LOGST(INFO, "tag") << "my message";
 
 ### Reference
 
-[C++ APIs](/garnet/public/lib/syslog/cpp/logger.h)
+[C++ APIs](/src/lib/syslog/cpp/logger.h)
 <br/>
 [FSL initialization API](/src/lib/fsl/syslogger/init.h)
