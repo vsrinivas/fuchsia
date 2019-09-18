@@ -5,6 +5,7 @@
 driver("sherlock") {
   sources = [
     "sherlock-audio.cc",
+    "sherlock-backlight.cc",
     "sherlock-bluetooth.cc",
     "sherlock-board.cc",
     "sherlock-buttons.cc",

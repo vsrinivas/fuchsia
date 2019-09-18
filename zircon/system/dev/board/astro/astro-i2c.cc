@@ -49,9 +49,9 @@ static const i2c_channel_t i2c_channels[] = {
     {
         .bus_id = ASTRO_I2C_3,
         .address = I2C_BACKLIGHT_ADDR,
-        .vid = PDEV_VID_TI,
-        .pid = PDEV_PID_TI_LP8556,
-        .did = PDEV_DID_TI_BACKLIGHT,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
     },
     // Focaltech touch screen
     {

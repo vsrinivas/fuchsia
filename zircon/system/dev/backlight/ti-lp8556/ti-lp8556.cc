@@ -4,16 +4,24 @@
 #include "ti-lp8556.h"
 
 #include <lib/device-protocol/i2c.h>
+#include <lib/device-protocol/pdev.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
 namespace ti {
+
+enum {
+  COMPONENT_PDEV,
+  COMPONENT_I2C,
+  COMPONENT_COUNT,
+};
 
 void Lp8556Device::DdkUnbind() { DdkRemove(); }
 
@@ -38,6 +46,14 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
       LOG_ERROR("Failed to set brightness register\n");
       return status;
     }
+
+    uint16_t sticky_reg_value = static_cast<uint16_t>(brightness * kAOBrightnessStickyMaxValue);
+    sticky_reg_value &= kAOBrightnessStickyMask;
+
+    auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
+    persistent_brightness.set_brightness(sticky_reg_value);
+    persistent_brightness.set_is_valid(1);
+    persistent_brightness.WriteTo(&mmio_);
   }
 
   if (power != power_) {
@@ -52,7 +68,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
 
     if (power) {
       buf[0] = kCfg2Reg;
-      buf[1] = kCfg2Default;
+      buf[1] = cfg2_;
       status = i2c_.WriteSync(buf, sizeof(buf));
       if (status != ZX_OK) {
         LOG_ERROR("Failed to set cfg2 register\n");
@@ -113,9 +129,40 @@ zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
+  composite_protocol_t composite;
+
+  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
+  if (status != ZX_OK) {
+    LOG_ERROR("Could not get composite protocol\n");
+    return status;
+  }
+
+  zx_device_t* components[COMPONENT_COUNT];
+  size_t actual;
+  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
+  if (actual != COMPONENT_COUNT) {
+    LOG_ERROR("Could not get components\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Get platform device protocol
+  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  if (!pdev.is_valid()) {
+    LOG_ERROR("Could not get PDEV protocol\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  // Map MMIO
+  std::optional<ddk::MmioBuffer> mmio;
+  status = pdev.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    LOG_ERROR("Could not map mmio %d\n", status);
+    return status;
+  }
+
   // Obtain I2C protocol needed to control backlight
   i2c_protocol_t i2c;
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
     LOG_ERROR("Could not obtain I2C protocol\n");
     return status;
@@ -123,7 +170,8 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
   ddk::I2cChannel i2c_channel(&i2c);
 
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c_channel));
+  auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c_channel),
+                                                        *std::move(mmio));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -150,7 +198,8 @@ static constexpr zx_driver_ops_t ti_lp8556_driver_ops = []() {
 }  // namespace ti
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP8556),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_BACKLIGHT),

@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_BOARD_SHERLOCK_SHERLOCK_H_
 #define ZIRCON_SYSTEM_DEV_BOARD_SHERLOCK_SHERLOCK_H_
 
+#include <threads.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
@@ -12,7 +14,6 @@
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <threads.h>
 
 namespace sherlock {
 
@@ -100,6 +101,7 @@ class Sherlock : public SherlockType {
   zx_status_t TouchInit();
   zx_status_t LightInit();
   zx_status_t OtRadioInit();
+  zx_status_t BacklightInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);
@@ -108,7 +110,6 @@ class Sherlock : public SherlockType {
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
   thrd_t thread_;
-
 };
 
 }  // namespace sherlock

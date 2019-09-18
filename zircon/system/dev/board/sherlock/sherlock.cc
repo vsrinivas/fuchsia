@@ -5,6 +5,11 @@
 #include "sherlock.h"
 
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -14,10 +19,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace sherlock {
 
@@ -170,6 +171,10 @@ int Sherlock::Thread() {
 
   if (OtRadioInit() != ZX_OK) {
     zxlogf(ERROR, "OtRadioInit() failed\n");
+  }
+
+  if (BacklightInit() != ZX_OK) {
+    zxlogf(ERROR, "BacklightInit() failed\n");
   }
 
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);

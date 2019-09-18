@@ -144,7 +144,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // so we can't just test that one of them is bound. That is why the
       // following test is disabled.
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/ti-lp8556",
+      "backlight/ti-lp8556",
       "display/astro-display/display-controller",
       "sys/platform/05:00:10/aml-canvas",
       "tee/optee-tz",
@@ -268,6 +268,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "spi/aml-spi-0/spi/spi-0-0",
       "sherlock-buttons/hid-buttons",
       "nrf52840-radio",
+      "backlight/ti-lp8556",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

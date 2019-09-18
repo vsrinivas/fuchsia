@@ -149,6 +149,10 @@ int Astro::Thread() {
     zxlogf(ERROR, "SecureMemInit failed: %d\n", status);
   }
 
+  if ((status = BacklightInit()) != ZX_OK) {
+    zxlogf(ERROR, "BacklightInit failed: %d\n", status);
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

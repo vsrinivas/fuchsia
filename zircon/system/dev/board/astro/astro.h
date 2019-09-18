@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_H_
 
 #include <threads.h>
 
@@ -115,6 +116,7 @@ class Astro : public AstroType {
   zx_status_t TouchInit();
   zx_status_t UsbInit();
   zx_status_t VideoInit();
+  zx_status_t BacklightInit();
   int Thread();
 
   uint32_t GetBoardRev(void);
@@ -129,3 +131,5 @@ class Astro : public AstroType {
 };
 
 }  // namespace astro
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_H_

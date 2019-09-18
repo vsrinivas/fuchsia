@@ -51,9 +51,9 @@ static const i2c_channel_t i2c_channels[] = {
     {
         .bus_id = SHERLOCK_I2C_3,
         .address = 0x2C,
-        .vid = PDEV_VID_TI,
-        .pid = PDEV_PID_TI_LP8556,
-        .did = PDEV_DID_TI_BACKLIGHT,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
     },
     // Touch screen I2C
     {
