@@ -14,6 +14,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
 
 // clang-format off
@@ -25,7 +26,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
-#include "lib/component/cpp/connect.h"
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
 #include "src/lib/ui/scenic/cpp/mesh_utils.h"
@@ -68,9 +69,9 @@ static const uint32_t kIndexBufferData[] = {
 }  // namespace
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()), loop_(loop) {
+    : component_context_(sys::ComponentContext::Create()), loop_(loop) {
   // Connect to the Scenic service.
-  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service. Status: " << status;
     loop_->Quit();
@@ -216,15 +217,15 @@ void App::StartPoseBufferProvider() {
   launch_info.url =
       "fuchsia-pkg://fuchsia.com/pose_buffer_provider#meta/"
       "pose_buffer_provider.cmx";
-  launch_info.directory_request = services_.NewRequest();
-  startup_context_->launcher()->CreateComponent(std::move(launch_info), controller_.NewRequest());
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+  fuchsia::sys::LauncherSyncPtr launcher;
+  component_context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   controller_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Lost connection to controller_. Status: " << status;
   });
 
-  services_.ConnectToService(provider_.NewRequest().TakeChannel(),
-                             fuchsia::ui::gfx::PoseBufferProvider::Name_);
-
+  services->Connect(provider_.NewRequest());
   provider_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: " << status;
   });

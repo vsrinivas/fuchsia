@@ -12,11 +12,11 @@ executable("standalone_app") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/scenic/cpp",
     "//src/ui/lib/escher",

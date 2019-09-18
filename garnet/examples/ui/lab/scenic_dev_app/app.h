@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/lib/fxl/command_line.h"
@@ -34,7 +34,7 @@ class App {
 
   void InitCheckerboardMaterial(scenic::Material* uninitialized_material);
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   async::Loop* const loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 

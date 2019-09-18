@@ -10,12 +10,12 @@
 
 namespace embedder {
 
-ExampleViewProviderService::ExampleViewProviderService(component::StartupContext* startup_ctx,
+ExampleViewProviderService::ExampleViewProviderService(sys::ComponentContext* component_ctx,
                                                        ViewFactory factory)
-    : startup_ctx_(startup_ctx), view_factory_fn_(std::move(factory)) {
-  FXL_DCHECK(startup_ctx_);
+    : component_ctx_(component_ctx), view_factory_fn_(std::move(factory)) {
+  FXL_DCHECK(component_ctx_);
 
-  startup_ctx->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
+  component_ctx->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       },
@@ -23,7 +23,7 @@ ExampleViewProviderService::ExampleViewProviderService(component::StartupContext
 }
 
 ExampleViewProviderService::~ExampleViewProviderService() {
-  startup_ctx_->outgoing().deprecated_services()->RemoveService<fuchsia::ui::app::ViewProvider>();
+  component_ctx_->outgoing()->RemovePublicService<fuchsia::ui::app::ViewProvider>();
 }
 
 void ExampleViewProviderService::CreateView(
@@ -32,7 +32,7 @@ void ExampleViewProviderService::CreateView(
   // Services in CreateView() API are from the client's perspective.
   // Services in the ViewContext are from the view's perspective.
   ViewContext view_ctx{
-      .startup_context = startup_ctx_,
+      .component_context = component_ctx_,
       .token = scenic::ToViewToken(std::move(token)),
       .incoming_services = std::move(outgoing_services),
       .outgoing_services = std::move(incoming_services),

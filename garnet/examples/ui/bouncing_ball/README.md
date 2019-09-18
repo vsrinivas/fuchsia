@@ -31,11 +31,11 @@ do anything with incoming request for a `ViewProvider` yet.
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::Create();
 
   // Add our ViewProvider service to the outgoing services.
-  startup_context->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
+  component_context->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         // TODO: Next step is to handle this request.
       });
@@ -56,8 +56,8 @@ This implementation of `ViewProvider` doesn't do anything in `CreateView` quite 
 ``` cpp
 class ViewProviderService : public fuchsia::ui::app::ViewProvider {
  public:
-  ViewProviderService(component::StartupContext* startup_context)
-      : startup_context_(startup_context) {}
+  ViewProviderService(sys::ComponentContext* component_context)
+      : component_context_(component_context) {}
 
   // |fuchsia::ui::app::ViewProvider|
   void CreateView(
@@ -74,7 +74,7 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
   }
 
  private:
-  component::StartupContext* startup_context_ = nullptr;
+  sys::ComponentContext* component_context_ = nullptr;
   std::vector<std::unique_ptr<BouncingBallView>> views_;
   fidl::BindingSet<ViewProvider> bindings_;
 };
@@ -86,14 +86,14 @@ Next, let's wire up this class in `main()`:
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::Create();
 
   // ** NEW CODE **: Instantiate our ViewProvider service.
-  ViewProviderService view_provider(startup_context.get());
+  ViewProviderService view_provider(component_context.get());
 
   // Add our ViewProvider service to the outgoing services.
-  startup_context->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
+  component_context->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
        // ** NEW CODE **: Handle ViewProvider request.
        [&view_provider](
           fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
@@ -122,13 +122,13 @@ creates a `Session` and uses that to create a `View`.
 ``` cpp
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
-  BouncingBallView(component::StartupContext* startup_context,
+  BouncingBallView(sys::ComponentContext* component_context,
                            zx::eventpair view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context
+            ->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
     // Create a Scenic Session and a Scenic SessionListener.
     scenic->CreateSession(session_.NewRequest(),

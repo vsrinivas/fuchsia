@@ -6,8 +6,9 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
@@ -35,7 +36,7 @@ namespace embedder {
 static fuchsia::sys::ComponentControllerPtr s_subview_controller;
 
 App::App(async::Loop* loop, AppType type)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       loop_(loop),
       type_(type) {
   // Connect the ExampleViewProviderService.
@@ -43,19 +44,18 @@ App::App(async::Loop* loop, AppType type)
     // Launch the subview app.  Clone our stdout and stderr file descriptors
     // into it so output (FXL_LOG, etc) from the subview app will show up as
     // if it came from us.
-    component::Services subview_services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     launch_info.url = "fuchsia-pkg://fuchsia.com/embedder#meta/subview.cmx";
-    launch_info.directory_request = subview_services.NewRequest();
-    startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                  s_subview_controller.NewRequest());
-
-    subview_services.ConnectToService(view_provider_.NewRequest(), "view_provider");
+    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    fuchsia::sys::LauncherSyncPtr launcher;
+    component_context_->svc()->Connect(launcher.NewRequest());
+    launcher->CreateComponent(std::move(launch_info), s_subview_controller.NewRequest());
+    services->Connect(view_provider_.NewRequest());
   } else if (type_ == AppType::SUBVIEW) {
     view_provider_impl_ = std::make_unique<ExampleViewProviderService>(
-        startup_context_.get(), [this](ViewContext context) {
+        component_context_.get(), [this](ViewContext context) {
           // Bind the ServiceProviders, ourselves as the ourgoing one.
           incoming_services_.Bind(std::move(context.incoming_services));
           service_bindings_.AddBinding(this, std::move(context.outgoing_services));
@@ -73,7 +73,7 @@ App::App(async::Loop* loop, AppType type)
 
   // Connect to the global Scenic service and begin a session.
   FXL_LOG(INFO) << AppTypeString(type_) << "Connecting to Scenic service.";
-  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << AppTypeString(type_) << "Scenic error.  Connection dropped.";
     ReleaseSessionResources();

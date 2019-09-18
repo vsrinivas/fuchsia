@@ -8,7 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -34,7 +35,7 @@ class App {
 
   void ReleaseSessionResources();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   async::Loop* loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
@@ -49,7 +50,6 @@ class App {
   // time elapsed since this time.
   zx_time_t start_time_ = 0;
 
-  component::Services services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::ui::gfx::PoseBufferProviderPtr provider_;
 };

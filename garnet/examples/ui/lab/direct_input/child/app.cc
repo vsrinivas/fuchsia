@@ -5,6 +5,7 @@
 #include "garnet/examples/ui/lab/direct_input/child/app.h"
 
 #include <fuchsia/math/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
@@ -20,13 +21,13 @@ namespace direct_input_child {
 const uint32_t kNoFinger = std::numeric_limits<uint32_t>::max();  // Sentinel.
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       message_loop_(loop),
       focused_(false),
       view_provider_binding_(this) {
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
 
-  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
   FXL_LOG(INFO) << "Child - connect to Scenic.";
 
@@ -40,7 +41,7 @@ App::App(async::Loop* loop)
     UpdateScene(zx_clock_get_monotonic());
   });
 
-  startup_context_->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
+  component_context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         view_provider_binding_.Bind(std::move(request));
       },
@@ -58,9 +59,7 @@ App::App(async::Loop* loop)
 }
 
 App::~App() {
-  startup_context_->outgoing()
-      .deprecated_services()
-      ->RemoveService<fuchsia::ui::app::ViewProvider>();
+  component_context_->outgoing()->RemovePublicService<fuchsia::ui::app::ViewProvider>();
   ReleaseSessionResources();
 }
 

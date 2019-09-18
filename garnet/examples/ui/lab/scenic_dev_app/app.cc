@@ -12,7 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/connect.h>
+
 #include <lib/ui/scenic/cpp/commands.h>
 #include <src/lib/ui/scenic/cpp/host_memory.h>
 #include <lib/zx/time.h>
@@ -53,10 +53,10 @@ fuchsia::ui::gfx::ShadowTechnique GetShadowTechniqueFromCommandLine(
 }
 
 App::App(async::Loop* loop, const fxl::CommandLine& command_line)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       loop_(loop),
       shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
-  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();

@@ -14,7 +14,6 @@ executable("embedder") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -41,7 +40,6 @@ executable("subview") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",

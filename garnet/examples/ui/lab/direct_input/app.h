@@ -14,9 +14,11 @@
 
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "lib/component/cpp/startup_context.h"
+#include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/input_device_impl.h"
@@ -80,7 +82,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   void OnDeviceInputEvent(uint32_t compositor_id, fuchsia::ui::input::InputEvent event);
 
   // Application fields
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   async::Loop* const message_loop_;
 
   // Input fields

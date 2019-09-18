@@ -9,7 +9,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <math.h>
@@ -17,12 +18,12 @@
 
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
-  BouncingBallView(component::StartupContext* startup_context,
+  BouncingBallView(sys::ComponentContext* component_context,
                    fuchsia::ui::views::ViewToken view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
-        startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
     // Create a Scenic Session and a Scenic SessionListener.
     scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
@@ -277,14 +278,14 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 // that's attached to the embedder's ViewHolder.
 class ViewProviderService : public fuchsia::ui::app::ViewProvider {
  public:
-  ViewProviderService(component::StartupContext* startup_context)
-      : startup_context_(startup_context) {}
+  ViewProviderService(sys::ComponentContext* component_context)
+      : component_context_(component_context) {}
 
   // |fuchsia::ui::app::ViewProvider|
   void CreateView(zx::eventpair view_token,
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
-    auto view = std::make_unique<BouncingBallView>(startup_context_,
+    auto view = std::make_unique<BouncingBallView>(component_context_,
                                                    scenic::ToViewToken(std::move(view_token)));
     views_.push_back(std::move(view));
   }
@@ -294,7 +295,7 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
   }
 
  private:
-  component::StartupContext* startup_context_ = nullptr;
+  sys::ComponentContext* component_context_ = nullptr;
   std::vector<std::unique_ptr<BouncingBallView>> views_;
   fidl::BindingSet<ViewProvider> bindings_;
 };
@@ -302,13 +303,12 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
-  ViewProviderService view_provider(startup_context.get());
+  ViewProviderService view_provider(component_context.get());
 
   // Add our ViewProvider service to the outgoing services.
-  startup_context->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
+  component_context->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [&view_provider](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         view_provider.HandleViewProviderRequest(std::move(request));
       });

@@ -15,7 +15,7 @@
 #include <array>
 #include <memory>
 
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
@@ -60,7 +60,7 @@ class App : public fuchsia::ui::app::ViewProvider {
   void OnPointerEvent(const fuchsia::ui::input::PointerEvent& event);
 
   // Application fields
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   async::Loop* const message_loop_;
 
   // Scene fields

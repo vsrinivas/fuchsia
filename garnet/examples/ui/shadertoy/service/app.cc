@@ -4,18 +4,18 @@
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
 
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
 namespace shadertoy {
 
-App::App(async::Loop* loop, component::StartupContext* app_context,
+App::App(async::Loop* loop, sys::ComponentContext* app_context,
          escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       renderer_(escher_, kDefaultImageFormat),
       compiler_(loop, escher_, renderer_.render_pass(), renderer_.descriptor_set_layout()) {
-  app_context->outgoing().AddPublicService(factory_bindings_.GetHandler(this));
+  app_context->outgoing()->AddPublicService(factory_bindings_.GetHandler(this));
 }
 
 App::~App() = default;

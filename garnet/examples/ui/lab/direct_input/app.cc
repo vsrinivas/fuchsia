@@ -12,6 +12,7 @@
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 
 #include <limits>
@@ -23,14 +24,14 @@ namespace direct_input {
 const uint32_t kNoFinger = std::numeric_limits<uint32_t>::max();  // Sentinel.
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       message_loop_(loop),
       input_reader_(this),
       next_device_token_(0),
       focused_(false) {
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
 
-  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
   FXL_LOG(INFO) << "DirectInput - scenic connection";
 
@@ -44,7 +45,7 @@ App::App(async::Loop* loop)
   FXL_LOG(INFO) << "DirectInput - compositor set up";
 
   input_reader_.Start();
-  startup_context_->outgoing().AddPublicService(input_device_registry_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(input_device_registry_bindings_.GetHandler(this));
   FXL_LOG(INFO) << "DirectInput - input set up (Press ESC to quit).";
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -53,17 +54,17 @@ App::App(async::Loop* loop)
   });
 
   {
-    component::Services child_services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/direct_input_child#meta/"
         "direct_input_child.cmx";
-    launch_info.directory_request = child_services.NewRequest();
-    startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                  child_controller_.NewRequest());
-    child_services.ConnectToService(child_view_provider_.NewRequest(), "view_provider");
+    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    fuchsia::sys::LauncherSyncPtr launcher;
+    component_context_->svc()->Connect(launcher.NewRequest());
+    launcher->CreateComponent(std::move(launch_info), child_controller_.NewRequest());
+    services->Connect(child_view_provider_.NewRequest());
   }
 
   {

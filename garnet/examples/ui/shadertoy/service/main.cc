@@ -8,7 +8,7 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
@@ -48,8 +48,8 @@ int main(int argc, const char** argv) {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-    std::unique_ptr<component::StartupContext> app_context(
-        component::StartupContext::CreateFromStartupInfo());
+    std::unique_ptr<sys::ComponentContext> app_context(
+        sys::ComponentContext::Create());
 
     shadertoy::App app(&loop, app_context.get(), escher.GetWeakPtr());
     loop.Run();
