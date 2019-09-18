@@ -187,13 +187,12 @@ func (ios *endpoint) loopWrite() {
 					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
 				}
 
-				select {
-				case <-ios.closing:
-					// We're shutting down.
-					return
-				case <-notifyCh:
-					continue
-				}
+				// NB: we can't select on ios.closing here because the client may have
+				// written some data into the buffer and then immediately closed the
+				// socket. We don't have a choice but to wait around until we get the
+				// data out or the connection fails.
+				<-notifyCh
+				continue
 			case tcpip.ErrClosedForSend:
 				if err := ios.local.Shutdown(zx.SocketShutdownRead); err != nil {
 					panic(err)
@@ -487,6 +486,10 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 		}
 
 		ios.ep.Close()
+
+		// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
+		// care if the socket is closed.
+		ios.local.Shutdown(zx.SocketShutdownRead | zx.SocketShutdownWrite)
 
 		if err := ios.local.Close(); err != nil {
 			panic(err)
