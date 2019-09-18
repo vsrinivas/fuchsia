@@ -47,27 +47,39 @@ TEST_F(ModularTestHarnessTest, SimpleSuccess) {
 class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironment,
                                           protected modular::testing::FakeSessionShell {
  protected:
-  bool termination_signaled_ = false;
+  ModularTestHarnessDestructionTest() { termination_signaled_.store(false); }
+
+  std::atomic<bool> termination_signaled_;
 
  private:
-  // |modular::testing::FakeSessionShell|
-  void Terminate() override { termination_signaled_ = true; };
+  void Terminate() override {
+    termination_signaled_.store(true);
+    modular::testing::FakeSessionShell::Terminate();
+  };
 };
 
 // Test that a session is torn down cleanly.
 TEST_F(ModularTestHarnessDestructionTest, CleanTeardown) {
   modular_testing::TestHarnessBuilder builder;
+
+  // Service our FakeSessionShell on a different thread -- this will allow our FakeSessionShell to
+  // respond to Lifecycle/Terminate() while TestHarnessLauncher blocks this thread.
+  async::Loop session_shell_loop(&kAsyncLoopConfigNoAttachToThread);
+  session_shell_loop.StartThread();
   {
     modular_testing::TestHarnessLauncher launcher(
         real_services()->Connect<fuchsia::sys::Launcher>());
-    builder.InterceptSessionShell(GetOnCreateHandler(), {.sandbox_services = {
-                                                             "fuchsia.modular.SessionShellContext",
-                                                         }});
+    builder.InterceptSessionShell(GetOnCreateHandler(session_shell_loop.dispatcher()),
+                                  {.sandbox_services = {
+                                       "fuchsia.modular.SessionShellContext",
+                                   }});
     builder.BuildAndRun(launcher.test_harness());
 
     RunLoopUntil([&] { return is_running(); });
   }
-
   // Check that the session shell received a Lifecycle/Terminate() and wasn't forced killed.
-  RunLoopUntil([&] { return termination_signaled_; });
+  RunLoopUntil([&] { return termination_signaled_.load(); });
+
+  session_shell_loop.Quit();
+  session_shell_loop.JoinThreads();
 }

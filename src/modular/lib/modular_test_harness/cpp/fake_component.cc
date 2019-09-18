@@ -12,7 +12,7 @@ namespace {
 constexpr char kServiceRootPath[] = "/svc";
 
 std::unique_ptr<sys::ComponentContext> CreateComponentContext(
-    fuchsia::sys::StartupInfo* startup_info) {
+    fuchsia::sys::StartupInfo* startup_info, async_dispatcher_t* dispatcher) {
   fuchsia::sys::FlatNamespace& flat = startup_info->flat_namespace;
   if (flat.paths.size() != flat.directories.size()) {
     return nullptr;
@@ -28,24 +28,26 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
 
   return std::make_unique<sys::ComponentContext>(
       std::make_unique<sys::ServiceDirectory>(std::move(service_root)),
-      std::move(startup_info->launch_info.directory_request));
+      std::move(startup_info->launch_info.directory_request), dispatcher);
 }
 }  // namespace
 
 FakeComponent::~FakeComponent() = default;
 
-modular_testing::TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler() {
-  return [this](fuchsia::sys::StartupInfo startup_info,
-                fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                    intercepted_component) {
-    intercepted_component_ptr_ = intercepted_component.Bind();
+modular_testing::TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler(
+    async_dispatcher_t* dispatcher) {
+  return [this, dispatcher](fuchsia::sys::StartupInfo startup_info,
+                            fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                                intercepted_component) {
+    intercepted_component_ptr_.Bind(std::move(intercepted_component), dispatcher);
     intercepted_component_ptr_.events().OnKill = [this] {
       component_context_.reset();
       OnDestroy();
     };
 
-    component_context_ = CreateComponentContext(&startup_info);
-    component_context_->outgoing()->AddPublicService(lifecycle_bindings_.GetHandler(this));
+    component_context_ = CreateComponentContext(&startup_info, dispatcher);
+    component_context_->outgoing()->AddPublicService(
+        lifecycle_bindings_.GetHandler(this, dispatcher));
 
     OnCreate(std::move(startup_info));
   };
@@ -53,14 +55,12 @@ modular_testing::TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnC
 
 bool FakeComponent::is_running() const { return !!component_context_; }
 
-sys::ComponentContext* FakeComponent::component_context() {
-  ZX_ASSERT(is_running());
-  return component_context_.get();
-}
+sys::ComponentContext* FakeComponent::component_context() { return component_context_.get(); }
 
 void FakeComponent::Exit(int64_t exit_code, fuchsia::sys::TerminationReason reason) {
-  ZX_ASSERT(is_running());
-  intercepted_component_ptr_->Exit(exit_code, reason);
+  if (intercepted_component_ptr_) {
+    intercepted_component_ptr_->Exit(exit_code, reason);
+  }
 }
 
 void FakeComponent::Terminate() { Exit(0); }
