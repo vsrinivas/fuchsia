@@ -44,10 +44,9 @@ group("cpp") {
   ]
 }
 
-group ("tests") {
-  testonly = true 
+group("tests") {
+  testonly = true
   deps = [
-    ":cpp", 
-    "test:tests",
+    ":cpp",
   ]
 }

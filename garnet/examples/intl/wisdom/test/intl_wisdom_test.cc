@@ -26,8 +26,13 @@ using fuchsia::sys::ComponentControllerPtr;
 using fuchsia::sys::LaunchInfo;
 using sys::testing::TestWithEnvironment;
 
+// The C++ version of the wisdom client-server example.
 constexpr char kIntlWisdomClientPackage[] =
     "fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_client.cmx";
+
+// The Rust version of the wisdom client-server example.
+constexpr char kIntlWisdomClientRustPackage[] =
+    "fuchsia-pkg://fuchsia.com/intl_wisdom_rust#meta/intl_wisdom_client_rust.cmx";
 
 // Integration test for IntlWisdomClient and IntlWisdomServer.
 //
@@ -38,38 +43,40 @@ class IntlWisdomTest : public TestWithEnvironment {
  protected:
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    OpenNewOutFile();
+    OpenNewOutFiles();
   }
 
   void TearDown() override {
-    CloseOutFile();
+    CloseOutFiles();
     TestWithEnvironment::TearDown();
   }
 
-  void OpenNewOutFile() {
+  void OpenNewOutFiles() {
     ASSERT_TRUE(temp_dir_.NewTempFile(&out_file_path_));
     out_file_ = std::fopen(out_file_path_.c_str(), "w");
+    ASSERT_TRUE(temp_dir_.NewTempFile(&err_file_path_));
+    err_file_ = std::fopen(err_file_path_.c_str(), "w");
   }
 
-  void CloseOutFile() {
+  void CloseOutFiles() {
     if (out_file_ != nullptr) {
       std::fclose(out_file_);
+    }
+    if (err_file_ != nullptr) {
+      std::fclose(err_file_);
     }
   }
 
   // Read the contents of the file at |path| into |contents|.
-  void ReadFile(const std::string& path, std::string& contents) {
+  static void ReadFile(const std::string& path, std::string& contents) {
     ASSERT_TRUE(files::ReadFileToString(path, &contents)) << "Could not read file " << path;
   }
 
-  // Read the contents of the file at |out_file_path_| into |contents|.
-  void ReadStdOutFile(std::string& contents) { ReadFile(out_file_path_, contents); }
-
-  ComponentControllerPtr LaunchClientWithServer() {
+  ComponentControllerPtr LaunchClientWithServer(const std::string& url) {
     LaunchInfo launch_info{
-        .url = kIntlWisdomClientPackage,
+        .url = url,
         .out = sys::CloneFileDescriptor(fileno(out_file_)),
-        .err = sys::CloneFileDescriptor(STDERR_FILENO),
+        .err = sys::CloneFileDescriptor(fileno(err_file_)),
         .arguments =
             std::vector<std::string>({
                 "--timestamp=2018-11-01T12:34:56Z",
@@ -82,21 +89,54 @@ class IntlWisdomTest : public TestWithEnvironment {
     return controller;
   }
 
+  const  std::string& out_file_path() const {
+    return out_file_path_;
+  }
+
+  const std::string& err_file_path() const {
+      return err_file_path_;
+  }
+
+  // Syncs the files used for recording stdout and stderr.
+  void SyncWrites() {
+      fsync(fileno(out_file_));
+      fsync(fileno(err_file_));
+  }
+
+  void RunWisdomClientAndServer(const std::string& package_url) {
+      std::string expected_output;
+      IntlWisdomTest::ReadFile("/pkg/data/golden-output.txt", expected_output);
+
+      ComponentControllerPtr controller = LaunchClientWithServer(package_url);
+      ASSERT_TRUE(RunComponentUntilTerminated(std::move(controller), nullptr));
+      // Ensures that the data we just wrote is available for subsequent reading
+      // in the assertions.  Not doing so can result in assertions not seeing
+      // the just-written content.
+      SyncWrites();
+
+      std::string actual_output;
+      ReadFile(out_file_path(), actual_output);
+      std::string stderr_output;
+      ReadFile(err_file_path(), stderr_output);
+      ASSERT_EQ(actual_output, expected_output)
+          << "stdout:\n" << actual_output
+          << "\n:stderr:\n" << stderr_output;
+  }
+
  private:
   files::ScopedTempDir temp_dir_;
   std::string out_file_path_;
+  std::string err_file_path_;
   FILE* out_file_ = nullptr;
+  FILE* err_file_ = nullptr;
 };
 
-TEST_F(IntlWisdomTest, RunWisdomClientAndServer) {
-  std::string expected_output;
-  ReadFile("/pkg/data/golden-output.txt", expected_output);
+TEST_F(IntlWisdomTest, RunWisdomClientAndServerCPP) {
+  RunWisdomClientAndServer(kIntlWisdomClientPackage);
+}
 
-  ComponentControllerPtr controller = LaunchClientWithServer();
-  ASSERT_TRUE(RunComponentUntilTerminated(std::move(controller), nullptr));
-  std::string actual_output;
-  ReadStdOutFile(actual_output);
-  ASSERT_EQ(actual_output, expected_output);
+TEST_F(IntlWisdomTest, RunWisdomClientAndServerRust) {
+  RunWisdomClientAndServer(kIntlWisdomClientRustPackage);
 }
 
 }  // namespace intl_wisdom

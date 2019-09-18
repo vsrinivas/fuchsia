@@ -6,8 +6,9 @@ import("//build/package.gni")
 
 group("rust") {
   deps = [
-    "server",
     ":intl_wisdom_rust",
+    "client",
+    "server",
   ]
 }
 
@@ -15,6 +16,7 @@ group("tests") {
   testonly = true
   deps = [
     ":rust",
+    "client:tests",
     "server:tests",
   ]
 }
@@ -22,12 +24,16 @@ group("tests") {
 # Package that contains all binaries for the wisdom example.
 package("intl_wisdom_rust") {
   deps = [
-    "server:intl_wisdom_server_rust"
+    "client:intl_wisdom_client_rust",
+    "server:intl_wisdom_server_rust",
   ]
 
   binaries = [
     {
-        name = "intl_wisdom_server_rust"
+      name = "intl_wisdom_server_rust"
+    },
+    {
+      name = "intl_wisdom_client_rust"
     },
   ]
 
@@ -36,12 +42,16 @@ package("intl_wisdom_rust") {
       path = rebase_path("meta/intl_wisdom_server_rust.cmx")
       dest = "intl_wisdom_server_rust.cmx"
     },
+    {
+      path = rebase_path("meta/intl_wisdom_client_rust.cmx")
+      dest = "intl_wisdom_client_rust.cmx"
+    },
   ]
 
   resources = [
     {
-        path = rebase_path("//third_party/icu/common/icudtl.dat")
-        dest = "icudtl.dat"
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
     },
   ]
 }

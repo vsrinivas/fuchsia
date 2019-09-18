@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+# This is the main target in this BUILD file.  It implicitly contains everything
+# in the src/ directory, and implicitly looks for src/main.rs as entry point.
+# It intentionally has a long name to avoid naming conflicts, because the
+# binaries that are generated are named after the target name, and all binaries
+# for Fuchsia live in the same namespace and should be distinct.
+rustc_binary("intl_wisdom_client_rust") {
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//garnet/examples/intl/wisdom/fidl:wisdom-rustc",
+    "//garnet/lib/rust/fidl_fuchsia_intl_ext",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//src/lib/icu/rust/rust_icu_common",
+    "//src/lib/icu/rust/rust_icu_sys",
+    "//src/lib/icu/rust/rust_icu_ucal",
+    "//src/lib/icu/rust/rust_icu_udat",
+    "//src/lib/icu/rust/rust_icu_uloc",
+    "//src/lib/icu/rust/rust_icu_ustring",
+    "//src/lib/icu_data/rust/icu_data",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
+  ]
+  test_deps = [ "//src/lib/rust_backtrace" ]
+}
+
+test_package("intl_wisdom_client_rust_tests") {
+  deps = [
+    ":intl_wisdom_client_rust_test",
+  ]
+  tests = [
+    {
+      name = "intl_wisdom_client_rust_bin_test"
+      dest = "intl_wisdom_client_rust_bin_test"
+      environments = basic_envs
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
+
+group("client") {
+  deps = [
+    ":intl_wisdom_client_rust",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":intl_wisdom_client_rust_tests",
+  ]
+}

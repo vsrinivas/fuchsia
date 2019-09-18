@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/intl_wisdom_client_rust_bin_test"
+    }
+}

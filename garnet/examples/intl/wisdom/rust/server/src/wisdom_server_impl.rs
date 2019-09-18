@@ -40,7 +40,6 @@ fn build_response(
     calendars: &Vec<ucal::UCalendar>,
     tz_id: &ustring::UChar,
 ) -> Result<String, Error> {
-    let pattern: ustring::UChar = ustring::UChar::try_from("")?;
     let time_style = usys::UDateFormatStyle::UDAT_FULL;
     let date_style = usys::UDateFormatStyle::UDAT_FULL;
 
@@ -51,7 +50,7 @@ fn build_response(
         for calendar in calendars {
             let loc_ref: &str = *locale;
             let loc = uloc::ULoc::try_from(loc_ref)?;
-            let mut fmt = udat::UDateFormat::new(time_style, date_style, &loc, tz_id, &pattern)?;
+            let mut fmt = udat::UDateFormat::new_with_styles(time_style, date_style, &loc, tz_id)?;
             fmt.set_calendar(calendar);
             let formatted_date = fmt.format(timestamp_ms)?;
             response.push_str(&format!("{}\n", formatted_date));
@@ -59,7 +58,9 @@ fn build_response(
     }
 
     // TODO(fmil): I18N I18ize this response.
-    response.push_str("\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕  time?\n");
+    // Note that this Unicode shenanigan has a space between the two letters "t", but some editors
+    // won't render it.  It's there though.
+    response.push_str("\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n");
     Ok(response)
 }
 
@@ -143,7 +144,7 @@ mod tests {
                     "\nA wise one knows the time...\n\n",
                     "четвртак, 01. јануар 1970. 00:00:00 GMT\n",
                     "donderdag 1 januari 1970 om 00:00:00 GMT",
-                    "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕  time?\n",
+                    "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
@@ -167,7 +168,7 @@ mod tests {
                    "\nA wise one knows the time...\n\n",
                    "четвртак, 01. јануар 1970. 19:46:40 Северноамеричко пацифичко стандардно време\n",
                    "donderdag 1 januari 1970 om 19:46:40 Pacific-standaardtijd",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕  time?\n",
+                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
@@ -189,7 +190,7 @@ mod tests {
                 result: vec![
                    "\nA wise one knows the time...\n\n",
                    "Thursday, Tevet 23, 5730 at 10:46:40 PM Eastern Standard Time",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕  time?\n",
+                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
@@ -211,7 +212,7 @@ mod tests {
                 result: vec![
                    "\nA wise one knows the time...\n\n",
                    "الخميس، ٢٣ شوال ١٣٨٩ هـ ١٠:٤٦:٤٠ م التوقيت الرسمي الشرقي لأمريكا الشمالية",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕  time?\n",
+                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
@@ -219,7 +220,7 @@ mod tests {
         ];
         for t in tests {
             let result = ask_for_wisdom(&t.profile, t.timestamp_ms)?;
-            assert_eq!(t.result, result);
+            assert_eq!(t.result, result, "\nwant: {:?}\ngot : {:?}", t.result, result);
         }
         Ok(())
     }
