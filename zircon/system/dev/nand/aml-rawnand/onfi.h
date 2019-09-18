@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <lib/zx/time.h>
-#include <zircon/types.h>
-
 #include <fbl/function.h>
+#include <zircon/types.h>
 
 static constexpr uint32_t NAND_CE0 = (0xe << 10);
 static constexpr uint32_t NAND_CE1 = (0xd << 10);
@@ -48,24 +46,12 @@ struct nand_timings {
   uint32_t RHOH_min;
 };
 
-struct polling_timing_t {
-  zx::duration min;
-  zx::duration interval;
-};
-
-struct polling_timings_t {
-  polling_timing_t cmd_flush;
-  polling_timing_t write;
-  polling_timing_t erase;
-};
-
 struct nand_chip_table {
   uint8_t manufacturer_id;
   uint8_t device_id;
   const char* manufacturer_name;
   const char* device_name;
   struct nand_timings timings;
-  polling_timings_t polling_timings;
   uint32_t chip_delay_us;  // Delay us after enqueuing command.
   // extended_id_nand -> pagesize, erase blocksize, OOB size
   // could vary given the same device id.
@@ -85,8 +71,7 @@ class Onfi {
   void OnfiCommand(uint32_t command, int32_t column, int32_t page_addr, uint32_t capacity_mb,
                    uint32_t chip_delay_us, int buswidth_16);
   // Generic wait function used by both program (write) and erase functionality.
-  zx_status_t OnfiWait(zx::duration timeout, zx::duration first_interval,
-                       zx::duration polling_interval);
+  zx_status_t OnfiWait(uint32_t timeout_ms);
   void Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
             fbl::Function<uint8_t()> read_byte);
   // Finds the entry in the NAND chip table database based on manufacturer

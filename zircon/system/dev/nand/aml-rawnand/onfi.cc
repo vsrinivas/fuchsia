@@ -17,52 +17,10 @@
 // errors significantly).
 // TODO(ZX-2696): Determine the value of chip delay more scientifically.
 static struct nand_chip_table nand_chip_table[] = {
-    {0x2C,
-     0xDC,
-     "Micron",
-     "MT29F4G08ABAEA",
-     {20, 16, 15},
-     {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
-      .write = {.min = zx::usec(320), .interval = zx::usec(20)},
-      .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
-     25,
-     true,
-     512,
-     0,
-     0,
-     0,
-     0},
-    {0xEC,
-     0xDC,
-     "Samsung",
-     "K9F4G08U0F",
-     {25, 20, 15},
-     {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
-      .write = {.min = zx::usec(320), .interval = zx::usec(20)},
-      .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
-     30,
-     true,
-     512,
-     0,
-     0,
-     0,
-     0},
+    {0x2C, 0xDC, "Micron", "MT29F4G08ABAEA", {20, 16, 15}, 25, true, 512, 0, 0, 0, 0},
+    {0xEC, 0xDC, "Samsung", "K9F4G08U0F", {25, 20, 15}, 30, true, 512, 0, 0, 0, 0},
     /* TODO: This works. but doublecheck Toshiba nand_timings from datasheet */
-    {0x98,
-     0xDC,
-     "Toshiba",
-     "TC58NVG2S0F",
-     {25, 20, /* 15 */ 25},
-     {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
-      .write = {.min = zx::usec(320), .interval = zx::usec(20)},
-      .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
-     25,
-     true,
-     512,
-     0,
-     0,
-     0,
-     0},
+    {0x98, 0xDC, "Toshiba", "TC58NVG2S0F", {25, 20, /* 15 */ 25}, 25, true, 512, 0, 0, 0, 0},
 };
 
 #define NAND_CHIP_TABLE_SIZE (sizeof(nand_chip_table) / sizeof(struct nand_chip_table))
@@ -80,20 +38,16 @@ void Onfi::Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
   read_byte_ = std::move(read_byte);
 }
 
-zx_status_t Onfi::OnfiWait(zx::duration timeout, zx::duration first_interval,
-                           zx::duration polling_interval) {
-  zx::duration total_time;
+zx_status_t Onfi::OnfiWait(uint32_t timeout_ms) {
+  uint64_t total_time = 0;
   uint8_t cmd_status;
 
   cmd_ctrl_(NAND_CMD_STATUS, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
   cmd_ctrl_(NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
-  bool first = true;
   while (!((cmd_status = read_byte_()) & NAND_STATUS_READY)) {
-    zx::duration sleep_interval = first ? first_interval : polling_interval;
-    first = false;
-    zx::nanosleep(zx::deadline_after(sleep_interval));
-    total_time += sleep_interval;
-    if (total_time > timeout) {
+    usleep(10);
+    total_time += 10;
+    if (total_time > (timeout_ms * 1000)) {
       break;
     }
   }

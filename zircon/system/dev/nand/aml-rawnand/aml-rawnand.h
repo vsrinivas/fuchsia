@@ -18,7 +18,6 @@
 #include <hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/time.h>
 #include <memory>
 #include <soc/aml-common/aml-rawnand.h>
 #include <string.h>
@@ -100,8 +99,6 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
     uint64_t failed;
   } stats;
 
-  polling_timings_t polling_timings_ = {};
-
   void AmlCmdCtrl(int32_t cmd, uint32_t ctrl);
   // Reads status byte.
   uint8_t AmlReadByte();
@@ -109,8 +106,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void NandctrlSetTimingAsync(int bus_tim, int bus_cyc);
   void NandctrlSendCmd(uint32_t cmd);
   void AmlCmdIdle(uint32_t time);
-  zx_status_t AmlWaitCmdFinish(zx::duration timeout, zx::duration first_interval,
-                               zx::duration polling_interval);
+  zx_status_t AmlWaitCmdFinish(unsigned int timeout_ms);
   void AmlCmdSeed(uint32_t seed);
   void AmlCmdN2M(uint32_t ecc_pages, uint32_t ecc_pagesize);
   void AmlCmdM2N(uint32_t ecc_pages, uint32_t ecc_pagesize);
