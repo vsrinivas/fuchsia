@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 #pragma once
 
+#include <block-client/cpp/client.h>
 #include <fbl/unique_ptr.h>
 #include <fvm/sparse-reader.h>
 
-#include <block-client/cpp/client.h>
+#include "fvm/fvm-sparse.h"
 
 namespace paver {
 
@@ -18,9 +19,17 @@ enum class BindOption {
   Reformat,
 };
 
+// Describes the result of attempting to format an Fvm Partition.
+enum class FormatResult {
+  kUnknown,
+  kPreserved,
+  kReformatted,
+};
+
 // Public for testing.
 fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
-                                  size_t slice_size, BindOption option);
+                                  const fvm::sparse_image_t& header, BindOption option,
+                                  FormatResult* format_result = nullptr);
 
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,

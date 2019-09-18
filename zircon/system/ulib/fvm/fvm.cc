@@ -16,10 +16,11 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include <zircon/types.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 #include "fvm/format.h"
 
@@ -39,7 +40,20 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
   if (slice_size == 0) {
     return 0;
   }
-  return (fvm_partition_size - 2 * metadata_allocated_size) / slice_size;
+
+  int64_t delta = (fvm_partition_size - 2 * metadata_allocated_size);
+  size_t slice_count = (delta > 0 ? static_cast<size_t>(delta) : 0) / slice_size;
+
+  // Because the allocation table is 1-indexed and pslices are 0 indexed on disk,
+  // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
+  // enough to address them all. This only happens when the rounded up block value happens to
+  // match the disk size.
+  // TODO(gevalentino): Fix underlying cause and remove workaround.
+  if ((fvm::AllocationTable::kOffset + slice_count * sizeof(fvm::SliceEntry)) ==
+      metadata_allocated_size) {
+    slice_count--;
+  }
+  return slice_count;
 }
 
 // Return true if g1 is greater than or equal to g2.

@@ -9,6 +9,8 @@
 #include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
 
+#include "fvm/format.h"
+#include "fvm/fvm-sparse.h"
 #include "test/test-utils.h"
 
 namespace {
@@ -19,7 +21,18 @@ using devmgr_integration_test::RecursiveWaitForFile;
 constexpr size_t kSliceSize = kBlockSize * 2;
 constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 
-}  // namespace
+constexpr fvm::sparse_image_t SparseHeaderForSliceSize(size_t slice_size) {
+  fvm::sparse_image_t header = {};
+  header.slice_size = slice_size;
+  return header;
+}
+
+constexpr fvm::sparse_image_t SparseHeaderForSliceSizeAndMaxDiskSize(size_t slice_size,
+                                                                     size_t max_disk_size) {
+  fvm::sparse_image_t header = SparseHeaderForSliceSize(slice_size);
+  header.maximum_disk_size = max_disk_size;
+  return header;
+}
 
 class FvmTest : public zxtest::Test {
  public:
@@ -32,8 +45,13 @@ class FvmTest : public zxtest::Test {
 
     fbl::unique_fd ctl;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl));
+  }
 
-    ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &device_));
+  void CreateRamdisk() { CreateRamdiskWithBlockCount(); }
+
+  void CreateRamdiskWithBlockCount(size_t block_count = kBlockCount) {
+    ASSERT_NO_FATAL_FAILURES(
+        BlockDevice::Create(devmgr_.devfs_root(), kFvmType, block_count, &device_));
     ASSERT_TRUE(device_);
   }
 
@@ -49,36 +67,78 @@ class FvmTest : public zxtest::Test {
 };
 
 TEST_F(FvmTest, FormatFvmEmpty) {
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::Reformat);
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindEmpty) {
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::TryBind);
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormatted) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
   ASSERT_OK(fvm_init(borrow_fd(), kSliceSize));
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::TryBind);
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyBound) {
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::Reformat);
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 
-  fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::TryBind);
+  fvm_part = FvmPartitionFormat(devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize),
+                                paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormattedWrongSliceSize) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
   ASSERT_OK(fvm_init(borrow_fd(), kSliceSize * 2));
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::TryBind);
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
+
+TEST_F(FvmTest, TryBindAlreadyFormattedWithSmallerSize) {
+  constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
+  constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
+  ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
+  ASSERT_OK(
+      fvm_init_preallocated(borrow_fd(), kBlockDeviceInitialSize, kBlockDeviceMaxSize, kSliceSize));
+  // Same slice size but can reference up to 200 Slices, which is far less than what the
+  // preallocated can have.
+  fvm::sparse_image_t header =
+      SparseHeaderForSliceSizeAndMaxDiskSize(kSliceSize, 2 * kBlockDeviceInitialSize);
+  paver::FormatResult result;
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), fd(), header, paver::BindOption::TryBind, &result);
+  ASSERT_TRUE(fvm_part.is_valid());
+  ASSERT_EQ(paver::FormatResult::kPreserved, result);
+}
+
+TEST_F(FvmTest, TryBindAlreadyFormattedWithBiggerSize) {
+  constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
+  constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
+  ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
+  ASSERT_OK(fvm_init_preallocated(borrow_fd(), kBlockDeviceInitialSize, kBlockDeviceMaxSize / 100,
+                                  kSliceSize));
+  // Same slice size but can reference up to 200 Slices, which is far less than what the
+  // preallocated can have.
+  fvm::sparse_image_t header =
+      SparseHeaderForSliceSizeAndMaxDiskSize(kSliceSize, kBlockDeviceMaxSize);
+  paver::FormatResult result;
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), fd(), header, paver::BindOption::TryBind, &result);
+  ASSERT_TRUE(fvm_part.is_valid());
+  ASSERT_EQ(paver::FormatResult::kReformatted, result);
+}
+
+}  // namespace
