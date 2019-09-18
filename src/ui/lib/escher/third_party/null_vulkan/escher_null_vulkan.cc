@@ -111,6 +111,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
     uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties) { return VK_SUCCESS; }
 
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceVersion(
+    uint32_t*                                   pApiVersion) { return VK_SUCCESS; }
+
 VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice                                    device,
     uint32_t                                    queueFamilyIndex,

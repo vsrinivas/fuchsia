@@ -16,6 +16,7 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDevice device) {
     vk::PhysicalDeviceProperties props = device.getProperties();
     max_image_width = props.limits.maxImageDimension2D;
     max_image_height = props.limits.maxImageDimension2D;
+    device_api_version = props.apiVersion;
   }
 
   {
@@ -216,7 +217,12 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   auto physical_device_features =
       vk::PhysicalDeviceFeatures2().setPNext(&physical_device_memory_features);
   physical_device.getFeatures2(&physical_device_features);
-  if (!physical_device_memory_features.protectedMemory) {
+
+  // Get the maximum supported Vulkan API version (minimum of device version and instance version).
+  uint32_t max_api_version = std::min(caps.device_api_version, instance->api_version());
+
+  // Protected memory is only supported with Vulkan API version 1.1.
+  if (!physical_device_memory_features.protectedMemory || max_api_version < VK_API_VERSION_1_1) {
     FXL_LOG(INFO) << "Protected memory is not supported.";
     caps.allow_protected_memory = false;
   } else {

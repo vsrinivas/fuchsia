@@ -89,8 +89,11 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   // Return per-instance functions that were dynamically looked up.
   const ProcAddrs& proc_addrs() const { return proc_addrs_; }
 
+  // Return Vulkan API Version of the instance.
+  uint32_t api_version() const { return api_version_; }
+
  private:
-  VulkanInstance(vk::Instance instance, Params params);
+  VulkanInstance(vk::Instance instance, Params params, uint32_t api_version);
 
   // The "entrance" handler for all Vulkan instances. When validation error
   // occurs, this function will invoke all debug report callback functions
@@ -111,6 +114,7 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   ProcAddrs proc_addrs_;
   std::list<DebugReportCallback> callbacks_;
   vk::DebugReportCallbackEXT vk_callback_entrance_handle_;
+  uint32_t api_version_;
 };
 
 };  // namespace escher

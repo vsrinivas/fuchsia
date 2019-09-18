@@ -50,7 +50,16 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
     extension_names.push_back(extension.c_str());
   }
 
+  uint32_t api_version = 0;
+  if (vkEnumerateInstanceVersion(&api_version) != VK_SUCCESS) {
+    api_version = VK_API_VERSION_1_0;
+  }
+
+  vk::ApplicationInfo app_info;
+  app_info.apiVersion = api_version;
+
   vk::InstanceCreateInfo info;
+  info.pApplicationInfo = &app_info;
   info.enabledLayerCount = layer_names.size();
   info.ppEnabledLayerNames = layer_names.data();
   info.enabledExtensionCount = extension_names.size();
@@ -62,13 +71,14 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
     return fxl::RefPtr<VulkanInstance>();
   }
 
-  return fxl::AdoptRef(new VulkanInstance(result.value, std::move(params)));
+  return fxl::AdoptRef(new VulkanInstance(result.value, std::move(params), api_version));
 }
 
-VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
+VulkanInstance::VulkanInstance(vk::Instance instance, Params params, uint32_t api_version)
     : instance_(instance),
       params_(std::move(params)),
-      proc_addrs_(instance_, params_.requires_surface) {
+      proc_addrs_(instance_, params_.requires_surface),
+      api_version_(api_version) {
   // Register global debug report callback function.
   // Do this only if extension VK_EXT_debug_report is enabled.
   if (HasDebugReportExt()) {

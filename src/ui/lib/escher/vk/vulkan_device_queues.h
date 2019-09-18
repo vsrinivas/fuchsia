@@ -46,6 +46,7 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     uint32_t max_image_height = 0;
     std::set<vk::Format> depth_stencil_formats;
     std::set<std::string> extensions;
+    uint32_t device_api_version;
     bool allow_protected_memory;
 
     vk::PhysicalDeviceFeatures enabled_features;
