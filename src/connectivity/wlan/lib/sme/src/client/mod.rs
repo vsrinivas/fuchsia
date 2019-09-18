@@ -474,8 +474,8 @@ mod tests {
     use super::info::DiscoveryStats;
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        expect_stream_empty, fake_bss_with_rates, fake_protected_bss_description,
-        fake_unprotected_bss_description, fake_wep_bss_description,
+        expect_stream_empty, fake_bss_with_bssid, fake_bss_with_rates,
+        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
     };
 
     use crate::test_utils;
@@ -1055,7 +1055,7 @@ mod tests {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
-        let bss = fake_unprotected_bss_description(b"foo".to_vec());
+        let bss = fake_bss_with_bssid(b"foo".to_vec(), [3; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
