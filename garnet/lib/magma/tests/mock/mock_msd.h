@@ -55,17 +55,6 @@ class MsdMockContext : public msd_context_t {
   MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
   virtual ~MsdMockContext();
 
-  magma_status_t ExecuteCommandBuffer(msd_buffer_t* cmd_buf_in, msd_buffer_t** exec_resources) {
-    auto cmd_buf = MsdMockCommandBuffer(MsdMockBuffer::cast(cmd_buf_in));
-    if (!cmd_buf.Initialize())
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to Initialize command buffer");
-    last_submitted_exec_resources_.clear();
-    for (uint32_t i = 0; i < cmd_buf.num_resources(); i++) {
-      last_submitted_exec_resources_.push_back(MsdMockBuffer::cast(exec_resources[i]));
-    }
-    return MAGMA_STATUS_OK;
-  }
-
   magma_status_t ExecuteCommandBufferWithResources(magma_system_command_buffer* cmd_buf,
                                                    msd_buffer_t** buffers) {
     last_submitted_exec_resources_.clear();
