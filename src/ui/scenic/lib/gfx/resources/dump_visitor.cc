@@ -57,6 +57,7 @@ void DumpVisitor::VisitEscherImage(escher::Image* i) {
     WriteProperty("format") << static_cast<int>(i->format());
     WriteProperty("has_depth") << i->has_depth();
     WriteProperty("has_stencil") << i->has_stencil();
+    WriteProperty("use_protected_memory") << i->use_protected_memory();
   } else {
     WriteProperty("value") << "(null)";
   }

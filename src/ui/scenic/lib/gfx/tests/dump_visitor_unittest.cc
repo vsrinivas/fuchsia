@@ -61,6 +61,7 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
 
   ASSERT_TRUE(ostream.str().find("Image:"));
   ASSERT_TRUE(ostream.str().find("ImagePipe:"));
+  ASSERT_TRUE(ostream.str().find("use_protected_memory:"));
 }
 
 }  // namespace test
