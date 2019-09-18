@@ -4,11 +4,15 @@
 
 use fidl_fuchsia_ui_gfx::Command as GfxCommand;
 use fidl_fuchsia_ui_gfx::{
-    AddChildCmd, AddPartCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd, DetachCmd,
-    ExportResourceCmd, ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue,
-    ReleaseResourceCmd, ResourceArgs, SetAnchorCmd, SetClipCmd, SetColorCmd, SetEventMaskCmd,
-    SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetTextureCmd, SetTranslationCmd,
-    SetViewPropertiesCmd, Vec3, Vector3Value, ViewProperties,
+    AddChildCmd, AddLayerCmd, AddPartCmd, ColorRgb, ColorRgbValue, ColorRgba, ColorRgbaValue,
+    CreateResourceCmd, DetachCmd, DetachLightCmd, DetachLightsCmd, ExportResourceCmd,
+    ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue, ReleaseResourceCmd,
+    RemoveAllLayersCmd, RemoveLayerCmd, ResourceArgs, SceneAddAmbientLightCmd,
+    SceneAddDirectionalLightCmd, SceneAddPointLightCmd, SetAnchorCmd, SetCameraCmd, SetClipCmd,
+    SetColorCmd, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd, SetLightDirectionCmd,
+    SetMaterialCmd, SetRendererCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetSizeCmd,
+    SetTextureCmd, SetTranslationCmd, SetViewPropertiesCmd, Vec2, Vec3, Vector2Value, Vector3Value,
+    ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
@@ -69,6 +73,11 @@ pub fn set_translation(id: u32, x: f32, y: f32, z: f32) -> Command {
     Command::Gfx(GfxCommand::SetTranslation(cmd))
 }
 
+pub fn set_size(id: u32, x: f32, y: f32) -> Command {
+    let cmd = SetSizeCmd { id, value: Vector2Value { value: Vec2 { x, y }, variable_id: 0 } };
+    Command::Gfx(GfxCommand::SetSize(cmd))
+}
+
 pub fn set_anchor(id: u32, x: f32, y: f32, z: f32) -> Command {
     let cmd = SetAnchorCmd { id, value: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 } };
     Command::Gfx(GfxCommand::SetAnchor(cmd))
@@ -105,4 +114,72 @@ pub fn detach(id: u32) -> Command {
 pub fn set_view_properties(view_holder_id: u32, properties: ViewProperties) -> Command {
     let cmd = SetViewPropertiesCmd { view_holder_id, properties };
     Command::Gfx(GfxCommand::SetViewProperties(cmd))
+}
+
+pub fn add_layer(layer_stack_id: u32, layer_id: u32) -> Command {
+    let cmd = AddLayerCmd { layer_stack_id, layer_id };
+    Command::Gfx(GfxCommand::AddLayer(cmd))
+}
+
+pub fn remove_layer(layer_stack_id: u32, layer_id: u32) -> Command {
+    let cmd = RemoveLayerCmd { layer_stack_id, layer_id };
+    Command::Gfx(GfxCommand::RemoveLayer(cmd))
+}
+
+pub fn remove_all_layers(layer_stack_id: u32) -> Command {
+    let cmd = RemoveAllLayersCmd { layer_stack_id };
+    Command::Gfx(GfxCommand::RemoveAllLayers(cmd))
+}
+
+pub fn set_layer_stack(compositor_id: u32, layer_stack_id: u32) -> Command {
+    let cmd = SetLayerStackCmd { compositor_id, layer_stack_id };
+    Command::Gfx(GfxCommand::SetLayerStack(cmd))
+}
+
+pub fn set_renderer(layer_id: u32, renderer_id: u32) -> Command {
+    let cmd = SetRendererCmd { layer_id, renderer_id };
+    Command::Gfx(GfxCommand::SetRenderer(cmd))
+}
+
+pub fn set_camera(renderer_id: u32, camera_id: u32) -> Command {
+    let cmd = SetCameraCmd { renderer_id, camera_id };
+    Command::Gfx(GfxCommand::SetCamera(cmd))
+}
+
+pub fn set_light_color(light_id: u32, value: ColorRgb) -> Command {
+    let cmd = SetLightColorCmd { light_id, color: ColorRgbValue { value, variable_id: 0 } };
+    Command::Gfx(GfxCommand::SetLightColor(cmd))
+}
+
+pub fn set_light_direction(light_id: u32, x: f32, y: f32, z: f32) -> Command {
+    let cmd = SetLightDirectionCmd {
+        light_id,
+        direction: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 },
+    };
+    Command::Gfx(GfxCommand::SetLightDirection(cmd))
+}
+
+pub fn scene_add_directional_light(scene_id: u32, light_id: u32) -> Command {
+    let cmd = SceneAddDirectionalLightCmd { scene_id, light_id };
+    Command::Gfx(GfxCommand::Scene_AddDirectionalLight(cmd))
+}
+
+pub fn scene_add_point_light(scene_id: u32, light_id: u32) -> Command {
+    let cmd = SceneAddPointLightCmd { scene_id, light_id };
+    Command::Gfx(GfxCommand::Scene_AddPointLight(cmd))
+}
+
+pub fn scene_add_ambient_light(scene_id: u32, light_id: u32) -> Command {
+    let cmd = SceneAddAmbientLightCmd { scene_id, light_id };
+    Command::Gfx(GfxCommand::Scene_AddAmbientLight(cmd))
+}
+
+pub fn detach_light(light_id: u32) -> Command {
+    let cmd = DetachLightCmd { light_id };
+    Command::Gfx(GfxCommand::DetachLight(cmd))
+}
+
+pub fn detach_lights(scene_id: u32) -> Command {
+    let cmd = DetachLightsCmd { scene_id };
+    Command::Gfx(GfxCommand::DetachLights(cmd))
 }

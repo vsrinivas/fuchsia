@@ -14,6 +14,7 @@ unittest_package("rust-crates-tests") {
     "fuchsia-hyper:fuchsia-hyper-tests",
     "fuchsia-inspect-contrib:fuchsia-inspect-contrib_test",
     "fuchsia-merkle:fuchsia-merkle_test",
+    "fuchsia-scenic:fuchsia-scenic_test",
     "fuchsia-trace:fuchsia-trace_test",
     "mapped-vmo:mapped-vmo_test",
     "mundane:mundane_test",
@@ -41,6 +42,10 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "fuchsia_merkle_lib_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_scenic_lib_test"
       environments = basic_envs
     },
     {

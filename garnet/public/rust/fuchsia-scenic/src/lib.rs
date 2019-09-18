@@ -8,9 +8,11 @@ pub use self::view_token_pair::*;
 
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
 use fidl_fuchsia_ui_gfx::{
-    CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec, MaterialArgs, MemoryArgs,
-    RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value, ViewArgs2,
-    ViewHolderArgs2, ViewProperties,
+    AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
+    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImportSpec, LayerArgs, LayerStackArgs,
+    MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs,
+    RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs2, ViewHolderArgs2,
+    ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
@@ -328,6 +330,206 @@ impl Node {
     }
 }
 
+pub struct AmbientLight {
+    resource: Resource,
+}
+
+impl AmbientLight {
+    pub fn new(session: SessionPtr) -> AmbientLight {
+        let args = AmbientLightArgs { dummy: 0 };
+        AmbientLight { resource: Resource::new(session, ResourceArgs::AmbientLight(args)) }
+    }
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn set_color(&self, color: ColorRgb) {
+        self.resource.enqueue(cmd::set_light_color(self.id(), color));
+    }
+    pub fn detach_light(&self) {
+        self.resource.enqueue(cmd::detach_light(self.id()));
+    }
+}
+pub struct PointLight {
+    resource: Resource,
+}
+
+impl PointLight {
+    pub fn new(session: SessionPtr) -> PointLight {
+        let args = PointLightArgs { dummy: 0 };
+        PointLight { resource: Resource::new(session, ResourceArgs::PointLight(args)) }
+    }
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+    pub fn set_color(&self, color: ColorRgb) {
+        self.resource.enqueue(cmd::set_light_color(self.id(), color));
+    }
+    pub fn detach_light(&self) {
+        self.resource.enqueue(cmd::detach_light(self.id()));
+    }
+}
+pub struct DirectionalLight {
+    resource: Resource,
+}
+
+impl DirectionalLight {
+    pub fn new(session: SessionPtr) -> DirectionalLight {
+        let args = DirectionalLightArgs { dummy: 0 };
+        DirectionalLight { resource: Resource::new(session, ResourceArgs::DirectionalLight(args)) }
+    }
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+    pub fn set_color(&self, color: ColorRgb) {
+        self.resource.enqueue(cmd::set_light_color(self.id(), color));
+    }
+    pub fn set_direction(&self, x: f32, y: f32, z: f32) {
+        self.resource.enqueue(cmd::set_light_direction(self.id(), x, y, z));
+    }
+
+    pub fn detach_light(&self) {
+        self.resource.enqueue(cmd::detach_light(self.id()));
+    }
+}
+
+pub struct Scene {
+    resource: Resource,
+}
+
+impl Scene {
+    pub fn new(session: SessionPtr) -> Scene {
+        let args = SceneArgs { dummy: 0 };
+        Scene { resource: Resource::new(session, ResourceArgs::Scene(args)) }
+    }
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+    pub fn add_child(&self, child: &Node) {
+        self.resource.enqueue(cmd::add_child(self.id(), child.id()))
+    }
+
+    pub fn add_directional_light(&self, light: &DirectionalLight) {
+        self.resource.enqueue(cmd::scene_add_directional_light(self.id(), light.id()));
+    }
+
+    pub fn add_ambient_light(&self, light: &AmbientLight) {
+        self.resource.enqueue(cmd::scene_add_ambient_light(self.id(), light.id()));
+    }
+
+    pub fn add_point_light(&self, light: &PointLight) {
+        self.resource.enqueue(cmd::scene_add_point_light(self.id(), light.id()));
+    }
+
+    pub fn detach_lights(&self) {
+        self.resource.enqueue(cmd::detach_lights(self.id()));
+    }
+}
+
+pub struct Camera {
+    resource: Resource,
+}
+
+impl Camera {
+    pub fn new(session: SessionPtr, scene: &Scene) -> Camera {
+        let args = CameraArgs { scene_id: scene.id() };
+        Camera { resource: Resource::new(session, ResourceArgs::Camera(args)) }
+    }
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+}
+
+pub struct Renderer {
+    resource: Resource,
+}
+
+impl Renderer {
+    pub fn new(session: SessionPtr) -> Renderer {
+        let args = RendererArgs { dummy: 0 };
+        Renderer { resource: Resource::new(session, ResourceArgs::Renderer(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn set_camera(&self, camera: &Camera) {
+        self.resource.enqueue(cmd::set_camera(self.id(), camera.id()))
+    }
+}
+
+pub struct Layer {
+    resource: Resource,
+}
+
+impl Layer {
+    pub fn new(session: SessionPtr) -> Layer {
+        let args = LayerArgs { dummy: 0 };
+        Layer { resource: Resource::new(session, ResourceArgs::Layer(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn set_renderer(&self, renderer: &Renderer) {
+        self.resource.enqueue(cmd::set_renderer(self.id(), renderer.id()))
+    }
+
+    pub fn set_size(&self, x: f32, y: f32) {
+        self.resource.enqueue(cmd::set_size(self.id(), x, y))
+    }
+}
+
+pub struct LayerStack {
+    resource: Resource,
+}
+
+impl LayerStack {
+    pub fn new(session: SessionPtr) -> LayerStack {
+        let args = LayerStackArgs { dummy: 0 };
+        LayerStack { resource: Resource::new(session, ResourceArgs::LayerStack(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn add_layer(&self, layer: &Layer) {
+        self.resource.enqueue(cmd::add_layer(self.id(), layer.id()))
+    }
+
+    pub fn remove_layer(&self, layer: &Layer) {
+        self.resource.enqueue(cmd::remove_layer(self.id(), layer.id()))
+    }
+
+    pub fn remove_all_layers(&self) {
+        self.resource.enqueue(cmd::remove_all_layers(self.id()))
+    }
+}
+
+pub struct DisplayCompositor {
+    resource: Resource,
+}
+
+impl DisplayCompositor {
+    pub fn new(session: SessionPtr) -> DisplayCompositor {
+        let args = DisplayCompositorArgs { dummy: 0 };
+        DisplayCompositor {
+            resource: Resource::new(session, ResourceArgs::DisplayCompositor(args)),
+        }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn set_layer_stack(&self, layer_stack: &LayerStack) {
+        self.resource.enqueue(cmd::set_layer_stack(self.id(), layer_stack.id()))
+    }
+}
+
 pub struct View {
     resource: Resource,
 }
@@ -592,5 +794,233 @@ impl HostImageCycler {
         );
         self.content_node.set_shape(&rectangle);
         self.content_shape = Some(rectangle);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl::endpoints::create_proxy_and_stream, fidl_fuchsia_ui_gfx,
+        fidl_fuchsia_ui_scenic, fuchsia_async as fasync, futures::prelude::*,
+    };
+
+    /// Returns `true` if the received session command matches the test expectation.
+    ///
+    /// If the received request is not a SessionRequest::Enqueue, the function will return
+    /// `false`.
+    ///
+    /// Parameters:
+    /// - `request`: The request the test case received.
+    /// - `check_command`: The function which is applied to the received request.
+    ///
+    /// Returns:
+    /// `true` iff the request is enqueuing a command, and that command passes the provided
+    /// check.
+    fn verify_session_command<F>(
+        request: fidl_fuchsia_ui_scenic::SessionRequest,
+        check_command: F,
+    ) -> bool
+    where
+        F: Fn(&fidl_fuchsia_ui_gfx::Command) -> bool,
+    {
+        match request {
+            fidl_fuchsia_ui_scenic::SessionRequest::Enqueue { cmds, control_handle: _ } => {
+                let cmd = cmds.first();
+                match cmd {
+                    Some(fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command)) => {
+                        assert!(check_command(gfx_command));
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    /// Verifies that the session's next resource id is given to a newly created layer.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_resource_id() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        let layer_id = session.lock().next_resource_id();
+
+        let _ = Layer::new(session.clone());
+
+        fasync::spawn(async move {
+            let _ = session.lock().present(0).await;
+        });
+
+        if let Some(session_request) = session_server.try_next().await.unwrap() {
+            assert!(verify_session_command(session_request, |gfx_command| {
+                match gfx_command {
+                    fidl_fuchsia_ui_gfx::Command::CreateResource(create_command) => {
+                        // Verify that the layer that was created got the expected layer id.
+                        create_command.id == layer_id
+                    }
+                    _ => false,
+                }
+            }));
+        }
+    }
+
+    /// Tests that the appropriate resource type is created.
+    macro_rules! test_resource_creation {
+        (
+            session: $session:expr,
+            session_server: $session_server:expr,
+            resource_type: $resource_type:ident
+        ) => {
+            let _ = $resource_type::new($session.clone());
+
+            fasync::spawn(async move {
+                let _ = $session.lock().present(0).await;
+            });
+
+            while let Some(session_request) = $session_server.try_next().await.unwrap() {
+                let passed = verify_session_command(session_request, |gfx_command| {
+                    match gfx_command {
+                        fidl_fuchsia_ui_gfx::Command::CreateResource(create_command) => {
+                            // Verify that the resource that was created got the expected resource
+                            // id.
+                            match create_command.resource {
+                                fidl_fuchsia_ui_gfx::ResourceArgs::$resource_type(_resource) => {
+                                    true
+                                }
+                                _ => false,
+                            }
+                        }
+                        _ => false,
+                    }
+                });
+
+                if passed {
+                    break;
+                }
+            }
+        };
+    }
+
+    /// Verifies that a new resource is created for a layer.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_layer() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: Layer
+        );
+    }
+
+    /// Verifies that a new resource is created for a layer stack.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_layer_stack() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: LayerStack
+        );
+    }
+
+    /// Verifies that a new resource is created for a renderer.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_renderer() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: Renderer
+        );
+    }
+
+    /// Verifies that a new resource is created for a scene.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_scene() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: Scene
+        );
+    }
+
+    /// Verifies that a new resource is created for an ambient light.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_ambient() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: AmbientLight
+        );
+    }
+
+    /// Verifies that a new resource is created for a directional light.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_directional() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: DirectionalLight
+        );
+    }
+
+    /// Verifies that a new resource is created for a point light.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_point() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: PointLight
+        );
+    }
+
+    /// Verifies that a new resource is created for a display compositor.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_display_compositor() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        test_resource_creation!(
+            session: session,
+            session_server: session_server,
+            resource_type: DisplayCompositor
+        );
     }
 }
