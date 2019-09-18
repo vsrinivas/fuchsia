@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use carnelian::{
     App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     ViewKey, ViewMode,

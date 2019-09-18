@@ -4,8 +4,6 @@
 
 //! Helper library for integration testing netdump.
 
-#![feature(async_await)]
-
 use {
     failure::{format_err, Error},
     fdio::{self, WatchEvent},

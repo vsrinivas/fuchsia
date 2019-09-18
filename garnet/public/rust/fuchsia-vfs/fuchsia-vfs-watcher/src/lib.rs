@@ -4,7 +4,6 @@
 
 //! Stream-based Fuchsia VFS directory watcher
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 use fuchsia_async as fasync;

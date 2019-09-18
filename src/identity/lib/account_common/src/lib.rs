@@ -4,7 +4,6 @@
 
 //! Types that are shared across more than one Account Management crate.
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 extern crate serde;
 

@@ -405,7 +405,7 @@ template("rustc_artifact") {
 
   # The set of unstable features permitted as per
   # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
-  unstable_rust_features = [ "async_await" ]
+  unstable_rust_features = []
 
   # Specifically enable specialization for use in netstack3.
   # This flag is not allowed to be introduced in new code.

@@ -7,7 +7,6 @@
 //! with the Fuchsia account.
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod account;
 mod account_handler;

@@ -7,6 +7,5 @@
 
 #![cfg(test)]
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod account;

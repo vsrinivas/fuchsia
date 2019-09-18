@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_device_manager::*,

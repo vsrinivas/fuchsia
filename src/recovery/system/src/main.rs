@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use carnelian::{
     measure_text, Canvas, Color, FontDescription, FontFace, IntSize, MappingPixelSink, Paint,
     PixelSink, Point, Rect, Size,

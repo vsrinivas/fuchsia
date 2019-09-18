@@ -5,7 +5,6 @@
 //! Unit tests for fuchsia-component that exercise only the public API.
 
 #![cfg(test)]
-#![feature(async_await)]
 
 use {
     failure::Error,

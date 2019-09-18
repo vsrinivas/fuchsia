@@ -10,7 +10,6 @@
 //! [Rust](https://www.rust-lang.org/).
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod app;
 mod canvas;

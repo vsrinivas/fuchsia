@@ -5,7 +5,6 @@
 //! A helper to create files backed by in process callbacks.  For example to expose component
 //! configuration, debug information or statistics.
 
-#![feature(async_await)]
 #![recursion_limit = "1024"]
 
 use proc_macro_hack::proc_macro_hack;

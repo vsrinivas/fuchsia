@@ -4,7 +4,6 @@
 //! run `fx shell mediasession_cli_tool ls` and then start some of these players
 //! with `fx shell run example_player` to see how it works.
 
-#![feature(async_await)]
 #![recursion_limit = "256"]
 
 use failure::{Error, ResultExt};

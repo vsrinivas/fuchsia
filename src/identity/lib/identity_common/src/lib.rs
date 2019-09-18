@@ -4,7 +4,6 @@
 
 //! Types that are shared across more than one crate in the Fuchsia identity stack.
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 // Async task management.
 mod task_group;

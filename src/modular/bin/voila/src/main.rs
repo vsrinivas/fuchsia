@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use carnelian::{
     set_node_color, App, AppAssistant, Color, Message, Point, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey,

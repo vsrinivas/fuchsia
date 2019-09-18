@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 /// Rust Puppet, receiving commands to drive the Rust Inspect library.
 ///
 /// This code doesn't check for illegal commands such as deleting a node

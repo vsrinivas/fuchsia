@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-#![feature(async_await)]
 
 use {
     failure::Error,

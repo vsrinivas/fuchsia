@@ -14,7 +14,6 @@
 //! `token_manager_factory` may be downscoped to only handle tokens that are independent of user.
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod auth_provider_supplier;
 mod token_manager_factory;

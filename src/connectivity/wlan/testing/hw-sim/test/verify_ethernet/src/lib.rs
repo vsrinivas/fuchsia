@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use {fuchsia_zircon::DurationNum, wlan_hw_sim::*};
 
 /// Test ethernet device is created successfully by verifying a ethernet client with specified

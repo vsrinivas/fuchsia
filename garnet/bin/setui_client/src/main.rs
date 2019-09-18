@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 use {
     failure::Error, fuchsia_async as fasync, fuchsia_syslog as syslog, setui_client_lib::*,
     structopt::StructOpt,

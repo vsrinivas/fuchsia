@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use failure::{bail, format_err, Error};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;

@@ -74,23 +74,8 @@ The current list of reviewers is as follows:
 
 ## Currently Used Features
 
-This list includes all of the unstable features currently used in Fuchsia.
-
-* `async_await` and `await_macro`
-    * Summary: These two features enable the syntactic transformation from code that looks like
-      `move async { await!(x); await!(y), await!(z); }` into an anonymous
-      `enum State { First(X, Y, Z), Second(Y, Z), Third(Z), Done }` that implements the `Future`
-      trait. This also makes it possible to await non-’static futures by internally creating a
-      self-referential generator, allowing for significantly more performant, idiomatic, readable,
-      and writable code than the current futures combinators.
-    * Use in Fuchsia: These features will be used in fuchsia-async and in applications which make
-      use of the async/await feature in order to achieve more performant, ergonomic, and idiomatic
-      async code.
-    * Remaining before stabilization: Apart from being dependent on all the other features, there
-      are no major additional stability risks (read: no major unresolved design decisions)
-      introduced by these features. There are changes planned to the implementation, but they’re
-      mostly polish, performance optimizations, and a few scattered bugfixes.
-    * Owner: cramertj@
+There are no longer any unstable features used in Fuchsia! The last one was
+`async_await`, which was stabilized in 2019 Q3.
 
 [the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776

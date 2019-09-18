@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;

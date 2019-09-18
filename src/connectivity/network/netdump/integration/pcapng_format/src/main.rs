@@ -5,8 +5,6 @@
 //! Tests for netdump's PCAPNG output format.
 //! These tests are not intended for verifying PCAPNG formats in general, only that used by netdump.
 
-#![feature(async_await)]
-
 use {
     failure::{format_err, Error},
     fuchsia_async as fasync,

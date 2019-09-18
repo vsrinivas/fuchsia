@@ -4,8 +4,6 @@
 
 //! qmi-snoop is used for snooping Qmi messages sent/received by transport driver
 
-#![feature(async_await)]
-
 use {
     failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,

@@ -5,8 +5,6 @@
 //! Triggers a forced fdr by comparing the configured
 //! index against the stored index
 
-#![feature(async_await)]
-
 use {
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy},

@@ -7,7 +7,6 @@
 //! for and issue tokens for Google accounts.
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod auth_provider;
 mod auth_provider_factory;

@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
-// Explicitly added due to conflict using custom_attribute and async_await above.
-#[macro_use]
-extern crate serde_derive;
-
 mod opts;
 
 use crate::opts::Opt;
@@ -20,6 +14,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
+use serde_derive::Serialize;
 use std::collections::HashMap;
 use std::process;
 use structopt::StructOpt;

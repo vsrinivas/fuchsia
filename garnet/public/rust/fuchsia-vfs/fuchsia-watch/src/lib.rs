@@ -7,7 +7,6 @@
 //! This module provides a higher-level asyncronous directory watcher that supports recursive
 //! watching.
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 use {

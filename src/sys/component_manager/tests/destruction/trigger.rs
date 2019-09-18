@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 /// This program hosts the `Trigger` service, which starts the component and hangs.
 use {
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,

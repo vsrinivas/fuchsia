@@ -4,7 +4,6 @@
 
 //! The network manager allows clients to manage router device properties.
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 

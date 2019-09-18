@@ -14,8 +14,6 @@
 //!
 //! TODO: Figure out a better way to run these tests.
 
-#![feature(async_await)]
-
 use {
     failure::{err_msg, format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,

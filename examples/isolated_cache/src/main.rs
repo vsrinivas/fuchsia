@@ -7,8 +7,6 @@
 //! an integration test for appmgr, as the example and test are identical. Take care when changing
 //! this file to not accidentally reduce test coverage of appmgr.
 
-#![feature(async_await)]
-
 use std::{fs, io};
 
 const FILE_PATH: &str = "/cache/example_file";

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 // NOTE: The comments that have [START/END ...] in them are used to identify code snippets that
 // appear in the documentation.  Please be aware that changes in these blocks will affect the
 // documentation on fuchsia.dev.

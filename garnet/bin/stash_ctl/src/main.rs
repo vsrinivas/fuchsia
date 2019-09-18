@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use failure::{err_msg, Error, ResultExt};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_mem;

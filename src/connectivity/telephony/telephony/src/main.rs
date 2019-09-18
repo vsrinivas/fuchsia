@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! System service for managing cellular modems
-#![feature(async_await)]
 
 use {
     failure::{Error, Fail, ResultExt},

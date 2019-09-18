@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
 use fuchsia_async as fasync;
 use fuchsia_async_testloop::{async_test_subloop_t, new_subloop};
 use libc::c_int;

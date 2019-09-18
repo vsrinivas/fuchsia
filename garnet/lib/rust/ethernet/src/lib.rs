@@ -4,7 +4,6 @@
 
 //! Fuchsia Ethernet client
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 use bitflags::bitflags;

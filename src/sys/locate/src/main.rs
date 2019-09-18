@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use failure::{err_msg, format_err, Error, ResultExt};
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, FuzzySearchError};
 use fuchsia_async as fasync;

@@ -4,7 +4,6 @@
 
 //! Rust fuchsia logger library.
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 use failure::{Error, ResultExt};

@@ -61,7 +61,6 @@
 // alternative front-end for that, similar to our C++ ProcessBuilder library, though that pulls in
 // a dependency on fdio).
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 pub use self::elf_load::ElfLoadError;

@@ -12,8 +12,6 @@
 //! Ex: ril-ctl -d /dev/class/qmi-usb-transport/000
 //!
 
-#![feature(async_await)]
-
 use {
     crate::commands::{Cmd, ReplControl},
     failure::{format_err, Error, ResultExt},

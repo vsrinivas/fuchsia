@@ -4,7 +4,6 @@
 
 //! This is for Omaha client binaries written in Rust.
 
-#![feature(async_await)]
 #![recursion_limit = "128"]
 
 pub mod clock;

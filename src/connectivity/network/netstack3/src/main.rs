@@ -4,7 +4,6 @@
 
 //! A networking stack.
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 

@@ -11,7 +11,6 @@
 //! system and is intended only for use by the most trusted parts of the system.
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 
 mod account_event_emitter;
 mod account_handler_connection;

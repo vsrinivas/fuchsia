@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await)]
-
 use failure::Error;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_net_oldhttp as oldhttp;

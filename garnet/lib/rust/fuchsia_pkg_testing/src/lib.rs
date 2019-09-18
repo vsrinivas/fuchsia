@@ -4,7 +4,6 @@
 
 //! Test tools for building Fuchsia packages and TUF repositories.
 
-#![feature(async_await)]
 #![deny(missing_docs)]
 
 mod package;

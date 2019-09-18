@@ -14,7 +14,6 @@
 //! ```
 
 #![deny(missing_docs)]
-#![feature(async_await)]
 #![feature()]
 
 #[allow(bad_style)]

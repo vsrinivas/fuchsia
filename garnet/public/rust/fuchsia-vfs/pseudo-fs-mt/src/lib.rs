@@ -5,7 +5,6 @@
 //! A library to create "pseudo" file systems.  These file systems are backed by in process
 //! callbacks.  Examples are: component configuration, debug information or statistics.
 
-#![feature(async_await)]
 #![recursion_limit = "1024"]
 
 use proc_macro_hack::proc_macro_hack;
