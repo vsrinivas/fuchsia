@@ -16,7 +16,7 @@ namespace intel_hda {
 
 class IntelDspStream : public codecs::IntelHDAStreamBase {
  public:
-  IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline,
+  IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline, fbl::String name,
                  const audio_stream_unique_id_t* unique_id = nullptr);
 
   // Overloaded
@@ -61,6 +61,9 @@ class IntelDspStream : public codecs::IntelHDAStreamBase {
 
   zx_status_t ProcessClientRbRequest(dispatcher::Channel* channel);
   void ProcessClientRbDeactivate(const dispatcher::Channel* channel);
+
+  // Device name, exposed to the user.
+  const fbl::String name_;
 
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};

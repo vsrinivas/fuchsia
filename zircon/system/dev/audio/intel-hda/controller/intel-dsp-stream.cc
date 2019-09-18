@@ -17,8 +17,8 @@ namespace audio {
 namespace intel_hda {
 
 IntelDspStream::IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline,
-                               const audio_stream_unique_id_t* unique_id)
-    : IntelHDAStreamBase(id, is_input), pipeline_(pipeline) {
+                               fbl::String name, const audio_stream_unique_id_t* unique_id)
+    : IntelHDAStreamBase(id, is_input), name_(std::move(name)), pipeline_(pipeline) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", is_input ? 'I' : 'O', id);
 
   if (unique_id) {
@@ -370,7 +370,7 @@ void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     case AUDIO_STREAM_STR_ID_PRODUCT:
-      requested_string = is_input() ? "Builtin Microphone" : "Builtin Speakers";
+      requested_string = name_.c_str();
       break;
 
     default:

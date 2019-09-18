@@ -49,20 +49,32 @@ TEST(PixelbookEveAudio, Topology) {
 
   // Expect a single input, output, and controller.
   ASSERT_EQ(devices.inputs.size(), 1);
-  ASSERT_EQ(devices.outputs.size(), 1);
+  ASSERT_EQ(devices.outputs.size(), 2);
   ASSERT_EQ(devices.controllers.size(), 1);
 
   // Ensure we have a microphone.
-  fbl::unique_ptr<AudioInput> input = AudioInput::Create(devices.inputs.at(0).c_str());
-  ASSERT_OK(input->Open());
-  ASSERT_NOT_NULL(input.get());
-  ASSERT_EQ(GetDeviceName(input.get()), "Builtin Microphone");
+  {
+    fbl::unique_ptr<AudioInput> input = AudioInput::Create(devices.inputs.at(0).c_str());
+    ASSERT_OK(input->Open());
+    ASSERT_NOT_NULL(input.get());
+    ASSERT_EQ(GetDeviceName(input.get()), "Builtin Microphone");
+  }
 
   // Ensure we have speakers.
-  fbl::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(0).c_str());
-  ASSERT_OK(output->Open());
-  ASSERT_NOT_NULL(output.get());
-  ASSERT_EQ(GetDeviceName(output.get()), "Builtin Speakers");
+  {
+    fbl::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(0).c_str());
+    ASSERT_OK(output->Open());
+    ASSERT_NOT_NULL(output.get());
+    ASSERT_EQ(GetDeviceName(output.get()), "Builtin Speakers");
+  }
+
+  // Ensure we have headphone output.
+  {
+    fbl::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(1).c_str());
+    ASSERT_OK(output->Open());
+    ASSERT_NOT_NULL(output.get());
+    ASSERT_EQ(GetDeviceName(output.get()), "Builtin Headphone Jack");
+  }
 }
 
 }  // namespace
