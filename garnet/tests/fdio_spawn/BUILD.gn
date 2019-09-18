@@ -8,10 +8,13 @@ import("//build/testing/environments.gni")
 executable("bin") {
   testonly = true
   output_name = "fdio_spawn_tests"
+  visibility = [ ":*" ]
 
   sources = [
+    "fake_launcher_util.h",
     "resolve_test.cc",
     "shebang_test.cc",
+    "spawn_test.cc",
     "util.cc",
     "util.h",
   ]
@@ -19,6 +22,35 @@ executable("bin") {
   deps = [
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
+executable("spawn_child_util") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "spawn_child_util.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
+executable("fake_launcher_util") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "fake_launcher_util.cc",
+    "fake_launcher_util.h",
+  ]
+  deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -40,7 +72,7 @@ executable("return_arg_test_util") {
 # TODO(bryanhenry): This is a copy from //src/sys/dash. Ideally we wouldn't need to copy this target
 # around to include bin/sh in packages, but get_target_outputs seems to only work on targets in the
 # current file. See if there's a way to improve this.
-zircon_extras_manifest("dash-bin-manifest") {
+zircon_extras_manifest("dash_bin_manifest") {
   visibility = [ ":*" ]
   manifest = "image"
   patterns = [ "bin/sh" ]
@@ -49,16 +81,24 @@ zircon_extras_manifest("dash-bin-manifest") {
 test_package("fdio_spawn_tests") {
   deps = [
     ":bin",
-    ":dash-bin-manifest",
+    ":dash_bin_manifest",
+    ":fake_launcher_util",
     ":return_arg_test_util",
+    ":spawn_child_util",
   ]
 
   # This includes bin/sh in the package
-  extra = get_target_outputs(":dash-bin-manifest")
+  extra = get_target_outputs(":dash_bin_manifest")
 
   binaries = [
     {
+      name = "fake_launcher_util"
+    },
+    {
       name = "return_arg_test_util"
+    },
+    {
+      name = "spawn_child_util"
     },
 
     # These 'binaries' (really just text files with either a "#!resolve" or "#!" directive) are

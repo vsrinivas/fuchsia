@@ -94,11 +94,8 @@ static bool do_stat(const char* path) {
 
 int do_spawn(int argc, char** argv) {
   zx::handle subprocess;
-  zx_status_t status = fdio_spawn(
-    ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-    argv[0], argv,
-    subprocess.reset_and_get_address()
-  );
+  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
+                                  subprocess.reset_and_get_address());
   if (status != ZX_OK)
     return status;
 
