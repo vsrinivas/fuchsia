@@ -6,16 +6,19 @@ group("test") {
   testonly = true
   deps = [
     ":intel-hda-test",
+    ":pixelbook-eve-test",
   ]
 }
 
-test("intel-hda-test") {
+source_set("test_libs") {
+  visibility = [ ":*" ]
   sources = [
+    "audio_test_tools.cc",
+    "audio_test_tools.h",
     "board_name.cc",
     "board_name.h",
-    "intel_hda_test.cc",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/audio-proto-utils",
@@ -27,5 +30,23 @@ test("intel-hda-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("intel-hda-test") {
+  sources = [
+    "intel_hda_test.cc",
+  ]
+  deps = [
+    ":test_libs",
+  ]
+}
+
+test("pixelbook-eve-test") {
+  sources = [
+    "pixelbook_eve_test.cc",
+  ]
+  deps = [
+    ":test_libs",
   ]
 }
