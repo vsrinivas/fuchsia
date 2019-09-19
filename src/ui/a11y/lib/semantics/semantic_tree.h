@@ -76,16 +76,6 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // and delete calls that conform to these limits. The commit function must
   // always be called at the end of a full update push to signal the end of
   // an update.
-  // |fuchsia::accessibility::semantics::SemanticsTree|
-  void Commit() override {}
-
-  // Semantic Tree for a particular view. Each client is responsible for
-  // maintaining the state of their tree. Nodes can be added, updated or
-  // deleted. Because the size of an update may exceed FIDL transfer limits,
-  // clients are responsible for breaking up changes into multiple update
-  // and delete calls that conform to these limits. The commit function must
-  // always be called at the end of a full update push to signal the end of
-  // an update.
   // Updates/Deletes are processed in the order in which they are recieved. If the committed updates
   // result in an ill formed tree(for example a missing root node or a cycle) then semantic manager
   // will close the connection.

@@ -28,13 +28,6 @@ const uint64 MAX_LABEL_SIZE = 16384;
 /// channel, delete any associated data and rely on the client to re-register.
 [Discoverable]
 protocol SemanticsManager {
-    // TODO(MI4-2636): This should be removed after clients move to RegisterViewForSemantics.
-    [Transitional]
-    RegisterView(fuchsia.ui.views.ViewRef view_ref,
-                 SemanticActionListener listener,
-                 request<SemanticTree> semantic_tree_request);
-
-    [Transitional]
     RegisterViewForSemantics(fuchsia.ui.views.ViewRef view_ref,
                              SemanticListener listener,
                              request<SemanticTree> semantic_tree_request);
@@ -64,16 +57,9 @@ protocol SemanticTree {
     DeleteSemanticNodes(vector<uint32>:MAX_NODES_PER_UPDATE node_ids);
 
     /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
-    /// DeleteSemanticNodes. Commits are processed in the order in which they are sent.
-    /// TODO(MI4-2636): This should be removed after clients move to CommitUpdates().
-    [Transitional]
-    Commit();
-
-    /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
     /// DeleteSemanticNodes. Updates are processed in the order in which they are received. If the
     /// committed updates result in an ill-formed tree (for example a missing root node or a cycle)
     /// the semantic manager will close the channel.
-    [Transitional]
     CommitUpdates() -> ();
 };
 
@@ -87,20 +73,6 @@ table Hit {
 
     /// The ordered list of node ids which represent path from root node to the hit node.
     2: vector<uint32>:MAX_TREE_DEPTH path_from_root;
-};
-
-/// A semantic provider is the client-side interface that the manager can use to
-/// ask clients to perform accessibility actions.
-// TODO(MI4-2636): This should be removed after clients move to SemanticListener.
-protocol SemanticActionListener {
-    /// Asks the semantics provider to perform an accessibility action on the
-    /// node with node id in the front-end.
-    [Transitional]
-    OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
-
-    /// Asks the semantics provider to perform hit testing and return the result.
-    [Transitional]
-    HitTest(fuchsia.math.PointF local_point) -> (Hit result);
 };
 
 /// A semantic provider is the client-side interface that the manager can use to enable or disable

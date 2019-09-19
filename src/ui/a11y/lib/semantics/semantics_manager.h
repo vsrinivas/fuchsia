@@ -48,13 +48,6 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
  private:
-  // |fuchsia::accessibility::semantics::SemanticsManager|:
-  void RegisterView(
-      fuchsia::ui::views::ViewRef view_ref,
-      fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree)
-      override {}
-
   // |fushsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
