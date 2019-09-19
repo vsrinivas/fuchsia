@@ -28,7 +28,6 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   using CommitErrorCallback = fit::function<void(zx_koid_t)>;
 
   SemanticTree(fuchsia::ui::views::ViewRef view_ref,
-               fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
                fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
                vfs::PseudoDir* debug_dir, CommitErrorCallback callback);
 
@@ -40,10 +39,10 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
 
   // Asks the semantics provider to perform an accessibility action on the
   // node with node id in the front-end.
-  void OnAccessibilityActionRequested(uint32_t node_id,
-                                      fuchsia::accessibility::semantics::Action action,
-                                      fuchsia::accessibility::semantics::SemanticActionListener::
-                                          OnAccessibilityActionRequestedCallback callback);
+  void OnAccessibilityActionRequested(
+      uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+          callback);
 
   // Compares a view with the current view of the semantic tree, based on KOID.
   bool IsSameView(const fuchsia::ui::views::ViewRef& view_ref);
@@ -55,7 +54,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // point.
   void PerformHitTesting(
       ::fuchsia::math::PointF local_point,
-      fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback);
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
   // Calls OnSemanticsModeChanged() to notify semantic provider whether Semantics Manager is enabled
   // or not.
@@ -78,7 +77,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // always be called at the end of a full update push to signal the end of
   // an update.
   // |fuchsia::accessibility::semantics::SemanticsTree|
-  void Commit() override;
+  void Commit() override {}
 
   // Semantic Tree for a particular view. Each client is responsible for
   // maintaining the state of their tree. Nodes can be added, updated or
@@ -147,7 +146,6 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   CommitErrorCallback commit_error_callback_;
 
   fuchsia::ui::views::ViewRef view_ref_;
-  fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
   vfs::PseudoDir* const debug_dir_;
   bool semantics_manager_enabled_ = false;

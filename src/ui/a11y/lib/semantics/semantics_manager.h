@@ -45,7 +45,7 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   // If no view matches given koid, then this function doesn't use callback.
   void PerformHitTesting(
       zx_koid_t koid, ::fuchsia::math::PointF local_point,
-      fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback);
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
@@ -53,9 +53,9 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree)
-      override;
+      override {}
 
-  // |fuchsia::accessibility::semantics::SemanticsManager|:
+  // |fushsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
@@ -65,7 +65,6 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   // Helper function for semantic registration.
   void CompleteSemanticRegistration(
       fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener,
       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
           semantic_tree_request);

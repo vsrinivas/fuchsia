@@ -121,7 +121,7 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_provider_.Commit();
+  semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.

@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_action_listener.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 
 namespace accessibility_test {
 
@@ -32,21 +32,29 @@ class MockSemanticProvider {
   // Calls DeleteSemanticNodes() on SemanticTree with given nodes list.
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids);
 
-  // Calls Commit() on SemanticTree.
-  void Commit();
+  // Calls Commit() Updates.
+  void CommitUpdates();
 
-  // Sets hit_test_result in MockSemanticActionListener.
+  // Sets hit_test_result in MockSemanticListener.
   void SetHitTestResult(uint32_t hit_test_result);
 
+  // Returns Commit Failed status.
+  bool CommitFailedStatus() { return commit_failed_; };
+
+  // Returns Semantics Enabled field from Semantic Listener.
+  bool GetSemanticsEnabled();
+
  private:
-  fuchsia::ui::views::ViewRef view_ref_;
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
 
-  MockSemanticActionListener action_listener_;
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener>
-      action_listener_bindings_;
+  // ViewRef of the Semantic Tree.
+  fuchsia::ui::views::ViewRef view_ref_;
+
+  bool commit_failed_;
+  MockSemanticListener semantic_listener_;
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticListener> semantic_listener_bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticProvider);
 };
 

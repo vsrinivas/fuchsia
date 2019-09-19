@@ -24,14 +24,11 @@ constexpr int kRootNode = 0;
 
 }  // namespace
 
-SemanticTree::SemanticTree(
-    fuchsia::ui::views::ViewRef view_ref,
-    fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
-    fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir, CommitErrorCallback commit_error_callback)
+SemanticTree::SemanticTree(fuchsia::ui::views::ViewRef view_ref,
+                           fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+                           vfs::PseudoDir* debug_dir, CommitErrorCallback commit_error_callback)
     : commit_error_callback_(std::move(commit_error_callback)),
       view_ref_(std::move(view_ref)),
-      client_action_listener_(std::move(client_action_listener)),
       semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir) {
   InitializeDebugEntry();
@@ -41,9 +38,9 @@ SemanticTree::~SemanticTree() = default;
 
 void SemanticTree::OnAccessibilityActionRequested(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
-    fuchsia::accessibility::semantics::SemanticActionListener::
-        OnAccessibilityActionRequestedCallback callback) {
-  client_action_listener_->OnAccessibilityActionRequested(node_id, action, std::move(callback));
+    fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+        callback) {
+  semantic_listener_->OnAccessibilityActionRequested(node_id, action, std::move(callback));
 }
 
 // Internal helper function to check if a point is within a bounding box.
@@ -68,8 +65,6 @@ bool SemanticTree::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
 }
 
 bool SemanticTree::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(view_ref_); }
-
-void SemanticTree::Commit() { ApplyCommit(); }
 
 void SemanticTree::CommitUpdates(CommitUpdatesCallback callback) {
   if (!ApplyCommit()) {
@@ -323,8 +318,8 @@ void SemanticTree::InitializeDebugEntry() {
 
 void SemanticTree::PerformHitTesting(
     ::fuchsia::math::PointF local_point,
-    fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback) {
-  client_action_listener_->HitTest(local_point, std::move(callback));
+    fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+  semantic_listener_->HitTest(local_point, std::move(callback));
 }
 
 void SemanticTree::EnableSemanticsUpdates(bool enabled) {

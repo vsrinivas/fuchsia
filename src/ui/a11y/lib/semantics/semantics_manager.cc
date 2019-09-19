@@ -20,28 +20,6 @@ SemanticsManager::SemanticsManager(sys::ComponentContext* startup_context)
 
 SemanticsManager::~SemanticsManager() = default;
 
-void SemanticsManager::RegisterView(
-    fuchsia::ui::views::ViewRef view_ref,
-    fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
-    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
-  // Clients should register every view that gets created irrespective of the
-  // state(enabled/disabled) of screen reader.
-  // When ViewRef is no longer valid, then all the holders of ViewRef will get a signal, and
-  // Semantics Manager should then delete the binding for that ViewRef.
-
-  fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener = handle.Bind();
-  // TODO(MI4-1736): Log View information in below error handler, once ViewRef
-  // support is added.
-  action_listener.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Semantic Provider disconnected with status: "
-                   << zx_status_get_string(status);
-  });
-  fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener;
-
-  CompleteSemanticRegistration(std::move(view_ref), std::move(action_listener),
-                               std::move(semantic_listener), std::move(semantic_tree_request));
-}
-
 void SemanticsManager::RegisterViewForSemantics(
     fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
@@ -57,22 +35,18 @@ void SemanticsManager::RegisterViewForSemantics(
     FX_LOGS(ERROR) << "Semantic Provider disconnected with status: "
                    << zx_status_get_string(status);
   });
-  // Semantic Action Listener will be deleted in subsequent cl's.
-  fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener;
 
-  CompleteSemanticRegistration(std::move(view_ref), std::move(action_listener),
-                               std::move(semantic_listener), std::move(semantic_tree_request));
+  CompleteSemanticRegistration(std::move(view_ref), std::move(semantic_listener),
+                               std::move(semantic_tree_request));
 }
 
 void SemanticsManager::CompleteSemanticRegistration(
     fuchsia::ui::views::ViewRef view_ref,
-    fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener,
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
   auto semantic_tree = std::make_unique<SemanticTree>(
-      std::move(view_ref), std::move(action_listener), std::move(semantic_listener), debug_dir_,
+      std::move(view_ref), std::move(semantic_listener), debug_dir_,
       /*commit_error_callback=*/[this](zx_koid_t koid) { CloseChannel(koid); });
-
   // As part of the registration, client should get notified about the current Semantics Manager
   // enable settings.
   semantic_tree->EnableSemanticsUpdates(semantics_enabled_);
@@ -108,7 +82,7 @@ void SemanticsManager::SetSemanticsManagerEnabled(bool enabled) {
 
 void SemanticsManager::PerformHitTesting(
     zx_koid_t koid, ::fuchsia::math::PointF local_point,
-    fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback) {
+    fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->IsSameKoid(koid)) {
       return binding->impl()->PerformHitTesting(local_point, std::move(callback));

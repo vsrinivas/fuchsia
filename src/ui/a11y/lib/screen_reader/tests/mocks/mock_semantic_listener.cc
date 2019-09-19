@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_semantic_listener.h"
 
 #include <lib/syslog/cpp/logger.h>
-
 namespace accessibility_test {
 
-MockSemanticListener::MockSemanticListener(sys::testing::ComponentContextProvider* context_provider,
+MockSemanticListener::MockSemanticListener(sys::ComponentContext* context,
                                            fuchsia::ui::views::ViewRef view_ref)
-    : context_provider_(context_provider), view_ref_(std::move(view_ref)) {
-  context_provider_->ConnectToPublicService(manager_.NewRequest());
+    : context_(context), view_ref_(std::move(view_ref)) {
+  context_->svc()->Connect(manager_.NewRequest());
   manager_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Cannot connect to SemanticsManager with status:" << status;
   });
@@ -31,6 +30,12 @@ void MockSemanticListener::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
 
 void MockSemanticListener::CommitUpdates() {
   tree_ptr_->CommitUpdates([]() {});
+}
+
+void MockSemanticListener::HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) {
+  Hit hit;
+  hit_test_result_.Clone(&hit);
+  callback(std::move(hit));
 }
 
 }  // namespace accessibility_test

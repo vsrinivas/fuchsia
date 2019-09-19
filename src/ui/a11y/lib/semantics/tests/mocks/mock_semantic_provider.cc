@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/logger.h>
 
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+
 namespace accessibility_test {
 
 namespace {
@@ -28,8 +30,10 @@ fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
 MockSemanticProvider::MockSemanticProvider(
     fuchsia::accessibility::semantics::SemanticsManager* manager)
     : view_ref_(CreateOrphanViewRef()) {
-  manager->RegisterView(Clone(view_ref_), action_listener_bindings_.AddBinding(&action_listener_),
-                        tree_ptr_.NewRequest());
+  manager->RegisterViewForSemantics(Clone(view_ref_),
+                                    semantic_listener_bindings_.AddBinding(&semantic_listener_),
+                                    tree_ptr_.NewRequest());
+  commit_failed_ = false;
 }
 
 void MockSemanticProvider::UpdateSemanticNodes(
@@ -41,10 +45,16 @@ void MockSemanticProvider::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
   tree_ptr_->DeleteSemanticNodes(std::move(node_ids));
 }
 
-void MockSemanticProvider::Commit() { tree_ptr_->Commit(); }
+void MockSemanticProvider::CommitUpdates() {
+  tree_ptr_->CommitUpdates([this]() { commit_failed_ = true; });
+}
 
 void MockSemanticProvider::SetHitTestResult(uint32_t hit_test_result) {
-  action_listener_.SetHitTestResult(hit_test_result);
+  semantic_listener_.SetHitTestResult(hit_test_result);
+}
+
+bool MockSemanticProvider::GetSemanticsEnabled() {
+  return semantic_listener_.GetSemanticsEnabled();
 }
 
 }  // namespace accessibility_test

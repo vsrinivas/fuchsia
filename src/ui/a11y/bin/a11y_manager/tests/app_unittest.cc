@@ -103,7 +103,7 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_listener.Commit();
+  semantic_listener.CommitUpdates();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
