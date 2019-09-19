@@ -152,6 +152,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
 void LogicalBufferCollection::CreateBufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> self, uint32_t rights_attenuation_mask,
     zx::channel buffer_collection_token_request) {
+  ZX_DEBUG_ASSERT(buffer_collection_token_request.get());
   auto token = BufferCollectionToken::Create(parent_device_, self, rights_attenuation_mask);
   token->SetErrorHandler([this, token_ptr = token.get()](zx_status_t status) {
     // Clean close from FIDL channel point of view is ZX_ERR_PEER_CLOSED,
@@ -205,13 +206,13 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
       token_views_.erase(token_ptr);
       MaybeAllocate();
       // ~self may delete "this"
+    } else {
+      // At this point we know that this was a BindSharedCollection().  We
+      // need to convert the BufferCollectionToken into a BufferCollection.
+      //
+      // ~token_ptr during this call
+      BindSharedCollectionInternal(token_ptr, std::move(buffer_collection_request));
     }
-
-    // At this point we know that this was a BindSharedCollection().  We
-    // need to convert the BufferCollectionToken into a BufferCollection.
-    //
-    // ~token_ptr during this call
-    BindSharedCollectionInternal(token_ptr, std::move(buffer_collection_request));
   });
   auto token_ptr = token.get();
   token_views_.insert({token_ptr, std::move(token)});
@@ -453,6 +454,7 @@ void LogicalBufferCollection::SendAllocationResult() {
 
 void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken* token,
                                                            zx::channel buffer_collection_request) {
+  ZX_DEBUG_ASSERT(buffer_collection_request.get());
   auto self = token->parent_shared();
   ZX_DEBUG_ASSERT(self.get() == this);
   auto collection = BufferCollection::Create(self);

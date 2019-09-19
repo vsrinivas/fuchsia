@@ -1303,9 +1303,10 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
     if (zx::clock::get_monotonic() > deadline_time) {
       // Otherwise, we'd potentially trigger the test watchdog.  So far we've only seen this happen
       // in QEMU environments.
-      printf("\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
-             "total_bytes_allocated so far: %zu\n",
-             total_bytes_allocated);
+      printf(
+          "\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
+          "total_bytes_allocated so far: %zu\n",
+          total_bytes_allocated);
       END_TEST;
       ZX_PANIC("unreachable\n");
     }
@@ -1753,6 +1754,44 @@ extern "C" bool test_sysmem_pixel_format_bgr24(void) {
   END_TEST;
 }
 
+// Test that closing a token handle that's had Close() called on it doesn't crash sysmem.
+extern "C" bool test_sysmem_close_token(void) {
+  BEGIN_TEST;
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token2_client;
+  zx::channel token2_server;
+  status = zx::channel::create(0, &token2_client, &token2_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                          token2_server.release()),
+            ZX_OK, "");
+
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenSync(token_client.get()), ZX_OK, "");
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenClose(token_client.get()), ZX_OK, "");
+  token_client.reset();
+
+  // Try to ensure sysmem processes the token closure before the sync.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+
+  EXPECT_EQ(fuchsia_sysmem_BufferCollectionTokenSync(token2_client.get()), ZX_OK, "");
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -1775,5 +1814,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
     RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)
     RUN_TEST(test_sysmem_pixel_format_bgr24)
+    RUN_TEST(test_sysmem_close_token)
 END_TEST_CASE(sysmem_tests)
 // clang-format on
