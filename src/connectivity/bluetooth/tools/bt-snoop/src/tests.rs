@@ -71,6 +71,43 @@ fn unwrap_response<T, E>(response: Poll<Result<T, E>>) -> T {
 }
 
 #[test]
+fn test_snoop_default_command_line_args() {
+    let args = Args::from_args(&["bt-snoop.cmx"], &[]).expect("Args created from empty args");
+    assert_eq!(args.log_size_kib, 256);
+    assert_eq!(args.log_time_seconds, 60);
+    assert_eq!(args.max_device_count, 8);
+    assert_eq!(args.truncate_payload, None);
+    assert_eq!(args.verbosity, 0);
+}
+
+#[test]
+fn test_snoop_command_line_args() {
+    let log_size_kib = 1;
+    let log_time_seconds = 2;
+    let max_device_count = 3;
+    let truncate_payload = 4;
+    let verbosity = 2;
+    let raw_args = &[
+        "--log-size-kib",
+        &log_size_kib.to_string(),
+        "--log-time-seconds",
+        &log_time_seconds.to_string(),
+        "--max-device-count",
+        &max_device_count.to_string(),
+        "--truncate-payload",
+        &truncate_payload.to_string(),
+        "-v",
+        "-v",
+    ];
+    let args = Args::from_args(&["bt-snoop.cmx"], raw_args).expect("Args created from args");
+    assert_eq!(args.log_size_kib, log_size_kib);
+    assert_eq!(args.log_time_seconds, log_time_seconds);
+    assert_eq!(args.max_device_count, max_device_count);
+    assert_eq!(args.truncate_payload, Some(truncate_payload));
+    assert_eq!(args.verbosity, verbosity);
+}
+
+#[test]
 fn test_snoop_config_inspect() {
     let args = Args {
         log_size_kib: 1,

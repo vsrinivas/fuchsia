@@ -300,7 +300,7 @@ struct Args {
     #[argh(option)]
     /// maximum number of bytes to keep in the payload of incoming packets. Defaults to no limit.
     truncate_payload: Option<usize>,
-    #[argh(option, short = 'v')]
+    #[argh(switch, short = 'v')]
     /// enable verbose log output. Additional occurrences of the flag will raise verbosity.
     verbosity: u16,
 }
