@@ -122,6 +122,13 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   size_t AllocatedPages() const;
 
+  // Generates a soft fault against this aspace. This is similar to a PageFault except:
+  //  * This aspace may not currently be active and this does not have to be called from the
+  //    hardware exception handler.
+  //  * May be invoked spuriously in situations where the hardware mappings would have prevented a
+  //    real PageFault from occurring.
+  zx_status_t SoftFault(vaddr_t va, uint flags);
+
   // Convenience method for traversing the tree of VMARs to find the deepest
   // VMAR in the tree that includes *va*.
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);

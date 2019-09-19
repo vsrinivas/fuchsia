@@ -572,6 +572,11 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
   return status;
 }
 
+zx_status_t VmAspace::SoftFault(vaddr_t va, uint flags) {
+  // With the current implementation we can just reuse the internal PageFault mechanism.
+  return PageFault(va, flags | VMM_PF_FLAG_SW_FAULT);
+}
+
 void VmAspace::Dump(bool verbose) const {
   canary_.Assert();
   printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this, base_,
