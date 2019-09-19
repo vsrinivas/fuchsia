@@ -49,7 +49,6 @@ source_set("cpp") {
     "//garnet/public/lib/test_runner/cpp:cpp",
     "//garnet/public/lib/ui/base_view/cpp:cpp",
     "//src/camera/camera_manager:lib",
-    "//src/camera/examples/video_display:video_display_bin",
     "//src/camera/simple_camera/simple_camera_lib:simple_camera_lib",
     "//src/camera/simple_camera/simple_camera_server:lib",
     "//src/modular/bin/sessionmgr:sessionmgr_impl_unittest",
