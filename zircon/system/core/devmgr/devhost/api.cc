@@ -142,11 +142,11 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     // For device instances we mimic the behavior of |open| by not leaking the reference,
     // effectively passing owenership to the new connection.
     if (!(args->flags & DEVICE_ADD_INSTANCE)) {
-      __UNUSED auto ptr = dev.leak_ref();
+      __UNUSED auto ptr = fbl::ExportToRawPtr(&dev);
     }
   } else {
     // Leak the reference that was written to |out|, it will be recovered in device_remove().
-    __UNUSED auto ptr = dev.leak_ref();
+    __UNUSED auto ptr = fbl::ExportToRawPtr(&dev);
   }
 
   return r;
@@ -156,7 +156,7 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) {
   ApiAutoLock lock;
   // This recovers the leaked reference that happened in
   // device_add_from_driver() above.
-  auto dev_ref = fbl::internal::MakeRefPtrNoAdopt(dev);
+  auto dev_ref = fbl::ImportFromRawPtr(dev);
   return devhost_device_remove(std::move(dev_ref));
 }
 

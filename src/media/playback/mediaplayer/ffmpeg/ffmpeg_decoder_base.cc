@@ -16,45 +16,6 @@ extern "C" {
 }
 
 namespace media_player {
-namespace {
-
-// Creates an opaque reference to an object from an |fbl::RefPtr|. The original
-// pointer is 'copied' in the sense that a refcount is added for the new opaque
-// reference.
-template <typename T>
-void* CopyRefPtrToOpaque(fbl::RefPtr<T> t) {
-  FXL_DCHECK(t);
-
-  // Increment the refcount to account for the opaque reference we're returning.
-  t->AddRef();
-  return t.get();
-}
-
-// Copies an opaque reference created with |CopyRefPtrToOpaque| to create a
-// new |fbl::RefPtr|. The opaque reference is 'copied' in the sense that a
-// refcount is added for the new |fbl::RefPtr|.
-template <typename T>
-fbl::RefPtr<T> CopyOpaqueRefPtr(void* opaque) {
-  T* t_raw_ptr = reinterpret_cast<T*>(opaque);
-
-  // Increment the refcount to account for the |fbl::RefPtr| we're about to
-  // create. |MakeRefPtrNoAdopt| doesn't increment the refcount.
-  t_raw_ptr->AddRef();
-  return fbl::internal::MakeRefPtrNoAdopt(t_raw_ptr);
-}
-
-// Releases an opaque reference created with |CopyRefPtrToOpaque|. |opaque| is
-// passed by value, so the caller must be careful not to use |opaque| as an
-// opaque RefPtr after calling this function.
-template <typename T>
-void ReleaseOpaqueRefPtr(void* opaque) {
-  // |MakeRefPtrNoAdopt| doesn't increment the refcount. When the |fbl::RefPtr|
-  // we've created here is dropped, the refcount in decremented, and the |T|
-  // may be deleted/recycled.
-  fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<T*>(opaque));
-}
-
-}  // namespace
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)), av_frame_ptr_(ffmpeg::AvFrame::Create()) {
@@ -122,17 +83,20 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
   int result = avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
 
   switch (result) {
-    case 0:
+    case 0: {
       // Succeeded, frame produced. We're not done with the input packet.
-      //
-      // We use |CopyOpaqueRefPtr| here to create a real |fbl:RefPtr| to the
-      // |PayloadBuffer| attached to the frame's |AVBuffer| in |CreateAVBuffer|.
+      auto* payload_buffer_raw_ptr =
+          reinterpret_cast<PayloadBuffer*>(av_frame_ptr_->buf[0]->buffer->opaque);
+
+      // Take a fresh reference to the payload_buffer since av_frame_unref will
+      // drop the av_frame's reference via ReleaseBufferForAvFrame.
       *output = CreateOutputPacket(
-          *av_frame_ptr_, CopyOpaqueRefPtr<PayloadBuffer>(av_frame_ptr_->buf[0]->buffer->opaque));
+          *av_frame_ptr_, fbl::RefPtr(payload_buffer_raw_ptr));
 
       // Release the frame returned by |avcodec_receive_frame|.
       av_frame_unref(av_frame_ptr_.get());
       return false;
+    }
 
     case AVERROR(EAGAIN):
       // Succeeded, no frame produced.
@@ -205,10 +169,11 @@ void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 AVBufferRef* FfmpegDecoderBase::CreateAVBuffer(fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(payload_buffer);
   FXL_DCHECK(payload_buffer->size() <= static_cast<uint64_t>(std::numeric_limits<int>::max()));
-  return av_buffer_create(reinterpret_cast<uint8_t*>(payload_buffer->data()),
-                          static_cast<int>(payload_buffer->size()), ReleaseBufferForAvFrame,
-                          CopyRefPtrToOpaque(payload_buffer),
-                          /* flags */ 0);
+  uint8_t* data = reinterpret_cast<uint8_t*>(payload_buffer->data());
+  int size = static_cast<int>(payload_buffer->size());
+  void* opaque = fbl::ExportToRawPtr(&payload_buffer);
+
+  return av_buffer_create(data, size, ReleaseBufferForAvFrame, opaque, /* flags */ 0);
 }
 
 // static
@@ -232,9 +197,10 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(AVCodecContext* av_codec_context
 void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
   FXL_DCHECK(opaque);
   FXL_DCHECK(buffer);
-  FXL_DCHECK(buffer == CopyOpaqueRefPtr<PayloadBuffer>(opaque)->data());
 
-  ReleaseOpaqueRefPtr<PayloadBuffer>(opaque);
+  auto ref = fbl::ImportFromRawPtr(reinterpret_cast<PayloadBuffer*>(opaque));
+
+  FXL_DCHECK(buffer == ref->data());
 }
 
 PacketPtr FfmpegDecoderBase::CreateEndOfStreamPacket() {

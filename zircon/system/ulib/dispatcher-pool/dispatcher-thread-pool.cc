@@ -340,7 +340,7 @@ int ThreadPool::Thread::Main() {
     // Reclaim our event source reference from the kernel.
     static_assert(sizeof(pkt.key) >= sizeof(EventSource*),
                   "Port packet keys are not large enough to hold a pointer!");
-    auto event_source = fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<EventSource*>(pkt.key));
+    auto event_source = fbl::ImportFromRawPtr(reinterpret_cast<EventSource*>(pkt.key));
 
     // Schedule the dispatch of the pending events for this event source.
     // If ScheduleDispatch returns a valid ExecutionDomain reference, then

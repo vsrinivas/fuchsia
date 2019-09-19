@@ -38,7 +38,7 @@ zx_status_t UsbAudioDevice::DriverBind(zx_device_t* parent) {
   // need to deliberately leak our reference so that we do not destruct as we
   // exit this function.
   __UNUSED UsbAudioDevice* leaked_ref;
-  leaked_ref = usb_device.leak_ref();
+  leaked_ref = fbl::ExportToRawPtr(&usb_device);
   return status;
 }
 
@@ -481,7 +481,7 @@ void UsbAudioDevice::DdkUnbind() {
 void UsbAudioDevice::DdkRelease() {
   // Recover our reference from the unmanaged C DDK.  Then, just let it go out
   // of scope.
-  auto reference = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto reference = fbl::ImportFromRawPtr(this);
 }
 
 static zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {

@@ -304,7 +304,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  __UNUSED auto dummy = stream.leak_ref();
+  __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
 
   return ZX_OK;
 }

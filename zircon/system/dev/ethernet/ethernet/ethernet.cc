@@ -886,7 +886,7 @@ zx_status_t EthDev0::DdkOpen(zx_device_t** out, uint32_t flags) {
     return status;
   }
 
-  __UNUSED auto dev = edev.leak_ref();
+  __UNUSED auto dev = fbl::ExportToRawPtr(&edev);
   return ZX_OK;
 }
 

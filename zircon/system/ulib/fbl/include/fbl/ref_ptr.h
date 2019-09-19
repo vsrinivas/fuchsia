@@ -22,11 +22,17 @@ template <typename T>
 RefPtr<T> AdoptRef(T* ptr);
 
 template <typename T>
+RefPtr<T> ImportFromRawPtr(T*);
+
+template <typename T>
 RefPtr<T> WrapRefPtr(T* ptr);
 
 namespace internal {
 template <typename T>
 RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
+
+template <typename T>
+T* LeakToRawPtr(RefPtr<T>* ptr) __WARN_UNUSED_RESULT;
 }  // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type
@@ -136,7 +142,8 @@ class RefPtr final {
                   "BaseRefPtr must be a RefPtr<T>!");
 
     if (base != nullptr)
-      return internal::MakeRefPtrNoAdopt<T>(static_cast<T*>(base.leak_ref()));
+      return ImportFromRawPtr<T>(
+          static_cast<T*>(internal::LeakToRawPtr(&base)));
 
     return nullptr;
   }
@@ -155,11 +162,6 @@ class RefPtr final {
     r.ptr_ = p;
   }
 
-  T* leak_ref() __WARN_UNUSED_RESULT {
-    T* p = ptr_;
-    ptr_ = nullptr;
-    return p;
-  }
 
   T* get() const { return ptr_; }
   T& operator*() const { return *ptr_; }
@@ -177,7 +179,9 @@ class RefPtr final {
   template <typename U>
   friend class RefPtr;
   friend RefPtr<T> AdoptRef<T>(T*);
-  friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
+  friend RefPtr<T> ImportFromRawPtr<>(T*);
+  friend RefPtr<T> internal::MakeRefPtrNoAdopt<>(T* ptr);
+  friend T* internal::LeakToRawPtr<>(RefPtr<T>*);
 
   enum AdoptTag { ADOPT };
   enum NoAdoptTag { NO_ADOPT };
@@ -230,6 +234,25 @@ inline RefPtr<T> WrapRefPtr(T* ptr) {
   return RefPtr<T>(ptr);
 }
 
+// Export a pointer from a smart pointer to a raw pointer without modifying its
+// reference count. The caller is responsible for maintaining the reference
+// count, likely by calling ImportFromRawPtr() later on.
+//
+// Use this to store a pointer in code that can't use the C++
+// type directly, such as in pure C code.
+template <typename T>
+inline T* ExportToRawPtr(RefPtr<T>* ptr) {
+  return internal::LeakToRawPtr(ptr);
+}
+
+// Imports from a raw pointer to a RefPtr. Does not modify the reference count
+// of the object. This should be used on values that have previously been
+// exported with ExportToRawPtr().
+template <typename T>
+inline RefPtr<T> ImportFromRawPtr(T* ptr) {
+  return internal::MakeRefPtrNoAdopt(ptr);
+}
+
 namespace internal {
 // Constructs a RefPtr from a T* without attempt to either AddRef or Adopt the
 // pointer.  Used by the internals of some intrusive container classes to store
@@ -238,6 +261,16 @@ template <typename T>
 inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
   return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
 }
+
+// Leaks the internal value to a raw pointer and resets the RefPtr to null.
+// Does not change the reference count of the object.
+template <typename T>
+inline T* LeakToRawPtr(RefPtr<T>* ptr) {
+  T* ret = ptr->ptr_;
+  ptr->ptr_ = nullptr;
+  return ret;
+}
+
 
 // This is a wrapper class that can be friended for a particular |T|, if you
 // want to make |T|'s constructor private, but still use |MakeRefCounted()|

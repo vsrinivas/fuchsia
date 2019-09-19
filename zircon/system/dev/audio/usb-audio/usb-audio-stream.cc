@@ -297,7 +297,7 @@ void UsbAudioStream::DdkRelease() {
   // Reclaim our reference from the driver framework and let it go out of
   // scope.  If this is our last reference (it should be), we will destruct
   // immediately afterwards.
-  auto stream = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto stream = fbl::ImportFromRawPtr(this);
 
   // Make sure that our parent is no longer holding a reference to us.
   parent_.RemoveAudioStream(stream);

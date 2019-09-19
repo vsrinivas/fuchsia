@@ -52,8 +52,8 @@ zx_status_t zxio_dir_close(fdio_t* io) {
   LocalConnection* dir = fdio_get_zxio_dir(io);
   // Reclaim a strong reference to |fs| which was leaked during
   // |CreateLocalConnection()|
-  __UNUSED auto fs = fbl::internal::MakeRefPtrNoAdopt<const fdio_namespace>(dir->fs);
-  __UNUSED auto vn = fbl::internal::MakeRefPtrNoAdopt<const LocalVnode>(dir->vn);
+  __UNUSED auto fs = fbl::ImportFromRawPtr<const fdio_namespace>(dir->fs);
+  __UNUSED auto vn = fbl::ImportFromRawPtr<const LocalVnode>(dir->vn);
   dir->fs = nullptr;
   dir->vn = nullptr;
   return ZX_OK;
@@ -140,8 +140,8 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
 
   // Leak a strong reference to |this| which will be reclaimed
   // in |zxio_dir_close()|.
-  dir->fs = fs.leak_ref();
-  dir->vn = vn.leak_ref();
+  dir->fs = fbl::ExportToRawPtr(&fs);
+  dir->vn = fbl::ExportToRawPtr(&vn);
   return io;
 }
 

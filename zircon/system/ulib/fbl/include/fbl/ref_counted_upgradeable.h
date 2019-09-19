@@ -147,7 +147,7 @@ inline RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const LockCapability& lock) __
     return nullptr;
   }
 
-  return internal::MakeRefPtrNoAdopt(ptr);
+  return ImportFromRawPtr(ptr);
 }
 
 }  // namespace fbl

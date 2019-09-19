@@ -107,7 +107,7 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   {
     // use a different refptr to avoid problems in error path
     auto ddk_ref = codec;
-    args.ctx = ddk_ref.leak_ref();
+    args.ctx = fbl::ExportToRawPtr(&ddk_ref);
   }
   args.ops = &CODEC_DEVICE_THUNKS;
   args.flags = DEVICE_ADD_NON_BINDABLE;
@@ -161,7 +161,7 @@ void IntelHDACodecDriverBase::Shutdown() {
 zx_status_t IntelHDACodecDriverBase::Suspend(uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 void IntelHDACodecDriverBase::DeviceRelease() {
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
   // Shut the codec down.
   thiz->Shutdown();
   // Let go of the reference.

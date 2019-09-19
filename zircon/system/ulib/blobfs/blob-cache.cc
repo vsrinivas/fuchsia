@@ -198,13 +198,13 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
   // concurrently accessed in Lookup, and gaining a strong reference before
   // being erased from open_hash_.
   raw_vnode->ResurrectRef();
-  fbl::RefPtr<CacheNode> vnode = fbl::internal::MakeRefPtrNoAdopt(raw_vnode);
+  fbl::RefPtr<CacheNode> vnode = fbl::ImportFromRawPtr(raw_vnode);
 
   // If the node has already been evicted, destroy it instead of caching.
   //
   // Delete it explicitly to prevent repeatedly calling fbl_recycle.
   if (!vnode->InContainer()) {
-    delete vnode.leak_ref();
+    delete fbl::ExportToRawPtr(&vnode);
     return;
   }
 
@@ -227,7 +227,7 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
 
   // To exist in the closed_hash_, this RefPtr must be leaked.
   // See the complement of this leak in UpgradeLocked.
-  __UNUSED auto leak = vnode.leak_ref();
+  __UNUSED auto leak = fbl::ExportToRawPtr(&vnode);
 }
 
 fbl::RefPtr<CacheNode> BlobCache::UpgradeLocked(const uint8_t* key) {
@@ -239,7 +239,7 @@ fbl::RefPtr<CacheNode> BlobCache::UpgradeLocked(const uint8_t* key) {
   open_hash_.insert(raw_vnode);
   // To have existed in the closed_hash_, this RefPtr must have been leaked.
   // See the complement of this adoption in Downgrade.
-  return fbl::internal::MakeRefPtrNoAdopt(raw_vnode);
+  return fbl::ImportFromRawPtr(raw_vnode);
 }
 
 }  // namespace blobfs

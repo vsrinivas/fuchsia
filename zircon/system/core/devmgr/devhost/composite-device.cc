@@ -26,7 +26,7 @@ class CompositeDeviceInstance {
                             std::unique_ptr<CompositeDeviceInstance>* device) {
     // Leak a reference to the zxdev here.  It will be cleaned up by the
     // device_remove() in Unbind().
-    auto dev = std::make_unique<CompositeDeviceInstance>(zxdev.leak_ref(), std::move(components));
+    auto dev = std::make_unique<CompositeDeviceInstance>(fbl::ExportToRawPtr(&zxdev), std::move(components));
     *device = std::move(dev);
     return ZX_OK;
   }

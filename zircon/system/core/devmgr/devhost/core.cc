@@ -537,7 +537,7 @@ zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr
     // open created a per-instance device for us
     new_ref.reset();
     // Claim the reference from open
-    new_ref = fbl::internal::MakeRefPtrNoAdopt(opened_dev);
+    new_ref = fbl::ImportFromRawPtr(opened_dev);
 
     if (!(opened_dev->flags & DEV_FLAG_INSTANCE)) {
       printf("device open: %p(%s) in bad state %x\n", opened_dev, opened_dev->name, flags);

@@ -38,7 +38,7 @@ class AsyncLoopRefCountedRpcHandler {
     if (status == ZX_OK) {
       // This reference will be recovered by MakeRefPtrNoAdopt in
       // HandleRpcEntry
-      __UNUSED auto ptr = conn.leak_ref();
+      __UNUSED auto ptr = fbl::ExportToRawPtr(&conn);
     }
     return status;
   }
@@ -47,7 +47,7 @@ class AsyncLoopRefCountedRpcHandler {
   // semantics.
   void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal) {
-    auto self = fbl::internal::MakeRefPtrNoAdopt(static_cast<T*>(this));
+    auto self = fbl::ImportFromRawPtr(static_cast<T*>(this));
     T::HandleRpc(std::move(self), dispatcher, wait, status, signal);
   }
 

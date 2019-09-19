@@ -100,9 +100,9 @@ struct ContainerPtrTraits<::fbl::RefPtr<T>> {
   static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
   static inline PtrType Copy(const RawPtrType& ptr) { return PtrType(ptr); }
 
-  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT { return ptr.leak_ref(); }
+  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT { return fbl::ExportToRawPtr(&ptr); }
 
-  static inline PtrType Reclaim(RawPtrType ptr) { return ::fbl::internal::MakeRefPtrNoAdopt(ptr); }
+  static inline PtrType Reclaim(RawPtrType ptr) { return ::fbl::ImportFromRawPtr(ptr); }
 };
 
 }  // namespace internal

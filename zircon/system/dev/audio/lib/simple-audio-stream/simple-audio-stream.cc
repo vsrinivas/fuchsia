@@ -174,7 +174,7 @@ void SimpleAudioStream::DdkUnbind() {
 
 void SimpleAudioStream::DdkRelease() {
   // Recover our ref from the DDK, then let it fall out of scope.
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
 }
 
 zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {

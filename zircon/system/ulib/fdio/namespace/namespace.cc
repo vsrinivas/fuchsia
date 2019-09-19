@@ -36,14 +36,14 @@ zx_status_t fdio_ns_create(fdio_ns_t** out) {
   //
   // This reference is reclaimed in fdio_ns_destroy.
   fbl::RefPtr<fdio_namespace> ns = fdio_namespace::Create();
-  *out = ns.leak_ref();
+  *out = fbl::ExportToRawPtr(&ns);
   return ZX_OK;
 }
 
 __EXPORT
 zx_status_t fdio_ns_destroy(fdio_ns_t* raw_ns) {
   // This function reclaims a reference which was leaked in fdio_ns_create.
-  __UNUSED auto ns = fbl::internal::MakeRefPtrNoAdopt<fdio_namespace>(raw_ns);
+  __UNUSED auto ns = fbl::ImportFromRawPtr<fdio_namespace>(raw_ns);
   return ZX_OK;
 }
 

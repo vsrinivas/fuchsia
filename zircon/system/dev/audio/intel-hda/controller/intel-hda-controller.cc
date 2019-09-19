@@ -239,7 +239,7 @@ void IntelHDAController::DeviceShutdown() {
 
 void IntelHDAController::DeviceRelease() {
   // Take our unmanaged reference back from our published device node.
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
 
   // ASSERT that we have been properly shut down, then release the DDK's
   // reference to our state as we allow thiz to go out of scope.
@@ -268,7 +268,7 @@ zx_status_t IntelHDAController::GetChannel(fidl_txn_t* txn) {
 
 void IntelHDAController::RootDeviceRelease() {
   // Take our unmanaged reference back from our published device node.
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
   // Now let go of it.
   thiz.reset();
 }
@@ -389,7 +389,7 @@ zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
   {
     // use a different refptr to avoid problems in error path
     auto ddk_ref = controller;
-    args.ctx = ddk_ref.leak_ref();
+    args.ctx = fbl::ExportToRawPtr(&ddk_ref);
   }
   args.ops = &ROOT_DEVICE_THUNKS;
   args.flags = DEVICE_ADD_NON_BINDABLE;

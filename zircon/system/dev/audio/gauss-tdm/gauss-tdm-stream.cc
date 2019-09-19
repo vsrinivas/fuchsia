@@ -127,7 +127,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
   //  Note: clang and gcc feel differently about different ways of doing this
   //        operation, below is a compromisse to appease both simultaneously.
   if (res == ZX_OK) {
-    __UNUSED auto dummy = stream.leak_ref();
+    __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   }
 
   return ZX_OK;
@@ -207,7 +207,7 @@ void TdmOutputStream::DdkRelease() {
   // Reclaim our reference from the driver framework and let it go out of
   // scope.  If this is our last reference (it should be), we will destruct
   // immediately afterwards.
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
 }
 
 zx_status_t TdmOutputStream::GetChannel(fidl_txn_t* txn) {

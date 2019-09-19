@@ -17,7 +17,7 @@ zx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool) {
 
   // Everything looks good.  Deliberately leak our reference out into the cold
   // cruel world of C.  I sure hope that it comes back some day...
-  *out_pool = reinterpret_cast<ralloc_pool_t*>(pool.leak_ref());
+  *out_pool = reinterpret_cast<ralloc_pool_t*>(fbl::ExportToRawPtr(&pool));
 
   return ZX_OK;
 }
@@ -29,7 +29,7 @@ void ralloc_release_pool(ralloc_pool_t* pool) {
   // back into a RefPtr, then deliberately let it go out of scope, dropping
   // its reference and destructing the RegionPool if need be.
   auto release_me =
-      fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
+      fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
 }
 
 zx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator) {
@@ -55,9 +55,9 @@ zx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool* p
   // deliberately leak the reference again so we are not accidentally removing
   // the unmanaged reference held by our C user.
   auto pool_ref =
-      fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
+      fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
   zx_status_t ret = alloc.SetRegionPool(pool_ref);
-  __UNUSED auto leak = pool_ref.leak_ref();
+  __UNUSED auto leak = fbl::ExportToRawPtr(&pool_ref);
 
   return ret;
 }

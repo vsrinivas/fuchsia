@@ -49,7 +49,7 @@ zx_status_t GaussPdmInputStream::Create(zx_device_t* parent) {
     // lifecycle and will release us when finished with us.  Let go of our
     // local reference.
     //
-    __UNUSED auto dummy = stream.leak_ref();
+    __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   }
 
   return ZX_OK;
@@ -126,7 +126,7 @@ void GaussPdmInputStream::DdkRelease() {
   // Reclaim our reference from the driver framework and let it go out of
   // scope.  If this is our last reference (it should be), we will destruct
   // immediately afterwards.
-  auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+  auto thiz = fbl::ImportFromRawPtr(this);
 }
 
 zx_status_t GaussPdmInputStream::GetChannel(fidl_txn_t* txn) {

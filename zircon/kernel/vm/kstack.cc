@@ -111,7 +111,7 @@ zx_status_t vm_allocate_kstack(kstack_t* stack) {
   stack->top = mapping->base() + DEFAULT_STACK_SIZE;
 
   // Stash address of VMAR so we can later free it in |vm_free_kstack|.
-  stack->vmar = vmar.leak_ref();
+  stack->vmar = fbl::ExportToRawPtr(&vmar);
 
 #if __has_feature(safe_stack)
   status = allocate_vmar(true, &mapping, &vmar);
@@ -123,7 +123,7 @@ zx_status_t vm_allocate_kstack(kstack_t* stack) {
   stack->unsafe_base = mapping->base();
 
   // Stash address of VMAR so we can later free it in |vm_free_kstack|.
-  stack->unsafe_vmar = vmar.leak_ref();
+  stack->unsafe_vmar = fbl::ExportToRawPtr(&vmar);
 #endif
 
   return ZX_OK;
@@ -136,7 +136,7 @@ zx_status_t vm_free_kstack(kstack_t* stack) {
 
   if (stack->vmar != nullptr) {
     fbl::RefPtr<VmAddressRegion> vmar =
-        fbl::internal::MakeRefPtrNoAdopt(static_cast<VmAddressRegion*>(stack->vmar));
+        fbl::ImportFromRawPtr(static_cast<VmAddressRegion*>(stack->vmar));
     zx_status_t status = vmar->Destroy();
     if (status != ZX_OK) {
       return status;
@@ -149,7 +149,7 @@ zx_status_t vm_free_kstack(kstack_t* stack) {
 
   if (stack->unsafe_vmar != nullptr) {
     fbl::RefPtr<VmAddressRegion> vmar =
-        fbl::internal::MakeRefPtrNoAdopt(static_cast<VmAddressRegion*>(stack->unsafe_vmar));
+        fbl::ImportFromRawPtr(static_cast<VmAddressRegion*>(stack->unsafe_vmar));
     zx_status_t status = vmar->Destroy();
     if (status != ZX_OK) {
       return status;
