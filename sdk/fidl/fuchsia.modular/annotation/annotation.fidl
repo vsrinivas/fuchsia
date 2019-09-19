@@ -21,13 +21,13 @@ const uint32 MAX_ANNOTATIONS_PER_STORY = 100;
 /// Maximum number of annotations on a single module.
 const uint32 MAX_ANNOTATIONS_PER_MODULE = 100;
 
-/// Maximum length of [`fuchsia.modular/AnnotationKey`].
-const uint32 MAX_ANNOTATION_KEY_LENGTH = 256;
-
 /// Maximum number of annotations that can be passed to either method
 /// Annotate() AnnotateModule() in fuchsia.modular protocols that support
 /// annotations.
-const uint32 MAX_ANNOTATE_SIZE = 50;
+const uint32 MAX_ANNOTATIONS_PER_UPDATE = 50;
+
+/// Maximum length of [`fuchsia.modular/AnnotationKey`].
+const uint32 MAX_ANNOTATION_KEY_LENGTH = 256;
 
 /// Maximum length of [`fuchsia.modular/AnnotationValue`] fields:
 /// `text` and `bytes`.

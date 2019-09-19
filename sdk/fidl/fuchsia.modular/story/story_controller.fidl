@@ -59,7 +59,7 @@ protocol StoryController {
     /// Attach the `annotations` to the story.
     ///
     /// Existing annotations with the same key will be overwritten.
-    Annotate(vector<Annotation>:MAX_ANNOTATE_SIZE annotations)
+    Annotate(vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
         -> () error AnnotationError;
 };
 

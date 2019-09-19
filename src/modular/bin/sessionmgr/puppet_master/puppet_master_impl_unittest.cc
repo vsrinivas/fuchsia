@@ -682,23 +682,24 @@ TEST_F(PuppetMasterTest, AnnotateBufferValueTooBig) {
 // MAX_ANNOTATIONS_PER_STORY.
 TEST_F(PuppetMasterTest, AnnotateTooMany) {
   // A single Annotate call should not accept more annotations than allowed on a single story.
-  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY, fuchsia::modular::MAX_ANNOTATE_SIZE);
+  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY,
+            fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE);
 
   const auto story_name = "annotate_too_many";
 
   auto story = ControlStory(story_name);
 
-  // Annotate the story repeatedly, in batches of MAX_ANNOTATE_SIZE items, in order
+  // Annotate the story repeatedly, in batches of MAX_ANNOTATIONS_PER_UPDATE items, in order
   // to reach, but not exceed the MAX_ANNOTATIONS_PER_STORY limit.
   for (unsigned int num_annotate_calls = 0;
        num_annotate_calls <
-       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATE_SIZE;
+       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE;
        ++num_annotate_calls) {
     std::vector<fuchsia::modular::Annotation> annotations;
 
-    // Create MAX_ANNOTATE_SIZE annotations for each call to Annotate.
-    for (unsigned int num_annotations = 0; num_annotations < fuchsia::modular::MAX_ANNOTATE_SIZE;
-         ++num_annotations) {
+    // Create MAX_ANNOTATIONS_PER_UPDATE annotations for each call to Annotate.
+    for (unsigned int num_annotations = 0;
+         num_annotations < fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE; ++num_annotations) {
       auto annotation_value = fuchsia::modular::AnnotationValue{};
       annotation_value.set_text("test_annotation_value");
       auto annotation =
@@ -714,7 +715,7 @@ TEST_F(PuppetMasterTest, AnnotateTooMany) {
         std::move(annotations), [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
           EXPECT_FALSE(result.is_err())
               << "Annotate call #" << num_annotate_calls << " returned an error when trying to add "
-              << std::to_string(fuchsia::modular::MAX_ANNOTATE_SIZE)
+              << std::to_string(fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE)
               << " annotations to the story.";
           done = true;
         });
@@ -725,8 +726,9 @@ TEST_F(PuppetMasterTest, AnnotateTooMany) {
   std::vector<fuchsia::modular::Annotation> annotations;
 
   for (unsigned int num_annotations = 0;
-       num_annotations <
-       (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY % fuchsia::modular::MAX_ANNOTATE_SIZE) + 1;
+       num_annotations < (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY %
+                          fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE) +
+                             1;
        ++num_annotations) {
     auto annotation_value = fuchsia::modular::AnnotationValue{};
     annotation_value.set_text("test_annotation_value");
@@ -1121,7 +1123,8 @@ TEST_F(PuppetMasterTest, AnnotateModuleBufferValueTooBig) {
 // MAX_ANNOTATIONS_PER_MODULE.
 TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
   // A single Annotate call should not accept more annotations than allowed on a single story.
-  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_MODULE, fuchsia::modular::MAX_ANNOTATE_SIZE);
+  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_MODULE,
+            fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE);
 
   const auto story_name = TEST_NAME(story);
   const auto module_name = TEST_NAME(module);
@@ -1146,17 +1149,17 @@ TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
   EXPECT_EQ(story_name, executor_.last_story_id());
 
-  // Annotate the story repeatedly, in batches of MAX_ANNOTATE_SIZE items, in order
+  // Annotate the story repeatedly, in batches of MAX_ANNOTATIONS_PER_UPDATE items, in order
   // to reach, but not exceed the MAX_ANNOTATIONS_PER_MODULE limit.
   for (unsigned int num_annotate_calls = 0;
        num_annotate_calls <
-       fuchsia::modular::MAX_ANNOTATIONS_PER_MODULE / fuchsia::modular::MAX_ANNOTATE_SIZE;
+       fuchsia::modular::MAX_ANNOTATIONS_PER_MODULE / fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE;
        ++num_annotate_calls) {
     std::vector<fuchsia::modular::Annotation> annotations;
 
-    // Create MAX_ANNOTATE_SIZE annotations for each call to Annotate.
-    for (unsigned int num_annotations = 0; num_annotations < fuchsia::modular::MAX_ANNOTATE_SIZE;
-         ++num_annotations) {
+    // Create MAX_ANNOTATIONS_PER_UPDATE annotations for each call to Annotate.
+    for (unsigned int num_annotations = 0;
+         num_annotations < fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE; ++num_annotations) {
       auto annotation_value = fuchsia::modular::AnnotationValue{};
       annotation_value.set_text("test_annotation_value");
       auto annotation =
@@ -1173,7 +1176,7 @@ TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
                             EXPECT_FALSE(result.is_err())
                                 << "AnnotateModule call #" << num_annotate_calls
                                 << " returned an error when trying to add "
-                                << std::to_string(fuchsia::modular::MAX_ANNOTATE_SIZE)
+                                << std::to_string(fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE)
                                 << " annotations to the story.";
                             annotate_done = true;
                           });
@@ -1184,8 +1187,9 @@ TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
   std::vector<fuchsia::modular::Annotation> annotations;
 
   for (unsigned int num_annotations = 0;
-       num_annotations <
-       (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY % fuchsia::modular::MAX_ANNOTATE_SIZE) + 1;
+       num_annotations < (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY %
+                          fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE) +
+                             1;
        ++num_annotations) {
     auto annotation_value = fuchsia::modular::AnnotationValue{};
     annotation_value.set_text("test_annotation_value");

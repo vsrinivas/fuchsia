@@ -752,19 +752,20 @@ TEST_F(SessionShellTest, StoryControllerAnnotateTooMany) {
   story_provider->GetController(story_name, story_controller.NewRequest());
 
   // A single Annotate call should not accept more annotations than allowed on a single story.
-  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY, fuchsia::modular::MAX_ANNOTATE_SIZE);
+  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY,
+            fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE);
 
-  // Annotate the story repeatedly, in batches of MAX_ANNOTATE_SIZE items, in order
+  // Annotate the story repeatedly, in batches of MAX_ANNOTATIONS_PER_UPDATE items, in order
   // to reach, but not exceed the MAX_ANNOTATIONS_PER_STORY limit.
   for (unsigned int num_annotate_calls = 0;
        num_annotate_calls <
-       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATE_SIZE;
+       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE;
        ++num_annotate_calls) {
     std::vector<fuchsia::modular::Annotation> annotations;
 
-    // Create MAX_ANNOTATE_SIZE annotations for each call to Annotate.
-    for (unsigned int num_annotations = 0; num_annotations < fuchsia::modular::MAX_ANNOTATE_SIZE;
-         ++num_annotations) {
+    // Create MAX_ANNOTATIONS_PER_UPDATE annotations for each call to Annotate.
+    for (unsigned int num_annotations = 0;
+         num_annotations < fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE; ++num_annotations) {
       auto annotation_value = fuchsia::modular::AnnotationValue{};
       annotation_value.set_text("test_annotation_value");
       auto annotation =
@@ -780,7 +781,7 @@ TEST_F(SessionShellTest, StoryControllerAnnotateTooMany) {
         std::move(annotations), [&](fuchsia::modular::StoryController_Annotate_Result result) {
           EXPECT_FALSE(result.is_err())
               << "Annotate call #" << num_annotate_calls << " returned an error when trying to add "
-              << std::to_string(fuchsia::modular::MAX_ANNOTATE_SIZE)
+              << std::to_string(fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE)
               << " annotations to the story.";
           done = true;
         });
@@ -791,8 +792,9 @@ TEST_F(SessionShellTest, StoryControllerAnnotateTooMany) {
   std::vector<fuchsia::modular::Annotation> annotations;
 
   for (unsigned int num_annotations = 0;
-       num_annotations <
-       (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY % fuchsia::modular::MAX_ANNOTATE_SIZE) + 1;
+       num_annotations < (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY %
+                          fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE) +
+                             1;
        ++num_annotations) {
     auto annotation_value = fuchsia::modular::AnnotationValue{};
     annotation_value.set_text("test_annotation_value");
