@@ -19,7 +19,7 @@ use {
     futures::future::{join_all, BoxFuture},
     futures::{channel::mpsc, sink::SinkExt, stream::BoxStream, FutureExt, StreamExt},
     std::collections::HashMap,
-    std::path::{Path, PathBuf},
+    std::path::{Path, PathBuf, StripPrefixError},
 };
 
 /// This module supports watching the Fuchsia Component Hub structure for changes that are
@@ -329,13 +329,13 @@ impl HubCollector {
     /// Adds a component to be watched.
     ///
     /// This publishes an event that the component has started or was existing.
-    async fn add_component<'a>(
-        &'a mut self,
-        path: PathBuf,
+    async fn add_component(
+        &mut self,
+        path: &Path,
         data: ComponentEventData,
         existing: ExistingPath,
     ) -> Result<(), Error> {
-        self.component_extra_data.insert(path, None);
+        self.component_extra_data.insert(path.to_path_buf(), None);
         match existing {
             ExistingPath(false) => {
                 self.component_event_sender.send(ComponentEvent::Start(data)).await?
@@ -351,12 +351,12 @@ impl HubCollector {
     ///
     /// This takes all extra data obtained by collectors and sends an event indicating that the
     /// component has stopped.
-    async fn remove_component<'a>(
-        &'a mut self,
-        path: PathBuf,
+    async fn remove_component(
+        &mut self,
+        path: &Path,
         mut data: ComponentEventData,
     ) -> Result<(), Error> {
-        data.component_data_map = match self.component_extra_data.remove(&path) {
+        data.component_data_map = match self.component_extra_data.remove(path) {
             Some(Some(data_collector)) => Box::new(data_collector).take_data(),
             _ => None,
         };
@@ -365,9 +365,9 @@ impl HubCollector {
         Ok(())
     }
 
-    async fn add_out_watcher<'a>(
-        &'a mut self,
-        path: PathBuf,
+    async fn add_out_watcher(
+        &mut self,
+        path: &Path,
         data: ComponentEventData,
     ) -> Result<(), Error> {
         // Clone the original collector to create a conceptual channel between the
@@ -393,23 +393,21 @@ impl HubCollector {
             }
         };
 
-        let component_path_buf = component_path.to_path_buf();
-
         // Store the receiving end of the extra data collectors in the
         // component map, to be retrieved by the archivist when the
         // component dies.
         self.component_extra_data
-            .entry(component_path_buf.clone())
+            .entry(component_path.to_path_buf())
             .and_modify(|v| *v = Some(extra_data_receiver));
 
         let inspect_data_proxy =
-            match inspect::InspectDataCollector::find_directory_proxy(&component_path_buf).await {
+            match inspect::InspectDataCollector::find_directory_proxy(component_path).await {
                 Ok(dir_proxy) => dir_proxy,
                 Err(e) => return Err(e),
             };
 
         let inspect_reader_data = InspectReaderData {
-            component_hierarchy_path: component_path_buf,
+            component_hierarchy_path: component_path.to_path_buf(),
             component_name: data.component_name,
             component_id: data.component_id,
             data_directory_proxy: inspect_data_proxy,
@@ -460,8 +458,8 @@ impl HubCollector {
             };
 
             let relative_path = match event.as_ref().strip_prefix(&self.path) {
-                Ok(p) => p.to_path_buf(),
-                _ => {
+                Ok(p) => p,
+                Err(StripPrefixError { .. }) => {
                     continue;
                 }
             };
@@ -470,8 +468,12 @@ impl HubCollector {
                 PathEvent::Added(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
                         if data.component_name != ARCHIVIST_NAME {
-                            self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
-                                eprintln!("Error reprocessing out directory: {:?}", e);
+                            self.add_out_watcher(&relative_path, data).await.unwrap_or_else(|e| {
+                                eprintln!(
+                                    "Error reprocessing out directory {}: {:?}",
+                                    relative_path.display(),
+                                    e
+                                );
                             });
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
@@ -485,8 +487,12 @@ impl HubCollector {
                 PathEvent::Existing(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
                         if data.component_name != ARCHIVIST_NAME {
-                            self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
-                                eprintln!("Error reprocessing out directory: {:?}", e);
+                            self.add_out_watcher(&relative_path, data).await.unwrap_or_else(|e| {
+                                eprintln!(
+                                    "Error reprocessing out directory {}: {:?}",
+                                    relative_path.display(),
+                                    e
+                                );
                             });
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {

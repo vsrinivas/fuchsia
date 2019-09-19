@@ -51,7 +51,7 @@ impl InspectDataCollector {
     /// Convert a fully-qualified path to a directory-proxy in the executing namespace.
     /// NOTE: Currently does a synchronous directory-open, since there are no available
     ///       async apis.
-    pub async fn find_directory_proxy(path: &PathBuf) -> Result<DirectoryProxy, Error> {
+    pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, Error> {
         // TODO(36762): When available, use the async directory-open api.
         return io_util::open_directory_in_namespace(
             &path.to_string_lossy(),
