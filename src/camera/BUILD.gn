@@ -96,6 +96,7 @@ test_package("camera_full_test") {
 test_package("camera_full_on_device_test") {
   deps = [
     "//src/camera/drivers/isp/mali-009/test:mali_009_test",
+    "//src/camera/test/camera_streaming_test",
   ]
 
   tests = [
@@ -103,6 +104,11 @@ test_package("camera_full_on_device_test") {
       name = "mali_009_test"
       manifest = "drivers/isp/mali-009/test/meta/mali_009_test.cmx"
       environments = basic_envs
+    },
+    {
+      name = "camera_streaming_test"
+      manifest = "test/camera_streaming_test/meta/camera_streaming_test.cmx"
+      environments = [ sherlock_env ]
     },
     # Put additional tests that can run on the device here.
   ]

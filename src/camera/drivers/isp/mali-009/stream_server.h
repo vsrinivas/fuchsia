@@ -37,6 +37,9 @@ class StreamServer {
   // Called when a new frame is available from the ISP.
   void FrameAvailable(uint32_t id);
 
+  // Gets the number of clients connected to the server.
+  size_t GetNumClients() { return streams_.size(); }
+
  private:
   zx_status_t GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffers_out);
 

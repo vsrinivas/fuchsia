@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("camera_streaming_test") {
+  testonly = true
+
+  sources = [
+    "camera_streaming_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/boringssl:crypto",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/system/fidl/fuchsia-camera-common",
+    "//zircon/system/fidl/fuchsia-camera-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -14,6 +14,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
 
 #include "global_regs.h"
@@ -103,6 +104,8 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // It also serves the Stream interface to any number of clients.
   fbl::Mutex server_lock_;
   std::unique_ptr<camera::StreamServer> server_ __TA_GUARDED(server_lock_);
+  output_stream_protocol stream_protocol_;
+  output_stream_protocol_ops_t stream_protocol_ops_;
 
   friend class camera::StreamServer;
 };

@@ -308,12 +308,21 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
                                           .frames_per_sec_denominator = 1};
   output_stream_callback cb{};
   cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
-    static_cast<StreamServer*>(ctx)->FrameAvailable(buffer_id);
+    auto tester = static_cast<ArmIspDeviceTester*>(ctx);
+    fbl::AutoLock server_guard(&tester->server_lock_);
+    tester->server_->FrameAvailable(buffer_id);
+    if (tester->server_->GetNumClients() == 0) {
+      // Stop streaming server upon losing the last client.
+      FXL_LOG(INFO) << "Last client disconnected. Stopping server.";
+      zx_status_t status = tester->stream_protocol_.ops->stop(tester->stream_protocol_.ctx);
+      if (status != ZX_OK) {
+        FXL_PLOG(ERROR, status) << "Failed to stop streaming";
+      }
+      tester->server_.reset();
+    }
   };
-  cb.ctx = server_.get();
-  output_stream_protocol output_stream{};
-  output_stream_protocol_ops_t ops{};
-  output_stream.ops = &ops;
+  cb.ctx = this;
+  stream_protocol_.ops = &stream_protocol_ops_;
 
   fbl::AutoLock guard(&isp_lock_);
   if (!isp_) {
@@ -322,18 +331,14 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
   }
 
   status = isp_->IspCreateOutputStream(&buffers, &rate, STREAM_TYPE_FULL_RESOLUTION, &cb,
-                                       &output_stream);
+                                       &stream_protocol_);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "IspCreateOutputStream failed";
     return status;
   }
 
   // Start streaming.
-  if (!output_stream.ops || !output_stream.ops->start) {
-    FXL_LOG(ERROR) << "IspCreateOutputStream failed to set ops.start";
-    return ZX_ERR_INTERNAL;
-  }
-  status = output_stream.ops->start(output_stream.ctx);
+  status = stream_protocol_.ops->start(stream_protocol_.ctx);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to start streaming";
     return status;
