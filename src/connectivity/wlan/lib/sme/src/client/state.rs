@@ -200,11 +200,65 @@ impl State {
                         State::Idle { cfg }
                     }
                 },
+                MlmeEvent::DeauthenticateInd { ind } => {
+                    error!(
+                        "authentication request failed due to spurious deauthentication: {:?}",
+                        ind.reason_code
+                    );
+                    report_connect_finished(
+                        cmd.responder,
+                        context,
+                        ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
+                            fidl_mlme::AuthenticateResultCodes::Refused,
+                        )),
+                    );
+                    state_change_msg.replace(format!(
+                        "received DeauthenticateInd msg while authenticating; reason code {:?}",
+                        ind.reason_code
+                    ));
+                    State::Idle { cfg }
+                }
                 _ => State::Authenticating { cfg, cmd },
             },
             State::Associating { cfg, cmd } => match event {
                 MlmeEvent::AssociateConf { resp } => {
                     handle_mlme_assoc_conf(cfg, resp, cmd, context, &mut state_change_msg)
+                }
+                MlmeEvent::DeauthenticateInd { ind } => {
+                    error!(
+                        "association request failed due to spurious deauthentication: {:?}",
+                        ind.reason_code
+                    );
+                    report_connect_finished(
+                        cmd.responder,
+                        context,
+                        ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                        )),
+                    );
+                    state_change_msg.replace(format!(
+                        "received DeauthenticateInd msg while associating; reason code {:?}",
+                        ind.reason_code
+                    ));
+                    State::Idle { cfg }
+                }
+                MlmeEvent::DisassociateInd { ind } => {
+                    error!(
+                        "association request failed due to spurious disassociation: {:?}",
+                        ind.reason_code
+                    );
+                    report_connect_finished(
+                        cmd.responder,
+                        context,
+                        ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                        )),
+                    );
+                    state_change_msg.replace(format!(
+                        "received DisassociateInd msg while associating; reason code {:?}",
+                        ind.reason_code
+                    ));
+                    State::Idle { cfg }
                 }
                 _ => State::Associating { cfg, cmd },
             },
@@ -464,7 +518,13 @@ impl State {
                     Event::ConnectionPing(prev_ping) => {
                         if !triggered(&ping_event, event_id) {
                             let link_state = LinkState::LinkUp { protection, since, ping_event };
-                            return State::Associated { cfg, bss, last_rssi, link_state, radio_cfg };
+                            return State::Associated {
+                                cfg,
+                                bss,
+                                last_rssi,
+                                link_state,
+                                radio_cfg,
+                            };
                         }
                         cancel(&mut ping_event);
                         ping_event.replace(report_ping(prev_ping.next_ping(now()), context));
@@ -1303,6 +1363,69 @@ mod tests {
         expect_result(receiver_one, ConnectResult::Canceled);
         expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
         assert_joining(state, &connect_command_two().0.bss);
+    }
+
+    #[test]
+    fn deauth_while_authing() {
+        let mut h = TestHelper::new();
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = authenticating_state(cmd_one);
+        let deauth_ind = MlmeEvent::DeauthenticateInd {
+            ind: fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: [7, 7, 7, 7, 7, 7],
+                reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+            },
+        };
+        let state = state.on_mlme_event(deauth_ind, &mut h.context);
+        expect_result(
+            receiver_one,
+            ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
+                fidl_mlme::AuthenticateResultCodes::Refused,
+            )),
+        );
+        assert_idle(state);
+    }
+
+    #[test]
+    fn deauth_while_associating() {
+        let mut h = TestHelper::new();
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = associating_state(cmd_one);
+        let deauth_ind = MlmeEvent::DeauthenticateInd {
+            ind: fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: [7, 7, 7, 7, 7, 7],
+                reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+            },
+        };
+        let state = state.on_mlme_event(deauth_ind, &mut h.context);
+        expect_result(
+            receiver_one,
+            ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            )),
+        );
+        assert_idle(state);
+    }
+
+    #[test]
+    fn disassoc_while_associating() {
+        let mut h = TestHelper::new();
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = associating_state(cmd_one);
+        let disassoc_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [7, 7, 7, 7, 7, 7],
+                reason_code: 42,
+            },
+        };
+        let state = state.on_mlme_event(disassoc_ind, &mut h.context);
+        expect_result(
+            receiver_one,
+            ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            )),
+        );
+        assert_idle(state);
     }
 
     #[test]
