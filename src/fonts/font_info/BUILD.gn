@@ -1,0 +1,88 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("font_info") {
+  edition = "2018"
+
+  deps = [
+    "//src/fonts/char_set",
+    "//src/fonts/freetype_ffi",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:libc",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//garnet/public/rust/fuchsia-zircon",
+      "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+      "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    ]
+  }
+}
+
+rustc_test("font_info_test_bin") {
+  name = "font_info_test"
+  edition = "2018"
+  deps = [
+    ":font_info",
+    "//src/fonts/char_set",
+    "//third_party/rust_crates:failure",
+  ]
+  source_root = "tests/tests.rs"
+  non_rust_deps = [ ":test_data" ]
+}
+
+# Needed for testing on Fuchsia
+test_package("font_info_tests") {
+  deps = [
+    ":font_info_test_bin",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//src/fonts/test_data/sample_font.ttf")
+      dest = "sample_font.ttf"
+    },
+  ]
+
+  tests = [
+    {
+      name = "font_info_test"
+    },
+  ]
+}
+
+# Needed for testing on host
+copy("copy_test_data") {
+  sources = [
+    "//src/fonts/test_data/sample_font.ttf",
+  ]
+  outputs = [
+    "$root_out_dir/test_data/font_info/{{source_file_part}}",
+  ]
+}
+
+group("test_data") {
+  deps = [
+    ":copy_test_data",
+  ]
+  metadata = {
+    test_runtime_deps = get_target_outputs(":copy_test_data")
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":font_info_test_bin($host_toolchain)",
+    ":font_info_tests",
+  ]
+}

@@ -4,7 +4,14 @@
 
 use {
     failure::{format_err, Error},
-    std::{clone::Clone, cmp::Ordering, iter::Iterator, ops::Range, vec::Vec},
+    std::{
+        clone::Clone,
+        cmp::Ordering,
+        hash::{Hash, Hasher},
+        iter::Iterator,
+        ops::Range,
+        vec::Vec,
+    },
     unic_char_range::{chars, CharIter, CharRange},
 };
 
@@ -426,6 +433,17 @@ impl MultiCharRange for CharCollection {
     fn range_count(&self) -> usize {
         self.ranges.len()
     }
+}
+
+impl Hash for CharCollection {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.ranges.iter().for_each(|range| hash_char_range(range, state));
+    }
+}
+
+fn hash_char_range<H: Hasher>(range: &CharRange, state: &mut H) {
+    range.low.hash(state);
+    range.high.hash(state);
 }
 
 fn are_chars_adjacent(left: &char, right: &char) -> bool {

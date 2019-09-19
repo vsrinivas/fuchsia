@@ -9,11 +9,14 @@ use {
 
 type BitmapElement = u64;
 const BITMAP_ELEMENT_SIZE: usize = 64;
-const MAX_RANGE_GAP: u32 = 2048;
+/// This value is optimal for memory use, based on some non-scientific experimentation with
+/// real-world font files. (Though compared to `2048`, it does add a few nanoseconds to the average
+/// `contains` call.)
+const MAX_RANGE_GAP: u32 = 256;
 
 /// Represents an ordered set of code points that begin at [CharSetRange.start]. The largest
 /// allowed discontinuity between two consecutive code points in the set is [MAX_RANGE_GAP].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 struct CharSetRange {
     start: u32,
     bitmap: Vec<BitmapElement>,
@@ -59,7 +62,7 @@ impl CharSetRange {
             false
         } else {
             let index = c as usize - self.start as usize;
-            (self.bitmap[index / 64] & (1 << (index % 64))) > 0
+            (self.bitmap[index / BITMAP_ELEMENT_SIZE] & (1 << (index % BITMAP_ELEMENT_SIZE))) > 0
         }
     }
 
@@ -90,9 +93,9 @@ impl Iterator for CharSetRangeIterator<'_> {
 
 /// Represents an ordered set of code points.
 ///
-/// TODO(kpozin): Evaluate replacing with `MultiCharRange`, which might be more space-efficient for
-/// large sets with few discontinuities.
-#[derive(Debug, Clone)]
+/// TODO(kpozin): Add factory method that takes lazy `Iterator<Item = char>` instead of `Vec`.
+/// TODO(kpozin): Enforce `char` values.
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct CharSet {
     ranges: Vec<CharSetRange>,
 }

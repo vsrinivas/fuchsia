@@ -7,7 +7,7 @@ use {
         matcher::select_best_match,
         typeface::{Typeface, TypefaceAndLangScore},
     },
-    crate::font_service::font_info::CharSet,
+    char_set::CharSet,
     failure::{format_err, Error},
     fidl_fuchsia_fonts::{Style2, TypefaceQuery, TypefaceRequest, TypefaceRequestFlags},
     std::sync::Arc,

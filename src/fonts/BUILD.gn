@@ -13,9 +13,10 @@ group("tests") {
   testonly = true
   public_deps = [
     ":font_provider_tests",
-    "//src/fonts/char_set:tests",
-    "//src/fonts/manifest:tests",
-    "//src/fonts/offset_string:tests",
+    "char_set:tests",
+    "font_info:tests",
+    "manifest:tests",
+    "offset_string:tests",
   ]
 }
 
@@ -25,6 +26,10 @@ rustc_binary("font_server") {
   edition = "2018"
 
   deps = [
+    "char_set",
+    "font_info",
+    "freetype_ffi",
+    "manifest",
     "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -37,8 +42,6 @@ rustc_binary("font_server") {
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//src/fonts/char_set",
-    "//src/fonts/manifest",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

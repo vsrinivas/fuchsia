@@ -62,7 +62,7 @@ use {
 macro_rules! derive_opt {
     ($module:ident, $remote_type:ty, $local_type:ty, $local_type_str:expr) => {
         #[allow(non_snake_case, dead_code)]
-        pub(crate) mod $module {
+        pub mod $module {
             use {
                 super::*,
                 serde::{Deserialize, Deserializer, Serialize, Serializer},
@@ -102,7 +102,7 @@ macro_rules! derive_opt {
 /// Serialized values are in _kebab-case_, e.g. `"sans-serif"`.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "GenericFontFamily", rename_all = "kebab-case")]
-pub(crate) enum GenericFontFamilyDef {
+pub enum GenericFontFamilyDef {
     Serif,
     SansSerif,
     Monospace,
@@ -121,7 +121,7 @@ derive_opt!(OptGenericFontFamily, GenericFontFamily, GenericFontFamilyDef, "Gene
 /// Serialize values are _lowercase_, e.g. `"italic"`.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "Slant", rename_all = "lowercase")]
-pub(crate) enum SlantDef {
+pub enum SlantDef {
     Upright,
     Italic,
     Oblique,
@@ -132,7 +132,7 @@ pub(crate) enum SlantDef {
 /// Serialized values are in _kebab-case_, e.g. `"semi-condensed"`.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "Width", rename_all = "kebab-case")]
-pub(crate) enum WidthDef {
+pub enum WidthDef {
     UltraCondensed,
     ExtraCondensed,
     Condensed,

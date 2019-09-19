@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #[macro_use]
-mod serde_ext;
+pub mod serde_ext;
 mod v1_to_v2;
-mod v2;
+pub mod v2;
 
 use {
     crate::{serde_ext::*, v2::FontsManifest as FontsManifestV2},

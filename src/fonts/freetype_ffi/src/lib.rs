@@ -66,8 +66,10 @@ pub type FT_Module = *const c_void;
 pub type FT_Face = *mut c_void;
 
 pub const FT_OPEN_STREAM: c_uint = 0x2;
+pub const FT_OPEN_PATHNAME: c_uint = 0x4;
 
-#[link(name = "freetype2")]
+#[cfg_attr(target_os = "fuchsia", link(name = "freetype2"))]
+#[cfg_attr(not(target_os = "fuchsia"), link(name = "freetype2_for_rust_host", kind = "static"))]
 extern "C" {
     pub fn FT_New_Library(memory: FT_Memory, alibrary: *mut FT_Library) -> FT_Error;
     pub fn FT_Done_Library(library: FT_Library) -> FT_Error;

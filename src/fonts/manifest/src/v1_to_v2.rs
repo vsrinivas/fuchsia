@@ -4,7 +4,6 @@
 
 use {
     crate::{v2, Family as FamilyV1, Font as FontV1, FontsManifest as FontsManifestV1},
-    char_collection::CharCollection,
     failure::{format_err, Error},
     itertools::Itertools,
     std::{
@@ -84,7 +83,7 @@ fn font_to_typeface(font: &FontV1) -> v2::Typeface {
         index: font.index,
         languages: font.languages.clone(),
         style: v2::Style { slant: font.slant, weight: font.weight, width: font.width },
-        code_points: CharCollection::from_sorted_chars(font.code_points.iter()).unwrap(),
+        code_points: font.code_points.clone(),
     }
 }
 
@@ -184,9 +183,9 @@ mod tests {
                                     weight: 800,
                                     width: Width::Condensed,
                                 },
-                                code_points: CharCollection::from_sorted_chars(vec![
-                                    '\u{1}', '\u{2}', '\u{3}', '\u{7}', '\u{8}', '\u{9}', '\u{100}',
-                                ])?,
+                                code_points: CharSet::new(vec![
+                                    0x1, 0x2, 0x3, 0x7, 0x8, 0x9, 0x100,
+                                ]),
                             }],
                         },
                         v2::Asset {
@@ -202,10 +201,9 @@ mod tests {
                                     weight: 200,
                                     width: Width::Normal,
                                 },
-                                code_points: CharCollection::from_sorted_chars(vec![
-                                    '\u{11}', '\u{12}', '\u{13}', '\u{17}', '\u{18}', '\u{19}',
-                                    '\u{100}',
-                                ])?,
+                                code_points: CharSet::new(vec![
+                                    0x11, 0x12, 0x13, 0x17, 0x18, 0x19, 0x100,
+                                ]),
                             }],
                         },
                     ],
@@ -229,9 +227,9 @@ mod tests {
                                     weight: 800,
                                     width: Width::Condensed,
                                 },
-                                code_points: CharCollection::from_sorted_chars(vec![
-                                    '\u{1}', '\u{2}', '\u{3}', '\u{7}', '\u{8}', '\u{9}', '\u{100}',
-                                ])?,
+                                code_points: CharSet::new(vec![
+                                    0x1, 0x2, 0x3, 0x7, 0x8, 0x9, 0x100,
+                                ]),
                             },
                             v2::Typeface {
                                 index: 1,
@@ -241,10 +239,9 @@ mod tests {
                                     weight: 200,
                                     width: Width::Normal,
                                 },
-                                code_points: CharCollection::from_sorted_chars(vec![
-                                    '\u{11}', '\u{12}', '\u{13}', '\u{17}', '\u{18}', '\u{19}',
-                                    '\u{100}',
-                                ])?,
+                                code_points: CharSet::new(vec![
+                                    0x11, 0x12, 0x13, 0x17, 0x18, 0x19, 0x100,
+                                ]),
                             },
                         ],
                     }],

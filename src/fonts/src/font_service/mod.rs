@@ -4,15 +4,12 @@
 
 mod asset;
 mod family;
-mod font_info;
-mod freetype_ffi;
 mod typeface;
 
 use {
     self::{
         asset::Collection as AssetCollection,
         family::{FamilyOrAlias, FontFamily},
-        font_info::FontInfoLoader,
         typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
     },
     failure::{format_err, Error, ResultExt},
@@ -23,6 +20,7 @@ use {
     },
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
+    font_info::FontInfoLoaderImpl,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
@@ -81,7 +79,7 @@ impl FontService {
     }
 
     async fn add_fonts_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
-        let font_info_loader = FontInfoLoader::new()?;
+        let font_info_loader = FontInfoLoaderImpl::new()?;
 
         for mut family_manifest in manifest.families.drain(..) {
             if family_manifest.fonts.is_empty() {
@@ -134,7 +132,7 @@ impl FontService {
                     })?;
 
                     let info = font_info_loader
-                        .load_font_info(buffer.vmo, buffer.size as usize, font_manifest.index)
+                        .load_font_info(buffer, font_manifest.index)
                         .with_context(|_| {
                             format!(
                                 "Failed to load font info from {}",
@@ -264,7 +262,12 @@ impl FontService {
                     })
                 })
                 .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
-            None => fonts::TypefaceResponse::new_empty(),
+            None => {
+                if let Some(code_points) = query_field!(request, code_points) {
+                    fx_log_err!("Missing code points: {:?}", code_points);
+                }
+                fonts::TypefaceResponse::new_empty()
+            }
         };
 
         // Note that not finding a typeface is not an error, as long as the query was legal.

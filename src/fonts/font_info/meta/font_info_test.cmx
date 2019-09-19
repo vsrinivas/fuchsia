@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/font_info_test"
+    }
+}

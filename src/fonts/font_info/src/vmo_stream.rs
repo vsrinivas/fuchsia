@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(target_os = "fuchsia")]
+
 use {
-    crate::font_service::freetype_ffi::{FT_Stream, FT_StreamRec},
+    crate::sources::FTStreamProvider,
     failure::Error,
+    freetype_ffi::{FT_Stream, FT_StreamRec},
     fuchsia_zircon as zx,
     libc::{c_uchar, c_ulong, c_void},
     std::{cmp, ptr, slice},
@@ -16,8 +19,7 @@ struct VmoStreamInternal {
 }
 
 impl VmoStreamInternal {
-    // Caller must ensure that the returned FT_Stream is not used after
-    // VmoStream is dropped.
+    /// Caller must ensure that the returned FT_Stream is not used after VmoStream is dropped.
     unsafe fn ft_stream(&self) -> FT_Stream {
         &self.stream_rec as FT_Stream
     }
@@ -53,11 +55,10 @@ impl VmoStreamInternal {
     }
 }
 
-// Implements FT_Stream for a VMO.
-pub struct VmoStream {
-    // VmoStreamInternal needs to be boxed to ensure that it's not moved. This
-    // allows to set stream_rec.descriptor to point to the containing
-    // VmoStreamInternal instance.
+/// Implements FT_Stream for a VMO.
+pub(crate) struct VmoStream {
+    /// VmoStreamInternal needs to be boxed to ensure that it's not moved. This allows to set
+    /// `stream_rec.descriptor` to point to the containing `VmoStreamInternal` instance.
     internal: Box<VmoStreamInternal>,
 }
 
@@ -86,9 +87,17 @@ impl VmoStream {
         Ok(VmoStream { internal })
     }
 
-    // Caller must ensure that the returned FT_Stream is not used after
-    // VmoStream is dropped.
+    /// Unsafe to call FreeType FFI.
+    /// Caller must ensure that the returned `FT_Stream` is not used after `VmoStream` is dropped.
     pub unsafe fn ft_stream(&self) -> FT_Stream {
         self.internal.ft_stream()
+    }
+}
+
+impl FTStreamProvider for VmoStream {
+    /// Unsafe to call FreeType FFI.
+    /// Caller must ensure that the returned `FT_Stream` is not used after `VmoStream` is dropped.
+    unsafe fn ft_stream(&self) -> FT_Stream {
+        VmoStream::ft_stream(self)
     }
 }

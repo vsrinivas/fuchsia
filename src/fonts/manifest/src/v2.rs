@@ -4,7 +4,7 @@
 
 use {
     crate::serde_ext::*,
-    char_collection::CharCollection,
+    char_set::CharSet,
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
     offset_string::OffsetString,
@@ -20,21 +20,23 @@ use {
 ///
 /// Less duplication than v1 schema. Intended for generation using a Rust tool, not for writing by
 /// hand.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct FontsManifest {
     /// List of families in the manifest.
     pub families: Vec<Family>,
 }
 
 /// Represents a font family, its metadata, and its font files.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Family {
     pub name: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    /// Alternate names for the font family.
+    // During de/serialization, omitted `aliases` are treated as an empty array and vice-versa.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub aliases: Vec<String>,
     /// The generic font family that this font belongs to. If this is a specialty font (e.g. for
     /// custom icons), this should be set to `None`.
-    #[serde(with = "OptGenericFontFamily")]
+    #[serde(with = "OptGenericFontFamily", default)]
     pub generic_family: Option<GenericFontFamily>,
     /// Whether this family can be used as a fallback for other fonts (within the same generic
     /// family, or as a last resort).
@@ -44,7 +46,7 @@ pub struct Family {
 }
 
 /// Represents a single font file, which contains one or more [`Typeface`]s.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Asset {
     /// Asset identifier. Should be a valid file name, e.g. `"Roboto-Regular.ttf`.
     pub file_name: String,
@@ -68,7 +70,7 @@ impl Asset {
 }
 
 /// Describes the location of a font asset.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub enum AssetLocation {
     /// Indicates that the file is accessible through a file path in the font server's namespace
     /// (e.g. at `/config/data/fonts/`).
@@ -81,7 +83,7 @@ pub enum AssetLocation {
 }
 
 /// Describes the location of a local file asset. Used in conjunction with [`Asset::file_name`].
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct LocalFileLocator {
     /// Package-relative path to the file, excluding the file name
     pub directory: PathBuf,
@@ -89,7 +91,7 @@ pub struct LocalFileLocator {
 
 /// Describes the location of a font asset that's part of a Fuchsia package. Used in conjunction
 /// with [`Asset::file_name`].
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct PackageLocator {
     /// URL of just the package (not including the file name)
     pub package: PkgUrl,
@@ -100,7 +102,7 @@ pub struct PackageLocator {
 /// Describes which set of dependencies a font package belongs to.
 ///
 /// See https://fuchsia.dev/fuchsia-src/development/build/boards_and_products#dependency_sets.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum PackageSet {
     /// Package is in the device's base image (the "base set" of packages)
@@ -110,7 +112,7 @@ pub enum PackageSet {
 }
 
 /// Describes a single typeface within a font file
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Typeface {
     /// Index of the typeface in the file. If the file only contains a single typeface, this will
     /// always be `0`.
@@ -129,7 +131,7 @@ pub struct Typeface {
 
     /// List of Unicode code points supported by the typeface.
     #[serde(with = "code_points_serde")]
-    pub code_points: CharCollection,
+    pub code_points: CharSet,
 }
 
 impl Typeface {
@@ -142,19 +144,19 @@ impl Typeface {
     }
 }
 
-/// Used for de/serializing a `CharCollection`.
+/// Used for de/serializing a `CharSet`.
 mod code_points_serde {
     use super::*;
 
-    pub fn deserialize<'d, D>(deserializer: D) -> Result<CharCollection, D::Error>
+    pub fn deserialize<'d, D>(deserializer: D) -> Result<CharSet, D::Error>
     where
         D: Deserializer<'d>,
     {
         let offset_string = OffsetString::deserialize(deserializer)?;
-        CharCollection::try_from(offset_string).map_err(|e| D::Error::custom(format!("{:?}", e)))
+        CharSet::try_from(offset_string).map_err(|e| D::Error::custom(format!("{:?}", e)))
     }
 
-    pub fn serialize<S>(code_points: &CharCollection, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(code_points: &CharSet, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -165,7 +167,7 @@ mod code_points_serde {
 
 /// Describes a typeface's style properties. Equivalent to [`fidl_fuchsia_fonts::Style2`], but all
 /// fields are required.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Style {
     #[serde(default = "Style::default_slant", with = "SlantDef")]
     pub slant: Slant,

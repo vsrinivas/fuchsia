@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    char_collection::{CharCollection, MultiCharRange},
-    char_set::CharSet,
     failure::{format_err, Error},
     serde_derive::{Deserialize, Serialize},
-    std::convert::TryFrom,
-    unic_char_range::{chars, CharRange},
+    std::{iter::Iterator, ops::RangeInclusive},
 };
+
+mod conversions;
+
+pub use crate::conversions::*;
 
 /// A compact representation of a set of unsigned integer ranges.
 ///
@@ -27,142 +28,107 @@ use {
 /// range has length > 1, then there's a '+x' that shows how much to add to get the upper bound of
 /// the range. Note that the range [13, 14) has length 1, so it doesn't get a plus suffix.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(try_from = "String")]
 pub struct OffsetString(String);
 
-impl From<OffsetString> for String {
-    fn from(value: OffsetString) -> String {
-        value.0
-    }
-}
+impl OffsetString {
+    /// Tries to construct a new `OffsetString` from a string.
+    ///
+    /// This method performs basic validation on whether the string is syntactically valid and does
+    /// not contain any redundantly short ranges. Returns an `Error` if validation fails.
+    pub fn new<T: AsRef<str>>(source: T) -> Result<OffsetString, Error> {
+        let mut segment_index = 0;
+        for segment in source.as_ref().split(',') {
+            let mut endpoints = segment.split('+');
 
-impl From<CharCollection> for OffsetString {
-    fn from(value: CharCollection) -> OffsetString {
-        OffsetString::from(&value)
-    }
-}
+            // Not enough plus signs
+            let low = endpoints.next().ok_or_else(|| format_err!("Empty segment"))?;
+            let low_int = low.parse::<u32>()?;
 
-impl From<&CharCollection> for OffsetString {
-    fn from(value: &CharCollection) -> OffsetString {
-        let mut prev_high: u32 = 0;
-        let mut segments: Vec<String> = Vec::with_capacity(value.range_count());
-        for range in value.iter_ranges() {
-            let relative_low = range.low as u32 - prev_high;
-            let range_size = range.len();
-            let segment = if range_size == 1 {
-                relative_low.to_string()
-            } else {
-                format!("{}+{}", relative_low, range_size - 1)
-            };
-            segments.push(segment);
-            prev_high = range.high as u32;
+            if segment_index > 0 && low_int <= 1 {
+                return Err(format_err!("Adjacent ranges must be merged"));
+            }
+
+            if let Some(span) = endpoints.next() {
+                let span_int = span.parse::<u32>()?;
+                if span_int < 1 {
+                    return Err(format_err!("Range is too small: {}", &segment));
+                }
+
+                // Too many plus signs
+                if endpoints.next().is_some() {
+                    return Err(format_err!("Invalid segment: {}", &segment));
+                }
+            }
+
+            segment_index += 1;
         }
-        OffsetString(segments.join(","))
+        Ok(OffsetString(source.as_ref().to_string()))
     }
-}
 
-impl TryFrom<OffsetString> for CharCollection {
-    type Error = failure::Error;
-
-    fn try_from(value: OffsetString) -> Result<Self, Self::Error> {
-        CharCollection::try_from(&value)
-    }
-}
-
-impl TryFrom<&OffsetString> for CharCollection {
-    type Error = failure::Error;
-
-    fn try_from(value: &OffsetString) -> Result<Self, Self::Error> {
-        let mut offset: u32 = 0;
-        let ranges: Result<Vec<CharRange>, Error> = value
-            .0
+    /// Iterate over the numeric ranges in the collection.
+    pub fn iter_ranges<'a>(&'a self) -> impl Iterator<Item = RangeInclusive<u32>> + 'a {
+        self.0
             .split(',')
             .map(|segment| {
-                let parsed_ints: Result<Vec<u32>, _> =
-                    segment.split('+').map(|s| s.parse::<u32>()).collect();
-                parsed_ints
+                segment.split('+').map(|s| s.parse::<u32>().unwrap()).collect::<Vec<u32>>()
             })
-            .map(|parsed_ints| {
-                let parsed_ints = parsed_ints?;
-                let low = offset + parsed_ints[0];
+            .scan(0u32, |offset, parsed_ints| {
+                let low = *offset + parsed_ints[0];
                 let high = if parsed_ints.len() == 1 { low } else { low + parsed_ints[1] };
-                offset = high;
-
-                let low_char =
-                    std::char::from_u32(low).ok_or_else(|| format_err!("Bad char: {}", low))?;
-                let high_char =
-                    std::char::from_u32(high).ok_or_else(|| format_err!("Bad char: {}", high))?;
-
-                Ok(chars!(low_char..=high_char))
+                *offset = high;
+                Some(low..=high)
             })
-            .collect();
-        return CharCollection::from_sorted_ranges(ranges?);
     }
-}
 
-impl From<CharSet> for OffsetString {
-    fn from(value: CharSet) -> OffsetString {
-        OffsetString::from(&value)
-    }
-}
-
-impl From<&CharSet> for OffsetString {
-    fn from(char_set: &CharSet) -> OffsetString {
-        let collection: CharCollection = char_set.into();
-        collection.into()
-    }
-}
-
-impl TryFrom<OffsetString> for CharSet {
-    type Error = failure::Error;
-
-    fn try_from(value: OffsetString) -> Result<Self, Self::Error> {
-        CharSet::try_from(&value)
-    }
-}
-
-impl TryFrom<&OffsetString> for CharSet {
-    type Error = failure::Error;
-
-    fn try_from(value: &OffsetString) -> Result<Self, Self::Error> {
-        CharCollection::try_from(value).map(CharSet::from)
+    /// Iterate over the individual unsigned integers in the collection.
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = u32> + 'a {
+        self.iter_ranges().flat_map(|range| range)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, char_collection::char_collect};
+    use super::*;
 
     #[test]
-    fn test_char_collection_to_offset_string() {
-        let collection = char_collect!(0..=4, 9..=9, 20..=28);
-        let offset_string: OffsetString = collection.into();
-        assert_eq!(offset_string, OffsetString("0+4,5,11+8".to_string()));
-
-        let collection = char_collect!(3..=4, 9..=9, 20..=28);
-        let offset_string: OffsetString = collection.into();
-        assert_eq!(offset_string, OffsetString("3+1,5,11+8".to_string()));
+    fn test_offset_string_new() {
+        assert!(OffsetString::new("0+4,5,11+8").is_ok());
+        assert!(OffsetString::new("1+3,5,11+8").is_ok());
     }
 
     #[test]
-    fn test_char_collection_from_offset_string() -> Result<(), Error> {
-        assert_eq!(
-            char_collect!(0..=4, 9..=9, 20..=28),
-            CharCollection::try_from(OffsetString("0+4,5,11+8".to_string()))?
-        );
+    fn test_offset_string_new_bad_string() {
+        assert!(OffsetString::new("3+,5,11+8").is_err());
+        assert!(OffsetString::new("-5+4,5,11+8").is_err());
+        assert!(OffsetString::new("3+1,a,11+8").is_err());
+        assert!(OffsetString::new("3+1,5,11+8,").is_err());
+    }
 
-        assert_eq!(
-            char_collect!(3..=4, 9..=9, 20..=28),
-            CharCollection::try_from(OffsetString("3+1,5,11+8".to_string()))?
-        );
+    #[test]
+    fn test_offset_string_new_bad_offset() {
+        assert!(OffsetString::new("0+4,0,5,11+8").is_err());
+        assert!(OffsetString::new("0+4,1,5,11+8").is_err());
+        assert!(OffsetString::new("0+4,1+3,5,11+8").is_err());
+    }
 
+    #[test]
+    fn test_offset_string_iter_ranges() -> Result<(), Error> {
+        let offset_string = OffsetString::new("0+4,5,11+8")?;
+        assert_eq!(
+            offset_string.iter_ranges().collect::<Vec<RangeInclusive<u32>>>(),
+            vec![0..=4, 9..=9, 20..=28]
+        );
         Ok(())
     }
 
     #[test]
-    fn test_char_collection_from_bad_offset_string() {
-        assert!(CharCollection::try_from(OffsetString("3+,5,11+8".to_string())).is_err());
-        assert!(CharCollection::try_from(OffsetString("-5+4,5,11+8".to_string())).is_err());
-        assert!(CharCollection::try_from(OffsetString("3+1,a,11+8".to_string())).is_err());
-        assert!(CharCollection::try_from(OffsetString("3+1,5,11+8,".to_string())).is_err());
+    fn test_offset_string_iter() -> Result<(), Error> {
+        let offset_string = OffsetString::new("0+4,5,11+8")?;
+        assert_eq!(
+            offset_string.iter().collect::<Vec<u32>>(),
+            vec![0, 1, 2, 3, 4, 9, 20, 21, 22, 23, 24, 25, 26, 27, 28]
+        );
+        Ok(())
     }
 }
