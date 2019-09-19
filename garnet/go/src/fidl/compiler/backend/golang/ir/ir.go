@@ -788,6 +788,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag, tag2 := c.compileType(val.Type)
+	tag.reverseOfBounds = append(tag.reverseOfBounds, val.Offset)
 	return StructMember{
 		Attributes:  val.Attributes,
 		Type:        ty,
