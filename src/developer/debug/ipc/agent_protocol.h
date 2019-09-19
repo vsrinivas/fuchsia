@@ -16,6 +16,10 @@ class MessageWriter;
 bool ReadRequest(MessageReader* reader, HelloRequest* request, uint32_t* transaction_id);
 void WriteReply(const HelloReply& reply, uint32_t transaction_id, MessageWriter* writer);
 
+// Status.
+bool ReadRequest(MessageReader* reader, StatusRequest* request, uint32_t* transaction_id);
+void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter* writer);
+
 // Launch.
 bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transaction_id);
 void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter* writer);

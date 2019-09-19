@@ -61,7 +61,7 @@ bool SerializeDeserializeNotification(const NotificationType& in, NotificationTy
 
 }  // namespace
 
-// ConfigAgent -----------------------------------------------------------------
+// ConfigAgent -------------------------------------------------------------------------------------
 
 TEST(Protocol, ConfigAgentRequest) {
   ConfigAgentRequest initial;
@@ -96,7 +96,7 @@ TEST(Protocol, ConfigAgentReply) {
   EXPECT_EQ(second.results[2], initial.results[2]);
 }
 
-// Hello -----------------------------------------------------------------------
+// Hello -------------------------------------------------------------------------------------------
 
 TEST(Protocol, HelloRequest) {
   HelloRequest initial;
@@ -112,7 +112,30 @@ TEST(Protocol, HelloReply) {
   EXPECT_EQ(initial.version, second.version);
 }
 
-// Launch ----------------------------------------------------------------------
+// Status ------------------------------------------------------------------------------------------
+
+TEST(Protocol, StatusRequest) {
+  StatusRequest initial;
+  StatusRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+}
+
+TEST(Protocol, StatusReply) {
+  StatusReply initial;
+  initial.process_koids.push_back(0x1);
+  initial.process_koids.push_back(0x2);
+  initial.process_koids.push_back(0x3);
+
+  StatusReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(second.process_koids.size(), 3u);
+  EXPECT_EQ(second.process_koids[0], initial.process_koids[0]);
+  EXPECT_EQ(second.process_koids[1], initial.process_koids[1]);
+  EXPECT_EQ(second.process_koids[2], initial.process_koids[2]);
+}
+
+// Launch ------------------------------------------------------------------------------------------
 
 TEST(Protocol, LaunchRequest) {
   LaunchRequest initial;
@@ -145,7 +168,7 @@ TEST(Protocol, LaunchReply) {
   EXPECT_EQ(initial.process_name, second.process_name);
 }
 
-// Kill ----------------------------------------------------------------------
+// Kill --------------------------------------------------------------------------------------------
 
 TEST(Protocol, KillRequest) {
   KillRequest initial;
@@ -165,7 +188,7 @@ TEST(Protocol, KillReply) {
   EXPECT_EQ(initial.status, second.status);
 }
 
-// Attach ----------------------------------------------------------------------
+// Attach ------------------------------------------------------------------------------------------
 
 TEST(Protocol, AttachRequest) {
   AttachRequest initial;
@@ -190,7 +213,7 @@ TEST(Protocol, AttachReply) {
   EXPECT_EQ(initial.name, second.name);
 }
 
-// Detach ----------------------------------------------------------------------
+// Detach ------------------------------------------------------------------------------------------
 
 TEST(Protocol, DetachRequest) {
   DetachRequest initial;
@@ -212,7 +235,7 @@ TEST(Protocol, DetachReply) {
   EXPECT_EQ(initial.status, second.status);
 }
 
-// Pause ---------------------------------------------------------------------
+// Pause -------------------------------------------------------------------------------------------
 
 TEST(Protocol, PauseRequest) {
   PauseRequest initial;
@@ -245,7 +268,7 @@ TEST(Protocol, PauseReply) {
   }
 }
 
-// Resume --------------------------------------------------------------------
+// Resume ------------------------------------------------------------------------------------------
 
 TEST(Protocol, ResumeRequest) {
   ResumeRequest initial;
@@ -264,7 +287,7 @@ TEST(Protocol, ResumeRequest) {
   EXPECT_EQ(initial.range_end, second.range_end);
 }
 
-// ProcessTree -----------------------------------------------------------------
+// ProcessTree -------------------------------------------------------------------------------------
 
 TEST(Protocol, ProcessTreeRequest) {
   ProcessTreeRequest initial;
@@ -295,7 +318,7 @@ TEST(Protocol, ProcessTreeReply) {
   EXPECT_EQ(initial.root.children[0].name, second.root.children[0].name);
 }
 
-// Threads ---------------------------------------------------------------------
+// Threads -----------------------------------------------------------------------------------------
 
 TEST(Protocol, ThreadsRequest) {
   ThreadsRequest initial;
@@ -328,7 +351,7 @@ TEST(Protocol, ThreadsReply) {
   EXPECT_EQ(initial.threads[1].name, second.threads[1].name);
 }
 
-// ReadMemory ------------------------------------------------------------------
+// ReadMemory --------------------------------------------------------------------------------------
 
 TEST(Protocol, ReadMemoryRequest) {
   ReadMemoryRequest initial;
@@ -374,7 +397,7 @@ TEST(Protocol, ReadMemoryReply) {
   EXPECT_TRUE(second.blocks[1].data.empty());
 }
 
-// AddOrChangeBreakpoint -------------------------------------------------------
+// AddOrChangeBreakpoint ---------------------------------------------------------------------------
 
 TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest initial;
@@ -420,7 +443,7 @@ TEST(Protocol, AddOrChangeBreakpointReply) {
   EXPECT_EQ(initial.status, second.status);
 }
 
-// RemoveBreakpoint ------------------------------------------------------------
+// RemoveBreakpoint --------------------------------------------------------------------------------
 
 TEST(Protocol, RemoveBreakpointRequest) {
   RemoveBreakpointRequest initial;
@@ -438,7 +461,7 @@ TEST(Protocol, RemoveBreakpointReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 }
 
-// SysInfo ---------------------------------------------------------------------
+// SysInfo -----------------------------------------------------------------------------------------
 
 TEST(Protocol, SysInfoRequest) {
   SysInfoRequest initial;
@@ -464,7 +487,7 @@ TEST(Protocol, SysInfoReply) {
   EXPECT_EQ(initial.hw_watchpoint_count, second.hw_watchpoint_count);
 }
 
-// ThreadStatus ----------------------------------------------------------------
+// ThreadStatus ------------------------------------------------------------------------------------
 
 TEST(Protocol, ThreadStatusRequest) {
   ThreadStatusRequest initial;
@@ -505,7 +528,7 @@ TEST(Protocol, ThreadStatusReply) {
   EXPECT_EQ(initial.record.frames[1], second.record.frames[1]);
 }
 
-// Modules ---------------------------------------------------------------------
+// Modules -----------------------------------------------------------------------------------------
 
 TEST(Protocol, ModulesRequest) {
   ModulesRequest initial;
@@ -535,7 +558,7 @@ TEST(Protocol, ModulesReply) {
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
 }
 
-// ASpace ----------------------------------------------------------------------
+// ASpace ------------------------------------------------------------------------------------------
 
 TEST(Protocol, AspaceRequest) {
   AddressSpaceRequest initial;
@@ -581,7 +604,7 @@ TEST(Protocol, AspaceReply) {
   EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
 }
 
-// JobFilter ------------------------------------------------------------------
+// JobFilter --------------------------------------------------------------------------------------
 
 TEST(Protocol, JobFilterRequest) {
   JobFilterRequest initial;
@@ -609,7 +632,7 @@ TEST(Protocol, JobFilterReply) {
   EXPECT_EQ(second.matched_processes[1], initial.matched_processes[1]);
 }
 
-// WriteMemory -----------------------------------------------------------------
+// WriteMemory -------------------------------------------------------------------------------------
 
 TEST(Protocol, WriteMemoryRequest) {
   WriteMemoryRequest initial;
@@ -636,7 +659,7 @@ TEST(Protocol, WriteMemoryReply) {
   ASSERT_EQ(initial.status, second.status);
 }
 
-// Registers -------------------------------------------------------------------
+// Registers ---------------------------------------------------------------------------------------
 
 using debug_ipc::RegisterID;
 
@@ -744,7 +767,7 @@ TEST(Protocol, WriteRegistersReply) {
   EXPECT_EQ(second.status, initial.status);
 }
 
-// Notifications ---------------------------------------------------------------
+// Notifications -----------------------------------------------------------------------------------
 
 TEST(Protocol, NotifyThread) {
   NotifyThread initial;

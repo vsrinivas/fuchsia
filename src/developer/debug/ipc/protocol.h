@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 13;
+constexpr uint32_t kProtocolVersion = 14;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -44,19 +44,20 @@ struct MsgHeader {
     kWriteRegisters,
     kRemoveBreakpoint,
     kResume,
+    kStatus,
     kSysInfo,
     kThreadStatus,
     kThreads,
     kWriteMemory,
 
     // The "notify" messages are sent unrequested from the agent to the client.
+    kNotifyException,
+    kNotifyIO,
+    kNotifyModules,
     kNotifyProcessExiting,
     kNotifyProcessStarting,
-    kNotifyThreadStarting,
     kNotifyThreadExiting,
-    kNotifyException,
-    kNotifyModules,
-    kNotifyIO,
+    kNotifyThreadStarting,
 
     kNumMessages
   };
@@ -97,6 +98,16 @@ enum class InferiorType : uint32_t {
   kLast,
 };
 const char* InferiorTypeToString(InferiorType);
+
+// Status ------------------------------------------------------------------------------------------
+//
+// Asks for a present view of the system.
+
+struct StatusRequest {};
+struct StatusReply {
+  // All the processes that the debug agent is currently attached.
+  std::vector<uint64_t> process_koids;
+};
 
 struct LaunchRequest {
   // TODO(DX-953): zxdb should be able to recognize when something is a binary

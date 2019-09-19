@@ -9,6 +9,7 @@
 
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
+#include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -61,6 +62,40 @@ std::unique_ptr<TestContext> CreateTestContext() {
   auto context = std::make_unique<TestContext>();
   context->object_provider = CreateDefaultMockObjectProvider();
   return context;
+}
+
+TEST(DebugAgent, OnStatus) {
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, test_context->object_provider);
+  debug_agent.Connect(&test_context->stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  debug_ipc::StatusReply reply = {};
+  remote_api->OnStatus({}, &reply);
+
+  ASSERT_EQ(reply.process_koids.size(), 0u);
+
+
+  constexpr uint64_t kProcessKoid1 = 0x1234;
+  auto process1 = std::make_unique<MockProcess>(kProcessKoid1, nullptr);
+  debug_agent.InjectProcessForTest(std::move(process1));
+
+  reply = {};
+  remote_api->OnStatus({}, &reply);
+
+  ASSERT_EQ(reply.process_koids.size(), 1u);
+  EXPECT_EQ(reply.process_koids[0], kProcessKoid1);
+
+  constexpr uint64_t kProcessKoid2 = 0x5678;
+  auto process2 = std::make_unique<MockProcess>(kProcessKoid2, nullptr);
+  debug_agent.InjectProcessForTest(std::move(process2));
+
+  reply = {};
+  remote_api->OnStatus({}, &reply);
+
+  ASSERT_EQ(reply.process_koids.size(), 2u);
+  EXPECT_EQ(reply.process_koids[0], kProcessKoid1);
+  EXPECT_EQ(reply.process_koids[1], kProcessKoid2);
 }
 
 TEST(DebugAgent, OnAttach) {

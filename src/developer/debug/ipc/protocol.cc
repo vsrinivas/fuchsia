@@ -31,6 +31,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "None";
     case MsgHeader::Type::kHello:
       return "Hello";
+    case MsgHeader::Type::kStatus:
+      return "Status";
     case MsgHeader::Type::kLaunch:
       return "Launch";
     case MsgHeader::Type::kKill:

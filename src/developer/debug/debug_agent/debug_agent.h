@@ -63,6 +63,8 @@ class DebugAgent : public RemoteAPI,
 
   void OnProcessStart(const std::string& filter, zx::process) override;
 
+  void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
+
   bool should_quit() const { return configuration_.quit_on_exit; }
 
  private:
@@ -70,6 +72,7 @@ class DebugAgent : public RemoteAPI,
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                      debug_ipc::ConfigAgentReply* reply) override;
   void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) override;
+  void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) override;
   void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) override;
   void OnAttach(std::vector<char> serialized) override;
@@ -104,7 +107,7 @@ class DebugAgent : public RemoteAPI,
   void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                      debug_ipc::WriteMemoryReply* reply) override;
 
-  // Breakpoint::ProcessDelegate implementation --------------------------------
+  // Breakpoint::ProcessDelegate implementation ----------------------------------------------------
 
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
@@ -112,7 +115,7 @@ class DebugAgent : public RemoteAPI,
   void SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
 
-  // Watchpoint::ProcessDelegate implementation --------------------------------
+  // Watchpoint::ProcessDelegate implementation ----------------------------------------------------
 
   zx_status_t RegisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
                                  const debug_ipc::AddressRange&) override;
@@ -122,7 +125,7 @@ class DebugAgent : public RemoteAPI,
   void SetupWatchpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
 
-  // Job/Process/Thread Management ---------------------------------------------
+  // Job/Process/Thread Management -----------------------------------------------------------------
 
   zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);

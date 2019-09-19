@@ -78,26 +78,27 @@ void RemoteAPIAdapter::OnStreamReadable() {
     break
 
     switch (header.type) {
+      DISPATCH(AddOrChangeBreakpoint);
+      DISPATCH(AddressSpace);
       DISPATCH(ConfigAgent);
+      DISPATCH(Detach);
+      DISPATCH(JobFilter);
       DISPATCH(Hello);
-      DISPATCH(Launch);
       DISPATCH(Kill);
-      DISPATCH(Pause);
-      DISPATCH(QuitAgent);
-      DISPATCH(ProcessTree);
-      DISPATCH(Threads);
+      DISPATCH(Launch);
       DISPATCH(Modules);
+      DISPATCH(Pause);
+      DISPATCH(ProcessTree);
+      DISPATCH(QuitAgent);
       DISPATCH(ReadMemory);
       DISPATCH(ReadRegisters);
       DISPATCH(WriteRegisters);
-      DISPATCH(Resume);
-      DISPATCH(Detach);
-      DISPATCH(AddOrChangeBreakpoint);
       DISPATCH(RemoveBreakpoint);
+      DISPATCH(Resume);
+      DISPATCH(Status);
       DISPATCH(SysInfo);
       DISPATCH(ThreadStatus);
-      DISPATCH(AddressSpace);
-      DISPATCH(JobFilter);
+      DISPATCH(Threads);
       DISPATCH(WriteMemory);
 
       // Attach is special (see remote_api.h): forward the raw data instead of
@@ -110,13 +111,13 @@ void RemoteAPIAdapter::OnStreamReadable() {
       // but need to handle these "not a message" types to avoid this warning.
       case debug_ipc::MsgHeader::Type::kNone:
       case debug_ipc::MsgHeader::Type::kNumMessages:
+      case debug_ipc::MsgHeader::Type::kNotifyException:
+      case debug_ipc::MsgHeader::Type::kNotifyIO:
+      case debug_ipc::MsgHeader::Type::kNotifyModules:
       case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
       case debug_ipc::MsgHeader::Type::kNotifyProcessStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
-      case debug_ipc::MsgHeader::Type::kNotifyException:
-      case debug_ipc::MsgHeader::Type::kNotifyModules:
-      case debug_ipc::MsgHeader::Type::kNotifyIO:
         break;  // Avoid warning
     }
 

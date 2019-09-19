@@ -10,7 +10,7 @@
 
 namespace debug_ipc {
 
-// Record deserializers --------------------------------------------------------
+// Record deserializers ----------------------------------------------------------------------------
 
 bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
   if (!reader->ReadUint64(&settings->process_koid) || !reader->ReadUint64(&settings->thread_koid) ||
@@ -58,7 +58,7 @@ bool Deserialize(MessageReader* reader, ConfigAction* action) {
   return true;
 }
 
-// Record serializers ----------------------------------------------------------
+// Record serializers ------------------------------------------------------------------------------
 
 void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(record.type));
@@ -116,7 +116,7 @@ void Serialize(const BreakpointStats& stats, MessageWriter* writer) {
   writer->WriteBool(stats.should_delete);
 }
 
-// Hello -----------------------------------------------------------------------
+// Hello -------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, HelloRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -131,7 +131,22 @@ void WriteReply(const HelloReply& reply, uint32_t transaction_id, MessageWriter*
   writer->WriteBytes(&reply, sizeof(HelloReply));
 }
 
-// Launch ----------------------------------------------------------------------
+// Status ------------------------------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, StatusRequest* request, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
+void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kStatus, transaction_id);
+  Serialize(reply.process_koids, writer);
+}
+
+// Launch ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -158,7 +173,7 @@ void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteString(reply.process_name);
 }
 
-// Kill ----------------------------------------------------------------------
+// Kill ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, KillRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -173,7 +188,7 @@ void WriteReply(const KillReply& reply, uint32_t transaction_id, MessageWriter* 
   writer->WriteUint32(reply.status);
 }
 
-// Attach ----------------------------------------------------------------------
+// Attach ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, AttachRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -196,7 +211,7 @@ void WriteReply(const AttachReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteString(reply.name);
 }
 
-// Detach ----------------------------------------------------------------------
+// Detach ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, DetachRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -217,7 +232,7 @@ void WriteReply(const DetachReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteUint32(reply.status);
 }
 
-// Pause -----------------------------------------------------------------------
+// Pause -------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, PauseRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -236,7 +251,7 @@ void WriteReply(const PauseReply& reply, uint32_t transaction_id, MessageWriter*
   Serialize(reply.threads, writer);
 }
 
-// QuitAgent -------------------------------------------------------------------
+// QuitAgent ---------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, QuitAgentRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -250,7 +265,7 @@ void WriteReply(const QuitAgentReply& reply, uint32_t transaction_id, MessageWri
   writer->WriteHeader(MsgHeader::Type::kQuitAgent, transaction_id);
 }
 
-// Resume ----------------------------------------------------------------------
+// Resume ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ResumeRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -281,7 +296,7 @@ void WriteReply(const ResumeReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
 }
 
-// ProcessTree -----------------------------------------------------------------
+// ProcessTree -------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ProcessTreeRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -296,7 +311,7 @@ void WriteReply(const ProcessTreeReply& reply, uint32_t transaction_id, MessageW
   Serialize(reply.root, writer);
 }
 
-// Threads ---------------------------------------------------------------------
+// Threads -----------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ThreadsRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -311,7 +326,7 @@ void WriteReply(const ThreadsReply& reply, uint32_t transaction_id, MessageWrite
   Serialize(reply.threads, writer);
 }
 
-// ReadMemory ------------------------------------------------------------------
+// ReadMemory --------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ReadMemoryRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -326,7 +341,7 @@ void WriteReply(const ReadMemoryReply& reply, uint32_t transaction_id, MessageWr
   Serialize(reply.blocks, writer);
 }
 
-// AddOrChangeBreakpoint -------------------------------------------------------
+// AddOrChangeBreakpoint ---------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, AddOrChangeBreakpointRequest* request,
                  uint32_t* transaction_id) {
@@ -351,7 +366,7 @@ void WriteReply(const AddOrChangeBreakpointReply& reply, uint32_t transaction_id
   writer->WriteUint32(reply.status);
 }
 
-// RemoveBreakpoint ------------------------------------------------------------
+// RemoveBreakpoint --------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, RemoveBreakpointRequest* request,
                  uint32_t* transaction_id) {
@@ -367,7 +382,7 @@ void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id,
   writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
 }
 
-// SysInfo ---------------------------------------------------------------------
+// SysInfo -----------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, SysInfoRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -386,7 +401,7 @@ void WriteReply(const SysInfoReply& reply, uint32_t transaction_id, MessageWrite
   writer->WriteUint32(reply.hw_watchpoint_count);
 }
 
-// ThreadStatus ----------------------------------------------------------------
+// ThreadStatus ------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -401,7 +416,7 @@ void WriteReply(const ThreadStatusReply& reply, uint32_t transaction_id, Message
   Serialize(reply.record, writer);
 }
 
-// Modules ---------------------------------------------------------------------
+// Modules -----------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ModulesRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -416,7 +431,7 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id, MessageWrite
   Serialize(reply.modules, writer);
 }
 
-// JobFilter ------------------------------------------------------------------
+// JobFilter --------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -434,7 +449,7 @@ void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWri
   Serialize(reply.matched_processes, writer);
 }
 
-// WriteMemory -----------------------------------------------------------------
+// WriteMemory -------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -453,7 +468,7 @@ void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id, MessageW
   writer->WriteUint64(reply.status);
 }
 
-// ReadRegisters ---------------------------------------------------------------
+// ReadRegisters -----------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -472,7 +487,7 @@ void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id, Messag
   Serialize(reply.categories, writer);
 }
 
-// WriteRegisters --------------------------------------------------------------
+// WriteRegisters ----------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -490,7 +505,7 @@ void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id, Messa
   writer->WriteUint64(reply.status);
 }
 
-// Address space ---------------------------------------------------------------
+// Address space -----------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -505,7 +520,7 @@ void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id, Message
   Serialize(reply.map, writer);
 }
 
-// ConfigAgent -----------------------------------------------------------------
+// ConfigAgent -------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
@@ -520,7 +535,7 @@ void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id, MessageW
   Serialize(reply.results, writer);
 }
 
-// Notifications ---------------------------------------------------------------
+// Notifications -----------------------------------------------------------------------------------
 
 void WriteNotifyProcessExiting(const NotifyProcessExiting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessExiting, 0);

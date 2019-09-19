@@ -18,6 +18,8 @@ class RemoteAPI {
 
   virtual void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) = 0;
 
+  virtual void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) = 0;
+
   virtual void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) = 0;
   virtual void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) = 0;
 

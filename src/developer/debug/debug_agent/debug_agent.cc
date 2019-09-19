@@ -125,6 +125,13 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::Hell
   reply->arch = arch::ArchProvider::Get().GetArch();
 }
 
+void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {
+  reply->process_koids.reserve(procs_.size());
+  for (auto& [process_koid, _] : procs_) {
+    reply->process_koids.emplace_back(process_koid);
+  }
+}
+
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) {
   switch (request.inferior_type) {
     case debug_ipc::InferiorType::kBinary:
@@ -727,6 +734,10 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
     // known at startup. Send it if so.
     new_process->SuspendAndSendModulesIfKnown();
   }
+}
+
+void DebugAgent::InjectProcessForTest(std::unique_ptr<DebuggedProcess> process) {
+  procs_[process->koid()] = std::move(process);
 }
 
 void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
