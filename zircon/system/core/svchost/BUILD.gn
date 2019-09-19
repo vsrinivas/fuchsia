@@ -32,6 +32,7 @@ executable("svchost") {
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-fshost:c",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/fidl/fuchsia-mem:c",

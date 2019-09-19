@@ -5,6 +5,7 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/paver/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -12,9 +13,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+
+#include <trace-provider/provider.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
 #include "src/lib/fxl/command_line.h"
@@ -31,6 +33,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::device::NameProvider::Name_,
       fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
+      fuchsia::hardware::pty::Device::Name_,
       fuchsia::kernel::Counter::Name_,
       fuchsia::kernel::DebugBroker::Name_,
       fuchsia::paver::Paver::Name_,

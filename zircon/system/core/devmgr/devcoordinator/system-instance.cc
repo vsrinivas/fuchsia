@@ -560,7 +560,7 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
 
   const char* device = boot_args.Get("console.path");
   if (device == nullptr) {
-    device = "/svc/fuchsia.hardware.pty.Device";
+    device = "/svc/console";
   }
 
   const char* envp[] = {

@@ -67,6 +67,12 @@
     {
       "legacy_service": "/svc/fuchsia.hardware.pty.Device",
       "from": "#console",
+      "to": [ { "dest": "#devcoordinator", "as": "/svc/console" } ],
+    },
+    // Offer the pty service to devcoordinator (temporary hack to expose it to appmgr).
+    {
+      "legacy_service": "/svc/fuchsia.hardware.pty.Device",
+      "from": "#ptysvc",
       "to": [ { "dest": "#devcoordinator" } ],
     },
   ]

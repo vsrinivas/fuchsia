@@ -2,6 +2,7 @@
   "program": { "binary": "bin/devcoordinator" },
   "use": [
     { "directory": "/boot" },
+    { "legacy_service": "/svc/console" },
     { "legacy_service": "/svc/fuchsia.boot.Arguments" },
     { "legacy_service": "/svc/fuchsia.boot.FactoryItems" },
     { "legacy_service": "/svc/fuchsia.boot.Items" },

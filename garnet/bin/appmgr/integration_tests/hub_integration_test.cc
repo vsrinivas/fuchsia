@@ -97,6 +97,7 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.device.NameProvider",
                                                "fuchsia.device.manager.Administrator",
                                                "fuchsia.device.manager.DebugDumper",
+                                               "fuchsia.hardware.pty.Device",
                                                "fuchsia.kernel.Counter",
                                                "fuchsia.kernel.DebugBroker",
                                                "fuchsia.paver.Paver",

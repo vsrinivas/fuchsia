@@ -74,6 +74,7 @@ extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetWindowSizeResponseTab
 class Device final {
   Device() = delete;
  public:
+  static constexpr char Name[] = "fuchsia.hardware.pty.Device";
 
   struct CloneRequest final {
     FIDL_ALIGNDECL

@@ -111,6 +111,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-hardware-pty",
     "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/system/fidl/fuchsia-paver",
     "//zircon/system/fidl/fuchsia-scheduler",

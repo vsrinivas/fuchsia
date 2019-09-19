@@ -6,6 +6,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
@@ -157,7 +158,7 @@ static constexpr const char* miscsvc_services[] = {
 // List of services which are re-routed to devcoodinator's /svc.
 // TODO: When svchost becomes a standalone v2 component, these will be provided through its own
 // namespace instead.
-static constexpr const char* devcoodinator_services[] = {
+static constexpr const char* devcoordinator_services[] = {
     fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Items_Name,
     fuchsia_boot_ReadOnlyLog_Name,
@@ -165,6 +166,7 @@ static constexpr const char* devcoodinator_services[] = {
     fuchsia_boot_RootResource_Name,
     fuchsia_boot_WriteOnlyLog_Name,
     fuchsia_process_Launcher_Name,
+    fuchsia_hardware_pty_Device_Name,
     nullptr,
 };
 
@@ -321,7 +323,7 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
   publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(fshost_svc));
   publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
-  publish_services(outgoing.svc_dir(), devcoodinator_services,
+  publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
   publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name,
