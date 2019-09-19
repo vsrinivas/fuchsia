@@ -22,6 +22,12 @@ library("devmgr-integration-test") {
 
     # <lib/devmgr-integration-test/fixture.h> has #include <fbl/unique_fd.h>.
     "$zx/system/ulib/fbl:headers",
+
+    # <lib/devmgr-integration-test/fixture.h> has #include <lib/fit/function.h>.
+    "$zx/system/ulib/fit:headers",
+
+    # <lib/devmgr-integration-test/fixture.h> has #include <lib/zx/channel.h>.
+    "$zx/system/ulib/zx:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
