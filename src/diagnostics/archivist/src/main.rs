@@ -75,6 +75,7 @@ fn main() -> Result<(), Error> {
 
     let log_manager2 = log_manager.clone();
     let log_manager3 = log_manager.clone();
+
     fs.dir("svc")
         .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
         .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream))

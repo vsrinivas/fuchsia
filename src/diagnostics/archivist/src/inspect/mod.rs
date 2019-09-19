@@ -289,7 +289,7 @@ impl ReaderServer {
             .write(aggregated_vmo_string.as_bytes(), 0)
             .map_err(|s| err_msg(format!("error writing buffer, zx status: {}", s)))?;
 
-        let client_vmo = dump_vmo.duplicate_handle(zx::Rights::READ)?;
+        let client_vmo = dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
         Ok(fidl_fuchsia_mem::Buffer { vmo: client_vmo, size: vmo_size })
     }
 
