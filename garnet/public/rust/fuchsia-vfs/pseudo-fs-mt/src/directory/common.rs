@@ -12,8 +12,8 @@ use {
         MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
         OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
@@ -27,6 +27,10 @@ pub const POSIX_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR;
 /// Checks flags provided for a new connection.  Returns adjusted flags (cleaning up some
 /// ambiguities) or a fidl Status error, in case new new connection flags are not permitting the
 /// connection to be opened.
+///
+/// OPEN_FLAG_NODE_REFERENCE is preserved.
+///
+/// Changing this function can be dangerous!  Flags operations may have security implications.
 pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
     // the target is a directory.
@@ -39,8 +43,15 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
     }
 
     if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-        flags &= !OPEN_FLAG_NODE_REFERENCE;
         flags &= OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
+    }
+
+    if flags & OPEN_FLAG_DIRECTORY != 0 {
+        flags &= !OPEN_FLAG_DIRECTORY;
+    }
+
+    if flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
+        return Err(Status::NOT_FILE);
     }
 
     // For directories OPEN_FLAG_POSIX means WRITABLE permission.  Parent connection must have
@@ -50,8 +61,11 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
         flags |= OPEN_RIGHT_WRITABLE;
     }
 
-    let allowed_flags =
-        OPEN_FLAG_DESCRIBE | OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+    let allowed_flags = OPEN_FLAG_NODE_REFERENCE
+        | OPEN_FLAG_DESCRIBE
+        | OPEN_FLAG_DIRECTORY
+        | OPEN_RIGHT_READABLE
+        | OPEN_RIGHT_WRITABLE;
 
     let prohibited_flags =
         OPEN_FLAG_APPEND | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE;
@@ -135,8 +149,9 @@ mod tests {
     use {
         fidl_fuchsia_io::{
             MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE,
-            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX,
-            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon::Status,
     };
@@ -145,7 +160,7 @@ mod tests {
     // The only reason this is a macro is to generate error messages that point to the test
     // function source location in their top stack frame.
     macro_rules! ncvf_ok {
-        ($flags:expr, $mode:expr, $expected_new_flags:expr) => {{
+        ($flags:expr, $mode:expr, $expected_new_flags:expr $(,)*) => {{
             let res = new_connection_validate_flags($flags, $mode);
             match res {
                 Ok(new_flags) => assert_eq!(
@@ -164,7 +179,7 @@ mod tests {
     // The only reason this is a macro is to generate error messages that point to the test
     // function source location in their top stack frame.
     macro_rules! ncvf_err {
-        ($flags:expr, $mode:expr, $expected_status:expr) => {{
+        ($flags:expr, $mode:expr, $expected_status:expr $(,)*) => {{
             let res = new_connection_validate_flags($flags, $mode);
             match res {
                 Ok(new_flags) => panic!(
@@ -179,22 +194,28 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_node_reference() {
-        // OPEN_FLAG_NODE_REFERENCE is dropped.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE, 0, 0);
+        // OPEN_FLAG_NODE_REFERENCE is preserved.
+        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE, 0, OPEN_FLAG_NODE_REFERENCE);
 
         // Access flags are also dropped.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, 0, 0);
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, 0, 0);
+        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, 0, OPEN_FLAG_NODE_REFERENCE);
+        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, 0, OPEN_FLAG_NODE_REFERENCE);
 
         // OPEN_FLAG_DESCRIBE is preserved though.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE, 0, OPEN_FLAG_DESCRIBE);
+        ncvf_ok!(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            0,
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+        );
         ncvf_ok!(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
             0,
-            OPEN_FLAG_DESCRIBE
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
         );
 
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DIRECTORY, 0, OPEN_FLAG_DIRECTORY);
+        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DIRECTORY, 0, OPEN_FLAG_NODE_REFERENCE);
+
+        ncvf_err!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY, 0, Status::NOT_FILE);
     }
 
     #[test]
@@ -202,13 +223,13 @@ mod tests {
         ncvf_ok!(
             OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
             0,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         );
         ncvf_ok!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX, 0, OPEN_RIGHT_WRITABLE);
         ncvf_ok!(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX,
             0,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         );
     }
 

@@ -7,8 +7,9 @@
 use {
     fidl_fuchsia_io::{
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
-        OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
@@ -34,12 +35,14 @@ pub const POSIX_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
 /// On success, returns the validated flags, with some ambiguities cleaned up.  On failure, it
 /// returns a [`Status`] indicating the problem.
 ///
+/// `OPEN_FLAG_NODE_REFERENCE` is preserved and prohibits both read and write access.
+///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
 pub fn new_connection_validate_flags(
     mut flags: u32,
     mode: u32,
-    readable: bool,
-    writable: bool,
+    mut readable: bool,
+    mut writable: bool,
 ) -> Result<u32, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
     // target is a pseudo file.
@@ -52,18 +55,24 @@ pub fn new_connection_validate_flags(
     }
 
     if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-        flags &= !OPEN_FLAG_NODE_REFERENCE;
-        flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+        flags &= OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
+        readable = false;
+        writable = false;
     }
 
     if flags & OPEN_FLAG_DIRECTORY != 0 {
         return Err(Status::NOT_DIR);
     }
 
+    if flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
+        flags &= !OPEN_FLAG_NOT_DIRECTORY;
+    }
+
     // For files OPEN_FLAG_POSIX is just ignored, as it has meaning only for directories.
     flags &= !OPEN_FLAG_POSIX;
 
-    let allowed_flags = OPEN_FLAG_DESCRIBE
+    let allowed_flags = OPEN_FLAG_NODE_REFERENCE
+        | OPEN_FLAG_DESCRIBE
         | if readable { OPEN_RIGHT_READABLE } else { 0 }
         | if writable { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 };
 
@@ -105,14 +114,15 @@ mod tests {
     use {
         fidl_fuchsia_io::{
             MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND,
-            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX,
-            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon::Status,
     };
 
     macro_rules! ncvf_ok {
-        ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_new_flags:expr) => {{
+        ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_new_flags:expr $(,)*) => {{
             let res = new_connection_validate_flags($flags, $mode, $readable, $writable);
             match res {
                 Ok(new_flags) => assert_eq!(
@@ -128,7 +138,7 @@ mod tests {
     }
 
     macro_rules! ncvf_err {
-        ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_status:expr) => {{
+        ($flags:expr, $mode:expr, $readable:expr, $writable:expr, $expected_status:expr $(,)*) => {{
             let res = new_connection_validate_flags($flags, $mode, $readable, $writable);
             match res {
                 Ok(new_flags) => panic!(
@@ -143,24 +153,50 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_node_reference() {
-        // OPEN_FLAG_NODE_REFERENCE is dropped.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE, 0, true, true, 0);
+        // OPEN_FLAG_NODE_REFERENCE is preserved.
+        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE, 0, true, true, OPEN_FLAG_NODE_REFERENCE);
 
-        // Access flags are also dropped.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, 0, true, true, 0);
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, 0, true, true, 0);
+        // Access flags are dropped.
+        ncvf_ok!(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
+            0,
+            true,
+            true,
+            OPEN_FLAG_NODE_REFERENCE
+        );
+        ncvf_ok!(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
+            0,
+            true,
+            true,
+            OPEN_FLAG_NODE_REFERENCE
+        );
 
         // OPEN_FLAG_DESCRIBE is preserved though.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE, 0, true, true, OPEN_FLAG_DESCRIBE);
+        ncvf_ok!(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            0,
+            true,
+            true,
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+        );
         ncvf_ok!(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
             0,
             true,
             true,
-            OPEN_FLAG_DESCRIBE
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE
         );
 
         ncvf_err!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DIRECTORY, 0, true, true, Status::NOT_DIR);
+
+        ncvf_ok!(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            true,
+            true,
+            OPEN_FLAG_NODE_REFERENCE
+        );
     }
 
     #[test]

@@ -85,3 +85,34 @@ pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, st
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::inherit_rights_for_clone;
+
+    use fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
+
+    // TODO This should be converted into a function as soon as backtrace support is in place.
+    // The only reason this is a macro is to generate error messages that point to the test
+    // function source location in their top stack frame.
+    macro_rules! irfc_ok {
+        ($parent_flags:expr, $flags:expr, $expected_new_flags:expr $(,)*) => {{
+            let res = inherit_rights_for_clone($parent_flags, $flags);
+            match res {
+                Ok(new_flags) => assert_eq!(
+                    $expected_new_flags, new_flags,
+                    "`inherit_rights_for_clone` returned unexpected set of flags.\n\
+                     Expected: {:X}\n\
+                     Actual: {:X}",
+                    $expected_new_flags, new_flags
+                ),
+                Err(status) => panic!("`inherit_rights_for_clone` failed.  Status: {}", status),
+            }
+        }};
+    }
+
+    #[test]
+    fn node_reference_is_inherited() {
+        irfc_ok!(OPEN_FLAG_NODE_REFERENCE, 0, OPEN_FLAG_NODE_REFERENCE);
+    }
+}

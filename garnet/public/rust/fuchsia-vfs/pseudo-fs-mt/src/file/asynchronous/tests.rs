@@ -1120,6 +1120,59 @@ fn node_reference_ignores_write_access() {
     );
 }
 
+#[test]
+fn clone_can_not_remove_node_reference() {
+    run_server_client(
+        OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
+        read_write(
+            || future::ready(Ok(b"Initial content".to_vec())),
+            100,
+            |_content| {
+                async move {
+                    panic!("Clone should not be able to write.");
+                }
+            },
+        ),
+        |first_proxy| {
+            async move {
+                // first_proxy would not have OPEN_RIGHT_READABLE, as it will be dropped by the
+                // OPEN_FLAG_NODE_REFERENCE.  Even though we do not ask for
+                // OPEN_FLAG_NODE_REFERENCE here it is actually enforced.  Our
+                // OPEN_RIGHT_READABLE is beyond the allowed rights, but it is unrelated to the
+                // OPEN_FLAG_NODE_REFERENCE, really.
+                {
+                    let second_proxy = clone_as_file_assert_err!(
+                        &first_proxy,
+                        OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
+                        Status::ACCESS_DENIED
+                    );
+
+                    assert_read_fidl_err!(
+                        second_proxy,
+                        fidl::Error::ClientWrite(Status::PEER_CLOSED)
+                    );
+                }
+
+                {
+                    let third_proxy = clone_as_file_assert_err!(
+                        &first_proxy,
+                        OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
+                        Status::ACCESS_DENIED
+                    );
+
+                    assert_write_fidl_err!(
+                        third_proxy,
+                        "Write attempt",
+                        fidl::Error::ClientWrite(Status::PEER_CLOSED)
+                    );
+                }
+
+                assert_close!(first_proxy);
+            }
+        },
+    );
+}
+
 /// This test checks a somewhat non-trivial case. Two clients are connected to the same file, and
 /// we want to make sure that they get individual buffers. The file content will be different every
 /// time a new buffer is created, as `init_buffer` returns a string with an invocation count in it.
