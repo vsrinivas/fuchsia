@@ -35,16 +35,6 @@ class TestAmlSdEmmc : public AmlSdEmmc {
                       .max_freq = 120000000,
                       .version_3 = true,
                       .prefs = 0,
-                      .clock_phases =
-                          {
-                              .init = {.core_phase = 3, .tx_phase = 0},
-                              .hs = {.core_phase = 1, .tx_phase = 0},
-                              .legacy = {.core_phase = 1, .tx_phase = 2},
-                              .ddr = {.core_phase = 2, .tx_phase = 0},
-                              .hs2 = {.core_phase = 3, .tx_phase = 0},
-                              .hs4 = {.core_phase = 0, .tx_phase = 0},
-                              .sdr104 = {.core_phase = 2, .tx_phase = 0},
-                          },
                   },
                   zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {
     ASSERT_EQ(thrd_success, cnd_init(&spurious_interrupt_received_));
@@ -191,6 +181,8 @@ class AmlSdEmmcTest : public zxtest::Test {
     mmio_ = ddk::MmioBuffer(mmio_buffer);
     dut_ = new TestAmlSdEmmc(mmio_buffer);
 
+    dut_->SdmmcHwReset();
+
     mmio_.Write32(1, kAmlSdEmmcCfgOffset);  // Set bus width 4.
     memcpy(reinterpret_cast<uint8_t*>(mmio_.get()) + kAmlSdEmmcPingOffset,
            aml_sd_emmc_tuning_blk_pattern_4bit, sizeof(aml_sd_emmc_tuning_blk_pattern_4bit));
@@ -217,16 +209,6 @@ TEST_F(AmlSdEmmcTest, DdkLifecycle) {
   EXPECT_TRUE(ddk.Ok());
 }
 
-TEST_F(AmlSdEmmcTest, SetClockPhase) {
-  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS200));
-  EXPECT_EQ(mmio_.Read32(0), (3 << 8) | (0 << 10));
-
-  mmio_.Write32(0, 0);
-
-  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_LEGACY));
-  EXPECT_EQ(mmio_.Read32(0), (1 << 8) | (2 << 10));
-}
-
 TEST_F(AmlSdEmmcTest, TuningV3) {
   dut_->set_board_config({
       .supports_dma = false,
@@ -234,16 +216,6 @@ TEST_F(AmlSdEmmcTest, TuningV3) {
       .max_freq = 120000000,
       .version_3 = true,
       .prefs = 0,
-      .clock_phases =
-          {
-              .init = {.core_phase = 3, .tx_phase = 0},
-              .hs = {.core_phase = 1, .tx_phase = 0},
-              .legacy = {.core_phase = 1, .tx_phase = 2},
-              .ddr = {.core_phase = 2, .tx_phase = 0},
-              .hs2 = {.core_phase = 3, .tx_phase = 0},
-              .hs4 = {.core_phase = 0, .tx_phase = 0},
-              .sdr104 = {.core_phase = 2, .tx_phase = 0},
-          },
   });
 
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
@@ -271,16 +243,6 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
       .max_freq = 120000000,
       .version_3 = false,
       .prefs = 0,
-      .clock_phases =
-          {
-              .init = {.core_phase = 3, .tx_phase = 0},
-              .hs = {.core_phase = 1, .tx_phase = 0},
-              .legacy = {.core_phase = 1, .tx_phase = 2},
-              .ddr = {.core_phase = 2, .tx_phase = 0},
-              .hs2 = {.core_phase = 3, .tx_phase = 0},
-              .hs4 = {.core_phase = 0, .tx_phase = 0},
-              .sdr104 = {.core_phase = 2, .tx_phase = 0},
-          },
   });
 
   AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
@@ -302,7 +264,7 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
 }
 
 TEST_F(AmlSdEmmcTest, TuningAllPass) {
-  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
   auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
   auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
@@ -315,7 +277,6 @@ TEST_F(AmlSdEmmcTest, TuningAllPass) {
   delay1.ReadFrom(&mmio_);
   delay2.ReadFrom(&mmio_);
 
-  EXPECT_EQ(clock.cfg_co_phase(), 2);
   EXPECT_EQ(clock.cfg_tx_phase(), 0);
   EXPECT_EQ(adjust.adj_delay(), 0);
   EXPECT_EQ(delay1.dly_0(), 32);
@@ -343,7 +304,7 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningNoWindowWrap) {
   });
   // clang-format on
 
-  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
   ASSERT_OK(dut_->Init());
@@ -352,7 +313,6 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningNoWindowWrap) {
   clock.ReadFrom(&mmio_);
   adjust.ReadFrom(&mmio_);
 
-  EXPECT_EQ(clock.cfg_co_phase(), 2);
   EXPECT_EQ(clock.cfg_tx_phase(), 3);
   EXPECT_EQ(adjust.adj_delay(), 6);
 }
@@ -370,7 +330,7 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningWindowWrap) {
   });
   // clang-format on
 
-  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
   auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
 
   ASSERT_OK(dut_->Init());
@@ -379,7 +339,6 @@ TEST_F(AmlSdEmmcTest, AdjDelayTuningWindowWrap) {
   clock.ReadFrom(&mmio_);
   adjust.ReadFrom(&mmio_);
 
-  EXPECT_EQ(clock.cfg_co_phase(), 2);
   EXPECT_EQ(clock.cfg_tx_phase(), 1);
   EXPECT_EQ(adjust.adj_delay(), 0);
 }

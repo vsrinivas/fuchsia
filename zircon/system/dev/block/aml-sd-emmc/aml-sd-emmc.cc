@@ -349,8 +349,8 @@ void AmlSdEmmc::ConfigureDefaultRegs() {
                          .FromValue(0)
                          .set_cfg_div(AmlSdEmmcClock::kDefaultClkDiv)
                          .set_cfg_src(AmlSdEmmcClock::kDefaultClkSrc)
-                         .set_cfg_co_phase(board_config_.clock_phases.init.core_phase)
-                         .set_cfg_tx_phase(board_config_.clock_phases.init.tx_phase)
+                         .set_cfg_co_phase(AmlSdEmmcClock::kDefaultClkCorePhase)
+                         .set_cfg_tx_phase(AmlSdEmmcClock::kDefaultClkTxPhase)
                          .set_cfg_rx_phase(AmlSdEmmcClock::kDefaultClkRxPhase)
                          .set_cfg_always_on(1)
                          .reg_value();
@@ -405,33 +405,6 @@ zx_status_t AmlSdEmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
   }
 
   config.WriteTo(&mmio_);
-
-  auto clock = AmlSdEmmcClock::Get().ReadFrom(&mmio_);
-  uint32_t co_phase = clock.cfg_co_phase();
-  uint32_t tx_phase = clock.cfg_tx_phase();
-
-  if (timing == SDMMC_TIMING_LEGACY) {
-    co_phase = board_config_.clock_phases.legacy.core_phase;
-    tx_phase = board_config_.clock_phases.legacy.tx_phase;
-  } else if (timing == SDMMC_TIMING_HS) {
-    co_phase = board_config_.clock_phases.hs.core_phase;
-    tx_phase = board_config_.clock_phases.hs.tx_phase;
-  } else if (timing == SDMMC_TIMING_HSDDR || timing == SDMMC_TIMING_DDR50) {
-    co_phase = board_config_.clock_phases.ddr.core_phase;
-    tx_phase = board_config_.clock_phases.ddr.tx_phase;
-  } else if (timing == SDMMC_TIMING_HS200) {
-    co_phase = board_config_.clock_phases.hs2.core_phase;
-    tx_phase = board_config_.clock_phases.hs2.tx_phase;
-  } else if (timing == SDMMC_TIMING_HS400) {
-    co_phase = board_config_.clock_phases.hs4.core_phase;
-    tx_phase = board_config_.clock_phases.hs4.tx_phase;
-  } else if (timing == SDMMC_TIMING_SDR104) {
-    co_phase = board_config_.clock_phases.sdr104.core_phase;
-    tx_phase = board_config_.clock_phases.sdr104.tx_phase;
-  }
-
-  clock.set_cfg_co_phase(co_phase).set_cfg_tx_phase(tx_phase).WriteTo(&mmio_);
-
   return ZX_OK;
 }
 
@@ -876,11 +849,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     return ZX_ERR_INTERNAL;
   }
 
-  auto clk = AmlSdEmmcClock::Get()
-                 .ReadFrom(&mmio_)
-                 .set_cfg_co_phase(AmlSdEmmcClock::kClkPhase180Degrees)
-                 .set_cfg_rx_phase(AmlSdEmmcClock::kClkPhase0Degrees)
-                 .WriteTo(&mmio_);
+  auto clk = AmlSdEmmcClock::Get().ReadFrom(&mmio_);
 
   auto set_adj_delay = [&](uint32_t param) -> void { SetAdjDelay(param); };
   auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };

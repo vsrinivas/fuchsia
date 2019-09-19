@@ -46,16 +46,6 @@ static aml_sd_emmc_config_t config = {
     .max_freq = 200000000,
     .version_3 = false,
     .prefs = 0,
-    .clock_phases =
-        {
-            .init = {.core_phase = 2, .tx_phase = 0},
-            .hs = {.core_phase = 2, .tx_phase = 0},
-            .legacy = {.core_phase = 2, .tx_phase = 0},
-            .ddr = {.core_phase = 2, .tx_phase = 0},
-            .hs2 = {.core_phase = 2, .tx_phase = 0},
-            .hs4 = {.core_phase = 2, .tx_phase = 0},
-            .sdr104 = {.core_phase = 2, .tx_phase = 0},
-        },
 };
 
 static const wifi_config_t wifi_config = {

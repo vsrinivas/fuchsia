@@ -56,7 +56,9 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   static constexpr uint32_t kClkPhase90Degrees = 1;
   static constexpr uint32_t kClkPhase180Degrees = 2;
   static constexpr uint32_t kClkPhase270Degrees = 3;
-  static constexpr uint32_t kDefaultClkRxPhase = 0;
+  static constexpr uint32_t kDefaultClkCorePhase = kClkPhase180Degrees;
+  static constexpr uint32_t kDefaultClkTxPhase = kClkPhase0Degrees;
+  static constexpr uint32_t kDefaultClkRxPhase = kClkPhase0Degrees;
   static constexpr uint32_t kMaxClkDiv = 63;
   static constexpr uint32_t kMaxClkPhase = 3;
   static constexpr uint32_t kMaxDelay = 63;
