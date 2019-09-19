@@ -22,7 +22,7 @@ namespace fs_pty {
 // static zx_status_t Write(const Console&, const void* data, size_t len, size_t* out_actual);
 // static zx_status_t GetEvent(const Console&, zx::eventpair* event);
 template <typename Connection, typename ConsoleOps, typename Console>
-class Service final : public fs::Vnode {
+class Service : public fs::Vnode {
  public:
   using SelfType = Service<Connection, ConsoleOps, Console>;
 
@@ -73,7 +73,7 @@ class Service final : public fs::Vnode {
     return ConsoleOps::Write(console_, data, len, out_actual);
   }
 
- private:
+ protected:
   Console console_;
 };
 

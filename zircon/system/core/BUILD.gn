@@ -9,7 +9,8 @@ group("core") {
   deps = [
     "bootsvc",
 
-    # TODO(teisenbe): Find a better place to hook this into the dependency graph
+    # TODO(teisenbe): Find a better place to hook these into the dependency graph
     "console",
+    "ptysvc",
   ]
 }

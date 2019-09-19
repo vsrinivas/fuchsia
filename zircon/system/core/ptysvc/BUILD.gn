@@ -1,0 +1,70 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/package.gni")
+
+executable("ptysvc") {
+  sources = [
+    "main.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/svc",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "fifo.cc",
+    "fifo.h",
+    "pty-client-connection.cc",
+    "pty-client-connection.h",
+    "pty-client-vnode.h",
+    "pty-client.cc",
+    "pty-client.h",
+    "pty-server-connection.cc",
+    "pty-server-connection.h",
+    "pty-server-vnode.h",
+    "pty-server.cc",
+    "pty-server.h",
+    "pty-transaction.h",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs-pty",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+test("ptysvc-test") {
+  test_group = "sys"
+
+  sources = [
+    "pty-tests.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zxtest",
+  ]
+}

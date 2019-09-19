@@ -45,6 +45,7 @@ zedboot_binary_patterns = [
   "bin/fshost",
   "bin/miscsvc",
   "bin/netsvc",
+  "bin/ptysvc",
   "bin/pwrbtn-monitor",
   "bin/svchost",
   "bin/virtual-console",

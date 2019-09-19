@@ -28,6 +28,7 @@ if (current_cpu != "") {
       "$zx/system/core/devmgr/fshost:fshost-metrics-test",
       "$zx/system/core/devmgr/fshost:fshost-test",
       "$zx/system/core/netsvc:netsvc-test",
+      "$zx/system/core/ptysvc:ptysvc-test",
       "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/core/virtcon:virtual-console-display-test",
       "$zx/system/core/virtcon:virtual-console-test",
