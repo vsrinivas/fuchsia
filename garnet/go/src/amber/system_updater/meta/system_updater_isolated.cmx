@@ -3,16 +3,12 @@
         "binary": "bin/system_updater"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.process.Launcher"
+            "fuchsia.pkg.PackageResolver"
         ]
     }
 }

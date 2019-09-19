@@ -34,8 +34,6 @@ go_test("system_updater_test") {
 }
 
 test_package("system_updater_tests") {
-  deprecated_shell = "//build"
-
   deps = [
     ":system_updater_test",
   ]

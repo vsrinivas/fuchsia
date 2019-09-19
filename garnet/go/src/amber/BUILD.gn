@@ -39,8 +39,6 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.update($go_toolchain)",
     "//third_party/golibs:github.com/flynn/go-tuf",
-    "//third_party/golibs:github.com/rjw57/oauth2device",
-    "//third_party/golibs:golang.org/x/oauth2",
     "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
   ]
@@ -75,7 +73,6 @@ package("pkgfs") {
 # FIXME: Until fuchsia_component exists again, ensure this and //garnet/tests/amberctl:amberctl-tests stay in sync
 package("amber") {
   deprecated_misc_storage = "//build"
-  deprecated_shell = "//build"
 
   deps = [
     "//garnet/go/src/grand_unified_binary",
@@ -190,25 +187,6 @@ test_package("amber_tests") {
       },
     ]
   }
-}
-
-package("test_config") {
-  deprecated_system_image = true
-  package_name = "amber_test_config"
-  testonly = true
-
-  resources = [
-    {
-      dest = "amber/test_sources/test1/config.json"
-      path = rebase_path("etc/sources/test1/config.json")
-      environments = basic_envs
-    },
-    {
-      dest = "amber/test_sources/test2/config.json"
-      path = rebase_path("etc/sources/test2/config.json")
-      environments = basic_envs
-    },
-  ]
 }
 
 config_data("config") {

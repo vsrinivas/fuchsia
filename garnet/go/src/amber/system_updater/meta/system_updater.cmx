@@ -5,7 +5,6 @@
     "sandbox": {
         "features": [
             "build-info",
-            "deprecated-shell",
             "deprecated-misc-storage",
             "isolated-persistent-storage"
         ],
@@ -18,8 +17,7 @@
             "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.process.Launcher"
+            "fuchsia.pkg.PackageResolver"
         ]
     }
 }
