@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("image_writer_bin") {
+  output_name = "image_writer"
+
+  sources = [
+    "image_writer.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fzl",
+  ]
+
+  include_dirs = [ "//lib" ]
+}
+
+package("image_writer") {
+  deps = [
+    ":image_writer_bin",
+  ]
+
+  binary = "image_writer"
+}

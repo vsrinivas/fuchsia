@@ -10,6 +10,7 @@ import("//build/testing/environments.gni")
 group("camera") {
   testonly = true
   deps = [
+    "calibration",
     "drivers",
   ]
 }
@@ -28,6 +29,7 @@ group("tests") {
 
 test_package("camera_full_test") {
   deps = [
+    "//src/camera/calibration/image_writer/test:image_writer_test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/isp/modules:gamma-rgb-registers",
@@ -78,6 +80,12 @@ test_package("camera_full_test") {
       name = "mock-sensor-integration-test"
       manifest =
           "drivers/sensors/mock-sensor/meta/mock-sensor-integration-test.cmx"
+      environments = basic_envs
+    },
+
+    {
+      name = "image_writer_test"
+      manifest = "calibration/image_writer/test/meta/image_writer_test.cmx"
       environments = basic_envs
     },
 
