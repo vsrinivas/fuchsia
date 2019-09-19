@@ -68,7 +68,7 @@ class AutoCleanableSet {
 
   // Capacity methods.
   size_t size() const { return set_.size(); }
-  bool empty() { return set_.empty(); }
+  bool empty() const { return set_.empty(); }
 
   void clear() { set_.clear(); }
 
@@ -123,7 +123,7 @@ class AutoCleanableMap {
   AutoCleanableMap() {}
   ~AutoCleanableMap() {}
 
-  bool empty() { return map_.empty(); }
+  bool empty() const { return map_.empty(); }
 
   template <typename Key, typename... Args>
   std::pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {

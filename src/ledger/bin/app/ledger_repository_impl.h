@@ -57,6 +57,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
+  bool empty() const;
 
   void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request);
 
@@ -100,8 +101,10 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   const DetachedPath content_path_;
   Environment* const environment_;
-  // True if the LedgerRepository is currently shutting down.
+  // True if the LedgerRepository is currently shutting down because it was either requested by
+  // calling Close() or because this was empty.
   bool closing_ = false;
+  bool closed_ = false;
   callback::AutoCleanableSet<
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
@@ -120,8 +123,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 
-  // Callback set when closing this repository.
-  fit::function<void(Status)> close_callback_;
+  // Callbacks set when closing this repository.
+  std::vector<fit::function<void(Status)>> close_callbacks_;
 
   coroutine::CoroutineManager coroutine_manager_;
 

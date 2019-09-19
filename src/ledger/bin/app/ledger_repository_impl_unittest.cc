@@ -158,6 +158,10 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
 };
 
 TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
+  // Ensure the repository is not empty.
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
   // Make a first call to DiskCleanUp.
   bool callback_called1 = false;
   Status status1;
@@ -378,6 +382,19 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
   EXPECT_FALSE(ptr1_closed);
 }
 
+TEST_F(LedgerRepositoryImplTest, CloseWhenEmptyWithoutCallback) {
+  // Running will init the repo, that will trigger is emptyness check, which
+  // will close it given that it has no user.
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  repository_->GetLedger({}, nullptr, callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::ILLEGAL_STATE);
+}
+
+
 // Verifies that the callback on closure is called, even if the on_empty_callback is not set.
 TEST_F(LedgerRepositoryImplTest, CloseWithoutOnEmptyCallback) {
   bool ptr1_closed;
@@ -391,6 +408,10 @@ TEST_F(LedgerRepositoryImplTest, CloseWithoutOnEmptyCallback) {
 
 // Verifies that the object remains alive is the no on_empty_callback nor close_callback are set.
 TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
+  // Ensure the repository is not empty.
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
   // Make a first call to DiskCleanUp.
   bool callback_called1 = false;
   Status status1;
@@ -407,18 +428,6 @@ TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called1);
   EXPECT_EQ(status1, Status::OK);
-
-  bool callback_called2 = false;
-  Status status2;
-  // This call should not fail as the object is still alive, because none of the callbacks triggered
-  // in |CheckEmpty()| are set.
-  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called2), &status2));
-  RunLoopUntilIdle();
-
-  disk_cleanup_manager_->cleanup_callback(Status::OK);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(callback_called2);
-  EXPECT_EQ(status2, Status::OK);
 }
 
 // Verifies that the object is not destroyed until the initialization of PageUsageDb is finished.

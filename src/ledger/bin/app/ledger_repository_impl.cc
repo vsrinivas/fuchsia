@@ -86,6 +86,12 @@ LedgerRepositoryImpl::~LedgerRepositoryImpl() {
   }
 }
 
+bool LedgerRepositoryImpl::empty() const {
+  return ledger_managers_.empty() && (closing_ || bindings_.empty()) &&
+         (!disk_cleanup_manager_ || disk_cleanup_manager_->IsEmpty()) &&
+         (!background_sync_manager_ || background_sync_manager_->IsEmpty());
+}
+
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request) {
   bindings_.emplace(this, std::move(repository_request));
@@ -241,7 +247,7 @@ void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
                                      fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
-  if (close_callback_) {
+  if (closing_) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -267,7 +273,7 @@ void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
 void LedgerRepositoryImpl::Duplicate(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
     fit::function<void(Status)> callback) {
-  if (close_callback_) {
+  if (closing_) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -280,7 +286,7 @@ void LedgerRepositoryImpl::Duplicate(
 
 void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                                                fit::function<void(Status)> callback) {
-  if (close_callback_) {
+  if (closing_) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -292,20 +298,31 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {
-  if (!closing_ && ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
-      disk_cleanup_manager_->IsEmpty() && background_sync_manager_->IsEmpty() &&
-      db_->IsInitialized() && (on_empty_callback_ || close_callback_)) {
-    closing_ = true;
+  if (!empty()) {
+    return;
+  }
+
+  closing_ = true;
+
+  // Only run the following code once. |db_| is used as a sentinel.
+  if (db_) {
     // Both PageUsageDb and DbFactory use the filesystem. We need to close them before we can
     // close ourselves, as well as DiskCleanupManager and BackgroungSyncManager, since they use
     // filesystem via pointer to PageUsageDb.
+    coroutine_manager_.Shutdown();
+    ledger_managers_.clear();
     disk_cleanup_manager_.reset();
     background_sync_manager_.reset();
     db_.reset();
     db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
-      if (close_callback_) {
-        close_callback_(Status::OK);
+      closed_ = true;
+
+      auto callbacks = std::move(close_callbacks_);
+      close_callbacks_.clear();
+      for (auto& callback : callbacks) {
+        callback(Status::OK);
       }
+
       if (on_empty_callback_) {
         on_empty_callback_();
       }
@@ -314,7 +331,7 @@ void LedgerRepositoryImpl::CheckEmpty() {
 }
 
 void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
-  if (close_callback_) {
+  if (closing_) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -342,12 +359,13 @@ DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
 }
 
 void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
-  if (close_callback_) {
-    // Closing the repository twice is force-terminating it.
-    callback(Status::ILLEGAL_STATE);
+  if (closed_) {
+    // Closing the repository.
+    callback(Status::OK);
     return;
   }
-  close_callback_ = std::move(callback);
+  close_callbacks_.push_back(std::move(callback));
+  closing_ = true;
   CheckEmpty();
 }
 
