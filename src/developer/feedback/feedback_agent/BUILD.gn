@@ -109,6 +109,8 @@ source_set("src") {
     "image_conversion.h",
     "inspect_ptr.cc",
     "inspect_ptr.h",
+    "kernel_log_ptr.cc",
+    "kernel_log_ptr.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
     "system_log_ptr.cc",
@@ -125,6 +127,7 @@ source_set("src") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 

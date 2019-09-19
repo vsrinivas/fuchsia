@@ -113,7 +113,7 @@ zx_status_t ReadOnlyLogGet(void* ctx, fidl_txn_t* txn) {
            zx_status_get_string(status));
     return status;
   }
-  return fuchsia_boot_WriteOnlyLogGet_reply(txn, ret.release());
+  return fuchsia_boot_ReadOnlyLogGet_reply(txn, ret.release());
 }
 
 constexpr fuchsia_boot_ReadOnlyLog_ops kReadOnlyLogOps = {

@@ -11,19 +11,17 @@
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/debuglog.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-#include <zircon/syscalls/log.h>
 
 #include <string>
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
+#include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 #include "src/developer/feedback/utils/archive.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
@@ -32,42 +30,6 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
-
-// This is actually synchronous, but we return a fit::promise to match other attachment providers
-// that are asynchronous.
-fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
-  zx::debuglog log;
-  const zx_status_t create_status =
-      zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log);
-  if (create_status != ZX_OK) {
-    FX_PLOGS(ERROR, create_status) << "zx::debuglog::create failed";
-    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
-  }
-
-  // zx_log_record_t has a flexible array member, so we need to allocate the buffer explicitly.
-  char buf[ZX_LOG_RECORD_MAX + 1];
-  zx_log_record_t* record = reinterpret_cast<zx_log_record_t*>(buf);
-  std::string kernel_log;
-  while (log.read(/*options=*/0, /*buffer=*/record,
-                  /*buffer_size=*/ZX_LOG_RECORD_MAX) > 0) {
-    if (record->datalen && (record->data[record->datalen - 1] == '\n')) {
-      record->datalen--;
-    }
-    record->data[record->datalen] = 0;
-
-    kernel_log += fxl::StringPrintf("[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                                    static_cast<int>(record->timestamp / 1000000000ULL),
-                                    static_cast<int>((record->timestamp / 1000000ULL) % 1000ULL),
-                                    record->pid, record->tid, record->data);
-  }
-
-  fsl::SizedVmo vmo;
-  if (!fsl::VmoFromString(kernel_log, &vmo)) {
-    FX_LOGS(ERROR) << "Failed to convert kernel log string to vmo";
-    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
-  }
-  return fit::make_ok_promise(std::move(vmo).ToTransport());
-}
 
 // This is actually synchronous, but we return a fit::promise to match other attachment providers
 // that are asynchronous.
@@ -87,7 +49,7 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
   if (key == kAttachmentBuildSnapshot) {
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == kAttachmentLogKernel) {
-    return GetKernelLog();
+    return CollectKernelLog(dispatcher, services, timeout);
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher, services, timeout);
   } else if (key == kAttachmentInspect) {

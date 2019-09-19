@@ -40,6 +40,9 @@ test_package("feedback_agent_tests") {
       name = "data_provider_config_unittest"
     },
     {
+      name = "kernel_log_ptr_integration_test"
+    },
+    {
       name = "feedback_agent_integration_test"
 
       # We need to also test on real devices as we talk to a real Scenic service.
@@ -121,6 +124,7 @@ test_package("feedback_agent_tests") {
     ":inspect_exe",
     ":screenshot_ptr_unittest",
     ":system_log_ptr_unittest",
+    ":kernel_log_ptr_integration_test",
   ]
 }
 
@@ -213,6 +217,27 @@ executable("inspect_exe") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+executable("kernel_log_ptr_integration_test") {
+  testonly = true
+
+  sources = [
+    "kernel_log_ptr_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/feedback/feedback_agent:src",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+             "system-services": [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/kernel_log_ptr_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.boot.ReadOnlyLog",
+            "fuchsia.boot.WriteOnlyLog",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

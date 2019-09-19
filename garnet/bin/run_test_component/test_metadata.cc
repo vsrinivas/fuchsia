@@ -30,12 +30,13 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
-    fuchsia::boot::RootJob::Name_,           fuchsia::boot::RootResource::Name_,
+    fuchsia::boot::ReadOnlyLog::Name_,       fuchsia::boot::RootJob::Name_,
+    fuchsia::boot::RootResource::Name_,      fuchsia::boot::WriteOnlyLog::Name_,
     fuchsia::device::NameProvider::Name_,    fuchsia::kernel::Counter::Name_,
     fuchsia::net::Connectivity::Name_,       fuchsia::net::NameLookup::Name_,
     fuchsia::net::stack::Stack::Name_,       fuchsia::netstack::Netstack::Name_,
     fuchsia::posix::socket::Provider::Name_, fuchsia::scheduler::ProfileProvider::Name_,
-    fuchsia::sysmem::Allocator::Name_,       fuchsia::sys::test::CacheControl::Name_,
+    fuchsia::sys::test::CacheControl::Name_, fuchsia::sysmem::Allocator::Name_,
     fuchsia::ui::policy::Presenter::Name_,   fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
 };
