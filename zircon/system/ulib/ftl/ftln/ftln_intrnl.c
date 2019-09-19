@@ -1245,6 +1245,29 @@ ui32 FtlnGarbLvl(CFTLN ftl) {
   return 100 - (100 * free_pages) / (ftl->num_pages - used_pages);
 }
 
+// FtlnGetWearHistogram: Get a 20 bucket histogram of wear counts.
+//
+//       Input: ftl = Pointer to FTL control block.
+//            count = Number of buckets on the provided buffer.
+//        histogram = Storage for the result.
+//
+//     Returns: O on success, -1 if the buffer is not large enough.
+//
+int FtlnGetWearHistogram(CFTLN ftl, int count, ui32* histogram) {
+  const int kNumBuckets = 20;
+  if (count < kNumBuckets) {
+    return -1;
+  }
+  memset(histogram, 0, sizeof(ui32) * kNumBuckets);
+
+  for (ui32 block = 0; block < ftl->num_blks; block++) {
+    ui8 value = 255 - ftl->blk_wc_lag[block];
+    histogram[value * kNumBuckets / 256]++;
+  }
+
+  return 0;
+}
+
 #if FTLN_DEBUG_RECYCLES && FTLN_DEBUG_PTR
 // FtlnShowBlks: Display block WC, selection priority, etc
 //

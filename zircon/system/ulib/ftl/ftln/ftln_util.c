@@ -361,15 +361,15 @@ int FtlnReport(void* vol, ui32 msg, ...) {
     }
 
     case FS_VSTAT: {
-      union vstat* buf;
+      vstat* buf;
 
       // Use the va_arg mechanism to get the vstat buffer.
       va_start(ap, msg);
-      buf = (union vstat*)va_arg(ap, void*);
+      buf = (vstat*)va_arg(ap, void*);
       va_end(ap);
 
       // Get the garbage level.
-      buf->xfs.garbage_level = FtlnGarbLvl(ftl);
+      buf->garbage_level = FtlnGarbLvl(ftl);
 
       // Get TargetFTL-NDM RAM usage.
       ftl->stats.ram_used = sizeof(struct ftln) + ftl->num_map_pgs * sizeof(ui32) + ftl->page_size +
@@ -387,8 +387,15 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       // Record high wear count.
       ftl->stats.wear_count = ftl->high_wc;
 
+      const int kNumBuckets = sizeof(buf->wear_histogram) / sizeof(ui32);
+      PfAssert(kNumBuckets == 20);
+      int rv = FtlnGetWearHistogram(ftl, kNumBuckets, buf->wear_histogram);
+      PfAssert(rv == 0);
+
+      buf->num_blocks = ftl->num_blks;
+
       // Set TargetFTL-NDM driver call counts and reset internal ones.
-      buf->xfs.drvr_stats.ftl.ndm = ftl->stats;
+      buf->ndm = ftl->stats;
       memset(&ftl->stats, 0, sizeof(ftl_ndm_stats));
 
       // Return success.

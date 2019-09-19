@@ -93,13 +93,15 @@ zx_status_t VolumeImpl::GarbageCollect() {
 }
 
 zx_status_t VolumeImpl::GetStats(Stats* stats) {
-  union vstat buffer;
+  vstat buffer;
   if (report_(vol_, FS_VSTAT, &buffer) != 0) {
     return ZX_ERR_BAD_STATE;
   }
-  stats->ram_used = buffer.xfs.drvr_stats.ftl.ndm.ram_used;
-  stats->wear_count = buffer.xfs.drvr_stats.ftl.ndm.wear_count;
-  stats->garbage_level = buffer.xfs.garbage_level;
+  stats->ram_used = buffer.ndm.ram_used;
+  stats->wear_count = buffer.ndm.wear_count;
+  stats->garbage_level = buffer.garbage_level;
+  memcpy(stats->wear_histogram, buffer.wear_histogram, sizeof(stats->wear_histogram));
+  stats->num_blocks = buffer.num_blocks;
   return ZX_OK;
 }
 

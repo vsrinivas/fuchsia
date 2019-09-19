@@ -33,6 +33,14 @@ class Volume {
   struct Stats {
     size_t ram_used;
     uint32_t wear_count;
+
+    // Histogram of the wear level distribution. Each bucket represents about 5%
+    // of the valid range, with the first bucket storing the number of blocks
+    // with the lowest wear count, and the last bucket the most reused blocks.
+    // If all blocks have the same wear count, the first 19 buckets will have no
+    // samples.
+    uint32_t wear_histogram[20];
+    uint32_t num_blocks;
     int garbage_level;  // Percentage of free space that can be garbage-collected.
   };
 

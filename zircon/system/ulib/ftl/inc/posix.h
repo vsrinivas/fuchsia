@@ -4,31 +4,15 @@
 
 #pragma once
 
-#include <stddef.h>  // for size_t definition
-#include <stdint.h>  // for fixed width types
+#include <stdint.h>
 
 #include <zircon/compiler.h>
 
-/***********************************************************************/
-/* Symbol Definitions                                                  */
-/***********************************************************************/
-
-// vstat() file system types - also used for NDM partitions, so existing
-// values cannot be modified, only new values added or old ones removed
-#define XFS_VOL 6
-
-// vstat() FTL types
-#define FTL_NDM 2
-
-// Types of Flash
+// Types of Flash.
 #define FFS_NAND_SLC (1 << 0)
 #define FFS_NAND_MLC (1 << 1)
 
-/***********************************************************************/
-/* Type definitions                                                    */
-/***********************************************************************/
-
-// Driver count statistics for TargetFTL-NDM volumes
+// Driver count statistics for TargetFTL-NDM volumes.
 typedef struct {
   uint32_t write_page;
   uint32_t read_page;
@@ -41,30 +25,21 @@ typedef struct {
   uint32_t wear_count;
 } ftl_ndm_stats;
 
-// Driver count statistics for TargetFTL volumes
-typedef union {
-  ftl_ndm_stats ndm;
-} ftl_drvr_stats;
-
-// Driver count statistics for TargetXFS/TargetFTL volumes
 typedef struct {
-  uint32_t write_pages;
-  uint32_t read_pages;
-  ftl_drvr_stats ftl;
-} xfs_drvr_stats;
+  uint32_t num_blocks;
 
-typedef struct  // Must be the same as vstat_fat up to driver stats
-{
-  uint32_t vol_type;       // set to XFS_VOL
-  uint32_t garbage_level;  // garbage level as percentage 0 to 100
-  uint32_t ftl_type;
-  xfs_drvr_stats drvr_stats;  // driver count statistics
-} vstat_xfs;
+  // Percentage of space that is dirty from the total available. [0, 100).
+  // Calculated as 100 x (1 - free_pages / volume_size - used_pages).
+  uint32_t garbage_level;
 
-union vstat {
-  uint32_t vol_type;  // FS volume type
-  vstat_xfs xfs;
-};
+  // Histogram of the wear level distribution. Each bucket represents about 5%
+  // of the valid range, with the first bucket storing the number of blocks
+  // with the lowest wear count, and the last bucket the most reused blocks.
+  // If all blocks have the same wear count, the first 19 buckets will have no
+  // samples.
+  uint32_t wear_histogram[20];
+  ftl_ndm_stats ndm;
+} vstat;
 
 __BEGIN_CDECLS
 

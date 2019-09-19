@@ -238,6 +238,7 @@ int FtlnWrPages(const void* buf, ui32 first, int count, void* vol);
 int FtlnRdPages(void* buf, ui32 first, int count, void* vol);
 int FtlnReport(void* vol, ui32 msg, ...);
 ui32 FtlnGarbLvl(CFTLN ftl);
+int FtlnGetWearHistogram(CFTLN ftl, int count, ui32* histogram);
 int FtlnVclean(FTLN ftl);
 int FtlnMapGetPpn(CFTLN ftl, ui32 vpn, ui32* pnp);
 int FtlnMapSetPpn(CFTLN ftl, ui32 vpn, ui32 ppn);

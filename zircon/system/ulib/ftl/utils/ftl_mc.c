@@ -4,6 +4,8 @@
 
 #include "ftl_mc.h"
 
+#include <stddef.h>
+
 #include "ftl_private.h"
 #include "inc/kprivate/fsprivate.h"
 #include "inc/sys.h"

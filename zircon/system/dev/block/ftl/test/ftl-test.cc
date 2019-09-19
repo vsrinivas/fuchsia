@@ -154,6 +154,10 @@ TEST(FtlTest, Stats) {
   ASSERT_EQ(0, stats.garbage_level);
   ASSERT_EQ(0, stats.wear_count);
   ASSERT_LT(0, stats.ram_used);
+  ASSERT_LT(200, stats.num_blocks);
+  for (size_t i = 0; i < fbl::count_of(stats.wear_histogram) - 1; i++) {
+    ASSERT_EQ(0, stats.wear_histogram[i]);
+  }
 }
 
 class FtlTest : public zxtest::Test {
@@ -432,6 +436,45 @@ TEST(FtlExtendTest, ReduceReservedBlocksInvalidLocation) {
   ASSERT_LT(driver->num_bad_blocks(), options.max_bad_blocks);
   ASSERT_TRUE(driver->IsNdmDataPresent(options));
   ASSERT_TRUE(driver->BadBbtReservation());
+}
+
+TEST(FtlTest, WearCountDistribution) {
+  ftl::VolumeOptions options = kDefaultOptions;
+  options.num_blocks = 117;  // Should end in 100 usable blocks.
+
+  FtlShell ftl;
+  ASSERT_TRUE(ftl.Init(options));
+
+  for (int i = 0; i < 40; i++) {
+    // Fill the entire FTL.
+    for (uint32_t page = 0; page < ftl.num_pages(); page++) {
+      ASSERT_OK(WritePage(&ftl, page));
+    }
+
+    for (int j = 0; j < 30; j++) {
+      // Keep writing to 20% of the disk.
+      for (uint32_t page = 0; page < ftl.num_pages() / 5; page++) {
+        ASSERT_OK(WritePage(&ftl, page));
+      }
+    }
+  }
+
+  ftl::Volume::Stats stats;
+  ASSERT_OK(ftl.volume()->GetStats(&stats));
+  EXPECT_EQ(100, stats.num_blocks);
+
+  // Verify that none of the buckets close to get too behind (the lower 30% of
+  // the histogram) is accumulating too many blocks.
+  // TODO(fxb/35898): Enable this test.
+  int close_to_fall_of = 0;
+  for (int bucket = 0; bucket < 6; bucket++) {
+    // If the distribution is flat, no bucket should have more than 5 blocks.
+    // 20 sounds like a reasonable limit.
+    //EXPECT_GT(20, stats.wear_histogram[bucket], "Bucket %d too big", bucket);
+
+    close_to_fall_of += stats.wear_histogram[bucket];
+  }
+  //EXPECT_GT(60, close_to_fall_of);
 }
 
 }  // namespace
