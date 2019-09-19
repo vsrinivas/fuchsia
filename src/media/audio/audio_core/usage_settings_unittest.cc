@@ -14,7 +14,9 @@ namespace {
 constexpr float kArbitraryGainValue = -45.0;
 constexpr float kArbitraryGainAdjustment = -2.0;
 
-TEST(UsageGainSettingsTest, BasicRenderUsageGainPersists) {
+constexpr float kArbitraryVolumeValue = 0.14;
+
+TEST(UsageGainSettingsTest, RenderUsageGainPersists) {
   UsageGainSettings under_test;
 
   const auto test_usage = [&under_test](auto render_usage) {
@@ -30,7 +32,7 @@ TEST(UsageGainSettingsTest, BasicRenderUsageGainPersists) {
   test_usage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
 }
 
-TEST(UsageGainSettingsTest, BasicCaptureUsageGainPersists) {
+TEST(UsageGainSettingsTest, CaptureUsageGainPersists) {
   UsageGainSettings under_test;
 
   const auto test_usage = [&under_test](auto capture_usage) {
@@ -52,6 +54,45 @@ TEST(UsageGainSettingsTest, UsageGainCannotExceedUnity) {
   under_test.SetUsageGain(fidl::Clone(usage), 10.0);
 
   EXPECT_FLOAT_EQ(under_test.GetUsageGain(fidl::Clone(usage)), Gain::kUnityGainDb);
+}
+
+TEST(UsageVolumeSettingsTest, RenderUsageVolumePersists) {
+  UsageVolumeSettings under_test;
+
+  const auto test_usage = [&under_test](auto render_usage) {
+    under_test.SetUsageVolume(UsageFrom(render_usage), kArbitraryVolumeValue);
+    EXPECT_FLOAT_EQ(under_test.GetUsageVolume(UsageFrom(render_usage)), kArbitraryVolumeValue);
+  };
+
+  test_usage(fuchsia::media::AudioRenderUsage::BACKGROUND);
+  test_usage(fuchsia::media::AudioRenderUsage::MEDIA);
+  test_usage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+  test_usage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  test_usage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+}
+
+TEST(UsageVolumeSettingsTest, CaptureUsageVolumePersists) {
+  UsageVolumeSettings under_test;
+
+  const auto test_usage = [&under_test](auto capture_usage) {
+    under_test.SetUsageVolume(UsageFrom(capture_usage), kArbitraryVolumeValue);
+    EXPECT_FLOAT_EQ(under_test.GetUsageVolume(UsageFrom(capture_usage)), kArbitraryVolumeValue);
+  };
+
+  test_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
+  test_usage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+}
+
+TEST(UsageVolumeSettingsTest, DefaultVolumeIsMax) {
+  UsageVolumeSettings under_test;
+
+  const auto test_usage = [&under_test](auto capture_usage) {
+    EXPECT_FLOAT_EQ(under_test.GetUsageVolume(UsageFrom(capture_usage)),
+                    fuchsia::media::audio::MAX_VOLUME);
+  };
+
+  test_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
+  test_usage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
 }
 
 }  // namespace

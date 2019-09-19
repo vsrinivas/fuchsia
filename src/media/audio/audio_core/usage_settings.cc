@@ -54,4 +54,32 @@ void UsageGainSettings::SetUsageGainAdjustment(fuchsia::media::Usage usage, floa
   }
 }
 
+UsageVolumeSettings::UsageVolumeSettings() {
+  for (auto& volume : render_usage_volume_) {
+    volume = fuchsia::media::audio::MAX_VOLUME;
+  }
+
+  for (auto& volume : capture_usage_volume_) {
+    volume = fuchsia::media::audio::MAX_VOLUME;
+  }
+}
+
+float UsageVolumeSettings::GetUsageVolume(const fuchsia::media::Usage& usage) const {
+  TRACE_DURATION("audio", "UsageVolumeSettings::GetUsageVolume");
+  if (usage.is_render_usage()) {
+    return render_usage_volume_[fidl::ToUnderlying(usage.render_usage())];
+  } else {
+    return capture_usage_volume_[fidl::ToUnderlying(usage.capture_usage())];
+  }
+}
+
+void UsageVolumeSettings::SetUsageVolume(fuchsia::media::Usage usage, float volume) {
+  TRACE_DURATION("audio", "UsageVolumeSettings::SetUsageVolume");
+  if (usage.is_render_usage()) {
+    render_usage_volume_[fidl::ToUnderlying(usage.render_usage())] = volume;
+  } else {
+    capture_usage_volume_[fidl::ToUnderlying(usage.capture_usage())] = volume;
+  }
+}
+
 }  // namespace media::audio
