@@ -65,6 +65,3 @@ void MsdArmAtom::set_address_slot_mapping(
   }
   address_slot_mapping_ = address_slot_mapping;
 }
-
-void MsdArmAtom::SetExecutionStarted() { execution_start_time_ = std::chrono::steady_clock::now(); }
-void MsdArmAtom::SetTickStarted() { tick_start_time_ = std::chrono::steady_clock::now(); }

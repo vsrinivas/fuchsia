@@ -257,11 +257,9 @@ class TestJobScheduler {
     TestOwner owner;
     TestConnectionOwner connection_owner;
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
+    JobScheduler::Clock::time_point current_time = JobScheduler::Clock::now();
     JobScheduler scheduler(&owner, 1);
-
-    // Make timeout lower so test runs faster.
-    static constexpr uint64_t kTimeoutDurationMs = 10;
-    scheduler.set_timeout_duration(kTimeoutDurationMs);
+    scheduler.set_clock_callback([&current_time]() { return current_time; });
 
     auto atom = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
     MsdArmAtom* atom_ptr = atom.get();
@@ -269,10 +267,12 @@ class TestJobScheduler {
     DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
 
     scheduler.TryToSchedule();
-    DASSERT(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(kTimeoutDurationMs));
+    DASSERT(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(2000));
     EXPECT_EQ(0u, owner.hang_message_output_count());
-    while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
-      ;
+    while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero()) {
+      current_time +=
+          std::chrono::duration_cast<JobScheduler::Clock::duration>(std::chrono::milliseconds(1));
+    }
     EXPECT_EQ(0u, owner.stopped_atoms().size());
     scheduler.HandleTimedOutAtoms();
     EXPECT_EQ(1u, owner.stopped_atoms().size());
@@ -401,11 +401,9 @@ class TestJobScheduler {
     TestOwner owner;
     TestConnectionOwner connection_owner;
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
+    JobScheduler::Clock::time_point current_time = JobScheduler::Clock::now();
     JobScheduler scheduler(&owner, 1);
-
-    // Make timeout lower so test runs faster.
-    static constexpr uint64_t kTimeoutDurationMs = 10;
-    scheduler.set_semaphore_timeout_duration(kTimeoutDurationMs);
+    scheduler.set_clock_callback([&current_time]() { return current_time; });
 
     auto semaphore = std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
 
@@ -420,11 +418,12 @@ class TestJobScheduler {
     scheduler.EnqueueAtom(atom2);
 
     scheduler.TryToSchedule();
-    EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <=
-                std::chrono::milliseconds(kTimeoutDurationMs));
+    EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(5000));
     EXPECT_EQ(0u, owner.hang_message_output_count());
-    while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
-      ;
+    while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero()) {
+      current_time +=
+          std::chrono::duration_cast<JobScheduler::Clock::duration>(std::chrono::milliseconds(1));
+    }
     scheduler.HandleTimedOutAtoms();
     EXPECT_EQ(kArmMaliResultTimedOut, atom->result_code());
     EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
@@ -555,7 +554,10 @@ class TestJobScheduler {
     TestOwner owner;
     TestConnectionOwner connection_owner;
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
+    JobScheduler::Clock::time_point current_time = JobScheduler::Clock::now();
     JobScheduler scheduler(&owner, 2);
+    scheduler.set_clock_callback([&current_time]() { return current_time; });
+
     auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(),
                                               equal_priority ? 0 : -1);
     scheduler.EnqueueAtom(atom1);
@@ -570,7 +572,8 @@ class TestJobScheduler {
 
     if (equal_priority) {
       EXPECT_EQ(0u, owner.soft_stopped_atoms().size());
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      current_time +=
+          std::chrono::duration_cast<JobScheduler::Clock::duration>(std::chrono::milliseconds(100));
       EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <= JobScheduler::Clock::duration::zero());
       scheduler.HandleTimedOutAtoms();
       EXPECT_EQ(0u, owner.hang_message_output_count());

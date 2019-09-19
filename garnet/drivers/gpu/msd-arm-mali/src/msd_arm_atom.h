@@ -68,13 +68,17 @@ class MsdArmAtom {
   void set_hard_stopped() { hard_stopped_ = true; }
   bool soft_stopped() const { return soft_stopped_; }
   void set_soft_stopped(bool stopped) { soft_stopped_ = stopped; }
-  void SetExecutionStarted();
-  void SetTickStarted();
 
   // Preempted by a timer interrupt (not by a higher priority atom)
   bool preempted() const { return preempted_; }
   void set_preempted(bool preempted) { preempted_ = preempted; }
 
+  void set_execution_start_time(std::chrono::time_point<std::chrono::steady_clock> time) {
+    execution_start_time_ = time;
+  }
+  void set_tick_start_time(std::chrono::time_point<std::chrono::steady_clock> time) {
+    tick_start_time_ = time;
+  }
   std::chrono::time_point<std::chrono::steady_clock> execution_start_time() const {
     return execution_start_time_;
   }

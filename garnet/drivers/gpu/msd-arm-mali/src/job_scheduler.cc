@@ -11,6 +11,7 @@
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
     : owner_(owner),
+      clock_callback_([]() { return Clock::now(); }),
       job_slots_(job_slots),
       executing_atoms_(job_slots),
       runnable_atoms_(job_slots) {}
@@ -34,7 +35,7 @@ void JobScheduler::MoveAtomsToRunnable() {
       if (dep_status != kArmMaliResultSuccess) {
         owner_->AtomCompleted(atom.get(), dep_status);
       } else if (soft_atom) {
-        soft_atom->SetExecutionStarted();
+        soft_atom->set_execution_start_time(clock_callback_());
         ProcessSoftAtom(soft_atom);
       } else if (atom->IsDependencyOnly()) {
         owner_->AtomCompleted(atom.get(), kArmMaliResultSuccess);
@@ -174,8 +175,8 @@ void JobScheduler::ScheduleRunnableAtoms() {
       }
     }
 
-    atom->SetExecutionStarted();
-    atom->SetTickStarted();
+    atom->set_execution_start_time(clock_callback_());
+    atom->set_tick_start_time(clock_callback_());
     DASSERT(!atom->preempted());
     DASSERT(!atom->soft_stopped());
     executing_atoms_[slot] = atom;
@@ -305,12 +306,12 @@ JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration() {
 
   if (timeout_time == Clock::time_point::max())
     return Clock::duration::max();
-  return timeout_time - Clock::now();
+  return timeout_time - clock_callback_();
 }
 
 void JobScheduler::HandleTimedOutAtoms() {
   bool have_output_hang_message = false;
-  auto now = Clock::now();
+  auto now = clock_callback_();
   for (auto& atom : executing_atoms_) {
     if (!atom || atom->hard_stopped())
       continue;
@@ -324,7 +325,7 @@ void JobScheduler::HandleTimedOutAtoms() {
       owner_->HardStopAtom(atom.get());
     } else if (atom->tick_start_time() + std::chrono::milliseconds(job_tick_duration_ms_) <= now) {
       // Reset tick time so we won't spin trying to stop this atom.
-      atom->SetTickStarted();
+      atom->set_tick_start_time(clock_callback_());
 
       if (atom->soft_stopped() || atom->is_protected())
         continue;

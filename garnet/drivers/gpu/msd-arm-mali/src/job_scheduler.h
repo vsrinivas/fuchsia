@@ -30,6 +30,7 @@ class JobScheduler {
     virtual void OutputHangMessage() = 0;
   };
   using Clock = std::chrono::steady_clock;
+  using ClockCallback = std::function<Clock::time_point()>;
 
   JobScheduler(Owner* owner, uint32_t job_slots);
 
@@ -53,6 +54,9 @@ class JobScheduler {
 
   void ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
+  // Used to fake out time for tests.
+  void set_clock_callback(const ClockCallback& clock_callback) { clock_callback_ = clock_callback; }
+
  private:
   MsdArmAtom* executing_atom() const { return executing_atoms_[0].get(); }
   void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
@@ -71,14 +75,8 @@ class JobScheduler {
   }
   void ValidateCanSwitchProtected();
 
-  void set_timeout_duration(uint64_t timeout_duration_ms) {
-    timeout_duration_ms_ = timeout_duration_ms;
-  }
-  void set_semaphore_timeout_duration(uint64_t semaphore_timeout_duration_ms) {
-    semaphore_timeout_duration_ms_ = semaphore_timeout_duration_ms;
-  }
-
   Owner* owner_;
+  ClockCallback clock_callback_;
 
   uint32_t job_slots_;
 
