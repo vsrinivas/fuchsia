@@ -156,6 +156,8 @@ source_set("audio_core_lib") {
     "usage_settings.h",
     "utils.cc",
     "utils.h",
+    "volume_control.cc",
+    "volume_control.h",
     "volume_curve.cc",
     "volume_curve.h",
   ]
@@ -230,6 +232,7 @@ executable("unittest_bin") {
     "stream_volume_manager_unittest.cc",
     "usage_settings_unittest.cc",
     "utils_unittest.cc",
+    "volume_control_unittest.cc",
     "volume_curve_unittest.cc",
   ]
 
