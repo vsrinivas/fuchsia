@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
@@ -30,7 +30,7 @@ using fuchsia::accessibility::semantics::SemanticsManager;
 const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
 constexpr int kMaxLogBufferSize = 1024;
 
-class ScreenReaderTest : public gtest::RealLoopFixture {
+class ScreenReaderTest : public gtest::TestLoopFixture {
  public:
   ScreenReaderTest()
       : tts_manager_(context_provider_.context()),
@@ -140,7 +140,7 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   RunLoopUntilIdle();
 
   // Verify that TTS is called when OneFingerTapAction was performed.
-  RunLoopUntil([&mock_tts_engine] { return mock_tts_engine.ReceivedSpeak(); });
+  EXPECT_TRUE(mock_tts_engine.ReceivedSpeak());
   // Check if Utterance and Speak functions are called in Tts.
   ASSERT_EQ(mock_tts_engine.ExamineUtterances().size(), 1u);
   EXPECT_EQ(mock_tts_engine.ExamineUtterances()[0].message(), "Label A");

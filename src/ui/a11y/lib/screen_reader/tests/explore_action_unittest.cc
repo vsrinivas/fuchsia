@@ -5,7 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
@@ -28,7 +28,7 @@ using fuchsia::accessibility::semantics::SemanticsManager;
 const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
 constexpr int kMaxLogBufferSize = 1024;
 
-class ExploreActionTest : public gtest::RealLoopFixture {
+class ExploreActionTest : public gtest::TestLoopFixture {
  public:
   ExploreActionTest()
       : semantics_manager_(context_provider_.context()),
@@ -109,7 +109,8 @@ TEST_F(ExploreActionTest, ReadLabel) {
 
   // Call ExploreAction Run()
   explore_action.Run(action_data);
-  RunLoopUntil([&mock_tts_engine] { return mock_tts_engine.ReceivedSpeak(); });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_tts_engine.ReceivedSpeak());
 
   // Check if Utterance and Speak functions are called in Tts.
   ASSERT_EQ(mock_tts_engine.ExamineUtterances().size(), 1u);

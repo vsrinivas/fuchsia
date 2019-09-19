@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -60,7 +60,7 @@ const std::string kDeletedSemanticSubtreePath = "/pkg/data/deleted_subtree_even_
 
 // Unit tests for src/ui/a11y/lib/semantics_manager.h and
 // semantic_tree.h
-class SemanticsManagerTest : public gtest::RealLoopFixture {
+class SemanticsManagerTest : public gtest::TestLoopFixture {
  public:
   SemanticsManagerTest() : semantics_manager_(context_provider_.context()) { syslog::InitLogger(); }
 
@@ -280,7 +280,8 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
     RunLoopUntilIdle();
 
     // Verify that Commit Called the callback on SemanticProvider.
-    RunLoopUntil([&semantic_provider] { return semantic_provider.CommitFailedStatus(); });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(semantic_provider.CommitFailedStatus());
 
     // Check that nodes are not present in the semantic tree.
     for (const Node &node : nodes_list_copy) {
@@ -475,20 +476,21 @@ TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
   InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider);
 
   // Set HitTest result in action listener.
-  uint32_t expected_result = 5;
+  static constexpr uint32_t expected_result = 5;
   semantic_provider.SetHitTestResult(expected_result);
 
   zx_koid_t koid = a11y::GetKoid(semantic_provider.view_ref());
   ::fuchsia::math::PointF local_point;
-  bool done = false;
-  semantics_manager_.PerformHitTesting(
-      koid, local_point, [expected_result, &done](::fuchsia::accessibility::semantics::Hit hit) {
-        EXPECT_EQ(expected_result, hit.node_id());
-        EXPECT_EQ(1ul, hit.path_from_root().size());
-        EXPECT_EQ(expected_result, hit.path_from_root()[0]);
-        done = true;
-      });
-  RunLoopUntil([&done] { return done; });
+  fuchsia::accessibility::semantics::Hit hit;
+  semantics_manager_.PerformHitTesting(koid, local_point,
+                                       [&hit](fuchsia::accessibility::semantics::Hit received_hit) {
+                                         hit = std::move(received_hit);
+                                       });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(expected_result, hit.node_id());
+  EXPECT_EQ(1ul, hit.path_from_root().size());
+  EXPECT_EQ(expected_result, hit.path_from_root()[0]);
 }
 
 // Basic test to make sure nodes can be searched using node id and Koid of
