@@ -94,7 +94,7 @@ def main():
         if not '"' + lib_with_dash + '"' in line:
             sys.stdout.write(line)
 
-    Create a commit.
+    # Create a commit.
     run_command(['git', 'checkout', '-b', 'fidl-move-' + lib, 'JIRI_HEAD'])
     run_command(['git', 'add', sdk_dir])
     message = [
