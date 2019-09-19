@@ -523,7 +523,9 @@ bool validate_multiple_present_nullable_string() {
 
   // Among other things, this test ensures we handle out-of-line
   // alignment to FIDL_ALIGNMENT (i.e., 8) bytes correctly.
-  multiple_nullable_strings_message_layout message = {};
+  multiple_nullable_strings_message_layout message;
+  memset(&message, 0, sizeof(message));
+
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.string2 = fidl_string_t{8, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   memcpy(message.data, "hello ", 6);
@@ -1167,7 +1169,9 @@ bool validate_single_membered_present_nonnullable_union() {
 bool validate_many_membered_present_nonnullable_union() {
   BEGIN_TEST;
 
-  array_of_nonnullable_handles_union_message_layout message = {};
+  array_of_nonnullable_handles_union_message_layout message;
+  memset(&message, 0, sizeof(message));
+
   message.inline_struct.data.tag = array_of_nonnullable_handles_union_kArrayOfArrayOfHandles;
   message.inline_struct.data.array_of_array_of_handles[0][0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.data.array_of_array_of_handles[0][1] = FIDL_HANDLE_PRESENT;
@@ -1259,7 +1263,9 @@ bool validate_single_membered_present_nullable_union() {
 bool validate_many_membered_present_nullable_union() {
   BEGIN_TEST;
 
-  array_of_nonnullable_handles_union_ptr_message_layout message = {};
+  array_of_nonnullable_handles_union_ptr_message_layout message;
+  memset(&message, 0, sizeof(message));
+
   message.inline_struct.data =
       reinterpret_cast<array_of_nonnullable_handles_union*>(FIDL_ALLOC_PRESENT);
   message.data.tag = array_of_nonnullable_handles_union_kArrayOfArrayOfHandles;
@@ -1583,7 +1589,8 @@ void SetUpRecursionMessage(recursion_message_layout* message) {
 bool validate_nested_struct_recursion_too_deep_error() {
   BEGIN_TEST;
 
-  recursion_message_layout message = {};
+  recursion_message_layout message;
+  memset(&message, 0, sizeof(message));
 
   // First we check that FIDL_RECURSION_DEPTH - 1 levels of recursion is OK.
   SetUpRecursionMessage(&message);
