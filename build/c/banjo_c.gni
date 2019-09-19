@@ -18,7 +18,10 @@ template("banjo_c_target") {
 
   main_target_name = target_name
 
-  library_name = invoker.name
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
 
   ddk_root = string_replace(string_replace(library_name, ".", "/"), "_", "-")
   ddktl_root = string_replace(ddk_root, "ddk", "ddktl")
