@@ -46,7 +46,7 @@ def main():
     shutil.move(source_dir, sdk_base)
 
     # Edit the build file.
-    is_dummy = lib.startswith('ddk.protocol') or lib.startswith('ddk.hw')
+    is_dummy = not (lib.startswith('ddk.protocol') or lib.startswith('ddk.hw'))
     for line in fileinput.FileInput(os.path.join(sdk_dir, 'BUILD.gn'),
                                     inplace=True):
         line = line.replace('$zx_build/public/gn/banjo.gni',
