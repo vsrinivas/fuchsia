@@ -339,6 +339,11 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
   return x86_microarch_config;
 }
 
+static inline bool x86_get_disable_spec_mitigations(void) {
+  extern bool g_disable_spec_mitigations;
+  return g_disable_spec_mitigations;
+}
+
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);

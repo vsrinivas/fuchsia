@@ -269,7 +269,15 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
-## kernel.pti.enable=\<int>
+## kernel.x86.disable_spec_mitigations=\<bool>
+
+If set, disable all speculative execution information leak mitigations.
+
+If clear, the per-mitigation defaults will be used.
+
+This option only affects x86 systems.
+
+## kernel.x86.pti.enable=\<int>
 
 Page table isolation configures user page tables to not have kernel text or
 data mapped. This may impact performance negatively. This is a mitigation

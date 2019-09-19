@@ -17,6 +17,7 @@
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
 #include <ktl/atomic.h>
+#include <lib/cmdline.h>
 #include <lib/code_patching.h>
 #include <platform/pc/bootbyte.h>
 
@@ -42,6 +43,8 @@ bool g_has_l1tf;
 bool g_has_mds;
 bool g_has_swapgs_bug;
 bool g_swapgs_bug_mitigated;
+// True if we should disable all speculative execution mitigations.
+bool g_disable_spec_mitigations;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -159,6 +162,9 @@ void x86_feature_init(void) {
   }
 
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
+
+  g_disable_spec_mitigations = gCmdline.GetBool("kernel.x86.disable_spec_mitigations",
+                                                /*default_value=*/false);
 }
 
 static enum x86_hypervisor_list get_hypervisor() {
@@ -855,7 +861,7 @@ void swapgs_bug_postfence(const CodePatchInfo* patch) {
   DEBUG_ASSERT(patch->dest_size == kSize);
   DEBUG_ASSERT(kLfenceEnd - kLfence == kSize);
 
-  if (g_has_swapgs_bug) {
+  if ((x86_get_disable_spec_mitigations() == false) && g_has_swapgs_bug) {
     memcpy(patch->dest_addr, kLfence, kSize);
     g_swapgs_bug_mitigated = true;
   } else {

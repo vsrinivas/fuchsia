@@ -544,9 +544,10 @@ void x86_mmu_early_init() {
 
 void x86_mmu_init(void) {
   extern bool g_has_meltdown;
-  auto pti_enable = gCmdline.GetUInt32("kernel.pti.enable", /*default_value=*/2);
-  g_enable_isolation = (pti_enable == 1) ||
-                       ((pti_enable == 2) && g_has_meltdown);
+  auto pti_enable = gCmdline.GetUInt32("kernel.x86.pti.enable", /*default_value=*/2);
+  g_enable_isolation = (x86_get_disable_spec_mitigations() == false) &&
+                       ((pti_enable == 1) ||
+                       ((pti_enable == 2) && g_has_meltdown));
   printf("Kernel PTI %s\n", g_enable_isolation ? "enabled" : "disabled");
 
   // TODO(crbug.com/fuchsia/31415): Currently KPTI disables Global pages; we might be able to do
