@@ -7,7 +7,6 @@ namespace p2p_provider;
 // Handshake. Gives the client_id of the device. Will be the first message
 // once a connection is established.
 table Handshake {
-  version: ushort;
   client_id: [ubyte];
 }
 

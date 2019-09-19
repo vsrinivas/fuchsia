@@ -324,8 +324,8 @@ TEST_F(P2PProviderImplTest, DisconnectBeforeHandshake) {
 
   // Send handshake
   flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<Handshake> request = CreateHandshake(
-      buffer, 1, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
+  flatbuffers::Offset<Handshake> request =
+      CreateHandshake(buffer, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
   flatbuffers::Offset<Envelope> envelope =
       CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
   buffer.Finish(envelope);
@@ -365,8 +365,8 @@ TEST_F(P2PProviderImplTest, TripleConnection) {
 
   // Send handshake
   flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<Handshake> request = CreateHandshake(
-      buffer, 1, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
+  flatbuffers::Offset<Handshake> request =
+      CreateHandshake(buffer, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
   flatbuffers::Offset<Envelope> envelope =
       CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
   buffer.Finish(envelope);

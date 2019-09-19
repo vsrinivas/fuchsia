@@ -16,7 +16,9 @@
 namespace p2p_provider {
 namespace {
 // Prefix for the peer-to-peer service.
-constexpr char kRespondingServiceName[] = "ledger-p2p-";
+constexpr char kRespondingServiceName[] = "ledger-p2p";
+// Separator for the different parts of the service name.
+constexpr char kRespondingServiceNameSeparator[] = "/";
 // Current Ledger protocol version. Devices on different versions are unable to talk to each other.
 const uint16_t kCurrentVersion = 1;
 // Initial version of the list of peers, when starting Overnet.
@@ -28,18 +30,14 @@ bool ValidateHandshake(const Envelope* envelope, const Handshake** message) {
     return false;
   }
   *message = static_cast<const Handshake*>(envelope->message());
-  if ((*message)->version() != kCurrentVersion) {
-    FXL_LOG(ERROR) << "Incorrect message version: " << (*message)->version();
-    return false;
-  }
   return true;
 }
 
 std::unique_ptr<flatbuffers::FlatBufferBuilder> BuildBufferContainingHandshake(
     const P2PClientId& client_id) {
   auto buffer = std::make_unique<flatbuffers::FlatBufferBuilder>();
-  flatbuffers::Offset<Handshake> request = CreateHandshake(
-      *buffer, kCurrentVersion, convert::ToFlatBufferVector(buffer.get(), client_id.GetData()));
+  flatbuffers::Offset<Handshake> request =
+      CreateHandshake(*buffer, convert::ToFlatBufferVector(buffer.get(), client_id.GetData()));
   flatbuffers::Offset<Envelope> envelope =
       CreateEnvelope(*buffer, EnvelopeMessage_Handshake, request.Union());
   buffer->Finish(envelope);
@@ -279,6 +277,9 @@ void P2PProviderImpl::OnDeviceChange(P2PClientId remote_device, DeviceChangeType
   client_->OnDeviceChange(remote_device, change_type);
 }
 
-std::string P2PProviderImpl::OvernetServiceName() { return kRespondingServiceName + user_id_; }
+std::string P2PProviderImpl::OvernetServiceName() {
+  return std::string(kRespondingServiceName) + kRespondingServiceNameSeparator +
+         std::to_string(kCurrentVersion) + kRespondingServiceNameSeparator + user_id_;
+}
 
 }  // namespace p2p_provider
