@@ -2,6 +2,7 @@ use {
     crate::registry::base::{Command, Notifier, State},
     crate::switchboard::base::{DeviceInfo, SettingResponse},
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_info,
     futures::StreamExt,
     parking_lot::RwLock,
     std::fs,
@@ -32,10 +33,12 @@ pub fn spawn_device_controller() -> futures::channel::mpsc::UnboundedSender<Comm
                     // Right now will panic in hanging_get_handler if Err is sent back.
                     let contents = fs::read_to_string(BUILD_TAG_FILE_PATH)
                         .expect("Could not read build tag file");
+                    let device_info = DeviceInfo {
+                        build_tag: contents.trim().to_string(),
+                    };
+                    fx_log_info!("{:?}", device_info);
                     responder
-                        .send(Ok(Some(SettingResponse::Device(DeviceInfo {
-                            build_tag: contents.trim().to_string(),
-                        }))))
+                        .send(Ok(Some(SettingResponse::Device(device_info))))
                         .ok();
                 }
             }
