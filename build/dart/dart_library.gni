@@ -12,6 +12,10 @@ import("//third_party/flutter/lib/ui/dart_ui.gni")
 declare_args() {
   # Enable all dart analysis
   enable_dart_analysis = true
+
+  # Detect dart API changes
+  # TODO(fxb/36723, fxb/6623) Remove this flag once issues are resolved
+  enable_api_diff = false
 }
 
 # Defines a Dart library
@@ -344,8 +348,8 @@ if (current_toolchain == dart_toolchain) {
     # SDK support
     #
 
-    with_api_diff =
-        defined(invoker.sdk_category) && invoker.sdk_category != "excluded"
+    with_api_diff = enable_api_diff && (defined(invoker.sdk_category) &&
+                                        invoker.sdk_category != "excluded")
 
     if (with_api_diff) {
       detect_target_name = "${target_name}_detect_action"
