@@ -9,7 +9,6 @@ group("testing") {
     ":component_context_fake",
     ":component_main",
     ":entity_resolver_fake",
-    ":fake_agent_runner_storage",
     ":ledger_repository_for_testing",
     ":mock_base",
     ":module_facet_reader_fake",
@@ -238,20 +237,6 @@ source_set("test_with_session_storage") {
     ":test_with_ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr/storage",
-  ]
-}
-
-source_set("fake_agent_runner_storage") {
-  testonly = true
-
-  sources = [
-    "fake_agent_runner_storage.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
-    "//src/modular/bin/sessionmgr/agent_runner:public",
   ]
 }
 

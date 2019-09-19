@@ -10,8 +10,6 @@ source_set("agent_runner") {
     "agent_context_impl.cc",
     "agent_context_impl.h",
     "agent_runner.cc",
-    "agent_runner_storage_impl.cc",
-    "agent_runner_storage_impl.h",
     "agent_service_index.h",
     "map_agent_service_index.h",
   ]
@@ -35,7 +33,6 @@ source_set("agent_runner") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr:component_context",
-    "//src/modular/bin/sessionmgr/message_queue",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/common:teardown",
@@ -65,9 +62,7 @@ executable("agent_runner_unittest") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
-    "//src/modular/bin/sessionmgr/message_queue",
     "//src/modular/lib/fidl:array_to_string",
-    "//src/modular/lib/testing:fake_agent_runner_storage",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
     "//zircon/public/lib/fs",
@@ -86,8 +81,6 @@ hermetic_tests_package("agent_runner_unittests") {
 source_set("public") {
   sources = [
     "agent_runner.h",
-    "agent_runner_storage.cc",
-    "agent_runner_storage.h",
     "agent_service_index.h",
   ]
 

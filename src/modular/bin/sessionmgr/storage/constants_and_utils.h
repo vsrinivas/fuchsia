@@ -13,15 +13,6 @@
 #include <string>
 
 namespace modular {
-
-// There are four kinds of pages used by the modular runtime:
-//
-// 1. The user root page contains a list of all stories and of all devices.
-//
-//
-// 2. The message queue page lists all message queues that exist.
-//
-constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
 //
 // 3. The trigger page contains the trigger conditions for all agents.
 //
@@ -46,11 +37,6 @@ constexpr char kFocusKeyPrefix[] = "Focus/";
 constexpr char kStoryDataKeyPrefix[] = "Story/Data/";
 constexpr char kStorySnapshotKeyPrefix[] = "Story/Snapshot/";
 
-//
-//    Message Queue page:
-constexpr char kMessageQueueKeyPrefix[] = "fuchsia::modular::MessageQueue/";
-constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
-//
 //    fuchsia::modular::Agent Trigger page:
 constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //
@@ -67,11 +53,6 @@ constexpr char kEntityNamePrefix[] = "EntityName/";
 //
 std::string MakeDeviceKey(const fidl::StringPtr& device_name);
 std::string MakeFocusKey(const fidl::StringPtr& device_name);
-std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
-std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
-                                     const std::string& component_instance_id,
-                                     const std::string& queue_name);
-std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url, const std::string& task_id);
 std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path);
 std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path);

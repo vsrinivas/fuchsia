@@ -54,26 +54,6 @@ executable("last_focus_time_test") {
   ]
 }
 
-executable("queue_persistence_test") {
-  testonly = true
-
-  output_name = "queue_persistence_test"
-
-  sources = [
-    "queue_persistence_test.cc",
-  ]
-
-  deps = [
-    ":queue_persistence_test_service",
-    "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/modular/lib/message_queue/cpp",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
 executable("sessionctl_test") {
   testonly = true
   output_name = "sessionctl_test"
@@ -337,10 +317,6 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "queue_persistence_test"
-      environments = basic_envs
-    },
-    {
       name = "session_shell_test"
       environments = basic_envs
     },
@@ -404,7 +380,6 @@ test_package("modular_integration_tests") {
     ":last_focus_time_test",
     ":login_override_test",
     ":module_context_test",
-    ":queue_persistence_test",
     ":session_shell_test",
     ":sessionctl_test",
     ":sessionmgr_integration_test",
@@ -412,12 +387,5 @@ test_package("modular_integration_tests") {
     ":story_shell_embedded_mod_test",
     ":story_shell_factory_test",
     ":story_shell_test",
-  ]
-}
-
-fidl("queue_persistence_test_service") {
-  name = "test.modular.queuepersistence"
-  sources = [
-    "queue_persistence_test_service.test.fidl",
   ]
 }

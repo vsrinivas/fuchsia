@@ -25,9 +25,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
-#include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "src/modular/lib/fidl/array_to_string.h"
-#include "src/modular/lib/testing/fake_agent_runner_storage.h"
 #include "src/modular/lib/testing/mock_base.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
@@ -146,8 +144,6 @@ class AgentRunnerTest : public TestWithLedger {
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    mqm_ = std::make_unique<MessageQueueManager>(ledger_client(), MakePageId("0123456789123456"),
-                                                 mq_data_dir_.path());
     entity_provider_runner_ = std::make_unique<EntityProviderRunner>(nullptr);
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
@@ -156,19 +152,16 @@ class AgentRunnerTest : public TestWithLedger {
   void TearDown() override {
     agent_runner_.reset();
     entity_provider_runner_.reset();
-    mqm_.reset();
 
     TestWithLedger::TearDown();
   }
-
-  MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
   AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<AgentRunner>(
-          &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_, token_manager_.get(),
-          nullptr, entity_provider_runner_.get(),
+          &launcher_, ledger_repository(), token_manager_.get(), nullptr,
+          entity_provider_runner_.get(),
           std::make_unique<MapAgentServiceIndex>(std::move(agent_service_index_)));
     }
     return agent_runner_.get();
@@ -262,8 +255,6 @@ class AgentRunnerTest : public TestWithLedger {
   FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
-  std::unique_ptr<MessageQueueManager> mqm_;
-  FakeAgentRunnerStorage agent_runner_storage_;
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;

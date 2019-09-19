@@ -23,30 +23,6 @@ std::string MakeFocusKey(const fidl::StringPtr& device_name) {
   return kFocusKeyPrefix + device_name.value_or("");
 }
 
-std::string MakeMessageQueuesPrefix(const std::string& component_namespace) {
-  std::string key{kMessageQueueTokenKeyPrefix};
-  key.append(StringEscape(component_namespace, kSeparator, kEscaper));
-  key.append(kSeparator);
-  return key;
-}
-
-std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
-                                     const std::string& component_instance_id,
-                                     const std::string& queue_name) {
-  std::string key{kMessageQueueTokenKeyPrefix};
-  key.append(StringEscape(component_namespace, kSeparator, kEscaper));
-  key.append(kSeparator);
-  key.append(StringEscape(component_instance_id, kSeparator, kEscaper));
-  key.append(kSeparator);
-  key.append(StringEscape(queue_name, kSeparator, kEscaper));
-  return key;
-}
-
-std::string MakeMessageQueueKey(const std::string& queue_token) {
-  // Not escaped, because only one component after the prefix.
-  return kMessageQueueKeyPrefix + queue_token;
-}
-
 std::string EncodeModulePath(const std::vector<std::string>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path.size());

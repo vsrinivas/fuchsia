@@ -24,7 +24,6 @@ fidl("fuchsia.modular") {
     "basemgr/user_provider.fidl",
     "clipboard/clipboard.fidl",
     "component/component_context.fidl",
-    "component/message_queue.fidl",
     "config/config.fidl",
     "entity/entity.fidl",
     "entity/entity_provider.fidl",

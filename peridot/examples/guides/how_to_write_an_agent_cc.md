@@ -13,23 +13,6 @@ the `fuchsia::modular::Agent` described here.
 
 ## SimpleAgent
 
-`SimpleAgent` is an `fuchsia::modular::Agent` that periodically writes a simple message to
-a `fuchsia::modular::MessageQueue` (a common communication channel).
-
-`SimpleAgent` implements the `Simple` FIDL protocol which exposes the
-ability to control which `fuchsia::modular::MessageQueue` the messages will be sent to.
-
-```
-library simple;
-
-[Discoverable]
-protocol Simple {
-  // Provides the Simple protocol with a message queue to which
-  // messages will be written periodically.
-  1: SetMessageQueue(string queue_token);
-};
-```
-
 ### fuchsia::modular::Agent Initialization
 
 The first step to writing an `fuchsia::modular::Agent` is implementing the initializer:
@@ -111,9 +94,6 @@ class SimpleImpl : Simple {
   std::string message_queue_token() const { return token_; }
 
  private:
-  // |Simple| protocol method.
-  void SetMessageQueue(fidl::StringPtr queue_token);
-
   // The bindings to the Simple service.
   fidl::BindingSet<Simple> bindings_;
 
@@ -173,8 +153,6 @@ SimpleServicePtr agent_service;
 component_context->ConnectToAgent(agent_url,
                                   agent_services.NewRequest(),
                                   agent_controller.NewRequest());
-ConnectToService(agent_services.get(), agent_service.NewRequest());
-agent_service->SetMessageQueue(...);
 ```
 
 Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`,
@@ -182,7 +160,6 @@ and is given a request for the services that the `SimpleAgent` will provide via 
 and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 
 Then the client connects to the `Simple` protocol by invoking `ConnectToService` with
-a request for a new `SimpleServicePtr`. This protocol pointer can be used immediately
-to provide the agent with the token for the `fuchsia::modular::MessageQueue` to send messages to.
+a request for a new `SimpleServicePtr`.
 
 See the [SimpleModule](how_to_write_a_mod.md) guide for a more in-depth example.

@@ -5,7 +5,6 @@
 group("examples") {
   testonly = true
   deps = [
-    "simple",
     "swap_cpp",
     "todo_cpp",
   ]

@@ -28,18 +28,6 @@ void ComponentContextFake::ConnectToAgent(
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::ObtainMessageQueue(
-    std::string name, fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void ComponentContextFake::DeleteMessageQueue(std::string name) { FXL_NOTIMPLEMENTED(); }
-
-void ComponentContextFake::GetMessageSender(
-    std::string queue_token, fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
-  FXL_NOTIMPLEMENTED();
-}
-
 void ComponentContextFake::GetEntityResolver(
     fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   entity_resolver_.Connect(std::move(request));

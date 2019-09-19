@@ -10,9 +10,6 @@ additional capabilities via its `fuchsia::modular::ModuleContext`.
 
 ## `SimpleMod`
 
-`SimpleMod` is a `Module` communicates with `SimpleAgent` via a `fuchsia::modular::MessageQueue`, and
-displays the messages from `SimpleAgent` on screen.
-
 ### Mod Initialization
 
 The first step to writing a `Module` is implementing the initializer.
@@ -67,40 +64,6 @@ fuchsia::sys::ServiceProviderPtr agent_services;
 component_context->ConnectToAgent("system/bin/simple_agent",
                                   agent_services.NewRequest(),
                                   agent_controller.NewRequest());
-```
-
-### Creating a `fuchsia::modular::MessageQueue`
-
-`SimpleModule` needs to create a message queue and retrieve its token to hand
-it over to `SimpleAgent` so it can write messages to it.
-
-```c++
-// Request a new message queue from the component context.
-modular::MessageQueueClient message_queue;
-component_context->ObtainMessageQueue("agent_queue",
-                                      message_queue.NewRequest());
-
-// Get the token for the message queue and send it to the agent.
-message_queue.GetToken(
-    [agent_service = std::move(agent_service)](fidl::StringPtr token) {
-      agent_service->SetMessageQueue(token);
-    });
-```
-
-### Communicating with `SimpleAgent
-
-In order to receive messages on the newly created message queue, `SimpleModule`
-registers a receiver callback with `MessageQueueClient`. Here, the receiver is a
-lambda that gets called with new messages.
-
-```c++
-// Register a callback with a message queue client that logs any
-// messages that SimpleAgent sends
-message_queue.RegsiterReceiver(
-    [](std::string msg, fit::function<void()> ack) {
-        ack();
-        FXL_LOG(INFO) << "New message: " << msg;
-    });
 ```
 
 ### Running the Module

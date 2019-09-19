@@ -9,6 +9,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -29,7 +30,6 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
-#include "src/modular/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
@@ -49,7 +49,6 @@ class ComponentContextImpl;
 class DeviceMapImpl;
 class FocusHandler;
 class LedgerClient;
-class MessageQueueManager;
 class PuppetMasterImpl;
 class SessionCtl;
 class SessionStorage;
@@ -97,7 +96,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeClipboard();
-  void InitializeMessageQueueManager();
   void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
                                    fuchsia::modular::AppConfig story_shell_config,
                                    bool use_session_shell_for_story_shell_factory);
@@ -213,8 +211,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
-  std::unique_ptr<MessageQueueManager> message_queue_manager_;
-  std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
   AsyncHolder<AgentRunner> agent_runner_;
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
@@ -223,8 +219,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<SessionCtl> session_ctl_;
 
   // These component contexts are supplied to:
-  // - the user intelligence provider so it can run agents and create message
-  //   queues
   // - |modular resolver_service_| so it can resolve entity references
   std::unique_ptr<
       fidl::BindingSet<fuchsia::modular::ComponentContext, std::unique_ptr<ComponentContextImpl>>>
@@ -243,8 +237,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<FocusHandler> focus_handler_;
 
-  // Component context given to session shell so that it can run agents and
-  // create message queues.
+  // Component context given to session shell so that it can run agents.
   std::unique_ptr<ComponentContextImpl> session_shell_component_context_impl_;
 
   // Given to the session shell so it can store its own data. These data are

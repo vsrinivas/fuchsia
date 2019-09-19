@@ -15,7 +15,6 @@
 #include <src/lib/fxl/macros.h>
 
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
-#include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 
 namespace modular {
 
@@ -23,7 +22,6 @@ class AgentRunner;
 
 // The parameters of component context that do not vary by instance.
 struct ComponentContextInfo {
-  MessageQueueManager* const message_queue_manager;
   AgentRunner* const agent_runner;
   fuchsia::ledger::internal::LedgerRepository* const ledger_repository;
   EntityProviderRunner* const entity_provider_runner;
@@ -67,20 +65,8 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   void ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ObtainMessageQueue(std::string name,
-                          fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void DeleteMessageQueue(std::string name) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void GetMessageSender(std::string queue_token,
-                        fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
-
-  // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
-  MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   EntityProviderRunner* const entity_provider_runner_;

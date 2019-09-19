@@ -21,7 +21,6 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "src/modular/bin/sessionmgr/agent_runner/agent_runner_storage.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "src/modular/lib/async/cpp/operation.h"
 
@@ -33,19 +32,18 @@ constexpr char kAgentComponentNamespace[] = "agents";
 
 class AgentContextImpl;
 class EntityProviderRunner;
-class MessageQueueManager;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-class AgentRunner : AgentRunnerStorage::NotificationDelegate {
+class AgentRunner {
  public:
-  AgentRunner(fuchsia::sys::Launcher* launcher, MessageQueueManager* message_queue_manager,
+  AgentRunner(fuchsia::sys::Launcher* launcher,
               fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-              AgentRunnerStorage* agent_runner_storage, fuchsia::auth::TokenManager* token_manager,
+              fuchsia::auth::TokenManager* token_manager,
               fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
               EntityProviderRunner* entity_provider_runner,
               std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr);
-  ~AgentRunner() override;
+  ~AgentRunner();
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
@@ -109,48 +107,8 @@ class AgentRunner : AgentRunnerStorage::NotificationDelegate {
   // Will also start and initialize the agent as a consequence.
   void ForwardConnectionsToAgent(const std::string& agent_url);
 
-  // Schedules a task that triggers when a new message is available on a
-  // message queue.
-  //
-  // |agent_url| The URL of the agent creating the trigger. Only the message
-  // queue owner can schedule a task with a new message trigger, and thus this
-  // is also the agent url of the owner of the message queue.
-  // |queue_name| The name of the message queue to observe.
-  // |task_id| The identifier for the task.
-  void ScheduleMessageQueueNewMessageTask(const std::string& agent_url, const std::string& task_id,
-                                          const std::string& queue_name);
-
-  // Schedules a task that triggers when a message queue is deleted.
-  //
-  // |agent_url| The URL of the agent creating the trigger.
-  // |queue_token| The token of the queue that is to be observed.
-  // |task_id| The identifier of the task.
-  void ScheduleMessageQueueDeletionTask(const std::string& agent_url, const std::string& task_id,
-                                        const std::string& queue_token);
-
-  // Deletes the task scheduled for |agent_url| and |task_id|, regardless of
-  // the task type.
-  void DeleteMessageQueueTask(const std::string& agent_url, const std::string& task_id);
-
-  // For triggers based on alarms.
-  void ScheduleAlarmTask(const std::string& agent_url, const std::string& task_id,
-                         uint32_t alarm_in_seconds, bool is_new_request);
-  void DeleteAlarmTask(const std::string& agent_url, const std::string& task_id);
-
   // A set of all agents that are either running or scheduled to be run.
   std::vector<std::string> GetAllAgents();
-
-  // |AgentRunnerStorage::Delegate|
-  void AddedTask(const std::string& key, AgentRunnerStorage::TriggerInfo data) override;
-
-  // |AgentRunnerStorage::Delegate|
-  void DeletedTask(const std::string& key) override;
-
-  // agent URL -> { task id -> queue name }
-  std::map<std::string, std::map<std::string, std::string>> watched_queues_;
-
-  // agent URL -> { task id -> alarm in seconds }
-  std::map<std::string, std::map<std::string, uint32_t>> running_alarms_;
 
   // agent URL -> pending agent connections
   // This map holds connections to an agent that we hold onto while the
@@ -181,20 +139,8 @@ class AgentRunner : AgentRunnerStorage::NotificationDelegate {
   // agent URL -> modular.fuchsia::modular::AgentContext
   std::map<std::string, std::unique_ptr<AgentContextImpl>> running_agents_;
 
-  // ledger key -> [agent URL, task ID]
-  //
-  // Used to delete entries from the maps above when a ledger key is
-  // deleted. This saves us from having to parse a ledger key, which
-  // becomes impossible once we use hashes to construct it, or from
-  // having to read the value from the previous snapshot, which would
-  // be nifty but is easy only once we have Operations.
-  std::map<std::string, std::pair<std::string, std::string>> task_by_ledger_key_;
-
   fuchsia::sys::Launcher* const launcher_;
-  MessageQueueManager* const message_queue_manager_;
   fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
-  // |agent_runner_storage_| must outlive this class.
-  AgentRunnerStorage* const agent_runner_storage_;
   fuchsia::auth::TokenManager* const token_manager_;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;
@@ -202,14 +148,7 @@ class AgentRunner : AgentRunnerStorage::NotificationDelegate {
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
 
-  OperationQueue operation_queue_;
-
   std::unique_ptr<AgentServiceIndex> agent_service_index_;
-
-  // Operations implemented here.
-  class InitializeCall;
-  class UpdateCall;
-  class DeleteCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

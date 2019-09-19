@@ -46,13 +46,11 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
 
   StopStoryCall(fidl::StringPtr story_id, const bool bulk,
-                StoryRuntimesMap* const story_runtime_containers,
-                MessageQueueManager* const message_queue_manager, ResultCall result_call)
+                StoryRuntimesMap* const story_runtime_containers, ResultCall result_call)
       : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
         story_id_(story_id),
         bulk_(bulk),
-        story_runtime_containers_(story_runtime_containers),
-        message_queue_manager_(message_queue_manager) {}
+        story_runtime_containers_(story_runtime_containers) {}
 
  private:
   void Run() override {
@@ -79,18 +77,14 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     // through the run loop.
     //
     // TODO(thatguy); Understand the above comment, and rewrite it.
-    async::PostTask(async_get_default_dispatcher(), [this, flow] {
-      story_runtime_containers_->erase(story_id_.value_or(""));
-      message_queue_manager_->DeleteNamespace(
-          EncodeModuleComponentNamespace(story_id_.value_or("")), [flow] {});
-    });
+    async::PostTask(async_get_default_dispatcher(),
+                    [this, flow] { story_runtime_containers_->erase(story_id_.value_or("")); });
   }
 
  private:
   const fidl::StringPtr story_id_;
   const bool bulk_;
   StoryRuntimesMap* const story_runtime_containers_;
-  MessageQueueManager* const message_queue_manager_;
 };
 
 // Loads a StoryRuntimeContainer object and stores it in
@@ -202,8 +196,7 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
       operations_.Add(std::make_unique<StopStoryCall>(
-          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_,
-          story_provider_impl_->component_context_info_.message_queue_manager, [flow] {}));
+          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_, [flow] {}));
     }
   }
 
@@ -628,8 +621,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   operation_queue_.Add(std::make_unique<StopStoryCall>(
-      story_id, false /* bulk */, &story_runtime_containers_,
-      component_context_info_.message_queue_manager, [this, story_id] {
+      story_id, false /* bulk */, &story_runtime_containers_, [this, story_id] {
         for (const auto& i : watchers_.ptrs()) {
           (*i)->OnDelete(story_id.value_or(""));
         }

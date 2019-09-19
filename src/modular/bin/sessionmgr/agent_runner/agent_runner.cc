@@ -15,7 +15,6 @@
 #include <utility>
 
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
-#include "src/modular/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
@@ -25,24 +24,19 @@ namespace modular {
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(
-    fuchsia::sys::Launcher* const launcher, MessageQueueManager* const message_queue_manager,
+    fuchsia::sys::Launcher* const launcher,
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
-    AgentRunnerStorage* const agent_runner_storage,
     fuchsia::auth::TokenManager* const token_manager,
     fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner,
     std::unique_ptr<AgentServiceIndex> agent_service_index)
     : launcher_(launcher),
-      message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
-      agent_runner_storage_(agent_runner_storage),
       token_manager_(token_manager),
       user_intelligence_provider_(user_intelligence_provider),
       entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)),
-      agent_service_index_(std::move(agent_service_index)) {
-  agent_runner_storage_->Initialize(this, [] {});
-}
+      agent_service_index_(std::move(agent_service_index)) {}
 
 AgentRunner::~AgentRunner() = default;
 
@@ -119,8 +113,7 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {message_queue_manager_, this, ledger_repository_,
-                                         entity_provider_runner_};
+  ComponentContextInfo component_info = {this, ledger_repository_, entity_provider_runner_};
   AgentContextInfo info = {component_info, launcher_, token_manager_, user_intelligence_provider_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
@@ -263,221 +256,6 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
     }
     pending_agent_connections_.erase(found_it);
   }
-}
-
-void AgentRunner::AddedTask(const std::string& key, AgentRunnerStorage::TriggerInfo data) {
-  switch (data.task_type) {
-    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE:
-      ScheduleMessageQueueNewMessageTask(data.agent_url, data.task_id, data.queue_name);
-      break;
-    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_DELETION:
-      ScheduleMessageQueueDeletionTask(data.agent_url, data.task_id, data.queue_token);
-      break;
-    case AgentRunnerStorage::TriggerInfo::TYPE_ALARM:
-      ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds, true);
-      break;
-  }
-
-  task_by_ledger_key_[key] = std::make_pair(data.agent_url, data.task_id);
-}
-
-void AgentRunner::DeletedTask(const std::string& key) {
-  auto data = task_by_ledger_key_.find(key);
-  if (data == task_by_ledger_key_.end()) {
-    // Never scheduled, nothing to delete.
-    return;
-  }
-
-  DeleteMessageQueueTask(data->second.first, data->second.second);
-  DeleteAlarmTask(data->second.first, data->second.second);
-
-  task_by_ledger_key_.erase(key);
-}
-
-void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url, const std::string& task_id) {
-  auto agent_it = watched_queues_.find(agent_url);
-  if (agent_it == watched_queues_.end()) {
-    return;
-  }
-
-  auto& agent_map = agent_it->second;
-  auto task_id_it = agent_map.find(task_id);
-  if (task_id_it == agent_map.end()) {
-    return;
-  }
-
-  // The specific type of message queue task identified by |task_id| is not
-  // available, so explicitly clean up both types.
-  message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
-                                             task_id_it->second);
-  message_queue_manager_->DropDeletionWatcher(kAgentComponentNamespace, agent_url,
-                                              task_id_it->second);
-
-  watched_queues_[agent_url].erase(task_id);
-  if (watched_queues_[agent_url].empty()) {
-    watched_queues_.erase(agent_url);
-  }
-}
-
-void AgentRunner::DeleteAlarmTask(const std::string& agent_url, const std::string& task_id) {
-  auto agent_it = running_alarms_.find(agent_url);
-  if (agent_it == running_alarms_.end()) {
-    return;
-  }
-
-  auto& agent_map = agent_it->second;
-  auto task_id_it = agent_map.find(task_id);
-  if (task_id_it == agent_map.end()) {
-    return;
-  }
-
-  running_alarms_[agent_url].erase(task_id);
-  if (running_alarms_[agent_url].empty()) {
-    running_alarms_.erase(agent_url);
-  }
-}
-
-void AgentRunner::ScheduleMessageQueueDeletionTask(const std::string& agent_url,
-                                                   const std::string& task_id,
-                                                   const std::string& queue_token) {
-  auto found_it = watched_queues_.find(agent_url);
-  if (found_it != watched_queues_.end()) {
-    if (found_it->second.count(task_id) != 0) {
-      if (found_it->second[task_id] == queue_token) {
-        // This means that we are already watching the message queue.
-        // Do nothing.
-        return;
-      }
-
-      // We were watching some other queue for this task_id. Stop watching.
-      message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
-                                                 found_it->second[task_id]);
-    }
-  } else {
-    bool inserted = false;
-    std::tie(found_it, inserted) =
-        watched_queues_.emplace(agent_url, std::map<std::string, std::string>());
-    FXL_DCHECK(inserted);
-  }
-
-  found_it->second[task_id] = queue_token;
-  message_queue_manager_->RegisterDeletionWatcher(
-      kAgentComponentNamespace, agent_url, queue_token,
-      [this, agent_url, task_id, terminating = terminating_] {
-        // If agent runner is terminating or has already terminated, do not
-        // run any new tasks.
-        if (*terminating) {
-          return;
-        }
-
-        EnsureAgentIsRunning(agent_url, [agent_url, task_id, this] {
-          running_agents_[agent_url]->NewTask(task_id);
-        });
-      });
-}
-
-void AgentRunner::ScheduleMessageQueueNewMessageTask(const std::string& agent_url,
-                                                     const std::string& task_id,
-                                                     const std::string& queue_name) {
-  auto found_it = watched_queues_.find(agent_url);
-  if (found_it != watched_queues_.end()) {
-    if (found_it->second.count(task_id) != 0) {
-      if (found_it->second[task_id] == queue_name) {
-        // This means that we are already watching the message queue.
-        // Do nothing.
-        return;
-      }
-
-      // We were watching some other queue for this task_id. Stop watching.
-      message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
-                                                 found_it->second[task_id]);
-    }
-  } else {
-    bool inserted = false;
-    std::tie(found_it, inserted) =
-        watched_queues_.emplace(agent_url, std::map<std::string, std::string>());
-    FXL_DCHECK(inserted);
-  }
-
-  found_it->second[task_id] = queue_name;
-  auto terminating = terminating_;
-  message_queue_manager_->RegisterMessageWatcher(
-      kAgentComponentNamespace, agent_url, queue_name, [this, agent_url, task_id, terminating] {
-        // If agent runner is terminating or has already terminated, do not
-        // run any new tasks.
-        if (*terminating) {
-          return;
-        }
-
-        EnsureAgentIsRunning(agent_url, [agent_url, task_id, this] {
-          running_agents_[agent_url]->NewTask(task_id);
-        });
-      });
-}
-
-void AgentRunner::ScheduleAlarmTask(const std::string& agent_url, const std::string& task_id,
-                                    const uint32_t alarm_in_seconds, const bool is_new_request) {
-  auto found_it = running_alarms_.find(agent_url);
-  if (found_it != running_alarms_.end()) {
-    if (found_it->second.count(task_id) != 0 && is_new_request) {
-      // We are already running a task with the same task_id. We might
-      // just have to update the alarm frequency.
-      found_it->second[task_id] = alarm_in_seconds;
-      return;
-    }
-  } else {
-    bool inserted = false;
-    std::tie(found_it, inserted) =
-        running_alarms_.emplace(agent_url, std::map<std::string, uint32_t>());
-    FXL_DCHECK(inserted);
-  }
-
-  found_it->second[task_id] = alarm_in_seconds;
-  auto terminating = terminating_;
-  async::PostDelayedTask(
-      async_get_default_dispatcher(),
-      [this, agent_url, task_id, terminating] {
-        // If agent runner is terminating, do not run any new tasks.
-        if (*terminating) {
-          return;
-        }
-
-        // Stop the alarm if entry not found.
-        auto found_it = running_alarms_.find(agent_url);
-        if (found_it == running_alarms_.end()) {
-          return;
-        }
-        if (found_it->second.count(task_id) == 0) {
-          return;
-        }
-
-        EnsureAgentIsRunning(agent_url, [agent_url, task_id, found_it, this]() {
-          running_agents_[agent_url]->NewTask(task_id);
-          ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id], false);
-        });
-      },
-      zx::sec(alarm_in_seconds));
-}
-
-std::vector<std::string> AgentRunner::GetAllAgents() {
-  // A set of all agents that are either running or scheduled to be run.
-  std::set<std::string> agents;
-  for (auto const& it : running_agents_) {
-    agents.insert(it.first);
-  }
-  for (auto const& it : watched_queues_) {
-    agents.insert(it.first);
-  }
-  for (auto const& it : running_alarms_) {
-    agents.insert(it.first);
-  }
-
-  std::vector<std::string> agent_urls;
-  for (auto const& it : agents) {
-    agent_urls.push_back(it);
-  }
-
-  return agent_urls;
 }
 
 }  // namespace modular

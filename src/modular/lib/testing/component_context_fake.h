@@ -47,17 +47,6 @@ class ComponentContextFake : public fuchsia::modular::ComponentContext {
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ObtainMessageQueue(std::string name,
-                          fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void DeleteMessageQueue(std::string name) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void GetMessageSender(std::string queue_token,
-                        fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
-
-  // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
   EntityResolverFake entity_resolver_;

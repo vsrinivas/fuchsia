@@ -32,7 +32,6 @@
 #include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/focus.h"
-#include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/puppet_master/make_production_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
@@ -62,8 +61,6 @@ constexpr char kMaxwellUrl[] = "maxwell";
 constexpr char kDiscovermgrUrl[] = "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
-
-constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
 
@@ -208,7 +205,6 @@ void SessionmgrImpl::Initialize(
 
     InitializeLedger(std::move(ledger_token_manager));
     InitializeIntlPropertyProvider();
-    InitializeMessageQueueManager();
     InitializeDiscovermgr();
     InitializeMaxwellAndModular(std::move(session_shell_url), std::move(story_shell_config),
                                 use_session_shell_for_story_shell_factory);
@@ -404,18 +400,6 @@ void SessionmgrImpl::InitializeClipboard() {
       });
 }
 
-void SessionmgrImpl::InitializeMessageQueueManager() {
-  std::string message_queue_path = kMessageQueuePath;
-  message_queue_path.append(session_id_);
-  if (!files::CreateDirectory(message_queue_path)) {
-    FXL_LOG(FATAL) << "Failed to create message queue directory: " << message_queue_path;
-  }
-
-  message_queue_manager_ = std::make_unique<MessageQueueManager>(
-      ledger_client_.get(), MakePageId(kMessageQueuePageId), message_queue_path);
-  AtEnd(Reset(&message_queue_manager_));
-}
-
 void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
                                                  fuchsia::modular::AppConfig story_shell_config,
                                                  bool use_session_shell_for_story_shell_factory) {
@@ -468,10 +452,6 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
   AtEnd(Reset(&entity_provider_runner_));
 
-  agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(ledger_client_.get(),
-                                                                   MakePageId(kAgentRunnerPageId));
-  AtEnd(Reset(&agent_runner_storage_));
-
   std::map<std::string, std::string> service_to_agent_map;
   for (auto& entry : config_.agent_service_index()) {
     service_to_agent_map.emplace(entry.service_name(), entry.agent_url());
@@ -480,8 +460,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       std::make_unique<MapAgentServiceIndex>(std::move(service_to_agent_map));
 
   agent_runner_.reset(
-      new AgentRunner(session_environment_->GetLauncher(), message_queue_manager_.get(),
-                      ledger_repository_.get(), agent_runner_storage_.get(),
+      new AgentRunner(session_environment_->GetLauncher(), ledger_repository_.get(),
                       agent_token_manager_.get(), user_intelligence_provider_impl_.get(),
                       entity_provider_runner_.get(), std::move(agent_service_index)));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
@@ -491,8 +470,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
                                         std::unique_ptr<ComponentContextImpl>>>();
   AtEnd(Reset(&maxwell_component_context_bindings_));
 
-  ComponentContextInfo component_context_info{message_queue_manager_.get(), agent_runner_.get(),
-                                              ledger_repository_.get(),
+  ComponentContextInfo component_context_info{agent_runner_.get(), ledger_repository_.get(),
                                               entity_provider_runner_.get()};
 
   auto maxwell_app_component_context =

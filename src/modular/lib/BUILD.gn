@@ -21,7 +21,6 @@ group("lib") {
     "fidl",
     "integration_testing",
     "lifecycle",
-    "message_queue",
     "module_manifest",
     "module_manifest_source",
     "testing",

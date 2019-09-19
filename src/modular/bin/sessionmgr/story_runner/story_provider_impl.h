@@ -32,7 +32,6 @@
 #include "peridot/lib/ledger_client/types.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
-#include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "src/modular/bin/sessionmgr/story/model/noop_story_model_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_owner.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_entity_provider.h"

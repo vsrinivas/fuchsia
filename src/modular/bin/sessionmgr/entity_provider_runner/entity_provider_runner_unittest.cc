@@ -23,10 +23,8 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
-#include "src/modular/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "src/modular/lib/agent/cpp/agent_impl.h"
 #include "src/modular/lib/fidl/array_to_string.h"
-#include "src/modular/lib/testing/fake_agent_runner_storage.h"
 #include "src/modular/lib/testing/mock_base.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
@@ -43,26 +41,21 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    mqm_ = std::make_unique<MessageQueueManager>(ledger_client(), MakePageId("0123456789123456"),
-                                                 mq_data_dir_.path());
     entity_provider_runner_ =
         std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
-    agent_runner_ = std::make_unique<AgentRunner>(&launcher_, mqm_.get(), ledger_repository(),
-                                                  &agent_runner_storage_, token_manager_.get(),
-                                                  nullptr, entity_provider_runner_.get());
+    agent_runner_ =
+        std::make_unique<AgentRunner>(&launcher_, ledger_repository(), token_manager_.get(),
+                                      nullptr, entity_provider_runner_.get());
   }
 
   void TearDown() override {
     agent_runner_.reset();
     entity_provider_runner_.reset();
-    mqm_.reset();
 
     TestWithLedger::TearDown();
   }
-
-  MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
   AgentRunner* agent_runner() { return agent_runner_.get(); }
@@ -89,8 +82,6 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
-  std::unique_ptr<MessageQueueManager> mqm_;
-  FakeAgentRunnerStorage agent_runner_storage_;
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
 
