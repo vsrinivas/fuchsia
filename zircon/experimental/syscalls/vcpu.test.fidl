@@ -26,7 +26,7 @@ protocol Vcpu {
 
     /// Read the state of a VCPU.
     [In0="handle<vcpu>:rights=READ"]
-    ReadState(handle<vcpu> handle, uint32 kind, mutable_vector_void buffer) -> (status status);
+    ReadState(handle<vcpu> handle, uint32 kind) -> (status status, vector_void buffer);
 
     /// Write the state of a VCPU.
     [In0="handle<vcpu>:rights=WRITE"]

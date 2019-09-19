@@ -28,6 +28,7 @@ out/default/host_x64/exe.unstripped/kazoo \
   --arm-asm=/tmp/arm-asm.S \
   --category=/tmp/syscall-category.inc \
   --kernel-branches=/tmp/kernel-branches.S \
+  --kernel-header=/tmp/kernel-header.h \
   --ktrace=/tmp/ktrace.inc \
   --syscall-numbers=/tmp/syscall-numbers.h \
   --user-header=/tmp/definitions.h \
@@ -35,8 +36,15 @@ out/default/host_x64/exe.unstripped/kazoo \
   --x86-asm=/tmp/x86-asm.S \
   /tmp/syscalls.json
 
+# These comparisons rely on having an up-to-date build of arm64 and then x64 (to get the outputs of
+# banjoc/abigen in the locations below. e.g.
+#
+#  rm -f out/default.zircon/gen/syscalls.abigen && \
+#      fx set core.arm64 && ninja -C out/default.zircon -j1000 && \
+#      fx set core.x64 && ninja -C out/default.zircon -j1000
+
 compare "arm-asm" \
-        "out/default.zircon/user-arm64-clang/gen/system/ulib/zircon/zircon/syscalls-arm64.S" \
+        "out/default.zircon/user.vdso-arm64-clang.shlib/gen/system/ulib/zircon/zircon/syscalls-arm64.S" \
         "/tmp/arm-asm.S"
 
 compare "category" \
@@ -47,6 +55,10 @@ compare "kernel-branches" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \
         "/tmp/kernel-branches.S"
 
+compare "kernel-header" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-definitions.h" \
+        "/tmp/kernel-header.h"
+
 compare "ktrace" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/lib/ktrace/zircon/syscall-ktrace-info.inc" \
         "/tmp/ktrace.inc"
@@ -56,13 +68,13 @@ compare "syscall-numbers" \
         "/tmp/syscall-numbers.h"
 
 compare "user-header" \
-        "out/default.zircon/user-x64-clang/gen/zircon/syscalls/definitions.h" \
+        "out/default.zircon/user.vdso-x64-clang.shlib/gen/zircon/syscalls/definitions.h" \
         "/tmp/definitions.h"
 
 compare "vdso-header" \
-        "out/default.zircon/user-x64-clang/gen/system/ulib/zircon/zircon/syscall-vdso-definitions.h" \
+        "out/default.zircon/user.vdso-x64-clang.shlib/gen/system/ulib/zircon/zircon/syscall-vdso-definitions.h" \
         "/tmp/vdso-definitions.h"
 
 compare "x86-asm" \
-        "out/default.zircon/user-x64-clang/gen/system/ulib/zircon/zircon/syscalls-x86-64.S" \
+        "out/default.zircon/user.vdso-x64-clang.shlib/gen/system/ulib/zircon/zircon/syscalls-x86-64.S" \
         "/tmp/x86-asm.S"

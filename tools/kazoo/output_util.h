@@ -23,8 +23,12 @@ std::string ToLowerAscii(const std::string& input);
 // Maps a name from typical FidlCamelStyle to zircon_snake_style.
 std::string CamelToSnake(const std::string& camel_fidl);
 
-// Gets an string representing |type| suitable for output to a C file.
-std::string GetCName(const Type& type);
+// Gets a string representing |type| suitable for output to a C file in userspace.
+std::string GetCUserModeName(const Type& type);
+
+// Gets a string representing |type| suitable for output to a C file in a kernel header (rather than
+// zx_xyz_t*, this will have user_out_ptr<xyz>, etc.)
+std::string GetCKernelModeName(const Type& type);
 
 // Emits a C header declaration for a syscall.
 // |prefix| is a string that goes before the entire declaration.

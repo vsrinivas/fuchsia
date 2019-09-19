@@ -31,8 +31,8 @@ protocol Process {
 
     /// Read from the given process's address space.
     [In0="handle<process>:rights=READ,WRITE"]
-    ReadMemory(handle<process> handle, vaddr vaddr, mutable_vector_void buffer) ->
-        (status status, usize actual);
+    ReadMemory(handle<process> handle, vaddr vaddr) ->
+        (status status, vector_void buffer, usize actual);
 
     /// Write into the given process's address space.
     [In0="handle<process>:rights=WRITE"]

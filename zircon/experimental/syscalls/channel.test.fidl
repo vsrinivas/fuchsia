@@ -49,19 +49,23 @@ protocol Channel {
     [In0="handle:rights=READ",
      ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     Read(handle<channel> handle,
-         uint32 options,
-         mutable_vector_void_u32size bytes,
-         mutable_vector_handle_u32size handles) ->
-        (status status, optional_uint32 actual_bytes, optional_uint32 actual_handles);
+         uint32 options) ->
+        (status status,
+         vector_void_u32size bytes,
+         vector_handle_u32size handles,
+         optional_uint32 actual_bytes,
+         optional_uint32 actual_handles);
 
     /// Read a message from a channel.
     [In0="handle:rights=READ",
      ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     ReadEtc(handle<channel> handle,
-            uint32 options,
-            mutable_vector_void_u32size bytes,
-            mutable_vector_HandleInfo_u32size handles) ->
-        (status status, optional_uint32 actual_bytes, optional_uint32 actual_handles);
+            uint32 options) ->
+        (status status,
+         vector_void_u32size bytes,
+         vector_HandleInfo_u32size handles,
+         optional_uint32 actual_bytes,
+         optional_uint32 actual_handles);
 
     /// Write a message to a channel.
     [In0="handle:rights=WRITE"]

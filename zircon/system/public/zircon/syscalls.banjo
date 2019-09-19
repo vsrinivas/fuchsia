@@ -767,8 +767,8 @@ protocol Api {
     [rights="handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.",
      argtype="data OUT",
      argtype="actual_count optional",
-     arraysize="data count*elem_size"]
-    fifo_read(handle<fifo> handle, usize elem_size, array<voidptr>:N data, usize count) ->
+     arraysize="data data_size*elem_size"]
+    fifo_read(handle<fifo> handle, usize elem_size, array<voidptr>:N data, usize data_size) ->
         (zx.status status, usize actual_count);
 
     /// Write data to a fifo.

@@ -174,95 +174,80 @@ bool Syscall::MapRequestResponseToKernelAbi() {
         return Optionality::kOutputNonOptional;
       };
 
-  // Used for output arguments: can't be explicitly const.
-  auto ensure_mutable = [](Constness constness) {
-    FXL_DCHECK(constness == Constness::kUnspecified || constness == Constness::kMutable);
-    return Constness::kMutable;
+  auto get_vector_size_name = [](const StructMember& member) {
+    std::string prefix, suffix;
+      // If it's a char* or void*, blah_size seems more natural, otherwise, num_blahs is moreso.
+    if ((member.type().DataAsVector().contained_type().IsChar() ||
+         member.type().DataAsVector().contained_type().IsVoid()) &&
+        (member.name() != "bytes")) {
+      suffix = "_size";
+    } else {
+      prefix = "num_";
+    }
+    return std::tuple<std::string, bool>(prefix + member.name() + suffix,
+                                         member.type().DataAsVector().uint32_size());
   };
 
-  auto input_vector_and_string_expand = [&default_to_const](
-                                            const StructMember& member,
-                                            std::vector<StructMember>* into) {
-    const Type& type = member.type();
+  // Map inputs first, converting vectors, strings, and structs to their corresponding input types
+  // as we go.
+  for (const auto& m : request_.members()) {
+    const Type& type = m.type();
     if (type.IsVector()) {
-      Type pointer_to_subtype(TypePointer(type.DataAsVector().contained_type()),
-                              default_to_const(type.constness()), Optionality::kInputArgument);
-      into->emplace_back(member.name(), pointer_to_subtype);
-      std::string prefix, suffix;
-      // If it's a char* or void*, blah_size seems more natural, otherwise, num_blahs is moreso.
-      if ((type.DataAsVector().contained_type().IsChar() ||
-           type.DataAsVector().contained_type().IsVoid()) &&
-          (member.name() != "bytes")) {
-        suffix = "_size";
-      } else {
-        prefix = "num_";
-      }
-      if (type.DataAsVector().uint32_size()) {
-        into->emplace_back(prefix + member.name() + suffix, Type(TypeUint32{}));
-      } else {
-        into->emplace_back(prefix + member.name() + suffix, Type(TypeSizeT{}));
-      }
+      Type pointer_to_subtype(
+          TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
+          default_to_const(type.constness()), Optionality::kInputArgument);
+      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
+      auto [size_name, is_u32] = get_vector_size_name(m);
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
     } else if (type.IsString()) {
       // char*, using the same constness as the string was specified as.
-      into->emplace_back(member.name(),
-                         Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
-                              Optionality::kInputArgument));
-      into->emplace_back(member.name() + "_size", Type(TypeSizeT{}));
-    } else {
-      // Otherwise, just copy it over.
-      into->push_back(member);
-    }
-  };
-
-  std::vector<StructMember> kernel_request;
-  std::vector<StructMember> kernel_response;
-
-  // First, map from FIDL request_/response_ to kernel_request/kernel_response converting string and
-  // vectors. At the same time, make all input parameters const (unless specified to be mutable),
-  // and ensure output parameters are mutable.
-  for (const auto& m : request_.members()) {
-    input_vector_and_string_expand(m, &kernel_request);
-  }
-  for (const auto& m : response_.members()) {
-    // Vector and string outputs are currently disallowed, as it's not clear who'd be allocating
-    // those (this is typically expressed by a mutable input into which the output is stored).
-    FXL_CHECK(!m.type().IsString() && !m.type().IsVector());
-    // Otherwise, copy the response member and ensure it's mutable.
-    kernel_response.emplace_back(m.name(),
-                                 Type(m.type().type_data(), ensure_mutable(m.type().constness()),
-                                      output_optionality(m.type().optionality())));
-  }
-
-  // Now from these vectors into kernel_arguments_ making pointers to structs as necessary on input
-  // (again, with the correct constness).
-  for (const auto& m : kernel_request) {
-    if (m.type().IsStruct()) {
+      kernel_arguments_.emplace_back(
+          m.name(), Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
+                         Optionality::kInputArgument));
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+    } else if (type.IsStruct()) {
       // If it's a struct, map to struct*, const unless otherwise specified. The pointer takes the
       // constness of the struct.
       kernel_arguments_.emplace_back(
-          m.name(), Type(TypePointer(m.type()), default_to_const(m.type().constness()),
-                         Optionality::kInputArgument));
+          m.name(),
+          Type(TypePointer(type), default_to_const(type.constness()), Optionality::kInputArgument));
     } else {
-      // Otherwise, copy it over, unchanged.
-      kernel_arguments_.push_back(m);
+      // Otherwise, copy it over, unchanged other than to tag it as input.
+      kernel_arguments_.emplace_back(m.name(),
+                                     Type(type.type_data(), default_to_const(m.type().constness()),
+                                          Optionality::kInputArgument));
     }
   }
 
-  // For output arguments:
-  // - Return type is either void or the actual type (we disallow non-simple returns for now, as
-  // it's not entirely clear if they should be by pointer or value, and this doesn't happen in
-  // current syscalls).
-  // - Otherwise, output parameter T is mapped to (mutable) T*.
-  if (kernel_response.size() == 0) {
+  // Similarly for the outputs, but turning buffers into outparams, and with special handling for
+  // the C return value.
+  if (response_.members().size() == 0) {
     kernel_return_type_ = Type(TypeVoid{});
   } else {
-    kernel_return_type_ = kernel_response[0].type();
+    kernel_return_type_ = response_.members()[0].type();
     FXL_CHECK(kernel_return_type_.IsSimpleType());
-    for (size_t i = 1; i < kernel_response.size(); ++i) {
-      const StructMember& m = kernel_response[i];
-      kernel_arguments_.emplace_back(
-          m.name(), Type(TypePointer(m.type()), ensure_mutable(m.type().constness()),
-                         output_optionality(m.type().optionality())));
+    for (size_t i = 1; i < response_.members().size(); ++i) {
+      const StructMember& m = response_.members()[i];
+      const Type& type = m.type();
+      if (type.IsVector()) {
+        // TODO(syscall-fidl-transition): These vector types aren't marked as non-optional in
+        // abigen, but generally they probably are.
+        Type pointer_to_subtype(
+            TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
+            Constness::kMutable, Optionality::kOutputOptional);
+        kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
+        auto [size_name, is_u32] = get_vector_size_name(m);
+        kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
+      } else if (type.IsString()) {
+        kernel_arguments_.emplace_back(
+            m.name(),
+            Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional));
+        kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+      } else {
+        // Everything else becomes a T* (to make it an out parameter).
+        kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
+                                                      output_optionality(type.optionality())));
+      }
     }
   }
 

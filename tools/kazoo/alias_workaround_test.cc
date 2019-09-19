@@ -18,16 +18,16 @@ TEST(AliasWorkaround, Mappings) {
 
   const auto& sc = library.syscalls()[0];
   EXPECT_EQ(sc->name(), "aliases_some_func");
-  EXPECT_EQ(GetCName(sc->kernel_return_type()), "zx_status_t");
+  EXPECT_EQ(GetCUserModeName(sc->kernel_return_type()), "zx_status_t");
 
   // See test_aliases.test.fidl for this giant function's fidl spec. This covers all the aliases
   // required to map all syscalls today. We should be able to whittle these down over time and
   // eventually delete this mapping and test entirely.
   size_t cur_arg = 0;
 
-#define CHECK_ARG(_type, _name) \
-  EXPECT_EQ(sc->kernel_arguments()[cur_arg].name(), _name); \
-  EXPECT_EQ(GetCName(sc->kernel_arguments()[cur_arg].type()), _type); \
+#define CHECK_ARG(_type, _name)                                               \
+  EXPECT_EQ(sc->kernel_arguments()[cur_arg].name(), _name);                   \
+  EXPECT_EQ(GetCUserModeName(sc->kernel_arguments()[cur_arg].type()), _type); \
   ++cur_arg;
 
   // charptr
@@ -53,33 +53,33 @@ TEST(AliasWorkaround, Mappings) {
   CHECK_ARG("zx_handle_disposition_t*", "g");
   CHECK_ARG("uint32_t", "num_g");
 
-  // mutable_vector_HandleInfo_u32size
-  CHECK_ARG("zx_handle_info_t*", "h");
-  CHECK_ARG("uint32_t", "num_h");
-
   // mutable_vector_WaitItem
-  CHECK_ARG("zx_wait_item_t*", "i");
-  CHECK_ARG("size_t", "num_i");
+  CHECK_ARG("zx_wait_item_t*", "h");
+  CHECK_ARG("size_t", "num_h");
 
   // mutable_vector_handle_u32size
-  CHECK_ARG("zx_handle_t*", "j");
-  CHECK_ARG("uint32_t", "num_j");
-
-  // mutable_vector_paddr
-  CHECK_ARG("zx_paddr_t*", "k");
-  CHECK_ARG("size_t", "num_k");
+  CHECK_ARG("zx_handle_t*", "i");
+  CHECK_ARG("uint32_t", "num_i");
 
   // mutable_vector_void
-  CHECK_ARG("void*", "l");
-  CHECK_ARG("size_t", "l_size");
+  CHECK_ARG("void*", "j");
+  CHECK_ARG("size_t", "j_size");
 
   // mutable_vector_void_u32size
-  CHECK_ARG("void*", "m");
-  CHECK_ARG("uint32_t", "m_size");
+  CHECK_ARG("void*", "k");
+  CHECK_ARG("uint32_t", "k_size");
+
+  // vector_HandleInfo_u32size
+  CHECK_ARG("const zx_handle_info_t*", "l");
+  CHECK_ARG("uint32_t", "num_l");
 
   // vector_handle_u32size
-  CHECK_ARG("const zx_handle_t*", "n");
-  CHECK_ARG("uint32_t", "num_n");
+  CHECK_ARG("const zx_handle_t*", "m");
+  CHECK_ARG("uint32_t", "num_m");
+
+  // vector_paddr
+  CHECK_ARG("const zx_paddr_t*", "n");
+  CHECK_ARG("size_t", "num_n");
 
   // vector_void
   CHECK_ARG("const void*", "o");

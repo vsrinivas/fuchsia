@@ -81,7 +81,11 @@ std::string CamelToSnake(const std::string& camel_fidl) {
   return fxl::JoinStrings(parts, "_");
 }
 
-std::string GetCName(const Type& type) {
+namespace {
+
+// Most of the implementation of GetCUserModeName() and GetCKernelModeName(), other than for
+// pointers.
+std::string CNameImpl(const Type& type) {
   struct {
    public:
     void operator()(const std::monostate&) { ret = "<TODO!>"; }
@@ -105,10 +109,8 @@ std::string GetCName(const Type& type) {
       // add the underlying handle type here like "zx_handle_t /*vmo*/ handle" or similar.
     }
     void operator()(const TypePointer& pointer) {
-      FXL_CHECK(constness != Constness::kUnspecified)
-          << "Pointer should be explictly const or mutable by output time";
-      ret = (constness == Constness::kConst ? "const " : "") + GetCName(pointer.pointed_to_type()) +
-            "*";
+      FXL_DCHECK(false) << "pointers should be handled by caller";
+      ret = "<!>";
     }
     void operator()(const TypeString&) {
       FXL_DCHECK(false) << "can't convert string to C directly";
@@ -128,10 +130,43 @@ std::string GetCName(const Type& type) {
   return name_visitor.ret;
 }
 
+}  // namespace
+
+std::string GetCUserModeName(const Type& type) {
+  if (type.IsPointer()) {
+    FXL_CHECK(type.constness() != Constness::kUnspecified)
+        << "Pointer should be explictly const or mutable by output time";
+    return (type.constness() == Constness::kConst ? "const " : "") +
+           GetCUserModeName(type.DataAsPointer().pointed_to_type()) + "*";
+  }
+  return CNameImpl(type);
+}
+
+std::string GetCKernelModeName(const Type& type) {
+  if (type.IsPointer()) {
+    FXL_CHECK(type.constness() != Constness::kUnspecified)
+        << "Pointer should be explictly const or mutable by output time";
+    std::string pointed_to = GetCKernelModeName(type.DataAsPointer().pointed_to_type());
+    if (type.constness() == Constness::kConst) {
+      return fxl::StringPrintf("user_in_ptr<const %s>", pointed_to.c_str());
+    } else if (type.constness() == Constness::kMutable) {
+      if (pointed_to == "zx_handle_t" && !type.DataAsPointer().was_vector()) {
+        return "user_out_handle*";
+      }
+      if (type.optionality() == Optionality::kInputArgument) {
+        return fxl::StringPrintf("user_inout_ptr<%s>", pointed_to.c_str());
+      } else {
+        return fxl::StringPrintf("user_out_ptr<%s>", pointed_to.c_str());
+      }
+    }
+  }
+  return CNameImpl(type);
+}
+
 void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
                   Writer* writer) {
   writer->Printf("%sextern ", prefix);
-  writer->Printf("%s ", GetCName(syscall.kernel_return_type()).c_str());
+  writer->Printf("%s ", GetCUserModeName(syscall.kernel_return_type()).c_str());
   writer->Printf("%s%s(\n", name_prefix, syscall.name().c_str());
 
   std::vector<std::string> non_nulls;
@@ -141,7 +176,7 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
     for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall.kernel_arguments()[i];
       const bool last = i == syscall.kernel_arguments().size() - 1;
-      writer->Printf("    %s %s%s", GetCName(arg.type()).c_str(), arg.name().c_str(),
+      writer->Printf("    %s %s%s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str(),
                      last ? "" : ",\n");
       if (arg.type().IsPointer() && arg.type().optionality() == Optionality::kOutputNonOptional) {
         non_nulls.push_back(fxl::StringPrintf("%zu", i + 1));

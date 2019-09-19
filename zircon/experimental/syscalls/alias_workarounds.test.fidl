@@ -38,19 +38,12 @@ using mutable_usize = usize;
 // TODO(fidlc): mutable<vector<HandleDisposition>
 using mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
 
-// TODO(fidlc): uint32 size
-// TODO(fidlc): mutable<vector<HandleInfo>
-using mutable_vector_HandleInfo_u32size = vector<HandleInfo>;
-
 // TODO(fidlc): mutable<vector<WaitItem>>
 using mutable_vector_WaitItem = vector<WaitItem>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<handle>
 using mutable_vector_handle_u32size = vector<handle>;
-
-// TODO(fidlc): mutable<vector<paddr>>
-using mutable_vector_paddr = vector<paddr>;
 
 // TODO(fidlc): mutable<vector<void>>
 using mutable_vector_void = vector<byte>;
@@ -80,8 +73,15 @@ using optional_uint32 = uint32;
 // TODO(fidlc): optional<usize>
 using optional_usize = usize;
 
+// TODO(fidlc): uint32 size
+// TODO(fidlc): vector<HandleInfo>
+using vector_HandleInfo_u32size = vector<HandleInfo>;
+
 // TODO(fidlc): vector<handle> uint32 size
 using vector_handle_u32size = vector<handle>;
+
+// TODO(fidlc): vector<paddr>>
+using vector_paddr = vector<paddr>;
 
 // TODO(fidlc): vector<void>
 using vector_void = vector<byte>;

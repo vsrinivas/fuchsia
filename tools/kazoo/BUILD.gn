@@ -28,6 +28,7 @@ if (current_toolchain == host_toolchain) {
       "asm_output.cc",
       "category_output.cc",
       "kernel_branches_output.cc",
+      "kernel_header_output.cc",
       "ktrace_output.cc",
       "output_util.cc",
       "output_util.h",
@@ -67,6 +68,7 @@ if (current_toolchain == host_toolchain) {
       "asm_output_test.cc",
       "category_output_test.cc",
       "kernel_branches_output_test.cc",
+      "kernel_header_output_test.cc",
       "ktrace_output_test.cc",
       "output_util_test.cc",
       "syscall_library_test.cc",
@@ -93,6 +95,7 @@ if (current_toolchain == host_toolchain) {
 
     sources = [
       "test_aliases.test.fidl",
+      "test_kernel_cases.test.fidl",
       "test_no_methods.test.fidl",
       "test_one_protocol_one_method.test.fidl",
       "test_one_protocol_two_methods.test.fidl",

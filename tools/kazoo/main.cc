@@ -17,6 +17,7 @@ struct CommandLineOptions {
   std::optional<std::string> arm_asm;
   std::optional<std::string> category;
   std::optional<std::string> kernel_branches;
+  std::optional<std::string> kernel_header;
   std::optional<std::string> ktrace;
   std::optional<std::string> syscall_numbers;
   std::optional<std::string> user_header;
@@ -41,6 +42,9 @@ constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
 
 constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
     The output name for the .S file used for kernel syscall dispatch.)";
+
+constexpr const char kKernelHeaderHelp[] = R"(  --kernel-header=FILENAME
+    The output name for the .h file used for kernel header.)";
 
 constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
     The output name for the .inc file used for kernel tracing.)";
@@ -67,6 +71,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("arm-asm", 0, kArmAsmHelp, &CommandLineOptions::arm_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
+  parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
   parser.AddSwitch("user-header", 0, kUserHeaderHelp, &CommandLineOptions::user_header);
@@ -118,6 +123,7 @@ int main(int argc, const char* argv[]) {
       {&options.arm_asm, AsmOutput},
       {&options.category, CategoryOutput},
       {&options.kernel_branches, KernelBranchesOutput},
+      {&options.kernel_header, KernelHeaderOutput},
       {&options.ktrace, KtraceOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
       {&options.user_header, UserHeaderOutput},

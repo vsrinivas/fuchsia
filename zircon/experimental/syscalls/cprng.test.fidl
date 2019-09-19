@@ -11,7 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Cprng {
     [Internal]
-    DrawOnce(mutable_vector_void buffer) -> (status status);
+    DrawOnce() -> (status status, vector_void buffer);
 
     /// Draw from the kernel's CPRNG.
     [Vdsocall]

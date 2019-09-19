@@ -14,6 +14,7 @@
 bool AsmOutput(const SyscallLibrary& library, Writer* writer);
 bool CategoryOutput(const SyscallLibrary& library, Writer* writer);
 bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer);
+bool KernelHeaderOutput(const SyscallLibrary& library, Writer* writer);
 bool KtraceOutput(const SyscallLibrary& library, Writer* writer);
 bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer);
 bool UserHeaderOutput(const SyscallLibrary& library, Writer* writer);

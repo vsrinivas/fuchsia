@@ -37,12 +37,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
                  Constness::kMutable);
     return true;
   }
-  if (name == "mutable_vector_HandleInfo_u32size") {
-    *type = Type(
-        TypeVector(Type(library.TypeFromIdentifier("zz/HandleInfo")), UseUint32ForVectorSizeTag{}),
-        Constness::kMutable);
-    return true;
-  }
   if (name == "mutable_vector_WaitItem") {
     *type = Type(TypeVector(Type(library.TypeFromIdentifier("zz/WaitItem"))), Constness::kMutable);
     return true;
@@ -50,10 +44,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
   if (name == "mutable_vector_handle_u32size") {
     *type = Type(TypeVector(Type(TypeHandle(std::string())), UseUint32ForVectorSizeTag{}),
                  Constness::kMutable);
-    return true;
-  }
-  if (name == "mutable_vector_paddr") {
-    *type = Type(TypeVector(Type(TypeZxBasicAlias("paddr"))), Constness::kMutable);
     return true;
   }
   if (name == "mutable_vector_void") {
@@ -95,9 +85,19 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypeSizeT{}, Constness::kUnspecified, Optionality::kOutputOptional);
     return true;
   }
+  if (name == "vector_HandleInfo_u32size") {
+    *type = Type(
+        TypeVector(Type(library.TypeFromIdentifier("zz/HandleInfo")), UseUint32ForVectorSizeTag{}),
+        Constness::kConst);
+    return true;
+  }
   if (name == "vector_handle_u32size") {
     *type = Type(TypeVector(Type(TypeHandle(std::string())), UseUint32ForVectorSizeTag{}),
                  Constness::kConst);
+    return true;
+  }
+  if (name == "vector_paddr") {
+    *type = Type(TypeVector(Type(TypeZxBasicAlias("paddr"))), Constness::kConst);
     return true;
   }
   if (name == "vector_void") {

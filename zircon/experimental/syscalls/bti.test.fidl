@@ -20,9 +20,8 @@ protocol Bti {
         uint32 options,
         handle<vmo> vmo,
         uint64 offset,
-        uint64 size,
-        mutable_vector_paddr addrs) ->
-        (status status, handle<pmt> pmt);
+        uint64 size) ->
+        (status status, vector_paddr addrs, handle<pmt> pmt);
 
     /// Releases all quarantined PMTs.
     [In0="handle<bti>:rights=WRITE"]

@@ -44,15 +44,15 @@ protocol Object {
 
     /// Ask for various properties of various kernel objects.
     [In0="handle:rights=GET_PROPERTY"]
-    GetProperty(handle handle, uint32 property, mutable_vector_void value) -> (status status);
+    GetProperty(handle handle, uint32 property) -> (status status, vector_void value);
 
     /// Set various properties of various kernel objects.
     [In0="handle:rights=SET_PROPERTY"]
     SetProperty(handle handle, uint32 property, vector_void value) -> (status status);
 
     /// Query information about an object.
-    GetInfo(handle handle, uint32 topic, mutable_vector_void buffer) ->
-        (status status, optional_usize actual, optional_usize avail);
+    GetInfo(handle handle, uint32 topic) ->
+        (status status, vector_void buffer, optional_usize actual, optional_usize avail);
 
     /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
     [In0="handle:rights=ENUMERATE"]

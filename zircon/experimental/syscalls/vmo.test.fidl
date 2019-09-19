@@ -24,7 +24,7 @@ protocol Vmo {
     [Blocking,
      In0="handle<vmo>:rights=READ",
      ArgReorder="handle,buffer,offset,buffer_size"]
-    Read(handle<vmo> handle, mutable_vector_void buffer, uint64 offset) -> (status status);
+    Read(handle<vmo> handle, uint64 offset) -> (status status, vector_void buffer);
 
     // TODO(scottmg): Same probelm as Read() above.
     /// Write bytes to the VMO.

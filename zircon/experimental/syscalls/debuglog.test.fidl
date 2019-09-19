@@ -18,5 +18,5 @@ protocol Debuglog {
     Write(handle<debuglog> handle, uint32 options, vector_void buffer) -> (status status);
 
     [In0="handle<debuglog>:rights=READ"]
-    Read(handle<debuglog> handle, uint32 options, mutable_vector_void buffer) -> (status status);
+    Read(handle<debuglog> handle, uint32 options) -> (status status, vector_void buffer);
 };

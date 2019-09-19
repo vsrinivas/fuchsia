@@ -14,12 +14,10 @@ protocol Fifo {
     Create(usize elem_count, usize elem_size, uint32 options) ->
         (status status, handle<fifo> out0, handle<fifo> out1);
 
-    // Note: |data| isn't a vector because its size in bytes is
-    // elem_size*count (i.e. vector<T> but runtime-determined T)
     /// Read data from a fifo.
     [In0="handle<fifo>:rights=READ"]
-    Read(handle<fifo> handle, usize elem_size, voidptr data, usize count) ->
-        (status status, optional_usize actual_count);
+    Read(handle<fifo> handle, usize elem_size) ->
+        (status status, vector_void data, optional_usize actual_count);
 
     // Note: Same as above regarding |data|.
     /// Write data to a fifo.

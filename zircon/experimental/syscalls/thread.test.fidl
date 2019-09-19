@@ -26,7 +26,7 @@ protocol Thread {
 
     /// Read one aspect of thread state.
     [In0="handle<thread>:rights=READ"]
-    ReadState(handle<thread> handle, uint32 kind, mutable_vector_void buffer) -> (status status);
+    ReadState(handle<thread> handle, uint32 kind) -> (status status, vector_void buffer);
 
     /// Write one aspect of thread state.
     [In0="handle<thread>:rights=WRITE"]

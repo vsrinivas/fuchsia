@@ -29,10 +29,8 @@ using mutable_string = string;
 using mutable_uint32 = uint32;
 using mutable_usize = usize;
 using mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
-using mutable_vector_HandleInfo_u32size = vector<HandleInfo>;
 using mutable_vector_WaitItem = vector<WaitItem>;
 using mutable_vector_handle_u32size = vector<handle>;
-using mutable_vector_paddr = vector<paddr>;
 using mutable_vector_void = vector<byte>;
 using mutable_vector_void_u32size = vector<byte>;
 using optional_PciBar = PciBar;
@@ -42,7 +40,9 @@ using optional_signals = signals;
 using optional_time = time;
 using optional_uint32 = uint32;
 using optional_usize = usize;
+using vector_HandleInfo_u32size = vector<HandleInfo>;
 using vector_handle_u32size = vector<handle>;
+using vector_paddr = vector<paddr>;
 using vector_void = vector<byte>;
 using vector_void_u32size = vector<byte>;
 using voidptr = uint64;
@@ -56,13 +56,13 @@ protocol Aliases {
              mutable_uint32 e,
              mutable_usize f,
              mutable_vector_HandleDisposition_u32size g,
-             mutable_vector_HandleInfo_u32size h,
-             mutable_vector_WaitItem i,
-             mutable_vector_handle_u32size j,
-             mutable_vector_paddr k,
-             mutable_vector_void l,
-             mutable_vector_void_u32size m,
-             vector_handle_u32size n,
+             mutable_vector_WaitItem h,
+             mutable_vector_handle_u32size i,
+             mutable_vector_void j,
+             mutable_vector_void_u32size k,
+             vector_HandleInfo_u32size l,
+             vector_handle_u32size m,
+             vector_paddr n,
              vector_void o,
              vector_void_u32size p,
              voidptr q) ->

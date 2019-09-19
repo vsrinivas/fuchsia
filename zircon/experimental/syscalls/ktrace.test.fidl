@@ -16,8 +16,8 @@ protocol Ktrace {
     //   (handle, data, data_size, offset).
     [In0="handle<resource>:kind=ROOT",
      ArgReorder="handle,data,offset,data_size,actual"]
-    Read(handle<resource> handle, mutable_vector_void data, uint32 offset) ->
-        (status status, usize actual);
+    Read(handle<resource> handle, uint32 offset) ->
+        (status status, vector_void data, usize actual);
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
     [In0="handle<resource>:kind=ROOT"]

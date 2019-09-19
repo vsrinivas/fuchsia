@@ -11,7 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Debug {
     [In0="handle<resource>:kind=ROOT"]
-    Read(handle<resource> handle, charptr buffer, mutable_usize buffer_size) -> (status status);
+    Read(handle<resource> handle) -> (status status, string buffer, usize actual);
 
     Write(string buffer) -> (status status);
 

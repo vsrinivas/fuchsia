@@ -66,15 +66,27 @@ class TypeHandle {
   std::string handle_type_;
 };
 
+class IsDecayedVectorTag {};
+
 class TypePointer {
  public:
   explicit TypePointer(const Type& pointed_to_type)
       : pointed_to_type_(std::make_shared<Type>(pointed_to_type)) {}
 
+  TypePointer(const Type& pointed_to_type, IsDecayedVectorTag)
+      : pointed_to_type_(std::make_shared<Type>(pointed_to_type)), was_vector_(true) {}
+
   const Type& pointed_to_type() const;
+  bool was_vector() const { return was_vector_; }
 
  private:
   std::shared_ptr<Type> pointed_to_type_;
+
+  // This is set to true when the pointer was converted from a vector to a
+  // pointer when changing from FIDL type to the target language's type. This
+  // indicates that the pointer points the base of an array of
+  // pointed-to-types, rather than just pointing at a single one.
+  bool was_vector_{false};
 };
 
 class TypeStruct {
@@ -158,6 +170,7 @@ class Type {
   bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
 
   const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
+  const TypePointer& DataAsPointer() const { return std::get<TypePointer>(type_data_); }
 
   bool IsSimpleType() const { return !IsVector() && !IsString() && !IsStruct(); }
 
