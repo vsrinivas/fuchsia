@@ -9,6 +9,10 @@
       "name": "console",
       "url": "fuchsia-boot:///#meta/console.cm",
     },
+    {
+      "name": "ptysvc",
+      "url": "fuchsia-boot:///#meta/ptysvc.cm",
+    },
   ],
   "offer": [
     // These services and directories routed from "realm" at the root are provided by bootsvc
@@ -65,6 +69,6 @@
       "from": "#console",
       "to": [ { "dest": "#devcoordinator" } ],
     },
-  ],
+  ]
 }
 
