@@ -38,8 +38,6 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   // Shut this endpoint of the socket down for reading, writing, or both.
   zx_status_t Shutdown(uint32_t how);
 
-  zx_status_t HalfClose();
-
   zx_status_t Read(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
 
   // Property methods.
