@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestExecute(t *testing.T) {
@@ -33,6 +34,8 @@ func TestExecute(t *testing.T) {
 
 		cmd := &RunCommand{
 			syslogFile: syslogPath,
+			netboot:    true,
+			timeout:    time.Second * 5,
 		}
 		ctx := context.Background()
 		var targets []Target
@@ -54,7 +57,9 @@ func TestExecute(t *testing.T) {
 				t.Fatalf("File is not open: %v", err)
 			}
 		}
-		cmd.runCmdWithTargets(ctx, targetSetup, []string{scriptPath})
+		if err = cmd.runCmdWithTargets(ctx, targetSetup, []string{scriptPath}); err != nil {
+			t.Fatalf("Execute failed with error: %v", err)
+		}
 		for _, file := range targetSetup.syslogs {
 			if _, err := io.WriteString(file, "File is closed!"); err == nil {
 				t.Fatalf("File is open: %v", err)

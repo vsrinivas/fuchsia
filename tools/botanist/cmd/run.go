@@ -186,18 +186,19 @@ type targetSetup struct {
 
 func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targets []Target) *targetSetup {
 	var syslogs, serialLogs []io.ReadWriteCloser
-	errs := make(chan error)
+	errs := make(chan error, len(targets))
 	var wg sync.WaitGroup
 	var setupErr error
 
 	for i, t := range targets {
 		var syslog io.ReadWriteCloser
+		var err error
 		if r.syslogFile != "" {
 			syslogFile := r.syslogFile
 			if len(targets) > 1 {
 				syslogFile = getIndexedFilename(r.syslogFile, i)
 			}
-			syslog, err := os.Create(syslogFile)
+			syslog, err = os.Create(syslogFile)
 			if err != nil {
 				setupErr = err
 				break
@@ -250,6 +251,12 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 				return
 			}
 			nodename := t.Nodename()
+
+			if r.syslogFile != "" && syslog == nil {
+				errs <- fmt.Errorf("syslog is nil.")
+				return
+			}
+
 			// If having paved, SSH in and stream syslogs back to a file sink.
 			if !r.netboot && syslog != nil {
 				p, err := ioutil.ReadFile(t.SSHKey())
