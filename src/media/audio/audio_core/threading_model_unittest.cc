@@ -22,13 +22,12 @@ void ValidateThreadingModel(ThreadingModel* threading_model) {
   // For threading models that use dynamically allocated loops, we submit a task to one loop we
   // immediately release and another to a loop we retain to validate both modes of operation work.
   bool mix1_task_run = false;
-  {
-    auto mix_domain = threading_model->AcquireMixDomain();
-    async::PostTask(mix_domain->dispatcher(), [&mix1_task_run] { mix1_task_run = true; });
-  }
+  auto mix_domain1 = threading_model->AcquireMixDomain();
+  async::PostTask(mix_domain1->dispatcher(), [&mix1_task_run] { mix1_task_run = true; });
+
   bool mix2_task_run = false;
-  auto mix_domain = threading_model->AcquireMixDomain();
-  async::PostTask(mix_domain->dispatcher(), [&mix2_task_run] { mix2_task_run = true; });
+  auto mix_domain2 = threading_model->AcquireMixDomain();
+  async::PostTask(mix_domain2->dispatcher(), [&mix2_task_run] { mix2_task_run = true; });
 
   // We quit first here to cause |RunAndJoinAllThreads| to exit after all currently queued tasks
   // have executed.

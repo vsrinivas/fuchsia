@@ -117,6 +117,11 @@ class ThreadingModel {
   // Acquires an |ExecutionDomain| to use for mixing. The returned domain will live as long as the
   // returned pointer.
   //
+  // It is implementation defined if tasks will still execute after the returned |OwnedDomainPtr| is
+  // released; for shared dispatcher implementations these tasks will still run, while
+  // implementations that provide a unique dispatcher may choose to immediately shutdown the loop in
+  // response to the |OwnedDomainPtr| being released.
+  //
   // This is a single-threaded dispatcher.
   virtual OwnedDomainPtr AcquireMixDomain() = 0;
 
