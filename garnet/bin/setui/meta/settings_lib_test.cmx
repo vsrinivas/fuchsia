@@ -1,14 +1,17 @@
 {
-    "program": {
-        "binary": "test/settings_lib_test"
-    },
-    "sandbox": {
-        "features": [
-            "build-info"
-        ],
-        "services": [
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
-        ]
-    }
+  "program": {
+    "binary": "test/settings_lib_test"
+  },
+  "sandbox": {
+    "dev": [
+        "class/input"
+    ],
+    "features": [
+        "build-info"
+    ],
+    "services": [
+        "fuchsia.sys.Environment",
+        "fuchsia.sys.Loader"
+    ]
+  }
 }

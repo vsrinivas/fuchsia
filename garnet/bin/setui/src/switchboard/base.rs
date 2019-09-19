@@ -25,6 +25,7 @@ pub enum SettingType {
     Display,
     DoNotDisturb,
     Intl,
+    LightSensor,
     Privacy,
     Setup,
     System,
@@ -40,6 +41,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     set.insert(SettingType::Display);
     set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
+    set.insert(SettingType::LightSensor);
     set.insert(SettingType::Privacy);
     set.insert(SettingType::Setup);
     set.insert(SettingType::System);
@@ -450,6 +452,12 @@ pub struct SetupInfo {
     pub configuration_interfaces: ConfigurationInterfaceFlags,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct LightData {
+    /// Overall illuminance as measured in lux
+    pub illuminance: f32,
+}
+
 /// The possible responses to a SettingRequest.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
@@ -459,6 +467,7 @@ pub enum SettingResponse {
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(DisplayInfo),
     Device(DeviceInfo),
+    LightSensor(LightData),
     DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
     Privacy(PrivacyInfo),

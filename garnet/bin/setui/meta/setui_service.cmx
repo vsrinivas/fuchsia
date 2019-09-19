@@ -7,6 +7,9 @@
             "isolated-persistent-storage",
             "build-info"
         ],
+        "dev": [
+        "class/input"
+        ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
             "fuchsia.logger.LogSink",

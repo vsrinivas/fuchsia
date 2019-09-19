@@ -12,6 +12,7 @@ use {
     crate::device::spawn_device_fidl_handler,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
+    crate::display::spawn_light_sensor_controller,
     crate::do_not_disturb::spawn_do_not_disturb_controller,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
@@ -163,18 +164,29 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
         });
     }
 
-    if components.contains(&SettingType::Display) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Display,
-                spawn_display_controller(
-                    service_context_handle.clone(),
-                    unboxed_storage_factory.get_store::<switchboard::base::DisplayInfo>(),
-                ),
-            )
-            .unwrap();
-
+    if components.contains(&SettingType::Display) || components.contains(&SettingType::LightSensor)
+    {
+        if components.contains(&SettingType::Display) {
+            registry_handle
+                .write()
+                .register(
+                    switchboard::base::SettingType::Display,
+                    spawn_display_controller(
+                        service_context_handle.clone(),
+                        unboxed_storage_factory.get_store::<switchboard::base::DisplayInfo>(),
+                    ),
+                )
+                .unwrap();
+        }
+        if components.contains(&SettingType::LightSensor) {
+            registry_handle
+                .write()
+                .register(
+                    switchboard::base::SettingType::LightSensor,
+                    spawn_light_sensor_controller(service_context_handle.clone()),
+                )
+                .unwrap();
+        }
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
             spawn_display_fidl_handler(switchboard_handle_clone.clone(), stream);
