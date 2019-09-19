@@ -22,13 +22,18 @@ class IndexNode2 {
  public:
   using Map = std::map<std::string, IndexNode2>;
 
-  enum class Kind {
-    kNone = 0,
-    kRoot,  // Root index node (meaning nothing semantically).
-    kNamespace,
+  // The type of an index node. There are several "physical" kinds which are associated with
+  // children of each node. These physical ones count up from 0 so one can iterate over them
+  // from to up until < kEndPhysical to iterate the child categories.
+  enum class Kind : int {
+    kNamespace = 0,
     kType,
     kFunction,
     kVar,
+    kEndPhysical,  // Marker for the end of the kinds that have children for every node.
+
+    kNone = kEndPhysical,
+    kRoot,  // Root index node (meaning nothing semantically).
   };
 
   // A reference to a DIE that doesn't need the unit or the underlying llvm::DwarfDebugInfoEntry to
@@ -59,20 +64,27 @@ class IndexNode2 {
   explicit IndexNode2(Kind kind) : kind_(kind) {}
   ~IndexNode2() = default;
 
+  // The DieRef can be omitted when indexing namespaces as the DIEs are not stored for that case.
+  IndexNode2* AddChild(Kind kind, const char* name);
   IndexNode2* AddChild(Kind kind, const char* name, const DieRef& ref);
   void AddDie(const DieRef& ref);
 
-  const Map& namespaces() const { return namespaces_; }
-  Map& namespaces() { return namespaces_; }
+  const Map& namespaces() const { return children_[static_cast<int>(Kind::kNamespace)]; }
+  Map& namespaces() { return children_[static_cast<int>(Kind::kNamespace)]; }
 
-  const Map& types() const { return types_; }
-  Map& types() { return types_; }
+  const Map& types() const { return children_[static_cast<int>(Kind::kType)]; }
+  Map& types() { return children_[static_cast<int>(Kind::kType)]; }
 
-  const Map& functions() const { return functions_; }
-  Map& functions() { return functions_; }
+  const Map& functions() const { return children_[static_cast<int>(Kind::kFunction)]; }
+  Map& functions() { return children_[static_cast<int>(Kind::kFunction)]; }
 
-  const Map& vars() const { return vars_; }
-  Map& vars() { return vars_; }
+  const Map& vars() const { return children_[static_cast<int>(Kind::kVar)]; }
+  Map& vars() { return children_[static_cast<int>(Kind::kVar)]; }
+
+  // Returns the map for the given child kind. This will assert for >= kEndPhysical ("kNone" and
+  // "kRoot") which aren't child kinds.
+  const Map& MapForKind(Kind kind) const;
+  Map& MapForKind(Kind kind);
 
   // AsString is useful only in small unit tests since even a small module can have many megabytes
   // of dump.
@@ -94,10 +106,7 @@ class IndexNode2 {
 
   // TODO(brettw) evaluate whether we can save a lot of memory using optionally-null unique_ptrs
   // here since in most cases all but on of these maps will be empty.
-  Map namespaces_;
-  Map types_;
-  Map functions_;
-  Map vars_;
+  Map children_[static_cast<int>(Kind::kEndPhysical)];
 
   // Contains the references to the definitions (if possible) or the declarations (if not) of the
   // type, function, or variable. This will not have any entries for namespaces.

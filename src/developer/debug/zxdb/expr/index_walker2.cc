@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/index_walker.h"
+#include "src/developer/debug/zxdb/expr/index_walker2.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -11,8 +11,8 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
-#include "src/developer/debug/zxdb/symbols/index.h"
-#include "src/developer/debug/zxdb/symbols/index_node.h"
+#include "src/developer/debug/zxdb/symbols/index2.h"
+#include "src/developer/debug/zxdb/symbols/index_node2.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -25,60 +25,76 @@ inline bool IsNameEnd(char ch) { return isspace(ch) || ch == '<'; }
 
 }  // namespace
 
-IndexWalker::IndexWalker(const Index* index) { path_.push_back(&index->root()); }
+IndexWalker2::IndexWalker2(const Index2* index) {
+  // Prefer not to reallocate the vector-of-vectors. It is rare for C++ namespace hierarchies to
+  // be more than a couple of components long, so this number should cover most cases.
+  path_.reserve(8);
 
-IndexWalker::~IndexWalker() = default;
+  path_.push_back({&index->root()});
+}
 
-bool IndexWalker::WalkUp() {
+IndexWalker2::~IndexWalker2() = default;
+
+bool IndexWalker2::WalkUp() {
   if (path_.size() > 1) {
     // Don't walk above the root.
-    path_.pop_back();
+    path_.resize(path_.size() - 1);
     return true;
   }
   return false;
 }
 
-bool IndexWalker::WalkInto(const ParsedIdentifierComponent& comp) {
-  const IndexNode* node = path_.back();
+bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
+  const Stage& old_stage = path_.back();
 
   const std::string& comp_name = comp.name();
   if (comp_name.empty())
     return true;  // No-op.
 
-  // This is complicated by templates which can't be string-compared for equality without
-  // canonicalization. Search everything in the index with the same base (non-template-part) name.
-  // With the index being sorted, we can start at the item that begins lexicographically >= the
-  // input.
-  auto iter = node->sub().lower_bound(comp_name);
-  if (iter == node->sub().end())
-    return false;  // Nothing can match.
+  Stage new_stage;
+  for (const auto* old_node : old_stage) {
+    for (int i = 0; i < static_cast<int>(IndexNode2::Kind::kEndPhysical); i++) {
+      const IndexNode2::Map& map = old_node->MapForKind(static_cast<IndexNode2::Kind>(i));
 
-  if (!comp.has_template()) {
-    // In the common case there is no template in the input, so we can just
-    // check for exact string equality and be done.
-    if (iter->first == comp_name) {
-      path_.push_back(&iter->second);
-      return true;
+      // This is complicated by templates which can't be string-compared for equality without
+      // canonicalization. Search everything in the index with the same base (non-template-part)
+      // name. With the index being sorted, we can start at the item that begins lexicographically
+      // >= the input.
+      auto iter = map.lower_bound(comp_name);
+      if (iter == map.end())
+        continue;  // Nothing can match of this kind.
+
+      if (!comp.has_template()) {
+        // In the common case there is no template in the input, so we can just check for exact
+        // string equality and be done with this kind.
+        if (iter->first == comp_name)
+          new_stage.push_back(&iter->second);
+        continue;
+      }
+
+      // Check all nodes until template canonicalization can't affect the comparison.
+      while (iter != map.end() && !IsIndexStringBeyondName(iter->first, comp_name)) {
+        if (ComponentMatches(iter->first, comp)) {
+          // Found match.
+          new_stage.push_back(&iter->second);
+          break;
+        }
+
+        ++iter;
+      }
     }
-    return false;
   }
 
-  // Check all nodes until template canonicalization can't affect the comparison.
-  while (iter != node->sub().end() && !IsIndexStringBeyondName(iter->first, comp_name)) {
-    if (ComponentMatches(iter->first, comp)) {
-      // Found match.
-      path_.push_back(&iter->second);
-      return true;
-    }
+  if (new_stage.empty())
+    return false;  // No children found.
 
-    ++iter;
-  }
-
-  return false;
+  // Commit the new found stuff.
+  path_.push_back(std::move(new_stage));
+  return true;
 }
 
-bool IndexWalker::WalkInto(const ParsedIdentifier& ident) {
-  IndexWalker sub(*this);
+bool IndexWalker2::WalkInto(const ParsedIdentifier& ident) {
+  IndexWalker2 sub(*this);
   if (!sub.WalkIntoClosest(ident))
     return false;
 
@@ -87,7 +103,7 @@ bool IndexWalker::WalkInto(const ParsedIdentifier& ident) {
   return true;
 }
 
-bool IndexWalker::WalkIntoClosest(const ParsedIdentifier& ident) {
+bool IndexWalker2::WalkIntoClosest(const ParsedIdentifier& ident) {
   if (ident.qualification() == IdentifierQualification::kGlobal)
     path_.resize(1);  // Only keep the root.
 
@@ -99,8 +115,8 @@ bool IndexWalker::WalkIntoClosest(const ParsedIdentifier& ident) {
 }
 
 // static
-bool IndexWalker::ComponentMatches(const std::string& index_string,
-                                   const ParsedIdentifierComponent& comp) {
+bool IndexWalker2::ComponentMatches(const std::string& index_string,
+                                    const ParsedIdentifierComponent& comp) {
   if (!ComponentMatchesNameOnly(index_string, comp))
     return false;
   // Only bother with the expensive template comparison on demand.
@@ -108,8 +124,8 @@ bool IndexWalker::ComponentMatches(const std::string& index_string,
 }
 
 // static
-bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
-                                           const ParsedIdentifierComponent& comp) {
+bool IndexWalker2::ComponentMatchesNameOnly(const std::string& index_string,
+                                            const ParsedIdentifierComponent& comp) {
   const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
@@ -123,8 +139,8 @@ bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
 }
 
 // static
-bool IndexWalker::ComponentMatchesTemplateOnly(const std::string& index_string,
-                                               const ParsedIdentifierComponent& comp) {
+bool IndexWalker2::ComponentMatchesTemplateOnly(const std::string& index_string,
+                                                const ParsedIdentifierComponent& comp) {
   ParsedIdentifier index_ident;
   Err err = ExprParser::ParseIdentifier(index_string, &index_ident);
   if (err.has_error())
@@ -143,7 +159,7 @@ bool IndexWalker::ComponentMatchesTemplateOnly(const std::string& index_string,
 }
 
 // static
-bool IndexWalker::IsIndexStringBeyondName(std::string_view index_name, std::string_view name) {
+bool IndexWalker2::IsIndexStringBeyondName(std::string_view index_name, std::string_view name) {
   if (index_name.size() <= name.size()) {
     // The |index_name| is too small to start with the name and have template stuff on it (which
     // requires special handling), so we can directly return the answer by string comparison.

@@ -39,39 +39,26 @@ llvm::DWARFDie IndexNode2::DieRef::ToDie(llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
 }
 
-IndexNode2* IndexNode2::AddChild(Kind kind, const char* name, const DieRef& ref) {
+IndexNode2* IndexNode2::AddChild(Kind kind, const char* name) {
   FXL_DCHECK(name);
-
-  Map* map = nullptr;
-  switch (kind) {
-    case Kind::kNone:
-    case Kind::kRoot:
-      FXL_NOTREACHED();  // Can't add these.
-      return nullptr;
-    case Kind::kNamespace:
-      map = &namespaces_;
-      break;
-    case Kind::kType:
-      map = &types_;
-      break;
-    case Kind::kFunction:
-      map = &functions_;
-      break;
-    case Kind::kVar:
-      map = &vars_;
-      break;
-  }
 
   // TODO(brettw) Get some kind of transparent lookup here to avoid making an intermediate
   // std::string.
-  auto found = map->find(name);
-  if (found == map->end()) {
-    found = map->emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                         std::forward_as_tuple(kind))
+  Map& map = MapForKind(kind);
+  auto found = map.find(name);
+  if (found == map.end()) {
+    found = map.emplace(std::piecewise_construct, std::forward_as_tuple(name),
+                        std::forward_as_tuple(kind))
                 .first;
   }
-  found->second.AddDie(ref);
+
   return &found->second;
+}
+
+IndexNode2* IndexNode2::AddChild(Kind kind, const char* name, const DieRef& ref) {
+  auto added = AddChild(kind, name);
+  added->AddDie(ref);
+  return added;
 }
 
 void IndexNode2::AddDie(const DieRef& ref) {
@@ -102,6 +89,18 @@ void IndexNode2::AddDie(const DieRef& ref) {
   dies_.push_back(ref);
 }
 
+const IndexNode2::Map& IndexNode2::MapForKind(Kind kind) const {
+  FXL_DCHECK(static_cast<int>(kind) >= 0 &&
+             static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
+  return children_[static_cast<int>(kind)];
+}
+
+IndexNode2::Map& IndexNode2::MapForKind(Kind kind) {
+  FXL_DCHECK(static_cast<int>(kind) >= 0 &&
+             static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
+  return children_[static_cast<int>(kind)];
+}
+
 std::string IndexNode2::AsString(int indent_level) const {
   std::ostringstream out;
   Dump(out, indent_level);
@@ -109,10 +108,10 @@ std::string IndexNode2::AsString(int indent_level) const {
 }
 
 void IndexNode2::Dump(std::ostream& out, int indent_level) const {
-  DumpMap(namespaces_, indent_level + 1, "Namespaces:", out);
-  DumpMap(types_, indent_level + 1, "Types:", out);
-  DumpMap(functions_, indent_level + 1, "Functions:", out);
-  DumpMap(vars_, indent_level + 1, "Variables:", out);
+  DumpMap(namespaces(), indent_level + 1, "Namespaces:", out);
+  DumpMap(types(), indent_level + 1, "Types:", out);
+  DumpMap(functions(), indent_level + 1, "Functions:", out);
+  DumpMap(vars(), indent_level + 1, "Variables:", out);
 }
 
 void IndexNode2::Dump(const std::string& name, std::ostream& out, int indent_level) const {
@@ -128,10 +127,10 @@ void IndexNode2::Dump(const std::string& name, std::ostream& out, int indent_lev
 void IndexNode2::Merge(IndexNode2&& other) {
   FXL_DCHECK(kind_ == other.kind_);
 
-  MergeMaps(other.namespaces_, &namespaces_);
-  MergeMaps(other.types_, &types_);
-  MergeMaps(other.functions_, &functions_);
-  MergeMaps(other.vars_, &vars_);
+  MergeMaps(other.namespaces(), &namespaces());
+  MergeMaps(other.types(), &types());
+  MergeMaps(other.functions(), &functions());
+  MergeMaps(other.vars(), &vars());
 
   if (!other.dies_.empty()) {
     if (dies_.empty()) {
