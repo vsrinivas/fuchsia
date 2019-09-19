@@ -48,6 +48,7 @@ source_set("buffer_header") {
   public_configs = [ ":platform_include_config" ]
   public_deps = [
     ":handle",
+    "//garnet/lib/magma/include:magma_abi",
   ]
   sources = [
     "platform_buffer.h",

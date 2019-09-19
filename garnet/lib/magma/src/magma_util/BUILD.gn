@@ -24,6 +24,19 @@ group("magma_util") {
   ]
 }
 
+source_set("address_space") {
+  sources = [
+    "accessor.h",
+    "address_space.h",
+    "gpu_mapping.h",
+  ]
+  public_deps = [
+    ":common",
+    "platform:buffer",
+    "platform:bus_mapper",
+  ]
+}
+
 source_set("common") {
   public_configs = [
     ":magma_util_config",

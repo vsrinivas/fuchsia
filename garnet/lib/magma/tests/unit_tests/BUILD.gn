@@ -57,6 +57,7 @@ source_set("magma_util_tests") {
   testonly = true
 
   sources = [
+    "test_address_space.cc",
     "test_address_space_allocator.cc",
     "test_inflight_list.cc",
     "test_macros.cc",
@@ -66,10 +67,13 @@ source_set("magma_util_tests") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:allocator",
     "$magma_build_root/src/magma_util:inflight_list",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
+    "$magma_build_root/tests/mock:address_space",
+    "$magma_build_root/tests/mock:bus_mapper",
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
     "//third_party/googletest:gtest",
