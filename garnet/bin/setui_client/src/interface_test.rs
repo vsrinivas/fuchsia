@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
+    parking_lot::RwLock,
     setui_client_lib::accessibility,
     setui_client_lib::audio,
     setui_client_lib::client,
@@ -21,6 +20,7 @@ use {
     setui_client_lib::setup,
     setui_client_lib::system,
     setui_client_lib::{AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions},
+    std::sync::Arc,
 };
 
 enum Services {
@@ -150,6 +150,9 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set auto brightness");
     validate_display(None, Some(true)).await?;
+
+    println!("  client calls watch light sensor");
+    validate_light_sensor().await?;
 
     println!("do not disturb service tests");
     println!("  client calls dnd watch");
@@ -323,7 +326,37 @@ async fn validate_display(
         .connect_to_service::<DisplayMarker>()
         .context("Failed to connect to display service")?;
 
-    display::command(display_service, expected_brightness, expected_auto_brightness).await?;
+    display::command(display_service, expected_brightness, expected_auto_brightness, false).await?;
+
+    Ok(())
+}
+
+// Can only check one mutate option at once
+async fn validate_light_sensor() -> Result<(), Error> {
+    let watch_called = Arc::new(RwLock::new(false));
+
+    let watch_called_clone = watch_called.clone();
+
+    let (display_service, mut stream) =
+        fidl::endpoints::create_proxy_and_stream::<DisplayMarker>().unwrap();
+
+    fasync::spawn(async move {
+        while let Some(request) = stream.try_next().await.unwrap() {
+            match request {
+                DisplayRequest::WatchLightSensor { delta: _, responder } => {
+                    *watch_called_clone.write() = true;
+                    responder
+                        .send(&mut Ok(LightSensorData { illuminance_lux: Some(100.0) }))
+                        .unwrap();
+                }
+                _ => {}
+            }
+        }
+    });
+
+    display::command(display_service, None, None, true).await?;
+
+    assert_eq!(*watch_called.read(), true);
 
     Ok(())
 }

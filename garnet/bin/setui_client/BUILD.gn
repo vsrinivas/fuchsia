@@ -89,6 +89,7 @@ rustc_binary("setui_client_interface_test_bin") {
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
   ]
   source_root = "src/interface_test.rs"
 }

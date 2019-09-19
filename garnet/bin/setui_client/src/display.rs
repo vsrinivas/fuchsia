@@ -8,6 +8,7 @@ pub async fn command(
     proxy: DisplayProxy,
     brightness: Option<f32>,
     auto_brightness: Option<bool>,
+    light_sensor: bool,
 ) -> Result<String, Error> {
     let mut output = String::new();
 
@@ -34,6 +35,9 @@ pub async fn command(
             }
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
+    } else if light_sensor {
+        let data = proxy.watch_light_sensor(0.0).await?;
+        output.push_str(&format!("{:?}", data));
     } else {
         let setting = proxy.watch().await?;
 

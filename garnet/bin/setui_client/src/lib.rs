@@ -75,6 +75,9 @@ pub enum SettingClient {
 
         #[structopt(short = "a", long = "auto_brightness")]
         auto_brightness: Option<bool>,
+
+        #[structopt(short = "l", long = "light_sensor")]
+        light_sensor: bool,
     },
 
     // Operations that use the new interfaces.
@@ -256,10 +259,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = device::command(device_service).await?;
             println!("Device: {}", output);
         }
-        SettingClient::Display { brightness, auto_brightness } => {
+        SettingClient::Display { brightness, auto_brightness, light_sensor } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
-            let output = display::command(display_service, brightness, auto_brightness).await?;
+            let output =
+                display::command(display_service, brightness, auto_brightness, light_sensor)
+                    .await?;
             println!("Display: {}", output);
         }
         SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
