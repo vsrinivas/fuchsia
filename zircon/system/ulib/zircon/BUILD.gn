@@ -95,6 +95,7 @@ if (current_toolchain == default_toolchain) {
       "syscall-wrappers.cc",
       "zx_cache_flush.cc",
       "zx_channel_call.cc",
+      "zx_clock_get_monotonic.cc",
       "zx_cprng_draw.cc",
       "zx_deadline_after.cc",
       "zx_status_get_string.cc",
@@ -112,6 +113,7 @@ if (current_toolchain == default_toolchain) {
       ":generate",
       ":syscall-asm",
       "$zx/kernel/lib/userabi:headers",
+      "$zx/system/ulib/affine",
     ]
     public_deps = [
       ":generated-public-headers",

@@ -180,8 +180,6 @@ These values either are fixed in the kernel at compile time or are
 determined by the kernel at boot time from hardware or boot parameters.
 Examples include [`zx_system_get_version()`],
 [`zx_system_get_num_cpus()`], and [`zx_ticks_per_second()`].
-The last example is influenced by
-a [kernel command line option](kernel_cmdline.md#vdso_soft_ticks_bool).
 
 Because these values are constant, there is no need to pay the overhead
 of entering the kernel to read them.  Instead, the vDSO implementations

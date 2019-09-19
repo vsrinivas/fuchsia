@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+
+#include <array>
+#include <utility>
 
 #include <zxtest/zxtest.h>
 
@@ -27,6 +28,23 @@ TEST(ClockTest, ClockMonotonic) {
     zx::nanosleep(current + k1MsDelay);
 
     previous = current;
+  }
+}
+
+TEST(ClockTest, DeadlineAfter) {
+  constexpr std::array Offsets = {ZX_MSEC(0), ZX_MSEC(20)};
+
+  // Make sure that zx_deadline_after always gives results which are consistent
+  // with simply getting clock monotonic and adding our own offset.
+  for (auto offset : Offsets) {
+    zx_time_t before, after, deadline;
+
+    before = zx_time_add_duration(zx_clock_get_monotonic(), offset);
+    deadline = zx_deadline_after(offset);
+    after = zx_time_add_duration(zx_clock_get_monotonic(), offset);
+
+    ASSERT_GE(deadline, before);
+    ASSERT_LE(deadline, after);
   }
 }
 

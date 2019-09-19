@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_ZIRCON_PRIVATE_H_
+#define ZIRCON_SYSTEM_ULIB_ZIRCON_PRIVATE_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -19,7 +20,9 @@ extern "C" {
 // the public names so as to avoid PLT entries.
 #include <zircon/syscall-vdso-definitions.h>
 
-__LOCAL decltype(zx_ticks_get) CODE_soft_ticks_get;
+__LOCAL decltype(zx_clock_get_monotonic) CODE_clock_get_monotonic_via_kernel_ticks;
+__LOCAL decltype(zx_deadline_after) CODE_deadline_after_via_kernel_mono;
+__LOCAL decltype(zx_deadline_after) CODE_deadline_after_via_kernel_ticks;
 }
 
 // Code should define '_zx_foo' and then do 'VDSO_INTERFACE_FUNCTION(zx_foo);'
@@ -31,3 +34,5 @@ __LOCAL decltype(zx_ticks_get) CODE_soft_ticks_get;
 // This symbol is expected to appear in the build-time vDSO symbol table so
 // kernel/lib/userabi/ code can use it.
 #define VDSO_KERNEL_EXPORT __attribute__((used))
+
+#endif  // ZIRCON_SYSTEM_ULIB_ZIRCON_PRIVATE_H_

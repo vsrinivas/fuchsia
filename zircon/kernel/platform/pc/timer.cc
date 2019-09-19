@@ -617,6 +617,17 @@ void platform_shutdown_timer(void) {
   // TODO(maniscalco): What should we do here?  Anything?
 }
 
+// Currently, usermode can access our source of ticks only if we have chosen TSC
+// to be our tick counter.  Otherwise, they will need to go through a syscall.
+//
+// In theory, we can fix this, but it would require having the vDSO map some
+// read-only memory in the user mode process (either the HPET registers, or the
+// variable which represents the PIT timer).  Currently, doing this is not
+// something we support, and the vast majority of x64 systems that we run on
+// have an invariant TSC which is accessible from usermode.  For now, we just
+// take the syscall hit instead of attempting to get more fancy.
+bool platform_usermode_can_access_tick_registers(void) { return (wall_clock == CLOCK_TSC); }
+
 static uint64_t saved_hpet_val;
 void pc_prep_suspend_timer(void) {
   if (hpet_is_present()) {

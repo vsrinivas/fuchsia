@@ -7,20 +7,18 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <platform.h>
-#include <trace.h>
-
-#include <arch/ops.h>
-#include <ktl/limits.h>
 #include <lib/affine/ratio.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
+#include <platform.h>
+#include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
+#include <ktl/limits.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
 #include <platform/timer.h>
@@ -204,6 +202,12 @@ void platform_stop_timer(void) { write_ctl(0); }
 void platform_shutdown_timer(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   mask_interrupt(timer_irq);
+}
+
+bool platform_usermode_can_access_tick_registers(void) {
+  // We always use the ARM generic timer for the tick counter, and these
+  // registers are accessible from usermode.
+  return true;
 }
 
 template <bool AllowDebugPrint = false>

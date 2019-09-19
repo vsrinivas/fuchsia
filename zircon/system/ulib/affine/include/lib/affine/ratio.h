@@ -5,8 +5,10 @@
 #ifndef LIB_AFFINE_RATIO_H_
 #define LIB_AFFINE_RATIO_H_
 
-#include <stdint.h>
 #include <lib/affine/assert.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
+
 #include <limits>
 #include <type_traits>
 
@@ -50,8 +52,31 @@ class Ratio {
   }
 
   Ratio() = default;
-  Ratio(uint32_t numerator, uint32_t denominator)
-      : numerator_(numerator), denominator_(denominator) {
+
+  // TODO(36192) : Remove these __LOCAL annotations
+  //
+  // So, there is something wrong with GCC when building this library with -O0
+  // (see the referenced bug).  It does not seem to be respecting the
+  // -fvisiability-hidden or -fvisability-inlines-hidden flags which are being
+  // passed to it.
+  //
+  // As a result, when this library is used by a DSO, the symbols become
+  // exported by the DSO and require some runtime fixup.  This generated a GOT
+  // which is (by definition) a RW segment.  This is a problem when we attempt
+  // to use this library in the VDSO image (libzircon.so) since the VDSO
+  // _demands_ that there be no read write segments.
+  //
+  // The workaround here is to put the __LOCAL annotation on the two methods
+  // that the VDSO images uses directly (the non-default constructor, and the
+  // Scale method).  Under the hood, __LOCAL is attribute("hidden"), which the
+  // compiler does seem to respect.  Once the symbols are no longer exported
+  // from the VDSO image, the GOT goes away and the system is happy.
+  //
+  // Eventually, if the issue with GCC gets resolved, we can come back and
+  // remove these explicit annotations.
+  //
+  Ratio(uint32_t numerator, uint32_t denominator) __LOCAL : numerator_(numerator),
+                                                            denominator_(denominator) {
     internal::DebugAssert(denominator_ != 0);
   }
 
@@ -64,7 +89,7 @@ class Ratio {
     return Ratio{denominator_, numerator_};
   }
 
-  int64_t Scale(int64_t value) const { return Scale(value, numerator_, denominator_); }
+  int64_t Scale(int64_t value) const __LOCAL { return Scale(value, numerator_, denominator_); }
 
  private:
   uint32_t numerator_ = 1;

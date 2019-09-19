@@ -16,6 +16,14 @@ SYSCALL_\name:
 .cfi_endproc
 .size SYSCALL_\name, . - SYSCALL_\name
 
+// Create a hidden alias for the syscall which is prefixed with CODE_.  This
+// allows the macros which perform redirection in the kernel to redirect a VDSO
+// entry to either an explicit CODE_ alternate, or to another syscall if needed.
+.globl CODE_SYSCALL_\name
+.hidden CODE_SYSCALL_\name
+CODE_SYSCALL_\name = SYSCALL_\name
+.size CODE_SYSCALL_\name, . - SYSCALL_\name
+
 // For wrapper functions, aliasing is handled by the generator.
 .if \public
 .globl _\name
