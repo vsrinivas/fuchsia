@@ -329,8 +329,9 @@ func newTUFKeys(cfg []amber.KeyConfig) ([]*tuf_data.Key, error) {
 		}
 
 		keys[i] = &tuf_data.Key{
-			Type:  key.Type,
-			Value: tuf_data.KeyValue{Public: tuf_data.HexBytes(keyHex)},
+			Type:   key.Type,
+			Value:  tuf_data.KeyValue{Public: tuf_data.HexBytes(keyHex)},
+			Scheme: "ed25519",
 		}
 	}
 
