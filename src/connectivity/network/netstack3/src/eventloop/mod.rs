@@ -74,8 +74,6 @@
 //! timers is - see the comment below on race conditions. Particularly, it's a bit tricky that the
 //! timer is not cancelled when the timer trigger message is _sent_, but when it is _received_.
 
-#![allow(unused)]
-
 mod icmp_provider;
 #[cfg(test)]
 mod integration_tests;
@@ -84,49 +82,36 @@ mod timers;
 mod util;
 
 use ethernet as eth;
-use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
 use std::convert::TryFrom;
-use std::fs::File;
-use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use failure::{bail, format_err, Error};
-use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
+use failure::{bail, Error};
+use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
-use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
-use fidl_fuchsia_io;
+use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_icmp as fidl_icmp;
 
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
-    PhysicalStatus, StackAddEthernetInterfaceResponder, StackAddForwardingEntryResponder,
-    StackAddInterfaceAddressResponder, StackDelEthernetInterfaceResponder,
-    StackDelForwardingEntryResponder, StackDelInterfaceAddressResponder,
-    StackDisableInterfaceResponder, StackEnableInterfaceResponder,
-    StackGetForwardingTableResponder, StackGetInterfaceInfoResponder, StackListInterfacesResponder,
-    StackMarker, StackRequest, StackRequestStream,
+    PhysicalStatus, StackAddEthernetInterfaceResponder, StackRequest,
 };
 use fidl_fuchsia_posix_socket as psocket;
 use futures::channel::mpsc;
-use futures::future::{AbortHandle, Abortable};
 use futures::prelude::*;
-use futures::{select, TryFutureExt, TryStreamExt};
 #[cfg(test)]
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, AddrSubnetEither, IpAddr, IpVersion, Subnet, SubnetEither};
-use packet::{Buf, BufferMut, ReusableBuffer, Serializer};
-use rand::{rngs::OsRng, Rng};
-use std::convert::TryInto;
-use util::{
-    ContextCoreCompatible, ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible,
-};
+use net_types::ip::IpVersion;
+use packet::{Buf, BufferMut, Serializer};
+use rand::rngs::OsRng;
+use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible};
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
@@ -134,7 +119,7 @@ use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatche
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, get_all_ip_addr_subnets, get_all_routes,
     handle_timeout, initialize_device, receive_frame, remove_device, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
+    DeviceLayerEventDispatcher, EntryEither, EventDispatcher, IpLayerEventDispatcher,
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
@@ -167,7 +152,7 @@ pub struct EthernetSetupWorker {
 }
 
 impl EthernetSetupWorker {
-    fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
+    fn spawn(self, sender: mpsc::UnboundedSender<Event>) {
         fasync::spawn_local(
             async move {
                 let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
@@ -181,7 +166,7 @@ impl EthernetSetupWorker {
                     info,
                     responder: self.responder,
                 });
-                sender.unbounded_send(eth_device_event);
+                sender.unbounded_send(eth_device_event)?;
                 Ok(())
             }
                 .unwrap_or_else(|e: Error| error!("{:?}", e)),
@@ -201,13 +186,13 @@ impl EthernetWorker {
         EthernetWorker { id, events }
     }
 
-    fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
+    fn spawn(self, sender: mpsc::UnboundedSender<Event>) {
         let mut events = self.events;
         let id = self.id;
         fasync::spawn_local(
             async move {
                 while let Some(evt) = events.try_next().await? {
-                    sender.unbounded_send(Event::EthEvent((id, evt)));
+                    sender.unbounded_send(Event::EthEvent((id, evt)))?;
                 }
                 Ok(())
             }
@@ -241,6 +226,17 @@ impl From<timers::TimerEvent<TimerId>> for Event {
     }
 }
 
+// Errors from `responder.send` can be safely ignored during regular operation, they are handled
+// only by logging to debug.
+macro_rules! responder_send {
+    ($responder:expr, $arg:expr) => {
+        $responder.send($arg).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
+    };
+    ($responder:expr, $arg1:expr, $arg2:expr) => {
+        $responder.send($arg1, $arg2).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
+    };
+}
+
 /// The event loop.
 pub struct EventLoop {
     ctx: Context<EventLoopInner>,
@@ -248,10 +244,13 @@ pub struct EventLoop {
 }
 
 impl EventLoop {
+    /// # Panics
+    ///
+    /// Panics if a new `FidlWorker` cannot be spawned.
     pub fn new() -> Self {
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
         let fidl_worker = crate::fidl_worker::FidlWorker;
-        fidl_worker.spawn(event_send.clone());
+        fidl_worker.spawn(event_send.clone()).expect("Unable to spawn fidl worker");
         Self::new_with_channels(event_send, event_recv)
     }
 
@@ -314,11 +313,11 @@ impl EventLoop {
                         if let Some(core_id) = self.ctx.dispatcher_mut().devices.get_core_id(id) {
                             initialize_device(&mut self.ctx, core_id);
                         }
-                        setup.responder.send(&mut Ok(id));
+                        responder_send!(setup.responder, &mut Ok(id));
                     }
                     None => {
                         // Send internal error if we can't allocate an id
-                        setup.responder.send(&mut Err(fidl_net_stack::Error::Internal));
+                        responder_send!(setup.responder, &mut Err(fidl_net_stack::Error::Internal));
                     }
                 }
             }
@@ -345,9 +344,13 @@ impl EventLoop {
                         // Handle the new device state. If this results in no change, no state
                         // will be modified.
                         if status.contains(EthernetStatus::ONLINE) {
-                            self.enable_interface(id, |_| {}).await;
+                            self.enable_interface(id, |_| {})
+                                .await
+                                .unwrap_or_else(|e| trace!("Phy enable interface failed: {:?}", e));
                         } else {
-                            self.disable_interface(id, |_| {});
+                            self.disable_interface(id, |_| {}).unwrap_or_else(|e| {
+                                trace!("Phy disable interface failed: {:?}", e)
+                            });
                         }
                         #[cfg(test)]
                         self.ctx
@@ -379,7 +382,8 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn run_until<V>(&mut self, mut fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
+    #[cfg(test)]
+    async fn run_until<V>(&mut self, fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
         let mut buf = [0; 2048];
         let mut fut = Some(fut);
         loop {
@@ -389,7 +393,6 @@ impl EventLoop {
                     fut = Some(f);
                 }
                 future::Either::Right((result, _)) => break Ok(result),
-                _ => continue,
             }
         }
     }
@@ -400,12 +403,11 @@ impl EventLoop {
             let evt = self.event_recv.next().await;
             self.handle_event(&mut buf, evt).await?;
         }
-        Ok(())
     }
 
     async fn handle_fidl_socket_provider_request(&mut self, req: psocket::ProviderRequest) {
         match req {
-            psocket::ProviderRequest::Socket { domain, type_, protocol, responder } => {
+            psocket::ProviderRequest::Socket { domain, type_, protocol: _, responder } => {
                 let domain = i32::from(domain);
                 let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
                 let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
@@ -413,7 +415,7 @@ impl EventLoop {
                     libc::AF_INET => IpVersion::V4,
                     libc::AF_INET6 => IpVersion::V6,
                     _ => {
-                        responder.send(libc::EAFNOSUPPORT as i16, None);
+                        responder_send!(responder, libc::EAFNOSUPPORT as i16, None);
                         return;
                     }
                 };
@@ -421,7 +423,7 @@ impl EventLoop {
                     libc::SOCK_DGRAM => socket::TransProto::UDP,
                     libc::SOCK_STREAM => socket::TransProto::TCP,
                     _ => {
-                        responder.send(libc::EAFNOSUPPORT as i16, None);
+                        responder_send!(responder, libc::EAFNOSUPPORT as i16, None);
                         return;
                     }
                 };
@@ -437,12 +439,12 @@ impl EventLoop {
                     );
                     if let Ok(worker) = worker {
                         worker.spawn(self.ctx.dispatcher().event_send.clone());
-                        responder.send(0, Some(ClientEnd::new(c1)));
+                        responder_send!(responder, 0, Some(ClientEnd::new(c1)));
                     } else {
-                        responder.send(libc::ENOBUFS as i16, None);
+                        responder_send!(responder, libc::ENOBUFS as i16, None);
                     }
                 } else {
-                    responder.send(libc::ENOBUFS as i16, None);
+                    responder_send!(responder, libc::ENOBUFS as i16, None);
                 }
             }
         }
@@ -454,45 +456,45 @@ impl EventLoop {
                 self.fidl_add_ethernet_interface(topological_path, device, responder);
             }
             StackRequest::DelEthernetInterface { id, responder } => {
-                responder.send(&mut self.fidl_del_ethernet_interface(id));
+                responder_send!(responder, &mut self.fidl_del_ethernet_interface(id));
             }
             StackRequest::ListInterfaces { responder } => {
-                responder.send(&mut self.fidl_list_interfaces().await.iter_mut());
+                responder_send!(responder, &mut self.fidl_list_interfaces().await.iter_mut());
             }
             StackRequest::GetInterfaceInfo { id, responder } => {
-                responder.send(&mut self.fidl_get_interface_info(id).await);
+                responder_send!(responder, &mut self.fidl_get_interface_info(id).await);
             }
             StackRequest::EnableInterface { id, responder } => {
-                responder.send(&mut self.fidl_enable_interface(id).await);
+                responder_send!(responder, &mut self.fidl_enable_interface(id).await);
             }
             StackRequest::DisableInterface { id, responder } => {
-                responder.send(&mut self.fidl_disable_interface(id));
+                responder_send!(responder, &mut self.fidl_disable_interface(id));
             }
             StackRequest::AddInterfaceAddress { id, addr, responder } => {
-                responder.send(&mut self.fidl_add_interface_address(id, addr));
+                responder_send!(responder, &mut self.fidl_add_interface_address(id, addr));
             }
             StackRequest::DelInterfaceAddress { id, addr, responder } => {
-                responder.send(&mut self.fidl_del_interface_address(id, addr));
+                responder_send!(responder, &mut self.fidl_del_interface_address(id, addr));
             }
             StackRequest::GetForwardingTable { responder } => {
-                responder.send(&mut self.fidl_get_forwarding_table().iter_mut());
+                responder_send!(responder, &mut self.fidl_get_forwarding_table().iter_mut());
             }
             StackRequest::AddForwardingEntry { entry, responder } => {
-                responder.send(&mut self.fidl_add_forwarding_entry(entry));
+                responder_send!(responder, &mut self.fidl_add_forwarding_entry(entry));
             }
             StackRequest::DelForwardingEntry { subnet, responder } => {
-                responder.send(&mut self.fidl_del_forwarding_entry(subnet));
+                responder_send!(responder, &mut self.fidl_del_forwarding_entry(subnet));
             }
-            StackRequest::EnablePacketFilter { id, responder } => {
+            StackRequest::EnablePacketFilter { id: _, responder: _ } => {
                 // TODO(toshik)
             }
-            StackRequest::DisablePacketFilter { id, responder } => {
+            StackRequest::DisablePacketFilter { id: _, responder: _ } => {
                 // TODO(toshik)
             }
-            StackRequest::EnableIpForwarding { responder } => {
+            StackRequest::EnableIpForwarding { responder: _ } => {
                 // TODO(toshik)
             }
-            StackRequest::DisableIpForwarding { responder } => {
+            StackRequest::DisableIpForwarding { responder: _ } => {
                 // TODO(toshik)
             }
         }
@@ -514,7 +516,7 @@ impl EventLoop {
 
     fn fidl_del_ethernet_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.ctx.dispatcher_mut().devices.remove_device(id) {
-            Some(info) => {
+            Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
             }
@@ -645,8 +647,8 @@ impl EventLoop {
 
     fn fidl_del_interface_address(
         &mut self,
-        id: u64,
-        addr: fidl_net_stack::InterfaceAddress,
+        _id: u64,
+        _addr: fidl_net_stack::InterfaceAddress,
     ) -> Result<(), fidl_net_stack::Error> {
         // TODO(eyalsoha): Implement this.
         Err(fidl_net_stack::Error::NotSupported)
@@ -656,7 +658,7 @@ impl EventLoop {
         get_all_routes(&self.ctx)
             .filter_map(|entry| match entry.try_into_fidl_with_ctx(self.ctx.dispatcher()) {
                 Ok(entry) => Some(entry),
-                Err(e) => {
+                Err(_) => {
                     error!("Failed to map forwarding entry into FIDL");
                     None
                 }
@@ -717,7 +719,7 @@ impl EventLoop {
         // core to get an id, then reach into the driver to get updated info before triggering the
         // core to allow traffic on the interface.
         let generate_core_id =
-            |dev_info: &DeviceInfo| state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
+            |_dev_info: &DeviceInfo| state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
         match disp.devices.activate_device(id, generate_core_id) {
             Ok(device_info) => {
                 handle_device_state(device_info);
@@ -741,8 +743,6 @@ impl EventLoop {
         id: u64,
         handle_device_state: F,
     ) -> Result<(), fidl_net_stack::Error> {
-        let device =
-            self.ctx.dispatcher_mut().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
         match self.ctx.dispatcher_mut().devices.deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 handle_device_state(device_info);
@@ -761,12 +761,6 @@ impl EventLoop {
             }
         }
     }
-}
-
-struct TimerInfo {
-    time: zx::Time,
-    id: TimerId,
-    abort_handle: AbortHandle,
 }
 
 struct EventLoopInner {
@@ -887,6 +881,8 @@ impl Icmpv4EventDispatcher for EventLoopInner {
     // TODO(joshlf): Override default impl of `receive_icmpv4_error`.
 }
 
+// TODO(rheacock): remove `allow(unused)` once the implementation uses the inputs
+#[allow(unused)]
 impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         #[cfg(test)]

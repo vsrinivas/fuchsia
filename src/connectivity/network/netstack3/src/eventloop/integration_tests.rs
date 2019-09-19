@@ -10,16 +10,16 @@ use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use futures::{future, Future, FutureExt, StreamExt};
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr};
+use futures::{future, Future};
+use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, SubnetEither};
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
+use netstack3_core::EntryDest;
 use packet::Buf;
 use pin_utils::pin_mut;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex, Once};
-use zx;
 
 use super::*;
 use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
@@ -142,7 +142,7 @@ impl TestStack {
         let (snd, rcv) = mpsc::unbounded();
         self.set_event_listener(snd);
 
-        let mut rcv = rcv.filter_map(|e| {
+        let rcv = rcv.filter_map(|e| {
             future::ready(match e {
                 TestEvent::DeviceStatusChanged { id, status } => {
                     if if_id == id && check_status(&status) {
@@ -269,7 +269,7 @@ impl TestSetup {
         match future::select(fut, stacks_fut).await {
             future::Either::Left((result, other)) => {
                 // finish all other tasks:
-                for mut snd in end_senders.into_iter() {
+                for snd in end_senders.into_iter() {
                     snd.unbounded_send(()).unwrap();
                 }
                 let () = other.await;
@@ -304,13 +304,12 @@ impl TestSetup {
         self.sandbox.get_network_context(net_ctx_server)?;
         let (epm, epm_server) = fidl::endpoints::create_proxy::<net::EndpointManagerMarker>()?;
         net_ctx.get_endpoint_manager(epm_server)?;
-        let ep = match epm.get_endpoint(ep_name).await? {
-            Some(ep) => ep.into_proxy()?.set_link_up(up).await,
-            None => {
-                return Err(format_err!("Failed to retrieve endpoint {}", ep_name));
-            }
-        };
-        Ok(())
+        if let Some(ep) = epm.get_endpoint(ep_name).await? {
+            ep.into_proxy()?.set_link_up(up).await?;
+            Ok(())
+        } else {
+            Err(format_err!("Failed to retrieve endpoint {}", ep_name))
+        }
     }
 
     fn new() -> Result<Self, Error> {
@@ -491,8 +490,8 @@ async fn configure_endpoint_address(
         .squash_result()
         .context("Add interface address")?;
 
-    // add route:
-    let (_, subnet) = AddrSubnetEither::try_from(addr)
+    // add route to ensure `addr` is valid, the result can be safely discarded
+    let _ = AddrSubnetEither::try_from(addr)
         .expect("Invalid test subnet configuration")
         .into_addr_subnet();
 
@@ -554,7 +553,7 @@ async fn test_ping() {
 
     t.get(0).set_event_listener(sender);
 
-    let mut recv = recv.filter_map(|f| {
+    let recv = recv.filter_map(|f| {
         future::ready(match f {
             TestEvent::IcmpEchoReply { conn, seq_num, data } => Some((conn, seq_num, data)),
             _ => None,
@@ -626,8 +625,6 @@ async fn test_ethernet_link_up_down() {
         .await
         .unwrap();
     let ep_name = test_ep_name(1);
-    let ep = t.get_endpoint(&ep_name).await.unwrap();
-    let ep_info = ep.into_proxy().unwrap().get_info().await.unwrap();
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
@@ -780,7 +777,7 @@ async fn test_list_interfaces() {
         t.get(0).wait_for_interface_online(i as u64).await;
     }
 
-    let mut test_stack = t.get(0);
+    let test_stack = t.get(0);
     let ifs = test_stack.run_future(stack.list_interfaces()).await.expect("List interfaces");
     assert_eq!(ifs.len(), 3);
     // check that what we served over FIDL is correct:
@@ -1171,7 +1168,7 @@ async fn test_socket_describe() {
 #[fasync::run_singlethreaded(test)]
 async fn test_main_loop() {
     let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
-    let mut event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
+    let event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
     fasync::spawn_local(
         event_loop.run().unwrap_or_else(|e| panic!("Event loop failed with error {:?}", e)),
     );

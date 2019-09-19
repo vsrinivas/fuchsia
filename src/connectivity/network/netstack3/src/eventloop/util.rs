@@ -4,11 +4,10 @@
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
+use net_types::ip::{AddrSubnetEither, IpAddr, SubnetEither};
 use net_types::{SpecifiedAddr, Witness};
-use netstack3_core::{Context, DeviceId, EntryDest, EntryDestEither, EntryEither};
+use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither};
 use never::Never;
-use std::convert::TryFrom;
 
 /// Error returned when trying create `core` subnets with invalid values.
 #[derive(Debug)]
@@ -375,8 +374,7 @@ mod tests {
     use fidl_fuchsia_net as fidl_net;
     use fidl_fuchsia_net_stack as fidl_net_stack;
     use net_types::ethernet::Mac;
-    use net_types::ip::Subnet;
-    use std::convert::TryFrom;
+    use net_types::ip::{Ipv4Addr, Ipv6Addr};
 
     use super::*;
     use crate::eventloop::EventLoop;
@@ -418,11 +416,11 @@ mod tests {
 
     struct EmptyFakeConversionContext;
     impl ConversionContext for EmptyFakeConversionContext {
-        fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
+        fn get_core_id(&self, _binding_id: u64) -> Option<DeviceId> {
             None
         }
 
-        fn get_binding_id(&self, core_id: DeviceId) -> Option<u64> {
+        fn get_binding_id(&self, _core_id: DeviceId) -> Option<u64> {
             None
         }
     }

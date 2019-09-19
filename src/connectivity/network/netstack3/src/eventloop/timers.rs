@@ -5,8 +5,6 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
@@ -95,7 +93,7 @@ where
         fasync::spawn_local(timeout);
 
         match self.timers.entry(timer_id) {
-            Entry::Vacant(mut e) => {
+            Entry::Vacant(e) => {
                 // If we don't have any currently scheduled timers with this
                 // timer_id, we're just going to insert a new value into the
                 // vacant entry, marking it with next_id.
@@ -130,7 +128,7 @@ where
     /// If a timer with the provided `timer_id` was scheduled, returns the
     /// expiry time for it after having cancelled it.
     pub(super) fn cancel_timer(&mut self, timer_id: &T) -> Option<ZxTime> {
-        if let Some(mut t) = self.timers.remove(timer_id) {
+        if let Some(t) = self.timers.remove(timer_id) {
             // call the abort handle, in case the future hasn't fired yet:
             t.abort_handle.abort();
             Some(t.instant)
@@ -173,7 +171,7 @@ where
     /// [`schedule_timer`]: TimerDispatcher::schedule_timer
     pub(super) fn commit_timer(&mut self, event: TimerEvent<T>) -> Option<T> {
         match self.timers.entry(event.inner.clone()) {
-            Entry::Occupied(mut e) => {
+            Entry::Occupied(e) => {
                 // The event is only valid if its id matches the one in the
                 // HashMap:
                 if e.get().id == event.id {
@@ -193,7 +191,7 @@ mod tests {
     use super::*;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc;
-    use futures::{Stream, StreamExt};
+    use futures::StreamExt;
 
     struct OuterEvent(TimerEvent<usize>);
 
@@ -231,7 +229,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_scheduled_instant() {
-        let (snd, mut rcv) = mpsc::unbounded();
+        let (snd, _rcv) = mpsc::unbounded();
         let mut d = TimerDispatcher::<usize, OuterEvent>::new(snd);
 
         // Timer 1 is scheduled.

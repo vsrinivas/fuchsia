@@ -8,15 +8,15 @@ use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketMarker, ProviderRequest}
 /// Handle a fuchsia.net.icmp.Provider FIDL request, which are used for opening ICMP sockets.
 pub async fn handle_request(req: ProviderRequest) {
     match req {
-        ProviderRequest::OpenEchoSocket { config, socket, control_handle } => {
-            open_echo_socket(config, socket);
+        ProviderRequest::OpenEchoSocket { config, socket, control_handle: _ } => {
+            let _ = open_echo_socket(config, socket);
         }
     }
 }
 
 fn open_echo_socket(
-    config: EchoSocketConfig,
-    socket: ServerEnd<EchoSocketMarker>,
+    _config: EchoSocketConfig,
+    _socket: ServerEnd<EchoSocketMarker>,
 ) -> Result<(), fidl::Error> {
     // TODO(sbalana): Implement opening ICMP echo sockets
     Ok(())
@@ -61,7 +61,7 @@ mod test {
         // Open ICMP Echo socket from Alice to Bob
         let source_stack = t.get(ALICE);
         let icmp_provider = source_stack.connect_icmp_provider().unwrap();
-        let mut config = EchoSocketConfig {
+        let config = EchoSocketConfig {
             local: Some(IpAddress::Ipv4(Ipv4Address { addr: ALICE_IP })),
             remote: Some(IpAddress::Ipv4(Ipv4Address { addr: BOB_IP })),
         };
@@ -69,7 +69,7 @@ mod test {
         let (socket_client, socket_server) =
             fidl::endpoints::create_endpoints::<EchoSocketMarker>().unwrap();
         let socket = socket_client.into_proxy().unwrap();
-        let mut event_stream = socket.take_event_stream();
+        let mut _event_stream = socket.take_event_stream();
 
         icmp_provider.open_echo_socket(config, socket_server).expect("ICMP Echo socket opens");
 

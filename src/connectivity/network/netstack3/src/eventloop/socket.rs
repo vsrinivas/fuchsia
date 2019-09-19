@@ -7,7 +7,7 @@ use fuchsia_zircon::{self as zx, prelude::HandleBased};
 use futures::channel::mpsc;
 use futures::{TryFutureExt, TryStreamExt};
 use log::error;
-use net_types::ip::{AddrSubnet, AddrSubnetEither, IpAddr, IpVersion, Subnet, SubnetEither};
+use net_types::ip::{IpAddr, IpVersion};
 use std::sync::{Arc, Mutex};
 
 pub struct SocketControlWorker {
@@ -25,7 +25,7 @@ pub struct SocketControlWorkerInner {
 #[derive(Debug)]
 pub enum SocketControlInfo {
     Unbound(UnboundSocket),
-    Bound(SocketWorker),
+    _Bound(SocketWorker),
 }
 
 #[derive(Debug)]
@@ -67,11 +67,13 @@ impl SocketControlWorker {
         })
     }
 
+    // TODO(rheacock): remove `allow(unused)` once this function is used
+    #[allow(unused)]
     pub fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
         fasync::spawn_local(
             async move {
                 while let Some(evt) = self.events.try_next().await? {
-                    sender.unbounded_send(Event::FidlSocketControlEvent((
+                    let _ = sender.unbounded_send(Event::FidlSocketControlEvent((
                         Arc::clone(&self.inner),
                         evt,
                     )));
@@ -84,7 +86,7 @@ impl SocketControlWorker {
 }
 
 impl SocketControlWorkerInner {
-    pub fn handle_request(&mut self, event_loop: &mut EventLoop, req: psocket::ControlRequest) {
+    pub fn handle_request(&mut self, _event_loop: &mut EventLoop, req: psocket::ControlRequest) {
         match req {
             psocket::ControlRequest::Clone { .. } => {}
             psocket::ControlRequest::Close { .. } => {}
@@ -93,7 +95,7 @@ impl SocketControlWorkerInner {
                 if let Ok(peer) = peer {
                     let mut info =
                         fidl_fuchsia_io::NodeInfo::Socket(fidl_fuchsia_io::Socket { socket: peer });
-                    responder.send(&mut info);
+                    let _ = responder.send(&mut info);
                 }
                 // If the call to duplicate_handle fails, we have no choice but to drop the
                 // responder and close the channel, since Describe must be infallible.
@@ -124,7 +126,9 @@ pub struct SocketWorker {
 }
 
 impl SocketWorker {
-    pub fn spawn(mut self) {
+    // TODO(rheacock): remove `allow(unused)` once this is implemented
+    #[allow(unused)]
+    pub fn spawn(self) {
         unimplemented!()
     }
 }
