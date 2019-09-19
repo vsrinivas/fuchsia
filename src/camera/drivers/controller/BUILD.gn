@@ -13,7 +13,9 @@ driver_module("controller-driver") {
   deps = [
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gdc",
-    "//zircon/system/banjo/ddk.protocol.isp",
+    "//sdk/banjo/ddk.protocol.isp",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",

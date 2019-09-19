@@ -43,7 +43,6 @@ group("banjo") {
     "ddk.protocol.intelgpucore",
     "ddk.protocol.intelhda.codec",
     "ddk.protocol.iommu",
-    "ddk.protocol.isp",
     "ddk.protocol.mailbox",
     "ddk.protocol.mipicsi",
     "ddk.protocol.nand",

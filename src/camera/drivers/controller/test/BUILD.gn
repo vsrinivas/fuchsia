@@ -14,7 +14,7 @@ executable("controller-test") {
   deps = [
     "//src/camera/drivers/test_utils",
     "//zircon/system/banjo/ddk.protocol.gdc",
-    "//zircon/system/banjo/ddk.protocol.isp",
+    "//sdk/banjo/ddk.protocol.isp",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
