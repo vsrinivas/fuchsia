@@ -4,21 +4,25 @@
 
 #![cfg(test)]
 
-use failure::{Error, ResultExt};
-use fidl::endpoints::create_proxy;
-use fidl_fuchsia_net_oldhttp as oldhttp;
-use fuchsia_async as fasync;
-use fuchsia_component::client::{launch, launcher};
-use rouille::{self, router, Request, Response};
-use std::thread;
+use {
+    failure::{Error, ResultExt},
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_net_oldhttp as oldhttp,
+    fuchsia_async as fasync,
+    fuchsia_component::client::{launch, launcher},
+    fuchsia_component::fuchsia_single_component_package_url,
+    rouille::{self, router, Request, Response},
+    std::thread,
+};
 
 const SERVER_IP: &str = "[::]";
 const SERVER_PORT: &str = "5646";
+const ROOT_DOCUMENT: &str = "Root document\n";
 
 pub fn serve_request(request: &Request) -> Response {
     router!(request,
         (GET) (/) => {
-            rouille::Response::text("Root document\n")
+            rouille::Response::text(ROOT_DOCUMENT)
         },
         _ => {
             rouille::Response::text("File not found\n").with_status_code(404)
@@ -37,18 +41,22 @@ pub fn start_test_server() -> Result<(), Error> {
 
 // Disabled because test is flaky. See FLK-217.
 #[ignore]
-#[fasync::run_singlethreaded]
-#[test]
-async fn test_oldhttp() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn test_new_client() -> Result<(), Error> {
+    test_oldhttp(fuchsia_single_component_package_url!("http_client"), false).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_old_client() -> Result<(), Error> {
+    test_oldhttp(fuchsia_single_component_package_url!("http"), true).await
+}
+
+async fn test_oldhttp(package_path: &str, check_body: bool) -> Result<(), Error> {
     start_test_server()?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
-    let http_client = launch(
-        &launcher,
-        "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx".to_string(),
-        None,
-    )
-    .context("Failed to launch http_client")?;
+    let http_client = launch(&launcher, package_path.to_string(), None)
+        .context("Failed to launch http_client")?;
 
     let (loader, loader_server) = create_proxy::<oldhttp::UrlLoaderMarker>()?;
     let service = http_client.connect_to_service::<oldhttp::HttpServiceMarker>()?;
@@ -67,7 +75,26 @@ async fn test_oldhttp() -> Result<(), Error> {
     let response = loader.start(&mut request).await?;
 
     assert_eq!(response.status_code, 200);
-    // We can't check the body yet because the service doesn't return it.
+    let expected_header_names = ["Server", "Date", "Content-Type", "Content-Length"];
+    // If the webserver started above ever returns different headers, or changes the order, this
+    // assertion will fail.
+    let response_headers: Vec<String> =
+        response.headers.unwrap().iter().map(|h| h.name.clone()).collect();
+    assert_eq!(&response_headers, &expected_header_names);
+
+    if check_body {
+        match *response.body.unwrap() {
+            oldhttp::UrlBody::Buffer(b) => {
+                // Temporary check until we can use const fn when defining buf below.
+                assert_eq!(ROOT_DOCUMENT.len(), 14);
+                assert_eq!(b.size, ROOT_DOCUMENT.len() as u64);
+                let mut buf = [0; 14];
+                b.vmo.read(&mut buf, 0).unwrap();
+                assert_eq!(&buf, ROOT_DOCUMENT.as_bytes());
+            }
+            oldhttp::UrlBody::Stream(_) => panic!("Unexpected stream for response body"),
+        }
+    }
 
     Ok(())
 }

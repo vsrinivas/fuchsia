@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_
-#define GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_
+#ifndef GARNET_BIN_HTTP_HTTP_CLIENT_H_
+#define GARNET_BIN_HTTP_HTTP_CLIENT_H_
 
 #include <zircon/status.h>
 
@@ -464,7 +464,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         ParseHeaderField(header, &name, &value);
         hdr.name = std::move(name);
         hdr.value = std::move(value);
-        response.headers.emplace({std::move(hdr)});
+        response.headers->push_back(std::move(hdr));
       }
 
       response.body = std::make_unique<::fuchsia::net::oldhttp::URLBody>();
@@ -557,4 +557,4 @@ void asio::detail::throw_exception(const Exception& e) {
 }
 #endif
 
-#endif  // GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_
+#endif  // GARNET_BIN_HTTP_HTTP_CLIENT_H_
