@@ -1411,4 +1411,22 @@ TEST(State, MultithreadingTest) {
                                                 "root\0\0\0\0"));
 }
 
+TEST(State, OutOfOrderDeletion) {
+  // Ensure that deleting properties after their parent does not cause a crash.
+  auto state = State::CreateWithSize(4096);
+  {
+    auto root = state->CreateRootNode();
+
+    inspect::StringProperty a, b, c;
+    auto base = root.CreateChild("base");
+    c = base.CreateString("c", "test");
+    b = base.CreateString("b", "test");
+    a = base.CreateString("a", "test");
+    ASSERT_TRUE(!!base);
+    ASSERT_TRUE(!!c);
+    ASSERT_TRUE(!!b);
+    ASSERT_TRUE(!!a);
+  }
+}
+
 }  // namespace

@@ -539,13 +539,17 @@ void State::DecrementParentRefcount(BlockIndex value_index) {
       case BlockType::kTombstone:
         ZX_ASSERT(parent->payload.u64 != 0);
         if (--parent->payload.u64 == 0) {
+          // The tombstone parent is no longer referenced and can be deleted.
+          // Continue decrementing refcounts.
           BlockIndex next_parent_index =
               ValueBlockFields::ParentIndex::Get<BlockIndex>(parent->header);
           heap_->Free(ValueBlockFields::NameIndex::Get<BlockIndex>(parent->header));
           heap_->Free(parent_index);
           parent_index = next_parent_index;
+          break;
         }
-        break;
+        // The tombstone parent is still referenced. Done decrementing refcounts.
+        return;
       default:
         ZX_DEBUG_ASSERT_MSG(false, "Invalid parent type %u",
                             static_cast<uint32_t>(GetType(parent)));
