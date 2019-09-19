@@ -125,6 +125,16 @@ class TileChrome extends StatelessWidget {
                     controller: titleFieldController,
                     autofocus: true,
                     onSubmitted: (_) => onTapDone(),
+                    cursorWidth: 8,
+                    cursorRadius: Radius.zero,
+                    cursorColor: Colors.white,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.zero,
+                      hintText: '              NAME THIS STORY',
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
                   )
                 : _buildTitleBarTextButton(context, name ?? '<>', onEdit),
           ),
