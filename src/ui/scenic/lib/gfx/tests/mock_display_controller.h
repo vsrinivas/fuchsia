@@ -18,28 +18,18 @@ namespace test {
 
 class MockDisplayController : public fuchsia::hardware::display::testing::Controller_TestBase {
  public:
+  using CheckConfigFn =
+      std::function<void(bool, fuchsia::hardware::display::ConfigResult*,
+                         std::vector<fuchsia::hardware::display::ClientCompositionOp>*)>;
+  using SetDisplayColorConversionFn = std::function<void(
+      uint64_t, std::array<float, 3>, std::array<float, 9>, std::array<float, 3>)>;
+  using ImportEventFn = std::function<void(zx::event event, uint64_t event_id)>;
 
-    MockDisplayController() : binding_(this) {}
+  MockDisplayController() : binding_(this) {}
 
   void NotImplemented_(const std::string& name) final {}
 
-  void ImportEvent(zx::event event, uint64_t event_id) override {
-    last_imported_event_koid_ = fsl::GetKoid(event.get());
-    last_imported_event_id_ = event_id;
-  }
-
-  void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
-                                 std::array<float, 9> coefficients,
-                                 std::array<float, 3> postoffsets) override {
-    color_conversion_display_id_ = display_id;
-    color_conversion_preoffsets_ = preoffsets;
-    color_conversion_coefficients_ = coefficients;
-    color_conversion_postoffsets_ = postoffsets;
-  }
-
-  void WaitForMessage() {
-      binding_.WaitForMessage();
-  }
+  void WaitForMessage() { binding_.WaitForMessage(); }
 
   void Bind(zx::channel device_channel, zx::channel controller_channel,
             async_dispatcher_t* dispatcher = nullptr) {
@@ -49,10 +39,25 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
                   dispatcher);
   }
 
+  void set_import_event_fn(ImportEventFn fn) { import_event_fn_ = fn; }
 
-  using CheckConfigFn =
-      std::function<void(bool, fuchsia::hardware::display::ConfigResult*,
-                          std::vector<fuchsia::hardware::display::ClientCompositionOp>*)>;
+  void ImportEvent(zx::event event, uint64_t event_id) override {
+    if (import_event_fn_) {
+      import_event_fn_(std::move(event), event_id);
+    }
+  }
+
+  void set_display_color_conversion_fn(SetDisplayColorConversionFn fn) {
+    set_display_color_conversion_fn_ = fn;
+  }
+
+  void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
+                                 std::array<float, 9> coefficients,
+                                 std::array<float, 3> postoffsets) override {
+    if (set_display_color_conversion_fn_) {
+      set_display_color_conversion_fn_(display_id, preoffsets, coefficients, postoffsets);
+    }
+  }
 
   void set_check_config_fn(CheckConfigFn fn) { check_config_fn_ = fn; }
 
@@ -66,32 +71,21 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     callback(std::move(result), std::move(ops));
   }
 
-  zx_koid_t last_imported_event_koid() const { return last_imported_event_koid_; }
-  uint64_t last_imported_event_id() const { return last_imported_event_id_; }
+  EventSender_& events() { return binding_.events(); }
 
-  uint64_t color_conversion_display_id() const { return color_conversion_display_id_; }
-  std::array<float, 3> color_conversion_preoffsets() const { return color_conversion_preoffsets_; }
-  std::array<float, 9> color_conversion_coefficients() const {
-    return color_conversion_coefficients_;
-  }
-  std::array<float, 3> color_conversion_postoffsets() const {
-    return color_conversion_postoffsets_;
-  }
+  void ResetDeviceChannel() { device_channel_.reset(); }
+
+  void ResetControllerBinding() { binding_.Close(ZX_ERR_INTERNAL); }
+
+  fidl::Binding<fuchsia::hardware::display::Controller>& binding() { return binding_; }
 
  private:
+  CheckConfigFn check_config_fn_;
+  SetDisplayColorConversionFn set_display_color_conversion_fn_;
+  ImportEventFn import_event_fn_;
+
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
   zx::channel device_channel_;
-
-
-  zx_koid_t last_imported_event_koid_ = 0;
-  uint64_t last_imported_event_id_ = fuchsia::hardware::display::invalidId;
-
-  uint64_t color_conversion_display_id_;
-  std::array<float, 3> color_conversion_preoffsets_;
-  std::array<float, 9> color_conversion_coefficients_;
-  std::array<float, 3> color_conversion_postoffsets_;
-
-  CheckConfigFn check_config_fn_;
 };
 
 }  // namespace test

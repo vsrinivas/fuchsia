@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <zircon/syscalls.h>
@@ -10,6 +12,8 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 #include "src/ui/scenic/lib/gfx/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
@@ -45,8 +49,6 @@ class CompositorTest : public SessionTest {
   void TearDown() override {
     SessionTest::TearDown();
 
-    view_linker_.reset();
-    resource_linker_.reset();
     scene_graph_.reset();
     display_manager_.reset();
     sysmem_.reset();
@@ -56,27 +58,9 @@ class CompositorTest : public SessionTest {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
     FXL_DCHECK(!scene_graph_);
-    FXL_DCHECK(!resource_linker_);
-    FXL_DCHECK(!view_linker_);
 
     // Generate scene graph.
     scene_graph_ = std::make_unique<SceneGraph>(context_provider_.context());
-
-    // Generate other parameters needed for session context.
-    resource_linker_ = std::make_unique<ResourceLinker>();
-    view_linker_ = std::make_unique<ViewLinker>();
-
-    ChannelPair device_channel = CreateChannelPair();
-    ChannelPair controller_channel = CreateChannelPair();
-
-    mock_display_controller_.Bind(std::move(device_channel.server),
-                                  std::move(controller_channel.server));
-
-    display_controller_.Bind(std::move(controller_channel.client));
-
-    // Apply to the session context;
-    session_context.view_linker = view_linker_.get();
-    session_context.resource_linker = resource_linker_.get();
 
     // Finally apply scene graph weak pointer.
     session_context.scene_graph = scene_graph_->GetWeakPtr();
@@ -86,56 +70,83 @@ class CompositorTest : public SessionTest {
   }
 
   CommandContext CreateCommandContext() {
-    return CommandContext(/* batch_gpu_uploader */ nullptr, sysmem_.get(), display_manager_.get(),
-                          scene_graph_->GetWeakPtr());
+    return CommandContext(/*batch_gpu_uploader=*/nullptr, /*sysmem=*/sysmem_.get(),
+                          display_manager_.get(), scene_graph_->GetWeakPtr());
   }
 
   DisplayManager* display_manager() const { return display_manager_.get(); }
 
- protected:
-  fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller;
-  MockDisplayController mock_display_controller_;
-  fuchsia::hardware::display::ControllerSyncPtr display_controller_;
-
  private:
   std::unique_ptr<Sysmem> sysmem_;
+  fuchsia::hardware::display::ControllerSyncPtr display_controller_;
   std::unique_ptr<DisplayManager> display_manager_;
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<SceneGraph> scene_graph_;
-
-  std::unique_ptr<ViewLinker> view_linker_;
-  std::unique_ptr<ResourceLinker> resource_linker_;
 };
 
 TEST_F(CompositorTest, Validation) {
-  const int CompositorId = 15;
+  ChannelPair device_channel = CreateChannelPair();
+  ChannelPair controller_channel = CreateChannelPair();
+
+  display_manager()->BindDefaultDisplayController(std::move(device_channel.client),
+                                                  std::move(controller_channel.client));
+
   std::array<float, 3> preoffsets = {0, 0, 0};
   std::array<float, 9> matrix = {0.3, 0.6, 0.1, 0.3, 0.6, 0.1, 0.3, 0.6, 0.1};
   std::array<float, 3> postoffsets = {0, 0, 0};
 
+  // Create a compositor
+  const int CompositorId = 15;
   ASSERT_TRUE(Apply(scenic::NewCreateDisplayCompositorCmd(CompositorId)));
+
+  // Create a mock display controller that runs on a separate thread.
+  std::thread server([&preoffsets, &matrix, &postoffsets,
+                      device_channel = std::move(device_channel.server),
+                      controller_channel = std::move(controller_channel.server)]() mutable {
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+    MockDisplayController mock_display_controller;
+
+    mock_display_controller.set_display_color_conversion_fn(
+        [&](uint64_t display_id, std::array<float, 3> preoffsets_out,
+            std::array<float, 9> matrix_out, std::array<float, 3> postoffsets_out) {
+          // Check that the display controller got the color correction matrix we passed in.
+          EXPECT_EQ(preoffsets, preoffsets_out);
+          EXPECT_EQ(matrix, matrix_out);
+          EXPECT_EQ(postoffsets, postoffsets_out);
+        });
+    mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
+
+    // Waits for a call to |SetDisplayColorConversion| by client.
+    mock_display_controller.WaitForMessage();
+  });
 
   ASSERT_TRUE(Apply(
       scenic::NewSetDisplayColorConversionCmdHACK(CompositorId, preoffsets, matrix, postoffsets)));
 
-  Display* display = display_manager()->default_display();
-  ASSERT_TRUE(display != nullptr);
-
-  const ColorTransform& transform = display->color_transform();
-
-  ASSERT_TRUE(transform.preoffsets == preoffsets);
-  ASSERT_TRUE(transform.matrix == matrix);
-  ASSERT_TRUE(transform.postoffsets == postoffsets);
+  server.join();
 }
 
-TEST_F(CompositorTest, ColorConversionConfigChecking) {
+using CompositorTestSimple = gtest::TestLoopFixture;
+
+TEST_F(CompositorTestSimple, ColorConversionConfigChecking) {
+  fuchsia::hardware::display::ControllerSyncPtr display_controller;
+  MockDisplayController mock_display_controller;
+
+  ChannelPair device_channel = CreateChannelPair();
+  ChannelPair controller_channel = CreateChannelPair();
+
+  mock_display_controller.Bind(std::move(device_channel.server),
+                               std::move(controller_channel.server));
+
+  display_controller.Bind(std::move(controller_channel.client));
+
   ColorTransform transform;
-  Display* display = display_manager()->default_display();
 
   uint32_t check_config_call_count = 0;
   bool should_discard_config = false;
   auto check_config_fn = [&](bool discard, fuchsia::hardware::display::ConfigResult* result,
-                            std::vector<fuchsia::hardware::display::ClientCompositionOp>* ops) {
+                             std::vector<fuchsia::hardware::display::ClientCompositionOp>* ops) {
     *result = fuchsia::hardware::display::ConfigResult::UNSUPPORTED_CONFIG;
 
     fuchsia::hardware::display::ClientCompositionOp op;
@@ -146,21 +157,20 @@ TEST_F(CompositorTest, ColorConversionConfigChecking) {
       should_discard_config = true;
     }
   };
-  mock_display_controller_.set_check_config_fn(check_config_fn);
+  mock_display_controller.set_check_config_fn(check_config_fn);
 
-  std::thread client([display_controller = std::move(display_controller_), display,
-                      transform]() mutable {
-    DisplayManager::SetDisplayColorConversion(display, display_controller, transform);
+  std::thread client([display_controller = std::move(display_controller), transform]() mutable {
+    DisplaySwapchain::SetDisplayColorConversion(/*id=*/1, display_controller, transform);
   });
 
   // Wait for |SetDisplayColorConversion|.
-  mock_display_controller_.WaitForMessage();
-  
+  mock_display_controller.WaitForMessage();
+
   // Wait for |CheckConfig|.
-  mock_display_controller_.WaitForMessage();
-  
+  mock_display_controller.WaitForMessage();
+
   // Wait for |CheckConfig|.
-  mock_display_controller_.WaitForMessage();
+  mock_display_controller.WaitForMessage();
 
   client.join();
 
@@ -169,6 +179,7 @@ TEST_F(CompositorTest, ColorConversionConfigChecking) {
   EXPECT_EQ(check_config_call_count, 2U);
   EXPECT_TRUE(should_discard_config);
 }
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

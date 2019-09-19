@@ -53,10 +53,6 @@ class Display {
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
-  void set_color_transform(const ColorTransform& transform) { color_transform_ = transform; }
-
-  const ColorTransform& color_transform() const { return color_transform_; }
-
  protected:
   // Protected for testing purposes.
   zx::duration vsync_interval_;
@@ -69,12 +65,6 @@ class Display {
   // Vsync interval of a 60 Hz screen.
   // Used as a default value before real timings arrive.
   static constexpr zx::duration kNsecsFor60fps = zx::duration(16'666'667);  // 16.666667ms
-
-  // This is the color transform used by the display controller
-  // to augment the final display color. See |ColorTransform|
-  // comments for details on how this transform modifies the
-  // display pixels.
-  ColorTransform color_transform_;
 
   const uint64_t display_id_;
   const uint32_t width_in_px_;

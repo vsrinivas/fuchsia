@@ -5,98 +5,48 @@
 #include "src/ui/scenic/lib/gfx/displays/display_manager.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/async/default.h>
 
+#include "lib/fit/function.h"
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-DisplayManager::~DisplayManager() {
-  if (wait_.object() != ZX_HANDLE_INVALID) {
-    wait_.Cancel();
-  }
-}
-
-void DisplayManager::WaitForDefaultDisplayController(fit::closure callback) {
+void DisplayManager::WaitForDefaultDisplayController(fit::closure display_available_cb) {
   FXL_DCHECK(!default_display_);
 
-  display_available_cb_ = std::move(callback);
+  display_available_cb_ = std::move(display_available_cb);
+
   dc_watcher_.WaitForDisplayController([this](zx::channel dc_device, zx::channel dc_channel) {
-    dc_device_ = std::move(dc_device);
-    dc_channel_ = dc_channel.get();
-    display_controller_.Bind(std::move(dc_channel));
-
-    // TODO(FIDL-183): Resolve this hack when synchronous interfaces
-    // support events.
-    auto dispatcher =
-        static_cast<fuchsia::hardware::display::Controller::Proxy_*>(dc_event_dispatcher_.get());
-    dispatcher->DisplaysChanged = [this](auto added, auto removed) {
-      DisplaysChanged(std::move(added), std::move(removed));
-    };
-    dispatcher->ClientOwnershipChange = [this](auto change) { ClientOwnershipChange(change); };
-    dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
-                               std::vector<uint64_t> images) {
-      if (display_id == default_display_->display_id() && vsync_cb_) {
-        vsync_cb_(zx::time(timestamp), images);
-      }
-    };
-
-    wait_.set_object(dc_channel_);
-    wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    wait_.Begin(async_get_default_dispatcher());
+    BindDefaultDisplayController(std::move(dc_device), std::move(dc_channel));
   });
 }
 
-void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
-                             zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status & ZX_CHANNEL_PEER_CLOSED) {
-    // TODO(SCN-244): handle this more robustly.
-    FXL_CHECK(false) << "Display controller channel lost";
-    return;
-  }
-
-  // Read FIDL message.
-  uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
-  if (msg.Read(dc_channel_, 0) != ZX_OK || !msg.has_header()) {
-    FXL_LOG(WARNING) << "Display controller callback read failed";
-    return;
-  }
-  // Re-arm the wait.
-  wait_.Begin(async_get_default_dispatcher());
-
-  // TODO(FIDL-183): Resolve this hack when synchronous interfaces
-  // support events.
-  static_cast<fuchsia::hardware::display::Controller::Proxy_*>(dc_event_dispatcher_.get())
-      ->Dispatch_(std::move(msg));
+void DisplayManager::BindDefaultDisplayController(zx::channel dc_device, zx::channel dc_channel) {
+  // TODO(36549): Don't need to pass |dc_channel_handle| as a separate arg when
+  // SynchronousInterfacePtr gets a channel() getter.
+  zx_handle_t dc_channel_handle = dc_channel.get();
+  default_display_controller_ = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
+  default_display_controller_->Bind(std::move(dc_channel));
+  default_display_controller_listener_ = std::make_shared<DisplayControllerListener>(
+      std::move(dc_device), default_display_controller_, dc_channel_handle);
+  default_display_controller_listener_->InitializeCallbacks(
+      /*on_invalid_cb=*/nullptr, fit::bind_member(this, &DisplayManager::OnDisplaysChanged),
+      fit::bind_member(this, &DisplayManager::OnClientOwnershipChange));
 }
 
-void DisplayManager::DisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
-                                     std::vector<uint64_t> removed) {
+void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
+                                       std::vector<uint64_t> removed) {
   if (!default_display_) {
     FXL_DCHECK(added.size());
 
     auto& display = added[0];
     auto& mode = display.modes[0];
 
-    zx_status_t status;
-    zx_status_t transport_status = display_controller_->CreateLayer(&status, &layer_id_);
-    if (transport_status != ZX_OK || status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create layer";
-      return;
-    }
-
-    status = display_controller_->SetDisplayLayers(display.id, {layer_id_});
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to configure display layers";
-      return;
-    }
-
     default_display_ =
         std::make_unique<Display>(display.id, mode.horizontal_resolution, mode.vertical_resolution,
                                   std::move(display.pixel_format));
-    ClientOwnershipChange(owns_display_controller_);
+    OnClientOwnershipChange(owns_display_controller_);
 
     display_available_cb_();
     display_available_cb_ = nullptr;
@@ -104,15 +54,14 @@ void DisplayManager::DisplaysChanged(std::vector<fuchsia::hardware::display::Inf
     for (uint64_t id : removed) {
       if (default_display_->display_id() == id) {
         // TODO(SCN-244): handle this more robustly.
-        FXL_DCHECK(false) << "Display disconnected";
-        wait_.Cancel();
+        FXL_CHECK(false) << "Display disconnected";
         return;
       }
     }
   }
 }
 
-void DisplayManager::ClientOwnershipChange(bool has_ownership) {
+void DisplayManager::OnClientOwnershipChange(bool has_ownership) {
   owns_display_controller_ = has_ownership;
   if (default_display_) {
     if (has_ownership) {
@@ -123,156 +72,6 @@ void DisplayManager::ClientOwnershipChange(bool has_ownership) {
                                                  fuchsia::ui::scenic::displayNotOwnedSignal);
     }
   }
-}
-
-uint64_t DisplayManager::ImportEvent(const zx::event& event) {
-  zx::event dup;
-  uint64_t event_id = next_event_id_++;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate event";
-    return fuchsia::hardware::display::invalidId;
-  }
-
-  if (display_controller_->ImportEvent(std::move(dup), event_id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to import display controller event";
-    return fuchsia::hardware::display::invalidId;
-  }
-  return event_id;
-}
-
-void DisplayManager::ReleaseEvent(uint64_t id) {
-  if (display_controller_->ReleaseEvent(id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to release display controller event";
-  }
-}
-
-void DisplayManager::SetImageConfig(int32_t width, int32_t height, zx_pixel_format_t format) {
-  image_config_.height = height;
-  image_config_.width = width;
-  image_config_.pixel_format = format;
-
-#if defined(__x86_64__)
-  // IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
-  image_config_.type = 1;
-#elif defined(__aarch64__)
-  image_config_.type = 0;
-#else
-  FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
-#endif
-
-  if (display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set layer primary config";
-  }
-}
-
-uint64_t DisplayManager::ImportImage(uint64_t collection_id, uint32_t index) {
-  zx_status_t status, result_status = ZX_OK;
-  uint64_t id;
-  status =
-      display_controller_->ImportImage(image_config_, collection_id, index, &result_status, &id);
-  if (status != ZX_OK || result_status != ZX_OK) {
-    return fuchsia::hardware::display::invalidId;
-  }
-  return id;
-}
-
-void DisplayManager::ReleaseImage(uint64_t id) {
-  if (display_controller_->ReleaseImage(id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to release image";
-  }
-}
-
-uint64_t DisplayManager::ImportBufferCollection(
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
-  uint64_t buffer_collection_id = next_buffer_collection_id_++;
-  zx_status_t status;
-  if (display_controller_->ImportBufferCollection(buffer_collection_id, std::move(token),
-                                                  &status) != ZX_OK ||
-      status != ZX_OK) {
-    FXL_LOG(ERROR) << "ImportBufferCollection failed - status: " << status;
-    return 0;
-  }
-
-  if (display_controller_->SetBufferCollectionConstraints(buffer_collection_id, image_config_,
-                                                          &status) != ZX_OK ||
-      status != ZX_OK) {
-    FXL_LOG(ERROR) << "SetBufferCollectionConstraints failed.";
-    if (display_controller_->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
-    }
-    return 0;
-  }
-
-  return buffer_collection_id;
-}
-
-void DisplayManager::ReleaseBufferCollection(uint64_t id) {
-  if (display_controller_->ReleaseBufferCollection(id) != ZX_OK) {
-    FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
-  }
-}
-
-void DisplayManager::Flip(Display* display, uint64_t buffer, uint64_t render_finished_event_id,
-                          uint64_t signal_event_id) {
-  zx_status_t status = display_controller_->SetLayerImage(
-      layer_id_, buffer, render_finished_event_id, signal_event_id);
-  // TODO(SCN-244): handle this more robustly.
-  FXL_CHECK(status == ZX_OK) << "DisplayManager::Flip failed";
-
-  status = display_controller_->ApplyConfig();
-  // TODO(SCN-244): handle this more robustly.
-  FXL_CHECK(status == ZX_OK) << "DisplayManager::Flip failed";
-}
-
-void DisplayManager::SetDisplayColorConversion(
-    Display* display, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-    const ColorTransform& transform) {
-  FXL_CHECK(display);
-  uint64_t display_id = display->display_id();
-
-  // For testing purposes, display_controller can be null
-  if (display_controller) {
-    // Attempt to apply color conversion.
-    zx_status_t status = display_controller->SetDisplayColorConversion(
-        display_id, transform.preoffsets, transform.matrix, transform.postoffsets);
-    FXL_CHECK(status == ZX_OK) << "DisplayManager:SetDisplayColorConversion failed";
-
-    // Now check the config.
-    fuchsia::hardware::display::ConfigResult result;
-    std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
-    display_controller->CheckConfig(/*discard=*/false, &result, &ops);
-
-    bool client_color_conversion_required = false;
-    if (result != fuchsia::hardware::display::ConfigResult::OK) {
-      client_color_conversion_required = true;
-    }
-
-    for (const auto& op : ops) {
-      if (op.opcode ==
-          fuchsia::hardware::display::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION) {
-        client_color_conversion_required = true;
-        break;
-      }
-    }
-
-    if (client_color_conversion_required) {
-      // Clear config by calling |CheckConfig| once more with "discard" set to true.
-      display_controller->CheckConfig(/*discard=*/true, &result, &ops);
-      // TODO (24591): Implement scenic software fallback for color correction.
-    }
-  }
-
-  // For testing and future-proofing purposes.
-  display->set_color_transform(transform);
-}
-
-void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTransform& transform) {
-  SetDisplayColorConversion(display, display_controller_, transform);
-}
-
-bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
-  vsync_cb_ = std::move(vsync_cb);
-  return display_controller_->EnableVsync(true) == ZX_OK;
 }
 
 }  // namespace gfx

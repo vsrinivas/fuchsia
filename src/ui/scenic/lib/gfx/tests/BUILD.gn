@@ -100,6 +100,7 @@ executable("unittests") {
     "camera_unittest.cc",
     "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
+    "display_controller_listener_test.cc",
     "dump_visitor_unittest.cc",
     "duration_predictor_unittest.cc",
     "escher_vulkan_smoke_test.cc",
@@ -135,6 +136,7 @@ executable("unittests") {
   ]
   deps = [
     ":testing_deps",
+    "//garnet/public/lib/fsl",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//third_party/googletest:gmock",

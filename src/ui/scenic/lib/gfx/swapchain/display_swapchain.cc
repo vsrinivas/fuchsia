@@ -18,7 +18,7 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/scenic/lib/gfx/displays/display.h"
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
@@ -71,9 +71,16 @@ vk::ImageUsageFlags GetFramebufferImageUsage();
 
 }  // namespace
 
-DisplaySwapchain::DisplaySwapchain(Sysmem* sysmem, DisplayManager* display_manager,
-                                   Display* display, escher::Escher* escher)
-    : escher_(escher), sysmem_(sysmem), display_manager_(display_manager), display_(display) {
+DisplaySwapchain::DisplaySwapchain(
+    Sysmem* sysmem,
+    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
+    std::shared_ptr<DisplayControllerListener> display_controller_listener, Display* display,
+    escher::Escher* escher)
+    : escher_(escher),
+      sysmem_(sysmem),
+      display_(display),
+      display_controller_(display_controller),
+      display_controller_listener_(display_controller_listener) {
   FXL_DCHECK(display);
   FXL_DCHECK(sysmem);
 
@@ -89,7 +96,9 @@ DisplaySwapchain::DisplaySwapchain(Sysmem* sysmem, DisplayManager* display_manag
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    if (!display_manager_->EnableVsync(fit::bind_member(this, &DisplaySwapchain::OnVsync))) {
+    display_controller_listener_->SetVsyncCallback(
+        fit::bind_member(this, &DisplaySwapchain::OnVsync));
+    if ((*display_controller_)->EnableVsync(true) != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to enable vsync";
     }
 
@@ -136,6 +145,21 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
   return false;
 #endif
 
+  zx_status_t create_layer_status;
+  zx_status_t transport_status =
+      (*display_controller_)->CreateLayer(&create_layer_status, &primary_layer_id_);
+  if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to create layer";
+    return false;
+  }
+
+  zx_status_t status =
+      (*display_controller_)->SetDisplayLayers(display_->display_id(), {primary_layer_id_});
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to configure display layers";
+    return false;
+  }
+
   const uint32_t width_in_px = display_->width_in_px();
   const uint32_t height_in_px = display_->height_in_px();
   zx_pixel_format_t pixel_format = ZX_PIXEL_FORMAT_NONE;
@@ -152,7 +176,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
     return false;
   }
 
-  display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
+  SetImageConfig(primary_layer_id_, width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // TODO(35784): Allocate all images in a single BufferCollection.
     // Create all the tokens.
@@ -171,14 +195,16 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
     }
 
     // Set display buffer constraints.
-    uint64_t display_collection_id = display_manager_->ImportBufferCollection(std::move(tokens[1]));
+    uint64_t display_collection_id = ImportBufferCollection(std::move(tokens[1]));
     if (!display_collection_id) {
       FXL_LOG(ERROR) << "Setting buffer collection constraints failed.";
       return false;
     }
 
     auto collection_closer = fbl::MakeAutoCall([this, display_collection_id]() {
-      display_manager_->ReleaseBufferCollection(display_collection_id);
+      if ((*display_controller_)->ReleaseBufferCollection(display_collection_id) != ZX_OK) {
+        FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+      }
     });
 
     // Set Vulkan buffer constraints.
@@ -313,8 +339,13 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
       buffer.escher_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
     }
 
-    buffer.fb_id = display_manager_->ImportImage(display_collection_id, 0);
-    if (buffer.fb_id == fuchsia::hardware::display::invalidId) {
+    zx_status_t import_image_status = ZX_OK;
+    zx_status_t transport_status =
+        (*display_controller_)
+            ->ImportImage(image_config_, display_collection_id, /*index=*/0, &import_image_status,
+                          &buffer.fb_id);
+    if (transport_status != ZX_OK || import_image_status != ZX_OK) {
+      buffer.fb_id = fuchsia::hardware::display::invalidId;
       FXL_LOG(ERROR) << "Importing image failed.";
       return false;
     }
@@ -338,7 +369,11 @@ DisplaySwapchain::~DisplaySwapchain() {
   }
 
   // Turn off operations.
-  display_manager_->EnableVsync(nullptr);
+  if ((*display_controller_)->EnableVsync(false) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to disable vsync";
+  }
+
+  display_controller_listener_->SetVsyncCallback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
@@ -358,11 +393,24 @@ DisplaySwapchain::~DisplaySwapchain() {
   }
 
   display_->Unclaim();
+
+  if ((*display_controller_)->SetDisplayLayers(display_->display_id(), {}) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to configure display layers";
+  } else {
+    if ((*display_controller_)->DestroyLayer(primary_layer_id_) != ZX_OK) {
+      FXL_DLOG(ERROR) << "Failed to destroy layer";
+    }
+  }
+
   for (auto& buffer : swapchain_buffers_) {
-    display_manager_->ReleaseImage(buffer.fb_id);
+    if ((*display_controller_)->ReleaseImage(buffer.fb_id) != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to release image";
+    }
   }
   for (auto& buffer : protected_swapchain_buffers_) {
-    display_manager_->ReleaseImage(buffer.fb_id);
+    if ((*display_controller_)->ReleaseImage(buffer.fb_id) != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to release image";
+    }
   }
 }
 
@@ -374,7 +422,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   zx::event render_finished_event =
       GetEventForSemaphore(escher_->device(), render_finished_escher_semaphore);
-  uint64_t render_finished_event_id = display_manager_->ImportEvent(render_finished_event);
+  uint64_t render_finished_event_id = ImportEvent(render_finished_event);
 
   if (!render_finished_escher_semaphore ||
       render_finished_event_id == fuchsia::hardware::display::invalidId) {
@@ -389,7 +437,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     return std::unique_ptr<FrameRecord>();
   }
 
-  uint64_t retired_event_id = display_manager_->ImportEvent(retired_event);
+  uint64_t retired_event_id = ImportEvent(retired_event);
   if (retired_event_id == fuchsia::hardware::display::invalidId) {
     FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
@@ -475,18 +523,59 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  display_manager_->Flip(display_, buffer.fb_id, frame_record->render_finished_event_id,
+  Flip(display_->display_id(), buffer.fb_id, frame_record->render_finished_event_id,
                          frame_record->retired_event_id);
 
-  display_manager_->ReleaseEvent(frame_record->render_finished_event_id);
-  display_manager_->ReleaseEvent(frame_record->retired_event_id);
-
+  if ((*display_controller_)->ReleaseEvent(frame_record->render_finished_event_id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to release display controller event.";
+  }
+  if ((*display_controller_)->ReleaseEvent(frame_record->retired_event_id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to release display controller event.";
+  }
   return true;
 }
 
-// Passes along color correction information to the display
+void DisplaySwapchain::SetDisplayColorConversion(
+    uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+    const ColorTransform& transform) {
+  // Attempt to apply color conversion.
+  zx_status_t status = display_controller->SetDisplayColorConversion(
+      display_id, transform.preoffsets, transform.matrix, transform.postoffsets);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING)
+        << "DisplaySwapchain:SetDisplayColorConversion failed, controller returned status: "
+        << status;
+    return;
+  }
+
+  // Now check the config.
+  fuchsia::hardware::display::ConfigResult result;
+  std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+  display_controller->CheckConfig(/*discard=*/false, &result, &ops);
+
+  bool client_color_conversion_required = false;
+  if (result != fuchsia::hardware::display::ConfigResult::OK) {
+    client_color_conversion_required = true;
+  }
+
+  for (const auto& op : ops) {
+    if (op.opcode == fuchsia::hardware::display::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION) {
+      client_color_conversion_required = true;
+      break;
+    }
+  }
+
+  if (client_color_conversion_required) {
+    // Clear config by calling |CheckConfig| once more with "discard" set to true.
+    display_controller->CheckConfig(/*discard=*/true, &result, &ops);
+    // TODO (24591): Implement scenic software fallback for color correction.
+  }
+}
+
 void DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
-  display_manager_->SetDisplayColorConversion(display_, transform);
+  FXL_CHECK(display_);
+  uint64_t display_id = display_->display_id();
+  SetDisplayColorConversion(display_id, *display_controller_, transform);
 }
 
 void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
@@ -520,9 +609,10 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   // See ::OnVsync for comment about finalization.
 }
 
-void DisplaySwapchain::OnVsync(zx::time timestamp, const std::vector<uint64_t>& image_ids) {
+void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
+                               std::vector<uint64_t> image_ids) {
   if (on_vsync_) {
-    on_vsync_(timestamp);
+    on_vsync_(zx::time(timestamp));
   }
 
   if (image_ids.empty()) {
@@ -548,7 +638,7 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, const std::vector<uint64_t>& 
       record->presented = true;
 
       if (match) {
-        record->frame_timings->OnFramePresented(record->swapchain_index, timestamp);
+        record->frame_timings->OnFramePresented(record->swapchain_index, zx::time(timestamp));
       } else {
         record->frame_timings->OnFrameDropped(record->swapchain_index);
       }
@@ -571,6 +661,81 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, const std::vector<uint64_t>& 
     }
   }
   FXL_DCHECK(match) << "Unhandled vsync";
+}
+
+uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
+  zx::event dup;
+  uint64_t event_id = next_event_id_++;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate display controller event.";
+    return fuchsia::hardware::display::invalidId;
+  }
+
+  if ((*display_controller_)->ImportEvent(std::move(dup), event_id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to import display controller event.";
+    return fuchsia::hardware::display::invalidId;
+  }
+  return event_id;
+}
+
+void DisplaySwapchain::SetImageConfig(uint64_t layer_id, int32_t width, int32_t height,
+                                      zx_pixel_format_t format) {
+  image_config_.height = height;
+  image_config_.width = width;
+  image_config_.pixel_format = format;
+
+#if defined(__x86_64__)
+  // IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
+  image_config_.type = 1;
+#elif defined(__aarch64__)
+  image_config_.type = 0;
+#else
+  FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
+#endif
+
+  if ((*display_controller_)->SetLayerPrimaryConfig(layer_id, image_config_) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to set layer primary config";
+  }
+}
+
+uint64_t DisplaySwapchain::ImportBufferCollection(
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
+  uint64_t buffer_collection_id = next_buffer_collection_id_++;
+  zx_status_t status;
+
+  if ((*display_controller_)
+              ->ImportBufferCollection(buffer_collection_id, std::move(token), &status) != ZX_OK ||
+      status != ZX_OK) {
+    FXL_LOG(ERROR) << "ImportBufferCollection failed - status: " << status;
+    return 0;
+  }
+
+  if ((*display_controller_)
+              ->SetBufferCollectionConstraints(buffer_collection_id, image_config_, &status) !=
+          ZX_OK ||
+      status != ZX_OK) {
+    FXL_LOG(ERROR) << "SetBufferCollectionConstraints failed.";
+
+    if ((*display_controller_)->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
+      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+    }
+    return 0;
+  }
+
+  return buffer_collection_id;
+}
+
+void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
+                            uint64_t signal_event_id) {
+  zx_status_t status =
+      (*display_controller_)
+          ->SetLayerImage(layer_id, buffer, render_finished_event_id, signal_event_id);
+  // TODO(SCN-244): handle this more robustly.
+  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
+
+  status = (*display_controller_)->ApplyConfig();
+  // TODO(SCN-244): handle this more robustly.
+  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 }
 
 namespace {
