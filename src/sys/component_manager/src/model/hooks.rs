@@ -5,8 +5,8 @@
 use {
     crate::{framework::FrameworkCapability, model::*},
     cm_rust::FrameworkCapabilityDecl,
-    futures::{future::BoxFuture, lock::Mutex, prelude::*},
-    std::{pin::Pin, sync::Arc},
+    futures::{future::BoxFuture, lock::Mutex},
+    std::sync::Arc,
 };
 
 // ByAddr allows two Arcs to be compared by address instead of using its contained
@@ -153,13 +153,7 @@ impl Hooks {
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,
         mut capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<Option<Box<dyn FrameworkCapability>>, ModelError>>
-                + Send
-                + 'a,
-        >,
-    > {
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.capability_routing_hooks.clone() };
             for hook in hooks.iter() {
@@ -179,7 +173,7 @@ impl Hooks {
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
         routing_facade: RoutingFacade,
-    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+    ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.bind_instance_hooks.clone() };
             for hook in hooks.iter() {
@@ -195,7 +189,7 @@ impl Hooks {
     pub fn on_add_dynamic_child<'a>(
         &'a self,
         realm: Arc<Realm>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+    ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.add_dynamic_child_hooks.clone() };
             for hook in hooks.iter() {
@@ -211,7 +205,7 @@ impl Hooks {
     pub fn on_remove_dynamic_child<'a>(
         &'a self,
         realm: Arc<Realm>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+    ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.remove_dynamic_child_hooks.clone() };
             for hook in hooks.iter() {
@@ -224,10 +218,7 @@ impl Hooks {
         })
     }
 
-    pub fn on_stop_instance<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+    pub fn on_stop_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.stop_instance_hooks.clone() };
             for hook in hooks.iter() {
@@ -243,7 +234,7 @@ impl Hooks {
     pub fn on_destroy_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), ModelError>> + Send + 'a>> {
+    ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = { self.inner.lock().await.destroy_instance_hooks.clone() };
             for hook in hooks.iter() {
