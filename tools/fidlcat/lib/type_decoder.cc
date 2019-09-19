@@ -124,6 +124,22 @@ void FeatureKindName(uint32_t feature_kind, std::ostream& os) {
   }
 }
 
+#define GuestTrapNameCase(name) \
+  case name:                    \
+    os << #name;                \
+    return
+
+void GuestTrapName(zx_guest_trap_t trap, std::ostream& os) {
+  switch (trap) {
+    GuestTrapNameCase(ZX_GUEST_TRAP_BELL);
+    GuestTrapNameCase(ZX_GUEST_TRAP_MEM);
+    GuestTrapNameCase(ZX_GUEST_TRAP_IO);
+    default:
+      os << trap;
+      return;
+  }
+}
+
 #define InfoMapsTypeCase(name) \
   case name:                   \
     os << #name;               \
@@ -704,6 +720,21 @@ void TopicName(uint32_t topic, std::ostream& os) {
   }
 }
 
+#define VcpuNameCase(name) \
+  case name:               \
+    os << #name;           \
+    return
+
+void VcpuName(uint32_t type, std::ostream& os) {
+  switch (type) {
+    VcpuNameCase(ZX_VCPU_STATE);
+    VcpuNameCase(ZX_VCPU_IO);
+    default:
+      os << type;
+      return;
+  }
+}
+
 #define VmOptionAlign(name) \
   case name:                \
     os << #name;            \
@@ -923,6 +954,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
     case SyscallType::kGpAddr:
       os << ":" << colors.green << "zx_gpaddr_t" << colors.reset << ": ";
       break;
+    case SyscallType::kGuestTrap:
+      os << ":" << colors.green << "zx_guest_trap_t" << colors.reset << ": ";
+      break;
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";
       break;
@@ -1030,6 +1064,9 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       break;
     case SyscallType::kVaddr:
       os << ":" << colors.green << "zx_vaddr_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVcpu:
+      os << ":" << colors.green << "zx_vcpu_t" << colors.reset << ": ";
       break;
     case SyscallType::kVmOption:
       os << ":" << colors.green << "zx_vm_option_t" << colors.reset << ": ";

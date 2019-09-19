@@ -83,8 +83,7 @@ const char* const kSyscallFilterHelp = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
       Can be passed multiple times.
       By default, only zx_channel_.* syscalls are displayed.
-      To display all the syscalls, use: --syscalls ".*"
-      This option is under development (we are adding the syscalls).)";
+      To display all the syscalls, use: --syscalls=".*")";
 
 const char* const kExcludeSyscallFilterHelp = R"(  --exclude-syscalls
       A regular expression which selects the syscalls to not decode and display.
@@ -92,7 +91,7 @@ const char* const kExcludeSyscallFilterHelp = R"(  --exclude-syscalls
       To be displayed, a syscall must verify --syscalls and not verify
       --exclude-syscalls.
       To display all the syscalls but the zx_handle syscalls, use:
-        --syscalls ".*" --exclude-syscalls "zx_handle_.*")";
+        --syscalls=".*" --exclude-syscalls="zx_handle_.*")";
 
 const char* const kPrettyPrintHelp = R"(  --pretty-print
       Use a formated print instead of JSON.)";

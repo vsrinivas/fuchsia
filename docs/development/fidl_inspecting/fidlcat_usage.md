@@ -254,3 +254,29 @@ echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1
 
 You have the stack frames for the exception even if you didn't ask for the stack
 frames with the **--stack** options.
+
+## Syscalls
+
+By default, fidlcat only displays the zx_channel syscalls.
+
+You can display all the syscalls and choose which ones you want to display.
+
+The **--syscalls** option let you define a regular expression which selects the
+syscalls to decode and display.
+
+It can be passed multiple times.
+
+To display all the syscalls, use: **--syscalls=".\*"**
+
+The **--exclude-syscalls** flag lets you exclude some syscalls selected by
+**--syscalls**. It's a regular expression which selects the syscalls to not
+decode and display.
+
+It can be passed multiple times.
+
+To be displayed, a syscall must satisfy the **--syscalls** pattern and not
+satisfy the **--exclude-syscalls** pattern.
+
+To display all the syscalls but the zx_handle syscalls, use:
+
+--syscalls ".\*" --exclude-syscalls "zx_handle_.\*"

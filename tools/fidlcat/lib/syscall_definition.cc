@@ -9,6 +9,7 @@
 #include <zircon/system/public/zircon/syscalls/policy.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/syscalls/profile.h>
+#include <zircon/system/public/zircon/syscalls/smc.h>
 #include <zircon/system/public/zircon/syscalls/system.h>
 
 #include <cstdint>
@@ -1824,6 +1825,92 @@ const ZxProfileInfo* ZxProfileInfo::GetClass() {
   return instance_;
 }
 
+class ZxSmcParameters : public Class<zx_smc_parameters_t> {
+ public:
+  static const ZxSmcParameters* GetClass();
+
+  static uint32_t func_id(const zx_smc_parameters_t* from) { return from->func_id; }
+  static uint64_t arg1(const zx_smc_parameters_t* from) { return from->arg1; }
+  static uint64_t arg2(const zx_smc_parameters_t* from) { return from->arg2; }
+  static uint64_t arg3(const zx_smc_parameters_t* from) { return from->arg3; }
+  static uint64_t arg4(const zx_smc_parameters_t* from) { return from->arg4; }
+  static uint64_t arg5(const zx_smc_parameters_t* from) { return from->arg5; }
+  static uint64_t arg6(const zx_smc_parameters_t* from) { return from->arg6; }
+  static uint16_t client_id(const zx_smc_parameters_t* from) { return from->client_id; }
+  static uint16_t secure_os_id(const zx_smc_parameters_t* from) { return from->secure_os_id; }
+
+ private:
+  ZxSmcParameters() : Class("zx_smc_parameters_t") {
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint32_t>>(
+        "func_id", SyscallType::kUint32, func_id));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg1", SyscallType::kUint64, arg1));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg2", SyscallType::kUint64, arg2));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg3", SyscallType::kUint64, arg3));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg4", SyscallType::kUint64, arg4));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg5", SyscallType::kUint64, arg5));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint64_t>>(
+        "arg6", SyscallType::kUint64, arg6));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint16_t>>(
+        "client_id", SyscallType::kUint16, client_id));
+    AddField(std::make_unique<ClassField<zx_smc_parameters_t, uint16_t>>(
+        "secure_os_id", SyscallType::kUint16, secure_os_id));
+  }
+  ZxSmcParameters(const ZxSmcParameters&) = delete;
+  ZxSmcParameters& operator=(const ZxSmcParameters&) = delete;
+  static ZxSmcParameters* instance_;
+};
+
+ZxSmcParameters* ZxSmcParameters::instance_ = nullptr;
+
+const ZxSmcParameters* ZxSmcParameters::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxSmcParameters;
+  }
+  return instance_;
+}
+
+class ZxSmcResult : public Class<zx_smc_result_t> {
+ public:
+  static const ZxSmcResult* GetClass();
+
+  static uint64_t arg0(const zx_smc_result_t* from) { return from->arg0; }
+  static uint64_t arg1(const zx_smc_result_t* from) { return from->arg1; }
+  static uint64_t arg2(const zx_smc_result_t* from) { return from->arg2; }
+  static uint64_t arg3(const zx_smc_result_t* from) { return from->arg3; }
+  static uint64_t arg6(const zx_smc_result_t* from) { return from->arg6; }
+
+ private:
+  ZxSmcResult() : Class("zx_smc_result_t") {
+    AddField(std::make_unique<ClassField<zx_smc_result_t, uint64_t>>("arg0", SyscallType::kUint64,
+                                                                     arg0));
+    AddField(std::make_unique<ClassField<zx_smc_result_t, uint64_t>>("arg1", SyscallType::kUint64,
+                                                                     arg1));
+    AddField(std::make_unique<ClassField<zx_smc_result_t, uint64_t>>("arg2", SyscallType::kUint64,
+                                                                     arg2));
+    AddField(std::make_unique<ClassField<zx_smc_result_t, uint64_t>>("arg3", SyscallType::kUint64,
+                                                                     arg3));
+    AddField(std::make_unique<ClassField<zx_smc_result_t, uint64_t>>("arg6", SyscallType::kUint64,
+                                                                     arg6));
+  }
+  ZxSmcResult(const ZxSmcResult&) = delete;
+  ZxSmcResult& operator=(const ZxSmcResult&) = delete;
+  static ZxSmcResult* instance_;
+};
+
+ZxSmcResult* ZxSmcResult::instance_ = nullptr;
+
+const ZxSmcResult* ZxSmcResult::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxSmcResult;
+  }
+  return instance_;
+}
+
 class ZxSystemPowerctlArgAcpi : public Class<zx_system_powerctl_arg_t> {
  public:
   static const ZxSystemPowerctlArgAcpi* GetClass();
@@ -2327,6 +2414,153 @@ ZxThreadStateVectorRegsX86* ZxThreadStateVectorRegsX86::instance_ = nullptr;
 const ZxThreadStateVectorRegsX86* ZxThreadStateVectorRegsX86::GetClass() {
   if (instance_ == nullptr) {
     instance_ = new ZxThreadStateVectorRegsX86;
+  }
+  return instance_;
+}
+
+class ZxVcpuIo : public Class<zx_vcpu_io_t> {
+ public:
+  static const ZxVcpuIo* GetClass();
+
+  static uint8_t access_size(const zx_vcpu_io_t* from) { return from->access_size; }
+  static uint8_t u8(const zx_vcpu_io_t* from) { return from->u8; }
+  static uint16_t u16(const zx_vcpu_io_t* from) { return from->u16; }
+  static uint32_t u32(const zx_vcpu_io_t* from) { return from->u32; }
+  static std::pair<const uint8_t*, int> data(const zx_vcpu_io_t* from) {
+    return std::make_pair(reinterpret_cast<const uint8_t*>(from->data),
+                          sizeof(from->data) / sizeof(uint8_t));
+  }
+
+ private:
+  ZxVcpuIo() : Class("zx_vcpu_io_t") {
+    AddField(std::make_unique<ClassField<zx_vcpu_io_t, uint8_t>>("access_size", SyscallType::kUint8,
+                                                                 access_size));
+    AddField(
+        std::make_unique<ClassField<zx_vcpu_io_t, uint8_t>>("u8", SyscallType::kUint8Hexa, u8));
+    AddField(
+        std::make_unique<ClassField<zx_vcpu_io_t, uint16_t>>("u16", SyscallType::kUint16Hexa, u16));
+    AddField(
+        std::make_unique<ClassField<zx_vcpu_io_t, uint32_t>>("u32", SyscallType::kUint32Hexa, u32));
+    AddField(std::make_unique<ClassField<zx_vcpu_io_t, std::pair<const uint8_t*, int>>>(
+        "data", SyscallType::kUint8ArrayHexa, data));
+  }
+  ZxVcpuIo(const ZxVcpuIo&) = delete;
+  ZxVcpuIo& operator=(const ZxVcpuIo&) = delete;
+  static ZxVcpuIo* instance_;
+};
+
+ZxVcpuIo* ZxVcpuIo::instance_ = nullptr;
+
+const ZxVcpuIo* ZxVcpuIo::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxVcpuIo;
+  }
+  return instance_;
+}
+
+class ZxVcpuStateAArch64 : public Class<zx_vcpu_state_aarch64_t> {
+ public:
+  static const ZxVcpuStateAArch64* GetClass();
+
+  static std::pair<const uint64_t*, int> x(const zx_vcpu_state_aarch64_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->x),
+                          sizeof(from->x) / sizeof(uint64_t));
+  }
+  static uint64_t sp(const zx_vcpu_state_aarch64_t* from) { return from->sp; }
+  static uint32_t cpsr(const zx_vcpu_state_aarch64_t* from) { return from->cpsr; }
+
+ private:
+  ZxVcpuStateAArch64() : Class("zx_vcpu_state_aarch64_t") {
+    AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, std::pair<const uint64_t*, int>>>(
+        "x", SyscallType::kUint64ArrayHexa, x));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, uint64_t>>(
+        "sp", SyscallType::kUint64Hexa, sp));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_aarch64_t, uint32_t>>(
+        "cpsr", SyscallType::kUint32Hexa, cpsr));
+  }
+  ZxVcpuStateAArch64(const ZxVcpuStateAArch64&) = delete;
+  ZxVcpuStateAArch64& operator=(const ZxVcpuStateAArch64&) = delete;
+  static ZxVcpuStateAArch64* instance_;
+};
+
+ZxVcpuStateAArch64* ZxVcpuStateAArch64::instance_ = nullptr;
+
+const ZxVcpuStateAArch64* ZxVcpuStateAArch64::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxVcpuStateAArch64;
+  }
+  return instance_;
+}
+
+class ZxVcpuStateX86 : public Class<zx_vcpu_state_x86_t> {
+ public:
+  static const ZxVcpuStateX86* GetClass();
+
+  static uint64_t rax(const zx_vcpu_state_x86_t* from) { return from->rax; }
+  static uint64_t rcx(const zx_vcpu_state_x86_t* from) { return from->rcx; }
+  static uint64_t rdx(const zx_vcpu_state_x86_t* from) { return from->rdx; }
+  static uint64_t rbx(const zx_vcpu_state_x86_t* from) { return from->rbx; }
+  static uint64_t rsp(const zx_vcpu_state_x86_t* from) { return from->rsp; }
+  static uint64_t rbp(const zx_vcpu_state_x86_t* from) { return from->rbp; }
+  static uint64_t rsi(const zx_vcpu_state_x86_t* from) { return from->rsi; }
+  static uint64_t rdi(const zx_vcpu_state_x86_t* from) { return from->rdi; }
+  static uint64_t r8(const zx_vcpu_state_x86_t* from) { return from->r8; }
+  static uint64_t r9(const zx_vcpu_state_x86_t* from) { return from->r9; }
+  static uint64_t r10(const zx_vcpu_state_x86_t* from) { return from->r10; }
+  static uint64_t r11(const zx_vcpu_state_x86_t* from) { return from->r11; }
+  static uint64_t r12(const zx_vcpu_state_x86_t* from) { return from->r12; }
+  static uint64_t r13(const zx_vcpu_state_x86_t* from) { return from->r13; }
+  static uint64_t r14(const zx_vcpu_state_x86_t* from) { return from->r14; }
+  static uint64_t r15(const zx_vcpu_state_x86_t* from) { return from->r15; }
+  static uint64_t rflags(const zx_vcpu_state_x86_t* from) { return from->rflags; }
+
+ private:
+  ZxVcpuStateX86() : Class("zx_vcpu_state_x86_t") {
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rax", SyscallType::kUint64Hexa, rax));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rcx", SyscallType::kUint64Hexa, rcx));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rdx", SyscallType::kUint64Hexa, rdx));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rbx", SyscallType::kUint64Hexa, rbx));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rsp", SyscallType::kUint64Hexa, rsp));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rbp", SyscallType::kUint64Hexa, rbp));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rsi", SyscallType::kUint64Hexa, rsi));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rdi", SyscallType::kUint64Hexa, rdi));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r8", SyscallType::kUint64Hexa, r8));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r9", SyscallType::kUint64Hexa, r9));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r10", SyscallType::kUint64Hexa, r10));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r11", SyscallType::kUint64Hexa, r11));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r12", SyscallType::kUint64Hexa, r12));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r13", SyscallType::kUint64Hexa, r13));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r14", SyscallType::kUint64Hexa, r14));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "r15", SyscallType::kUint64Hexa, r15));
+    AddField(std::make_unique<ClassField<zx_vcpu_state_x86_t, uint64_t>>(
+        "rflags", SyscallType::kUint64Hexa, rflags));
+  }
+  ZxVcpuStateX86(const ZxVcpuStateX86&) = delete;
+  ZxVcpuStateX86& operator=(const ZxVcpuStateX86&) = delete;
+  static ZxVcpuStateX86* instance_;
+};
+
+ZxVcpuStateX86* ZxVcpuStateX86::instance_ = nullptr;
+
+const ZxVcpuStateX86* ZxVcpuStateX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxVcpuStateX86;
   }
   return instance_;
 }
@@ -4933,6 +5167,273 @@ void SyscallDecoderDispatcher::Populate() {
     zx_pci_add_subtract_io_range->Input<uint64_t>("len",
                                                   std::make_unique<ArgumentAccess<uint64_t>>(len));
     zx_pci_add_subtract_io_range->Input<bool>("add", std::make_unique<ArgumentAccess<bool>>(add));
+  }
+
+  {
+    Syscall* zx_pc_firmware_tables = Add("zx_pc_firmware_tables", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_pc_firmware_tables->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto acpi_rsdp = zx_pc_firmware_tables->PointerArgument<zx_paddr_t>(SyscallType::kPaddr);
+    auto smbios = zx_pc_firmware_tables->PointerArgument<zx_paddr_t>(SyscallType::kPaddr);
+    // Inputs
+    zx_pc_firmware_tables->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_pc_firmware_tables->Output<zx_paddr_t>(
+        ZX_OK, "acpi_rsdp", std::make_unique<ArgumentAccess<zx_paddr_t>>(acpi_rsdp));
+    zx_pc_firmware_tables->Output<zx_paddr_t>(ZX_OK, "smbios",
+                                              std::make_unique<ArgumentAccess<zx_paddr_t>>(smbios));
+  }
+
+  {
+    Syscall* zx_smc_call = Add("zx_smc_call", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_smc_call->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto parameters = zx_smc_call->PointerArgument<zx_smc_parameters_t>(SyscallType::kStruct);
+    auto out_smc_result = zx_smc_call->PointerArgument<zx_smc_result_t>(SyscallType::kStruct);
+    // Inputs
+    zx_smc_call->Input<zx_handle_t>("handle",
+                                    std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_smc_call->InputObject<zx_smc_parameters_t>(
+        "parameters", std::make_unique<ArgumentAccess<zx_smc_parameters_t>>(parameters),
+        ZxSmcParameters::GetClass());
+    // Outputs
+    zx_smc_call->OutputObject<zx_smc_result_t>(
+        ZX_OK, "out_smc_result", std::make_unique<ArgumentAccess<zx_smc_result_t>>(out_smc_result),
+        ZxSmcResult::GetClass());
+  }
+
+  {
+    Syscall* zx_resource_create = Add("zx_resource_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto parent_rsrc = zx_resource_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_resource_create->Argument<uint32_t>(SyscallType::kRsrcKind);
+    auto base = zx_resource_create->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_resource_create->Argument<size_t>(SyscallType::kSize);
+    auto name = zx_resource_create->PointerArgument<char>(SyscallType::kChar);
+    auto name_size = zx_resource_create->Argument<size_t>(SyscallType::kSize);
+    auto resource_out = zx_resource_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_resource_create->Input<zx_handle_t>(
+        "parent_rsrc", std::make_unique<ArgumentAccess<zx_handle_t>>(parent_rsrc));
+    zx_resource_create->Input<uint32_t>("options",
+                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_resource_create->Input<uint64_t>("base", std::make_unique<ArgumentAccess<uint64_t>>(base));
+    zx_resource_create->Input<size_t>("size", std::make_unique<ArgumentAccess<size_t>>(size));
+    zx_resource_create->InputString<char>("name", std::make_unique<ArgumentAccess<char>>(name),
+                                          std::make_unique<ArgumentAccess<size_t>>(name_size));
+    // Outputs
+    zx_resource_create->Output<zx_handle_t>(
+        ZX_OK, "resource_out", std::make_unique<ArgumentAccess<zx_handle_t>>(resource_out));
+  }
+
+  {
+    Syscall* zx_guest_create = Add("zx_guest_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_guest_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_guest_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto guest_handle = zx_guest_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto vmar_handle = zx_guest_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_guest_create->Input<zx_handle_t>("resource",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_guest_create->Input<uint32_t>("options",
+                                     std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_guest_create->Output<zx_handle_t>(
+        ZX_OK, "guest_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(guest_handle));
+    zx_guest_create->Output<zx_handle_t>(
+        ZX_OK, "vmar_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(vmar_handle));
+  }
+
+  {
+    Syscall* zx_guest_set_trap = Add("zx_guest_set_trap", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_guest_set_trap->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_guest_set_trap->Argument<uint32_t>(SyscallType::kGuestTrap);
+    auto addr = zx_guest_set_trap->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto size = zx_guest_set_trap->Argument<size_t>(SyscallType::kSize);
+    auto port_handle = zx_guest_set_trap->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto key = zx_guest_set_trap->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_guest_set_trap->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_guest_set_trap->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    zx_guest_set_trap->Input<zx_vaddr_t>("addr",
+                                         std::make_unique<ArgumentAccess<zx_vaddr_t>>(addr));
+    zx_guest_set_trap->Input<size_t>("size", std::make_unique<ArgumentAccess<size_t>>(size));
+    zx_guest_set_trap->Input<zx_handle_t>(
+        "port_handle", std::make_unique<ArgumentAccess<zx_handle_t>>(port_handle));
+    zx_guest_set_trap->Input<uint64_t>("key", std::make_unique<ArgumentAccess<uint64_t>>(key));
+  }
+
+  {
+    Syscall* zx_vcpu_create = Add("zx_vcpu_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto guest = zx_vcpu_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_vcpu_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto entry = zx_vcpu_create->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto out = zx_vcpu_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_vcpu_create->Input<zx_handle_t>("guest",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(guest));
+    zx_vcpu_create->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_vcpu_create->Input<zx_vaddr_t>("entry", std::make_unique<ArgumentAccess<zx_vaddr_t>>(entry));
+    // Outputs
+    zx_vcpu_create->Output<zx_handle_t>(ZX_OK, "out",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_vcpu_resume = Add("zx_vcpu_resume", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vcpu_resume->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto packet = zx_vcpu_resume->PointerArgument<zx_port_packet_t>(SyscallType::kStruct);
+    // Inputs
+    zx_vcpu_resume->Input<zx_handle_t>("handle",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_vcpu_resume->OutputObject<zx_port_packet_t>(
+        ZX_OK, "packet", std::make_unique<ArgumentAccess<zx_port_packet_t>>(packet),
+        ZxPortPacket::GetClass());
+  }
+
+  {
+    Syscall* zx_vcpu_interrupt = Add("zx_vcpu_interrupt", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vcpu_interrupt->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vector = zx_vcpu_interrupt->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_vcpu_interrupt->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vcpu_interrupt->Input<uint32_t>("vector",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(vector));
+  }
+
+  {
+    Syscall* zx_vcpu_read_state = Add("zx_vcpu_read_state", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vcpu_read_state->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_vcpu_read_state->Argument<uint32_t>(SyscallType::kVcpu);
+    auto buffer = zx_vcpu_read_state->PointerArgument<uint8_t>(SyscallType::kUint8);
+    zx_vcpu_read_state->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_vcpu_read_state->Input<zx_handle_t>("handle",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vcpu_read_state->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    // Outputs
+    zx_vcpu_read_state
+        ->OutputObject<zx_vcpu_state_aarch64_t>(ZX_OK, "buffer",
+                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                                ZxVcpuStateAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_vcpu_read_state
+        ->OutputObject<zx_vcpu_state_x86_t>(ZX_OK, "buffer",
+                                            std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                            ZxVcpuStateX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+  }
+
+  {
+    Syscall* zx_vcpu_write_state = Add("zx_vcpu_write_state", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vcpu_write_state->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_vcpu_write_state->Argument<uint32_t>(SyscallType::kVcpu);
+    auto buffer = zx_vcpu_write_state->PointerArgument<uint8_t>(SyscallType::kUint8);
+    zx_vcpu_write_state->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_vcpu_write_state->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vcpu_write_state->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    zx_vcpu_write_state
+        ->InputObject<zx_vcpu_state_aarch64_t>("buffer",
+                                               std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                               ZxVcpuStateAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_vcpu_write_state
+        ->InputObject<zx_vcpu_state_x86_t>(
+            "buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxVcpuStateX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_vcpu_write_state
+        ->InputObject<zx_vcpu_io_t>("buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                    ZxVcpuIo::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_IO);
+  }
+
+  {
+    Syscall* zx_pager_create = Add("zx_pager_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto options = zx_pager_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_pager_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pager_create->Input<uint32_t>("options",
+                                     std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_pager_create->Output<zx_handle_t>(ZX_OK, "out",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_pager_create_vmo = Add("zx_pager_create_vmo", SyscallReturnType::kStatus);
+    // Arguments
+    auto pager = zx_pager_create_vmo->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_pager_create_vmo->Argument<uint32_t>(SyscallType::kUint32);
+    auto port = zx_pager_create_vmo->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto key = zx_pager_create_vmo->Argument<uint64_t>(SyscallType::kUint64);
+    auto size = zx_pager_create_vmo->Argument<uint64_t>(SyscallType::kUint64);
+    auto out = zx_pager_create_vmo->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pager_create_vmo->Input<zx_handle_t>("pager",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(pager));
+    zx_pager_create_vmo->Input<uint32_t>("options",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_pager_create_vmo->Input<zx_handle_t>("port",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(port));
+    zx_pager_create_vmo->Input<uint64_t>("key", std::make_unique<ArgumentAccess<uint64_t>>(key));
+    zx_pager_create_vmo->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
+    // Outputs
+    zx_pager_create_vmo->Output<zx_handle_t>(ZX_OK, "out",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_pager_detach_vmo = Add("zx_pager_detach_vmo", SyscallReturnType::kStatus);
+    // Arguments
+    auto pager = zx_pager_detach_vmo->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto vmo = zx_pager_detach_vmo->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_pager_detach_vmo->Input<zx_handle_t>("pager",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(pager));
+    zx_pager_detach_vmo->Input<zx_handle_t>("vmo",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(vmo));
+  }
+
+  {
+    Syscall* zx_pager_supply_pages = Add("zx_pager_supply_pages", SyscallReturnType::kStatus);
+    // Arguments
+    auto pager = zx_pager_supply_pages->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto pager_vmo = zx_pager_supply_pages->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto offset = zx_pager_supply_pages->Argument<uint64_t>(SyscallType::kUint64);
+    auto length = zx_pager_supply_pages->Argument<uint64_t>(SyscallType::kUint64);
+    auto aux_vmo = zx_pager_supply_pages->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto aux_offset = zx_pager_supply_pages->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_pager_supply_pages->Input<zx_handle_t>("pager",
+                                              std::make_unique<ArgumentAccess<zx_handle_t>>(pager));
+    zx_pager_supply_pages->Input<zx_handle_t>(
+        "pager_vmo", std::make_unique<ArgumentAccess<zx_handle_t>>(pager_vmo));
+    zx_pager_supply_pages->Input<uint64_t>("offset",
+                                           std::make_unique<ArgumentAccess<uint64_t>>(offset));
+    zx_pager_supply_pages->Input<uint64_t>("length",
+                                           std::make_unique<ArgumentAccess<uint64_t>>(length));
+    zx_pager_supply_pages->Input<zx_handle_t>(
+        "aux_vmo", std::make_unique<ArgumentAccess<zx_handle_t>>(aux_vmo));
+    zx_pager_supply_pages->Input<uint64_t>("aux_offset",
+                                           std::make_unique<ArgumentAccess<uint64_t>>(aux_offset));
   }
 }
 

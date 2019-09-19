@@ -7,6 +7,7 @@
 
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
+#include <zircon/system/public/zircon/syscalls/hypervisor.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
 #include <zircon/system/public/zircon/syscalls/resource.h>
 #include <zircon/system/public/zircon/types.h>
@@ -61,6 +62,7 @@ enum class SyscallType {
   kFeatureKind,
   kFutex,
   kGpAddr,
+  kGuestTrap,
   kHandle,
   kInfoMapsType,
   kInterruptFlags,
@@ -97,6 +99,7 @@ enum class SyscallType {
   kTimerOption,
   kUintptr,
   kVaddr,
+  kVcpu,
   kVmOption,
   kVmoCreationOption,
   kVmoOp,
@@ -121,6 +124,7 @@ void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
 void ExceptionStateName(uint32_t state, std::ostream& os);
 void FeatureKindName(uint32_t feature_kind, std::ostream& os);
+void GuestTrapName(zx_guest_trap_t trap, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
 void InterruptFlagsName(uint32_t flags, std::ostream& os);
 void IommuTypeName(uint32_t type, std::ostream& os);
@@ -148,6 +152,7 @@ void ThreadStateName(uint32_t state, std::ostream& os);
 void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os);
 void TimerOptionName(uint32_t option, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
+void VcpuName(uint32_t type, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
 void VmoCreationOptionName(uint32_t option, std::ostream& os);
 void VmoOpName(uint32_t op, std::ostream& os);
@@ -430,6 +435,36 @@ typedef struct zx_thread_state_debug_regs_x86 {
   uint64_t dr6;  // Status register.
   uint64_t dr7;  // Control register.
 } zx_thread_state_debug_regs_x86_t;
+
+// This is a copy of zx_vcpu_state_t from
+// zircon/system/public/zircon/syscalls/hypervisor.h for __aarch64__.
+typedef struct zx_vcpu_state_aarch64 {
+  uint64_t x[31];
+  uint64_t sp;
+  uint32_t cpsr;
+} zx_vcpu_state_aarch64_t;
+
+// This is a copy of zx_vcpu_state_t from
+// zircon/system/public/zircon/syscalls/hypervisor.h for __x86_64__.
+typedef struct zx_vcpu_state_x86 {
+  uint64_t rax;
+  uint64_t rcx;
+  uint64_t rdx;
+  uint64_t rbx;
+  uint64_t rsp;
+  uint64_t rbp;
+  uint64_t rsi;
+  uint64_t rdi;
+  uint64_t r8;
+  uint64_t r9;
+  uint64_t r10;
+  uint64_t r11;
+  uint64_t r12;
+  uint64_t r13;
+  uint64_t r14;
+  uint64_t r15;
+  uint64_t rflags;
+} zx_vcpu_state_x86_t;
 
 }  // namespace fidlcat
 

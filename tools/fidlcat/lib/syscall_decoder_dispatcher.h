@@ -269,6 +269,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
       FeatureKindName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kGuestTrap:
+      os << colors.red;
+      GuestTrapName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kHandle: {
       zx_handle_info_t handle_info;
       handle_info.handle = value;
@@ -400,6 +405,11 @@ inline void DisplayValue<uint32_t>(const fidl_codec::Colors& colors, SyscallType
     case SyscallType::kTimerOption:
       os << colors.blue;
       TimerOptionName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kVcpu:
+      os << colors.red;
+      VcpuName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kVmOption:

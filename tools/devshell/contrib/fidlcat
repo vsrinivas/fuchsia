@@ -40,7 +40,6 @@
 ##                         Can be passed multiple times.
 ##                         By default, only zx_channel_.* syscalls are displayed.
 ##                         To display all the syscalls, use: --syscalls ".*"
-##                         This option is under development (we are adding the syscalls).
 ##    --exclude-syscalls   A regular expression which selects the syscalls to not decode and
 ##                         display.
 ##                         Can be passed multiple times.
