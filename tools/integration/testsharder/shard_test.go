@@ -175,6 +175,27 @@ func TestMakeShards(t *testing.T) {
 		}
 		assertEqual(t, expected, actual)
 	})
+	t.Run("netboot envs get different shards", func(t *testing.T) {
+		withNetboot := func(env Environment) Environment {
+			env2 := env
+			env2.Netboot = true
+			return env2
+		}
+
+		actual := MakeShards(
+			[]TestSpec{
+				spec(1, env1),
+				spec(1, withNetboot(env1)),
+			},
+			Normal,
+			[]string{},
+		)
+		expected := []*Shard{
+			shard(env1, 1),
+			shard(withNetboot(env1), 1),
+		}
+		assertEqual(t, expected, actual)
+	})
 }
 
 func TestMultiplyShards(t *testing.T) {

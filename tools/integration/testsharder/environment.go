@@ -25,6 +25,9 @@ type Environment struct {
 
 	// ServiceAccount gives a service account to attach to Swarming task.
 	ServiceAccount string `json:"service_account,omitempty"`
+
+	// Netboot tells whether to "netboot" instead of paving before running the tests.
+	Netboot bool `json:"netboot,omitempty"`
 }
 
 // Name returns a name calculated from its specfied properties.
@@ -45,6 +48,9 @@ func (env Environment) Name() string {
 	addToken(env.Dimensions.Pool)
 	if env.ServiceAccount != "" {
 		addToken(strings.Split(env.ServiceAccount, "@")[0])
+	}
+	if env.Netboot {
+		addToken("netboot")
 	}
 	return strings.Join(tokens, "-")
 }
