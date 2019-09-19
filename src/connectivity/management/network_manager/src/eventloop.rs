@@ -74,8 +74,10 @@ pub enum Event {
     FidlRouterAdminEvent(RouterAdminRequest),
     /// A request from the fuchsia.router.config State FIDL interface
     FidlRouterStateEvent(RouterStateRequest),
-    /// fuchsia.net.stack.StackEvent
-    StackObservable(<fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item),
+    /// An event coming from fuchsia.net.stack.
+    StackEvent(<fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item),
+    /// An event coming from fuchsia.netstack.
+    NetstackEvent(<fidl_fuchsia_netstack::NetstackEventStream as futures::Stream>::Item),
 }
 
 /// The event loop.
@@ -104,9 +106,14 @@ impl EventLoop {
 
     pub async fn run(mut self) -> Result<(), Error> {
         self.device.populate_state().await?;
+
+        let streams = self.device.take_event_streams();
         let mut select_stream = futures::stream::select(
-            self.event_recv.take().unwrap(),
-            self.device.take_event_stream().map(|e| Event::StackObservable(e)),
+            futures::stream::select(
+                self.event_recv.take().unwrap(),
+                streams.0.map(|e| Event::StackEvent(e)),
+            ),
+            streams.1.map(|e| Event::NetstackEvent(e)),
         );
 
         loop {
@@ -117,7 +124,8 @@ impl EventLoop {
                 Some(Event::FidlRouterStateEvent(req)) => {
                     self.handle_fidl_router_state_request(req).await;
                 }
-                Some(Event::StackObservable(event)) => self.handle_stack_event(event).await,
+                Some(Event::StackEvent(event)) => self.handle_stack_event(event).await,
+                Some(Event::NetstackEvent(event)) => self.handle_netstack_event(event).await,
                 None => bail!("Stream of events ended unexpectedly"),
             }
         }
@@ -128,8 +136,26 @@ impl EventLoop {
         event: <fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item,
     ) {
         match event {
-            Ok(e) => self.device.update_state_for_stack_event(e).await,
-            Err(e) => warn!("error from stack observer: {:?}", e),
+            Ok(evt) => self
+                .device
+                .update_state_for_stack_event(evt)
+                .await
+                .unwrap_or_else(|err| warn!("error updating state: {:?}", err)),
+            Err(err) => warn!("error from stack observer: {:?}", err),
+        }
+    }
+
+    async fn handle_netstack_event(
+        &mut self,
+        event: <fidl_fuchsia_netstack::NetstackEventStream as futures::Stream>::Item,
+    ) {
+        match event {
+            Ok(evt) => self
+                .device
+                .update_state_for_netstack_event(evt)
+                .await
+                .unwrap_or_else(|err| warn!("error updating state: {:?}", err)),
+            Err(err) => warn!("error from netstack observer: {:?}", err),
         }
     }
 

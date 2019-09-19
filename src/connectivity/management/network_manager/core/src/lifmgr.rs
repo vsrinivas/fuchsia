@@ -9,7 +9,8 @@
 
 use crate::portmgr::PortId;
 use crate::{error, ElementId, Version, UUID};
-use fidl_fuchsia_net_stack::InterfaceAddress;
+use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_stack::{self as stack, InterfaceAddress};
 use fidl_fuchsia_router_config;
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
@@ -31,14 +32,14 @@ pub struct LIF {
     id: ElementId,
     l_type: LIFType,
     name: String,
-    // pid is the id of the port associated with the LIF.
+    // `pid` is the id of the port associated with the LIF.
     // In case of a LIF associated to a bridge, it is the id of the bridge port.
     // In the case of a LIF associated to a single port, it's the id of that port.
     pid: PortId,
-    // ports is the list of ports that are associated to the LIF.
+    // `ports` is the list of ports that are associated to the LIF.
     // In the case of a bridge these are all the ports that belong ot the bridge.
     ports: HashSet<PortId>,
-    // vlan id of the bridge.
+    // VLAN ID of the bridge.
     vlan: u16,
     properties: LIFProperties,
 }
@@ -88,6 +89,8 @@ impl LIF {
         Ok(())
     }
 
+    /// Returns a list of ports associated with this interface. May be more than one if this
+    /// interface is a bridge.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = PortId> + '_ {
         self.ports.iter().map(|p| p.clone())
     }
@@ -111,13 +114,28 @@ impl LIF {
         self.ports.remove(&p);
         Ok(())
     }
+
     fn set_vlan(&mut self, _v: Version, _vlan: u16) -> error::Result<()> {
         Err(error::NetworkManager::LIF(error::Lif::NotSupported))
     }
+
+    /// Updates the version and properties associated with this interface.
     pub fn set_properties(&mut self, v: Version, p: LIFProperties) -> error::Result<()> {
         self.id.version = v;
         self.properties = p;
         Ok(())
+    }
+
+    /// Updates this interface's address and increments the version.
+    pub fn update_with_address(
+        &mut self,
+        addr: Option<LifIpAddr>,
+        enabled: bool,
+    ) -> error::Result<()> {
+        self.set_properties(
+            self.id.version + 1,
+            LIFProperties { dhcp: self.properties.dhcp, address: addr, enabled: enabled },
+        )
     }
 
     fn rename(&mut self, v: Version, name: &'static str) -> error::Result<()> {
@@ -125,25 +143,28 @@ impl LIF {
         self.name = name.to_string();
         Ok(())
     }
-    // id returns the LIF ElementID.
+
+    /// `id` returns the LIF ElementID.
     pub fn id(&self) -> ElementId {
         self.id
     }
 
-    // set_pid sets the Lif pid.
+    /// `set_pid` sets the Lif pid.
     pub fn set_pid(&mut self, pid: PortId) {
         self.pid = pid;
     }
 
-    // pid returns the Lif pid.
+    /// `pid` returns the Lif pid.
     pub fn pid(&self) -> PortId {
         self.pid
     }
 
+    /// Returns the properties associated with the LIF.
     pub fn properties(&self) -> &LIFProperties {
         &self.properties
     }
 
+    /// Creates a fuchsia.router.config.Lif using the current state.
     pub fn to_fidl_lif(&self) -> fidl_fuchsia_router_config::Lif {
         let ps: Vec<_> = self.ports.iter().map(|p| p.to_u32()).collect();
         let lt;
@@ -176,26 +197,37 @@ impl LIF {
     }
 }
 
-// TODO(dpradilla): Move lines 175-205 to line 34 so things are defined in the proper order.
+// TODO(dpradilla): Move struct declarations to the top.
+
+/// LifIpAddr is an IP address and its prefix.
 #[derive(Eq, PartialEq, Debug, Clone)]
-// LifIpAddr is an IP address and its prefix.
 pub struct LifIpAddr {
     pub address: IpAddr,
     pub prefix: u8,
 }
 
+/// Creates an `std::net::IpAddr` from fuchsia.net.IpAddress.
+pub fn to_ip_addr(addr: net::IpAddress) -> IpAddr {
+    match addr {
+        net::IpAddress::Ipv4(net::Ipv4Address { addr }) => IpAddr::from(addr),
+        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => IpAddr::from(addr),
+    }
+}
+
 impl From<&InterfaceAddress> for LifIpAddr {
     fn from(addr: &InterfaceAddress) -> Self {
-        LifIpAddr {
-            address: match addr.ip_address {
-                fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
-                    IpAddr::from(addr)
-                }
-                fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
-                    IpAddr::from(addr)
-                }
-            },
-            prefix: addr.prefix_len,
+        LifIpAddr { address: to_ip_addr(addr.ip_address), prefix: addr.prefix_len }
+    }
+}
+
+/// Converts a subnet mask given as a set of octets to a scalar prefix length.
+pub fn subnet_mask_to_prefix_length(addr: net::IpAddress) -> u8 {
+    match addr {
+        net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
+            (!u32::from_be_bytes(addr)).leading_zeros() as u8
+        }
+        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+            (!u128::from_be_bytes(addr)).leading_zeros() as u8
         }
     }
 }
@@ -203,11 +235,8 @@ impl From<&InterfaceAddress> for LifIpAddr {
 impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
     fn from(a: &fidl_fuchsia_router_config::CidrAddress) -> Self {
         match a.address {
-            Some(fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr })) => {
-                LifIpAddr { address: IpAddr::from(addr), prefix: a.prefix_length.unwrap() }
-            }
-            Some(fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr })) => {
-                LifIpAddr { address: IpAddr::from(addr), prefix: a.prefix_length.unwrap() }
+            Some(addr) => {
+                LifIpAddr { address: to_ip_addr(addr), prefix: a.prefix_length.unwrap_or(0) }
             }
             None => LifIpAddr { address: IpAddr::from([0, 0, 0, 0]), prefix: 0 },
         }
@@ -215,22 +244,21 @@ impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
 }
 
 impl LifIpAddr {
+    /// Convert to fuchsia.router.config.CidrAddress.
     pub fn to_fidl_address_and_prefix(&self) -> fidl_fuchsia_router_config::CidrAddress {
         match self.address {
             IpAddr::V4(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: a.octets(),
-                })),
+                address: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: a.octets() })),
                 prefix_length: Some(self.prefix),
             },
             IpAddr::V6(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                    addr: a.octets(),
-                })),
+                address: Some(net::IpAddress::Ipv6(net::Ipv6Address { addr: a.octets() })),
                 prefix_length: Some(self.prefix),
             },
         }
     }
+
+    /// Convert to fuchsia.net.Subnet, which contains a subnet mask and prefix length.
     pub fn to_fidl_subnet(&self) -> fidl_fuchsia_net::Subnet {
         match self.address {
             IpAddr::V4(a) => fidl_fuchsia_net::Subnet {
@@ -251,18 +279,16 @@ impl LifIpAddr {
             },
         }
     }
-    pub fn to_fidl_interface_address(&self) -> fidl_fuchsia_net_stack::InterfaceAddress {
+
+    /// Convert to fuchsia.net.stack::InterfaceAddress.
+    pub fn to_fidl_interface_address(&self) -> stack::InterfaceAddress {
         match self.address {
-            IpAddr::V4(a) => fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: a.octets(),
-                }),
+            IpAddr::V4(a) => stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: a.octets() }),
                 prefix_len: self.prefix,
             },
-            IpAddr::V6(a) => fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                    addr: a.octets(),
-                }),
+            IpAddr::V6(a) => stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv6(net::Ipv6Address { addr: a.octets() }),
                 prefix_len: self.prefix,
             },
         }
@@ -270,13 +296,19 @@ impl LifIpAddr {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
+/// Dynamic properties associated with the LIF.
 pub struct LIFProperties {
+    /// Whether this interface's current address was acquired via DHCP. Corresponds to
+    /// fuchsia.netstack.NetInterfaceFlagUp.
     pub dhcp: bool,
+    /// Current address of this interface, may be `None`.
     pub address: Option<LifIpAddr>,
+    /// Corresponds to fuchsia.netstack.NetInterfaceFlagUp.
     pub enabled: bool,
 }
 
 impl LIFProperties {
+    /// Convert to fuchsia.router.config.LifProperties, WAN variant.
     pub fn to_fidl_wan(&self) -> fidl_fuchsia_router_config::LifProperties {
         fidl_fuchsia_router_config::LifProperties::Wan(fidl_fuchsia_router_config::WanProperties {
             address_method: Some(if self.dhcp {
@@ -300,6 +332,7 @@ impl LIFProperties {
             ),
         })
     }
+    /// Convert to fuchsia.router.config.LifProperties, LAN variant.
     pub fn to_fidl_lan(&self) -> fidl_fuchsia_router_config::LifProperties {
         fidl_fuchsia_router_config::LifProperties::Lan(fidl_fuchsia_router_config::LanProperties {
             address_v4: self.address.as_ref().map(|x| x.to_fidl_address_and_prefix()),
@@ -373,12 +406,8 @@ impl LIFManager {
         self.lifs.iter().map(|(_, l)| l)
     }
 
-    pub fn update_lif_at_port(&mut self, port: u64, properties: LIFProperties) {
-        if let Some((_, lif)) = self.lifs.iter_mut().find(|(_, lif)| lif.pid.to_u64() == port) {
-            let dhcp = lif.properties.dhcp;
-            lif.properties = properties;
-            lif.properties.dhcp = dhcp;
-        }
+    pub fn lif_at_port(&mut self, port: PortId) -> Option<&mut LIF> {
+        self.lifs.iter_mut().find_map(|(_, lif)| if lif.pid == port { Some(lif) } else { None })
     }
 }
 
@@ -724,41 +753,31 @@ mod tests {
         assert_eq!(got, None);
     }
 
+    fn v4(addr: [u8; 4]) -> net::IpAddress {
+        net::IpAddress::Ipv4(net::Ipv4Address { addr })
+    }
+
+    fn v6(addr: [u8; 16]) -> net::IpAddress {
+        net::IpAddress::Ipv6(net::Ipv6Address { addr })
+    }
+
     #[test]
-    fn test_update_lif_at_port() {
-        let pm = create_ports();
-        let mut lm = LIFManager::new();
-        let lif = &LIF::new(
-            3,
-            LIFType::LAN,
-            "lan1",
-            PortId::from(33),
-            vec![PortId::from(1), PortId::from(2), PortId::from(33)],
-            0,
-            Some(LIFProperties {
-                dhcp: true,
-                address: Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 }),
-                enabled: true,
-            }),
-        )
-        .unwrap();
-        lm.add_lif(lif);
-        lm.update_lif_at_port(
-            33,
-            LIFProperties {
-                dhcp: false,
-                address: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
-                enabled: false,
-            },
-        );
-        // DHCP field must not be updated, but all other fields should have the new value.
+    fn test_to_prefix() {
+        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 255])), 32);
+        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 0])), 24);
+        assert_eq!(subnet_mask_to_prefix_length(v4([255, 128, 0, 0])), 9);
+        assert_eq!(subnet_mask_to_prefix_length(v4([0, 0, 0, 0])), 0);
         assert_eq!(
-            lm.lif(&lif.id.uuid).unwrap().properties,
-            LIFProperties {
-                dhcp: true,
-                address: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
-                enabled: false,
-            }
+            subnet_mask_to_prefix_length(v6([
+                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+            ])),
+            128
+        );
+        assert_eq!(
+            subnet_mask_to_prefix_length(v6([
+                255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0,
+            ])),
+            64
         );
     }
 

@@ -5,12 +5,12 @@
 //! A simple port manager.
 
 use crate::error;
-use crate::lifmgr::{self, LIFProperties, LifIpAddr};
+use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
 use failure::{Error, ResultExt};
-use fidl_fuchsia_net;
-use fidl_fuchsia_net_stack::{InterfaceInfo, StackMarker, StackProxy};
+use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_stack::{self as stack, InterfaceInfo, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
-use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
+use fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy};
 use fuchsia_component::client::connect_to_service;
 use std::collections::HashSet;
 use std::convert::TryFrom;
@@ -102,39 +102,56 @@ pub struct Interface {
     pub enabled: bool,
 }
 
+fn address_is_valid_unicast(addr: &IpAddr) -> bool {
+    // TODO(guzt): This should also check for special-purpose addresses as defined by rfc6890.
+    !addr.is_loopback() && !addr.is_unspecified() && !addr.is_multicast()
+}
+
 impl From<&InterfaceInfo> for Interface {
     fn from(iface: &InterfaceInfo) -> Self {
         Interface {
             id: iface.id.into(),
             name: iface.properties.topopath.clone(),
-            addr:
-                iface
-                    .properties
-                    .addresses
-                    .iter()
-                    .find(|&addr| match addr {
-                        // Only return interfaces with an IPv4 address
-                        // TODO(dpradilla) support IPv6 and interfaces with multiple IPs? (is there
-                        // a use case given this context?)
-                        fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address:
-                                fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                    addr,
-                                }),
-                            ..
-                        } => {
-                            let ip_address = IpAddr::from(*addr);
-                            !ip_address.is_loopback()
-                                && !ip_address.is_unspecified()
-                                && !ip_address.is_multicast()
-                        }
-                        _ => false,
-                    })
-                    .map(|addr| addr.into()),
+            addr: iface
+                .properties
+                .addresses
+                .iter()
+                .find(|&addr| match addr {
+                    // Only return interfaces with an IPv4 address
+                    // TODO(dpradilla) support IPv6 and interfaces with multiple IPs? (is there
+                    // a use case given this context?)
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
+                        ..
+                    } => address_is_valid_unicast(&IpAddr::from(*addr)),
+                    _ => false,
+                })
+                .map(|addr| addr.into()),
             enabled: match iface.properties.administrative_status {
-                fidl_fuchsia_net_stack::AdministrativeStatus::Enabled => true,
-                fidl_fuchsia_net_stack::AdministrativeStatus::Disabled => false,
+                stack::AdministrativeStatus::Enabled => true,
+                stack::AdministrativeStatus::Disabled => false,
             },
+        }
+    }
+}
+
+fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
+    match address_is_valid_unicast(&addr.address) {
+        true => Some(addr),
+        false => None,
+    }
+}
+
+impl From<netstack::NetInterface> for Interface {
+    fn from(iface: netstack::NetInterface) -> Self {
+        Interface {
+            id: PortId(iface.id.into()),
+            name: iface.name,
+            addr: valid_unicast_address_or_none(LifIpAddr {
+                address: to_ip_addr(iface.addr),
+                prefix: subnet_mask_to_prefix_length(iface.netmask),
+            }),
+            enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
         }
     }
 }
@@ -154,10 +171,14 @@ impl NetCfg {
         Ok(NetCfg { stack, netstack, id_in_use: HashSet::new() })
     }
 
-    pub fn take_event_stream(&mut self) -> fidl_fuchsia_net_stack::StackEventStream {
-        self.stack.take_event_stream()
+    /// Returns event streams for fuchsia.net.stack and fuchsia.netstack.
+    pub fn take_event_streams(
+        &mut self,
+    ) -> (stack::StackEventStream, netstack::NetstackEventStream) {
+        (self.stack.take_event_stream(), self.netstack.take_event_stream())
     }
 
+    /// Gets the interface associated with the specified port.
     pub async fn get_interface(&mut self, port: u64) -> Option<Interface> {
         match self.stack.get_interface_info(port).await {
             Ok(Ok(info)) => Some((&info).into()),
@@ -165,7 +186,7 @@ impl NetCfg {
         }
     }
 
-    // ports gets all physical ports in the system.
+    /// `ports` gets all physical ports in the system.
     pub async fn ports(&self) -> error::Result<Vec<Port>> {
         let ports = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
         let p = ports
@@ -189,6 +210,8 @@ impl NetCfg {
             .collect();
         Ok(ifs)
     }
+
+    /// Creates a new interface bridging the given ports.
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
         let _br = self
             .netstack
@@ -246,14 +269,12 @@ impl NetCfg {
             )
             .await;
         match r {
-            Ok(fidl_fuchsia_netstack::NetErr {
-                status: fidl_fuchsia_netstack::Status::Ok,
-                message: _,
-            }) => Ok(()),
+            Ok(netstack::NetErr { status: netstack::Status::Ok, message: _ }) => Ok(()),
             _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
         }
     }
 
+    /// Enables/disables the interface at the specified port.
     pub async fn set_interface_state(&mut self, pid: PortId, state: bool) -> error::Result<()> {
         let r = if state {
             self.stack.enable_interface(StackPortId::from(pid).to_u64())
@@ -266,6 +287,7 @@ impl NetCfg {
         }
     }
 
+    /// Start/stop the DHCP client on the specified interface.
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
         let (dhcp_client, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
@@ -287,7 +309,7 @@ impl NetCfg {
         Ok(())
     }
 
-    // apply_manual_address updates the configured IP address.
+    /// `apply_manual_address` updates the configured IP address.
     async fn apply_manual_ip<'a>(
         &'a mut self,
         pid: PortId,
@@ -353,8 +375,6 @@ impl NetCfg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_net as net;
-    use fidl_fuchsia_net_stack as stack;
 
     fn interface_info_with_addrs(addrs: Vec<stack::InterfaceAddress>) -> InterfaceInfo {
         InterfaceInfo {
@@ -475,5 +495,44 @@ mod tests {
                 })),
             ]
         );
+    }
+
+    #[test]
+    fn test_valid_address() {
+        let f = |addr| {
+            valid_unicast_address_or_none(LifIpAddr { address: IpAddr::from(addr), prefix: 24 })
+        };
+        assert!(f([0, 0, 0, 0]).is_none());
+        assert!(f([127, 0, 0, 1]).is_none());
+        assert!(f([224, 0, 0, 5]).is_none());
+        assert_eq!(
+            f([1, 2, 3, 4]),
+            Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 })
+        );
+    }
+
+    #[test]
+    fn test_netstack_net_interface_into_hal_interface() {
+        let net_interface = netstack::NetInterface {
+            id: 5,
+            flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+            features: 0,
+            configuration: 0,
+            name: "test_if".to_string(),
+            addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+            netmask: net::IpAddress::Ipv4(net::Ipv4Address { addr: [255, 255, 255, 0] }),
+            broadaddr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 255] }),
+            ipv6addrs: vec![],
+            hwaddr: vec![1, 2, 3, 4, 5, 6],
+        };
+        assert_eq!(
+            Interface::from(net_interface),
+            Interface {
+                id: PortId(5),
+                name: "test_if".to_string(),
+                addr: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
+                enabled: true,
+            }
+        )
     }
 }

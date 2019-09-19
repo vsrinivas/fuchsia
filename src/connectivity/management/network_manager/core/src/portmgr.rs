@@ -18,7 +18,7 @@ pub struct Port {
 }
 
 impl Port {
-    //! new creates a physical port to be managed by the network manager.
+    /// `new` creates a physical port to be managed by the network manager.
     pub fn new(port_id: PortId, path: &str, v: Version) -> Self {
         //TODO(dpradilla) this has to check port actually exists and reference to it.
         Port { e_id: ElementId::new(v), port_id, path: path.to_string() }
@@ -27,12 +27,12 @@ impl Port {
 
 /// `PortManager` keeps track of physical ports in the system.
 pub struct PortManager {
-    // ports keeps track of ports in the system and if they are available or not.
+    /// `ports` keeps track of ports in the system and if they are available or not.
     ports: std::collections::HashMap<PortId, (Port, bool)>,
 }
 
 impl PortManager {
-    //! Creates a new PortManager.
+    /// Creates a new PortManager.
     pub fn new() -> Self {
         PortManager { ports: HashMap::new() }
     }
@@ -78,6 +78,14 @@ impl PortManager {
                 *available = true;
             }
         }
+    }
+
+    /// Checks if the port is currently in use by a valid interface.
+    #[cfg(test)]
+    pub fn port_available(&self, port: &PortId) -> Option<bool> {
+        self.ports
+            .iter()
+            .find_map(|(id, (_, available))| if port == id { Some(*available) } else { None })
     }
 }
 
