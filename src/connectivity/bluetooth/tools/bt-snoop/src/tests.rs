@@ -4,7 +4,9 @@
 
 use {
     fidl::{endpoints::RequestStream, Error as FidlError},
-    fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopProxy, SnoopRequestStream},
+    fidl_fuchsia_bluetooth_snoop::{
+        PacketType, SnoopMarker, SnoopPacket, SnoopProxy, SnoopRequestStream, Timestamp,
+    },
     fuchsia_async::{Channel, Executor},
     fuchsia_inspect::{assert_inspect_tree, Inspector},
     fuchsia_zircon as zx,
@@ -105,6 +107,59 @@ fn test_snoop_command_line_args() {
     assert_eq!(args.max_device_count, max_device_count);
     assert_eq!(args.truncate_payload, Some(truncate_payload));
     assert_eq!(args.verbosity, verbosity);
+}
+
+#[test]
+fn test_packet_logs_inspect() {
+    // This is a test that basic inspect data is plumbed through from the inspect root.
+    // More comprehensive testing of possible permutations of packet log inspect data
+    // is found in bounded_queue.rs
+    let inspect = Inspector::new();
+    let runtime_metrics_node = inspect.root().create_child("runtime_metrics");
+    let mut packet_logs = PacketLogs::new(2, 256, Duration::from_secs(60), runtime_metrics_node);
+
+    assert_inspect_tree!(inspect, root: {
+        runtime_metrics: {
+            logging_active_for_devices: "",
+        }
+    });
+
+    let id_1 = String::from("001");
+
+    packet_logs.add_device(id_1.clone());
+
+    assert_inspect_tree!(inspect, root: {
+        runtime_metrics: {
+            logging_active_for_devices: "\"001\"",
+            device_001: {
+                size_in_bytes: 0u64,
+                number_of_items: 0u64,
+            },
+        }
+    });
+
+    let packet = SnoopPacket {
+        is_received: false,
+        type_: PacketType::Data,
+        timestamp: Timestamp { subsec_nanos: 0, seconds: 123 },
+        original_len: 3,
+        payload: vec![3, 2, 1],
+    };
+
+    packet_logs.log_packet(&id_1, packet);
+
+    assert_inspect_tree!(inspect, root: {
+        runtime_metrics: {
+            logging_active_for_devices: "\"001\"",
+            device_001: {
+                size_in_bytes: 75u64,
+                number_of_items: 1u64,
+                "0": vec![0u8, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0, 2, 3, 2, 1],
+            },
+        }
+    });
+
+    drop(packet_logs);
 }
 
 #[test]

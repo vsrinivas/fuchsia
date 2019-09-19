@@ -71,8 +71,6 @@ pub(crate) struct PacketLogs {
     // Inspect Data
     inspect: inspect::Node,
     logging_for_devices: inspect::StringProperty,
-    log_data_list: inspect::Node,
-    log_data: HashMap<DeviceId, inspect::BytesProperty>,
 }
 
 impl PacketLogs {
@@ -92,7 +90,6 @@ impl PacketLogs {
     ) -> PacketLogs {
         assert!(max_device_count != 0, "Cannot create a `PacketLog` with a max_device_count of 0");
         let logging_for_devices = inspect.create_string("logging_active_for_devices", "");
-        let log_data_list = inspect.create_child("log_data");
         PacketLogs {
             max_device_count,
             log_size_bytes,
@@ -101,8 +98,6 @@ impl PacketLogs {
             insertion_order: VecDeque::new(),
             inspect,
             logging_for_devices,
-            log_data_list,
-            log_data: HashMap::new(),
         }
     }
 
@@ -120,7 +115,6 @@ impl PacketLogs {
             device.clone(),
             BoundedQueue::new(self.log_size_bytes, self.log_age, bounded_queue_metrics),
         );
-        self.log_data.insert(device.clone(), self.log_data_list.create_bytes(device.clone(), b""));
 
         // Remove old log and its insertion order metadata if there are too many logs
         //
