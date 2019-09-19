@@ -42,7 +42,7 @@ If you don't know the network interface name, run `fx sniff` without options. Th
 ### Show the hexdump of packets over the ethernet interface
 
 ```shell
-[host] $ fx sniff --format hex eth
+[host] $ fx sniff --view hex eth
 ```
 
 ### Capture WLAN packets and store them in a file
