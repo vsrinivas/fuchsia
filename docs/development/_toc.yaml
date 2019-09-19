@@ -53,3 +53,6 @@ toc:
   - title: "Debugger"
     section:
     - include: /docs/development/debugger/_toc.yaml
+- title: "Editors"
+  section:
+   - include: /docs/development/editors/_toc.yaml
