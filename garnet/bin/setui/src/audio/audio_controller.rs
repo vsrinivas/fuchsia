@@ -19,6 +19,25 @@ use {
 const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
 const DEFAULT_VOLUME_MUTED: bool = false;
 
+// TODO(go/fxb/35983): Load default values from a config.
+pub const DEFAULT_STREAMS: [AudioStream; 5] = [
+    create_default_audio_stream(AudioStreamType::Background),
+    create_default_audio_stream(AudioStreamType::Media),
+    create_default_audio_stream(AudioStreamType::Interruption),
+    create_default_audio_stream(AudioStreamType::SystemAgent),
+    create_default_audio_stream(AudioStreamType::Communication),
+];
+
+// TODO(go/fxb/35983): Load default values from a config.
+pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
+    AudioStream {
+        stream_type: stream_type,
+        source: AudioSettingSource::Default,
+        user_volume_level: DEFAULT_VOLUME_LEVEL,
+        user_volume_muted: DEFAULT_VOLUME_MUTED,
+    }
+}
+
 /// Controller that handles commands for SettingType::Audio.
 pub fn spawn_audio_controller(
     service_context_handle: Arc<RwLock<ServiceContext>>,
@@ -34,17 +53,8 @@ pub fn spawn_audio_controller(
     // TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
     let stored_mic_mute = false;
 
-    let stream_types: [AudioStreamType; 5] = [
-        AudioStreamType::Background,
-        AudioStreamType::Media,
-        AudioStreamType::Interruption,
-        AudioStreamType::SystemAgent,
-        AudioStreamType::Communication,
-    ];
-
-    for stream_type in stream_types.iter() {
-        stored_audio_streams
-            .insert(stream_type.clone(), create_default_audio_stream(stream_type.clone()));
+    for stream in DEFAULT_STREAMS.iter() {
+        stored_audio_streams.insert(stream.stream_type.clone(), stream.clone());
     }
 
     fasync::spawn(async move {
@@ -90,9 +100,13 @@ pub fn spawn_audio_controller(
                             }
                         }
                         SettingRequest::Get => {
-                            let mut streams = Vec::new();
-                            for val in stored_audio_streams.values() {
-                                streams.push(val.clone());
+                            let mut streams: [AudioStream; 5] = DEFAULT_STREAMS;
+                            for i in 0..streams.len() {
+                                if let Some(stored_stream) =
+                                    stored_audio_streams.get(&streams[i].stream_type)
+                                {
+                                    streams[i] = stored_stream.clone();
+                                }
                             }
 
                             let _ = responder
@@ -151,13 +165,4 @@ pub fn get_gain_db(level: f32, muted: bool) -> f32 {
     }
 
     (1.0 - level) * MIN_LEVEL_GAIN_DB
-}
-
-pub fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
-    AudioStream {
-        stream_type: stream_type,
-        source: AudioSettingSource::Default,
-        user_volume_level: DEFAULT_VOLUME_LEVEL,
-        user_volume_muted: DEFAULT_VOLUME_MUTED,
-    }
 }

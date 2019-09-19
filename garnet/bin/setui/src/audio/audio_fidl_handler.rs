@@ -25,8 +25,8 @@ impl From<SettingResponse> for AudioSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Audio(info) = response {
             let mut streams = Vec::new();
-            for stream in info.streams {
-                streams.push(AudioStreamSettings::from(stream));
+            for stream in info.streams.iter() {
+                streams.push(AudioStreamSettings::from(stream.clone()));
             }
 
             let mut audio_input = AudioInput::empty();

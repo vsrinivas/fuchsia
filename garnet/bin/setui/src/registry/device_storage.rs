@@ -29,6 +29,7 @@ pub struct DeviceStorage<T> {
 /// Clients that want to make a breaking change should create a new structure with a new key and
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
+/// TODO(fxb/37035): Remove Copy trait.
 pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Copy + PartialEq {
     const DEFAULT_VALUE: Self;
     const KEY: &'static str;

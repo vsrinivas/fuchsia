@@ -4,13 +4,13 @@
 
 #[cfg(test)]
 use {
-    crate::audio::{create_default_audio_stream, get_gain_db},
+    crate::audio::{create_default_audio_stream, get_gain_db, DEFAULT_STREAMS},
     crate::create_fidl_service,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::service_context::ServiceContext,
-    crate::switchboard::base::AudioStreamType,
     crate::switchboard::base::SettingType,
+    crate::switchboard::base::{AudioInfo, AudioInputInfo, AudioStreamType},
     failure::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_media::AudioRenderUsage,
@@ -117,4 +117,13 @@ async fn test_audio() {
             .get(&fidl_fuchsia_media::AudioRenderUsage::Media)
             .expect("contains media stream")
     );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_audio_info_copy() {
+    let audio_info =
+        AudioInfo { streams: DEFAULT_STREAMS, input: AudioInputInfo { mic_mute: false } };
+
+    let copy_audio_info = audio_info;
+    assert_eq!(audio_info, copy_audio_info);
 }

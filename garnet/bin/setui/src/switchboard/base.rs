@@ -353,7 +353,7 @@ impl From<EdgeStyle> for fidl_fuchsia_settings::EdgeStyle {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum AudioSettingSource {
     Default,
     User,
@@ -369,7 +369,7 @@ pub enum AudioStreamType {
     Communication,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct AudioStream {
     pub stream_type: AudioStreamType,
     pub source: AudioSettingSource,
@@ -377,14 +377,14 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct AudioInputInfo {
     pub mic_mute: bool,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct AudioInfo {
-    pub streams: Vec<AudioStream>,
+    pub streams: [AudioStream; 5],
     pub input: AudioInputInfo,
 }
 
