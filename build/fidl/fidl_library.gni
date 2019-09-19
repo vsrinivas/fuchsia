@@ -3,9 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
+
+declare_args() {
+  # Whether libraries under //vendor should be linted.
+  vendor_linting = false
+}
 
 # Generates some representation of a FIDL library that's consumable by Language
 # bindings generators.
@@ -150,19 +156,25 @@ template("fidl_library") {
       lint_stamp_file,
     ]
 
+    should_lint = true
+    foreach(library, unlinted_libraries) {
+      if (library == library_name) {
+        should_lint = false
+      }
+    }
+
+    full_label = get_label_info(":bogus", "label_no_toolchain")
+    in_vendor = string_replace(full_label, "//vendor", "") != full_label
+    if (in_vendor && !vendor_linting) {
+      # Disable lints for libraries under //vendor.
+      # TODO(fxb/36800): remove this exception.
+      should_lint = false
+    }
+
     fidl_to_lint = []
-    foreach(source, sources) {
-      if (string_replace(source, ".test.", "") == source) {
-        # TODO(fxb/7821): After soft transition to disable failed FIDL lint checks
-        # outside the primary fuchsia source tree, remove this "if" gate and
-        # always add the non-test "source" to the "fidl_to_lint" array, so linting
-        # is enforced on all builds using this toolchain.
-        source_path = "//" + rebase_path(source, "//")
-        if (string_replace(source_path, "//examples/", "") != source_path ||
-            string_replace(source_path, "//garnet/", "") != source_path ||
-            string_replace(source_path, "//peridot/", "") != source_path ||
-            string_replace(source_path, "//sdk/", "") != source_path ||
-            string_replace(source_path, "//src/", "") != source_path) {
+    if (should_lint) {
+      foreach(source, sources) {
+        if (string_replace(source, ".test.", "") == source) {
           # Don't automatically lint test.fidl and test.<various>.fidl files
           fidl_to_lint += [ rebase_path(source, root_build_dir) ]
         }
