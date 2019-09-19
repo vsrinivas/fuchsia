@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fostr/zx_types.h"
-
-#include <sstream>
-
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
@@ -24,7 +22,10 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
+#include <sstream>
+
 #include "gtest/gtest.h"
+#include "lib/fostr/zx_types.h"
 #include "lib/fsl/handles/object_info.h"
 
 namespace fostr {
@@ -213,8 +214,14 @@ TEST(ZxTypes, InvalidLog) {
 // Tests zx::debuglog formatting.
 TEST(ZxTypes, Log) {
   std::ostringstream os;
+
+  zx::channel local, remote;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
+  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
+  ASSERT_EQ(ZX_OK, fdio_service_connect(kWriteOnlyLogPath, remote.release()));
+
   zx::debuglog log;
-  EXPECT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0, &log));
+  ASSERT_EQ(ZX_OK, fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address()));
 
   os << log;
 
