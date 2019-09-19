@@ -5,19 +5,23 @@
 group("test") {
   testonly = true
   deps = [
-    ":fvm-driver-unittests",
-    "integration:test",
+    ":fvm-driver-integration",
   ]
 }
 
-test("fvm-driver-unittests") {
+test("fvm-driver-integration") {
   sources = [
-    "slice-extent-test.cc",
+    "volume_manager_api_test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [
     "$zx/system/dev/block/fvm:shared",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:llcpp",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fvm/test:devices",
     "$zx/system/ulib/zxtest",
   ]
 }

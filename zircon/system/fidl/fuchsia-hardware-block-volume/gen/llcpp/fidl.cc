@@ -1625,6 +1625,9 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocate
 constexpr uint64_t kVolumeManager_Query_Ordinal = 0x4591d72f00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kVolumeManager_GetInfo_Ordinal = 0x21196e0c00000000lu;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kVolumeManager_Activate_Ordinal = 0x45f8979b00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
 
@@ -1768,6 +1771,68 @@ VolumeManager::UnownedResultOf::Query VolumeManager::Call::Query(zx::unowned_cha
 }
 
 template <>
+VolumeManager::ResultOf::GetInfo_Impl<VolumeManager::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetInfoRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInfoRequest));
+  ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      VolumeManager::InPlace::GetInfo(std::move(_client_end), Super::response_buffer()));
+}
+
+VolumeManager::ResultOf::GetInfo VolumeManager::SyncClient::GetInfo() {
+  return ResultOf::GetInfo(zx::unowned_channel(this->channel_));
+}
+
+VolumeManager::ResultOf::GetInfo VolumeManager::Call::GetInfo(zx::unowned_channel _client_end) {
+  return ResultOf::GetInfo(std::move(_client_end));
+}
+
+template <>
+VolumeManager::UnownedResultOf::GetInfo_Impl<VolumeManager::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetInfoRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetInfoRequest));
+  ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      VolumeManager::InPlace::GetInfo(std::move(_client_end), std::move(_response_buffer)));
+}
+
+VolumeManager::UnownedResultOf::GetInfo VolumeManager::SyncClient::GetInfo(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+VolumeManager::UnownedResultOf::GetInfo VolumeManager::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetInfo(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<VolumeManager::GetInfoResponse> VolumeManager::InPlace::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kVolumeManager_GetInfo_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<VolumeManager::GetInfoResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetInfoRequest, GetInfoResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<VolumeManager::GetInfoResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 VolumeManager::ResultOf::Activate_Impl<VolumeManager::ActivateResponse>::Activate_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActivateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -1864,6 +1929,17 @@ bool VolumeManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::QueryCompleter::Sync(txn));
       return true;
     }
+    case kVolumeManager_GetInfo_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetInfo(
+        Interface::GetInfoCompleter::Sync(txn));
+      return true;
+    }
     case kVolumeManager_Activate_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ActivateRequest>(msg);
@@ -1957,6 +2033,46 @@ void VolumeManager::Interface::QueryCompleterBase::Reply(::fidl::BytePart _buffe
 void VolumeManager::Interface::QueryCompleterBase::Reply(::fidl::DecodedMessage<QueryResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolumeManager_Query_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void VolumeManager::Interface::GetInfoCompleterBase::Reply(int32_t status, VolumeManagerInfo* info) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetInfoResponse _response = {};
+  _response._hdr.ordinal = kVolumeManager_GetInfo_Ordinal;
+  _response.status = std::move(status);
+  _response.info = std::move(info);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void VolumeManager::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, VolumeManagerInfo* info) {
+  if (_buffer.capacity() < GetInfoResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetInfoResponse _response = {};
+  _response._hdr.ordinal = kVolumeManager_GetInfo_Ordinal;
+  _response.status = std::move(status);
+  _response.info = std::move(info);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void VolumeManager::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInfoResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kVolumeManager_GetInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

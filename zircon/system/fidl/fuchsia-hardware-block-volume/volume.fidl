@@ -22,6 +22,25 @@ struct VolumeInfo {
     uint64 pslice_allocated_count;
 };
 
+// VolumeManagerInfo describes the properties of the existing volume manager.
+// This properties are specific for the VolumeManager and are not specific
+// to each Volume.
+struct VolumeManagerInfo {
+    // Size of a single slice, in bytes.
+    uint64 slice_size;
+
+    // Size in bytes of the partition the VolumeManager is able to address with respect to the available space.
+    uint64 current_slice_count;
+
+    // The maximum capacity which the Volume Manager could grow to utilize, if the
+    // partition containing the Volume Manager itself expands (i.e., the Volume Manager
+    // is initialized on a GPT partition that has extended beyond the originally allocated
+    // capacity).
+    // This resize occurs automatically on initialization of the Volume Manager,
+    // and adjusts the result of |current_slice_count| to reflect the currently usable size.
+    uint64 maximum_slice_count;
+};
+
 // Indicates that the partition should be created as inactive, implying that it
 // will be destroyed on reboot (unless activated by a call to "Activate").
 const uint32 AllocatePartitionFlagInactive = 0x00000001;
@@ -41,6 +60,9 @@ protocol VolumeManager {
 
     // Gets slice size information about all volumes.
     Query() -> (zx.status status, VolumeInfo? info);
+
+    // Gets the VolumeManagerInfo describing this instance of the |VolumeManager|.
+    GetInfo() -> (zx.status status, VolumeManagerInfo? info);
 
     // Atomically marks a vpartition (by instance GUID) as inactive, while finding
     // another partition (by instance GUID) and marking it as active.
@@ -89,7 +111,7 @@ protocol Volume {
     //
     // TODO(smklein): Replace array with vector; doing so would be non-simple.
     QuerySlices(vector<uint64>:MAX_SLICE_REQUESTS start_slices)
-      -> (zx.status status, array<VsliceRange>:MAX_SLICE_REQUESTS response, uint64 response_count);
+        -> (zx.status status, array<VsliceRange>:MAX_SLICE_REQUESTS response, uint64 response_count);
 
     // Extends the mapping of this partition.
     Extend(uint64 start_slice, uint64 slice_count) -> (zx.status status);

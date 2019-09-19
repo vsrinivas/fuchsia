@@ -2,27 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <limits>
-#include <new>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/vmo.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
+#include <atomic>
+#include <limits>
+#include <new>
 #include <utility>
 
 #include <ddk/protocol/block.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "fvm-private.h"
 #include "slice-extent.h"
@@ -673,6 +674,15 @@ zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {
   fuchsia_hardware_block_volume_VolumeInfo info;
   Query(&info);
   return fuchsia_hardware_block_volume_VolumeManagerQuery_reply(txn, ZX_OK, &info);
+}
+
+zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) {
+  fuchsia_hardware_block_volume_VolumeManagerInfo info;
+  info.slice_size = format_info().slice_size();
+  info.current_slice_count =
+      format_info().GetMaxAddressableSlices(info_.block_size * info_.block_count);
+  info.maximum_slice_count = format_info().GetMaxAllocatableSlices();
+  return fuchsia_hardware_block_volume_VolumeManagerGetInfo_reply(txn, ZX_OK, &info);
 }
 
 zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,

@@ -27,6 +27,7 @@ namespace block {
 namespace volume {
 
 struct VsliceRange;
+struct VolumeManagerInfo;
 struct VolumeInfo;
 class Volume;
 class VolumeManager;
@@ -43,6 +44,22 @@ struct VsliceRange {
   bool allocated = {};
 
   uint64_t count = {};
+};
+
+
+
+struct VolumeManagerInfo {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint64_t slice_size = {};
+
+  uint64_t current_slice_count = {};
+
+  uint64_t maximum_slice_count = {};
 };
 
 
@@ -1325,6 +1342,7 @@ class Volume final {
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
 
 class VolumeManager final {
@@ -1378,6 +1396,22 @@ class VolumeManager final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using QueryRequest = ::fidl::AnyZeroArgMessage;
+
+  struct GetInfoResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+    VolumeManagerInfo* info;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetInfoRequest = ::fidl::AnyZeroArgMessage;
 
   struct ActivateResponse final {
     FIDL_ALIGNDECL
@@ -1446,6 +1480,22 @@ class VolumeManager final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetInfo_Impl(zx::unowned_channel _client_end);
+      ~GetInfo_Impl() = default;
+      GetInfo_Impl(GetInfo_Impl&& other) = default;
+      GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Activate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1465,6 +1515,7 @@ class VolumeManager final {
    public:
     using AllocatePartition = AllocatePartition_Impl<AllocatePartitionResponse>;
     using Query = Query_Impl<QueryResponse>;
+    using GetInfo = GetInfo_Impl<GetInfoResponse>;
     using Activate = Activate_Impl<ActivateResponse>;
   };
 
@@ -1506,6 +1557,22 @@ class VolumeManager final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetInfo_Impl() = default;
+      GetInfo_Impl(GetInfo_Impl&& other) = default;
+      GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Activate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -1525,6 +1592,7 @@ class VolumeManager final {
    public:
     using AllocatePartition = AllocatePartition_Impl<AllocatePartitionResponse>;
     using Query = Query_Impl<QueryResponse>;
+    using GetInfo = GetInfo_Impl<GetInfoResponse>;
     using Activate = Activate_Impl<ActivateResponse>;
   };
 
@@ -1550,6 +1618,12 @@ class VolumeManager final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Query Query(::fidl::BytePart _response_buffer);
+
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetInfo GetInfo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetInfo GetInfo(::fidl::BytePart _response_buffer);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Activate Activate(::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
@@ -1579,6 +1653,12 @@ class VolumeManager final {
     static UnownedResultOf::Query Query(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Activate Activate(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1595,6 +1675,8 @@ class VolumeManager final {
     static ::fidl::DecodeResult<AllocatePartitionResponse> AllocatePartition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<QueryResponse> Query(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<ActivateResponse> Activate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1635,6 +1717,20 @@ class VolumeManager final {
     using QueryCompleter = ::fidl::Completer<QueryCompleterBase>;
 
     virtual void Query(QueryCompleter::Sync _completer) = 0;
+
+    class GetInfoCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, VolumeManagerInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, VolumeManagerInfo* info);
+      void Reply(::fidl::DecodedMessage<GetInfoResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetInfoCompleter = ::fidl::Completer<GetInfoCompleterBase>;
+
+    virtual void GetInfo(GetInfoCompleter::Sync _completer) = 0;
 
     class ActivateCompleterBase : public _Base {
      public:
@@ -1686,6 +1782,14 @@ static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::volum
 static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VsliceRange, allocated) == 0);
 static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VsliceRange, count) == 8);
 static_assert(sizeof(::llcpp::fuchsia::hardware::block::volume::VsliceRange) == ::llcpp::fuchsia::hardware::block::volume::VsliceRange::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo, slice_size) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo, current_slice_count) == 8);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo, maximum_slice_count) == 16);
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo) == ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::block::volume::VolumeInfo> : public std::true_type {};
@@ -1888,6 +1992,15 @@ static_assert(sizeof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::Q
     == ::llcpp::fuchsia::hardware::block::volume::VolumeManager::QueryResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::QueryResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::QueryResponse, info) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse)
+    == ::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::volume::VolumeManager::GetInfoResponse, info) == 24);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::block::volume::VolumeManager::ActivateRequest> : public std::true_type {};

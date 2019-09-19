@@ -2,19 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/device/block.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <fvm/format.h>
-#include <zircon/device/block.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 #ifdef __cplusplus
+
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 
 #include <atomic>
 
@@ -26,11 +33,6 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
 
 #include "slice-extent.h"
 #include "vpartition.h"
@@ -97,6 +99,7 @@ class VPartitionManager : public ManagerDeviceType {
     static const fuchsia_hardware_block_volume_VolumeManager_ops kOps = {
         .AllocatePartition = Binder::BindMember<&VPartitionManager::FIDLAllocatePartition>,
         .Query = Binder::BindMember<&VPartitionManager::FIDLQuery>,
+        .GetInfo = Binder::BindMember<&VPartitionManager::FIDLGetInfo>,
         .Activate = Binder::BindMember<&VPartitionManager::FIDLActivate>,
     };
     return &kOps;
@@ -109,6 +112,7 @@ class VPartitionManager : public ManagerDeviceType {
                                     const char* name_data, size_t name_size, uint32_t flags,
                                     fidl_txn_t* txn);
   zx_status_t FIDLQuery(fidl_txn_t* txn);
+  zx_status_t FIDLGetInfo(fidl_txn_t* txn);
   zx_status_t FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
                            const fuchsia_hardware_block_partition_GUID* new_guid, fidl_txn_t* txn);
 
@@ -204,3 +208,5 @@ __BEGIN_CDECLS
 zx_status_t fvm_bind(zx_device_t* dev);
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
