@@ -18,7 +18,6 @@ constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
 constexpr char kCrashServerUrlKey[] = "url";
 constexpr char kFeedbackDataCollectionTimeoutInMillisecondsKey[] =
     "feedback_data_collection_timeout_in_milliseconds";
-
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONSTANTS_H_

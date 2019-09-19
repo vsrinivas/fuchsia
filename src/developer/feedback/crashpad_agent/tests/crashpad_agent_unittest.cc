@@ -79,6 +79,10 @@ constexpr zx::duration kFeedbackDataCollectionTimeout = zx::msec(10);
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
 
+// "attachments" should be kept in sync with the value defined in
+// //crashpad/client/crash_report_database_generic.cc
+constexpr char kCrashpadAttachmentsDir[] = "attachments";
+constexpr char kCrashpadUUIDString[] = "00000000-0000-0000-0000-000000000001";
 constexpr char kProgramName[] = "crashing_program";
 
 constexpr char kSingleAttachmentKey[] = "attachment.key";
@@ -132,9 +136,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
               (!config.crash_server.url && !crash_server));
     crash_server_ = std::move(crash_server);
 
-    // "attachments" should be kept in sync with the value defined in
-    // //crashpad/client/crash_report_database_generic.cc
-    attachments_dir_ = files::JoinPath(config.crashpad_database.path, "attachments");
+    attachments_dir_ = files::JoinPath(config.crashpad_database.path, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot());
     agent_ = CrashpadAgent::TryCreate(dispatcher(), service_directory_provider_.service_directory(),
@@ -449,6 +451,22 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
   EXPECT_EQ(new_attachment_subdirs.size(), 1u);
   EXPECT_THAT(new_attachment_subdirs,
               testing::Not(testing::UnorderedElementsAreArray(attachment_subdirs)));
+}
+
+TEST_F(CrashpadAgentTest, Check_CleanDatabase_CleanOrphanedAttachments) {
+  const std::string kOrphanedAttachmentDir = files::JoinPath(
+      database_path_.path(), files::JoinPath(kCrashpadAttachmentsDir, kCrashpadUUIDString));
+  files::CreateDirectory(kOrphanedAttachmentDir);
+
+  const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
+  EXPECT_THAT(attachment_subdirs, ElementsAre(kCrashpadUUIDString));
+
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment("an attachment").is_response());
+
+  // We check that only one set of attachments is present and different than the
+  // prior set (the name of the directory is the local crash report ID).
+  const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirs();
+  EXPECT_THAT(new_attachment_subdirs, Not(UnorderedElementsAreArray(attachment_subdirs)));
 }
 
 TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {

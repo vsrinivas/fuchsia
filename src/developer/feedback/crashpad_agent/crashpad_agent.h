@@ -75,6 +75,15 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
   // Report age is defined by their crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
+  // Removes expired lockfiles, metadata without report files, report files without
+  // metadata from the database, and orphaned attachments.
+  //
+  // An expired lockfile is defined as having been alive longer than |lockfile_ttl|
+  // seconds.
+  //
+  // Returns the number of reports cleaned.
+  size_t CleanDatabase();
+
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;

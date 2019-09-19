@@ -30,6 +30,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/util/misc/metrics.h"
@@ -165,6 +166,7 @@ void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
                      this](fuchsia::crash::Analyzer_OnManagedRuntimeException_Result& result) {
             callback(std::move(result));
             PruneDatabase();
+            CleanDatabase();
           });
 
   executor_.schedule_task(std::move(promise));
@@ -196,6 +198,7 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
           .and_then([callback = std::move(callback), this](CrashReporter_File_Result& result) {
             callback(std::move(result));
             PruneDatabase();
+            CleanDatabase();
           });
 
   executor_.schedule_task(std::move(promise));
@@ -356,6 +359,17 @@ void CrashpadAgent::PruneDatabase() {
   // total size every time we prune.
   crashpad::DatabaseSizePruneCondition pruning_condition(config_.crashpad_database.max_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
+}
+
+size_t CrashpadAgent::CleanDatabase() {
+  // We set the |lockfile_ttl| to 0 to ensure that lockfiles are available for removal
+  // immediately after a report has been unlocked.
+  const size_t num_removed = static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/0));
+  if (num_removed > 0) {
+    FX_LOGS(INFO) << fxl::StringPrintf("Removed %lu orphan file(s) from Crashpad database",
+                                       num_removed);
+  }
+  return num_removed;
 }
 
 }  // namespace feedback
