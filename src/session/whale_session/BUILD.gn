@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("whale_session_bin") {
+  name = "whale_session"
+  edition = "2018"
+
+  visibility = [ "//src/session/whale_session/*" ]
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:png",
+  ]
+}
+
+package("whale_session") {
+  deps = [
+    ":whale_session_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/whale_session.cml")
+      dest = "whale_session.cm"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("resources/whale.png")
+      dest = "whale.png"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "whale_session"
+    },
+  ]
+}

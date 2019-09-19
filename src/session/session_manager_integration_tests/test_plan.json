@@ -1,0 +1,5 @@
+{
+  "tests": [
+    "fuchsia-pkg://fuchsia.com/session_manager_integration_tests#meta/session_manager_integration_tests.cm"
+  ]
+}

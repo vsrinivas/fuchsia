@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+deprecated_fuchsia_component("component_manager_sfw_v1_component") {
+  deps = [
+    "//src/sys/component_manager:bin",
+  ]
+  manifest = rebase_path("meta/component_manager_sfw.cmx")
+  binary = "component_manager"
+}
+
+# A session framework specific version of component manager that includes the Scenic service.
+package("component_manager_sfw") {
+  components = [ ":component_manager_sfw_v1_component" ]
+}

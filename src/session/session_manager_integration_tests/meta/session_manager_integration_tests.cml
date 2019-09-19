@@ -1,0 +1,24 @@
+{
+    "program": {
+        "binary": "bin/session_manager_integration_tests_bin",
+        "args": [ "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm" ],
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        }
+    ],
+    "expose": [
+        {
+            "legacy_service": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ],
+    "collections": [
+        {
+            "name": "session",
+            "durability": "transient",
+        },
+    ],
+}

@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This group includes all the dependencies necessary to run Session Framework and its tests.
+group("session_framework") {
+  testonly = true
+  deps = [
+    "//garnet/bin/ui:scenic",
+    "//src/session/component_manager:component_manager_sfw",
+    "//src/session/session_manager",
+    "//src/session/session_manager:session_manager_tests",
+    "//src/session/session_manager_integration_tests",
+    "//src/session/whale_session",
+    "//src/sys/component_manager_for_test",
+    "//src/testing/runner",
+    "//src/ui/bin/ime:ime_service",
+  ]
+}

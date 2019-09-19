@@ -1,0 +1,32 @@
+{
+    "program": {
+        "binary": "bin/session_manager",
+        // The root session.
+        "args": [ "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm" ],
+    },
+    "use": [
+        {
+            // The Realm service allows session_manager to start components.
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        }
+    ],
+    // Holds all the sessions this session_manager will create. Capabilities offered to and exposed
+    // by sessions should be routed here.
+    "collections": [
+        {
+            "name": "session",
+            "durability": "transient",
+        },
+    ],
+    "offer": [
+        {
+            // Sessions use Scenic to display images.
+            "legacy_service": "/svc/fuchsia.ui.scenic.Scenic",
+            "from": "realm",
+            "to": [
+                { "dest": "#session" }
+            ]
+        },
+    ],
+}

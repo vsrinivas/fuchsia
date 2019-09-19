@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/session_manager_tests"
+    }
+}

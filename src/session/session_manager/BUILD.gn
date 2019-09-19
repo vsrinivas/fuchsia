@@ -1,0 +1,79 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("lib") {
+  name = "session_manager_lib"
+  with_unit_tests = true
+  edition = "2018"
+
+  visibility = [
+    "//src/session/session_manager/*",
+    "//src/session/session_manager_integration_tests/*",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust_crates:failure",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "session_manager"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust_crates:failure",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("session_manager") {
+  deps = [
+    ":bin",
+    ":lib",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/session_manager.cml")
+      dest = "session_manager.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "session_manager"
+    },
+  ]
+}
+
+test_package("session_manager_tests") {
+  deps = [
+    ":lib_test",
+  ]
+
+  tests = [
+    {
+      name = "session_manager_lib_lib_test"
+      dest = "session_manager_tests"
+      environments = basic_envs
+    },
+  ]
+}
