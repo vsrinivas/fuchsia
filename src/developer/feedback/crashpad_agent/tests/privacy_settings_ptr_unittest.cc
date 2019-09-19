@@ -283,6 +283,13 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnEachWatch) {
 }
 
 }  // namespace
+
+// Pretty-prints Settings::UploadPolicy in gTest matchers instead of the default byte
+// string in case of failed expectations.
+void PrintTo(const Settings::UploadPolicy& upload_policy, std::ostream* os) {
+  *os << ToString(upload_policy);
+}
+
 }  // namespace feedback
 
 int main(int argc, char** argv) {

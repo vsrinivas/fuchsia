@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -69,10 +70,10 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
       kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
   crash_server->node = config_.node.CreateChild(kCrashServerKey);
-  crash_server->enable_upload = crash_server->node.CreateString(
-      kCrashServerEnableUploadKey, (config.crash_server.enable_upload ? "true" : "false"));
+  crash_server->upload_policy = crash_server->node.CreateString(
+      kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
 
-  if (config.crash_server.enable_upload) {
+  if (config.crash_server.url) {
     crash_server->url =
         crash_server->node.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
   }

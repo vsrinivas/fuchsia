@@ -4,7 +4,7 @@
         "max_size_in_kb": 1024
     },
     "crash_server" : {
-        "enable_upload": true,
+        "upload_policy": "read_from_privacy_settings",
         "url": "http://localhost:1234"
     },
     "feedback_data_collection_timeout_in_milliseconds": 10

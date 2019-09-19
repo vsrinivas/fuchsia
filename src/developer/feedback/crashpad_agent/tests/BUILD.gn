@@ -67,20 +67,26 @@ test_package("crashpad_agent_tests") {
   resources = [
     # needed for crashpad_config_unittest
     {
-      path = "configs/valid_no_upload.json"
-      dest = "valid_config_no_upload.json"
+      path = "configs/valid_upload_disabled.json"
+      dest = "valid_config_upload_disabled.json"
     },
 
     # needed for crashpad_config_unittest
     {
-      path = "configs/valid_upload.json"
-      dest = "valid_config_upload.json"
+      path = "configs/valid_upload_enabled.json"
+      dest = "valid_config_upload_enabled.json"
     },
 
     # needed for crashpad_config_unittest
     {
-      path = "configs/valid_no_upload_spurious_server.json"
-      dest = "valid_config_no_upload_spurious_server.json"
+      path = "configs/valid_upload_read_from_privacy_settings.json"
+      dest = "valid_config_upload_read_from_privacy_settings.json"
+    },
+
+    # needed for crashpad_config_unittest
+    {
+      path = "configs/valid_upload_disabled_spurious_server.json"
+      dest = "valid_config_upload_disabled_spurious_server.json"
     },
 
     # needed for crashpad_config_unittest
@@ -97,8 +103,20 @@ test_package("crashpad_agent_tests") {
 
     # needed for crashpad_config_unittest
     {
-      path = "configs/bad_schema_missing_server.json"
-      dest = "bad_schema_missing_server_config.json"
+      path = "configs/bad_schema_missing_server_upload_enabled.json"
+      dest = "bad_schema_missing_server_upload_enabled_config.json"
+    },
+
+    # needed for crashpad_config_unittest
+    {
+      path = "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json"
+      dest = "bad_schema_missing_server_upload_read_from_privacy_settings_config.json"
+    },
+
+    # needed for crashpad_config_unittest
+    {
+      path = "configs/bad_schema_invalid_upload_policy.json"
+      dest = "bad_schema_invalid_upload_policy_config.json"
     },
   ]
 

@@ -14,39 +14,55 @@
 namespace feedback {
 namespace {
 
+constexpr CrashServerConfig::UploadPolicy kDisabled = CrashServerConfig::UploadPolicy::DISABLED;
+constexpr CrashServerConfig::UploadPolicy kEnabled = CrashServerConfig::UploadPolicy::ENABLED;
+constexpr CrashServerConfig::UploadPolicy kReadFromPrivacySettings =
+    CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+
 void CheckEmptyConfig(const Config& config) {
   EXPECT_EQ(config.crashpad_database.path, "");
-  EXPECT_FALSE(config.crash_server.enable_upload);
+  EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   EXPECT_EQ(config.crash_server.url, nullptr);
   EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(0));
 }
 
-TEST(ConfigTest, ParseConfig_ValidConfig_NoUpload) {
+TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload.json", &config), ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_disabled.json", &config), ZX_OK);
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
-  EXPECT_FALSE(config.crash_server.enable_upload);
+  EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   EXPECT_EQ(config.crash_server.url, nullptr);
   EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
 }
 
-TEST(ConfigTest, ParseConfig_ValidConfig_Upload) {
+TEST(ConfigTest, ParseConfig_ValidConfig_UploadEnabled) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload.json", &config), ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_enabled.json", &config), ZX_OK);
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
-  EXPECT_TRUE(config.crash_server.enable_upload);
+  EXPECT_EQ(config.crash_server.upload_policy, kEnabled);
+  EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
+}
+
+TEST(ConfigTest, ParseConfig_ValidConfig_UploadReadFromPrivacySettings) {
+  Config config;
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_read_from_privacy_settings.json", &config),
+            ZX_OK);
+  EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
+  EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
+  EXPECT_EQ(config.crash_server.upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
   EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
 }
 
-TEST(ConfigTest, ParseConfig_ValidConfig_NoUploadServerUrlIgnored) {
+TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload_spurious_server.json", &config), ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_disabled_spurious_server.json", &config),
+            ZX_OK);
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
-  EXPECT_FALSE(config.crash_server.enable_upload);
+  EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   // Even though a URL is set in the config file, we check that it is not set in the struct.
   EXPECT_EQ(config.crash_server.url, nullptr);
   EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
@@ -74,12 +90,35 @@ TEST(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
 
 TEST(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadEnabled) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_missing_server_config.json", &config),
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_missing_server_upload_enabled_config.json", &config),
+            ZX_ERR_INTERNAL);
+  CheckEmptyConfig(config);
+}
+
+TEST(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadReadFromPrivacySettings) {
+  Config config;
+  ASSERT_EQ(ParseConfig(
+                "/pkg/data/bad_schema_missing_server_upload_read_from_privacy_settings_config.json",
+                &config),
+            ZX_ERR_INTERNAL);
+  CheckEmptyConfig(config);
+}
+
+TEST(ConfigTest, ParseConfig_BadConfig_InvalidUploadPolicy) {
+  Config config;
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_invalid_upload_policy_config.json", &config),
             ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 
 }  // namespace
+
+// Pretty-prints CrashServerConfig::UploadPolicy in gTest matchers instead of the default byte
+// string in case of failed expectations.
+void PrintTo(const CrashServerConfig::UploadPolicy& upload_policy, std::ostream* os) {
+  *os << ToString(upload_policy);
+}
+
 }  // namespace feedback
 
 int main(int argc, char** argv) {

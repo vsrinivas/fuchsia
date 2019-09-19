@@ -4,7 +4,7 @@
         "max_size_in_kb": 51200
     },
     "crash_server" : {
-        "enable_upload": true,
+        "upload_policy": "enabled",
         "url": "https://clients2.google.com/cr/report"
     },
     "feedback_data_collection_timeout_in_milliseconds": 10000

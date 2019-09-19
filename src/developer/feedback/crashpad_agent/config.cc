@@ -39,15 +39,20 @@ const char kSchema[] = R"({
     "crash_server": {
       "type": "object",
       "properties": {
-        "enable_upload": {
-          "type": "boolean"
+        "upload_policy": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "enabled",
+            "read_from_privacy_settings"
+          ]
         },
         "url": {
           "type": "string"
         }
       },
       "required": [
-        "enable_upload"
+        "upload_policy"
       ],
       "additionalProperties": false
     },
@@ -97,11 +102,26 @@ CrashpadDatabaseConfig ParseCrashpadDatabaseConfig(const JsonObject& obj) {
 template <typename JsonObject>
 bool ParseCrashServerConfig(const JsonObject& obj, CrashServerConfig* config) {
   CrashServerConfig local_config;
-  local_config.enable_upload = obj[kCrashServerEnableUploadKey].GetBool();
 
-  if (local_config.enable_upload) {
+  bool should_expect_url = true;
+
+  const std::string upload_policy = obj[kCrashServerUploadPolicyKey].GetString();
+  if (upload_policy.compare("disabled") == 0) {
+    local_config.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
+    should_expect_url = false;
+  } else if (upload_policy.compare("enabled") == 0) {
+    local_config.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
+  } else if (upload_policy.compare("read_from_privacy_settings") == 0) {
+    local_config.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+  } else {
+    // This should not be possible as we have checked the config against the schema.
+    FX_LOGS(ERROR) << "unknown upload policy " << upload_policy;
+    return false;
+  }
+
+  if (should_expect_url) {
     if (!obj.HasMember(kCrashServerUrlKey)) {
-      FX_LOGS(ERROR) << "missing crash server URL in config with upload enabled";
+      FX_LOGS(ERROR) << "missing crash server URL in config with upload not disabled";
       return false;
     }
     local_config.url = std::make_unique<std::string>(obj[kCrashServerUrlKey].GetString());
@@ -137,9 +157,9 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // We use a local config to only set the out argument after all the checks.
   Config local_config;
+
   // It is safe to directly access the fields for which the keys are marked as required as we have
   // checked the config against the schema.
-
   local_config.crashpad_database =
       ParseCrashpadDatabaseConfig(doc[kCrashpadDatabaseKey].GetObject());
   if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
@@ -150,6 +170,17 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   *config = std::move(local_config);
   return ZX_OK;
+}
+
+std::string ToString(const CrashServerConfig::UploadPolicy upload_policy) {
+  switch (upload_policy) {
+    case CrashServerConfig::UploadPolicy::DISABLED:
+      return "DISABLED";
+    case CrashServerConfig::UploadPolicy::ENABLED:
+      return "ENABLED";
+    case CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS:
+      return "READ_FROM_PRIVACY_SETTINGS";
+  }
 }
 
 }  // namespace feedback

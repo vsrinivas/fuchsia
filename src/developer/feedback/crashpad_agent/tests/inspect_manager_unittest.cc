@@ -11,6 +11,7 @@
 #include <lib/zx/time.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
+#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -148,7 +149,7 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
       },
       /*crash_server=*/
       {
-          /*enable_upload=*/true,
+          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
           /*url=*/std::make_unique<std::string>("http://localhost:1234"),
       },
       /*feedback_data_collection_timeout=*/zx::msec(10)});
@@ -166,24 +167,26 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
                                 })))),
               NodeMatches(AllOf(NameMatches(kCrashServerKey),
                                 PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashServerEnableUploadKey, "true"),
+                                    StringIs(kCrashServerUploadPolicyKey,
+                                             ToString(CrashServerConfig::UploadPolicy::ENABLED)),
                                     StringIs(kCrashServerUrlKey, "http://localhost:1234"),
                                 })))),
           }))))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
-  inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
-                                        {
-                                            /*path=*/"/foo/crashes",
-                                            /*max_size_in_kb=*/1234,
-                                        },
-                                        /*crash_server=*/
-                                        {
-                                            /*enable_upload=*/false,
-                                            /*url=*/nullptr,
-                                        },
-                                        /*feedback_data_collection_timeout=*/zx::msec(10)});
+  inspect_manager_->ExposeConfig(Config{
+      /*crashpad_database=*/
+      {
+          /*path=*/"/foo/crashes",
+          /*max_size_in_kb=*/1234,
+      },
+      /*crash_server=*/
+      {
+          /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
+          /*url=*/nullptr,
+      },
+      /*feedback_data_collection_timeout=*/zx::msec(10)});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -196,9 +199,10 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
                                     StringIs(kCrashpadDatabasePathKey, "/foo/crashes"),
                                     UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
                                 })))),
-              NodeMatches(
-                  AllOf(NameMatches(kCrashServerKey),
-                        PropertyList(ElementsAre(StringIs(kCrashServerEnableUploadKey, "false"))))),
+              NodeMatches(AllOf(NameMatches(kCrashServerKey),
+                                PropertyList(ElementsAre(StringIs(
+                                    kCrashServerUploadPolicyKey,
+                                    ToString(CrashServerConfig::UploadPolicy::DISABLED)))))),
           }))))));
 }
 

@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/logger.h>
 
+#include "src/developer/feedback/crashpad_agent/config.h"
+
 namespace feedback {
 
 void Settings::set_upload_policy(const Settings::UploadPolicy upload_policy) {
@@ -24,13 +26,28 @@ void Settings::set_upload_policy(const Settings::UploadPolicy upload_policy) {
   }
 }
 
-void Settings::set_upload_policy(const std::optional<bool> enabled) {
-  if (!enabled.has_value()) {
-    set_upload_policy(UploadPolicy::LIMBO);
-  } else if (enabled.value()) {
-    set_upload_policy(UploadPolicy::ENABLED);
-  } else {
-    set_upload_policy(UploadPolicy::DISABLED);
+void Settings::set_upload_policy(const CrashServerConfig::UploadPolicy upload_policy) {
+  switch (upload_policy) {
+    case CrashServerConfig::UploadPolicy::DISABLED:
+      set_upload_policy(UploadPolicy::DISABLED);
+      break;
+    case CrashServerConfig::UploadPolicy::ENABLED:
+      set_upload_policy(UploadPolicy::ENABLED);
+      break;
+    case CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS:
+      set_upload_policy(UploadPolicy::LIMBO);
+      break;
+  }
+}
+
+std::string ToString(const Settings::UploadPolicy upload_policy) {
+  switch (upload_policy) {
+    case Settings::UploadPolicy::DISABLED:
+      return "DISABLED";
+    case Settings::UploadPolicy::ENABLED:
+      return "ENABLED";
+    case Settings::UploadPolicy::LIMBO:
+      return "LIMBO";
   }
 }
 

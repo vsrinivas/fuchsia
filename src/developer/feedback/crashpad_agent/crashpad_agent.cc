@@ -90,7 +90,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
     InspectManager* inspect_manager) {
   std::unique_ptr<CrashServer> crash_server;
-  if (config.crash_server.enable_upload && config.crash_server.url) {
+  if (config.crash_server.url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
   }
   return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
@@ -134,12 +134,12 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   FXL_DCHECK(services_);
   FXL_DCHECK(database_);
   FXL_DCHECK(inspect_manager_);
-  if (config.crash_server.enable_upload) {
+  if (config.crash_server.url) {
     FXL_DCHECK(crash_server_);
   }
 
-  // TODO(fxb/6360): add support for setting the upload policy according to PrivacySettingsWatcher.
-  settings_.set_upload_policy(config_.crash_server.enable_upload);
+  // TODO(fxb/6360): use PrivacySettingsWatcher if upload_policy is READ_FROM_PRIVACY_SETTINGS.
+  settings_.set_upload_policy(config_.crash_server.upload_policy);
 
   inspect_manager_->ExposeConfig(config_);
 }

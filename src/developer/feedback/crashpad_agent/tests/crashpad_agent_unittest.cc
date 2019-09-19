@@ -117,7 +117,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
                },
                /*crash_server=*/
                {
-                   /*enable_upload=*/true,
+                   /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
                },
                /*feedback_data_collection_timeout=*/
@@ -128,7 +128,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
  protected:
   // Resets the underlying agent using the given |config| and |crash_server|.
   void ResetAgent(Config config, std::unique_ptr<StubCrashServer> crash_server) {
-    FXL_CHECK(config.crash_server.enable_upload ^ !crash_server);
+    FXL_CHECK((config.crash_server.url && crash_server) ||
+              (!config.crash_server.url && !crash_server));
     crash_server_ = std::move(crash_server);
 
     // "attachments" should be kept in sync with the value defined in
@@ -144,7 +145,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 
   // Resets the underlying agent using the given |config|.
   void ResetAgent(Config config) {
-    FXL_CHECK(!config.crash_server.enable_upload);
+    FXL_CHECK(!config.crash_server.url);
     return ResetAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
@@ -389,7 +390,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                     },
                     /*crash_server=*/
                     {
-                        /*enable_upload=*/false,
+                        /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
                     /*feedback_data_collection_timeout=*/
@@ -423,7 +424,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                     },
                     /*crash_server=*/
                     {
-                        /*enable_upload=*/false,
+                        /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
                     /*feedback_data_collection_timeout=*/
@@ -460,7 +461,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
              },
              /*crash_server=*/
              {
-                 /*enable_upload=*/true,
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*feedback_data_collection_timeout=*/
@@ -479,7 +480,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                     },
                     /*crash_server=*/
                     {
-                        /*enable_upload=*/false,
+                        /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
                     /*feedback_data_collection_timeout=*/
@@ -550,11 +551,13 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
                                   StringIs(kCrashpadDatabasePathKey, database_path_.path()),
                                   UintIs(kCrashpadDatabaseMaxSizeInKbKey, kMaxTotalReportSizeInKb),
                               })))),
-                    NodeMatches(AllOf(NameMatches(kCrashServerKey),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          StringIs(kCrashServerEnableUploadKey, "true"),
-                                          StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
-                                      })))),
+                    NodeMatches(
+                        AllOf(NameMatches(kCrashServerKey),
+                              PropertyList(UnorderedElementsAreArray({
+                                  StringIs(kCrashServerUploadPolicyKey,
+                                           ToString(CrashServerConfig::UploadPolicy::ENABLED)),
+                                  StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
+                              })))),
                 }))),
           NodeMatches(NameMatches(kInspectReportsName)))));
 }

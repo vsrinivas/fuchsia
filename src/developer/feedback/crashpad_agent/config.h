@@ -24,12 +24,25 @@ struct CrashpadDatabaseConfig {
 };
 
 struct CrashServerConfig {
-  // Whether to upload the crash report to a remote crash server or leave it locally.
-  bool enable_upload = false;
+  // Policy defining whether to upload pending and future crash reports to a remote crash server.
+  enum class UploadPolicy {
+    // Crash reports should (1) not be uploaded and (2) marked as completed in the Crashpad database
+    // to avoid trying to ever upload them in the future.
+    DISABLED,
+
+    // Crash reports should be uploaded and on success marked as completed in the Crashpad database.
+    // If the upload is unsuccessful and the policy changes to DISABLED, the crash report should
+    // follow the DISABLED policy.
+    ENABLED,
+
+    // Policy should not be read from the config, but instead from the privacy settings.
+    READ_FROM_PRIVACY_SETTINGS,
+  };
+  UploadPolicy upload_policy = UploadPolicy::DISABLED;
 
   // URL of the remote crash server.
   //
-  // We use a std::unique_ptr to set it only when relevant, i.e. when |enable_upload| is set.
+  // We use a std::unique_ptr to set it only when relevant, i.e. when the policy is not DISABLED.
   std::unique_ptr<std::string> url;
 };
 
@@ -47,6 +60,9 @@ struct Config {
 
 // Parses the JSON config at |filepath| as |config|.
 zx_status_t ParseConfig(const std::string& filepath, Config* config);
+
+// Returns the string version of the enum.
+std::string ToString(CrashServerConfig::UploadPolicy upload_policy);
 
 }  // namespace feedback
 

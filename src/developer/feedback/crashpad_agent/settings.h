@@ -5,8 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_SETTINGS_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_SETTINGS_H_
 
-#include <optional>
-
+#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -35,13 +34,16 @@ class Settings {
 
   const UploadPolicy& upload_policy() { return upload_policy_; }
   void set_upload_policy(UploadPolicy upload_policy);
-  void set_upload_policy(std::optional<bool> enabled);
+  void set_upload_policy(CrashServerConfig::UploadPolicy upload_policy);
 
  private:
   UploadPolicy upload_policy_ = UploadPolicy::LIMBO;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Settings);
 };
+
+// Returns the string version of the enum.
+std::string ToString(Settings::UploadPolicy upload_policy);
 
 }  // namespace feedback
 
