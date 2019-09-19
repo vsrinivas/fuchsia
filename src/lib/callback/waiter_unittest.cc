@@ -6,12 +6,15 @@
 
 #include <lib/fit/defer.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 
 namespace callback {
 namespace {
+
+using ::testing::ElementsAre;
 
 TEST(Waiter, NoCallback) {
   auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
@@ -122,6 +125,19 @@ TEST(Waiter, CallbackSurviveWaiter) {
   waiter = nullptr;
 
   c1(0, 0);
+}
+
+TEST(Waiter, MultipleParameterCallack) {
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int, int>>(0);
+  auto c1 = waiter->NewCallback();
+  c1(0, 1, 2);
+
+  std::vector<std::tuple<int, int>> data;
+  int result = -1;
+  waiter->Finalize(Capture([] {}, &result, &data));
+
+  EXPECT_EQ(0, result);
+  EXPECT_THAT(data, ElementsAre(std::make_tuple(1, 2)));
 }
 
 TEST(Waiter, Promise) {

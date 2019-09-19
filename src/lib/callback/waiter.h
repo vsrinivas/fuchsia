@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -19,9 +20,32 @@ namespace callback {
 
 namespace internal {
 
-template <typename S, typename T>
+template <typename... T>
+class ResultAccumulatorValue {
+ public:
+  using  Value = std::tuple<T...>;
+
+  template <typename... T1>
+  static Value Build(T1&&... args) {
+    return std::make_tuple(std::forward<T1>(args)...);
+  }
+};
+
+template <typename T>
+class ResultAccumulatorValue<T> {
+ public:
+  using Value = T;
+
+  static Value Build(T arg) {
+    return arg;
+  }
+};
+
+template <typename S, typename... T>
 class ResultAccumulator {
  public:
+  using Value = typename ResultAccumulatorValue<T...>::Value;
+
   explicit ResultAccumulator(S success_status)
       : success_status_(success_status), result_status_(success_status_) {}
 
@@ -30,23 +54,24 @@ class ResultAccumulator {
     return results_.size() - 1;
   }
 
-  bool Update(size_t index, S status, T result) {
+  template <typename... T1>
+  bool Update(size_t index, S status, T1&&... args) {
     if (status != success_status_) {
       result_status_ = status;
       results_.clear();
       return false;
     }
-    results_[index] = std::move(result);
+    results_[index] = ResultAccumulatorValue<T...>::Build(std::forward<T1>(args)...);
     return true;
   }
 
-  std::pair<S, std::vector<T>> Result() {
+  std::pair<S, std::vector<Value>> Result() {
     return std::make_pair(result_status_, std::move(results_));
   }
 
  private:
   size_t current_index_ = 0;
-  std::vector<T> results_;
+  std::vector<Value> results_;
   S success_status_;
   S result_status_;
 };
@@ -300,15 +325,22 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 // waiter->Finalize([](Status s, std::vector<std::unique_ptr<Object>> v) {
 //   do something with the returned objects
 // });
-template <class S, class T>
-class Waiter
-    : public BaseWaiter<internal::ResultAccumulator<S, T>, std::pair<S, std::vector<T>>, S, T> {
+//
+// If the callbacks have multiple argument in sus of Status, the result are
+// accumulated in a std::vector of std::tuples.
+template <class S, class... T>
+class Waiter : public BaseWaiter<
+                   internal::ResultAccumulator<S, T...>,
+                   std::pair<S, std::vector<typename internal::ResultAccumulator<S, T...>::Value>>,
+                   S, T...> {
  public:
-  void Finalize(fit::function<void(S, std::vector<T>)> callback) {
-    BaseWaiter<internal::ResultAccumulator<S, T>, std::pair<S, std::vector<T>>, S, T>::Finalize(
-        [callback = std::move(callback)](std::pair<S, std::vector<T>> result) {
-          callback(result.first, std::move(result.second));
-        });
+  using Value = typename internal::ResultAccumulator<S, T...>::Value;
+  void Finalize(fit::function<void(S, std::vector<Value>)> callback) {
+    BaseWaiter<internal::ResultAccumulator<S, T...>, std::pair<S, std::vector<Value>>, S,
+               T...>::Finalize([callback =
+                                    std::move(callback)](std::pair<S, std::vector<Value>> result) {
+      callback(result.first, std::move(result.second));
+    });
   }
 
  private:
@@ -317,8 +349,8 @@ class Waiter
   ~Waiter() override{};
 
   explicit Waiter(S success_status)
-      : BaseWaiter<internal::ResultAccumulator<S, T>, std::pair<S, std::vector<T>>, S, T>(
-            internal::ResultAccumulator<S, T>(success_status)) {}
+      : BaseWaiter<internal::ResultAccumulator<S, T...>, std::pair<S, std::vector<Value>>, S, T...>(
+            internal::ResultAccumulator<S, T...>(success_status)) {}
 };
 
 // StatusWaiter can be used to collate the results of many asynchronous calls
