@@ -357,24 +357,6 @@ const std::vector<IndexNode::DieRef>& Index::FindExact(const Identifier& input) 
   return cur->dies();
 }
 
-std::pair<IndexNode::ConstIterator, IndexNode::ConstIterator> Index::FindPrefix(
-    const Identifier& input) const {
-  if (input.empty())
-    return std::make_pair(root_.sub().end(), root_.sub().end());
-
-  const IndexNode* cur = &root_;
-
-  // Go through all inputs that must match exactly (all but the last).
-  for (size_t i = 0; i < input.components().size() - 1; i++) {
-    auto found = cur->sub().find(input.components()[i].GetName(false));
-    if (found == cur->sub().end())
-      return std::make_pair(root_.sub().end(), root_.sub().end());
-    cur = &found->second;
-  }
-
-  return cur->FindPrefix(input.components().back().GetName(false));
-}
-
 std::vector<std::string> Index::FindFileMatches(std::string_view name) const {
   std::string_view name_last_comp = ExtractLastFileComponent(name);
 

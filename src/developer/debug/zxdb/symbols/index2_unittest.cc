@@ -42,12 +42,20 @@ TEST(Index2, IndexDump) {
         MyClass
           Types:
             Inner
+              Functions:
+                MyMemberTwo
+          Functions:
+            MyMemberOne
+          Variables:
+            kClassStatic
       Functions:
         NamespaceFunction
       Variables:
         kGlobal
   Types:
     ClassInTest2
+      Functions:
+        FunctionInTest2
     int
   Functions:
     DoLineLookupTest
@@ -64,6 +72,52 @@ zxdb_symbol_test.cc -> ../../garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test.
 zxdb_symbol_test2.cc -> ../../garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test2.cc -> 1 units
 )";
   EXPECT_EQ(kExpectedFiles, files.str());
+}
+
+TEST(Index2, FindExactFunction) {
+  TestSymbolModule module;
+  std::string err;
+  ASSERT_TRUE(module.Load(&err)) << err;
+
+  Index2 index;
+  index.CreateIndex(module.object_file());
+
+  // Standalone function search.
+  auto result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kMyFunctionName;
+
+  // Standalone function inside a named namespace.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kNamespaceFunctionName;
+
+  // Standalone function inside an anonymous namespace. Currently this is indexed as if the
+  // anonymous namespace wasn't there, but this may need to change in the future.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kAnonNSFunctionName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kAnonNSFunctionName;
+
+  // Namespace + class member function search.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyMemberOneName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kMyMemberOneName;
+
+  // Same but in the 2nd compilation unit (tests unit-relative addressing).
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kFunctionInTest2Name));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kFunctionInTest2Name;
+
+  // Namespace + class + struct with static member function search.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyMemberTwoName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kMyMemberTwoName;
+
+  // Global variable.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kGlobalName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kGlobalName;
+
+  // Class static variable.
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kClassStaticName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found: " << TestSymbolModule::kClassStaticName;
+
+  // Something not found.
+  result = index.FindExact(TestSymbolModule::SplitName("my_ns::MyClass::NotFoundThing"));
+  EXPECT_TRUE(result.empty());
 }
 
 TEST(Index2, FindFileMatches) {

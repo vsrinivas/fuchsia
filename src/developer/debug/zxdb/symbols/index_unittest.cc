@@ -58,45 +58,6 @@ TEST(Index, FindExactFunction) {
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 
-TEST(Index, FindPrefix) {
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.Load(&err)) << err;
-
-  Index index;
-  index.CreateIndex(module.object_file());
-
-  // Querying an exact identifier should return it.
-  auto [found, end] = index.FindPrefix(Identifier("GetStructWithEnums"));
-  ASSERT_NE(found, end);
-  EXPECT_EQ("GetStructWithEnums", found->first);
-
-  // Empty query should return found == end.
-  std::tie(found, end) = index.FindPrefix(Identifier());
-  EXPECT_EQ(found, end);
-
-  // Something not found.
-  std::tie(found, end) = index.FindPrefix(Identifier("ThisDoesntExist"));
-  EXPECT_EQ(found, end);
-
-  // Something with multiple results (NOTE: if more functions are added to the test file with this
-  // prefix, the expected results might change).
-  std::tie(found, end) = index.FindPrefix(Identifier(IdentifierComponent("Call")));
-  ASSERT_NE(found, end);
-  EXPECT_EQ("CallInline", found->first);
-  ++found;
-  ASSERT_NE(found, end);
-  EXPECT_EQ("CallInlineMember", found->first);
-
-  // A nested namespace.
-  std::tie(found, end) = index.FindPrefix(TestSymbolModule::SplitName("my_ns::Base"));
-  ASSERT_NE(found, end);
-  EXPECT_EQ("Base1", found->first);
-  ++found;
-  ASSERT_NE(found, end);
-  EXPECT_EQ("Base2", found->first);
-}
-
 TEST(Index, FindFileMatches) {
   TestSymbolModule module;
   std::string err;

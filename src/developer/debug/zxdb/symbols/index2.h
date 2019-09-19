@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index_node2.h"
 #include "src/lib/fxl/macros.h"
 
@@ -40,6 +41,14 @@ class Index2 {
 
   // Dumps the file index to the stream for debugging.
   void DumpFileIndex(std::ostream& out) const;
+
+  // Takes a fully-qualified name with namespaces and classes and template parameters and returns
+  // the list of symbols which match exactly.
+  //
+  // TODO(bug 36754) it would be nice if this could be deleted and all code go through
+  // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
+  // flexible way.
+  std::vector<IndexNode2::DieRef> FindExact(const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The name is matched from
   // the right side with a left boundary of either a slash or the beginning of the full path. This

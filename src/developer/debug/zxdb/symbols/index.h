@@ -54,27 +54,11 @@ class Index {
 
   // Takes a fully-qualified name with namespaces and classes and template parameters and returns
   // the list of symbols which match exactly.
+  //
+  // TODO(bug 36754) it would be nice if this could be deleted and all code go through
+  // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
+  // flexible way.
   const std::vector<IndexNode::DieRef>& FindExact(const Identifier& input) const;
-
-  // Takes a fully-qualified name with namespaces and classes and returns a pair of iterators.
-  //
-  // The first iterator points to the first node that has the input as a prefix.
-  //
-  // The second returned iterator points to the last node IN THE CONTAINER. This does not indicate
-  // the last node with the prefix. Many callers won't need all of the matches and doing it this way
-  // avoids a second lookup.
-  //
-  // Non-last input nodes must match exactly with "std::string::operator==". For example, the input:
-  //   { "std", "vector<" }
-  // Would look in the "std" node and would return an iterator to the "vector<Aardvark>" node inside
-  // it and the end of the "std" mode. Nodes are sorted by "std::string::operator<".
-  //
-  // If there are no matches both iterators will be the same (found == end).
-  //
-  // If the caller wants to find all matching prefixes, it can advance the iterator as long as the
-  // last input component is a prefix if the current iterator key and less than the end.
-  std::pair<IndexNode::ConstIterator, IndexNode::ConstIterator> FindPrefix(
-      const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The name is matched from
   // the right side with a left boundary of either a slash or the beginning of the full path. This

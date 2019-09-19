@@ -87,6 +87,8 @@ class IndexNode2 {
   // lists are just appended.
   void Merge(IndexNode2&& other);
 
+  const std::vector<DieRef>& dies() const { return dies_; }
+
  private:
   Kind kind_;
 

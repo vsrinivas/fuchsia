@@ -323,6 +323,9 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     }
   }
 
+  // TODO(bug 37654) it would be nice if this could be deleted and all code go through
+  // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
+  // flexible way.
   for (const auto& die_ref : index_.FindExact(symbol_to_find)) {
     LazySymbol lazy_symbol = IndexDieRefToSymbol(die_ref);
     const Symbol* symbol = lazy_symbol.Get();

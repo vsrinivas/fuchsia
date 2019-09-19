@@ -22,17 +22,23 @@ class NamedDieRef : public IndexNode2::DieRef {
  public:
   NamedDieRef() = default;
 
-  // The pointed-to string must outlive this class.
+  // Creates a DieRef we should index. The pointed-to string must outlive this class.
   NamedDieRef(bool is_decl, uint32_t offset, IndexNode2::Kind k, const char* name,
               uint32_t decl_offset)
       : DieRef(is_decl, offset), kind_(k), name_(name), decl_offset_(decl_offset) {}
 
-  bool is_valid() const { return kind_ != IndexNode2::Kind::kNone; }
+  bool should_index() const { return kind_ != IndexNode2::Kind::kNone; }
 
   IndexNode2::Kind kind() const { return kind_; }
 
   // The name associated with the DIE. Could be null.
+  //
+  // It's also possible for this to be valid for an otherwise !should_index() DieRef. In the case of
+  // a function with a specification, the implementation will have should_index set, but we'll
+  // traverse the specification to fill in the name. This will generate a valid but not indexable
+  // item for the specification.
   const char* name() const { return name_; }
+  void set_name(const char* n) { name_ = n; }
 
   // If this DIE has a declaration associated with it (a DW_AT_declaration tag), this indicates the
   // absolute offset of the declaration DIE. Will be 0 if none.
@@ -78,28 +84,46 @@ bool AbbrevHasLocation(const llvm::DWARFAbbreviationDeclaration* abbrev) {
 //
 // In the second pass we actually index the items identified, using the saved parent and name
 // information from the scan pass.
+//
+// In the second pass we can encounter some DIEs in the hierarchy chain that were not decoded in
+// the first pass. An example is when going to a function declaration. We only identify the
+// implementations in the first pass, but need to take the name from the declaration. These missing
+// ones are filled in by FillDieInfo().
 class UnitIndexer {
  public:
   // All passed-in objects must outlive this class.
-  explicit UnitIndexer(llvm::DWARFUnit* unit) : unit_(unit), scanner_(unit) {
+  explicit UnitIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
+      : context_(context), unit_(unit), scanner_(unit), name_decoder_(context, unit) {
     // The indexable array is 1:1 with the scanner entries.
     indexable_.resize(scanner_.die_count());
 
     path_.reserve(8);  // Don't want to reallocate.
+
+    // Set up the name decoder to extract to this local.
+    name_decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_decoder_name_);
   }
 
   // To use, first call Scan() to populate the indexable_ array, then call Index() to add the
   // items to the given index node root. The Scan pass will additionally add any entrypoint
   // functions it finds to the main_functions vector.
-  void Scan(llvm::DWARFContext* context, std::vector<IndexNode2::DieRef>* main_functions);
+  void Scan(std::vector<IndexNode2::DieRef>* main_functions);
   void Index(IndexNode2* root);
 
  private:
   // Returns kNone for non-indexable items.
+  //
+  // The kVar case is also returned for collection members. These need to be treated as variables
+  // when they have const data, but not otherwise, and this function does not decode the attributes.
   IndexNode2::Kind GetKindForDie(const llvm::DWARFDebugInfoEntry* die) const;
+
+  // Computes in the name and type for a DIE entry that wasn't filled in in the first pass (see
+  // class-level comment). Returns empty string if there is no name (this is important for the
+  // caller, see that code for more).
+  const char* GetDieName(uint32_t index);
 
   void AddEntryToIndex(uint32_t index_me, IndexNode2* root);
 
+  llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
 
   DwarfDieScanner2 scanner_;
@@ -107,13 +131,17 @@ class UnitIndexer {
 
   // Variable used for collecting the path of parents in AddDIE. This would make more sense as a
   // local variable but having it here prevents reallocating each time.
-  std::vector<uint32_t> path_;
+  std::vector<NamedDieRef*> path_;
+
+  // Used to decode names for DIEs in the second pass when we find one we need that wasn't extracted
+  // in the first.
+  DwarfDieDecoder name_decoder_;
+  llvm::Optional<const char*> name_decoder_name_;
 };
 
 // The symbol storage will be filled with the indexable entries.
-void UnitIndexer::Scan(llvm::DWARFContext* context,
-                       std::vector<IndexNode2::DieRef>* main_functions) {
-  DwarfDieDecoder decoder(context, unit_);
+void UnitIndexer::Scan(std::vector<IndexNode2::DieRef>* main_functions) {
+  DwarfDieDecoder decoder(context_, unit_);
 
   // The offset of the declaration. This can be unit-relative or file-absolute. This code doesn't
   // implement the file-absolute variant which it seems our toolchain doesn't generate. To implement
@@ -127,13 +155,16 @@ void UnitIndexer::Scan(llvm::DWARFContext* context,
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
 
+  bool has_const_value = false;
+  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_const_value, &has_const_value);
+
   llvm::Optional<bool> is_main_subprogram;
   decoder.AddBool(llvm::dwarf::DW_AT_main_subprogram, &is_main_subprogram);
 
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
-  // IF YOU ADD MORE ATTRBUTES HERE don't forget to reset() them before Decode().
+  // IF YOU ADD MORE ATTRIBUTES HERE don't forget to reset() them before Decode().
 
   for (; !scanner_.done(); scanner_.Advance()) {
     const llvm::DWARFDebugInfoEntry* die = scanner_.Prepare();
@@ -145,6 +176,7 @@ void UnitIndexer::Scan(llvm::DWARFContext* context,
 
     // This DIE is of the type we want to index so decode. Must reset all output vars first.
     is_declaration.reset();
+    has_const_value = false;
     decl_unit_offset.reset();
     decl_global_offset.reset();
     is_main_subprogram.reset();
@@ -153,15 +185,34 @@ void UnitIndexer::Scan(llvm::DWARFContext* context,
       continue;
 
     // Compute the offset of a separate declaration if this DIE has one.
-    bool decl_offset = 0;
+    uint32_t decl_offset = 0;
     if (decl_unit_offset)
       decl_offset = unit_->getOffset() + *decl_unit_offset;
     else if (decl_global_offset)
       FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
 
+    if (kind == IndexNode2::Kind::kVar && die->getTag() == llvm::dwarf::DW_TAG_member &&
+        !has_const_value) {
+      // Don't need to index structure members that don't have const values. This needs to be
+      // disambiguated because GetKindForDie doesn't have access to the attributes and we don't
+      // want to decode twice.
+      //
+      // In C++ everything with a const_value will generally also be external (i.e. "static") which
+      // are things we want to index. Theoretically the compiler could generated a const_value
+      // member if it notices the member is never modified and optimize it. In that case, the user
+      // would never expect to reference it outside of a known Collection object and it doesn't need
+      // to be in the index. But that requires some extra work checking for the external flag in
+      // this time-critical indexing step, and the worse thing is that "print MyClass::kMyConstant"
+      // evaluates to a correct value where it might not be allowed in the actual language.
+      //
+      // As a result, we don't also check DW_AT_external.
+      continue;
+    }
+
     FXL_DCHECK(scanner_.die_index() < indexable_.size());
-    indexable_[scanner_.die_index()] = NamedDieRef(
-        is_declaration && *is_declaration, die->getOffset(), kind, name ? *name : "", decl_offset);
+    indexable_[scanner_.die_index()] =
+        NamedDieRef(is_declaration && *is_declaration, die->getOffset(), kind,
+                    name ? *name : nullptr, decl_offset);
 
     // Check for "main" function annotation.
     if (kind == IndexNode2::Kind::kFunction && is_main_subprogram && *is_main_subprogram)
@@ -171,7 +222,7 @@ void UnitIndexer::Scan(llvm::DWARFContext* context,
 
 void UnitIndexer::Index(IndexNode2* root) {
   for (uint32_t i = 0; i < indexable_.size(); i++) {
-    if (indexable_[i].is_valid())
+    if (indexable_[i].should_index())
       AddEntryToIndex(i, root);
   }
 }
@@ -197,6 +248,7 @@ IndexNode2::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die
     case DwarfTag::kStringType:
     case DwarfTag::kStructureType:
     case DwarfTag::kSubroutineType:
+    case DwarfTag::kTypedef:
     case DwarfTag::kUnionType:
       return IndexNode2::Kind::kType;
 
@@ -204,10 +256,14 @@ IndexNode2::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die
       if (!scanner_.is_inside_function() && AbbrevHasLocation(abbrev)) {
         // Found variable storage outside of a function (variables inside functions are local so
         // don't get added to the global index).
-        // TODO: check function-static variables.
+        // TODO(bug 36671): index function-static variables.
         return IndexNode2::Kind::kVar;
       }
       return IndexNode2::Kind::kNone;  // Variable with no location.
+
+    case DwarfTag::kMember:
+      // Caller needs to check this case (see declaration comment).
+      return IndexNode2::Kind::kVar;
 
     default:
       // Don't index anything else.
@@ -215,16 +271,48 @@ IndexNode2::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die
   }
 }
 
+const char* UnitIndexer::GetDieName(uint32_t index) {
+  name_decoder_name_.reset();
+  const llvm::DWARFDebugInfoEntry* die = unit_->getDIEAtIndex(index).getDebugInfoEntry();
+
+  if (name_decoder_.Decode(*die) && name_decoder_name_)
+    return *name_decoder_name_;
+  return "";
+}
+
 void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
+  // The path to index always ends with the last thing being indexed (the path_ is in reverse).
+  path_.clear();
+  path_.push_back(&indexable_[index_me]);
+
   uint32_t cur = index_me;
   if (indexable_[index_me].decl_offset()) {
     // When the entry has a decl_offset, that means it's the implementation for e.g. a function.
-    // The actual name comes from the declatation so start from that index.
+    // The actual name comes from the declaration so start from that index.
     llvm::DWARFDie die = unit_->getDIEForOffset(indexable_[index_me].decl_offset());
     if (!die)
       return;  // Invalid declaration.
     cur = unit_->getDIEIndex(die);
+
+    if (!indexable_[index_me].name()) {
+      // When there's no name, take the name from the declaration.
+      if (!indexable_[cur].name()) {
+        // The declaration has no name because the first pass didn't need to index it. Compute
+        // the name now. Caching it on both the declaration and the implementation is useful because
+        // many implementation can share the same declaration and this saves multiple name
+        // retrievals.
+        //
+        // Here GetDieName() returns the empty string if there's no name which allows us to cache
+        // the lack of a name and not recompute.
+        indexable_[cur].set_name(GetDieName(cur));
+      }
+      indexable_[index_me].set_name(indexable_[cur].name());
+    }
   }
+
+  // Goes to the parent. The first item was added above, the loop below will add going up the
+  // parent chain from there.
+  cur = scanner_.GetParentIndex(cur);
 
   // Don't index more than this number of levels to prevent infinite recursion.
   constexpr uint32_t kMaxPath = 16;
@@ -234,8 +322,7 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
   IndexNode2* index_from = root;
 
   // Collect the path from the current item (path_[0]) to its ultimate parent (path_.back()).
-  path_.clear();
-  while (cur != DwarfDieScanner2::kNoParent && indexable_[cur].is_valid()) {
+  while (cur != DwarfDieScanner2::kNoParent && indexable_[cur].should_index()) {
     if (path_.size() > kMaxPath)
       return;  // Too many components, consider this item corrupt and don't index.
 
@@ -245,16 +332,38 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
       index_from = indexable_[cur].index_node();
       break;
     }
-    path_.push_back(cur);
+    path_.push_back(&indexable_[cur]);
     cur = scanner_.GetParentIndex(cur);
   }
 
   // Add the path to the index (walk in reverse to start from the root).
   for (int path_i = static_cast<int>(path_.size()) - 1; path_i >= 0; path_i--) {
-    NamedDieRef& named_ref = indexable_[path_[path_i]];
-    index_from = index_from->AddChild(named_ref.kind(), named_ref.name(), named_ref);
-    named_ref.set_index_node(index_from);
+    NamedDieRef* named_ref = path_[path_i];
+
+    index_from = index_from->AddChild(named_ref->kind(), named_ref->name() ? named_ref->name() : "",
+                                      *named_ref);
+    named_ref->set_index_node(index_from);
   }
+}
+
+void RecursiveFindExact(const IndexNode2* node, const Identifier& input, size_t input_index,
+                        std::vector<IndexNode2::DieRef>* result) {
+  if (input_index == input.components().size()) {
+    result->insert(result->end(), node->dies().begin(), node->dies().end());
+    return;
+  }
+
+  // Recursively search each category in this node.
+  for (auto* map : {&node->namespaces(), &node->types(), &node->functions(), &node->vars()}) {
+    auto found = map->find(input.components()[input_index].GetName(false));
+    if (found != map->end())  // Got a match for this category.
+      RecursiveFindExact(&found->second, input, input_index + 1, result);
+  }
+
+  // Also implicitly search anonymous namespaces (without advancing the input index).
+  auto found = node->namespaces().find(std::string());
+  if (found != node->namespaces().end())
+    RecursiveFindExact(&found->second, input, input_index, result);
 }
 
 }  // namespace
@@ -284,6 +393,12 @@ void Index2::DumpFileIndex(std::ostream& out) const {
     const auto& [filepath, compilation_units] = *file_index_entry;
     out << filename << " -> " << filepath << " -> " << compilation_units.size() << " units\n";
   }
+}
+
+std::vector<IndexNode2::DieRef> Index2::FindExact(const Identifier& input) const {
+  std::vector<IndexNode2::DieRef> result;
+  RecursiveFindExact(&root_, input, 0, &result);
+  return result;
 }
 
 std::vector<std::string> Index2::FindFileMatches(std::string_view name) const {
@@ -326,8 +441,8 @@ const std::vector<unsigned>* Index2::FindFileUnitIndices(const std::string& name
 
 void Index2::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                               unsigned unit_index) {
-  UnitIndexer indexer(unit);
-  indexer.Scan(context, &main_functions_);
+  UnitIndexer indexer(context, unit);
+  indexer.Scan(&main_functions_);
   indexer.Index(&root_);
 
   IndexCompileUnitSourceFiles(context, unit, unit_index);
