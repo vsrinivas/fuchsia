@@ -89,6 +89,8 @@ class VPartitionManager : public ManagerDeviceType {
   void DdkUnbind();
   void DdkRelease();
 
+  void SetFormatInfoForTest(const fvm::FormatInfo& format_info) { format_info_ = format_info; }
+
   VPartitionManager(zx_device_t* dev, const block_info_t& info, size_t block_op_size,
                     const block_impl_protocol_t* bp);
   ~VPartitionManager();

@@ -157,6 +157,7 @@ void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_o
   memset(info_out, 0, sizeof(*info_out));
   info_out->block_count = params_.num_pages;
   info_out->block_size = params_.page_size;
+  info_out->flags = BLOCK_FLAG_TRIM_SUPPORT;
   info_out->max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
   *block_op_size_out = sizeof(FtlOp);
 }

@@ -812,6 +812,8 @@ class Block final {
 
 constexpr uint32_t MAX_TRANSFER_UNBOUNDED = 4294967295u;
 
+constexpr uint32_t FLAG_TRIM_SUPPORT = 8u;
+
 constexpr uint32_t FLAG_REMOVABLE = 2u;
 
 constexpr uint32_t FLAG_READONLY = 1u;

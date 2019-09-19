@@ -5,7 +5,7 @@
 library zircon.device.block;
 
 /// Flag advertising trim support.
-const uint32 BLOCK_TRIM_SUPPORT = 0x00000001;
+const uint32 BLOCK_TRIM_SUPPORT = 0x00000008;
 
 [repr = "C"]
 struct BlockInfo {

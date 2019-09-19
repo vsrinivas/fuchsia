@@ -12,6 +12,7 @@ group("test") {
 
 test("fvm-driver-unittests") {
   sources = [
+    "block-device-test.cc",
     "slice-extent-test.cc",
   ]
   include_dirs = [ ".." ]

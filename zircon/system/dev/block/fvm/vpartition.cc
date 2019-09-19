@@ -16,6 +16,51 @@
 
 namespace fvm {
 
+namespace {
+
+void SetOperationDeviceOffset(uint64_t offset, block_op_t* txn) {
+  switch (txn->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+      txn->rw.offset_dev = offset;
+      break;
+    case BLOCK_OP_TRIM:
+      txn->trim.offset_dev = offset;
+      break;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+  }
+}
+
+void SetOperationVmoOffset(uint64_t offset, block_op_t* txn) {
+  switch (txn->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+      txn->rw.offset_vmo = offset;
+      break;
+    case BLOCK_OP_TRIM:
+      break;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+  }
+}
+
+void SetOperationLength(uint32_t length, block_op_t* txn) {
+  switch (txn->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+      txn->rw.length = length;
+      break;
+    case BLOCK_OP_TRIM:
+      txn->trim.length = length;
+      break;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+  }
+}
+
+}  // namespace.
+
 VPartition::VPartition(VPartitionManager* vpm, size_t entry_index, size_t block_op_size)
     : PartitionDeviceType(vpm->zxdev()), mgr_(vpm), entry_index_(entry_index) {
   memcpy(&info_, &mgr_->Info(), sizeof(block_info_t));
@@ -213,10 +258,21 @@ static void multi_txn_completion(void* cookie, zx_status_t status, block_op_t* t
 void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb,
                                 void* cookie) {
   ZX_DEBUG_ASSERT(mgr_->BlockOpSize() > 0);
+  uint32_t txn_length = 0;
+  uint64_t offset_dev = 0;
+  uint64_t offset_vmo = 0;
   switch (txn->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
+      txn_length = txn->rw.length;
+      offset_dev = txn->rw.offset_dev;
+      offset_vmo = txn->rw.offset_vmo;
       break;
+    case BLOCK_OP_TRIM:
+      txn_length = txn->trim.length;
+      offset_dev = txn->trim.offset_dev;
+      break;
+
     // Pass-through operations
     case BLOCK_OP_FLUSH:
       mgr_->Queue(txn, completion_cb, cookie);
@@ -228,11 +284,12 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   }
 
   const uint64_t device_capacity = DdkGetSize() / BlockSize();
-  if (txn->rw.length == 0) {
+  if (txn_length == 0) {
     completion_cb(cookie, ZX_ERR_INVALID_ARGS, txn);
     return;
-  } else if ((txn->rw.offset_dev >= device_capacity) ||
-             (device_capacity - txn->rw.offset_dev < txn->rw.length)) {
+  }
+
+  if ((offset_dev >= device_capacity) || (device_capacity - offset_dev < txn_length)) {
     completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
     return;
   }
@@ -241,8 +298,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   const uint64_t slice_size = mgr_->SliceSize();
   const uint64_t blocks_per_slice = slice_size / BlockSize();
   // Start, end both inclusive
-  uint64_t vslice_start = txn->rw.offset_dev / blocks_per_slice;
-  uint64_t vslice_end = (txn->rw.offset_dev + txn->rw.length - 1) / blocks_per_slice;
+  uint64_t vslice_start = offset_dev / blocks_per_slice;
+  uint64_t vslice_end = (offset_dev + txn_length - 1) / blocks_per_slice;
 
   fbl::AutoLock lock(&lock_);
   if (vslice_start == vslice_end) {
@@ -252,8 +309,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
       completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
       return;
     }
-    txn->rw.offset_dev =
-        format_info.GetSliceStart(pslice) / BlockSize() + (txn->rw.offset_dev % blocks_per_slice);
+    offset_dev = format_info.GetSliceStart(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
+    SetOperationDeviceOffset(offset_dev, txn);
     mgr_->Queue(txn, completion_cb, cookie);
     return;
   }
@@ -280,8 +337,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   if (contiguous) {
     uint64_t pslice;
     SliceGetLocked(vslice_start, &pslice);
-    txn->rw.offset_dev =
-        format_info.GetSliceStart(pslice) / BlockSize() + (txn->rw.offset_dev % blocks_per_slice);
+    offset_dev = format_info.GetSliceStart(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
+    SetOperationDeviceOffset(offset_dev, txn);
     mgr_->Queue(txn, completion_cb, cookie);
     return;
   }
@@ -294,22 +351,19 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   fbl::unique_ptr<multi_txn_state_t> state(
       new multi_txn_state_t(txn_count, txn, completion_cb, cookie));
 
-  uint32_t length_remaining = txn->rw.length;
+  uint32_t length_remaining = txn_length;
   for (size_t i = 0; i < txn_count; i++) {
     uint64_t vslice = vslice_start + i;
     uint64_t pslice;
     SliceGetLocked(vslice, &pslice);
 
-    uint64_t offset_vmo = txn->rw.offset_vmo;
     uint64_t length;
     if (vslice == vslice_start) {
-      length = fbl::round_up(txn->rw.offset_dev + 1, blocks_per_slice) - txn->rw.offset_dev;
+      length = fbl::round_up(offset_dev + 1, blocks_per_slice) - offset_dev;
     } else if (vslice == vslice_end) {
       length = length_remaining;
-      offset_vmo += txn->rw.length - length_remaining;
     } else {
       length = blocks_per_slice;
-      offset_vmo += txns[0]->rw.length + blocks_per_slice * (i - 1);
     }
     ZX_DEBUG_ASSERT(length <= blocks_per_slice);
     ZX_DEBUG_ASSERT(length <= length_remaining);
@@ -317,13 +371,15 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     txns.push_back(reinterpret_cast<block_op_t*>(new uint8_t[mgr_->BlockOpSize()]));
 
     memcpy(txns[i], txn, sizeof(*txn));
-    txns[i]->rw.offset_vmo = offset_vmo;
-    txns[i]->rw.length = static_cast<uint32_t>(length);
-    txns[i]->rw.offset_dev = format_info.GetSliceStart(pslice) / BlockSize();
+    uint64_t sub_txn_offset_dev = format_info.GetSliceStart(pslice) / BlockSize();
     if (vslice == vslice_start) {
-      txns[i]->rw.offset_dev += (txn->rw.offset_dev % blocks_per_slice);
+      sub_txn_offset_dev += (offset_dev % blocks_per_slice);
     }
-    length_remaining -= txns[i]->rw.length;
+    SetOperationDeviceOffset(sub_txn_offset_dev, txns[i]);
+    SetOperationVmoOffset(offset_vmo, txns[i]);
+    SetOperationLength(static_cast<uint32_t>(length), txns[i]);
+    offset_vmo += static_cast<uint32_t>(length);
+    length_remaining -= static_cast<uint32_t>(length);
   }
   ZX_DEBUG_ASSERT(length_remaining == 0);
 

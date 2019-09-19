@@ -22,8 +22,6 @@ constexpr uint32_t kNumPages = 20;
 constexpr char kMagic = 'f';
 constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {'g', 'u', 'i', 'd'};
 
-block_info_t kInfo = {kNumPages, kPageSize, BLOCK_MAX_TRANSFER_UNBOUNDED, 0, 0};
-
 bool CheckPattern(const void* buffer, size_t size, char pattern = kMagic) {
   const char* data = reinterpret_cast<const char*>(buffer);
   for (; size; size--) {
@@ -193,7 +191,10 @@ TEST(BlockDeviceTest, Query) {
   size_t operation_size;
   device.BlockImplQuery(&info, &operation_size);
 
-  ASSERT_EQ(0, memcmp(&info, &kInfo, sizeof(info)));
+  constexpr block_info_t kInfo = {kNumPages, kPageSize, BLOCK_MAX_TRANSFER_UNBOUNDED,
+                                  BLOCK_FLAG_TRIM_SUPPORT, 0};
+
+  ASSERT_BYTES_EQ(&info, &kInfo, sizeof(info));
   ASSERT_GT(operation_size, sizeof(block_op_t));
 }
 

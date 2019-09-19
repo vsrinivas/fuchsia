@@ -68,8 +68,7 @@ uint32_t OpcodeToCommand(uint32_t opcode) {
   static_assert(BLOCK_OP_TRIM == BLOCKIO_TRIM, "");
   static_assert(BLOCK_FL_BARRIER_BEFORE == BLOCKIO_BARRIER_BEFORE, "");
   static_assert(BLOCK_FL_BARRIER_AFTER == BLOCKIO_BARRIER_AFTER, "");
-  const uint32_t shared = BLOCK_OP_READ | BLOCK_OP_WRITE | BLOCK_OP_FLUSH |
-                          BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER;
+  const uint32_t shared = BLOCK_OP_MASK | BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER;
   return opcode & shared;
 }
 
@@ -439,7 +438,9 @@ zx_status_t BlockServer::ProcessTrimRequest(block_fifo_request_t* request) {
   }
   msg->Init(nullptr, this, request);
   msg->Op()->command = OpcodeToCommand(request->opcode);
-  InQueueAdd(ZX_HANDLE_INVALID, request->length, 0, request->dev_offset, msg.release(), &in_queue_);
+  msg->Op()->trim.length = request->length;
+  msg->Op()->trim.offset_dev = request->dev_offset;
+  in_queue_.push_back(msg.release());
   return ZX_OK;
 }
 

@@ -11,9 +11,9 @@
 
 #define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002
-#define BLOCK_FLAG_BOOTPART \
-  0x00000004  // block device has bootdata partition map
-              // provided by device metadata
+// Block device has bootdata partition map  provided by device metadata.
+#define BLOCK_FLAG_BOOTPART 0x00000004
+#define BLOCK_FLAG_TRIM_SUPPORT 0x00000008
 
 #define BLOCK_MAX_TRANSFER_UNBOUNDED 0xFFFFFFFF
 
