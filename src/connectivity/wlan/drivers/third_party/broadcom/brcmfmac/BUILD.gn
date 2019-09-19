@@ -222,20 +222,32 @@ source_set("driver_test") {
 
 if (internal_access) {
   # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-  copy("brcmfmac-firmware-copy") {
-    sources = [
-      "firmware/brcmfmac43242a.bin",
-      "firmware/brcmfmac43455-sdio.bin",
-      "firmware/brcmfmac43455-sdio.txt",
-      "firmware/brcmfmac4356-pcie.bin",
-      "firmware/brcmfmac4356-sdio.bin",
-      "firmware/brcmfmac4356-sdio.txt",
-      "firmware/brcmfmac4359-sdio.bin",
-      "firmware/brcmfmac4359-sdio.txt",
-    ]
-    outputs = [
-      "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
-    ]
+  if (board_name == "astro") {
+   copy("brcmfmac-firmware-copy") {
+     sources = [
+       "firmware/brcmfmac43455-sdio.bin",
+       "firmware/brcmfmac43455-sdio.txt",
+     ]
+     outputs = [
+       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+     ]
+   }
+  } else {
+   copy("brcmfmac-firmware-copy") {
+     sources = [
+       "firmware/brcmfmac43242a.bin",
+       "firmware/brcmfmac43455-sdio.bin",
+       "firmware/brcmfmac43455-sdio.txt",
+       "firmware/brcmfmac4356-pcie.bin",
+       "firmware/brcmfmac4356-sdio.bin",
+       "firmware/brcmfmac4356-sdio.txt",
+       "firmware/brcmfmac4359-sdio.bin",
+       "firmware/brcmfmac4359-sdio.txt",
+     ]
+     outputs = [
+       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+     ]
+   }
   }
 }
 
@@ -256,32 +268,43 @@ package("brcmfmac") {
       # were libraries which always use the shared-library toolchain to build.
       ":brcmfmac-firmware-copy($shlib_toolchain)",
     ]
-    libraries = [
-      {
-        name = "firmware/brcmfmac/brcmfmac4356-pcie.bin"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac4356-sdio.bin"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac4356-sdio.txt"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac4359-sdio.bin"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac4359-sdio.txt"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
-      },
-      {
-        name = "firmware/brcmfmac/brcmfmac43242a.bin"
-      },
-    ]
+    if (board_name == "astro") {
+      libraries = [
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+        },
+      ]
+    } else {
+      libraries = [
+        {
+          name = "firmware/brcmfmac/brcmfmac4356-pcie.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac4356-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac4356-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac4359-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac4359-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43242a.bin"
+        },
+      ]
+    }
   }
   visibility += [ "*" ]
 }
