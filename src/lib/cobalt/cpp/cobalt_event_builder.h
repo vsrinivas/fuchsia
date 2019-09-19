@@ -45,6 +45,8 @@ class CobaltEventBuilder {
 
   CobaltEventBuilder &with_event_code(const uint32_t event_code);
   CobaltEventBuilder &with_event_codes(std::vector<uint32_t> event_codes);
+
+  // Panics if index >= 5
   CobaltEventBuilder &with_event_code_at(const uint32_t index, const uint32_t event_code);
   CobaltEventBuilder &with_component(std::string component);
   CobaltEventBuilder Clone() const;

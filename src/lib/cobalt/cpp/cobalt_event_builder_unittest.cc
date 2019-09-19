@@ -140,4 +140,10 @@ TEST(CobaltEventBuilder, event_code_at) {
                                .as_elapsed_time(elapsed_micros)));
 }
 
+TEST(CobaltEventBuilderDeathTest, event_code_at) {
+  // Event code indices >= 5 are invalid.
+  ASSERT_DEATH_IF_SUPPORTED(CobaltEventBuilder(kMetricId).with_event_code_at(5, 10),
+                            "Invalid index");
+}
+
 }  // namespace cobalt

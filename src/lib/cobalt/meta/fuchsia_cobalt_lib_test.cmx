@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_cobalt_lib_test"
+    }
+}

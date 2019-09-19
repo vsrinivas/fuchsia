@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/cobalt_lib_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
