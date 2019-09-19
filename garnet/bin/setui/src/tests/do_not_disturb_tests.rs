@@ -29,7 +29,8 @@ async fn test_do_not_disturb() {
     {
         let mut store_lock = store.lock().await;
         assert!(store_lock
-            .write(DoNotDisturbInfo { user_dnd: true, night_mode_dnd: false })
+            .write(DoNotDisturbInfo { user_dnd: true, night_mode_dnd: false }, false)
+            .await
             .is_ok());
     }
 

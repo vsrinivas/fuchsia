@@ -119,7 +119,8 @@ async fn persist_accessibility_info(
     storage: Arc<Mutex<DeviceStorage<AccessibilityInfo>>>,
     responder: SettingRequestResponder,
 ) {
-    let write_request = storage.lock().await.write(info);
+    let mut storage_lock = storage.lock().await;
+    let write_request = storage_lock.write(info, false).await;
     let _ = match write_request {
         Ok(_) => responder.send(Ok(None)),
         Err(err) => responder

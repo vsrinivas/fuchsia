@@ -33,7 +33,8 @@ async fn test_setup() {
     {
         let mut store_lock = store.lock().await;
         assert!(store_lock
-            .write(SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::WIFI })
+            .write(SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::WIFI }, false)
+            .await
             .is_ok());
     }
 

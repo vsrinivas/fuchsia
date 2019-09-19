@@ -92,7 +92,8 @@ impl SetupController {
         let storage_clone = self.storage.clone();
         let info = self.info;
         fasync::spawn(async move {
-            storage_clone.lock().await.write(info).unwrap();
+            let mut storage_lock = storage_clone.lock().await;
+            storage_lock.write(info, false).await.unwrap();
         });
     }
 

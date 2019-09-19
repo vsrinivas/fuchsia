@@ -125,7 +125,8 @@ async fn set_brightness(
     brightness_service: &fidl_fuchsia_ui_brightness::ControlProxy,
     storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
 ) -> Result<(), fidl::Error> {
-    storage.lock().await.write(info).unwrap_or_else(move |e| {
+    let mut storage_lock = storage.lock().await;
+    storage_lock.write(info, false).await.unwrap_or_else(move |e| {
         fx_log_err!("failed storing brightness, {}", e);
     });
     if info.auto_brightness {

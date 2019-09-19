@@ -101,7 +101,8 @@ async fn write_value(
     storage: &Arc<Mutex<DeviceStorage<DoNotDisturbInfo>>>,
     responder: SettingRequestResponder,
 ) {
-    let write_result = storage.lock().await.write(request_info);
+    let mut storage_lock = storage.lock().await;
+    let write_result = storage_lock.write(request_info, false).await;
     if write_result.is_err() {
         responder
             .send(Err(format_err!("Failed to write {} to persistent storage", setting_name)))

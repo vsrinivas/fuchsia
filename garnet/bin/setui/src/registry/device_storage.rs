@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use failure::{format_err, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::*;
 use futures::lock::Mutex;
@@ -48,12 +48,18 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         self.caching_enabled = enabled;
     }
 
-    pub fn write(&mut self, new_value: T) -> Result<(), Error> {
+    pub async fn write(&mut self, new_value: T, flush: bool) -> Result<(), Error> {
         if self.current_data != Some(new_value) {
             self.current_data = Some(new_value);
             let mut serialized = Value::Stringval(serde_json::to_string(&new_value).unwrap());
             self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
-            self.stash_proxy.commit()?;
+            if flush {
+                if self.stash_proxy.flush().await.is_err() {
+                    return Err(format_err!("flush error"));
+                }
+            } else {
+                self.stash_proxy.commit()?;
+            }
         }
         Ok(())
     }
@@ -124,19 +130,58 @@ pub mod testing {
     use fidl::encoding::OutOfLine;
     use fuchsia_async as fasync;
     use futures::prelude::*;
+    use parking_lot::RwLock;
     use std::any::TypeId;
     use std::cell::RefCell;
     use std::collections::HashMap;
 
+    #[derive(PartialEq)]
+    pub enum StashAction {
+        Get,
+        Flush,
+        Set,
+        Commit,
+    }
+
+    pub struct StashStats {
+        actions: Vec<StashAction>,
+    }
+
+    impl StashStats {
+        pub fn new() -> Self {
+            StashStats { actions: Vec::new() }
+        }
+
+        pub fn record(&mut self, action: StashAction) {
+            self.actions.push(action);
+        }
+
+        pub fn get_record_count(&self, action: StashAction) -> usize {
+            return self.actions.iter().filter(|&target| *target == action).count();
+        }
+    }
+
     /// Storage that does not write to disk, for testing.
     /// Only supports a single key/value pair
     pub struct InMemoryStorageFactory {
-        proxies: RefCell<HashMap<TypeId, StoreAccessorProxy>>,
+        proxies: RefCell<HashMap<TypeId, (StoreAccessorProxy, Arc<RwLock<StashStats>>)>>,
     }
 
     impl InMemoryStorageFactory {
         pub fn create() -> InMemoryStorageFactory {
             InMemoryStorageFactory { proxies: RefCell::new(HashMap::new()) }
+        }
+
+        pub fn get_stats<T: DeviceStorageCompatible + 'static>(
+            &self,
+        ) -> Result<Arc<RwLock<StashStats>>, Error> {
+            let proxies = self.proxies.borrow();
+            let id = TypeId::of::<T>();
+            if let Some((_, stats)) = proxies.get(&id) {
+                return Ok(stats.clone());
+            }
+
+            return Err(format_err!("stash for type not present"));
         }
     }
 
@@ -148,7 +193,7 @@ pub mod testing {
                 proxies.insert(id, spawn_stash_proxy());
             }
 
-            if let Some(proxy) = proxies.get(&id) {
+            if let Some((proxy, _)) = proxies.get(&id) {
                 let mut storage = DeviceStorage::new(proxy.clone(), None);
                 storage.set_caching_enabled(false);
 
@@ -159,10 +204,11 @@ pub mod testing {
         }
     }
 
-    fn spawn_stash_proxy() -> StoreAccessorProxy {
+    fn spawn_stash_proxy() -> (StoreAccessorProxy, Arc<RwLock<StashStats>>) {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
-
+        let stats = Arc::new(RwLock::new(StashStats::new()));
+        let stats_clone = stats.clone();
         fasync::spawn(async move {
             let mut stored_value: Option<Value> = None;
             let mut stored_key: Option<String> = None;
@@ -171,6 +217,7 @@ pub mod testing {
                 #[allow(unreachable_patterns)]
                 match req {
                     StoreAccessorRequest::GetValue { key, responder } => {
+                        stats_clone.write().record(StashAction::Get);
                         if let Some(key_string) = stored_key {
                             assert_eq!(key, key_string);
                         }
@@ -179,17 +226,25 @@ pub mod testing {
                         responder.send(stored_value.as_mut().map(OutOfLine)).unwrap();
                     }
                     StoreAccessorRequest::SetValue { key, val, control_handle: _ } => {
+                        stats_clone.write().record(StashAction::Set);
                         if let Some(key_string) = stored_key {
                             assert_eq!(key, key_string);
                         }
                         stored_key = Some(key);
                         stored_value = Some(val);
                     }
+                    StoreAccessorRequest::Commit { control_handle: _ } => {
+                        stats_clone.write().record(StashAction::Commit);
+                    }
+                    StoreAccessorRequest::Flush { responder } => {
+                        stats_clone.write().record(StashAction::Flush);
+                        responder.send(&mut Ok(())).ok();
+                    }
                     _ => {}
                 }
             }
         });
-        stash_proxy
+        (stash_proxy, stats)
     }
 }
 
@@ -277,7 +332,7 @@ mod tests {
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
-        storage.write(TestStruct { value: VALUE2 }).expect("writing shouldn't fail");
+        storage.write(TestStruct { value: VALUE2 }, false).await.expect("writing shouldn't fail");
 
         match stash_stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
@@ -296,6 +351,36 @@ mod tests {
             Ok(StoreAccessorRequest::Commit { .. }) => {} // expected
             request => panic!("Unexpected request: {:?}", request),
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_write_with_flush() {
+        let (stash_proxy, mut stash_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        fasync::spawn(async move {
+            match stash_stream.next().await.unwrap() {
+                Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
+                    assert_eq!(key, "settings_testkey");
+                    if let Value::Stringval(string_value) = val {
+                        let input_value: TestStruct = serde_json::from_str(&string_value).unwrap();
+                        assert_eq!(input_value.value, VALUE2);
+                    } else {
+                        panic!("Unexpected type for key found in stash");
+                    }
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+
+            match stash_stream.next().await.unwrap() {
+                Ok(StoreAccessorRequest::Flush { responder }) => {
+                    responder.send(&mut Ok(())).ok();
+                } // expected
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        });
+        storage.write(TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -323,7 +408,7 @@ mod tests {
     ) {
         {
             let mut store_1_lock = store_1.lock().await;
-            assert!(store_1_lock.write(data).is_ok());
+            assert!(store_1_lock.write(data, false).await.is_ok());
         }
 
         // Ensure it is read in from second store.
