@@ -7,6 +7,11 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
+
+#include <cstdint>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -15,11 +20,14 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
+
+#include "ddk/device.h"
+#include "ddk/metadata/buttons.h"
+#include "ddk/protocol/buttons.h"
+#include "zircon/assert.h"
+#include "zircon/types.h"
 
 namespace buttons {
 
@@ -41,7 +49,13 @@ int HidButtonsDevice::Thread() {
       uint32_t type = static_cast<uint32_t>(packet.key - kPortKeyInterruptStart);
       if (gpios_[type].config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
         // We need to reconfigure the GPIO to catch the opposite polarity.
-        ReconfigurePolarity(type, packet.key);
+        uint8_t val = ReconfigurePolarity(type, packet.key);
+
+        // Callbacks
+        fbl::AutoLock lock(&callbacks_lock_);
+        for (auto const& fn : callbacks_[type]) {
+          fn.notify_button(fn.ctx, static_cast<bool>(val));
+        }
       }
 
       buttons_input_rpt_t input_rpt;
@@ -93,8 +107,8 @@ void HidButtonsDevice::HidbusStop() {
 }
 
 zx_status_t HidButtonsDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                                  void* out_data_buffer,
-                                                  size_t data_size, size_t* out_data_actual) {
+                                                  void* out_data_buffer, size_t data_size,
+                                                  size_t* out_data_actual) {
   const uint8_t* desc;
   size_t desc_size = get_buttons_report_desc(&desc);
   if (data_size < desc_size) {
@@ -179,7 +193,7 @@ zx_status_t HidButtonsDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_E
 
 zx_status_t HidButtonsDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
-void HidButtonsDevice::ReconfigurePolarity(uint32_t idx, uint64_t int_port) {
+uint8_t HidButtonsDevice::ReconfigurePolarity(uint32_t idx, uint64_t int_port) {
   zxlogf(TRACE, "%s gpio %u port %lu\n", __FUNCTION__, idx, int_port);
   uint8_t current = 0, old;
   gpio_read(&gpios_[idx].gpio, &current);
@@ -190,6 +204,7 @@ void HidButtonsDevice::ReconfigurePolarity(uint32_t idx, uint64_t int_port) {
     zxlogf(SPEW, "%s old gpio %u new gpio %u\n", __FUNCTION__, old, current);
     // If current switches after setup, we setup a new trigger for it (opposite edge).
   } while (current != old);
+  return current;
 }
 
 zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port) {
@@ -222,6 +237,13 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
 
   buttons_ = std::move(buttons);
   gpios_ = std::move(gpios);
+  fbl::AllocChecker ac;
+  fbl::AutoLock lock(&callbacks_lock_);
+  callbacks_ = std::move(fbl::Array(
+      new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
   status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
   if (status != ZX_OK) {
@@ -254,6 +276,9 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
       fdr_gpio_ = buttons_[i].gpioA_idx;
       zxlogf(INFO, "FDR (up and down buttons) setup to GPIO %u\n", *fdr_gpio_);
     }
+
+    // Button type to order (index)
+    button_map_[buttons_[i].id] = i;
   }
 
   // Setup.
@@ -288,12 +313,39 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
     return ZX_ERR_INTERNAL;
   }
 
-  status = DdkAdd("hid-buttons");
+  status = DdkAdd("hid-buttons", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd failed %d\n", __FUNCTION__, status);
     ShutDown();
     return status;
   }
+
+  std::unique_ptr<HidButtonsHidBusFunction> hidbus_function(
+      new (&ac) HidButtonsHidBusFunction(zxdev(), this));
+  if (!ac.check()) {
+    ShutDown();
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = hidbus_function->DdkAdd("hidbus_function");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s DdkAdd for Hidbus Function failed %d\n", __FUNCTION__, status);
+    ShutDown();
+    return status;
+  }
+  hidbus_function_ = hidbus_function.release();
+
+  std::unique_ptr<HidButtonsButtonsFunction> buttons_function(
+      new (&ac) HidButtonsButtonsFunction(zxdev(), this));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = buttons_function->DdkAdd("buttons_function");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s DdkAdd for Buttons Function failed %d\n", __FUNCTION__, status);
+    ShutDown();
+    return status;
+  }
+  buttons_function_ = buttons_function.release();
 
   return ZX_OK;
 }
@@ -308,6 +360,11 @@ void HidButtonsDevice::ShutDown() {
   }
   fbl::AutoLock lock(&client_lock_);
   client_.clear();
+
+  hidbus_function_->DdkUnbind();
+  hidbus_function_ = nullptr;
+  buttons_function_->DdkUnbind();
+  buttons_function_ = nullptr;
 }
 
 void HidButtonsDevice::DdkUnbind() {
@@ -318,6 +375,17 @@ void HidButtonsDevice::DdkUnbind() {
 void HidButtonsDevice::DdkRelease() { delete this; }
 
 static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
+  // button_type and buttons_id happen to be the same, in the future might need a map,
+  // combine declarations with ddk/metadata/buttons.h, or replace. Bug 36834
+  static_assert(BUTTON_TYPE_VOLUME_UP == BUTTONS_ID_VOLUME_UP,
+                "BUTTON_TYPE doesn't match BUTTONS_ID, volume up");
+  static_assert(BUTTON_TYPE_VOLUME_DOWN == BUTTONS_ID_VOLUME_DOWN,
+                "BUTTON_TYPE doesn't match BUTTONS_ID, volume down");
+  static_assert(BUTTON_TYPE_RESET == BUTTONS_ID_FDR,
+                "BUTTON_TYPE doesn't match BUTTONS_ID, reset/fdr");
+  static_assert(BUTTON_TYPE_MUTE == BUTTONS_ID_MIC_MUTE,
+                "BUTTON_TYPE doesn't match BUTTONS_ID, mute/mic mute");
+
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<buttons::HidButtonsDevice>(&ac, parent);
   if (!ac.check()) {
@@ -403,6 +471,28 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     __UNUSED auto ptr = dev.release();
   }
   return status;
+}
+
+bool HidButtonsDevice::ButtonsGetState(button_type_t type) {
+  uint8_t val;
+  gpio_read(&gpios_[buttons_[button_map_[type]].gpioA_idx].gpio, &val);
+  return val;
+}
+
+zx_status_t HidButtonsDevice::ButtonsRegisterNotifyButton(
+    button_type_t type, const button_notify_callback_t* callback) {
+  fbl::AutoLock lock(&callbacks_lock_);
+  callbacks_[button_map_[type]].push_back(*callback);
+  return ZX_OK;
+}
+
+void HidButtonsDevice::ButtonsUnregisterNotifyButton(button_type_t type,
+                                                     const button_notify_callback_t* callback) {
+  fbl::AutoLock lock(&callbacks_lock_);
+  auto& callbacks = callbacks_[button_map_[type]];
+  auto cb = std::find(callbacks.begin(), callbacks.end(), *callback);
+  if (cb != callbacks.end()) { callbacks.erase(cb); return; }
+  zxlogf(ERROR, "%s could not erase %p callback for %u button\n", __FUNCTION__, callback, type);
 }
 
 static constexpr zx_driver_ops_t hid_buttons_driver_ops = []() {

@@ -1,0 +1,41 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.buttons;
+
+using zx;
+
+enum ButtonType : uint8 {
+    VOLUME_UP = 0;
+    VOLUME_DOWN = 1;
+    RESET = 2;
+    MUTE = 3;
+    MAX = 4;
+};
+
+[Layout = "ddk-callback"]
+protocol ButtonNotifyCallback {
+    /// This gets called every time a button receives an interrupt
+    /// |pressed| : The new state of the specified button, true if the button is pressed.
+    NotifyButton(bool pressed);
+};
+
+[Layout = "ddk-protocol"]
+protocol Buttons {
+    /// Gets the state of the button requested
+    /// |type| : Type of the button to register the callback function with.
+    /// @Returns: |pressed| : State of the button, true if the button is pressed.
+    GetState(ButtonType type) -> (bool pressed);
+
+    /// Registers a button with a callback function
+    /// |type| : Type of the button to register the callback function with.
+    /// |callback| : Callback function to register with button.
+    /// @Returns: |status| : Success or fail.
+    RegisterNotifyButton(ButtonType type, ButtonNotifyCallback callback) -> (zx.status status);
+
+    /// Unregisters a callback function from a button
+    /// |type| : Type of the button to register the callback function with.
+    /// |callback| : Callback function to unregister.
+    UnregisterNotifyButton(ButtonType type, ButtonNotifyCallback callback);
+};
