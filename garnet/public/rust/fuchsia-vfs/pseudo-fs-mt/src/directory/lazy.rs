@@ -67,11 +67,10 @@ pub fn lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, Asyn
 ) -> Arc<Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
@@ -98,11 +97,10 @@ pub fn lazy_with_watchers<
 ) -> Arc<Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
@@ -145,11 +143,10 @@ where
 pub struct Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
@@ -206,11 +203,10 @@ impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEnt
     Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
@@ -263,11 +259,10 @@ impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEnt
     for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
@@ -314,11 +309,10 @@ impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEnt
     for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames:
-        Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-            + Send
-            + Sync
-            + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
     AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
     GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
     AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,

@@ -75,8 +75,8 @@ fn build_sorted_static_get_entry_names(
     AlphabeticalTraversal,
     Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
 ) -> AsyncGetEntryNames
-          + Send
-          + Sync) {
+        + Send
+        + Sync) {
     use dirents_sink::AppendResult;
     use AlphabeticalTraversal::{Dot, End, Name};
 
