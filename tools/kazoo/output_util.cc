@@ -163,27 +163,48 @@ std::string GetCKernelModeName(const Type& type) {
   return CNameImpl(type);
 }
 
-void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
-                  Writer* writer) {
-  writer->Printf("%sextern ", prefix);
+void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
+                    Writer* writer, SignatureNewlineStyle newline_style,
+                    std::vector<std::string>* non_nulls) {
+  const char* newline = newline_style == SignatureNewlineStyle::kAllOneLine ? "" : "\n";
+  const char* indent = newline_style == SignatureNewlineStyle::kAllOneLine ? "" : "    ";
+  writer->Puts(prefix);
   writer->Printf("%s ", GetCUserModeName(syscall.kernel_return_type()).c_str());
-  writer->Printf("%s%s(\n", name_prefix, syscall.name().c_str());
+  writer->Printf("%s%s(%s", name_prefix, syscall.name().c_str(), newline);
 
-  std::vector<std::string> non_nulls;
   if (syscall.kernel_arguments().size() == 0) {
-    writer->Printf("    void");
+    if (newline_style == SignatureNewlineStyle::kOnePerLine) {
+      writer->Puts(indent);
+    }
+    writer->Puts("void");
   } else {
     for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall.kernel_arguments()[i];
       const bool last = i == syscall.kernel_arguments().size() - 1;
-      writer->Printf("    %s %s%s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str(),
-                     last ? "" : ",\n");
+      if (newline_style == SignatureNewlineStyle::kOnePerLine) {
+        writer->Puts("    ");  // All indented if one per line.
+      } else if (i != 0) {
+        writer->Puts(" ");  // No space after open ( for single line.
+      }
+      writer->Printf("%s %s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
+      if (!last) {
+        writer->Printf(",%s", newline);
+      }
       if (arg.type().IsPointer() && arg.type().optionality() == Optionality::kOutputNonOptional) {
-        non_nulls.push_back(fxl::StringPrintf("%zu", i + 1));
+        if (non_nulls) {
+          non_nulls->push_back(fxl::StringPrintf("%zu", i + 1));
+        }
       }
     }
   }
   writer->Printf(")");
+}
+
+void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
+                  Writer* writer) {
+  std::vector<std::string> non_nulls;
+  CSignatureLine(syscall, prefix, name_prefix, writer, SignatureNewlineStyle::kOnePerLine,
+                 &non_nulls);
 
   // TODO(syscall-fidl-transition): The order of these post-declaration markup is maintained, but
   // perhaps it could be simplified once it doesn't need to match.
@@ -195,10 +216,10 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
   }
   writer->Printf(" __LEAF_FN");
   if (syscall.HasAttribute("Const")) {
-    writer->Printf(" __CONST");
+    writer->Puts(" __CONST");
   }
   if (syscall.HasAttribute("Noreturn")) {
-    writer->Printf(" __NO_RETURN");
+    writer->Puts(" __NO_RETURN");
   }
-  writer->Printf(";\n\n");
+  writer->Puts(";\n\n");
 }

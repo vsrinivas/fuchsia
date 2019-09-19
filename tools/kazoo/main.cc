@@ -22,6 +22,7 @@ struct CommandLineOptions {
   std::optional<std::string> syscall_numbers;
   std::optional<std::string> user_header;
   std::optional<std::string> vdso_header;
+  std::optional<std::string> vdso_wrappers;
   std::optional<std::string> x86_asm;
 };
 
@@ -58,6 +59,9 @@ constexpr const char kUserHeaderHelp[] = R"(  --user-header=FILENAME
 constexpr const char kVdsoHeaderHelp[] = R"(  --vdso-header=FILENAME
     The output name for the .h file used for VDSO prototypes.)";
 
+constexpr const char kVdsoWrappersHelp[] = R"(  --vdso-wrappers=FILENAME
+    The output name for the .inc file used for blocking VDSO call wrappers.)";
+
 constexpr const char kX86AsmHelp[] = R"(  --x86-asm=FILENAME
     The output name for the .S file x86-64 syscalls.)";
 
@@ -76,6 +80,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
   parser.AddSwitch("user-header", 0, kUserHeaderHelp, &CommandLineOptions::user_header);
   parser.AddSwitch("vdso-header", 0, kVdsoHeaderHelp, &CommandLineOptions::vdso_header);
+  parser.AddSwitch("vdso-wrappers", 0, kVdsoWrappersHelp, &CommandLineOptions::vdso_wrappers);
   parser.AddSwitch("x86-asm", 0, kX86AsmHelp, &CommandLineOptions::x86_asm);
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
@@ -128,6 +133,7 @@ int main(int argc, const char* argv[]) {
       {&options.syscall_numbers, SyscallNumbersOutput},
       {&options.user_header, UserHeaderOutput},
       {&options.vdso_header, VdsoHeaderOutput},
+      {&options.vdso_wrappers, VdsoWrappersOutput},
       {&options.x86_asm, AsmOutput},
   };
 

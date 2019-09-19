@@ -33,6 +33,7 @@ out/default/host_x64/exe.unstripped/kazoo \
   --syscall-numbers=/tmp/syscall-numbers.h \
   --user-header=/tmp/definitions.h \
   --vdso-header=/tmp/vdso-definitions.h \
+  --vdso-wrappers=/tmp/vdso-wrappers.inc \
   --x86-asm=/tmp/x86-asm.S \
   /tmp/syscalls.json
 
@@ -74,6 +75,10 @@ compare "user-header" \
 compare "vdso-header" \
         "out/default.zircon/user.vdso-x64-clang.shlib/gen/system/ulib/zircon/zircon/syscall-vdso-definitions.h" \
         "/tmp/vdso-definitions.h"
+
+compare "vdso-wrappers" \
+        "out/default.zircon/user.vdso-x64-clang.shlib/gen/system/ulib/zircon/zircon/syscall-vdso-wrappers.inc" \
+        "/tmp/vdso-wrappers.inc"
 
 compare "x86-asm" \
         "out/default.zircon/user.vdso-x64-clang.shlib/gen/system/ulib/zircon/zircon/syscalls-x86-64.S" \

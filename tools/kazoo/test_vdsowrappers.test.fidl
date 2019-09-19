@@ -1,0 +1,22 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+using vector_void = vector<byte>;
+
+// Note that this has to be named "protocol Syscall" to make test_wrapper have
+// the correct name.
+[Transport="Syscall"]
+protocol Syscall {
+    // Typical case.
+    [Blocking]
+    BlockingWrite(handle<vmo> handle, vector_void buffer, uint64 offset) -> (zx.status status);
+
+    // Special case for abigen's test wrapper.
+    TestWrapper(int32 a, int32 b, int32 c) -> (zx.status status);
+};
+

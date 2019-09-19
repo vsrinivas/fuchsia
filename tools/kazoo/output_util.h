@@ -30,6 +30,18 @@ std::string GetCUserModeName(const Type& type);
 // zx_xyz_t*, this will have user_out_ptr<xyz>, etc.)
 std::string GetCKernelModeName(const Type& type);
 
+enum class SignatureNewlineStyle { kAllOneLine, kOnePerLine };
+
+// Emits a C syscall signature, up to the closing parenthesis of the argument list (but does not
+// include any annotations, nor a trailing semi-colon or opening brace (see CDeclaration() as well).
+// |prefix| is a string that goes before the entire declaration.
+// |name_prefix| is prepended to the function name.
+// |non_nulls| is optional; if it's not null, it will be filled with the indices of the parameters
+// which the input specification says must be non-null arguments.
+void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
+                    Writer* writer, SignatureNewlineStyle newline_style,
+                    std::vector<std::string>* non_nulls);
+
 // Emits a C header declaration for a syscall.
 // |prefix| is a string that goes before the entire declaration.
 // |name_prefix| is prepended to the function name.

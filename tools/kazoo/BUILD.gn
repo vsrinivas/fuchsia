@@ -38,6 +38,7 @@ if (current_toolchain == host_toolchain) {
       "syscall_numbers_output.cc",
       "user_header_output.cc",
       "vdso_header_output.cc",
+      "vdso_wrappers_output.cc",
       "writer.cc",
       "writer.h",
     ]
@@ -75,6 +76,7 @@ if (current_toolchain == host_toolchain) {
       "syscall_numbers_output_test.cc",
       "user_header_output_test.cc",
       "vdso_header_output_test.cc",
+      "vdso_wrappers_output_test.cc",
       "writer_test.cc",
     ]
   }
@@ -103,6 +105,7 @@ if (current_toolchain == host_toolchain) {
       "test_pointers_and_vectors.test.fidl",
       "test_selection.test.fidl",
       "test_various_categories.test.fidl",
+      "test_vdsowrappers.test.fidl",
     ]
   }
 

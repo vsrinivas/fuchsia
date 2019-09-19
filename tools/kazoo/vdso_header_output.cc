@@ -11,13 +11,13 @@ bool VdsoHeaderOutput(const SyscallLibrary& library, Writer* writer) {
   }
 
   for (const auto& syscall : library.syscalls()) {
-    CDeclaration(*syscall, "__LOCAL ", "VDSO_zx_", writer);
+    CDeclaration(*syscall, "__LOCAL extern ", "VDSO_zx_", writer);
 
     if (syscall->HasAttribute("Vdsocall")) {
       continue;
     }
 
-    CDeclaration(*syscall, "__LOCAL ", "SYSCALL_zx_", writer);
+    CDeclaration(*syscall, "__LOCAL extern ", "SYSCALL_zx_", writer);
   }
 
   // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
