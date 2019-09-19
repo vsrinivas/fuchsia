@@ -34,6 +34,12 @@ trap 'rm -rf "${tmpdir}"' EXIT
 # where we'll write the temporary copy of ${IMAGE_NETBOOT_ZBI}.
 cp "${netboot_script}" "${tmpdir}"
 
+# XXX(raggi): the following is quite undesirable, as it takes internal
+# dependencies on the build, but at present the ssh-key fixup below is hard to
+# achieve otherwise.
+mkdir "${tmpdir}/host_x64"
+cp "${FUCHSIA_BUILD_DIR}/host_x64/bootserver" "${tmpdir}/host_x64/bootserver"
+
 # Make a temporary image that adds in the .ssh/authorized_keys file.
 fx-zbi \
   -o "${tmpdir}/${IMAGE_NETBOOT_ZBI}" \
@@ -41,4 +47,4 @@ fx-zbi \
   "--entry=data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
 
 # Now run the copied script, which will use the temporary ZBI.
-"${tmpdir}/netboot.sh" "${name_args[@]}" "$@"
+"${tmpdir}/netboot.sh" "${name_args[@]}" -1 "$@"
