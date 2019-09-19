@@ -630,6 +630,12 @@ struct NodeInfo {
 
   bool is_service() const { return tag_ == Tag::kService; }
 
+  static NodeInfo WithService(Service&& val) {
+    NodeInfo result;
+    result.set_service(std::move(val));
+    return result;
+  }
+
   Service& mutable_service();
 
   template <typename T>
@@ -647,6 +653,12 @@ struct NodeInfo {
   Service const & service() const { return service_; }
 
   bool is_file() const { return tag_ == Tag::kFile; }
+
+  static NodeInfo WithFile(FileObject&& val) {
+    NodeInfo result;
+    result.set_file(std::move(val));
+    return result;
+  }
 
   FileObject& mutable_file();
 
@@ -666,6 +678,12 @@ struct NodeInfo {
 
   bool is_directory() const { return tag_ == Tag::kDirectory; }
 
+  static NodeInfo WithDirectory(DirectoryObject&& val) {
+    NodeInfo result;
+    result.set_directory(std::move(val));
+    return result;
+  }
+
   DirectoryObject& mutable_directory();
 
   template <typename T>
@@ -683,6 +701,12 @@ struct NodeInfo {
   DirectoryObject const & directory() const { return directory_; }
 
   bool is_pipe() const { return tag_ == Tag::kPipe; }
+
+  static NodeInfo WithPipe(Pipe&& val) {
+    NodeInfo result;
+    result.set_pipe(std::move(val));
+    return result;
+  }
 
   Pipe& mutable_pipe();
 
@@ -702,6 +726,12 @@ struct NodeInfo {
 
   bool is_vmofile() const { return tag_ == Tag::kVmofile; }
 
+  static NodeInfo WithVmofile(Vmofile&& val) {
+    NodeInfo result;
+    result.set_vmofile(std::move(val));
+    return result;
+  }
+
   Vmofile& mutable_vmofile();
 
   template <typename T>
@@ -719,6 +749,12 @@ struct NodeInfo {
   Vmofile const & vmofile() const { return vmofile_; }
 
   bool is_device() const { return tag_ == Tag::kDevice; }
+
+  static NodeInfo WithDevice(Device&& val) {
+    NodeInfo result;
+    result.set_device(std::move(val));
+    return result;
+  }
 
   Device& mutable_device();
 
@@ -738,6 +774,12 @@ struct NodeInfo {
 
   bool is_tty() const { return tag_ == Tag::kTty; }
 
+  static NodeInfo WithTty(Tty&& val) {
+    NodeInfo result;
+    result.set_tty(std::move(val));
+    return result;
+  }
+
   Tty& mutable_tty();
 
   template <typename T>
@@ -755,6 +797,12 @@ struct NodeInfo {
   Tty const & tty() const { return tty_; }
 
   bool is_socket() const { return tag_ == Tag::kSocket; }
+
+  static NodeInfo WithSocket(Socket&& val) {
+    NodeInfo result;
+    result.set_socket(std::move(val));
+    return result;
+  }
 
   Socket& mutable_socket();
 

@@ -52,6 +52,12 @@ struct Union {
 
   bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
 
+  static Union WithPrimitive(int32_t&& val) {
+    Union result;
+    result.set_Primitive(std::move(val));
+    return result;
+  }
+
   int32_t& mutable_Primitive();
 
   template <typename T>
@@ -70,6 +76,12 @@ struct Union {
 
   bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
 
+  static Union WithStringNeedsConstructor(::fidl::StringView&& val) {
+    Union result;
+    result.set_StringNeedsConstructor(std::move(val));
+    return result;
+  }
+
   ::fidl::StringView& mutable_StringNeedsConstructor();
 
   template <typename T>
@@ -87,6 +99,12 @@ struct Union {
   ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
+
+  static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>&& val) {
+    Union result;
+    result.set_VectorStringAlsoNeedsConstructor(std::move(val));
+    return result;
+  }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor();
 
@@ -152,6 +170,12 @@ struct FieldCollision {
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_field_collision_tag() const { return tag_ == Tag::kFieldCollisionTag; }
+
+  static FieldCollision WithFieldCollisionTag(int32_t&& val) {
+    FieldCollision result;
+    result.set_field_collision_tag(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_field_collision_tag();
 

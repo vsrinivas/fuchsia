@@ -94,6 +94,12 @@ struct Device_GetStateNormalized_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Device_GetStateNormalized_Result WithResponse(Device_GetStateNormalized_Response&& val) {
+    Device_GetStateNormalized_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Device_GetStateNormalized_Response& mutable_response();
 
   template <typename T>
@@ -111,6 +117,12 @@ struct Device_GetStateNormalized_Result {
   Device_GetStateNormalized_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_GetStateNormalized_Result WithErr(int32_t&& val) {
+    Device_GetStateNormalized_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -189,6 +201,12 @@ struct Device_GetStateAbsolute_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Device_GetStateAbsolute_Result WithResponse(Device_GetStateAbsolute_Response&& val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Device_GetStateAbsolute_Response& mutable_response();
 
   template <typename T>
@@ -206,6 +224,12 @@ struct Device_GetStateAbsolute_Result {
   Device_GetStateAbsolute_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_GetStateAbsolute_Result WithErr(int32_t&& val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -284,6 +308,12 @@ struct Device_SetStateNormalized_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Device_SetStateNormalized_Result WithResponse(Device_SetStateNormalized_Response&& val) {
+    Device_SetStateNormalized_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Device_SetStateNormalized_Response& mutable_response();
 
   template <typename T>
@@ -301,6 +331,12 @@ struct Device_SetStateNormalized_Result {
   Device_SetStateNormalized_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_SetStateNormalized_Result WithErr(int32_t&& val) {
+    Device_SetStateNormalized_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -379,6 +415,12 @@ struct Device_SetStateAbsolute_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Device_SetStateAbsolute_Result WithResponse(Device_SetStateAbsolute_Response&& val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Device_SetStateAbsolute_Response& mutable_response();
 
   template <typename T>
@@ -396,6 +438,12 @@ struct Device_SetStateAbsolute_Result {
   Device_SetStateAbsolute_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_SetStateAbsolute_Result WithErr(int32_t&& val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

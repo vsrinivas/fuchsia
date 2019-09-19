@@ -2215,6 +2215,12 @@ struct BufferSpec {
 
   bool is_image() const { return tag_ == Tag::kImage; }
 
+  static BufferSpec WithImage(ImageSpec&& val) {
+    BufferSpec result;
+    result.set_image(std::move(val));
+    return result;
+  }
+
   ImageSpec& mutable_image();
 
   template <typename T>
@@ -2496,6 +2502,12 @@ struct BufferFormat {
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_image() const { return tag_ == Tag::kImage; }
+
+  static BufferFormat WithImage(ImageFormat&& val) {
+    BufferFormat result;
+    result.set_image(std::move(val));
+    return result;
+  }
 
   ImageFormat& mutable_image();
 

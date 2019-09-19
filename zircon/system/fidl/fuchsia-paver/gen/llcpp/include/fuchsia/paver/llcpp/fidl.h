@@ -91,6 +91,12 @@ struct ReadResult {
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  static ReadResult WithErr(int32_t&& val) {
+    ReadResult result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
   // Error encountered while reading data.
   int32_t& mutable_err();
 
@@ -113,6 +119,12 @@ struct ReadResult {
 
   bool is_eof() const { return tag_ == Tag::kEof; }
 
+  static ReadResult WithEof(bool&& val) {
+    ReadResult result;
+    result.set_eof(std::move(val));
+    return result;
+  }
+
   // End of file reached.
   bool& mutable_eof();
 
@@ -134,6 +146,12 @@ struct ReadResult {
   bool const & eof() const { return eof_; }
 
   bool is_info() const { return tag_ == Tag::kInfo; }
+
+  static ReadResult WithInfo(ReadInfo&& val) {
+    ReadResult result;
+    result.set_info(std::move(val));
+    return result;
+  }
 
   // Information about location of successfully read data within pre-registered VMO.
   ReadInfo& mutable_info();
@@ -481,6 +499,12 @@ struct Paver_QueryActiveConfiguration_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Paver_QueryActiveConfiguration_Result WithResponse(Paver_QueryActiveConfiguration_Response&& val) {
+    Paver_QueryActiveConfiguration_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Paver_QueryActiveConfiguration_Response& mutable_response();
 
   template <typename T>
@@ -498,6 +522,12 @@ struct Paver_QueryActiveConfiguration_Result {
   Paver_QueryActiveConfiguration_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Paver_QueryActiveConfiguration_Result WithErr(int32_t&& val) {
+    Paver_QueryActiveConfiguration_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

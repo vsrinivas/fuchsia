@@ -71,6 +71,12 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static TestDevice_GetCurrentDevicePowerState_Result WithResponse(TestDevice_GetCurrentDevicePowerState_Response&& val) {
+    TestDevice_GetCurrentDevicePowerState_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
 
   template <typename T>
@@ -88,6 +94,12 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static TestDevice_GetCurrentDevicePowerState_Result WithErr(int32_t&& val) {
+    TestDevice_GetCurrentDevicePowerState_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -166,6 +178,12 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(TestDevice_AddDeviceWithPowerArgs_Response&& val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   TestDevice_AddDeviceWithPowerArgs_Response& mutable_response();
 
   template <typename T>
@@ -183,6 +201,12 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t&& val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

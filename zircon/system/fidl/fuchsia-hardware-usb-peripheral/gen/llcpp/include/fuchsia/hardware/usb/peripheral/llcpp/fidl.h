@@ -283,6 +283,12 @@ struct Device_SetConfiguration_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Device_SetConfiguration_Result WithResponse(Device_SetConfiguration_Response&& val) {
+    Device_SetConfiguration_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Device_SetConfiguration_Response& mutable_response();
 
   template <typename T>
@@ -300,6 +306,12 @@ struct Device_SetConfiguration_Result {
   Device_SetConfiguration_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_SetConfiguration_Result WithErr(int32_t&& val) {
+    Device_SetConfiguration_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

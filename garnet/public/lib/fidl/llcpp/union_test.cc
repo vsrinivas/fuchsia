@@ -2,23 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
+
 #include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
+
 #include "gtest/gtest.h"
-#include <lib/zx/event.h>
-#include <lib/zx/eventpair.h>
 
 namespace llcpp_test = ::llcpp::fidl::llcpp::types::test;
 
 TEST(UnionPayload, Primitive) {
-  llcpp_test::TestUnion test_union;
-  EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
-  test_union.set_primitive(5);
-  EXPECT_EQ(llcpp_test::TestUnion::Tag::kPrimitive, test_union.which());
+  {
+    llcpp_test::TestUnion test_union;
+    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    test_union.set_primitive(5);
+    EXPECT_EQ(llcpp_test::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(5, test_union.primitive());
+  }
+  {
+    auto test_union = llcpp_test::TestUnion::WithPrimitive(5);
+    EXPECT_EQ(llcpp_test::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(5, test_union.primitive());
+  }
 }
 
 TEST(UnionPayload, CopyableStruct) {
@@ -33,6 +43,10 @@ TEST(UnionPayload, CopyableStruct) {
     EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
     llcpp_test::CopyableStruct copyable_struct{.x = 5};
     test_union.set_copyable(copyable_struct);
+    EXPECT_EQ(llcpp_test::TestUnion::Tag::kCopyable, test_union.which());
+  }
+  {
+    auto test_union = llcpp_test::TestUnion::WithCopyable(llcpp_test::CopyableStruct{.x = 5});
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kCopyable, test_union.which());
   }
 }
@@ -55,6 +69,11 @@ TEST(UnionPayload, MoveOnlyStruct) {
     test_union.set_move_only(std::move(move_only_struct));
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kMoveOnly, test_union.which());
     EXPECT_EQ(ZX_HANDLE_INVALID, move_only_struct.h.get());
+  }
+  {
+    auto test_union =
+        llcpp_test::TestUnion::WithMoveOnly(llcpp_test::MoveOnlyStruct{.h = zx::handle()});
+    EXPECT_EQ(llcpp_test::TestUnion::Tag::kMoveOnly, test_union.which());
   }
 }
 
@@ -125,4 +144,16 @@ TEST(MoveUnion, NoDoubleDestructPayload) {
   // |canary_b| should not be closed.
   EXPECT_TRUE(IsPeerValid(zx::unowned_eventpair(canary_a)));
   zx_handle_close(h);
+}
+
+TEST(XUnionPayload, Primitive) {
+  int32_t num = 5;
+  auto test_xunion = llcpp_test::TestXUnion::WithPrimitive(&num);
+  EXPECT_EQ(llcpp_test::TestXUnion::Tag::kPrimitive, test_xunion.which());
+}
+
+TEST(XUnionPayload, Struct) {
+  llcpp_test::CopyableStruct copyable{.x = 5};
+  auto test_xunion = llcpp_test::TestXUnion::WithCopyable(&copyable);
+  EXPECT_EQ(llcpp_test::TestXUnion::Tag::kCopyable, test_xunion.which());
 }

@@ -76,6 +76,12 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
+    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
 
   template <typename T>
@@ -93,6 +99,12 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&& val) {
+    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   uint32_t& mutable_err();
 
@@ -1064,6 +1076,12 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(WithErrorSyntax_ErrorAsEnum_Response&& val) {
+    WithErrorSyntax_ErrorAsEnum_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
 
   template <typename T>
@@ -1081,6 +1099,12 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(ErrorEnun&& val) {
+    WithErrorSyntax_ErrorAsEnum_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   ErrorEnun& mutable_err();
 

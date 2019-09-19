@@ -234,6 +234,11 @@ Tab 2> fx run -kN
 Tab 3> fx run-test fidl_tests
 ```
 
+There are separate tests for LLCPP that can be run in the same way as `fidl_tests`:
+
+* fidl_llcpp_types_test
+* fidl_llcpp_conformance_test
+
 ### Go runtime
 
 You first need to have Fuchsia running in an emulator. Here are the steps:
@@ -321,6 +326,7 @@ fx shell /tmp/run_fidl_compatibility_test_topaz.sh
 | fidlgen syzkaller ir     | fx run-host-tests fidlgen_syzkaller_ir_test         | garnet/go/src/fidl/compiler/backend/syzkaller/ir                        |
 | fidlgen type definitions | fx run-host-tests fidlgen_types_test                | garnet/go/src/fidl/compiler/backend/types                               |
 | c++ bindings tests       | fx run-test fidl_tests                              | sdk/lib/fidl                                                            |
+| llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                        |
 | go bindings tests        | fx run-test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | fx run-test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
 | rust bindings            | fx run-test rust_fidl_tests                         |                                                                         |

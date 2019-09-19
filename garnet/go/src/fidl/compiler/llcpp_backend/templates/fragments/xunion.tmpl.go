@@ -28,6 +28,12 @@ struct {{ .Name }} {
   {{- range $index, $member := .Members }}
 
   bool is_{{ .Name }}() const { return ordinal_ == Tag::{{ .TagName }}; }
+
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}* val) {
+    {{ $.Name }} result;
+    result.set_{{ .Name }}(val);
+    return result;
+  }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}

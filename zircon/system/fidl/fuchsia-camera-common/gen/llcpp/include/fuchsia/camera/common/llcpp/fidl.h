@@ -57,6 +57,12 @@ struct VirtualStreamConfig {
 
   bool is_artificial_config() const { return ordinal_ == Tag::kArtificialConfig; }
 
+  static VirtualStreamConfig WithArtificialConfig(ArtificialStreamConfig* val) {
+    VirtualStreamConfig result;
+    result.set_artificial_config(val);
+    return result;
+  }
+
   void set_artificial_config(ArtificialStreamConfig* elem) {
     ordinal_ = Tag::kArtificialConfig;
     envelope_.data = static_cast<void*>(elem);
@@ -68,6 +74,12 @@ struct VirtualStreamConfig {
   }
 
   bool is_real_world_config() const { return ordinal_ == Tag::kRealWorldConfig; }
+
+  static VirtualStreamConfig WithRealWorldConfig(RealWorldStreamConfig* val) {
+    VirtualStreamConfig result;
+    result.set_real_world_config(val);
+    return result;
+  }
 
   void set_real_world_config(RealWorldStreamConfig* elem) {
     ordinal_ = Tag::kRealWorldConfig;

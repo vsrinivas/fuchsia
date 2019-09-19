@@ -42,6 +42,12 @@ struct Data {
 
   bool is_bytes() const { return ordinal_ == Tag::kBytes; }
 
+  static Data WithBytes(::fidl::VectorView<uint8_t>* val) {
+    Data result;
+    result.set_bytes(val);
+    return result;
+  }
+
   // The binary data provided inline in the message.
   void set_bytes(::fidl::VectorView<uint8_t>* elem) {
     ordinal_ = Tag::kBytes;
@@ -55,6 +61,12 @@ struct Data {
   }
 
   bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
+
+  static Data WithBuffer(Buffer* val) {
+    Data result;
+    result.set_buffer(val);
+    return result;
+  }
 
   // The binary data provided out-of-line in a `Buffer`.
   void set_buffer(Buffer* elem) {

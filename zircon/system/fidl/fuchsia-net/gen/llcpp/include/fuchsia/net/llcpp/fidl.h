@@ -295,6 +295,12 @@ struct NameLookup_LookupHostname_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static NameLookup_LookupHostname_Result WithResponse(NameLookup_LookupHostname_Response&& val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   NameLookup_LookupHostname_Response& mutable_response();
 
   template <typename T>
@@ -312,6 +318,12 @@ struct NameLookup_LookupHostname_Result {
   NameLookup_LookupHostname_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static NameLookup_LookupHostname_Result WithErr(LookupError&& val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   LookupError& mutable_err();
 
@@ -437,6 +449,12 @@ struct NameLookup_LookupIp_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static NameLookup_LookupIp_Result WithResponse(NameLookup_LookupIp_Response&& val) {
+    NameLookup_LookupIp_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   NameLookup_LookupIp_Response& mutable_response();
 
   template <typename T>
@@ -454,6 +472,12 @@ struct NameLookup_LookupIp_Result {
   NameLookup_LookupIp_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static NameLookup_LookupIp_Result WithErr(LookupError&& val) {
+    NameLookup_LookupIp_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   LookupError& mutable_err();
 
@@ -521,6 +545,12 @@ struct IpAddress {
 
   bool is_ipv4() const { return tag_ == Tag::kIpv4; }
 
+  static IpAddress WithIpv4(Ipv4Address&& val) {
+    IpAddress result;
+    result.set_ipv4(std::move(val));
+    return result;
+  }
+
   Ipv4Address& mutable_ipv4();
 
   template <typename T>
@@ -538,6 +568,12 @@ struct IpAddress {
   Ipv4Address const & ipv4() const { return ipv4_; }
 
   bool is_ipv6() const { return tag_ == Tag::kIpv6; }
+
+  static IpAddress WithIpv6(Ipv6Address&& val) {
+    IpAddress result;
+    result.set_ipv6(std::move(val));
+    return result;
+  }
 
   Ipv6Address& mutable_ipv6();
 

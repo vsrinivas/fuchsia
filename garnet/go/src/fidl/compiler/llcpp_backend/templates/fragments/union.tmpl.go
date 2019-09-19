@@ -46,6 +46,12 @@ struct {{ .Name }} {
   {{- range $index, $member := .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
+
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}&& val) {
+    {{ $.Name }} result;
+    result.set_{{ .Name }}(std::move(val));
+    return result;
+  }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}

@@ -88,6 +88,12 @@ struct NameProvider_GetDeviceName_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static NameProvider_GetDeviceName_Result WithResponse(NameProvider_GetDeviceName_Response&& val) {
+    NameProvider_GetDeviceName_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   NameProvider_GetDeviceName_Response& mutable_response();
 
   template <typename T>
@@ -105,6 +111,12 @@ struct NameProvider_GetDeviceName_Result {
   NameProvider_GetDeviceName_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static NameProvider_GetDeviceName_Result WithErr(int32_t&& val) {
+    NameProvider_GetDeviceName_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -387,6 +399,12 @@ struct Controller_GetPowerStateMapping_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_GetPowerStateMapping_Result WithResponse(Controller_GetPowerStateMapping_Response&& val) {
+    Controller_GetPowerStateMapping_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_GetPowerStateMapping_Response& mutable_response();
 
   template <typename T>
@@ -404,6 +422,12 @@ struct Controller_GetPowerStateMapping_Result {
   Controller_GetPowerStateMapping_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_GetPowerStateMapping_Result WithErr(int32_t&& val) {
+    Controller_GetPowerStateMapping_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -506,6 +530,12 @@ struct Controller_GetDevicePowerCaps_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_GetDevicePowerCaps_Result WithResponse(Controller_GetDevicePowerCaps_Response&& val) {
+    Controller_GetDevicePowerCaps_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_GetDevicePowerCaps_Response& mutable_response();
 
   template <typename T>
@@ -523,6 +553,12 @@ struct Controller_GetDevicePowerCaps_Result {
   Controller_GetDevicePowerCaps_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_GetDevicePowerCaps_Result WithErr(int32_t&& val) {
+    Controller_GetDevicePowerCaps_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -601,6 +637,12 @@ struct Controller_Resume_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_Resume_Result WithResponse(Controller_Resume_Response&& val) {
+    Controller_Resume_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_Resume_Response& mutable_response();
 
   template <typename T>
@@ -618,6 +660,12 @@ struct Controller_Resume_Result {
   Controller_Resume_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_Resume_Result WithErr(int32_t&& val) {
+    Controller_Resume_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -719,6 +767,12 @@ struct Controller_UpdatePowerStateMapping_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_UpdatePowerStateMapping_Result WithResponse(Controller_UpdatePowerStateMapping_Response&& val) {
+    Controller_UpdatePowerStateMapping_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_UpdatePowerStateMapping_Response& mutable_response();
 
   template <typename T>
@@ -736,6 +790,12 @@ struct Controller_UpdatePowerStateMapping_Result {
   Controller_UpdatePowerStateMapping_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_UpdatePowerStateMapping_Result WithErr(int32_t&& val) {
+    Controller_UpdatePowerStateMapping_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

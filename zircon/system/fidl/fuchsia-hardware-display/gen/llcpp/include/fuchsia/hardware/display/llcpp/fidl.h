@@ -590,6 +590,12 @@ struct Controller_StartCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_StartCapture_Result WithResponse(Controller_StartCapture_Response&& val) {
+    Controller_StartCapture_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_StartCapture_Response& mutable_response();
 
   template <typename T>
@@ -607,6 +613,12 @@ struct Controller_StartCapture_Result {
   Controller_StartCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_StartCapture_Result WithErr(int32_t&& val) {
+    Controller_StartCapture_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -685,6 +697,12 @@ struct Controller_ReleaseCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_ReleaseCapture_Result WithResponse(Controller_ReleaseCapture_Response&& val) {
+    Controller_ReleaseCapture_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_ReleaseCapture_Response& mutable_response();
 
   template <typename T>
@@ -702,6 +720,12 @@ struct Controller_ReleaseCapture_Result {
   Controller_ReleaseCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_ReleaseCapture_Result WithErr(int32_t&& val) {
+    Controller_ReleaseCapture_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -780,6 +804,12 @@ struct Controller_ImportImageForCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Controller_ImportImageForCapture_Result WithResponse(Controller_ImportImageForCapture_Response&& val) {
+    Controller_ImportImageForCapture_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Controller_ImportImageForCapture_Response& mutable_response();
 
   template <typename T>
@@ -797,6 +827,12 @@ struct Controller_ImportImageForCapture_Result {
   Controller_ImportImageForCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_ImportImageForCapture_Result WithErr(int32_t&& val) {
+    Controller_ImportImageForCapture_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 

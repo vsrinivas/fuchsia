@@ -1203,6 +1203,12 @@ struct Coordinator_AddDevice_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_AddDevice_Result WithResponse(Coordinator_AddDevice_Response&& val) {
+    Coordinator_AddDevice_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_AddDevice_Response& mutable_response();
 
   template <typename T>
@@ -1220,6 +1226,12 @@ struct Coordinator_AddDevice_Result {
   Coordinator_AddDevice_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_AddDevice_Result WithErr(int32_t&& val) {
+    Coordinator_AddDevice_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1298,6 +1310,12 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_AddDeviceInvisible_Result WithResponse(Coordinator_AddDeviceInvisible_Response&& val) {
+    Coordinator_AddDeviceInvisible_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_AddDeviceInvisible_Response& mutable_response();
 
   template <typename T>
@@ -1315,6 +1333,12 @@ struct Coordinator_AddDeviceInvisible_Result {
   Coordinator_AddDeviceInvisible_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_AddDeviceInvisible_Result WithErr(int32_t&& val) {
+    Coordinator_AddDeviceInvisible_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1408,6 +1432,12 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_RunCompatibilityTests_Result WithResponse(Coordinator_RunCompatibilityTests_Response&& val) {
+    Coordinator_RunCompatibilityTests_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_RunCompatibilityTests_Response& mutable_response();
 
   template <typename T>
@@ -1425,6 +1455,12 @@ struct Coordinator_RunCompatibilityTests_Result {
   Coordinator_RunCompatibilityTests_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_RunCompatibilityTests_Result WithErr(int32_t&& val) {
+    Coordinator_RunCompatibilityTests_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1503,6 +1539,12 @@ struct Coordinator_RemoveDevice_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_RemoveDevice_Result WithResponse(Coordinator_RemoveDevice_Response&& val) {
+    Coordinator_RemoveDevice_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_RemoveDevice_Response& mutable_response();
 
   template <typename T>
@@ -1520,6 +1562,12 @@ struct Coordinator_RemoveDevice_Result {
   Coordinator_RemoveDevice_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_RemoveDevice_Result WithErr(int32_t&& val) {
+    Coordinator_RemoveDevice_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1598,6 +1646,12 @@ struct Coordinator_PublishMetadata_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_PublishMetadata_Result WithResponse(Coordinator_PublishMetadata_Response&& val) {
+    Coordinator_PublishMetadata_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_PublishMetadata_Response& mutable_response();
 
   template <typename T>
@@ -1615,6 +1669,12 @@ struct Coordinator_PublishMetadata_Result {
   Coordinator_PublishMetadata_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_PublishMetadata_Result WithErr(int32_t&& val) {
+    Coordinator_PublishMetadata_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1693,6 +1753,12 @@ struct Coordinator_MakeVisible_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_MakeVisible_Result WithResponse(Coordinator_MakeVisible_Response&& val) {
+    Coordinator_MakeVisible_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_MakeVisible_Response& mutable_response();
 
   template <typename T>
@@ -1710,6 +1776,12 @@ struct Coordinator_MakeVisible_Result {
   Coordinator_MakeVisible_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_MakeVisible_Result WithErr(int32_t&& val) {
+    Coordinator_MakeVisible_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1790,6 +1862,12 @@ struct Coordinator_LoadFirmware_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_LoadFirmware_Result WithResponse(Coordinator_LoadFirmware_Response&& val) {
+    Coordinator_LoadFirmware_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_LoadFirmware_Response& mutable_response();
 
   template <typename T>
@@ -1807,6 +1885,12 @@ struct Coordinator_LoadFirmware_Result {
   Coordinator_LoadFirmware_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_LoadFirmware_Result WithErr(int32_t&& val) {
+    Coordinator_LoadFirmware_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1885,6 +1969,12 @@ struct Coordinator_GetTopologicalPath_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_GetTopologicalPath_Result WithResponse(Coordinator_GetTopologicalPath_Response&& val) {
+    Coordinator_GetTopologicalPath_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_GetTopologicalPath_Response& mutable_response();
 
   template <typename T>
@@ -1902,6 +1992,12 @@ struct Coordinator_GetTopologicalPath_Result {
   Coordinator_GetTopologicalPath_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_GetTopologicalPath_Result WithErr(int32_t&& val) {
+    Coordinator_GetTopologicalPath_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -1980,6 +2076,12 @@ struct Coordinator_GetMetadata_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_GetMetadata_Result WithResponse(Coordinator_GetMetadata_Response&& val) {
+    Coordinator_GetMetadata_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_GetMetadata_Response& mutable_response();
 
   template <typename T>
@@ -1997,6 +2099,12 @@ struct Coordinator_GetMetadata_Result {
   Coordinator_GetMetadata_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_GetMetadata_Result WithErr(int32_t&& val) {
+    Coordinator_GetMetadata_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -2075,6 +2183,12 @@ struct Coordinator_GetMetadataSize_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_GetMetadataSize_Result WithResponse(Coordinator_GetMetadataSize_Response&& val) {
+    Coordinator_GetMetadataSize_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_GetMetadataSize_Response& mutable_response();
 
   template <typename T>
@@ -2092,6 +2206,12 @@ struct Coordinator_GetMetadataSize_Result {
   Coordinator_GetMetadataSize_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_GetMetadataSize_Result WithErr(int32_t&& val) {
+    Coordinator_GetMetadataSize_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -2170,6 +2290,12 @@ struct Coordinator_DirectoryWatch_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_DirectoryWatch_Result WithResponse(Coordinator_DirectoryWatch_Response&& val) {
+    Coordinator_DirectoryWatch_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_DirectoryWatch_Response& mutable_response();
 
   template <typename T>
@@ -2187,6 +2313,12 @@ struct Coordinator_DirectoryWatch_Result {
   Coordinator_DirectoryWatch_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_DirectoryWatch_Result WithErr(int32_t&& val) {
+    Coordinator_DirectoryWatch_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -2265,6 +2397,12 @@ struct Coordinator_BindDevice_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_BindDevice_Result WithResponse(Coordinator_BindDevice_Response&& val) {
+    Coordinator_BindDevice_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_BindDevice_Response& mutable_response();
 
   template <typename T>
@@ -2282,6 +2420,12 @@ struct Coordinator_BindDevice_Result {
   Coordinator_BindDevice_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_BindDevice_Result WithErr(int32_t&& val) {
+    Coordinator_BindDevice_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -2360,6 +2504,12 @@ struct Coordinator_AddMetadata_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_AddMetadata_Result WithResponse(Coordinator_AddMetadata_Response&& val) {
+    Coordinator_AddMetadata_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_AddMetadata_Response& mutable_response();
 
   template <typename T>
@@ -2377,6 +2527,12 @@ struct Coordinator_AddMetadata_Result {
   Coordinator_AddMetadata_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_AddMetadata_Result WithErr(int32_t&& val) {
+    Coordinator_AddMetadata_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
@@ -2455,6 +2611,12 @@ struct Coordinator_AddCompositeDevice_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  static Coordinator_AddCompositeDevice_Result WithResponse(Coordinator_AddCompositeDevice_Response&& val) {
+    Coordinator_AddCompositeDevice_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
   Coordinator_AddCompositeDevice_Response& mutable_response();
 
   template <typename T>
@@ -2472,6 +2634,12 @@ struct Coordinator_AddCompositeDevice_Result {
   Coordinator_AddCompositeDevice_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_AddCompositeDevice_Result WithErr(int32_t&& val) {
+    Coordinator_AddCompositeDevice_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_err();
 
