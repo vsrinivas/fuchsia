@@ -343,7 +343,6 @@ group("all") {
     ":fuchsia_component_test",
     ":fuzzing",
     ":fxl",
-    ":gfxlatency",
     ":go_benchmarking_tests",
     ":go_far_tests",
     ":go_inspect_tests",
@@ -759,13 +758,6 @@ group("banjo") {
   testonly = true
   public_deps = [
     "//tools/banjo/banjo:banjo_unittests($host_toolchain)",
-  ]
-}
-
-group("gfxlatency") {
-  testonly = true
-  public_deps = [
-    "//garnet/tests/gfxlatency",
   ]
 }
 
