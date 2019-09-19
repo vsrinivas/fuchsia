@@ -42,6 +42,8 @@ use {
     },
 };
 
+const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+
 trait PkgFs {
     fn root_dir_client_end(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
@@ -272,7 +274,8 @@ async fn test_package_resolution() -> Result<(), Error> {
         .add_resource_at("data/duplicate_b", "same contents".as_bytes())?
         .build()
         .await?;
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let repo =
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
@@ -297,7 +300,8 @@ async fn test_package_resolution() -> Result<(), Error> {
 async fn verify_separate_blobs_url(download_blob: bool) -> Result<(), Error> {
     let env = TestEnv::new();
     let pkg = make_rolldice_pkg_with_extra_blobs(3).await?;
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let repo =
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
 
     // Rename the blobs directory so the blobs can't be found in the usual place.
@@ -352,7 +356,8 @@ async fn verify_download_blob_resolve_with_altered_env(
 ) -> Result<(), Error> {
     let env = TestEnv::new();
 
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let repo =
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
@@ -422,7 +427,9 @@ async fn test_download_blob_experiment_identity_hyper() -> Result<(), Error> {
     let env = TestEnv::new();
 
     let pkg = Package::identity().await?;
-    let repo = Arc::new(RepositoryBuilder::new().add_package(&pkg).build().await?);
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?,
+    );
     let served_repository = repo.build_server().start()?;
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
@@ -447,7 +454,8 @@ async fn test_download_blob_experiment_uses_cached_package() -> Result<(), Error
         .add_resource_at("data/foo", "bar".as_bytes())?
         .build()
         .await?;
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let repo =
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
@@ -884,7 +892,8 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     failing_file_call_count: Arc<AtomicU64>,
 ) -> Result<(), Error> {
     let env = TestEnv::new_with_pkg_fs(pkgfs);
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let repo =
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);

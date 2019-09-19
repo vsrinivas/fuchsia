@@ -36,6 +36,7 @@ use {
         time::Duration,
     },
     tempfile::TempDir,
+    walkdir::WalkDir,
 };
 
 /// A builder to simplify construction of TUF repositories containing Fuchsia packages.
@@ -43,12 +44,18 @@ use {
 pub struct RepositoryBuilder<'a> {
     packages: Vec<PackageRef<'a>>,
     encryption_key: Option<BlobEncryptionKey>,
+    repodir: Option<PathBuf>,
 }
 
 impl<'a> RepositoryBuilder<'a> {
     /// Creates a new `RepositoryBuilder`.
     pub fn new() -> Self {
-        Self { packages: vec![], encryption_key: None }
+        Self { packages: vec![], encryption_key: None, repodir: None }
+    }
+
+    /// Creates a new `RepositoryBuilder` from a template TUF repository dir.
+    pub fn from_template_dir(path: impl Into<PathBuf>) -> Self {
+        Self { packages: vec![], encryption_key: None, repodir: Some(path.into()) }
     }
 
     /// Adds a package (or a reference to one) to the repository.
@@ -72,6 +79,23 @@ impl<'a> RepositoryBuilder<'a> {
             let mut manifest = File::create(indir.path().join("manifests.list"))?;
             for package in &self.packages {
                 writeln!(manifest, "/packages/{}/manifest.json", package.get().name())?;
+            }
+        }
+
+        // If configured to use a template repository directory, first copy it into the repo dir.
+        if let Some(templatedir) = self.repodir {
+            for entry in WalkDir::new(&templatedir) {
+                let entry = entry?;
+                if entry.path() == &templatedir {
+                    continue;
+                }
+                let relative_entry_path = entry.path().strip_prefix(&templatedir)?;
+                let target_path = repodir.path().join(relative_entry_path);
+                if entry.file_type().is_dir() {
+                    fs::create_dir(target_path)?;
+                } else {
+                    fs::copy(entry.path(), target_path)?;
+                }
             }
         }
 
@@ -512,6 +536,39 @@ mod tests {
         for blob in repo.iter_blobs()? {
             let blob = blob?;
             assert_ne!(repo.read_blob(&blob)?, message);
+        }
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_repo_builder_template() -> Result<(), Error> {
+        let repodir = tempfile::tempdir().context("create tempdir")?;
+
+        // Populate repodir with a freshly created repository.
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
+            .arg("newrepo")
+            .arg("-repo=/repo")
+            .add_dir_to_namespace(
+                "/repo".to_owned(),
+                File::open(repodir.path()).context("open /repo")?,
+            )?
+            .output(&launcher()?)?
+            .await?
+            .ok()?;
+
+        // Build a repo from the template.
+        let repo = RepositoryBuilder::from_template_dir(repodir.path())
+            .add_package(PackageBuilder::new("test").build().await?)
+            .build()
+            .await?;
+
+        // Ensure the repository used the generated keys.
+        for path in &["root.json", "snapshot.json", "timestamp.json", "targets.json"] {
+            assert_eq!(
+                fs::read(repodir.path().join("keys").join(path))?,
+                fs::read(repo.dir.path().join("keys").join(path))?,
+            );
         }
 
         Ok(())
