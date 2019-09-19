@@ -33,6 +33,7 @@ use {
         io::{self, Cursor, Read, Write},
         path::PathBuf,
         sync::Arc,
+        time::Duration,
     },
     tempfile::TempDir,
 };
@@ -329,30 +330,38 @@ impl Repository {
 
         let pm = pm.spawn(launcher)?;
 
-        // Wait for "pm serve" to either respond to HTTP requests (giving up after RETRY_COUNT) or
+        // Wait for "pm serve" to either respond to HTTP requests (giving up after a 20 seconds) or
         // exit, whichever happens first.
 
         let wait_pm_down = ExitStatus::from_event_stream(pm.controller().take_event_stream());
 
-        let wait_pm_up = async {
-            for i in 1.. {
+        // Under high load, a fast retry timeout can prevent pm from starting up. Start out fast,
+        // but slow down if pm doesn't come up quickly.
+        let backoff = std::iter::repeat(Duration::from_millis(250))
+            .take(4)
+            .chain(std::iter::repeat(Duration::from_millis(500)).take(4))
+            .chain(std::iter::repeat(Duration::from_millis(1000)));
+
+        let mut attempt = 0u32;
+        let wait_pm_up = fuchsia_backoff::retry_or_first_error(backoff, || {
+            async move {
+                attempt += 1;
                 match get(format!("http://127.0.0.1:{}/config.json", port)).await {
                     Ok(_) => {
-                        println!("server up on attempt {}", i);
+                        println!("server up on attempt {}", attempt);
                         return Ok(());
                     }
                     Err(e) => {
                         println!("request failed: {:?}", e);
+                        return Err(e);
                     }
                 }
-                fuchsia_async::Timer::new(500.millis().after_now()).await;
             }
-            unreachable!();
-        }
-            .on_timeout(20.seconds().after_now(), || {
-                bail!("timed out waiting for 'pm serve' to respond to http requests")
-            })
-            .boxed();
+        })
+        .on_timeout(20.seconds().after_now(), || {
+            bail!("timed out waiting for 'pm serve' to respond to http requests")
+        })
+        .boxed();
 
         let wait_pm_down = match future::select(wait_pm_up, wait_pm_down).await {
             future::Either::Left((res, wait_pm_down)) => {
