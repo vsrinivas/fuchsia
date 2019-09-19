@@ -10,7 +10,6 @@ using zx;
 /// Analyzes string exceptions from managed runtimes.
 [Discoverable, Layout = "Simple", Transitional = "deprecated in favor of fuchsia.feedback.CrashReporter"]
 protocol Analyzer {
-    /// Requests that the crash analyzer handles the exception thrown by the
     /// Requests that the crash analyzer handles the exception thrown in the
     /// managed runtime.
     ///
@@ -27,19 +26,9 @@ protocol Analyzer {
 
 /// Represents a managed runtime exception.
 ///
-/// unknown is intended to capture any language, meaning the handling will be
-/// language-agnostic. Choose a more specific member if available for handling
-/// that language more specifically.
+/// Only Dart is supported for this legacy protocol.
 union ManagedRuntimeException {
-    UnknownException unknown;
-
     GenericException dart;
-};
-
-/// Represents a language-agnostic exception.
-struct UnknownException {
-    /// A general buffer to hold some exception data.
-    fuchsia.mem.Buffer data;
 };
 
 /// Represents a generic exception that works for many managed runtime languages.

@@ -9,13 +9,11 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/cpp/string.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/process.h>
-#include <lib/zx/thread.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -49,7 +47,7 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
 
   // |fuchsia::crash::Analyzer|
   //
-  // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
+  // TODO(fxb/6599): delete once transitioned to fuchsia.feedback.CrashReporter.
   void OnManagedRuntimeException(std::string component_url,
                                  fuchsia::crash::ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
@@ -62,8 +60,6 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
                 Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
-  fit::promise<void> OnManagedRuntimeException(std::string component_url,
-                                               fuchsia::crash::ManagedRuntimeException exception);
   fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
   // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.

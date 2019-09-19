@@ -4,23 +4,12 @@
 
 #include "src/developer/feedback/crashpad_agent/report_attachments.h"
 
-#include <fuchsia/mem/cpp/fidl.h>
-#include <lib/syslog/cpp/logger.h>
-#include <zircon/errors.h>
-
-#include <memory>
-#include <string>
-
 #include "src/developer/feedback/crashpad_agent/crash_report_util.h"
 #include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
-#include "third_party/crashpad/util/file/file_writer.h"
 
 namespace feedback {
 
 namespace {
-
-// The crash server expects a specific filename for the attached stack trace in Dart crash reports.
-const char kAttachmentDartStackTraceFilename[] = "DartError";
 
 void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
                             const fuchsia::feedback::Data& feedback_data) {
@@ -33,29 +22,10 @@ void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
 
 }  // namespace
 
-void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
-                                           const fuchsia::feedback::Data& feedback_data,
-                                           fuchsia::crash::ManagedRuntimeException* exception) {
-  AddFeedbackAttachments(report, feedback_data);
-
-  // Language-specific attachments.
-  switch (exception->Which()) {
-    case fuchsia::crash::ManagedRuntimeException::Tag::Invalid:
-      FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
-      break;
-    case fuchsia::crash::ManagedRuntimeException::Tag::kUnknown_:
-      AddAttachment("data", exception->unknown_().data, report);
-      break;
-    case fuchsia::crash::ManagedRuntimeException::Tag::kDart:
-      AddAttachment(kAttachmentDartStackTraceFilename, exception->dart().stack_trace, report);
-      break;
-  }
-}
-
 void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
                       crashpad::CrashReportDatabase::NewReport* crashpad_report) {
-  // Default attachments common to all crash reports.
+  // Feedback attachments common to all crash reports.
   AddFeedbackAttachments(crashpad_report, feedback_data);
 
   // Optional attachments filled by the client.

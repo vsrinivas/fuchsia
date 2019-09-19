@@ -4,16 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/report_annotations.h"
 
-#include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/channel.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <zircon/boot/image.h>
 
 #include <string>
 
@@ -24,12 +15,6 @@
 namespace feedback {
 namespace {
 
-// The crash server expects specific key and values for some annotations in Dart crash reports.
-const char kDartTypeKey[] = "type";
-const char kDartTypeValue[] = "DartError";
-const char kDartErrorMessageKey[] = "error_message";
-const char kDartErrorRuntimeTypeKey[] = "error_runtime_type";
-
 std::string ReadStringFromFile(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
@@ -39,9 +24,7 @@ std::string ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
-}  // namespace
-
-std::map<std::string, std::string> MakeDefaultAnnotations(
+std::map<std::string, std::string> MakeCrashServerAnnotations(
     const fuchsia::feedback::Data& feedback_data, const std::string& program_name) {
   std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
@@ -61,34 +44,13 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
   return annotations;
 }
 
-std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
-    const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
-    fuchsia::crash::ManagedRuntimeException* exception) {
-  std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(feedback_data, component_url);
-  switch (exception->Which()) {
-    case fuchsia::crash::ManagedRuntimeException::Tag::Invalid:
-      FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
-      break;
-    case fuchsia::crash::ManagedRuntimeException::Tag::kUnknown_:
-      // No additional annotations, just a single attachment.
-      break;
-    case fuchsia::crash::ManagedRuntimeException::Tag::kDart:
-      annotations[kDartTypeKey] = kDartTypeValue;
-      annotations[kDartErrorRuntimeTypeKey] =
-          std::string(reinterpret_cast<const char*>(exception->dart().type.data()));
-      annotations[kDartErrorMessageKey] =
-          std::string(reinterpret_cast<const char*>(exception->dart().message.data()));
-      break;
-  }
-  return annotations;
-}
+}  // namespace
 
 std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
                                                     const fuchsia::feedback::Data& feedback_data) {
-  // Default annotations common to all crash reports.
+  // Crash server annotations common to all crash reports.
   std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(feedback_data, report.program_name());
+      MakeCrashServerAnnotations(feedback_data, report.program_name());
 
   // Optional annotations filled by the client.
   ExtractAnnotations(report, &annotations);

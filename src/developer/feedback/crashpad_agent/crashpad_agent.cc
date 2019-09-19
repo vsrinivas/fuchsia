@@ -4,17 +4,12 @@
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
-#include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/errors.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <string>
@@ -148,28 +143,28 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
 void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
                                               fuchsia::crash::ManagedRuntimeException exception,
                                               OnManagedRuntimeExceptionCallback callback) {
-  auto promise =
-      OnManagedRuntimeException(component_url, std::move(exception))
-          .and_then([] {
-            fuchsia::crash::Analyzer_OnManagedRuntimeException_Result result;
-            fuchsia::crash::Analyzer_OnManagedRuntimeException_Response response;
-            result.set_response(response);
-            return fit::ok(std::move(result));
-          })
-          .or_else([] {
-            FX_LOGS(ERROR) << "Failed to handle managed runtime exception. Won't retry.";
-            fuchsia::crash::Analyzer_OnManagedRuntimeException_Result result;
-            result.set_err(ZX_ERR_INTERNAL);
-            return fit::ok(std::move(result));
-          })
-          .and_then([callback = std::move(callback),
-                     this](fuchsia::crash::Analyzer_OnManagedRuntimeException_Result& result) {
-            callback(std::move(result));
-            PruneDatabase();
-            CleanDatabase();
-          });
-
-  executor_.schedule_task(std::move(promise));
+  // This is a legacy flow using the old protocol. We convert its input arguments to the ones of the
+  // new protocol so the rest of this class only needs to know about the new protocol.
+  fuchsia::feedback::RuntimeCrashReport dart_report;
+  dart_report.set_exception_type(
+      std::string(reinterpret_cast<const char*>(exception.dart().type.data())));
+  dart_report.set_exception_message(
+      std::string(reinterpret_cast<const char*>(exception.dart().message.data())));
+  dart_report.set_exception_stack_trace(std::move(exception.dart().stack_trace));
+  fuchsia::feedback::SpecificCrashReport specific_report;
+  specific_report.set_dart(std::move(dart_report));
+  CrashReport report;
+  report.set_program_name(std::move(component_url));
+  report.set_specific_report(std::move(specific_report));
+  File(std::move(report), [callback = std::move(callback)](CrashReporter_File_Result result) {
+    fuchsia::crash::Analyzer_OnManagedRuntimeException_Result old_result;
+    if (result.is_err()) {
+      old_result.set_err(result.err());
+    } else if (result.is_response()) {
+      old_result.set_response({});
+    }
+    callback(std::move(old_result));
+  });
 }
 
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -202,47 +197,6 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
           });
 
   executor_.schedule_task(std::move(promise));
-}
-
-fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
-    std::string component_url, fuchsia::crash::ManagedRuntimeException exception) {
-  FX_LOGS(INFO) << "generating crash report for exception thrown by " << component_url;
-
-  // Create local crash report.
-  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database_->PrepareNewCrashReport(&report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error creating local crash report (" << database_status << ")";
-    return fit::make_error_promise();
-  }
-
-  // Prepare annotations and attachments.
-  return GetFeedbackData(dispatcher_, services_, config_.feedback_data_collection_timeout)
-      .then([this, component_url, exception = std::move(exception),
-             report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
-        Data feedback_data;
-        if (result.is_ok()) {
-          feedback_data = result.take_value();
-        }
-        const std::map<std::string, std::string> annotations =
-            MakeManagedRuntimeExceptionAnnotations(feedback_data, component_url, &exception);
-        AddManagedRuntimeExceptionAttachments(report.get(), feedback_data, &exception);
-
-        // Finish new local crash report.
-        crashpad::UUID local_report_id;
-        const crashpad::CrashReportDatabase::OperationStatus database_status =
-            database_->FinishedWritingCrashReport(std::move(report), &local_report_id);
-        if (database_status != crashpad::CrashReportDatabase::kNoError) {
-          FX_LOGS(ERROR) << "error writing local crash report (" << database_status << ")";
-          return fit::error();
-        }
-
-        if (!UploadReport(local_report_id, component_url, annotations)) {
-          return fit::error();
-        }
-        return fit::ok();
-      });
 }
 
 fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {

@@ -46,7 +46,6 @@ namespace {
 using fuchsia::crash::Analyzer_OnManagedRuntimeException_Result;
 using fuchsia::crash::GenericException;
 using fuchsia::crash::ManagedRuntimeException;
-using fuchsia::crash::UnknownException;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -360,25 +359,6 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartException) {
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"DartError"});
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnUnknownManagedRuntimeLanguageException) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  UnknownException exception;
-  ASSERT_TRUE(fsl::VmoFromString("#0", &exception.data));
-  ManagedRuntimeException unknown_exception;
-  unknown_exception.set_unknown_(std::move(exception));
-
-  Analyzer_OnManagedRuntimeException_Result out_result;
-  agent_->OnManagedRuntimeException(
-      "component_url", std::move(unknown_exception),
-      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
-        out_result = std::move(result);
-      });
-  ASSERT_TRUE(RunLoopUntilIdle());
-
-  EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"data"});
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
