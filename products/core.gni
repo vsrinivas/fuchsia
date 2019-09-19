@@ -42,7 +42,6 @@ base_package_labels += [
   "//garnet/bin/thermd:config",
   "//garnet/bin/timezone",
   "//garnet/go/src/amber",
-  "//garnet/go/src/amber:amber_tools",
   "//garnet/go/src/amber:config",
   "//garnet/go/src/amber:pkgfs",
   "//garnet/lib/root_ssl_certificates",

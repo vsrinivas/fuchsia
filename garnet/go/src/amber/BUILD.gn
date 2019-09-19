@@ -87,46 +87,6 @@ package("amber") {
       name = "grand_unified_binary"
       dest = "amber"
     },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/amber.cmx")
-      dest = "amber.cmx"
-    },
-    {
-      path = rebase_path(
-              "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
-      dest = "system_updater.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("keys/root_sig.json")
-      dest = "keys"
-    },
-    {
-      path = rebase_path("system_updater/images")
-      dest = "images"
-    },
-  ]
-}
-
-# FIXME: Until fuchsia_component exists again, ensure this and //garnet/tests/amberctl:amberctl-tests stay in sync
-package("amber_tools") {
-  deps = [
-    "//garnet/go/src/grand_unified_binary",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/amberctl.cmx")
-      dest = "amberctl.cmx"
-    },
-  ]
-
-  binaries = [
     # TODO(raggi): remove the underscore version of the command name once all
     # docs and scripts have been updated.
     # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
@@ -139,6 +99,33 @@ package("amber_tools") {
       name = "amberctl"
       source = "grand_unified_binary"
       shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/amber.cmx")
+      dest = "amber.cmx"
+    },
+    {
+      path = rebase_path(
+              "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
+    },
+    {
+      path = rebase_path("meta/amberctl.cmx")
+      dest = "amberctl.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("keys/root_sig.json")
+      dest = "keys"
+    },
+    {
+      path = rebase_path("system_updater/images")
+      dest = "images"
     },
   ]
 }

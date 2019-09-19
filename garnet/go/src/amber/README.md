@@ -16,7 +16,7 @@ Many thanks to the Flynn team for such an excellent implementation in Go.
 The `amber` package contains more than just the `amberd` binary. It actually
 contains all of the Go the binaries required for all of the software delivery
 subsystem, including `pkgsvr`, `amberd`, and `system_updater`, as well as
-sharing binary contents with the `amberctl` program in the `amber_tools`
+sharing binary contents with the `amberctl` program in the `amber`
 package. This is a space saving optimization, as it reduces the total binary
 footprint of the software delivery subsystem by more than 50% due to the
 overhead of Go binaries and their lack of shared library support. Despite
