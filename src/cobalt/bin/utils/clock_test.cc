@@ -6,7 +6,6 @@
 
 #include <fuchsia/time/cpp/fidl.h>
 #include <fuchsia/time/cpp/fidl_test_base.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <optional>

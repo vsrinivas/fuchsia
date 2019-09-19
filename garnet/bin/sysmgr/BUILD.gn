@@ -24,7 +24,6 @@ source_set("lib") {
     "//garnet/lib/loader",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.pkg",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

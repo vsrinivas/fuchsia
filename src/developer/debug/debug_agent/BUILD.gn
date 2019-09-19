@@ -80,7 +80,6 @@ static_library("lib") {
 
   public_deps = [
     "//garnet/lib/process",
-    "//garnet/public/lib/svc/cpp",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",

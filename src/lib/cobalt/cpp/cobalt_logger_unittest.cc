@@ -4,11 +4,12 @@
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>

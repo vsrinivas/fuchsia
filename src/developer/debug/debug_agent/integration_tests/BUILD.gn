@@ -29,7 +29,6 @@ executable("integration_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/debug/debug_agent:test_lib",
     "//src/developer/debug/ipc:client",

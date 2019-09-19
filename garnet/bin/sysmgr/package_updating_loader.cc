@@ -20,7 +20,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
-#include "lib/svc/cpp/services.h"
 #include "lib/zx/handle.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"

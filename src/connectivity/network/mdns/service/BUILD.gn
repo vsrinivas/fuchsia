@@ -103,7 +103,6 @@ source_set("source_set") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/rapidjson_utils",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
