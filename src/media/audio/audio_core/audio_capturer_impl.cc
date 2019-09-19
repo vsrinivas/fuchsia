@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 
+#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/media/audio/cpp/types.h>
 #include <lib/zx/clock.h>
@@ -49,18 +50,19 @@ fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner) {
   return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
-                                             owner->dispatcher(), &owner->device_manager(),
+                                             &owner->threading_model(), &owner->device_manager(),
                                              &owner->audio_admin(), &owner->volume_manager()));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin,
+    ThreadingModel* threading_model, AudioDeviceManager* device_manager, AudioAdmin* admin,
     StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioCapturer),
       usage_(fuchsia::media::AudioCaptureUsage::FOREGROUND),
       binding_(this, std::move(audio_capturer_request)),
-      dispatcher_(dispatcher),
+      threading_model_(*threading_model),
+      mix_domain_(threading_model_.AcquireMixDomain()),
       device_manager_(*device_manager),
       admin_(*admin),
       volume_manager_(*volume_manager),
@@ -72,6 +74,7 @@ AudioCapturerImpl::AudioCapturerImpl(
       partial_overflow_count_(0u) {
   FXL_DCHECK(admin);
   FXL_DCHECK(device_manager);
+  FXL_DCHECK(mix_domain_);
   REP(AddingCapturer(*this));
 
   std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages;
@@ -83,15 +86,6 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   volume_manager_.AddStream(this);
 
-  zx::profile profile;
-  zx_status_t res = AcquireHighPriorityProfile(&profile);
-  if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not acquire profile!";
-  }
-  mix_domain_ = dispatcher::ExecutionDomain::Create(std::move(profile));
-  mix_wakeup_ = dispatcher::WakeupEvent::Create();
-  mix_timer_ = dispatcher::Timer::Create();
-
   binding_.set_error_handler([this](zx_status_t status) { Shutdown(); });
   source_link_refs_.reserve(16u);
 
@@ -102,13 +96,10 @@ AudioCapturerImpl::AudioCapturerImpl(
 }
 
 AudioCapturerImpl::~AudioCapturerImpl() {
-  // TODO(johngro) : ASSERT that the execution domain has shut down.
+  TRACE_DURATION("audio.debug", "AudioCapturerImpl::~AudioCapturerImpl");
   FXL_DCHECK(!payload_buf_vmo_.is_valid());
   FXL_DCHECK(payload_buf_virt_ == nullptr);
   FXL_DCHECK(payload_buf_size_ == 0);
-  ReportStop();
-  volume_manager_.RemoveStream(this);
-  REP(RemovingCapturer(*this));
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
@@ -163,29 +154,64 @@ void AudioCapturerImpl::Shutdown() {
     binding_.Unbind();
   }
 
-  // Deactivate our mixing domain and synchronize with any in-flight operations.
-  mix_domain_->Deactivate();
-
-  // Release our buffer resources.
-  //
-  // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
-  // class (and perhaps rename DriverRingBuffer to something more generic like
-  // RingBufferHelper, since this would be a use which is not driver specific).
-  if (payload_buf_virt_ != nullptr) {
-    FXL_DCHECK(payload_buf_size_ != 0);
-    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
-    payload_buf_virt_ = nullptr;
-    payload_buf_size_ = 0;
-    payload_buf_frames_ = 0;
-  }
-
-  payload_buf_vmo_.reset();
+  ReportStop();
+  volume_manager_.RemoveStream(this);
+  REP(RemovingCapturer(*this));
 
   // Make sure we have left the set of active AudioCapturers.
   if (InContainer()) {
     device_manager_.RemoveAudioCapturer(this);
   }
 
+  threading_model_.FidlDomain().executor()->schedule_task(
+      Cleanup().then([self = self_ref](fit::result<>&) {
+        // Release our buffer resources.
+        //
+        // It's important that we don't release the buffer until the mix thread cleanup has run as
+        // the mixer could still be accessing the memory backing the buffer.
+        //
+        // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
+        // class (and perhaps rename DriverRingBuffer to something more generic like
+        // RingBufferHelper, since this would be a use which is not driver specific).
+        if (self->payload_buf_virt_ != nullptr) {
+          FXL_DCHECK(self->payload_buf_size_ != 0);
+          zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
+                                       self->payload_buf_size_);
+          self->payload_buf_virt_ = nullptr;
+          self->payload_buf_size_ = 0;
+          self->payload_buf_frames_ = 0;
+        }
+
+        self->payload_buf_vmo_.reset();
+      }));
+}
+
+fit::promise<> AudioCapturerImpl::Cleanup() {
+  TRACE_DURATION("audio.debug", "AudioCapturerImpl::Cleanup");
+  // We need to stop all the async operations happening on the mix dispatcher. These components
+  // can only be touched on that thread, so post a task there to run that cleanup.
+  fit::bridge<> bridge;
+  auto nonce = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("audio.debug", "AudioCapturerImpl.capture_cleanup", nonce);
+  async::PostTask(
+      mix_domain_->dispatcher(),
+      [self = fbl::WrapRefPtr(this), completer = std::move(bridge.completer), nonce]() mutable {
+        TRACE_DURATION("audio.debug", "AudioCapturerImpl.cleanup_thunk");
+        TRACE_FLOW_END("audio.debug", "AudioCapturerImpl.capture_cleanup", nonce);
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+        self->CleanupFromMixThread();
+        self.reset();
+        completer.complete_ok();
+      });
+
+  return bridge.consumer.promise();
+}
+
+void AudioCapturerImpl::CleanupFromMixThread() {
+  TRACE_DURATION("audio", "AudioCapturerImpl::CleanupFromMixThread");
+  mix_wakeup_.Deactivate();
+  mix_timer_.Cancel();
+  mix_domain_.reset();
   state_.store(State::Shutdown);
 }
 
@@ -355,28 +381,25 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 
-  // Activate the dispatcher primitives we will use to drive the mixing process.
-  res = mix_wakeup_->Activate(mix_domain_, [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-    FXL_DCHECK(event == mix_wakeup_.get());
-    return Process();
+  // Activate the dispatcher primitives we will use to drive the mixing process. Note we must call
+  // Activate on the WakeupEvent from the mix domain, but Signal can be called anytime, even before
+  // this Activate occurs.
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this)] {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+    zx_status_t status =
+        self->mix_wakeup_.Activate(self->mix_domain_->dispatcher(),
+                                   [self = std::move(self)](WakeupEvent* event) -> zx_status_t {
+                                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+                                     FXL_DCHECK(event == &self->mix_wakeup_);
+                                     return self->Process();
+                                   });
+
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed activate mix WakeupEvent";
+      self->ShutdownFromMixDomain();
+      return;
+    }
   });
-
-  if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed activate wakeup event";
-    return;
-  }
-
-  res = mix_timer_->Activate(mix_domain_, [this](dispatcher::Timer* timer) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-    FXL_DCHECK(timer == mix_timer_.get());
-    return Process();
-  });
-
-  if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed activate timer";
-    return;
-  }
 
   // Next, select our output producer.
   output_producer_ = OutputProducer::Select(format_);
@@ -491,7 +514,7 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
 
   // If the pending list was empty, we need to poke the mixer.
   if (wake_mixer) {
-    mix_wakeup_->Signal();
+    mix_wakeup_.Signal();
   }
   ReportStart();
 
@@ -601,7 +624,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   async_frames_per_packet_ = frames_per_packet;
   state_.store(State::OperatingAsync);
   ReportStart();
-  mix_wakeup_->Signal();
+  mix_wakeup_.Signal();
   cleanup.cancel();
 }
 
@@ -636,7 +659,7 @@ void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   pending_async_stop_cbk_ = std::move(cbk);
   ReportStop();
   state_.store(State::AsyncStopping);
-  mix_wakeup_->Signal();
+  mix_wakeup_.Signal();
 }
 
 struct RbRegion {
@@ -732,12 +755,8 @@ zx_status_t AudioCapturerImpl::Process() {
         break;
 
       case State::Shutdown:
-        // This should be impossible. If the main message loop thread shut us
-        // down, then it should have shut down our execution domain and waited
-        // for any in flight tasks to complete before setting the state_
-        // variable to Shutdown. If we shut ourselves down, we should have shut
-        // down the execution domain and the immediately exited from the
-        // handler.
+        // This should be impossible. If the main message loop thread shut us down, then it should
+        // have shut down our mix timer before  setting the state_ variable to Shutdown.
         FXL_CHECK(false);
         return ZX_ERR_INTERNAL;
     }
@@ -797,7 +816,7 @@ zx_status_t AudioCapturerImpl::Process() {
       dest_frames_to_clock_mono_ = TimelineFunction();
       dest_frames_to_clock_mono_gen_.Next();
       frame_count_ = 0;
-      mix_timer_->Cancel();
+      mix_timer_.Cancel();
 
       if (!async_mode) {
         return ZX_OK;
@@ -858,8 +877,11 @@ zx_status_t AudioCapturerImpl::Process() {
       // a new source shows up and pushes the largest fence time out, the next
       // time we wake up, it will be early. We will need to recognize this
       // condition and go back to sleep for a little bit before actually mixing.
-      if (mix_timer_->Arm(last_frame_time + kAssumedWorstSourceFenceTime) != ZX_OK) {
-        FXL_LOG(ERROR) << "Could not arm mix timer for capture, shutting down capture.";
+      zx::time next_mix_time(
+          static_cast<zx_time_t>(last_frame_time + kAssumedWorstSourceFenceTime));
+      zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_mix_time);
+      if (status != ZX_OK) {
+        FXL_PLOG(ERROR, status) << "Failed to schedule capturer mix";
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
       }
@@ -920,7 +942,7 @@ zx_status_t AudioCapturerImpl::Process() {
 
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
-      async::PostTask(dispatcher_,
+      async::PostTask(threading_model_.FidlDomain().dispatcher(),
                       [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishBuffersThunk(); });
     }
 
@@ -1410,12 +1432,13 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
 
   // If we had a timer set, make sure that it is canceled. There is no point in
   // having it armed right now as we are in the process of stopping.
-  mix_timer_->Cancel();
+  mix_timer_.Cancel();
 
   // Transition to the AsyncStoppingCallbackPending state, and signal the
   // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
-  async::PostTask(dispatcher_, [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
+  async::PostTask(threading_model_.FidlDomain().dispatcher(),
+                  [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -1458,10 +1481,8 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
 
 void AudioCapturerImpl::ShutdownFromMixDomain() {
   TRACE_DURATION("audio", "AudioCapturerImpl::ShutdownFromMixDomain");
-  mix_domain_->DeactivateFromWithinDomain();
-  state_.store(State::Shutdown);
-
-  async::PostTask(dispatcher_, [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
+  async::PostTask(threading_model_.FidlDomain().dispatcher(),
+                  [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {

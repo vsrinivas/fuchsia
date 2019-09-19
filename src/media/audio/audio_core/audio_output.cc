@@ -27,33 +27,6 @@ AudioOutput::AudioOutput(AudioDeviceManager* manager) : AudioDevice(Type::Output
   source_link_refs_.reserve(16u);
 }
 
-zx_status_t AudioOutput::Init() {
-  TRACE_DURATION("audio", "AudioOutput::Init");
-  zx_status_t res = AudioDevice::Init();
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  mix_timer_ = dispatcher::Timer::Create();
-  if (mix_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  dispatcher::Timer::ProcessHandler process_handler(
-      [output = fbl::WrapRefPtr(this)](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
-        output->Process();
-        return ZX_OK;
-      });
-
-  res = mix_timer_->Activate(mix_domain_, std::move(process_handler));
-  if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to activate mix_timer_";
-  }
-
-  return res;
-}
-
 void AudioOutput::Process() {
   TRACE_DURATION("audio", "AudioOutput::Process");
   bool mixed = false;
@@ -126,8 +99,10 @@ void AudioOutput::Process() {
     next_sched_time_ = max_sched_time;
   }
 
-  zx_time_t next_time = static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds());
-  if (mix_timer_->Arm(next_time) != ZX_OK) {
+  zx::time next_time(static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds()));
+  zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_time);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();
   }
 }
@@ -594,6 +569,11 @@ void AudioOutput::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
 
   // Done, update our dest_trans generation.
   bk->dest_trans_gen_id = job.local_to_output_gen;
+}
+
+void AudioOutput::Cleanup() {
+  AudioDevice::Cleanup();
+  mix_timer_.Cancel();
 }
 
 }  // namespace media::audio

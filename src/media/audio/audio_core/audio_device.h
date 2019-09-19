@@ -6,13 +6,12 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fit/promise.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <zircon/device/audio.h>
 
 #include <memory>
 
-#include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -21,6 +20,8 @@
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
+#include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/wakeup_event.h"
 
 namespace media::audio {
 
@@ -88,8 +89,8 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
  protected:
   friend class fbl::RefPtr<AudioDevice>;
 
-  ~AudioDevice() override;
   AudioDevice(Type type, AudioDeviceManager* manager);
+  ~AudioDevice() override;
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -99,20 +100,17 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   // Init
   //
-  // Called during startup on the AudioCore's main message loop thread.  No
-  // locks are being held at this point.  Derived classes should begin the
-  // process of driver initialization at this point.  Return ZX_OK if things
-  // have started and we are waiting for driver init.
-  virtual zx_status_t Init();
+  // Called during startup on the mixer thread. Derived classes should begin the
+  // process of driver initialization at this point. Return ZX_OK if things have
+  // started and we are waiting for driver init.
+  virtual zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Cleanup
   //
-  // Called at shutdown on AudioCore's main message loop thread to allow derived
-  // classes to clean up any allocated resources. All pending processing
-  // callbacks have either been nerfed or run to completion. All other audio
-  // objects have been disconnected/unlinked. No locks are being held. The
-  // analogous AudioDriver::Cleanup is only ever called by this function.
-  virtual void Cleanup();
+  // Called at shutdown on the mixer thread to allow derived classes to clean
+  // up any allocated resources. All other audio objects have been
+  // disconnected/unlinked. No locks are being held.
+  virtual void Cleanup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // ApplyGainLimits
   //
@@ -152,7 +150,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   // Check the shutting down flag.  We are in the process of shutting down when
   // we have become deactivated at the dispatcher framework level.
-  inline bool is_shutting_down() const { return (!mix_domain_ || mix_domain_->deactivated()); }
+  inline bool is_shutting_down() const { return shutting_down_.load(); }
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -195,10 +193,8 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   AudioDeviceManager* manager_;
 
-  // State used to manage asynchronous processing using the dispatcher
-  // framework.
-  fbl::RefPtr<dispatcher::ExecutionDomain> mix_domain_;
-  fbl::RefPtr<dispatcher::WakeupEvent> mix_wakeup_;
+  ThreadingModel::OwnedDomainPtr mix_domain_;
+  WakeupEvent mix_wakeup_;
 
   // This object manages most interactions with the low-level driver for us.
   std::unique_ptr<AudioDriver> driver_;
@@ -218,23 +214,17 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   friend class AudioDriver;
   friend struct PendingInitListTraits;
 
-  // DeactivateDomain
-  //
-  // Deactivate our execution domain (if it exists) and synchronize with any
-  // operations taking place in the domain.
-  void DeactivateDomain() FXL_LOCKS_EXCLUDED(mix_domain_->token());
-
   // Called from the AudioDeviceManager after an output has been created.
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
-  zx_status_t Startup();
+  fit::promise<void, zx_status_t> Startup();
 
   // Called from the AudioDeviceManager on the main message loop thread.  Makes
   // certain that the shutdown process has started, synchronizes with processing
   // tasks which were executing at the time, then finishes the shutdown by
   // unlinking from all renderers/capturers and cleaning up all resources.
-  void Shutdown();
+  fit::promise<void> Shutdown();
 
   // Called from the AudioDeviceManager when it moves an audio device from its
   // "pending init" set over to its "active" set .
@@ -257,6 +247,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   bool plugged_ = false;
   zx_time_t plug_time_ = 0;
 
+  std::atomic<bool> shutting_down_{false};
   volatile bool shut_down_ = false;
   volatile bool activated_ = false;
 };

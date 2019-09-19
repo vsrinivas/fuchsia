@@ -42,9 +42,9 @@ static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), owner->dispatcher(),
-                                             &owner->device_manager(), &owner->audio_admin(),
-                                             owner->vmar(), &owner->volume_manager()));
+  return fbl::AdoptRef(new AudioRendererImpl(
+      std::move(audio_renderer_request), owner->threading_model().FidlDomain().dispatcher(),
+      &owner->device_manager(), &owner->audio_admin(), owner->vmar(), &owner->volume_manager()));
 }
 
 AudioRendererImpl::AudioRendererImpl(

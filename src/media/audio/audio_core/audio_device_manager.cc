@@ -4,6 +4,9 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
+#include <lib/fit/promise.h>
+#include <lib/fit/single_threaded_executor.h>
+
 #include <string>
 
 #include <trace/event.h>
@@ -20,17 +23,17 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
+AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
                                        EffectsLoader* effects_loader,
                                        AudioDeviceSettingsPersistence* device_settings_persistence,
                                        const SystemGainMuteProvider& system_gain_mute)
-    : dispatcher_(dispatcher),
+    : threading_model_(*threading_model),
       system_gain_mute_(system_gain_mute),
       effects_loader_(*effects_loader),
       device_settings_persistence_(*device_settings_persistence) {
-  FXL_DCHECK(dispatcher);
   FXL_DCHECK(effects_loader);
   FXL_DCHECK(device_settings_persistence);
+  FXL_DCHECK(threading_model);
 }
 
 AudioDeviceManager::~AudioDeviceManager() {
@@ -51,15 +54,16 @@ zx_status_t AudioDeviceManager::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t res = throttle_output->Startup();
-  if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to initialize the throttle output";
-    throttle_output->Shutdown();
-  }
+  threading_model_.FidlDomain().executor()->schedule_task(
+      throttle_output->Startup().or_else([throttle_output](zx_status_t& error) {
+        FXL_PLOG(ERROR, error) << "AudioDeviceManager failed to initialize the throttle output";
+        return throttle_output->Shutdown();
+      }));
   throttle_output_ = std::move(throttle_output);
 
   // Start monitoring for plug/unplug events of pluggable audio output devices.
-  res = plug_detector_.Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
+  zx_status_t res =
+      plug_detector_.Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
@@ -89,21 +93,24 @@ void AudioDeviceManager::Shutdown() {
   }
 
   // Step #4: Shut down each device which is waiting for initialization.
+  std::vector<fit::promise<void>> device_promises;
   while (!devices_pending_init_.is_empty()) {
     auto device = devices_pending_init_.pop_front();
-    device->Shutdown();
+    device_promises.push_back(device->Shutdown());
   }
 
   // Step #5: Shut down each currently active device in the system.
   while (!devices_.is_empty()) {
     auto device = devices_.pop_front();
-    device->Shutdown();
+    device_promises.push_back(device->Shutdown());
     device_settings_persistence_.FinalizeDeviceSettings(*device->device_settings());
   }
 
   // Step #6: Shut down the throttle output.
-  throttle_output_->Shutdown();
+  device_promises.push_back(throttle_output_->Shutdown());
   throttle_output_ = nullptr;
+
+  fit::run_single_threaded(fit::join_promise_vector(std::move(device_promises)));
 }
 
 void AudioDeviceManager::AddDeviceEnumeratorClient(
@@ -111,21 +118,20 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
   bindings_.AddBinding(this, std::move(request));
 }
 
-zx_status_t AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(device != throttle_output_);
   FXL_DCHECK(!device->InContainer());
 
-  zx_status_t res = device->Startup();
-  if (res != ZX_OK) {
-    REP(DeviceStartupFailed(*device));
-    device->Shutdown();
-  } else {
-    devices_pending_init_.insert(std::move(device));
-  }
-
-  return res;
+  threading_model_.FidlDomain().executor()->schedule_task(
+      device->Startup()
+          .and_then([this, device]() mutable { devices_pending_init_.insert(std::move(device)); })
+          .or_else([device](zx_status_t& error) {
+            FXL_PLOG(ERROR, error) << "AddDevice failed";
+            REP(DeviceStartupFailed(*device));
+            device->Shutdown();
+          }));
 }
 
 void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) {
@@ -455,8 +461,7 @@ void AudioDeviceManager::RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) 
 
 void AudioDeviceManager::ScheduleMainThreadTask(fit::closure task) {
   TRACE_DURATION("audio", "AudioDeviceManager::ScheduleMainThreadTask");
-  FXL_DCHECK(dispatcher_);
-  async::PostTask(dispatcher_, std::move(task));
+  async::PostTask(threading_model_.FidlDomain().dispatcher(), std::move(task));
 }
 
 fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
@@ -755,11 +760,7 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   }
 
   REP(AddingDevice(device_name, *new_device));
-  zx_status_t status = AddDevice(std::move(new_device));
-
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "AddDevice failed";
-  }
+  AddDevice(std::move(new_device));
 }
 
 }  // namespace media::audio

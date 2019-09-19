@@ -36,20 +36,13 @@ static constexpr uint16_t kPositionNotificationSpewInterval = 1;
 static constexpr uint16_t kPositionNotificationTraceInterval = 60;
 static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
 
-AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) {
-  FXL_DCHECK(owner_ != nullptr);
-  stream_channel_ = dispatcher::Channel::Create();
-  rb_channel_ = dispatcher::Channel::Create();
-  cmd_timeout_ = dispatcher::Timer::Create();
-}
+AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) { FXL_DCHECK(owner_ != nullptr); }
 
 zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   TRACE_DURATION("audio", "AudioDriver::Init");
+  // TODO(MTWN-385): Figure out a better way to assert this!
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
   FXL_DCHECK(state_ == State::Uninitialized);
-
-  if ((stream_channel_ == nullptr) || (rb_channel_ == nullptr) || (cmd_timeout_ == nullptr)) {
-    return ZX_ERR_NO_RESOURCES;
-  }
 
   // Fetch the KOID of our stream channel. We use this unique ID as our device's device token.
   zx_status_t res;
@@ -61,42 +54,25 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   }
   stream_channel_koid_ = sc_info.koid;
 
-  // Activate the stream channel.
-  dispatcher::Channel::ProcessHandler process_handler(
-      [this](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-        FXL_DCHECK(stream_channel_.get() == channel);
-        return ProcessStreamChannelMessage();
-      });
-
-  dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-      [this](const dispatcher::Channel* channel) {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-        FXL_DCHECK(stream_channel_.get() == channel);
-        ShutdownSelf("Stream channel closed unexpectedly", ZX_ERR_PEER_CLOSED);
-      });
-
-  res = stream_channel_->Activate(std::move(stream_channel), owner_->mix_domain_,
-                                  std::move(process_handler), std::move(channel_closed_handler));
+  // Setup async wait on channel.
+  stream_channel_wait_.set_object(stream_channel.get());
+  stream_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  stream_channel_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    StreamChannelSignalled(dispatcher, wait, status, signal);
+  });
+  res = stream_channel_wait_.Begin(owner_->mix_domain_->dispatcher());
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to activate stream channel for AudioDriver";
+    FXL_PLOG(ERROR, res) << "Failed to wait on stream channel for AudioDriver";
     return res;
   }
+  stream_channel_ = std::move(stream_channel);
 
-  // Activate the command timeout timer.
-  dispatcher::Timer::ProcessHandler cmd_timeout_handler(
-      [this](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-        FXL_DCHECK(cmd_timeout_.get() == timer);
-        ShutdownSelf("Unexpected command timeout", ZX_ERR_TIMED_OUT);
-        return ZX_OK;
-      });
-
-  res = cmd_timeout_->Activate(owner_->mix_domain_, std::move(cmd_timeout_handler));
-  if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to activate command timeout timer for AudioDriver";
-    return res;
-  }
+  cmd_timeout_.set_handler([this] {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    DriverCommandTimedOut();
+  });
 
   // We are now initialized, but we don't know any fundamental driver level info, such as:
   //
@@ -109,6 +85,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
 
 void AudioDriver::Cleanup() {
   TRACE_DURATION("audio", "AudioDriver::Cleanup");
+  // TODO(MTWN-385): Figure out a better way to assert this!
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
   fbl::RefPtr<DriverRingBuffer> ring_buffer;
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
@@ -118,9 +96,9 @@ void AudioDriver::Cleanup() {
   }
   ring_buffer.reset();
 
-  stream_channel_->Deactivate();
-  rb_channel_->Deactivate();
-  cmd_timeout_->Deactivate();
+  stream_channel_wait_.Cancel();
+  ring_buffer_channel_wait_.Cancel();
+  cmd_timeout_.Cancel();
 }
 
 void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
@@ -178,7 +156,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
     req.hdr.cmd = AUDIO_STREAM_CMD_GET_UNIQUE_ID;
     req.hdr.transaction_id = TXID;
 
-    zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+    zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to request unique ID.", res);
       return res;
@@ -196,7 +174,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
     req.hdr.transaction_id = TXID;
     req.id = string_id;
 
-    zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+    zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to request string.", res);
       return res;
@@ -209,7 +187,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
     req.hdr.cmd = AUDIO_STREAM_CMD_GET_GAIN;
     req.hdr.transaction_id = TXID;
 
-    zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+    zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to request gain state.", res);
       return res;
@@ -225,7 +203,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
     req.hdr.cmd = AUDIO_STREAM_CMD_GET_FORMATS;
     req.hdr.transaction_id = TXID;
 
-    zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+    zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to request supported format list.", res);
       return res;
@@ -311,7 +289,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
     configured_format_->frames_per_second = frames_per_second;
   }
 
-  zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+  zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     ShutdownSelf("Failed to send set format command", res);
     return res;
@@ -345,7 +323,7 @@ zx_status_t AudioDriver::Start() {
   audio_rb_cmd_start_req_t req;
   req.hdr.cmd = AUDIO_RB_CMD_START;
   req.hdr.transaction_id = TXID;
-  zx_status_t res = rb_channel_->Write(&req, sizeof(req));
+  zx_status_t res = ring_buffer_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     ShutdownSelf("Failed to send set start command", res);
     return res;
@@ -386,7 +364,7 @@ zx_status_t AudioDriver::Stop() {
   audio_rb_cmd_start_req_t req;
   req.hdr.cmd = AUDIO_RB_CMD_STOP;
   req.hdr.transaction_id = TXID;
-  zx_status_t res = rb_channel_->Write(&req, sizeof(req));
+  zx_status_t res = ring_buffer_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     ShutdownSelf("Failed to send set stop command", res);
     return res;
@@ -424,7 +402,7 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   }
   req.hdr.transaction_id = TXID;
 
-  zx_status_t res = stream_channel_->Write(&req, sizeof(req));
+  zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     ShutdownSelf("Failed to request send plug state request", res);
     return res;
@@ -436,7 +414,7 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ReadMessage(dispatcher::Channel* channel, void* buf, uint32_t buf_size,
+zx_status_t AudioDriver::ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
                                      uint32_t* bytes_read_out, zx::handle* handle_out) {
   TRACE_DURATION("audio", "AudioDriver::ReadMessage");
   FXL_DCHECK(buf != nullptr);
@@ -449,7 +427,8 @@ zx_status_t AudioDriver::ReadMessage(dispatcher::Channel* channel, void* buf, ui
   }
 
   zx_status_t res;
-  res = channel->Read(buf, buf_size, bytes_read_out, handle_out);
+  res = channel.read(0, buf, handle_out ? handle_out->reset_and_get_address() : nullptr, buf_size,
+                     handle_out ? 1 : 0, bytes_read_out, nullptr);
   if (res != ZX_OK) {
     ShutdownSelf("Error attempting to read channel response", res);
     return res;
@@ -504,7 +483,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
   } msg;
   static_assert(sizeof(msg) <= 256, "Message buffer is becoming too large to hold on the stack!");
 
-  res = ReadMessage(stream_channel_.get(), &msg, sizeof(msg), &bytes_read, &rxed_handle);
+  res = ReadMessage(stream_channel_, &msg, sizeof(msg), &bytes_read, &rxed_handle);
   if (res != ZX_OK) {
     return res;
   }
@@ -591,7 +570,7 @@ zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
   } msg;
   static_assert(sizeof(msg) <= 256, "Message buffer is becoming too large to hold on the stack!");
 
-  res = ReadMessage(rb_channel_.get(), &msg, sizeof(msg), &bytes_read, &rxed_handle);
+  res = ReadMessage(ring_buffer_channel_, &msg, sizeof(msg), &bytes_read, &rxed_handle);
   if (res != ZX_OK) {
     return res;
   }
@@ -762,28 +741,21 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   // TODO(MTWN-61): Update AudioCapturers and outputs to incorporate external delay when resampling.
   external_delay_nsec_ = resp.external_delay_nsec;
 
-  // Activate our ring buffer channel in our execution domain.
-  dispatcher::Channel::ProcessHandler process_handler(
-      [this](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-        FXL_DCHECK(rb_channel_.get() == channel);
-        return ProcessRingBufferChannelMessage();
-      });
-
-  dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-      [this](const dispatcher::Channel* channel) {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-        FXL_DCHECK(rb_channel_.get() == channel);
-        ShutdownSelf("Ring buffer channel closed");
-      });
-
-  zx_status_t res;
-  res = rb_channel_->Activate(std::move(rb_channel), owner_->mix_domain_,
-                              std::move(process_handler), std::move(channel_closed_handler));
+  // Setup async wait on channel.
+  ring_buffer_channel_wait_.set_object(rb_channel.get());
+  ring_buffer_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  ring_buffer_channel_wait_.set_handler([this](async_dispatcher_t* dispatcher,
+                                               async::WaitBase* wait, zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    RingBufferChannelSignalled(dispatcher, wait, status, signal);
+  });
+  zx_status_t res = ring_buffer_channel_wait_.Begin(owner_->mix_domain_->dispatcher());
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to activate ring buffer channel";
+    FXL_PLOG(ERROR, res) << "Failed to wait on ring buffer channel for AudioDriver";
     return res;
   }
+  ring_buffer_channel_ = std::move(rb_channel);
 
   // Fetch the fifo depth of the ring buffer we just received. This determines how far ahead of
   // current playout position (in bytes) the hardware may read. We need to know this number, in
@@ -793,7 +765,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   req.hdr.cmd = AUDIO_RB_CMD_GET_FIFO_DEPTH;
   req.hdr.transaction_id = TXID;
 
-  res = rb_channel_->Write(&req, sizeof(req));
+  res = ring_buffer_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to request ring buffer fifo depth.";
     return res;
@@ -858,7 +830,7 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   req.min_ring_buffer_frames = static_cast<uint32_t>(min_frames_64);
   req.notifications_per_ring = (kEnablePositionNotifications ? 2 : 0);
 
-  zx_status_t res = rb_channel_->Write(&req, sizeof(req));
+  zx_status_t res = ring_buffer_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
     ShutdownSelf("Failed to request ring buffer vmo", res);
     return res;
@@ -1019,9 +991,9 @@ void AudioDriver::SetupCommandTimeout() {
 
   if (last_set_timeout_ != timeout) {
     if (timeout != ZX_TIME_INFINITE) {
-      cmd_timeout_->Arm(timeout);
+      cmd_timeout_.PostDelayed(owner_->mix_domain_->dispatcher(), zx::duration(timeout));
     } else {
-      cmd_timeout_->Cancel();
+      cmd_timeout_.Cancel();
     }
     last_set_timeout_ = timeout;
   }
@@ -1080,7 +1052,57 @@ zx_status_t AudioDriver::SendSetGain(const AudioDeviceSettings::GainState& gain_
   // clang-format on
   req.gain = gain_state.gain_db;
 
-  return stream_channel_->Write(&req, sizeof(req));
+  return stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
+}
+
+void AudioDriver::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Async wait failed";
+    ShutdownSelf("Failed to wait on stream channel");
+    return;
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessStreamChannelMessage();
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to process stream channel message";
+      ShutdownSelf("Failed to process stream channel message");
+      return;
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
+    }
+  }
+  if (peer_closed_asserted) {
+    ShutdownSelf("Stream channel closed unexpectedly", ZX_ERR_PEER_CLOSED);
+  }
+}
+
+void AudioDriver::RingBufferChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                             zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Async wait failed";
+    ShutdownSelf("Failed to wait on ring buffer channel");
+    return;
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessRingBufferChannelMessage();
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to process ring buffer channel message";
+      ShutdownSelf("Failed to process channel message");
+      return;
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
+    }
+  }
+  if (peer_closed_asserted) {
+    ShutdownSelf("Ring buffer channel closed", ZX_ERR_PEER_CLOSED);
+  }
 }
 
 }  // namespace media::audio

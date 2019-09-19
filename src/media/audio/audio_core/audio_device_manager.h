@@ -20,6 +20,7 @@
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 namespace media::audio {
@@ -29,17 +30,14 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
  public:
-  AudioDeviceManager(async_dispatcher_t* dispatcher, EffectsLoader* effects_loader,
+  AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
                      const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
 
-  // Initialize the input/output manager. Called once from service impl, at startup time. Should...
-  //
-  // 1) Initialize the mixing thread pool.
-  // 2) Instantiate all of the built-in audio output devices.
-  // 3) Monitor for plug/unplug events for pluggable audio output devices.
-  // 4) Load the device effects library.
+  ThreadingModel& threading_model() { return threading_model_; }
+
+  // Initialize the input/output manager.
   zx_status_t Init();
 
   void EnableDeviceSettings(bool enabled) {
@@ -89,7 +87,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   // Begin initializing a device and add it to the set of devices waiting to be initialized.
   //
   // Called from the plug detector when a new stream device first shows up.
-  zx_status_t AddDevice(const fbl::RefPtr<AudioDevice>& device);
+  void AddDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Move device from pending-init list to active-devices list. Notify users and re-evaluate policy.
   void ActivateDevice(const fbl::RefPtr<AudioDevice>& device);
@@ -167,7 +165,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   // TODO(johngro): Remove this when we remove system gain entirely.
   void UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device);
 
-  async_dispatcher_t* dispatcher_;
+  ThreadingModel& threading_model_;
 
   // Pointer to System gain/mute values. This pointer cannot be bad while we still exist.
   const SystemGainMuteProvider& system_gain_mute_;

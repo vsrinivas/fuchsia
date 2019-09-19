@@ -23,7 +23,7 @@ class AudioInput : public AudioDevice {
   static fbl::RefPtr<AudioInput> Create(zx::channel channel, AudioDeviceManager* manager);
 
  protected:
-  zx_status_t Init() override FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

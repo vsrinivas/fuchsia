@@ -22,7 +22,7 @@ class DriverOutput : public AudioOutput {
 
  protected:
   // AudioOutput implementation
-  zx_status_t Init() override;
+  zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
   bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 
+#include <lib/fit/bridge.h>
+
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
@@ -29,17 +31,20 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
 }  // namespace
 
 AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
-    : AudioObject(type), manager_(manager), driver_(new AudioDriver(this)) {
-  FXL_DCHECK(manager_);
+    : AudioObject(type),
+      manager_(manager),
+      mix_domain_(manager ? manager->threading_model().AcquireMixDomain() : nullptr),
+      driver_(new AudioDriver(this)) {
+  // audio_core_inspect_tests currently relies on creating a subclass of AudioDevice with a null
+  // AudioDeviceManager, so we skip the nullptr asserts on |manager| and |mix_domain_|.
   FXL_DCHECK((type == Type::Input) || (type == Type::Output));
 }
 
-AudioDevice::~AudioDevice() { FXL_DCHECK(is_shutting_down()); }
+AudioDevice::~AudioDevice() = default;
 
 void AudioDevice::Wakeup() {
   TRACE_DURATION("audio", "AudioDevice::Wakeup");
-  FXL_DCHECK(mix_wakeup_ != nullptr);
-  mix_wakeup_->Signal();
+  mix_wakeup_.Signal();
 }
 
 std::optional<VolumeCurve> AudioDevice::GetVolumeCurve() const {
@@ -99,27 +104,14 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 
 zx_status_t AudioDevice::Init() {
   TRACE_DURATION("audio", "AudioDevice::Init");
-  zx::profile profile;
-  zx_status_t res = AcquireHighPriorityProfile(&profile);
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  mix_domain_ = dispatcher::ExecutionDomain::Create(std::move(profile));
-  mix_wakeup_ = dispatcher::WakeupEvent::Create();
-
-  if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  dispatcher::WakeupEvent::ProcessHandler process_handler(
-      [output = fbl::WrapRefPtr(this)](dispatcher::WakeupEvent* event) -> zx_status_t {
+  WakeupEvent::ProcessHandler process_handler(
+      [output = fbl::WrapRefPtr(this)](WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->OnWakeup();
         return ZX_OK;
       });
 
-  res = mix_wakeup_->Activate(mix_domain_, std::move(process_handler));
+  zx_status_t res = mix_wakeup_.Activate(mix_domain_->dispatcher(), std::move(process_handler));
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to activate wakeup event for AudioDevice";
     return res;
@@ -130,11 +122,13 @@ zx_status_t AudioDevice::Init() {
 
 void AudioDevice::Cleanup() {
   TRACE_DURATION("audio", "AudioDevice::Cleanup");
+  mix_wakeup_.Deactivate();
   // ThrottleOutput devices have no driver, so check for that.
   if (driver_ != nullptr) {
     // Instruct the driver to release all its resources (channels, timer).
     driver_->Cleanup();
   }
+  mix_domain_.reset();
 }
 
 void AudioDevice::ActivateSelf() {
@@ -160,11 +154,9 @@ void AudioDevice::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!is_shutting_down()) {
+    shutting_down_.store(true);
     // TODO(mpuryear): Considering eliminating this; it may not be needed.
     PreventNewLinks();
-
-    FXL_DCHECK(mix_domain_);
-    mix_domain_->DeactivateFromWithinDomain();
 
     FXL_DCHECK(manager_);
     manager_->ScheduleMainThreadTask(
@@ -172,49 +164,44 @@ void AudioDevice::ShutdownSelf() {
   }
 }
 
-void AudioDevice::DeactivateDomain() {
-  TRACE_DURATION("audio", "AudioDevice::DeactivateDomain");
-  if (mix_domain_ != nullptr) {
-    mix_domain_->Deactivate();
-  }
-}
-
-zx_status_t AudioDevice::Startup() {
+fit::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
-  // If our derived class failed to initialize, Just get out.  We are being
-  // called by the output manager, and they will remove us from the set of
-  // active outputs as a result of us failing to initialize.
-  zx_status_t res = Init();
-  if (res != ZX_OK) {
-    DeactivateDomain();
-    return res;
-  }
-
-  // Poke the output once so it gets a chance to actually start running.
-  Wakeup();
-
-  return ZX_OK;
+  fit::bridge<void, zx_status_t> bridge;
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this),
+                                              completer = std::move(bridge.completer)]() mutable {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+    zx_status_t res = self->Init();
+    if (res != ZX_OK) {
+      self->Cleanup();
+      completer.complete_error(res);
+      return;
+    }
+    self->OnWakeup();
+    completer.complete_ok();
+  });
+  return bridge.consumer.promise();
 }
 
-void AudioDevice::Shutdown() {
+fit::promise<void> AudioDevice::Shutdown() {
   TRACE_DURATION("audio", "AudioDevice::Shutdown");
+  // The only reason we have this flag is to make sure that Shutdown is idempotent.
   if (shut_down_) {
-    return;
+    return fit::make_ok_promise();
   }
-
-  // Make sure no new callbacks can be generated, and that pending callbacks
-  // have been nerfed.
-  DeactivateDomain();
+  shut_down_ = true;
 
   // Unlink ourselves from everything we are currently attached to.
   Unlink();
 
   // Give our derived class, and our driver, a chance to clean up resources.
-  Cleanup();
-
-  // We are now completely shut down.  The only reason we have this flag is to
-  // make sure that Shutdown is idempotent.
-  shut_down_ = true;
+  fit::bridge<void> bridge;
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this),
+                                              completer = std::move(bridge.completer)]() mutable {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+    self->Cleanup();
+    completer.complete_ok();
+  });
+  return bridge.consumer.promise();
 }
 
 bool AudioDevice::UpdatePlugState(bool plugged, zx_time_t plug_time) {

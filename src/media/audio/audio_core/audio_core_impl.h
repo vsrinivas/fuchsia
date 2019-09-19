@@ -16,6 +16,7 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
 
@@ -37,7 +38,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
                       SystemGainMuteProvider,
                       UsageGainAdjustment {
  public:
-  AudioCoreImpl(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+  AudioCoreImpl(ThreadingModel* threading_model,
                 std::unique_ptr<sys::ComponentContext> component_context,
                 CommandLineOptions options);
 
@@ -49,7 +50,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   ~AudioCoreImpl() override;
 
-  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+  ThreadingModel& threading_model() { return threading_model_; }
   AudioDeviceManager& device_manager() { return device_manager_; }
   AudioAdmin& audio_admin() { return audio_admin_; }
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
@@ -93,9 +94,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   fidl::BindingSet<fuchsia::media::AudioCore> bindings_;
 
-  // A reference to our thread's dispatcher object.  Allows us to post events to be handled by our
-  // main application thread from things like the output manager's thread pool.
-  async_dispatcher_t* dispatcher_;
+  ThreadingModel& threading_model_;
 
   std::unique_ptr<EffectsLoader> effects_loader_;
 

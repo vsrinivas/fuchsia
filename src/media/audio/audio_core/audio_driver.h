@@ -6,6 +6,8 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DRIVER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
@@ -13,8 +15,6 @@
 #include <mutex>
 #include <string>
 
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
@@ -138,7 +138,7 @@ class AudioDriver {
   uint32_t position_notification_count_ = 0;
 
   // Dispatchers for messages received over stream and ring buffer channels.
-  zx_status_t ReadMessage(dispatcher::Channel* channel, void* buf, uint32_t buf_size,
+  zx_status_t ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
                           uint32_t* bytes_read_out, zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStreamChannelMessage()
@@ -212,13 +212,27 @@ class AudioDriver {
   const TimelineFunction& clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS {
     return clock_mono_to_ring_pos_bytes_;
   }
+  void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+  void RingBufferChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+
+  void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+    ShutdownSelf("Unexpected command timeout", ZX_ERR_TIMED_OUT);
+  }
 
   AudioDevice* const owner_;
 
   State state_ = State::Uninitialized;
-  fbl::RefPtr<dispatcher::Channel> stream_channel_;
-  fbl::RefPtr<dispatcher::Channel> rb_channel_;
-  fbl::RefPtr<dispatcher::Timer> cmd_timeout_;
+  zx::channel stream_channel_;
+  zx::channel ring_buffer_channel_;
+
+  async::Wait stream_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain_->token());
+  async::Wait ring_buffer_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain_->token());
+  async::TaskClosure cmd_timeout_ FXL_GUARDED_BY(owner_->mix_domain_->token());
+
   zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
   zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
   zx_time_t fetch_driver_info_timeout_ = ZX_TIME_INFINITE;

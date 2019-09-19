@@ -151,6 +151,8 @@ source_set("audio_core_lib") {
     "reporter.h",
     "stream_volume_manager.cc",
     "stream_volume_manager.h",
+    "threading_model.cc",
+    "threading_model.h",
     "throttle_output.h",
     "usage_settings.cc",
     "usage_settings.h",
@@ -160,13 +162,14 @@ source_set("audio_core_lib") {
     "volume_control.h",
     "volume_curve.cc",
     "volume_curve.h",
+    "wakeup_event.cc",
+    "wakeup_event.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/inspect/cpp",
     "//third_party/rapidjson",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-cobalt",
@@ -185,6 +188,8 @@ source_set("audio_core_lib") {
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav_writer:wav_writer",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -205,8 +210,6 @@ executable("audio_core_bin") {
   deps = [
     ":audio_core_lib",
     "//garnet/public/lib/fsl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
   ]
   if (audio_core_trace_enabled) {
     deps += [ "//zircon/public/lib/trace-provider-with-fdio" ]
@@ -230,10 +233,12 @@ executable("unittest_bin") {
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "stream_volume_manager_unittest.cc",
+    "threading_model_unittest.cc",
     "usage_settings_unittest.cc",
     "utils_unittest.cc",
     "volume_control_unittest.cc",
     "volume_curve_unittest.cc",
+    "wakeup_event_unittest.cc",
   ]
 
   deps = [

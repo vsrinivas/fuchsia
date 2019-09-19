@@ -14,9 +14,6 @@
 #include <atomic>
 #include <memory>
 
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-timer.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 
@@ -26,6 +23,7 @@
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -151,7 +149,7 @@ class AudioCapturerImpl : public AudioObject,
 
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
+                    ThreadingModel* threading_model, AudioDeviceManager* device_manager,
                     AudioAdmin* admin, StreamVolumeManager* volume_manager);
 
   // AudioCapturer FIDL implementation
@@ -215,9 +213,17 @@ class AudioCapturerImpl : public AudioObject,
   // Select a mixer for the link supplied and return true, or return false if one cannot be found.
   zx_status_t ChooseMixer(const fbl::RefPtr<AudioLink>& link);
 
+  fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void MixTimerThunk() {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
+    Process();
+  }
+
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
-  async_dispatcher_t* dispatcher_;
+  ThreadingModel& threading_model_;
+  ThreadingModel::OwnedDomainPtr mix_domain_;
   AudioDeviceManager& device_manager_;
   AudioAdmin& admin_;
   StreamVolumeManager& volume_manager_;
@@ -238,10 +244,9 @@ class AudioCapturerImpl : public AudioObject,
   uint64_t payload_buf_size_ = 0;
   uint32_t payload_buf_frames_ = 0;
 
-  // Execution domain/dispatcher stuff for mixing.
-  fbl::RefPtr<dispatcher::ExecutionDomain> mix_domain_;
-  fbl::RefPtr<dispatcher::WakeupEvent> mix_wakeup_;
-  fbl::RefPtr<dispatcher::Timer> mix_timer_;
+  WakeupEvent mix_wakeup_;
+  async::TaskClosureMethod<AudioCapturerImpl, &AudioCapturerImpl::MixTimerThunk> mix_timer_
+      FXL_GUARDED_BY(mix_domain_->token()){this};
 
   // Queues of capture buffers from the client: waiting to be filled, or waiting to be returned.
   fbl::Mutex pending_lock_;

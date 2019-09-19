@@ -46,14 +46,14 @@ class ReporterTest : public gtest::TestLoopFixture {
 
 class TestInput : public AudioDevice {
  public:
-  TestInput() : AudioDevice(Type::Input, reinterpret_cast<AudioDeviceManager*>(1)) {}
+  TestInput() : AudioDevice(Type::Input, nullptr) {}
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
 };
 
 class TestOutput : public AudioDevice {
  public:
-  TestOutput() : AudioDevice(Type::Output, reinterpret_cast<AudioDeviceManager*>(1)) {}
+  TestOutput() : AudioDevice(Type::Output, nullptr) {}
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
 };

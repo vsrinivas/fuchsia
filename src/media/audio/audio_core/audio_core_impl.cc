@@ -38,18 +38,17 @@ std::unique_ptr<EffectsLoader> CreateEffectsLoaderWithFallback() {
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
                              std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
-    : dispatcher_(dispatcher),
+    : threading_model_(*threading_model),
       effects_loader_{CreateEffectsLoaderWithFallback()},
-      device_settings_persistence_(io_dispatcher),
-      device_manager_(dispatcher, effects_loader_.get(), &device_settings_persistence_, *this),
-      audio_admin_(this, dispatcher),
+      device_settings_persistence_(threading_model->IoDomain().dispatcher()),
+      device_manager_(threading_model, effects_loader_.get(), &device_settings_persistence_, *this),
+      audio_admin_(this, threading_model->FidlDomain().dispatcher()),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
-  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
   device_manager().EnableDeviceSettings(options.enable_device_settings_writeback);

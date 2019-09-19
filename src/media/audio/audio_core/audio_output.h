@@ -5,9 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/media/cpp/timeline_function.h>
-
-#include <dispatcher-pool/dispatcher-timer.h>
 
 #include "src/lib/fxl/time/time_point.h"
 #include "src/media/audio/audio_core/audio_device.h"
@@ -51,7 +50,7 @@ class AudioOutput : public AudioDevice {
   void UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
 
-  zx_status_t Init() override;
+  void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
@@ -76,7 +75,12 @@ class AudioOutput : public AudioDevice {
   std::unique_ptr<OutputProducer> output_producer_;
 
   // Timer used to schedule periodic mixing.
-  fbl::RefPtr<dispatcher::Timer> mix_timer_;
+  void MixTimerThunk() {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
+    Process();
+  }
+  async::TaskClosureMethod<AudioOutput, &AudioOutput::MixTimerThunk> mix_timer_
+      FXL_GUARDED_BY(mix_domain_->token()){this};
 
   int64_t min_clock_lead_time_nsec_ = 0;
 
