@@ -29,6 +29,7 @@ if (current_toolchain == host_toolchain) {
       "category_output.cc",
       "kernel_branches_output.cc",
       "kernel_header_output.cc",
+      "kernel_wrappers_output.cc",
       "ktrace_output.cc",
       "output_util.cc",
       "output_util.h",
@@ -70,6 +71,7 @@ if (current_toolchain == host_toolchain) {
       "category_output_test.cc",
       "kernel_branches_output_test.cc",
       "kernel_header_output_test.cc",
+      "kernel_wrappers_output_test.cc",
       "ktrace_output_test.cc",
       "output_util_test.cc",
       "syscall_library_test.cc",
@@ -106,6 +108,7 @@ if (current_toolchain == host_toolchain) {
       "test_selection.test.fidl",
       "test_various_categories.test.fidl",
       "test_vdsowrappers.test.fidl",
+      "test_kernelwrappers.test.fidl",
     ]
   }
 

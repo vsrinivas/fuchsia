@@ -19,4 +19,3 @@ protocol Syscall {
     // Special case for abigen's test wrapper.
     TestWrapper(int32 a, int32 b, int32 c) -> (zx.status status);
 };
-

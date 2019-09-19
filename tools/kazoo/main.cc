@@ -18,6 +18,7 @@ struct CommandLineOptions {
   std::optional<std::string> category;
   std::optional<std::string> kernel_branches;
   std::optional<std::string> kernel_header;
+  std::optional<std::string> kernel_wrappers;
   std::optional<std::string> ktrace;
   std::optional<std::string> syscall_numbers;
   std::optional<std::string> user_header;
@@ -46,6 +47,9 @@ constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
 
 constexpr const char kKernelHeaderHelp[] = R"(  --kernel-header=FILENAME
     The output name for the .h file used for kernel header.)";
+
+constexpr const char kKernelWrappersHelp[] = R"(  --kernel-wrappers=FILENAME
+    The output name for the .inc file used for kernel wrappers.)";
 
 constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
     The output name for the .inc file used for kernel tracing.)";
@@ -76,6 +80,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
+  parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
   parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
   parser.AddSwitch("user-header", 0, kUserHeaderHelp, &CommandLineOptions::user_header);
@@ -129,6 +134,7 @@ int main(int argc, const char* argv[]) {
       {&options.category, CategoryOutput},
       {&options.kernel_branches, KernelBranchesOutput},
       {&options.kernel_header, KernelHeaderOutput},
+      {&options.kernel_wrappers, KernelWrappersOutput},
       {&options.ktrace, KtraceOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
       {&options.user_header, UserHeaderOutput},

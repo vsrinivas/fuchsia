@@ -1,0 +1,42 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+using time = int64;
+using ticks = int64;
+using mutable_vector_void = vector<byte>;
+
+[Transport="Syscall"]
+protocol Kwrap {
+    // Simple out ptr.
+    SimpleCase() -> (time time);
+
+    MultipleInHandles(vector<handle> handles) -> (zx.status status);
+
+    // Vdsocall excluded.
+    [Vdsocall]
+    TicksGet() -> (ticks ticks);
+
+    // Noreturn handled properly.
+    [Noreturn]
+    ANoRetFunc();
+
+    // |buffer| treated as inout parameter.
+    InoutArgs(handle<vmo> handle,
+            uint32 op,
+            uint64 offset,
+            uint64 size,
+            mutable_vector_void buffer) ->
+        (zx.status status);
+
+    // Output handle copied properly.
+    OutputHandle() -> (zx.status status, handle<event> event);
+
+    // When two output handles, status and copy are verified before any bytes
+    // returned.
+    TwoOutputHandle() -> (zx.status status, handle<event> out0, handle<event> out1);
+};
