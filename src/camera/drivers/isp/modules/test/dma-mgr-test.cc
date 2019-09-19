@@ -332,5 +332,25 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   EXPECT_OK(full_resolution_dma_->ReleaseFrame(full_resolution_callbacks_.back().buffer_id));
 }
 
+// Make sure callbacks can call back into the class.
+TEST_F(DmaMgrTest, CallbackReentrancy) {
+  uint32_t buffer_id = kFullResNumberOfBuffers;
+  zx_status_t status = full_resolution_dma_->Configure(
+      full_resolution_buffer_collection_,
+      [this, &buffer_id](fuchsia_camera_common_FrameAvailableEvent event) {
+        buffer_id = event.buffer_id;
+        full_resolution_dma_->Disable();
+        ASSERT_FALSE(full_resolution_dma_->enabled());
+      });
+  EXPECT_OK(status);
+  full_resolution_dma_->Enable();
+  ASSERT_TRUE(full_resolution_dma_->enabled());
+  full_resolution_dma_->OnNewFrame();
+  EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
+  ASSERT_NO_DEATH([this]() { full_resolution_dma_->OnFrameWritten(); });
+  ASSERT_NE(buffer_id, kFullResNumberOfBuffers);
+  full_resolution_dma_->ReleaseFrame(buffer_id);
+}
+
 }  // namespace
 }  // namespace camera

@@ -186,6 +186,11 @@ void DmaManager::OnFrameWritten() {
   // TODO(garratt): set metadata
   event.metadata.timestamp = 0;
   frame_available_callback_(event);
+  ZX_ASSERT(!enabled_ || !write_locked_buffers_.empty());
+  // An additional check is needed here as the callback may have disabled us.
+  if (!enabled_) {
+    return;
+  }
   write_locked_buffers_.pop_back();
 }
 
