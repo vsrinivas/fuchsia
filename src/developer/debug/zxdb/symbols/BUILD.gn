@@ -249,6 +249,7 @@ source_set("tests") {
     "identifier_unittest.cc",
     "index2_unittest.cc",
     "index_node_unittest.cc",
+    "index_node2_unittest.cc",
     "index_unittest.cc",
     "loaded_module_symbols_unittest.cc",
     "member_ptr_unittest.cc",

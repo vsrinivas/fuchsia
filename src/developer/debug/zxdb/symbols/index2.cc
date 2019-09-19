@@ -74,6 +74,16 @@ bool AbbrevHasLocation(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   return false;
 }
 
+size_t RecursiveCountDies(const IndexNode2& node) {
+  size_t result = node.dies().size();
+
+  for (int i = 0; i < static_cast<int>(IndexNode2::Kind::kEndPhysical); i++) {
+    for (const auto& pair : node.MapForKind(static_cast<IndexNode2::Kind>(i)))
+      result += RecursiveCountDies(pair.second);
+  }
+  return result;
+}
+
 // This helper class is used to index the symbols of one unit. It keeps some state to avoid
 // reallocating for each call.
 //
@@ -438,6 +448,8 @@ const std::vector<unsigned>* Index2::FindFileUnitIndices(const std::string& name
     return nullptr;
   return &found->second;
 }
+
+size_t Index2::CountSymbolsIndexed() const { return RecursiveCountDies(root_); }
 
 void Index2::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                               unsigned unit_index) {

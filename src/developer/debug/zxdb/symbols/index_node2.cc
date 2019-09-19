@@ -14,16 +14,6 @@ namespace zxdb {
 
 namespace {
 
-void MergeMaps(IndexNode2::Map& from, IndexNode2::Map* to) {
-  for (auto& pair : from) {
-    auto found = to->find(pair.first);
-    if (found == to->end())
-      to->insert(std::move(pair));
-    else
-      found->second.Merge(std::move(pair.second));
-  }
-}
-
 void DumpMap(const IndexNode2::Map& map, int indent, const char* heading, std::ostream& out) {
   if (map.empty())
     return;
@@ -122,25 +112,6 @@ void IndexNode2::Dump(const std::string& name, std::ostream& out, int indent_lev
     out << name;
   out << std::endl;
   Dump(out, indent_level);
-}
-
-void IndexNode2::Merge(IndexNode2&& other) {
-  FXL_DCHECK(kind_ == other.kind_);
-
-  MergeMaps(other.namespaces(), &namespaces());
-  MergeMaps(other.types(), &types());
-  MergeMaps(other.functions(), &functions());
-  MergeMaps(other.vars(), &vars());
-
-  if (!other.dies_.empty()) {
-    if (dies_.empty()) {
-      dies_ = std::move(other.dies_);
-    } else {
-      // AddDie will apply de-duplication logic.
-      for (const auto& cur : other.dies_)
-        AddDie(cur);
-    }
-  }
 }
 
 }  // namespace zxdb

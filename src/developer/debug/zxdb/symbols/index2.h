@@ -75,6 +75,11 @@ class Index2 {
   const IndexNode2& root() const { return root_; }
   IndexNode2& root() { return root_; }
 
+  size_t files_indexed() const { return file_name_index_.size(); }
+
+  // Returns how many symbols are indexed. This iterates through everything so can be slow.
+  size_t CountSymbolsIndexed() const;
+
  private:
   void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit, unsigned unit_index);
 

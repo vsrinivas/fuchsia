@@ -95,10 +95,6 @@ class IndexNode2 {
   void Dump(std::ostream& out, int indent_level = 0) const;
   void Dump(const std::string& name, std::ostream& out, int indent_level = 0) const;
 
-  // Merges another node's children into this one. It's assumed there are no duplicate DIEs so the
-  // lists are just appended.
-  void Merge(IndexNode2&& other);
-
   const std::vector<DieRef>& dies() const { return dies_; }
 
  private:
