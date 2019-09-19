@@ -107,7 +107,8 @@ TEST_F(BatchUploadTest, SingleCommit) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   EXPECT_EQ(
       encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
       "content");
@@ -135,10 +136,12 @@ TEST_F(BatchUploadTest, MultipleCommits) {
   EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id0"));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id0")));
   EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content0");
-  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id1"));
+  EXPECT_EQ(page_cloud_.received_commits[1].id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id1")));
   EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content1");
   EXPECT_TRUE(page_cloud_.received_objects.empty());
@@ -169,7 +172,8 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   EXPECT_EQ(
       encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
       "content");
@@ -285,7 +289,8 @@ TEST_F(BatchUploadTest, DiffFromEmpty) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   EXPECT_EQ(
       encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
       "content");
@@ -340,7 +345,8 @@ TEST_F(BatchUploadTest, DiffFromCommit) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   EXPECT_EQ(
       encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
       "content");
@@ -382,7 +388,8 @@ TEST_F(BatchUploadTest, DiffSortedByEntryId) {
   // Verify that the entries are sent in entry id order.
   ASSERT_THAT(page_cloud_.received_commits, SizeIs(1));
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   ASSERT_TRUE(page_cloud_.received_commits[0].has_diff());
   ASSERT_TRUE(page_cloud_.received_commits[0].diff().has_base_state());
   EXPECT_TRUE(page_cloud_.received_commits[0].diff().base_state().is_empty_page());
@@ -500,7 +507,8 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
   EXPECT_EQ(
       encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
       "content");

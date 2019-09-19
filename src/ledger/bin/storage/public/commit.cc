@@ -6,12 +6,18 @@
 
 #include <tuple>
 
+#include "src/ledger/bin/encryption/primitives/hash.h"
+
 namespace storage {
 
 bool Commit::TimestampOrdered(const std::unique_ptr<const Commit>& commit1,
                               const std::unique_ptr<const Commit>& commit2) {
   return std::forward_as_tuple(commit1->GetTimestamp(), commit1->GetId()) <
          std::forward_as_tuple(commit2->GetTimestamp(), commit2->GetId());
+}
+
+std::string ComputeCommitId(fxl::StringView content) {
+  return encryption::SHA256WithLengthHash(content);
 }
 
 bool GenerationComparator::operator()(const std::unique_ptr<const Commit>& lhs,

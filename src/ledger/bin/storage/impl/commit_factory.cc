@@ -12,7 +12,6 @@
 
 #include <flatbuffers/flatbuffers.h>
 
-#include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_generated.h"
 #include "src/ledger/bin/storage/impl/commit_serialization.h"
@@ -222,7 +221,7 @@ std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
   std::string storage_bytes =
       SerializeCommit(generation, timestamp, root_node_identifier, std::move(parent_commits));
 
-  CommitId id = encryption::SHA256WithLengthHash(storage_bytes);
+  CommitId id = storage::ComputeCommitId(storage_bytes);
 
   std::unique_ptr<const Commit> commit;
   Status status = FromStorageBytes(std::move(id), std::move(storage_bytes), &commit);

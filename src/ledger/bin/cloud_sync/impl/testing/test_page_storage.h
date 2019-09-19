@@ -94,6 +94,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool watcher_set = false;
   bool watcher_removed = false;
   std::map<storage::CommitId, std::string> received_commits;
+
+  bool ReceivedCommitsContains(convert::ExtendedStringView content);
+
   std::map<std::string, std::string> sync_metadata;
   storage::fake::FakeObjectIdentifierFactory object_identifier_factory_;
 

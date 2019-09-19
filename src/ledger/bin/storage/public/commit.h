@@ -54,6 +54,9 @@ class Commit {
   FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
 
+// Generate an id for a commit based on its content.
+std::string ComputeCommitId(fxl::StringView content);
+
 // Comparator for commits that order commits based on their generation, then on
 // their id, with highest generation/highest id first.
 struct GenerationComparator {

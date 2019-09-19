@@ -261,8 +261,7 @@ void BatchUpload::EncodeCommit(
   auto remote_commit = std::make_unique<cloud_provider::Commit>();
   auto remote_commit_ptr = remote_commit.get();
 
-  // TODO(mariagl): change to the encoded version of the commit id.
-  remote_commit_ptr->set_id(convert::ToArray(commit.GetId()));
+  remote_commit_ptr->set_id(convert::ToArray(encryption_service_->EncodeCommitId(commit.GetId())));
   encryption_service_->EncryptCommit(
       commit.GetStorageBytes().ToString(),
       waiter->MakeScoped([callback = waiter->NewCallback(), remote_commit_ptr](

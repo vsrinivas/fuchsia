@@ -133,15 +133,15 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   EXPECT_EQ(storage_.received_commits.size(), 2u);
-  EXPECT_EQ(storage_.received_commits["id1"], "content1");
-  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
   EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
   EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
@@ -152,8 +152,8 @@ TEST_F(PageDownloadTest, DownloadLongBacklog) {
 
   const size_t commit_count = 100'000;
   for (size_t i = 0; i < commit_count; i++) {
-    page_cloud_.commits_to_return.push_back(MakeTestCommit(
-        &encryption_service_, "id" + std::to_string(i), "content" + std::to_string(i)));
+    page_cloud_.commits_to_return.push_back(
+        MakeTestCommit(&encryption_service_, "content" + std::to_string(i)));
   }
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
@@ -169,8 +169,8 @@ TEST_F(PageDownloadTest, DownloadEmptyBacklog) { ASSERT_TRUE(StartDownloadAndWai
 // Verifies that the cloud watcher is registered for the timestamp of the most
 // recent commit downloaded from the backlog.
 TEST_F(PageDownloadTest, RegisterWatcher) {
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
@@ -187,16 +187,15 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(storage_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
-  auto commit_pack =
-      MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}, {"id2", "content2"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1", "content2"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("43"), [] {});
   RunLoopUntilIdle();
 
   // Verify that the remote commits were added to storage.
   EXPECT_EQ(storage_.received_commits.size(), 2u);
-  EXPECT_EQ(storage_.received_commits["id1"], "content1");
-  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
   EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
 }
 
@@ -230,15 +229,14 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(storage_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
-  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
   RunLoopUntilIdle();
   EXPECT_EQ(storage_.delayed_add_commit_confirmations.size(), 1u);
 
   // Add two more remote commits, before storage confirms adding the first one.
-  commit_pack =
-      MakeTestCommitPack(&encryption_service_, {{"id2", "content2"}, {"id3", "content3"}});
+  commit_pack = MakeTestCommitPack(&encryption_service_, {"content2", "content3"});
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
 
   // Make storage confirm adding the first commit.
@@ -250,9 +248,9 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   // Verify that all three commits were delivered in total of two calls to
   // storage.
   EXPECT_EQ(storage_.received_commits.size(), 3u);
-  EXPECT_EQ(storage_.received_commits["id1"], "content1");
-  EXPECT_EQ(storage_.received_commits["id2"], "content2");
-  EXPECT_EQ(storage_.received_commits["id3"], "content3");
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content3"));
   EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "44");
   EXPECT_EQ(storage_.add_commits_from_sync_calls, 2u);
 }
@@ -276,13 +274,13 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 
   SetOnNewStateCallback([] {});
   page_cloud_.status_to_return = cloud_provider::Status::OK;
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("42"));
   RunLoopFor(kTestBackoffInterval);
   EXPECT_TRUE(page_download_->IsIdle());
 
   EXPECT_EQ(storage_.received_commits.size(), 1u);
-  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
   EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "42");
 }
 
@@ -293,7 +291,7 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
   EXPECT_TRUE(page_cloud_.set_watcher.is_bound());
 
   storage_.should_fail_add_commit_from_sync = true;
-  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
 
@@ -306,8 +304,8 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
 // Verifies that the idle status is returned when there is no download in
 // progress.
 TEST_F(PageDownloadTest, DownloadIdleCallback) {
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   int on_idle_calls = 0;
@@ -328,7 +326,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id3", "content3"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content3"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
   RunLoopUntilIdle();
@@ -447,8 +445,8 @@ TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   EXPECT_FALSE(StartDownloadAndWaitForIdle());

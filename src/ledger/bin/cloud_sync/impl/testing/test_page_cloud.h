@@ -17,11 +17,10 @@
 namespace cloud_sync {
 
 cloud_provider::Commit MakeTestCommit(encryption::FakeEncryptionService* encryption_service,
-                                      const std::string& id, const std::string& data);
+                                      const std::string& data);
 
 std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
-    encryption::FakeEncryptionService* encryption_service,
-    std::vector<std::tuple<std::string, std::string>> commit_data);
+    encryption::FakeEncryptionService* encryption_service, std::vector<std::string> commit_data);
 
 bool CommitHasIdAndData(const cloud_provider::Commit& commit);
 

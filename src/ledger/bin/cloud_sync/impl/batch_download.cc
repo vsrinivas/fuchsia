@@ -13,6 +13,7 @@
 #include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
@@ -51,11 +52,25 @@ void BatchDownload::Start() {
     }
     encryption_service_->DecryptCommit(
         remote_commit.data(),
-        [id = std::move(remote_commit.id()), callback = waiter->NewCallback()](
-            encryption::Status status, std::string content) mutable {
-          callback(status, storage::PageStorage::CommitIdAndBytes(convert::ToString(id),
-                                                                  std::move(content)));
-        });
+        callback::MakeScoped(
+            weak_ptr_factory_.GetWeakPtr(),
+            [this, id = std::move(remote_commit.id()), callback = waiter->NewCallback()](
+                encryption::Status status, std::string content) mutable {
+              if (status != encryption::Status::OK) {
+                FXL_LOG(ERROR) << "Failed to decrypt the commit.";
+                on_error_();
+                return;
+              }
+              storage::CommitId local_id = storage::ComputeCommitId(content);
+              if (convert::ToArray(encryption_service_->EncodeCommitId(local_id)) != id) {
+                FXL_LOG(ERROR) << "Commit content doesn't match the received id.";
+                on_error_();
+                return;
+              }
+
+              callback(status, storage::PageStorage::CommitIdAndBytes(std::move(local_id),
+                                                                      std::move(content)));
+            }));
   }
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),

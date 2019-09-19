@@ -10,24 +10,24 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/storage/public/commit.h"
 
 namespace cloud_sync {
 
 cloud_provider::Commit MakeTestCommit(encryption::FakeEncryptionService* encryption_service,
-                                      const std::string& id, const std::string& data) {
+                                      const std::string& data) {
   cloud_provider::Commit commit;
-  *commit.mutable_id() = convert::ToArray(id);
   *commit.mutable_data() = convert::ToArray(encryption_service->EncryptCommitSynchronous(data));
+  *commit.mutable_id() =
+      convert::ToArray(encryption_service->EncodeCommitId(storage::ComputeCommitId(data)));
   return commit;
 }
 
 std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
-    encryption::FakeEncryptionService* encryption_service,
-    std::vector<std::tuple<std::string, std::string>> commit_data) {
+    encryption::FakeEncryptionService* encryption_service, std::vector<std::string> commit_data) {
   cloud_provider::Commits commits_container;
   for (auto& data : commit_data) {
-    commits_container.commits.push_back(
-        MakeTestCommit(encryption_service, std::get<0>(data), std::get<1>(data)));
+    commits_container.commits.push_back(MakeTestCommit(encryption_service, data));
   }
   cloud_provider::CommitPack result;
   if (!cloud_provider::EncodeToBuffer(&commits_container, &result.buffer)) {

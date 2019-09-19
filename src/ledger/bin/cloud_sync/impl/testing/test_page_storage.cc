@@ -64,6 +64,14 @@ void TestPageStorage::AddCommitsFromSync(
   fit::closure confirm = [this, ids_and_bytes = std::move(ids_and_bytes),
                           callback = std::move(callback)]() mutable {
     for (auto& commit : ids_and_bytes) {
+      if (commit.id != storage::ComputeCommitId(commit.bytes)) {
+        FXL_LOG(ERROR) << "Commit id doesn't match its content";
+        async::PostTask(dispatcher_, [callback = std::move(callback)]() {
+          callback(ledger::Status::IO_ERROR, {});
+        });
+        return;
+      }
+
       received_commits[commit.id] = std::move(commit.bytes);
       unsynced_commits_to_return.erase(
           std::remove_if(unsynced_commits_to_return.begin(), unsynced_commits_to_return.end(),
@@ -209,6 +217,11 @@ void TestPageStorage::GetDiffForCloud(
   async::PostTask(dispatcher_, [diff, callback = std::move(callback)] {
     callback(ledger::Status::OK, diff.first, std::move(diff.second));
   });
+}
+
+bool TestPageStorage::ReceivedCommitsContains(convert::ExtendedStringView content) {
+  storage::CommitId id = storage::ComputeCommitId(content);
+  return received_commits[id] == content;
 }
 
 }  // namespace cloud_sync
