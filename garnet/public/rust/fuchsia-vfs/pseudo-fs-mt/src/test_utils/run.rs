@@ -5,7 +5,7 @@
 //! Utilities to run asynchronous tests that use `pseudo-fs` objects.
 
 use crate::{
-    directory::entry::DirectoryEntry,
+    directory::{entry::DirectoryEntry, mutable::entry_constructor::EntryConstructor},
     execution_scope::ExecutionScope,
     path::Path,
     registry::{InodeRegistry, TokenRegistry},
@@ -142,6 +142,7 @@ where
         coordinator: None,
         token_registry: None,
         inode_registry: None,
+        entry_constructor: None,
     }
 }
 
@@ -168,6 +169,7 @@ where
         coordinator: None,
         token_registry: None,
         inode_registry: None,
+        entry_constructor: None,
     }
 }
 
@@ -205,6 +207,7 @@ where
     coordinator: Option<Box<dyn FnOnce(TestController) + 'test_refs>>,
     token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
+    entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
 
 /// A helper that holds all the parameters necessary to run an async client-only test.
@@ -243,6 +246,7 @@ where
 
     field_setter!(token_registry, Arc<dyn TokenRegistry + Send + Sync>);
     field_setter!(inode_registry, Arc<dyn InodeRegistry + Send + Sync>);
+    field_setter!(entry_constructor, Arc<dyn EntryConstructor + Send + Sync>);
 
     /// Runs the test based on the parameters specified in the [`test_server_client`] and other
     /// method calls.
@@ -259,6 +263,10 @@ where
         };
         let scope_builder = match self.inode_registry {
             Some(inode_registry) => scope_builder.inode_registry(inode_registry),
+            None => scope_builder,
+        };
+        let scope_builder = match self.entry_constructor {
+            Some(entry_constructor) => scope_builder.entry_constructor(entry_constructor),
             None => scope_builder,
         };
         self.server.open(

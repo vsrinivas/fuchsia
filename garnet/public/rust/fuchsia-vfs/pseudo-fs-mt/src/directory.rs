@@ -14,6 +14,7 @@ mod traversal_position;
 mod watchers;
 
 pub mod immutable;
+pub mod mutable;
 
 pub mod simple;
 

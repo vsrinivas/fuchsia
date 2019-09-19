@@ -16,7 +16,10 @@
 //! Implementation wise, execution scope is just a proxy, that forwards all the tasks to an actual
 //! executor, provided as an instance of a [`Spawn`] trait.
 
-use crate::registry::{InodeRegistry, TokenRegistry};
+use crate::{
+    directory::mutable::entry_constructor::EntryConstructor,
+    registry::{InodeRegistry, TokenRegistry},
+};
 
 use {
     futures::{
@@ -49,6 +52,8 @@ pub struct ExecutionScope {
     token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
 
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
+
+    entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
 
 struct Executor {
@@ -62,8 +67,8 @@ struct Executor {
 
 impl ExecutionScope {
     /// Constructs an execution scope that has only an upstream executor attached.  No
-    /// `token_registry` or `inode_registry`.  Use [`build()`] if you want to specify other
-    /// parameters.
+    /// `token_registry`, `inode_registry`, nor `entry_constructor`.  Use [`build()`] if you want
+    /// to specify other parameters.
     pub fn from_executor(upstream: Box<dyn Spawn + Send>) -> Self {
         Self::build(upstream).new()
     }
@@ -72,7 +77,12 @@ impl ExecutionScope {
     /// accepting additional parameters.  Run [`ExecutionScopeParams::new()`] to get an actual
     /// [`ExecutionScope`] object.
     pub fn build(upstream: Box<dyn Spawn + Send>) -> ExecutionScopeParams {
-        ExecutionScopeParams { upstream, token_registry: None, inode_registry: None }
+        ExecutionScopeParams {
+            upstream,
+            token_registry: None,
+            inode_registry: None,
+            entry_constructor: None,
+        }
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -128,6 +138,10 @@ impl ExecutionScope {
         self.inode_registry.as_ref().map(Arc::clone)
     }
 
+    pub fn entry_constructor(&self) -> Option<Arc<dyn EntryConstructor + Send + Sync>> {
+        self.entry_constructor.as_ref().map(Arc::clone)
+    }
+
     pub fn shutdown(&self) {
         let mut this = self.executor.lock();
         this.shutdown();
@@ -140,6 +154,7 @@ impl Clone for ExecutionScope {
             executor: self.executor.clone(),
             token_registry: self.token_registry.as_ref().map(Arc::clone),
             inode_registry: self.inode_registry.as_ref().map(Arc::clone),
+            entry_constructor: self.entry_constructor.as_ref().map(Arc::clone),
         }
     }
 }
@@ -148,6 +163,7 @@ pub struct ExecutionScopeParams {
     upstream: Box<dyn Spawn + Send>,
     token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
+    entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
 
 impl ExecutionScopeParams {
@@ -163,6 +179,12 @@ impl ExecutionScopeParams {
         self
     }
 
+    pub fn entry_constructor(mut self, value: Arc<dyn EntryConstructor + Send + Sync>) -> Self {
+        assert!(self.entry_constructor.is_none(), "`entry_constructor` is already set");
+        self.entry_constructor = Some(value);
+        self
+    }
+
     pub fn new(self) -> ExecutionScope {
         ExecutionScope {
             executor: Arc::new(Mutex::new(Executor {
@@ -171,6 +193,7 @@ impl ExecutionScopeParams {
             })),
             token_registry: self.token_registry,
             inode_registry: self.inode_registry,
+            entry_constructor: self.entry_constructor,
         }
     }
 }
@@ -310,7 +333,10 @@ impl Drop for Executor {
 mod tests {
     use super::ExecutionScope;
 
-    use crate::registry::{inode_registry, token_registry, InodeRegistry, TokenRegistry};
+    use crate::{
+        directory::mutable::entry_constructor::EntryConstructor,
+        registry::{inode_registry, token_registry, InodeRegistry, TokenRegistry},
+    };
 
     use {
         fuchsia_async::Executor,
@@ -496,8 +522,37 @@ mod tests {
         );
     }
 
+    #[test]
+    fn with_mock_entry_constructor() {
+        let entry_constructor = mocks::MockEntryConstructor::new();
+
+        let exec = Executor::new().expect("Executor creation failed");
+        let scope = ExecutionScope::build(Box::new(exec.ehandle()))
+            .entry_constructor(entry_constructor.clone())
+            .new();
+
+        let entry_constructor2 = scope.entry_constructor().unwrap();
+        assert!(
+            Arc::ptr_eq(
+                &(entry_constructor as Arc<dyn EntryConstructor + Send + Sync>),
+                &entry_constructor2
+            ),
+            "`scope` returned `Arc` to an entry constructor is different from the one initially \
+             set."
+        );
+    }
+
     mod mocks {
+        use crate::{
+            directory::{
+                entry::DirectoryEntry,
+                mutable::entry_constructor::{EntryConstructor, NewEntryType},
+            },
+            path::Path,
+        };
+
         use {
+            fuchsia_zircon::Status,
             futures::{
                 channel::oneshot,
                 task::{Context, Poll},
@@ -639,5 +694,25 @@ mod tests {
         }
 
         impl Unpin for ControlledTask {}
+
+        pub(super) struct MockEntryConstructor {}
+
+        impl MockEntryConstructor {
+            pub(super) fn new() -> Arc<Self> {
+                Arc::new(Self {})
+            }
+        }
+
+        impl EntryConstructor for MockEntryConstructor {
+            fn create_entry(
+                self: Arc<Self>,
+                _parent: Arc<dyn DirectoryEntry>,
+                _what: NewEntryType,
+                _name: &str,
+                _path: &Path,
+            ) -> Result<Arc<dyn DirectoryEntry>, Status> {
+                panic!("Not implemented")
+            }
+        }
     }
 }
