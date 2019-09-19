@@ -9,19 +9,45 @@ group("tests") {
   ]
 }
 
+group("sysconfig-client") {
+  deps = [
+    ":sysconfig-sync-client",
+    ":sysconfig-sync-client-c",
+  ]
+}
+
 library("sysconfig-sync-client") {
+  sdk = "source"
+  sdk_headers = ["include/lib/sysconfig/sync-client.h"]
+
   sources = [
     "sync-client.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp.headers",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/fzl:fzl.headers",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+library("sysconfig-sync-client-c") {
+  sdk = "source"
+  sdk_headers = ["include/lib/sysconfig/sync-client-c.h"]
+
+  sources = [
+    "sync-client-c.cc",
+  ]
+  deps = [
+    ":sysconfig-sync-client",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

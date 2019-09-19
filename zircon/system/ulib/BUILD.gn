@@ -116,6 +116,7 @@ group("ulib") {
     "storage-metrics",
     "svc",
     "sync",
+    "sysconfig-client",
     "syslog",
     "sysmem-connector",
     "task-utils",
