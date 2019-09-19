@@ -146,7 +146,7 @@ class result final {
   result(const result& other) = default;
 
   // Moves from another result, leaving the other one in a pending state.
-  result(result&& other) : state_(std::move(other.state_)) { other.reset(); }
+  result(result&& other) noexcept : state_(std::move(other.state_)) { other.reset(); }
 
   ~result() = default;
 
