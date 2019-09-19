@@ -116,10 +116,7 @@ class TileChrome extends StatelessWidget {
 
           // Cancel edit button.
           if (editing)
-            _buildTitleBarTextButton(context, 'Cancel', () {
-              onEdit?.call();
-              onCancelEdit?.call();
-            }),
+            _buildTitleBarTextButton(context, 'Cancel', onTapCancel),
 
           // Story name.
           Expanded(
@@ -127,6 +124,7 @@ class TileChrome extends StatelessWidget {
                 ? TextField(
                     controller: titleFieldController,
                     autofocus: true,
+                    onSubmitted: (_) => onTapDone(),
                   )
                 : _buildTitleBarTextButton(context, name ?? '<>', onEdit),
           ),
@@ -140,10 +138,7 @@ class TileChrome extends StatelessWidget {
 
           // Done edit button.
           if (editing)
-            _buildTitleBarTextButton(context, 'Done', () {
-              onEdit?.call();
-              onConfirmEdit?.call();
-            }),
+            _buildTitleBarTextButton(context, 'Done', onTapDone),
 
           if (editing)
             Padding(
@@ -151,6 +146,16 @@ class TileChrome extends StatelessWidget {
             ),
         ],
       );
+
+  void onTapCancel() {
+    onEdit?.call();
+    onCancelEdit?.call();
+  }
+
+  void onTapDone() {
+    onEdit?.call();
+    onConfirmEdit?.call();
+  }
 
   Widget _buildTitleBarTextButton(
     BuildContext context,
