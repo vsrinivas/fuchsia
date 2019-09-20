@@ -238,10 +238,11 @@ template("go_build") {
       if (is_host && !is_test) {
         tool_paths = [
           {
-            name = output_name
-            path = rebase_path(output_path, root_build_dir)
-            label = get_label_info(":$main_target_name", "label_with_toolchain")
             cpu = current_cpu
+            label = get_label_info(":$main_target_name", "label_with_toolchain")
+            name = output_name
+            os = current_os
+            path = rebase_path(output_path, root_build_dir)
           },
         ]
       }

@@ -255,8 +255,11 @@ if (toolchain_variant.with_shared) {
         # -shared toolchain, so any going truly unused will be caught there.
         not_needed(invoker, "*")
 
+        shared_out_dir =
+            get_label_info("//anything(${current_toolchain}-shared)",
+                           "root_out_dir")
         if (!defined(output_dir)) {
-          output_dir = root_out_dir
+          output_dir = shared_out_dir
         }
         if (!defined(output_name)) {
           output_name = target_name
