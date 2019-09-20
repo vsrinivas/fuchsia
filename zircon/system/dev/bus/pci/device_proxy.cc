@@ -4,6 +4,7 @@
 
 #include "device_proxy.h"
 
+#include <cstring>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 
@@ -216,13 +217,12 @@ zx_status_t DeviceProxy::PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offs
 }
 
 zx_status_t DeviceProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
-
   if (!out_offset) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  PciRpcMsg req;
+  memset(&req, 0, sizeof(req));
   req.cap.id = cap_id;
   if (offset == kPciCapOffsetFirst) {
     req.cap.is_first = true;
@@ -231,6 +231,8 @@ zx_status_t DeviceProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, ui
     req.cap.offset = offset;
   }
 
+  PciRpcMsg resp;
+  memset(&resp, 0, sizeof(resp));
   zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_offset = static_cast<uint8_t>(resp.cap.offset);
@@ -244,13 +246,12 @@ zx_status_t DeviceProxy::PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t
 
 zx_status_t DeviceProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset,
                                                       uint16_t* out_offset) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
-
   if (!out_offset) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  PciRpcMsg req;
+  memset(&req, 0, sizeof(req));
   req.cap.id = cap_id;
   if (offset == kPciExtCapOffsetFirst) {
     req.cap.is_first = true;
@@ -260,6 +261,8 @@ zx_status_t DeviceProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t 
   }
   req.cap.is_extended = true;
 
+  PciRpcMsg resp;
+  memset(&resp, 0, sizeof(resp));
   zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_offset = resp.cap.offset;

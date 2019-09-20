@@ -171,7 +171,8 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
   ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
 
   // Use a temporary parameter set to avoid populating the output until we're sure it's valid.
-  fuchsia_tee_ParameterSet parameter_set = {};
+  fuchsia_tee_ParameterSet parameter_set;
+  memset(&parameter_set, 0, sizeof(parameter_set));
 
   // Below code assumes that we can fit all of the parameters from optee into the FIDL parameter
   // set. This static assert ensures that the FIDL parameter set can always fit the number of
