@@ -60,6 +60,92 @@ void RepairCorruptedSuperblock(fbl::unique_fd fd, const char* mount_path,
   ASSERT_EQ(minfs::kMinfsMagic0, info.magic0);
 }
 
+enum class Comparison {
+  kSame,
+  kDifferent,
+};
+
+void CompareSuperblockAndBackupAllocCounts(const fbl::unique_fd& fd, uint32_t backup_location,
+                                           Comparison value) {
+  minfs::Superblock info;
+
+  // Try reading the superblock.
+  ASSERT_GE(pread(fd.get(), &info, minfs::kMinfsBlockSize, minfs::kSuperblockStart), 0,
+            "Unable to read superblock.");
+  ASSERT_EQ(minfs::kMinfsMagic0, info.magic0);
+
+  // Try reading the backup superblock.
+  minfs::Superblock backup_info;
+  ASSERT_GE(pread(fd.get(), &backup_info, minfs::kMinfsBlockSize,
+            backup_location * minfs::kMinfsBlockSize), 0, "Unable to read backup superblock.");
+  ASSERT_EQ(minfs::kMinfsMagic0, backup_info.magic0);
+
+  if (value == Comparison::kSame) {
+    EXPECT_EQ(info.alloc_block_count, backup_info.alloc_block_count);
+    EXPECT_EQ(info.alloc_inode_count, backup_info.alloc_inode_count);
+  } else {
+    EXPECT_NE(info.alloc_block_count, backup_info.alloc_block_count);
+    EXPECT_NE(info.alloc_inode_count, backup_info.alloc_inode_count);
+  }
+}
+
+void TestAllocCountWriteFrequency(fbl::unique_fd fd, const char* mount_path,
+                                  const char* ramdisk_path, uint32_t backup_location) {
+  // Check that superblock and backup alloc counts are same, before mounting the filesystem.
+  ASSERT_NO_FAILURES(CompareSuperblockAndBackupAllocCounts(fd, backup_location,
+                     Comparison::kSame));
+
+  // Mount the filesystem.
+  ASSERT_EQ(ZX_OK, mount(fd.release(), mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+            launch_stdio_async));
+
+  // Mount consumes the device fd, hence ramdisk needs to be opened again.
+  fbl::unique_fd fd_device(open(ramdisk_path, O_RDWR));
+  ASSERT_TRUE(fd_device);
+
+  // Check that superblock and backup alloc counts are same.
+  ASSERT_NO_FAILURES(CompareSuperblockAndBackupAllocCounts(fd_device, backup_location,
+                     Comparison::kSame));
+
+  // Create a directory to force allocating inodes as well as data blocks.
+  char path[PATH_MAX] = {0};
+  const char test_dir[] = "test_dir";
+  snprintf(path, sizeof(path), "%s/%s", mount_path, test_dir);
+  ASSERT_EQ(0, mkdir(path, 0777));
+
+  // Create a file in the test directory to force allocating inodes as well as data blocks
+  // and write to it.
+  char file_path[PATH_MAX] = {0};
+  const char file_name[] = "test_dir/file1";
+  snprintf(file_path, sizeof(file_path), "%s/%s", mount_path, file_name);
+  fbl::unique_fd fd_file(open(file_path, O_RDWR | O_CREAT));
+  ASSERT_TRUE(fd_file);
+
+  // Write something to the file.
+  char data[minfs::kMinfsBlockSize];
+  memset(data, 0xb0b, sizeof(data));
+  ASSERT_EQ(write(fd_file.get(), data, sizeof(data)), sizeof(data));
+  ASSERT_EQ(fsync(fd_file.get()), 0);
+  ASSERT_EQ(close(fd_file.release()), 0);
+
+  // Open the root directory to fsync the filesystem.
+  fbl::unique_fd fd_mount(open(mount_path, O_RDONLY));
+  ASSERT_TRUE(fd_mount);
+  ASSERT_EQ(fsync(fd_mount.get()), 0);
+  ASSERT_EQ(close(fd_mount.release()), 0);
+
+  // Check that superblock and backup alloc counts are now different.
+  ASSERT_NO_FAILURES(CompareSuperblockAndBackupAllocCounts(fd_device, backup_location,
+                     Comparison::kDifferent));
+
+  // Unmount the filesystem.
+  ASSERT_EQ(ZX_OK, umount(mount_path));
+
+  // Check that superblock and backup alloc counts are same.
+  ASSERT_NO_FAILURES(CompareSuperblockAndBackupAllocCounts(fd_device, backup_location,
+                     Comparison::kSame));
+}
+
 // Tests backup superblock functionality on minfs backed with non-FVM block device.
 TEST(NonFvmBackupSuperblockTest, NonFvmMountCorruptedSuperblock)  {
   const char* mount_path = "/tmp/mount_backup";
@@ -72,6 +158,25 @@ TEST(NonFvmBackupSuperblockTest, NonFvmMountCorruptedSuperblock)  {
   ASSERT_TRUE(fd);
 
   ASSERT_NO_FAILURES(RepairCorruptedSuperblock(std::move(fd), mount_path, ramdisk_path,
+                     minfs::kNonFvmSuperblockBackup));
+
+  ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
+  ASSERT_EQ(unlink(mount_path), 0);
+}
+
+// Tests alloc_*_counts write frequency difference for backup superblock on minfs backed with
+// non-FVM block device.
+TEST(NonFvmBackupSuperblockTest, NonFvmAllocCountWriteFrequency)  {
+  const char* mount_path = "/tmp/mount_backup";
+  ramdisk_client_t* ramdisk = nullptr;
+  ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
+  const char* ramdisk_path = ramdisk_get_path(ramdisk);
+  ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
+  ASSERT_EQ(mkdir(mount_path, 0666), 0);
+  fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+  ASSERT_TRUE(fd);
+
+  ASSERT_NO_FAILURES(TestAllocCountWriteFrequency(std::move(fd), mount_path, ramdisk_path,
                      minfs::kNonFvmSuperblockBackup));
 
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
