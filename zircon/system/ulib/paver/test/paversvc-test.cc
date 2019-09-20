@@ -46,7 +46,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .partition_map =
                 {
                     .device_guid = {},
-                    .partition_count = 8,
+                    .partition_count = 6,
                     .partitions =
                         {
                             {
@@ -105,35 +105,13 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .bbt = false,
                             },
                             {
-                                .type_guid = GUID_VBMETA_A_VALUE,
+                                .type_guid = GUID_SYS_CONFIG_VALUE,
                                 .unique_guid = {},
                                 .first_block = 14,
-                                .last_block = 15,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_VBMETA_B_VALUE,
-                                .unique_guid = {},
-                                .first_block = 16,
                                 .last_block = 17,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
-                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_VBMETA_R_VALUE,
-                                .unique_guid = {},
-                                .first_block = 18,
-                                .last_block = 19,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'r'},
+                                .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
                                 .hidden = false,
                                 .bbt = false,
                             },
@@ -168,6 +146,8 @@ class PaverServiceTest : public zxtest::Test {
     ASSERT_EQ(device_.get(), nullptr);
     SkipBlockDevice::Create(kNandInfo, &device_);
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(), "misc/sysinfo", &fd));
   }
 
   // Spawn an isolated devmgr without a skip-block device.
@@ -183,10 +163,10 @@ class PaverServiceTest : public zxtest::Test {
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
   }
 
-  void CreatePayload(size_t num_blocks, ::llcpp::fuchsia::mem::Buffer* out) {
+  void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
     zx::vmo vmo;
     fzl::VmoMapper mapper;
-    const size_t size = kPageSize * kPagesPerBlock * num_blocks;
+    const size_t size = kPageSize * num_pages;
     ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
     memset(mapper.start(), 0x4a, mapper.size());
     out->vmo = std::move(vmo);
@@ -208,6 +188,15 @@ class PaverServiceTest : public zxtest::Test {
       ASSERT_EQ(start[i], 0xff, "i = %zu", i);
     }
   }
+
+  void ValidateWrittenPages(uint32_t page, size_t num_pages) {
+    const uint8_t* start =
+        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    for (size_t i = 0; i < kPageSize * num_pages; i++) {
+      ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
+    }
+  }
+
 
   void* provider_ctx_ = nullptr;
   fbl::unique_ptr<SkipBlockDevice> device_;
@@ -240,7 +229,7 @@ TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
 TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
                                     ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
@@ -252,7 +241,7 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
 TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
                                     ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
@@ -265,7 +254,7 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
 TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
                                     ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
@@ -277,52 +266,48 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
                                     ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
                                     std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  ValidateWritten(14, 2);
-  ValidateUnwritten(16, 4);
+  ValidateWrittenPages(14 * kPagesPerBlock + 32, 32);
 }
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigB) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
                                     ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
                                     std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  ValidateUnwritten(14, 2);
-  ValidateWritten(16, 2);
-  ValidateUnwritten(18, 2);
+  ValidateWrittenPages(14 * kPagesPerBlock + 64, 32);
 }
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
                                     ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
                                     std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  ValidateUnwritten(14, 4);
-  ValidateWritten(18, 2);
+  ValidateWrittenPages(14 * kPagesPerBlock + 96, 32);
 }
 
 TEST_F(PaverServiceTest, WriteAssetTwice) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(2, &payload);
+  CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
                                     ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  CreatePayload(2, &payload);
+  CreatePayload(2 * kPagesPerBlock, &payload);
   ValidateWritten(8, 2);
   ValidateUnwritten(10, 4);
   result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
@@ -336,7 +321,7 @@ TEST_F(PaverServiceTest, WriteAssetTwice) {
 TEST_F(PaverServiceTest, WriteBootloader) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(4, &payload);
+  CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = client_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);

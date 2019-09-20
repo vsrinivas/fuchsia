@@ -121,6 +121,8 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
   ASSERT_OK(ramdevice_client::RamNandCtl::Create(&ctl));
   std::optional<ramdevice_client::RamNand> ram_nand;
   ASSERT_OK(ramdevice_client::RamNand::Create(ctl, &info, &ram_nand));
+  fbl::unique_fd fd;
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(ctl->devfs_root(), "misc/sysinfo", &fd));
   device->emplace(std::move(ctl), *std::move(ram_nand), std::move(mapper));
 }
 
