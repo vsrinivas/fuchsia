@@ -61,7 +61,7 @@ void ProcessDiskObjects(std::unique_ptr<disk_inspector::DiskObject> obj, uint32_
     } break;
 
     default:
-      ZX_ASSERT_MSG(false, "Unknown object size: %lu", size);
+      ZX_ASSERT_MSG(false, "Unknown object size: %lu\n", size);
   }
 }
 
@@ -71,7 +71,6 @@ int Inspect(fbl::unique_fd fd) {
 
   if (inspector.GetRoot(&root) == ZX_OK) {
     ProcessDiskObjects(std::move(root), 0);
-    printf("\n");
     return 0;
   }
   fprintf(stderr, "ERROR: GetRoot failed\n");
