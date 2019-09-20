@@ -192,13 +192,9 @@ static inline std::string port_string_by_verbosity(uint16_t port, size_t verbosi
   return stream.str();
 }
 
-// Return a `stringstream` with highlighting applied, as appropriate.
-inline std::stringstream highlighted_stream(const Packet& packet, const NetdumpOptions& options) {
-  std::stringstream stream;
-  if (options.highlight_filter != nullptr && options.highlight_filter->match(packet)) {
-    stream << parser::ANSI_HIGHLIGHT;
-  }
-  return stream;
+// Test if the packet should be highlit.
+inline bool to_highlight(const Packet& packet, const NetdumpOptions& options) {
+  return (options.highlight_filter != nullptr && options.highlight_filter->match(packet));
 }
 
 // Write link level information to `stream` and return the ethtype.
@@ -267,7 +263,11 @@ void parse_l4_packet(uint8_t transport_protocol, const Packet& packet,
 }
 
 void parse_packet(const Packet& packet, const NetdumpOptions& options) {
-  std::stringstream stream = highlighted_stream(packet, options);
+  std::stringstream stream;
+  auto is_highlit = to_highlight(packet, options);
+  if (is_highlit) {
+    stream << parser::ANSI_HIGHLIGHT;
+  }
   uint16_t ethtype = parse_l2_packet(packet, options, &stream);
   if (packet.ip != nullptr) {
     uint8_t transport_protocol = parse_l3_packet(ethtype, packet, options, &stream);
@@ -279,7 +279,12 @@ void parse_packet(const Packet& packet, const NetdumpOptions& options) {
   } else {
     stream << "L3 headers incomplete or unhandled";  // Ethtype is displayed in L2 parsing.
   }
-  std::cout << stream.str() << parser::ANSI_RESET << std::endl;
+
+  if (is_highlit) {
+    std::cout << stream.str() << parser::ANSI_RESET << std::endl;
+  } else {
+    std::cout << stream.str() << std::endl;
+  }
 }
 
 inline bool filter_packet(const NetdumpOptions& options, Packet* packet) {
