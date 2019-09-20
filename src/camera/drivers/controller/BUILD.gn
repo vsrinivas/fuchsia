@@ -7,18 +7,26 @@ import("//build/package.gni")
 
 driver_module("controller-driver") {
   output_name = "controller"
+  deps = [
+    "//src/camera/drivers/controller/:controller-source",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+source_set("controller-source") {
+  visibility = [ "../*" ]
   sources = [
-    "controller.cc",
+    "config.cc",
+    "controller-device.cc",
+    "controller-protocol.cc",
   ]
   deps = [
-    "//zircon/system/banjo/ddk.protocol.composite",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -37,11 +45,12 @@ driver_module("controller-driver") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.gdc",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 package("controller") {

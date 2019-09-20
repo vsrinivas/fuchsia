@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "controller.h"
+#include "controller-device.h"
 
+#include <lib/fidl/cpp/binding.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -22,23 +23,50 @@ enum {
   COMPONENT_GDC,
   COMPONENT_COUNT,
 };
-
 }
-void Controller::DdkUnbind() {
+void ControllerDevice::DdkUnbind() {
   ShutDown();
   DdkRemove();
 }
 
-void Controller::DdkRelease() { delete this; }
+void ControllerDevice::DdkRelease() { delete this; }
 
-void Controller::ShutDown() {}
+zx_status_t ControllerDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &fidl_ops);
+}
 
-zx_status_t Controller::StartThread() {
+zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
+  if (handle == ZX_HANDLE_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (controller_ != nullptr) {
+    zx::channel channel(handle);
+    zxlogf(ERROR, "%s: Camera2 Controller already running", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  zx::channel channel(handle);
+  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
+
+  if (control_interface.is_valid()) {
+    controller_ = std::make_unique<ControllerImpl>(std::move(control_interface),
+                                                   controller_loop_.dispatcher(),
+                                                   [this] { controller_.reset(); });
+
+    return ZX_OK;
+  }
+  return ZX_ERR_INTERNAL;
+}
+
+void ControllerDevice::ShutDown() {}
+
+zx_status_t ControllerDevice::StartThread() {
   return controller_loop_.StartThread("camera-controller-loop", &loop_thread_);
 }
 
 // static
-zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* out) {
+zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<ControllerDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: could not get composite protocoln", __func__);
@@ -65,8 +93,8 @@ zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* 
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto controller =
-      std::make_unique<Controller>(parent, components[COMPONENT_ISP], components[COMPONENT_GDC]);
+  auto controller = std::make_unique<ControllerDevice>(parent, components[COMPONENT_ISP],
+                                                       components[COMPONENT_GDC]);
 
   auto status = controller->StartThread();
   if (status != ZX_OK) {
@@ -77,31 +105,31 @@ zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* 
   return ZX_OK;
 }
 
-zx_status_t ControllerBind(void* /*ctx*/, zx_device_t* device) {
-  std::unique_ptr<Controller> controller;
-  auto status = camera::Controller::Setup(device, &controller);
+zx_status_t ControllerDeviceBind(void* /*ctx*/, zx_device_t* device) {
+  std::unique_ptr<ControllerDevice> controller_device;
+  auto status = camera::ControllerDevice::Setup(device, &controller_device);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not setup camera_controller: %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: Could not setup camera_controller_device: %d\n", __func__, status);
     return status;
   }
 
-  status = controller->DdkAdd("camera-controller");
+  status = controller_device->DdkAdd("camera-controller-device");
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not add camera_controller device: %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: Could not add camera_controller_device device: %d\n", __func__, status);
     return status;
   }
 
-  FX_LOGF(INFO, "", "%s: camera_controller driver added\n", __func__);
+  FX_LOGF(INFO, "", "%s: camera_controller_device driver added\n", __func__);
 
   // controller device intentionally leaked as it is now held by DevMgr.
-  __UNUSED auto* dev = controller.release();
+  __UNUSED auto* dev = controller_device.release();
   return status;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = ControllerBind;
+  ops.bind = ControllerDeviceBind;
   return ops;
 }();
 
