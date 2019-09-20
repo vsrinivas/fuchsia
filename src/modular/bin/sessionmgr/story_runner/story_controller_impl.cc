@@ -632,9 +632,11 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     // Check for existing module at the given path.
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path());
+
     if (module_data_.module_deleted()) {
       // If the module is running, kill it.
       if (running_mod_info) {
+        running_mod_info->is_deleted_property.Set("True");
         operation_queue_.Add(std::make_unique<KillModuleCall>(story_controller_impl_,
                                                               std::move(module_data_), [flow] {}));
       }

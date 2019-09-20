@@ -206,7 +206,8 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
   EXPECT_THAT(grandchild.at(0),
               NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                  StringIs("is_embedded", "False"), StringIs("Module Source", "EXTERNAL"))))));
+                  StringIs("is_embedded", "False"), StringIs("module_source", "EXTERNAL"),
+                  StringIs("is_deleted", "False"))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
