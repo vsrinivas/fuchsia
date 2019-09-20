@@ -16,8 +16,10 @@
 #include <glm/gtx/string_cast.hpp>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/images/cpp/images.h>
@@ -1312,6 +1314,79 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
   EXPECT_EQ(histogram[shapes[0].color], 0u);
   EXPECT_EQ(histogram[shapes[2].color], 0u);
   EXPECT_GT(histogram[shapes[1].color], 0u);
+}
+
+// We cannot capture protected content, so we expect a black screenshot instead.
+TEST_F(ScenicPixelTest, ProtectedImage) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera().SetProjection(0);
+
+  fuchsia::images::ImagePipe2Ptr image_pipe;
+  const uint32_t kImagePipeId = session->next_resource_id();
+  session->Enqueue(scenic::NewCreateImagePipe2Cmd(kImagePipeId, image_pipe.NewRequest()));
+
+  const uint32_t kMaterialId = kImagePipeId + 1;
+  session->Enqueue(scenic::NewCreateMaterialCmd(kMaterialId));
+  session->Enqueue(scenic::NewSetTextureCmd(kMaterialId, kImagePipeId));
+
+  const uint32_t kShapeNodeId = kMaterialId + 1;
+  session->Enqueue(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewSetMaterialCmd(kShapeNodeId, kMaterialId));
+  const uint32_t kShapeId = kShapeNodeId + 1;
+  session->Enqueue(scenic::NewCreateRectangleCmd(kShapeId, display_width, display_height));
+  session->Enqueue(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
+  session->Enqueue(scenic::NewAddChildCmd(test_session->root_node.id(), kShapeNodeId));
+  Present(session);
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  status = local_token->Sync();
+  EXPECT_EQ(status, ZX_OK);
+  const uint32_t kBufferId = 1;
+  image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                  buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.secure_required = true;
+  constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+  constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferSrc;
+  status = buffer_collection->SetConstraints(true, constraints);
+  EXPECT_EQ(status, ZX_OK);
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  if (allocation_status != ZX_OK) {
+    // Protected memory might not be available in some devices which causes allocation failure.
+    GTEST_SKIP();
+  }
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_secure);
+  status = buffer_collection->Close();
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::ImageFormat_2 image_format = {};
+  image_format.coded_width = 1;
+  image_format.coded_height = 1;
+  const uint32_t kImageId = 1;
+  image_pipe->AddImage(kImageId, kBufferId, 0, image_format);
+  Present(session);
+
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
+  EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
 }
 
 }  // namespace

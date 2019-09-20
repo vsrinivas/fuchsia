@@ -7,6 +7,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
+#include "src/ui/scenic/lib/gfx/resources/image_base.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
@@ -28,8 +29,13 @@ namespace scenic_impl {
 namespace gfx {
 
 EngineRendererVisitor::EngineRendererVisitor(escher::PaperRenderer* renderer,
-                                             escher::BatchGpuUploader* gpu_uploader)
-    : renderer_(renderer), gpu_uploader_(gpu_uploader) {}
+                                             escher::BatchGpuUploader* gpu_uploader,
+                                             bool hide_protected_memory,
+                                             escher::MaterialPtr replacement_material)
+    : renderer_(renderer),
+      gpu_uploader_(gpu_uploader),
+      hide_protected_memory_(hide_protected_memory),
+      replacement_material_(replacement_material) {}
 
 void EngineRendererVisitor::Visit(Memory* r) { FXL_CHECK(false); }
 
@@ -128,6 +134,12 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
 
   escher::MaterialPtr escher_material = material->escher_material();
   FXL_DCHECK(escher_material);
+
+  if (hide_protected_memory_ && material->texture_image() &&
+      material->texture_image()->use_protected_memory()) {
+    FXL_DCHECK(replacement_material_);
+    escher_material = replacement_material_;
+  }
 
   if (opacity_ < 1.f) {
     // When we want to support other material types (e.g. metallic shaders),

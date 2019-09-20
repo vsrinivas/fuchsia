@@ -245,7 +245,12 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   // TODO(SCN-1256): scene-visitation should generate cameras, collect
   // lights, etc.
   escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
-  EngineRendererVisitor visitor(paper_renderer_.get(), &gpu_uploader);
+  // Using resources allocated with protected memory on non-protected CommandBuffers is not allowed.
+  // In order to avoid breaking access rules, we should replace them with non-protected materials
+  // when using a non-protected |frame|.
+  const bool hide_protected_memory = !frame->use_protected_memory();
+  EngineRendererVisitor visitor(paper_renderer_.get(), &gpu_uploader, hide_protected_memory,
+                                hide_protected_memory ? GetReplacementMaterial() : nullptr);
   visitor.Visit(camera->scene().get());
 
   gpu_uploader.Submit();
@@ -267,6 +272,23 @@ escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32
     info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }
   return escher_->image_cache()->NewImage(info);
+}
+
+escher::MaterialPtr EngineRenderer::GetReplacementMaterial() {
+  if (!replacement_material_) {
+    FXL_DCHECK(escher_);
+    // Fuchsia color.
+    uint8_t channels[4];
+    channels[0] = channels[2] = channels[3] = 255;
+    channels[1] = 0;
+    glm::vec4 color;
+    color.x = color.z = color.a = 255;
+    color.y = 0;
+    auto image = escher_->NewRgbaImage(1, 1, channels);
+    replacement_material_ =
+        escher::Material::New(color, escher_->NewTexture(std::move(image), vk::Filter::eNearest));
+  }
+  return replacement_material_;
 }
 
 }  // namespace gfx

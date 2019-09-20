@@ -13,19 +13,22 @@ namespace gfx {
 
 class Node;
 
-// EngineRendererVisitor is used by EngineRender to traverse a Scene, drawing it
-// via PaperRenderer.
+// EngineRendererVisitor is used by EngineRender to traverse a Scene, drawing it via PaperRenderer.
 //
-// EngineRendererVisitor's user is responsible for guaranteeing the lifetime of
-// the |renderer| and |gpu_uploader|, as well as for invoking
-// PaperRenderer::Begin/EndFrame() and BatchGpuUploader::Submit().
+// EngineRendererVisitor's user is responsible for guaranteeing the lifetime of the |renderer| and
+// |gpu_uploader|, as well as for invoking PaperRenderer::Begin/EndFrame() and
+// BatchGpuUploader::Submit().
+//
+// If |hide_protected_memory| true, content using protected memory will be replaced by
+// |replacement_material|.
 //
 // This class is currently designed for one-time use, and is typically destroyed
 // immediately afterward.
 class EngineRendererVisitor : public ResourceVisitor {
  public:
   // Both the renderer and gpu_uploader must outlive this visitor.
-  EngineRendererVisitor(escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader);
+  EngineRendererVisitor(escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader,
+                        bool hide_protected_memory, escher::MaterialPtr replacement_material);
 
   // Main entry point.
   // TODO(SCN-1256): EngineRenderer should visit the whole scene-graph, not just
@@ -78,6 +81,9 @@ class EngineRendererVisitor : public ResourceVisitor {
 
   escher::PaperRenderer* const renderer_;
   escher::BatchGpuUploader* const gpu_uploader_;
+
+  bool hide_protected_memory_ = false;
+  escher::MaterialPtr replacement_material_;
 };
 
 }  // namespace gfx

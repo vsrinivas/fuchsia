@@ -44,10 +44,13 @@ class EngineRenderer {
       const escher::FramePtr& frame, Camera* camera, escher::ViewingVolume viewing_volume,
       zx::time target_presentation_time);
 
+  escher::MaterialPtr GetReplacementMaterial();
+
   const escher::EscherWeakPtr escher_;
   escher::PaperRendererPtr paper_renderer_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader> pose_buffer_latching_shader_;
   vk::Format depth_stencil_format_ = vk::Format::eUndefined;
+  escher::MaterialPtr replacement_material_;
 };
 
 }  // namespace gfx

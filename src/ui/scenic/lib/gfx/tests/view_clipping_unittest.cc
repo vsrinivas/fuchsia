@@ -290,7 +290,8 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   paper_renderer->BeginFrame(frame, paper_scene, {camera}, output_image);
 
   BatchGpuUploader gpu_uploader(escher, frame->frame_number());
-  EngineRendererVisitor visitor(paper_renderer.get(), &gpu_uploader);
+  EngineRendererVisitor visitor(paper_renderer.get(), &gpu_uploader,
+                                /*hide_protected_memory=*/false, nullptr);
   visitor.Visit(scene.get());
 
   // Get the cache entries from the PaperDrawcallFactory.
