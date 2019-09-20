@@ -25,6 +25,7 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
+#include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/constants.h"
@@ -2416,10 +2417,24 @@ TEST_F(PageStorageTest, PageIsSynced) {
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(is_synced);
-  // Mark objects (and the root tree node) as synced and expect that the page is
-  // still unsynced.
-  for (const auto& object_identifier : stored_identifiers) {
-    called = false;
+
+  // Mark all objects (tree nodes and values of entries in the tree) as synced and expect that the
+  // page is still unsynced.
+  //
+  // There is not enough data in the tree for a tree node to be split, but it may still contain
+  // multiple tree nodes. The values will not be split either, so all the objects are chunks and
+  // |GetObjectIdentifiers| returns all the object identifiers we need to mark as synced.
+  std::set<ObjectIdentifier> object_identifiers;
+  btree::GetObjectIdentifiers(
+      environment_.coroutine_service(), storage_.get(),
+      {GetFirstHead()->GetRootIdentifier(), PageStorage::Location::Local()},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  for (const auto& object_identifier : object_identifiers) {
+    ASSERT_TRUE(GetObjectDigestInfo(object_identifier.object_digest()).is_chunk());
     storage_->MarkPieceSynced(object_identifier,
                               callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
@@ -2427,14 +2442,6 @@ TEST_F(PageStorageTest, PageIsSynced) {
     EXPECT_EQ(status, Status::OK);
   }
 
-  called = false;
-  storage_->MarkPieceSynced(GetFirstHead()->GetRootIdentifier(),
-                            callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(status, Status::OK);
-
-  called = false;
   storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -2442,13 +2449,12 @@ TEST_F(PageStorageTest, PageIsSynced) {
   EXPECT_FALSE(is_synced);
 
   // Mark the commit as synced and expect that the page is synced.
-  called = false;
   storage_->MarkCommitSynced(commit_id,
                              callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  called = false;
+
   storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
