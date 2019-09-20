@@ -305,10 +305,12 @@ fn populate_inspect_repo(
 ) -> Result<(), Error> {
     let state = state.lock().unwrap();
     let mut inspect_repo = state.inspect_repository.lock().unwrap();
-    inspect_repo.add(
-        inspect_reader_data.component_hierarchy_path,
-        inspect_reader_data.data_directory_proxy,
-    );
+
+    // The InspectreaderData should always contain a directory_proxy. Its existence
+    // as an Option is only to support mock objects for equality in tests.
+    let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
+
+    inspect_repo.add(inspect_reader_data.component_hierarchy_path, inspect_directory_proxy);
     Ok(())
 }
 
