@@ -11,7 +11,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.netemul.sandbox.Sandbox"
+            "fuchsia.netemul.sandbox.Sandbox",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

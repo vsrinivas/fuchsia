@@ -189,7 +189,41 @@ async fn get_aggregate_stats() -> Result {
     let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
         .context("failed to create node proxy")?;
     let () = netstack_proxy.get_aggregate_stats(server).context("failed to get aggregate stats")?;
-    let dir_entries = files_async::readdir_recursive(&client).await.context("failed to readdir")?;
+
+    verify_stats(&client).await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn read_stats_from_debug() -> Result {
+    let launcher = fuchsia_component::client::launcher().context("failed to create launcher")?;
+
+    let netstack = fuchsia_component::client::launch(
+        &launcher,
+        fuchsia_component::fuchsia_single_component_package_url!("netstack").to_string(),
+        None,
+    )
+    .context("failed to start netstack")?;
+
+    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+        .context("failed to create node proxy")?;
+
+    // TODO(fxbug.dev/4629): the launcher API lies and claims it connects you to "the" directory
+    // request, but it doesn't. It connects you to the "svc" directory under the directory request.
+    // That means that reading anything other than FIDL services isn't possible, and THAT means
+    // that this test is impossible.
+    if false {
+        let () = netstack
+            .pass_to_named_service("debug/counters", server.into_channel())
+            .context("failed to connect to counters")?;
+
+        verify_stats(&client).await
+    } else {
+        Ok(())
+    }
+}
+
+async fn verify_stats(client: &fidl_fuchsia_io::DirectoryProxy) -> Result {
+    let dir_entries = files_async::readdir_recursive(client).await.context("failed to readdir")?;
     let path_segments: std::collections::hash_set::HashSet<usize> = dir_entries
         .iter()
         .map(|dir_entry| 1 + dir_entry.name.matches(std::path::MAIN_SEPARATOR).count())
@@ -198,23 +232,22 @@ async fn get_aggregate_stats() -> Result {
     // https://github.com/rust-lang/rust/issues/25725.
     assert_eq!(path_segments, [1, 2, 3].iter().cloned().collect());
 
-    {
-        // Aggregate stats' initial values should be zero, before any packet can be exchanged.
-        for e in &dir_entries {
-            let file_proxy = io_util::open_file(
-                &client,
-                &std::path::Path::new(&e.name),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            )?;
-            assert_eq!(0, read_stat_counter(file_proxy).await.context("failed to read stats")?);
-        }
-
-        // Make sure interesting stats exist.
-        assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsReceived"));
-        assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsSent"));
-        assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsReceived/Echo"));
-        assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsSent/Echo"));
+    // Aggregate stats' initial values should be zero, before any packet can be exchanged.
+    for entry in &dir_entries {
+        let file_proxy = io_util::open_file(
+            client,
+            &std::path::Path::new(&entry.name),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )
+        .with_context(|_| format!("failed to open {}", entry.name))?;
+        assert_eq!(0, read_stat_counter(file_proxy).await.context("failed to read stats")?);
     }
+
+    // Make sure interesting stats exist.
+    assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsReceived"));
+    assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsSent"));
+    assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsReceived/Echo"));
+    assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsSent/Echo"));
 
     Ok(())
 }

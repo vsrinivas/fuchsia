@@ -122,9 +122,11 @@ func Main() {
 		}
 	}
 
+	const counters = "counters"
+
 	stats := reflect.ValueOf(stk.Stats())
 	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
+	ctx.OutgoingService.AddObjects(counters, &context.DirectoryWrapper{
 		Directory: &context.DirectoryWrapper{
 			Directory: &statCounterInspectImpl{
 				svc:   &inspectService,
@@ -134,15 +136,19 @@ func Main() {
 		},
 	})
 
+	countersDirectory := context.DirectoryWrapper{
+		Directory: &reflectNode{
+			Value: stats,
+		},
+	}
+
+	ctx.OutgoingService.AddDebug(counters, &countersDirectory)
+
 	ctx.OutgoingService.AddService(
 		netstack.NetstackName,
 		&netstack.NetstackStub{Impl: &netstackImpl{
-			ns: ns,
-			getIO: (&context.DirectoryWrapper{
-				Directory: &reflectNode{
-					Value: stats,
-				},
-			}).GetDirectory,
+			ns:    ns,
+			getIO: countersDirectory.GetDirectory,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
 			k, err := netstackService.BindingSet.Add(s, c, nil)
