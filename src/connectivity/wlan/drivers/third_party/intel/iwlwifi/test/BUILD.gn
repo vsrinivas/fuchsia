@@ -28,7 +28,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fake_ddk",
     "//zircon/system/banjo/ddk.protocol.pci",
-    "//zircon/system/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
   ]
 
   public_deps = [

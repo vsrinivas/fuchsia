@@ -112,7 +112,7 @@ source_set("core") {
     # TODO: we should try to refactor Device so this isn't required outside of the :sim target
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
