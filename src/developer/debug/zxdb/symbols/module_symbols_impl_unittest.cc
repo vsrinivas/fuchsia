@@ -91,7 +91,7 @@ TEST(ModuleSymbols, Basic) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_TRUE(locations[0].is_symbolized());
   EXPECT_TRUE(StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
-  EXPECT_EQ(96, locations[0].file_line().line());
+  EXPECT_EQ(109, locations[0].file_line().line());
 
   // The function symbol should have a compilation unit with a C-style language
   // defined and the name should contain the file.

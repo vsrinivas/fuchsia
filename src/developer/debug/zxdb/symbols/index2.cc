@@ -320,6 +320,11 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
     }
   }
 
+  // If at this point we still don't have a name for the thing being indexed, give up trying to
+  // index it.
+  if (!indexable_[index_me].name() || !indexable_[index_me].name()[0])
+    return;
+
   // Goes to the parent. The first item was added above, the loop below will add going up the
   // parent chain from there.
   cur = scanner_.GetParentIndex(cur);
@@ -349,9 +354,16 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
   // Add the path to the index (walk in reverse to start from the root).
   for (int path_i = static_cast<int>(path_.size()) - 1; path_i >= 0; path_i--) {
     NamedDieRef* named_ref = path_[path_i];
+    const char* name = named_ref->name() ? named_ref->name() : "";
 
-    index_from = index_from->AddChild(named_ref->kind(), named_ref->name() ? named_ref->name() : "",
-                                      *named_ref);
+    // Only save the DIE reference for the thing we're attempting to index. Intermediate things
+    // don't need DIE references unless we independently decided those need indexing. Not only is
+    // adding these DIEs unnecessary, it can create unnamed type entries for things like anonymous
+    // enums which we don't want.
+    if (path_i == 0)
+      index_from = index_from->AddChild(named_ref->kind(), name, *named_ref);
+    else
+      index_from = index_from->AddChild(named_ref->kind(), name);
     named_ref->set_index_node(index_from);
   }
 }

@@ -25,7 +25,7 @@ const char TestSymbolModule::kAnonNSFunctionName[] = "AnonNSFunction";
 const char TestSymbolModule::kGlobalName[] = "my_ns::kGlobal";
 const char TestSymbolModule::kClassStaticName[] = "my_ns::MyClass::kClassStatic";
 const char TestSymbolModule::kPltFunctionName[] = "__stack_chk_fail";
-const uint64_t TestSymbolModule::kPltFunctionOffset = 0x10e0U;
+const uint64_t TestSymbolModule::kPltFunctionOffset = 0x14A0;
 
 TestSymbolModule::TestSymbolModule() = default;
 TestSymbolModule::~TestSymbolModule() = default;
@@ -59,7 +59,7 @@ std::string TestSymbolModule::GetCheckedInTestFileName() {
   return path + "libsymbol_test_so.targetso";
 }
 
-std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "be807a2ad9b56020"; }
+std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "5110be4602809d9e"; }
 
 std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {
   std::string path = GetTestFilePath(kRelativeTestDataPath);

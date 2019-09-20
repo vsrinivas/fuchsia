@@ -35,10 +35,13 @@ TEST(Index2, IndexDump) {
   const char kExpected[] = R"(  Namespaces:
     <<empty index string>>
       Functions:
+        AnonNSFunction
         LineLookupTest<0>
         LineLookupTest<1>
     my_ns
       Types:
+        Base1
+        Base2
         MyClass
           Types:
             Inner
@@ -48,17 +51,57 @@ TEST(Index2, IndexDump) {
             MyMemberOne
           Variables:
             kClassStatic
+        Struct
+          Functions:
+            MyFunc
+          Variables:
+            kConstInt
+            kConstLongDouble
+        StructMemberPtr
+        TypeForUsing
       Functions:
+        DoStructCall
+        GetStruct
+        GetStructMemberPtr
+        InlinedFunction
         NamespaceFunction
+        PassRValueRef
       Variables:
         kGlobal
+    std
+      Types:
+        nullptr_t
   Types:
     ClassInTest2
       Functions:
         FunctionInTest2
+    ForInline
+      Functions:
+        ForInline
+    MyTemplate<my_ns::Struct, 42>
+      Functions:
+        MyTemplate
+    StructWithEnums
+      Types:
+        RegularEnum
+        TypedEnum
+    __ARRAY_SIZE_TYPE__
+    char
     int
+    long double
+    signed char
+    unsigned int
   Functions:
+    CallInline
+    CallInlineMember
     DoLineLookupTest
+    GetIntPtr
+    GetNullPtrT
+    GetString
+    GetStructWithEnums
+    GetTemplate
+    GetUsing
+    My2DArray
     MyFunction
 )";
   EXPECT_EQ(kExpected, out.str());
@@ -67,9 +110,10 @@ TEST(Index2, IndexDump) {
   std::ostringstream files;
   index.DumpFileIndex(files);
   const char kExpectedFiles[] =
-      R"(line_lookup_symbol_test.cc -> ../../garnet/bin/zxdb/symbols/test_data/line_lookup_symbol_test.cc -> 1 units
-zxdb_symbol_test.cc -> ../../garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test.cc -> 1 units
-zxdb_symbol_test2.cc -> ../../garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test2.cc -> 1 units
+      R"(line_lookup_symbol_test.cc -> ../../src/developer/debug/zxdb/symbols/test_data/line_lookup_symbol_test.cc -> 1 units
+type_test.cc -> ../../src/developer/debug/zxdb/symbols/test_data/type_test.cc -> 1 units
+zxdb_symbol_test.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.cc -> 1 units
+zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test2.cc -> 1 units
 )";
   EXPECT_EQ(kExpectedFiles, files.str());
 }
