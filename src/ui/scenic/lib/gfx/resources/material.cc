@@ -43,7 +43,7 @@ namespace gfx {
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial, "Material"};
 
 Material::Material(Session* session, ResourceId id)
-    : Resource(session, id, Material::kTypeInfo),
+    : Resource(session, session->id(), id, Material::kTypeInfo),
       escher_material_(fxl::MakeRefCounted<escher::Material>()) {}
 
 void Material::SetColor(float red, float green, float blue, float alpha) {

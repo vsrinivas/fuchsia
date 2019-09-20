@@ -14,7 +14,7 @@ class EntityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  EntityNode(Session* session, ResourceId node_id);
+  EntityNode(Session* session, SessionId session_id, ResourceId node_id);
 
   void Accept(class ResourceVisitor* visitor) override;
 };

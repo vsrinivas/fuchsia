@@ -13,7 +13,8 @@ namespace gfx {
 const ResourceTypeInfo MeshShape::kTypeInfo = {ResourceType::kShape | ResourceType::kMesh,
                                                "MeshShape"};
 
-MeshShape::MeshShape(Session* session, ResourceId id) : Shape(session, id, MeshShape::kTypeInfo) {}
+MeshShape::MeshShape(Session* session, SessionId session_id, ResourceId id)
+    : Shape(session, session_id, id, MeshShape::kTypeInfo) {}
 
 escher::Object MeshShape::GenerateRenderObject(const escher::mat4& transform,
                                                const escher::MaterialPtr& material) {

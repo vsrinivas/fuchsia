@@ -10,7 +10,7 @@ namespace gfx {
 const ResourceTypeInfo ImageBase::kTypeInfo = {ResourceType::kImageBase, "ImageBase"};
 
 ImageBase::ImageBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : Resource(session, id, type_info) {
+    : Resource(session, session->id(), id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));
 }
 

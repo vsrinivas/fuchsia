@@ -20,7 +20,7 @@ const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
            fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
            std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter)
-    : Resource(session, id, View::kTypeInfo),
+    : Resource(session, session->id(), id, View::kTypeInfo),
       link_(std::move(link)),
       control_ref_(std::move(control_ref)),
       view_ref_(std::move(view_ref)),
@@ -33,7 +33,7 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
   FXL_DCHECK(event_reporter_);
   FXL_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
 
-  node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, weak_factory_.GetWeakPtr()));
+  node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, session->id(), weak_factory_.GetWeakPtr()));
 
   fuchsia::ui::views::ViewRef clone;
   fidl::Clone(view_ref_, &clone);

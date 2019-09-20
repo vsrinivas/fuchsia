@@ -18,8 +18,9 @@ namespace gfx {
 const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceType::kViewHolder,
                                                 "ViewHolder"};
 
-ViewHolder::ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link)
-    : Node(session, node_id, ViewHolder::kTypeInfo),
+ViewHolder::ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
+                       ViewLinker::ExportLink link)
+    : Node(session, session_id, node_id, ViewHolder::kTypeInfo),
       link_(std::move(link)),
       view_holder_koid_(link_.endpoint_id()),
       gfx_session_(session),
@@ -30,9 +31,7 @@ ViewHolder::ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportL
   gfx_session_->TrackViewHolder(GetWeakPtr());
 }
 
-ViewHolder::~ViewHolder() {
-  gfx_session_->UntrackViewHolder(view_holder_koid_);
-}
+ViewHolder::~ViewHolder() { gfx_session_->UntrackViewHolder(view_holder_koid_); }
 
 void ViewHolder::Connect() {
   link_.Initialize(this, fit::bind_member(this, &ViewHolder::LinkResolved),

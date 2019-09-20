@@ -29,7 +29,7 @@ class Scene final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Scene(Session* session, ResourceId node_id);
+  Scene(Session* session, SessionId session_id, ResourceId node_id);
   ~Scene() override;
 
   bool AddLight(const LightPtr& light, ErrorReporter* error_reporter);

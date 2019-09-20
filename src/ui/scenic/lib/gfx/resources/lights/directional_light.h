@@ -14,7 +14,7 @@ class DirectionalLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  DirectionalLight(Session* session, ResourceId id);
+  DirectionalLight(Session* session, SessionId session_id, ResourceId id);
 
   // The direction will be normalized before storing.  Returns false if the
   // length of |direction| is nearly zero.

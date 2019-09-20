@@ -13,10 +13,10 @@ namespace gfx {
 const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor, "DisplayCompositor"};
 
-DisplayCompositor::DisplayCompositor(Session* session, ResourceId id, SceneGraphWeakPtr scene_graph,
-                                     Display* display,
+DisplayCompositor::DisplayCompositor(Session* session, SessionId session_id, ResourceId id,
+                                     SceneGraphWeakPtr scene_graph, Display* display,
                                      std::unique_ptr<DisplaySwapchain> display_swapchain)
-    : Compositor(session, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
+    : Compositor(session, session_id, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
                  std::move(display_swapchain)) {
   FXL_CHECK(display);
   static_cast<DisplaySwapchain*>(this->swapchain())

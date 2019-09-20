@@ -16,7 +16,7 @@ class ShapeNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ShapeNode(Session* session, ResourceId node_id);
+  ShapeNode(Session* session, SessionId session_id, ResourceId node_id);
 
   void SetMaterial(MaterialPtr material);
   void SetShape(ShapePtr shape);

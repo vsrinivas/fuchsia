@@ -10,8 +10,8 @@ namespace gfx {
 const ResourceTypeInfo AmbientLight::kTypeInfo = {
     ResourceType::kLight | ResourceType::kAmbientLight, "AmbientLight"};
 
-AmbientLight::AmbientLight(Session* session, ResourceId id)
-    : Light(session, id, AmbientLight::kTypeInfo) {}
+AmbientLight::AmbientLight(Session* session, SessionId session_id, ResourceId id)
+    : Light(session, session_id, id, AmbientLight::kTypeInfo) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

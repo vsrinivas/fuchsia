@@ -10,8 +10,8 @@ namespace gfx {
 const ResourceTypeInfo PointLight::kTypeInfo = {ResourceType::kLight | ResourceType::kPointLight,
                                                 "PointLight"};
 
-PointLight::PointLight(Session* session, ResourceId id)
-    : Light(session, id, PointLight::kTypeInfo) {}
+PointLight::PointLight(Session* session, SessionId session_id, ResourceId id)
+    : Light(session, session_id, id, PointLight::kTypeInfo) {}
 
 bool PointLight::SetPosition(const glm::vec3& position) {
   position_ = position;

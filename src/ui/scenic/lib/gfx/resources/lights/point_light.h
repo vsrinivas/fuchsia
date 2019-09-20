@@ -14,7 +14,7 @@ class PointLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  PointLight(Session* session, ResourceId id);
+  PointLight(Session* session, SessionId session_id, ResourceId id);
 
   bool SetPosition(const glm::vec3& position);
   const glm::vec3& position() const { return position_; }

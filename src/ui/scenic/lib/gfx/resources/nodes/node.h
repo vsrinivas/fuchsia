@@ -123,7 +123,8 @@ class Node : public Resource {
   virtual ViewPtr FindOwningView() const;
 
  protected:
-  Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+  Node(Session* session, SessionId session_id, ResourceId node_id,
+       const ResourceTypeInfo& type_info);
 
   // Returns whether or not this node can add the |child_node| as a child.
   virtual bool CanAddChild(NodePtr child_node);

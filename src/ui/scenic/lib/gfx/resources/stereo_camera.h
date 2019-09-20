@@ -14,7 +14,7 @@ class StereoCamera final : public Camera {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  StereoCamera(Session* session, ResourceId id, ScenePtr scene);
+  StereoCamera(Session* session, SessionId session_id, ResourceId id, ScenePtr scene);
 
   void SetStereoProjection(const glm::mat4 left_projection, const glm::mat4 right_projection);
 

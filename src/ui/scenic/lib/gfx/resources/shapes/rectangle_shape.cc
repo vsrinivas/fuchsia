@@ -10,9 +10,9 @@ namespace gfx {
 const ResourceTypeInfo RectangleShape::kTypeInfo = {ResourceType::kShape | ResourceType::kRectangle,
                                                     "RectangleShape"};
 
-RectangleShape::RectangleShape(Session* session, ResourceId id, float initial_width,
-                               float initial_height)
-    : PlanarShape(session, id, RectangleShape::kTypeInfo),
+RectangleShape::RectangleShape(Session* session, SessionId session_id, ResourceId id,
+                               float initial_width, float initial_height)
+    : PlanarShape(session, session_id, id, RectangleShape::kTypeInfo),
       width_(initial_width),
       height_(initial_height) {}
 

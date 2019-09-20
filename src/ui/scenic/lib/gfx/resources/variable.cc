@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/variable.h"
 
+#include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
@@ -12,7 +13,8 @@ namespace gfx {
 
 const ResourceTypeInfo Variable::kTypeInfo = {ResourceType::kVariable, "Variable"};
 
-Variable::Variable(Session* session, ResourceId id) : Resource(session, id, Variable::kTypeInfo) {}
+Variable::Variable(Session* session, ResourceId id)
+    : Resource(session, session->id(), id, Variable::kTypeInfo) {}
 
 Variable::~Variable() {}
 

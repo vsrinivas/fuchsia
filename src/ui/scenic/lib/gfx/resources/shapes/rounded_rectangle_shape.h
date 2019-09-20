@@ -16,8 +16,8 @@ class RoundedRectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RoundedRectangleShape(Session* session, ResourceId id, const escher::RoundedRectSpec& spec,
-                        escher::MeshPtr mesh);
+  RoundedRectangleShape(Session* session, SessionId session_id, ResourceId id,
+                        const escher::RoundedRectSpec& spec, escher::MeshPtr mesh);
 
   float width() const { return spec_.width; }
   float height() const { return spec_.height; }

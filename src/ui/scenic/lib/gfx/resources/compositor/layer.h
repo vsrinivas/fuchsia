@@ -30,7 +30,7 @@ class Layer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Layer(Session* session, ResourceId id);
+  Layer(Session* session, SessionId session_id, ResourceId id);
 
   ~Layer() override;
 

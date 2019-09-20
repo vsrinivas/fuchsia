@@ -30,7 +30,8 @@ namespace gfx {
 
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer, "Renderer"};
 
-Renderer::Renderer(Session* session, ResourceId id) : Resource(session, id, Renderer::kTypeInfo) {
+Renderer::Renderer(Session* session, SessionId session_id, ResourceId id)
+    : Resource(session, session_id, id, Renderer::kTypeInfo) {
   escher::MaterialPtr default_material_ = fxl::MakeRefCounted<escher::Material>();
   default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
 }

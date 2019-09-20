@@ -29,7 +29,7 @@ class Renderer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Renderer(Session* session, ResourceId id);
+  Renderer(Session* session, SessionId session_id, ResourceId id);
   ~Renderer();
 
   // |Resource|

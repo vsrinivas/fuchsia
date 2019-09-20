@@ -14,7 +14,7 @@ class OpacityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  OpacityNode(Session* session, ResourceId node_id);
+  OpacityNode(Session* session, SessionId session_id, ResourceId node_id);
 
   // valid range: [0, 1]
   void SetOpacity(float opacity);

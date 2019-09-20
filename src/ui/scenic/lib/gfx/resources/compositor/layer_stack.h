@@ -24,7 +24,7 @@ class LayerStack : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  LayerStack(Session* session, ResourceId id);
+  LayerStack(Session* session, SessionId session_id, ResourceId id);
 
   ~LayerStack() override;
 

@@ -13,8 +13,8 @@ namespace gfx {
 const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType::kViewNode,
                                               "ViewNode"};
 
-ViewNode::ViewNode(Session* session, fxl::WeakPtr<View> view)
-    : Node(session, /* node_id */ 0, ViewNode::kTypeInfo), view_(std::move(view)) {}
+ViewNode::ViewNode(Session* session, SessionId session_id, fxl::WeakPtr<View> view)
+    : Node(session, session_id, /* node_id */ 0, ViewNode::kTypeInfo), view_(std::move(view)) {}
 
 ViewPtr ViewNode::FindOwningView() const { return ViewPtr(view_.get()); }
 

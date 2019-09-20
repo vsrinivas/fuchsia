@@ -14,7 +14,7 @@ class AmbientLight final : public Light {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  AmbientLight(Session* session, ResourceId id);
+  AmbientLight(Session* session, SessionId session_id, ResourceId id);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;

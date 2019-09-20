@@ -18,7 +18,7 @@ class Camera : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Camera(Session* session, ResourceId id, ScenePtr scene);
+  Camera(Session* session, SessionId session_id, ResourceId id, ScenePtr scene);
   virtual ~Camera() {}
 
   // |Resource|.
@@ -57,7 +57,8 @@ class Camera : public Resource {
 
  protected:
   // Note: StereoCamera subclasses Camera and provides its own ResourceTypeInfo.
-  Camera(Session* session, ResourceId id, ScenePtr scene, const ResourceTypeInfo& type_info);
+  Camera(Session* session, SessionId session_id, ResourceId id, ScenePtr scene,
+         const ResourceTypeInfo& type_info);
 
   ScenePtr scene_;
 

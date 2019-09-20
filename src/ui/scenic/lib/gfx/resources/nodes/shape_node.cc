@@ -12,8 +12,8 @@ namespace gfx {
 const ResourceTypeInfo ShapeNode::kTypeInfo = {ResourceType::kNode | ResourceType::kShapeNode,
                                                "ShapeNode"};
 
-ShapeNode::ShapeNode(Session* session, ResourceId node_id)
-    : Node(session, node_id, ShapeNode::kTypeInfo) {}
+ShapeNode::ShapeNode(Session* session, SessionId session_id, ResourceId node_id)
+    : Node(session, session_id, node_id, ShapeNode::kTypeInfo) {}
 
 void ShapeNode::SetMaterial(MaterialPtr material) { material_ = std::move(material); }
 

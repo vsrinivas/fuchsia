@@ -15,11 +15,14 @@ namespace gfx {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
-Resource::Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : session_DEPRECATED_(session), global_id_(session->id(), id), type_info_(type_info) {
-  FXL_DCHECK(session);
+Resource::Resource(Session* session, SessionId session_id, ResourceId id,
+                   const ResourceTypeInfo& type_info)
+    : session_DEPRECATED_(session), global_id_(session_id, id), type_info_(type_info) {
   FXL_DCHECK(type_info.IsKindOf(Resource::kTypeInfo));
-  session_DEPRECATED_->IncrementResourceCount();
+  if (session_DEPRECATED_) {
+    FXL_DCHECK(session_DEPRECATED_->id() == session_id);
+    session_DEPRECATED_->IncrementResourceCount();
+  }
 }
 
 Resource::~Resource() {
@@ -30,7 +33,10 @@ Resource::~Resource() {
   if (resource_linker_weak_ && exported_) {
     resource_linker_weak_->OnExportedResourceDestroyed(this);
   }
-  session_DEPRECATED_->DecrementResourceCount();
+
+  if (session_DEPRECATED_) {
+    session_DEPRECATED_->DecrementResourceCount();
+  }
 }
 
 EventReporter* Resource::event_reporter() const { return session_DEPRECATED_->event_reporter(); }

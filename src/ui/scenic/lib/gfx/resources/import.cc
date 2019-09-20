@@ -14,7 +14,7 @@ namespace {
 ResourcePtr CreateDelegate(Session* session, ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec) {
   switch (spec) {
     case ::fuchsia::ui::gfx::ImportSpec::NODE:
-      return fxl::MakeRefCounted<EntityNode>(session, id);
+      return fxl::MakeRefCounted<EntityNode>(session, session->id(), id);
   }
   return nullptr;
 }
@@ -24,7 +24,7 @@ constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport, "Import"}
 
 Import::Import(Session* session, ResourceId id, fuchsia::ui::gfx::ImportSpec spec,
                const fxl::WeakPtr<ResourceLinker>& resource_linker_weak)
-    : Resource(session, id, Import::kTypeInfo),
+    : Resource(session, session->id(), id, Import::kTypeInfo),
       import_spec_(spec),
       delegate_(CreateDelegate(session, id, spec)),
       resource_linker_weak_(resource_linker_weak) {

@@ -32,8 +32,9 @@ constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode | ResourceType:
 
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
-Node::Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info)
-    : Resource(session, node_id, type_info) {
+Node::Node(Session* session, SessionId session_id, ResourceId node_id,
+           const ResourceTypeInfo& type_info)
+    : Resource(session, session_id, node_id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
 

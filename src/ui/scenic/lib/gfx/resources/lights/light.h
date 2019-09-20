@@ -24,7 +24,8 @@ class Light : public Resource {
   const glm::vec3& color() const { return color_; }
 
  protected:
-  Light(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+  Light(Session* session, SessionId session_id, ResourceId node_id,
+        const ResourceTypeInfo& type_info);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;

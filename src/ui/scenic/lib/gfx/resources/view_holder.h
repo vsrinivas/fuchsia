@@ -31,7 +31,8 @@ class ViewHolder final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link);
+  ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
+             ViewLinker::ExportLink link);
   ~ViewHolder() override;
 
   fxl::WeakPtr<ViewHolder> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

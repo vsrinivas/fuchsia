@@ -1202,9 +1202,8 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR)
-          << "Error: cannot set more than one root view in a session. This will soon "
-             "become a session-terminating error. For more info, see [SCN-1249].";
+      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
+                        "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
@@ -1224,9 +1223,8 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR)
-          << "Error: cannot set more than one root view in a session. This will soon "
-             "become a session-terminating error. For more info, see [SCN-1249].";
+      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
+                        "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
@@ -1345,13 +1343,13 @@ ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, Mem
 
 ResourcePtr GfxCommandApplier::CreateScene(Session* session, ResourceId id,
                                            fuchsia::ui::gfx::SceneArgs args) {
-  return fxl::MakeRefCounted<Scene>(session, id);
+  return fxl::MakeRefCounted<Scene>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateCamera(Session* session, ResourceId id,
                                             fuchsia::ui::gfx::CameraArgs args) {
   if (auto scene = session->resources()->FindResource<Scene>(args.scene_id)) {
-    return fxl::MakeRefCounted<Camera>(session, id, std::move(scene));
+    return fxl::MakeRefCounted<Camera>(session, session->id(), id, std::move(scene));
   }
   return ResourcePtr();
 }
@@ -1359,26 +1357,26 @@ ResourcePtr GfxCommandApplier::CreateCamera(Session* session, ResourceId id,
 ResourcePtr GfxCommandApplier::CreateStereoCamera(Session* session, ResourceId id,
                                                   const fuchsia::ui::gfx::StereoCameraArgs args) {
   if (auto scene = session->resources()->FindResource<Scene>(args.scene_id)) {
-    return fxl::MakeRefCounted<StereoCamera>(session, id, std::move(scene));
+    return fxl::MakeRefCounted<StereoCamera>(session, session->id(), id, std::move(scene));
   }
   return ResourcePtr();
 }
 
 ResourcePtr GfxCommandApplier::CreateRenderer(Session* session, ResourceId id,
                                               fuchsia::ui::gfx::RendererArgs args) {
-  return fxl::MakeRefCounted<Renderer>(session, id);
+  return fxl::MakeRefCounted<Renderer>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateAmbientLight(Session* session, ResourceId id) {
-  return fxl::MakeRefCounted<AmbientLight>(session, id);
+  return fxl::MakeRefCounted<AmbientLight>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateDirectionalLight(Session* session, ResourceId id) {
-  return fxl::MakeRefCounted<DirectionalLight>(session, id);
+  return fxl::MakeRefCounted<DirectionalLight>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id) {
-  return fxl::MakeRefCounted<PointLight>(session, id);
+  return fxl::MakeRefCounted<PointLight>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
@@ -1438,7 +1436,7 @@ ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
 
   // Create a ViewHolder if the Link was successfully registered.
   if (link.valid()) {
-    return fxl::MakeRefCounted<ViewHolder>(session, id, std::move(link));
+    return fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(link));
   }
   return nullptr;
 }
@@ -1452,22 +1450,22 @@ ResourcePtr GfxCommandApplier::CreateClipNode(Session* session, ResourceId id,
 
 ResourcePtr GfxCommandApplier::CreateEntityNode(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::EntityNodeArgs args) {
-  return fxl::MakeRefCounted<EntityNode>(session, id);
+  return fxl::MakeRefCounted<EntityNode>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateOpacityNode(Session* session, ResourceId id,
                                                  fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
-  return fxl::MakeRefCounted<OpacityNode>(session, id);
+  return fxl::MakeRefCounted<OpacityNode>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateShapeNode(Session* session, ResourceId id,
                                                fuchsia::ui::gfx::ShapeNodeArgs args) {
-  return fxl::MakeRefCounted<ShapeNode>(session, id);
+  return fxl::MakeRefCounted<ShapeNode>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::CompositorArgs args) {
-  return Compositor::New(session, id, session->session_context().scene_graph);
+  return Compositor::New(session, session->id(), id, session->session_context().scene_graph);
 }
 
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
@@ -1487,7 +1485,7 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
   }
 
   return fxl::AdoptRef(new DisplayCompositor(
-      session, id, session->session_context().scene_graph, display,
+      session, session->id(), id, session->session_context().scene_graph, display,
       SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem(),
                                                command_context->display_manager(),
                                                session->session_context().escher)));
@@ -1504,7 +1502,7 @@ ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
 
 ResourcePtr GfxCommandApplier::CreateLayerStack(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::LayerStackArgs args) {
-  return fxl::MakeRefCounted<LayerStack>(session, id);
+  return fxl::MakeRefCounted<LayerStack>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateVariable(Session* session, ResourceId id,
@@ -1552,16 +1550,16 @@ ResourcePtr GfxCommandApplier::CreateVariable(Session* session, ResourceId id,
 
 ResourcePtr GfxCommandApplier::CreateLayer(Session* session, ResourceId id,
                                            fuchsia::ui::gfx::LayerArgs args) {
-  return fxl::MakeRefCounted<Layer>(session, id);
+  return fxl::MakeRefCounted<Layer>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateCircle(Session* session, ResourceId id, float initial_radius) {
-  return fxl::MakeRefCounted<CircleShape>(session, id, initial_radius);
+  return fxl::MakeRefCounted<CircleShape>(session, session->id(), id, initial_radius);
 }
 
 ResourcePtr GfxCommandApplier::CreateRectangle(Session* session, ResourceId id, float width,
                                                float height) {
-  return fxl::MakeRefCounted<RectangleShape>(session, id, width, height);
+  return fxl::MakeRefCounted<RectangleShape>(session, session->id(), id, width, height);
 }
 
 ResourcePtr GfxCommandApplier::CreateRoundedRectangle(Session* session,
@@ -1601,11 +1599,11 @@ ResourcePtr GfxCommandApplier::CreateRoundedRectangle(Session* session,
     mesh = factory->NewRoundedRect(rect_spec, mesh_spec, command_context->batch_gpu_uploader());
   }
 
-  return fxl::MakeRefCounted<RoundedRectangleShape>(session, id, rect_spec, mesh);
+  return fxl::MakeRefCounted<RoundedRectangleShape>(session, session->id(), id, rect_spec, mesh);
 }
 
 ResourcePtr GfxCommandApplier::CreateMesh(Session* session, ResourceId id) {
-  return fxl::MakeRefCounted<MeshShape>(session, id);
+  return fxl::MakeRefCounted<MeshShape>(session, session->id(), id);
 }
 
 ResourcePtr GfxCommandApplier::CreateMaterial(Session* session, ResourceId id) {

@@ -10,8 +10,8 @@ namespace gfx {
 const ResourceTypeInfo EntityNode::kTypeInfo = {ResourceType::kNode | ResourceType::kEntityNode,
                                                 "EntityNode"};
 
-EntityNode::EntityNode(Session* session, ResourceId node_id)
-    : Node(session, node_id, EntityNode::kTypeInfo) {}
+EntityNode::EntityNode(Session* session, SessionId session_id, ResourceId node_id)
+    : Node(session, session_id, node_id, EntityNode::kTypeInfo) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

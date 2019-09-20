@@ -17,13 +17,16 @@ namespace gfx {
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor, "Compositor"};
 const CompositorWeakPtr Compositor::kNullWeakPtr = CompositorWeakPtr();
 
-CompositorPtr Compositor::New(Session* session, ResourceId id, SceneGraphWeakPtr scene_graph) {
-  return fxl::AdoptRef(new Compositor(session, id, Compositor::kTypeInfo, scene_graph, nullptr));
+CompositorPtr Compositor::New(Session* session, SessionId session_id, ResourceId id,
+                              SceneGraphWeakPtr scene_graph) {
+  return fxl::AdoptRef(
+      new Compositor(session, session_id, id, Compositor::kTypeInfo, scene_graph, nullptr));
 }
 
-Compositor::Compositor(Session* session, ResourceId id, const ResourceTypeInfo& type_info,
-                       SceneGraphWeakPtr scene_graph, std::unique_ptr<Swapchain> swapchain)
-    : Resource(session, id, type_info),
+Compositor::Compositor(Session* session, SessionId session_id, ResourceId id,
+                       const ResourceTypeInfo& type_info, SceneGraphWeakPtr scene_graph,
+                       std::unique_ptr<Swapchain> swapchain)
+    : Resource(session, session_id, id, type_info),
       scene_graph_(scene_graph),
       swapchain_(std::move(swapchain)),
       weak_factory_(this) {

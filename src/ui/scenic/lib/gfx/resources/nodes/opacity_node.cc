@@ -10,8 +10,8 @@ namespace gfx {
 const ResourceTypeInfo OpacityNode::kTypeInfo = {ResourceType::kNode | ResourceType::kOpacityNode,
                                                  "OpacityNode"};
 
-OpacityNode::OpacityNode(Session* session, ResourceId node_id)
-    : Node(session, node_id, OpacityNode::kTypeInfo) {}
+OpacityNode::OpacityNode(Session* session, SessionId session_id, ResourceId node_id)
+    : Node(session, session_id, node_id, OpacityNode::kTypeInfo) {}
 
 void OpacityNode::SetOpacity(float opacity) {
   FXL_DCHECK(0 <= opacity && opacity <= 1);

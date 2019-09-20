@@ -1,4 +1,5 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
+
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,7 +21,7 @@ class MeshShape final : public Shape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  MeshShape(Session* session, ResourceId id);
+  MeshShape(Session* session, SessionId session_id, ResourceId id);
 
   // These correspond to BindMeshBuffersCmd in commands.fidl.
   bool BindBuffers(BufferPtr index_buffer, ::fuchsia::ui::gfx::MeshIndexFormat index_format,

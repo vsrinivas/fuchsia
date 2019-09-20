@@ -12,8 +12,8 @@ namespace gfx {
 const ResourceTypeInfo DirectionalLight::kTypeInfo = {
     ResourceType::kLight | ResourceType::kDirectionalLight, "DirectionalLight"};
 
-DirectionalLight::DirectionalLight(Session* session, ResourceId id)
-    : Light(session, id, DirectionalLight::kTypeInfo) {}
+DirectionalLight::DirectionalLight(Session* session, SessionId session_id, ResourceId id)
+    : Light(session, session_id, id, DirectionalLight::kTypeInfo) {}
 
 bool DirectionalLight::SetDirection(const glm::vec3& direction, ErrorReporter* reporter) {
   float length = glm::length(direction);

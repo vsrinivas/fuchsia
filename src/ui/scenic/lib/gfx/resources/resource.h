@@ -104,7 +104,8 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   virtual bool Detach(ErrorReporter* error_reporter);
 
  protected:
-  Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+  Resource(Session* session, SessionId session_id, ResourceId id,
+           const ResourceTypeInfo& type_info);
 
   friend class ResourceLinker;
   friend class ResourceMap;

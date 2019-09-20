@@ -9,8 +9,9 @@ namespace gfx {
 
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
-Shape::Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : Resource(session, id, type_info) {
+Shape::Shape(Session* session, SessionId session_id, ResourceId id,
+             const ResourceTypeInfo& type_info)
+    : Resource(session, session_id, id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 

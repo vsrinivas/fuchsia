@@ -16,8 +16,8 @@ namespace gfx {
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
-Layer::Layer(Session* session, ResourceId id)
-    : Resource(session, id, Layer::kTypeInfo), translation_(0) {}
+Layer::Layer(Session* session, SessionId session_id, ResourceId id)
+    : Resource(session, session_id, id, Layer::kTypeInfo), translation_(0) {}
 
 Layer::~Layer() = default;
 

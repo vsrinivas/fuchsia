@@ -172,7 +172,7 @@ namespace gfx {
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
 Memory::Memory(Session* session, ResourceId id, bool is_host, zx::vmo vmo, uint64_t allocation_size)
-    : Resource(session, id, kTypeInfo),
+    : Resource(session, session->id(), id, kTypeInfo),
       is_host_(is_host),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), ZX_VM_PERM_READ)),
       allocation_size_(allocation_size) {}

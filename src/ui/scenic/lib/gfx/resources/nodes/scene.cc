@@ -14,8 +14,10 @@ namespace gfx {
 
 const ResourceTypeInfo Scene::kTypeInfo = {ResourceType::kNode | ResourceType::kScene, "Scene"};
 
-Scene::Scene(Session* session, ResourceId node_id)
-    : Node(session, node_id, Scene::kTypeInfo), gfx_session_(session), weak_factory_(this) {
+Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
+    : Node(session, session_id, node_id, Scene::kTypeInfo),
+      gfx_session_(session),
+      weak_factory_(this) {
   FXL_DCHECK(gfx_session_);
   scene_ = this;
 

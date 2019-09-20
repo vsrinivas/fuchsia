@@ -10,8 +10,8 @@ namespace gfx {
 const ResourceTypeInfo StereoCamera::kTypeInfo = {
     ResourceType::kCamera | ResourceType::kStereoCamera, "StereoCamera"};
 
-StereoCamera::StereoCamera(Session* session, ResourceId id, ScenePtr scene)
-    : Camera(session, id, scene, StereoCamera::kTypeInfo) {
+StereoCamera::StereoCamera(Session* session, SessionId session_id, ResourceId id, ScenePtr scene)
+    : Camera(session, session_id, id, scene, StereoCamera::kTypeInfo) {
   viewports_[Eye::LEFT] = {0.f, 0.f, 0.5f, 1.f};
   viewports_[Eye::RIGHT] = {0.5f, 0.f, 0.5f, 1.f};
 }

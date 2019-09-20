@@ -46,7 +46,7 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
   ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
 
@@ -59,7 +59,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
   ASSERT_EQ(1u, session()->GetTotalResourceCount());
   ASSERT_TRUE(linker->ExportResource(exported.get(), std::move(source)));
 
@@ -212,7 +212,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
     // source and destination dies now.
   }
 
-  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
   ASSERT_FALSE(linker->ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker->NumExports());
 }
@@ -229,7 +229,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
     // source dies now.
   }
 
-  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
   ASSERT_FALSE(linker->ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker->NumExports());
@@ -250,23 +250,23 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
-  async::PostTask(dispatcher(),
-                  [this, &resource, linker, source = std::move(source), &called]() mutable {
-                    resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  async::PostTask(
+      dispatcher(), [this, &resource, linker, source = std::move(source), &called]() mutable {
+        resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
-                    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
-                    ASSERT_EQ(1u, linker->NumExports());
+        ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
+        ASSERT_EQ(1u, linker->NumExports());
 
-                    // Set an expiry callback that checks the resource expired for the right
-                    // reason and signal the latch.
-                    linker->SetOnExpiredCallback(
-                        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
-                          ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-                          ASSERT_EQ(0u, linker->NumUnresolvedImports());
-                          ASSERT_EQ(0u, linker->NumExports());
-                          called = true;
-                        });
-                  });
+        // Set an expiry callback that checks the resource expired for the right
+        // reason and signal the latch.
+        linker->SetOnExpiredCallback(
+            [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+              ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+              ASSERT_EQ(0u, linker->NumUnresolvedImports());
+              ASSERT_EQ(0u, linker->NumExports());
+              called = true;
+            });
+      });
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(called);
 }
@@ -282,7 +282,7 @@ TEST_F(ResourceLinkerTest, DestinationHandleDeathAutomaticallyCleansUpResourceEx
   async::PostTask(dispatcher(), [this, &resource, linker, source = std::move(source), &destination,
                                  &called]() mutable {
     // Register the resource.
-    resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
     ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker->NumExports());
@@ -316,7 +316,7 @@ TEST_F(ResourceLinkerTest, SourceHandleDeathAutomaticallyCleansUpUnresolvedImpor
   async::PostTask(dispatcher(), [this, &import, &resource, linker, source = std::move(source),
                                  &destination, &did_resolve]() mutable {
     // Register the resource.
-    resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    resource = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
     // Import.
     linker->SetOnImportResolvedCallback(
@@ -354,7 +354,8 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
 
   async::PostTask(dispatcher(), [this, linker, source = std::move(source), &called]() mutable {
     // Register the resource.
-    auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    auto resource =
+        fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
     ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker->NumExports());
 
@@ -380,7 +381,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
   // Import.
   bool did_resolve = false;
@@ -419,7 +420,8 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
 
   bool did_resolve = false;
   {
-    auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    auto exported =
+        fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
     // Import.
     linker->SetOnImportResolvedCallback(
@@ -456,7 +458,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;
@@ -503,7 +505,7 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), session()->id(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;

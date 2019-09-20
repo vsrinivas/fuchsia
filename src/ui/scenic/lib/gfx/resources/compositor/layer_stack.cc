@@ -12,8 +12,8 @@ namespace gfx {
 
 const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack, "LayerStack"};
 
-LayerStack::LayerStack(Session* session, ResourceId id)
-    : Resource(session, id, LayerStack::kTypeInfo) {}
+LayerStack::LayerStack(Session* session, SessionId session_id, ResourceId id)
+    : Resource(session, session_id, id, LayerStack::kTypeInfo) {}
 
 LayerStack::~LayerStack() = default;
 

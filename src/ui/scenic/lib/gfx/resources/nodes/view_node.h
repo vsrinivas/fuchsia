@@ -34,7 +34,7 @@ class ViewNode final : public Node {
 
  private:
   friend class View;
-  ViewNode(Session* session, fxl::WeakPtr<View> view);
+  ViewNode(Session* session, SessionId session_id, fxl::WeakPtr<View> view);
 
   // The ID of the View owning this ViewNode.
   fxl::WeakPtr<View> view_;

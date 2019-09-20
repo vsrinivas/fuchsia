@@ -48,7 +48,7 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsFalseForOpacityNode) {
   ProtectedMemoryVisitor visitor;
 
   ResourceId next_id = 1;
-  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), next_id++);
+  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), session()->id(), next_id++);
   visitor.Visit(opacity_node.get());
   ASSERT_FALSE(visitor.HasProtectedMemoryUse());
 }
@@ -80,10 +80,10 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForChildProtectedImage) {
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
   protected_material->SetTexture(protected_image);
 
-  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), next_id++);
+  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), session()->id(), next_id++);
   shape_node->SetMaterial(protected_material);
 
-  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), next_id++);
+  auto opacity_node = fxl::MakeRefCounted<OpacityNode>(session(), session()->id(), next_id++);
   opacity_node->AddChild(shape_node, session()->error_reporter());
 
   visitor.Visit(opacity_node.get());
@@ -97,7 +97,7 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForImportedProtectedImage) {
   MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
   protected_material->SetTexture(protected_image);
-  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), next_id++);
+  auto shape_node = fxl::MakeRefCounted<ShapeNode>(session(), session()->id(), next_id++);
   shape_node->SetMaterial(protected_material);
 
   auto resource_linker = std::make_unique<ResourceLinker>();
