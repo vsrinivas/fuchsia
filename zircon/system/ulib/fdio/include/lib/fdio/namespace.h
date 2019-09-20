@@ -66,6 +66,11 @@ zx_status_t fdio_ns_chdir(fdio_ns_t* ns);
 // Retrieve the fdio "global" namespace (if any).
 zx_status_t fdio_ns_get_installed(fdio_ns_t** ns);
 
+// flat_namespace contains parallel arrays of handles, path names, and types.  The number of
+// elements of these arrays is given by |count|.  For any given offset i:
+// - handle[i] is the zx_handle_t representing that element in the namespace
+// - path[i] is the user-readable name of that element (e.g., "/bin")
+// - type[i] is a handle info entry as defined in zircon/processargs.h by PA_HND.
 typedef struct fdio_flat_namespace {
   size_t count;
   zx_handle_t* handle;
