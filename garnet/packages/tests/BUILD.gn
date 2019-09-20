@@ -525,19 +525,9 @@ group("memory_metrics") {
   ]
 }
 
-group("netstack_integration_tests") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/dhcp:dhcpd",
-    "//src/connectivity/network/testing/netemul",
-    "//src/connectivity/network/tests:netstack_integration_tests",
-  ]
-}
-
 group("netstack") {
   testonly = true
   public_deps = [
-    ":netstack_integration_tests",
     "//garnet/packages/prod:netstack",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/netstack/dhcp:netstack_dhcp_gotests",
@@ -546,10 +536,7 @@ group("netstack") {
     "//src/connectivity/network/netstack/routes:netstack_routes_gotests",
     "//src/connectivity/network/netstack/tests:netstack_manual_tests",
     "//src/connectivity/network/netstack/util:netstack_util_test($host_toolchain)",
-    "//src/connectivity/network/tests:device_name_provider",
-    "//src/connectivity/network/tests:netstack_bsdsocket_c_api_test($host_toolchain)",
-    "//src/connectivity/network/tests:netstack_c_api_tests",
-    "//src/connectivity/network/tests:netstack_external_network_test_client($host_toolchain)",
+    "//src/connectivity/network/tests",
   ]
 }
 

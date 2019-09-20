@@ -36,6 +36,7 @@ group("tests") {
     "//src/connectivity/network/netcfg:netcfg_tests",
     "//src/connectivity/network/netdump:tests",
     "//src/connectivity/network/testing/netemul:tests",
+    "//src/connectivity/network/tests",
     "//src/connectivity/overnet:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
     "//src/connectivity/wlan:tests",
