@@ -23,8 +23,89 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+
+/////////////////////////////////////       MAC       //////////////////////////////////////////////
+
+static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+  memset(info, 0, sizeof(*info));
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_OK;  // Temporarily returns OK to make the interface list-able.
+}
+
+static zx_status_t mac_start(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                             void* cookie) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_OK;  // Temporarily returns OK to make the interface list-able.
+}
+
+static void mac_stop(void* ctx) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+}
+
+static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_set_channel(void* ctx, uint32_t options, wlan_channel_t* chan) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_configure_bss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_configure_beacon(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_set_key(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_configure_assoc(void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+wlanmac_protocol_ops_t wlanmac_ops = {
+    .query = mac_query,
+    .start = mac_start,
+    .stop = mac_stop,
+    .queue_tx = mac_queue_tx,
+    .set_channel = mac_set_channel,
+    .configure_bss = mac_configure_bss,
+    .enable_beaconing = mac_enable_beaconing,
+    .configure_beacon = mac_configure_beacon,
+    .set_key = mac_set_key,
+    .configure_assoc = mac_configure_assoc,
+    .clear_assoc = mac_clear_assoc,
+    .start_hw_scan = mac_start_hw_scan,
+};
+
+/////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   if (!info) {
