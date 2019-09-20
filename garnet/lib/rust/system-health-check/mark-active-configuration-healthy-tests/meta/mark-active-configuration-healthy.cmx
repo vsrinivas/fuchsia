@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/mark-active-configuration-healthy"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.paver.Paver"
+        ]
+    }
+}

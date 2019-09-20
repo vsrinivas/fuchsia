@@ -400,6 +400,7 @@ group("all") {
     ":sysmem_connector",
     ":sysmgr",
     ":sysmgr_tests",
+    ":system-health-check",
     ":system_monitor_fuchsia",
     ":system_monitor_host",
     ":system_ota_tests",
@@ -986,6 +987,14 @@ group("system_update_checker") {
   testonly = true
   public_deps = [
     "//garnet/bin/system-update-checker:system-update-checker-tests",
+  ]
+}
+
+group("system-health-check") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/system-health-check:system-health-check-tests",
+    "//garnet/lib/rust/system-health-check/mark-active-configuration-healthy-tests",
   ]
 }
 
