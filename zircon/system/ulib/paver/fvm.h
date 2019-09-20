@@ -8,7 +8,6 @@
 #include <fvm/sparse-reader.h>
 
 #include "fvm/fvm-sparse.h"
-#include "partition-client.h"
 
 namespace paver {
 
@@ -32,12 +31,16 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
                                   const fvm::sparse_image_t& header, BindOption option,
                                   FormatResult* format_result = nullptr);
 
+// Registers a FIFO
+zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
+                                block_client::Client* out_client);
+
 // Given an fd representing a "sparse FVM format", fill the FVM with the
 // provided partitions described by |partition_fd|.
 //
 // Decides to overwrite or create new partitions based on the type
 // GUID, not the instance GUID.
-zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_client,
+zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
                                 std::unique_ptr<fvm::ReaderInterface> payload);
 
 }  // namespace paver

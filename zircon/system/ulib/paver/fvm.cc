@@ -19,7 +19,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
@@ -98,6 +97,8 @@ inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size
                                                      extent * sizeof(fvm::extent_descriptor_t));
 }
 
+}  // namespace
+
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
                                 block_client::Client* out_client) {
@@ -130,6 +131,8 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
   *out_vmoid = response2.vmoid->id;
   return block_client::Client::Create(std::move(response.fifo), out_client);
 }
+
+namespace {
 
 zx_status_t FlushClient(block_client::Client* client) {
   block_fifo_request_t request;
@@ -605,7 +608,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 
 }  // namespace
 
-zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_client,
+zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
                                 std::unique_ptr<fvm::ReaderInterface> payload) {
   fbl::unique_ptr<fvm::SparseReader> reader;
   zx_status_t status;
@@ -625,7 +628,7 @@ zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_clien
   // Acquire an fd to the FVM, either by finding one that already
   // exists, or formatting a new one.
   fbl::unique_fd fvm_fd(
-      FvmPartitionFormat(devfs_root, partition_client->block_fd(), *hdr, BindOption::TryBind));
+      FvmPartitionFormat(devfs_root, partition_fd.duplicate(), *hdr, BindOption::TryBind));
   if (!fvm_fd) {
     ERROR("Couldn't find FVM partition\n");
     return ZX_ERR_IO;
@@ -661,8 +664,7 @@ zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_clien
   if (free_slices < requested_slices) {
     Warn("Not enough space to non-destructively pave",
          "Automatically reinitializing FVM; Expect data loss");
-    fvm_fd =
-        FvmPartitionFormat(devfs_root, partition_client->block_fd(), *hdr, BindOption::Reformat);
+    fvm_fd = FvmPartitionFormat(devfs_root, partition_fd.duplicate(), *hdr, BindOption::Reformat);
     if (!fvm_fd) {
       ERROR("Couldn't reformat FVM partition.\n");
       return ZX_ERR_IO;

@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -19,6 +20,7 @@
 
 #include <utility>
 
+#include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
@@ -35,6 +37,8 @@
 
 namespace paver {
 namespace {
+
+namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
@@ -69,7 +73,8 @@ Partition PartitionType(Configuration configuration, Asset asset) {
 
 // Best effort attempt to see if payload contents match what is already inside
 // of the partition.
-bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t vmo_size) {
+bool CheckIfSame(fbl::Function<zx_status_t(const zx::vmo&)> read_to_vmo, const zx::vmo& vmo,
+                 size_t vmo_size) {
   zx::vmo read_vmo;
   auto status = zx::vmo::create(fbl::round_up(vmo_size, ZX_PAGE_SIZE), 0, &read_vmo);
   if (status != ZX_OK) {
@@ -77,7 +82,7 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t vmo_size
     return false;
   }
 
-  if ((status = partition->Read(read_vmo, vmo_size)) != ZX_OK) {
+  if ((status = read_to_vmo(read_vmo)) != ZX_OK) {
     return false;
   }
 
@@ -97,6 +102,132 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t vmo_size
   }
 
   return memcmp(first_mapper.start(), second_mapper.start(), vmo_size) == 0;
+}
+
+// Writes a raw (non-FVM) partition to a block device from a VMO.
+zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size, const fbl::unique_fd& partition_fd,
+                            uint32_t block_size_bytes) {
+  ZX_ASSERT(vmo_size % block_size_bytes == 0);
+
+  auto read_to_vmo = [&](const zx::vmo& vmo) -> zx_status_t {
+    vmoid_t vmoid;
+    block_client::Client client;
+    zx_status_t status = RegisterFastBlockIo(partition_fd, vmo, &vmoid, &client);
+    if (status != ZX_OK) {
+      ERROR("Cannot register fast block I/O\n");
+      return status;
+    }
+
+    block_fifo_request_t request;
+    request.group = 0;
+    request.vmoid = vmoid;
+    request.opcode = BLOCKIO_READ;
+
+    uint64_t length = vmo_size / block_size_bytes;
+    if (length > UINT32_MAX) {
+      ERROR("Error reading partition data: Too large\n");
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    request.length = static_cast<uint32_t>(length);
+    request.vmo_offset = 0;
+    request.dev_offset = 0;
+
+    if ((status = client.Transaction(&request, 1)) != ZX_OK) {
+      ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
+      return status;
+    }
+    return ZX_OK;
+  };
+
+  if (CheckIfSame(read_to_vmo, vmo, vmo_size)) {
+    LOG("Skipping write as partition contents match payload.\n");
+    return ZX_OK;
+  }
+
+  vmoid_t vmoid;
+  block_client::Client client;
+  zx_status_t status = RegisterFastBlockIo(partition_fd, vmo, &vmoid, &client);
+  if (status != ZX_OK) {
+    ERROR("Cannot register fast block I/O\n");
+    return status;
+  }
+
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = vmoid;
+  request.opcode = BLOCKIO_WRITE;
+
+  uint64_t length = vmo_size / block_size_bytes;
+  if (length > UINT32_MAX) {
+    ERROR("Error writing partition data: Too large\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  request.length = static_cast<uint32_t>(length);
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+
+  if ((status = client.Transaction(&request, 1)) != ZX_OK) {
+    ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
+// Writes a raw (non-FVM) partition to a skip-block device from a VMO.
+zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
+                                const fzl::UnownedFdioCaller& caller, uint32_t block_size_bytes) {
+  ZX_ASSERT(vmo_size % block_size_bytes == 0);
+
+  auto read_to_vmo = [&](const zx::vmo& vmo) -> zx_status_t {
+    zx_status_t status;
+    zx::vmo dup;
+    if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+      ERROR("Couldn't duplicate buffer vmo\n");
+      return status;
+    }
+
+    skipblock::ReadWriteOperation operation = {
+        .vmo = std::move(dup),
+        .vmo_offset = 0,
+        .block = 0,
+        .block_count = static_cast<uint32_t>(vmo_size / block_size_bytes),
+    };
+
+    auto result = skipblock::SkipBlock::Call::Read(caller.channel(), std::move(operation));
+    status = result.ok() ? result.value().status : result.status();
+    if (!result.ok()) {
+      ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
+      return status;
+    }
+    return ZX_OK;
+  };
+
+  if (CheckIfSame(read_to_vmo, vmo, vmo_size)) {
+    LOG("Skipping write as partition contents match payload.\n");
+    return ZX_OK;
+  }
+
+  zx_status_t status;
+  zx::vmo dup;
+  if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+    ERROR("Couldn't duplicate buffer vmo\n");
+    return status;
+  }
+
+  skipblock::ReadWriteOperation operation = {
+      .vmo = std::move(dup),
+      .vmo_offset = 0,
+      .block = 0,
+      .block_count = static_cast<uint32_t>(vmo_size / block_size_bytes),
+  };
+
+  auto result = skipblock::SkipBlock::Call::Write(caller.channel(), std::move(operation));
+  status = result.ok() ? result.value().status : result.status();
+  if (status != ZX_OK) {
+    ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
 }
 
 #if 0
@@ -165,8 +296,8 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
 
   constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
   zx_status_t status;
-  std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
+  fbl::unique_fd partition_fd;
+  if ((status = partitioner.FindPartition(partition_type, &partition_fd)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
       return status;
@@ -175,7 +306,7 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
     LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
         PartitionName(partition_type));
 
-    if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
+    if ((status = partitioner.AddPartition(partition_type, &partition_fd)) != ZX_OK) {
       ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
       return status;
     }
@@ -183,7 +314,7 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
     LOG("Partition already exists\n");
   }
 
-  if (partitioner.IsFvmWithinFtl()) {
+  if (partitioner.UseSkipBlockInterface()) {
     LOG("Attempting to format FTL...\n");
     status = partitioner.WipeFvm();
     if (status != ZX_OK) {
@@ -193,7 +324,7 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
     }
   }
   LOG("Streaming partitions...\n");
-  if ((status = FvmStreamPartitions(std::move(partition), std::move(payload))) != ZX_OK) {
+  if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload))) != ZX_OK) {
     ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -207,8 +338,8 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
   LOG("Paving partition.\n");
 
   zx_status_t status;
-  std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
+  fbl::unique_fd partition_fd;
+  if ((status = partitioner.FindPartition(partition_type, &partition_fd)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
       return status;
@@ -217,7 +348,7 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
     LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
         PartitionName(partition_type));
 
-    if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
+    if ((status = partitioner.AddPartition(partition_type, &partition_fd)) != ZX_OK) {
       ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
       return status;
     }
@@ -225,8 +356,8 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
     LOG("Partition already exists\n");
   }
 
-  size_t block_size_bytes;
-  if ((status = partition->GetBlockSize(&block_size_bytes)) != ZX_OK) {
+  uint32_t block_size_bytes;
+  if ((status = partitioner.GetBlockSize(partition_fd, &block_size_bytes)) != ZX_OK) {
     ERROR("Couldn't get partition block size\n");
     return status;
   }
@@ -258,13 +389,15 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
     payload_size += remaining_bytes;
   }
 
-  if (CheckIfSame(partition.get(), payload_vmo, payload_size)) {
-    LOG("Skipping write as partition contents match payload.\n");
+  if (partitioner.UseSkipBlockInterface()) {
+    fzl::UnownedFdioCaller caller(partition_fd.get());
+    status = WriteVmoToSkipBlock(payload_vmo, payload_size, caller, block_size_bytes);
   } else {
-    if ((status = partition->Write(payload_vmo, payload_size)) != ZX_OK) {
-      ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
-      return status;
-    }
+    status = WriteVmoToBlock(payload_vmo, payload_size, partition_fd, block_size_bytes);
+  }
+  if (status != ZX_OK) {
+    ERROR("Failed to write partition to block\n");
+    return status;
   }
 
   if ((status = partitioner.FinalizePartition(partition_type)) != ZX_OK) {
@@ -337,20 +470,13 @@ void Paver::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
 
 void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                           WriteDataFileCompleter::Sync completer) {
-
-  // Use global devfs if one wasn't injected via set_devfs_root.
-  if (!devfs_root_) {
-    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
-  }
-
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
   char path[PATH_MAX] = {0};
   zx_status_t status = ZX_OK;
 
-  fbl::unique_fd part_fd(
-      open_partition_with_devfs(devfs_root_.get(), nullptr, data_guid, ZX_SEC(1), path));
+  fbl::unique_fd part_fd(open_partition(nullptr, data_guid, ZX_SEC(1), path));
   if (!part_fd) {
     ERROR("DATA partition not found in FVM\n");
     completer.Reply(ZX_ERR_NOT_FOUND);
@@ -372,6 +498,10 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
     case DISK_FORMAT_ZXCRYPT: {
       fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
       uint8_t slot = 0;
+      // Use global devfs if one wasn't injected via set_devfs_root.
+      if (!devfs_root_) {
+        devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+      }
       if ((status = zxcrypt::FdioVolume::UnlockWithDeviceKey(
                std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),
                &zxc_volume)) != ZX_OK) {
@@ -529,8 +659,8 @@ void Paver::InitializePartitionTables(zx::channel block_device,
 
   constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
   zx_status_t status;
-  std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner->FindPartition(partition_type, &partition)) != ZX_OK) {
+  fbl::unique_fd partition_fd;
+  if ((status = partitioner->FindPartition(partition_type, &partition_fd)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
       completer.Reply(status);
@@ -540,7 +670,7 @@ void Paver::InitializePartitionTables(zx::channel block_device,
     LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
         PartitionName(partition_type));
 
-    if ((status = partitioner->AddPartition(partition_type, &partition)) != ZX_OK) {
+    if ((status = partitioner->AddPartition(partition_type, &partition_fd)) != ZX_OK) {
       ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
       completer.Reply(status);
       return;

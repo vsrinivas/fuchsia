@@ -4,23 +4,21 @@
 
 #pragma once
 
-#include <fuchsia/hardware/block/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/channel.h>
 #include <stdbool.h>
-#include <zircon/types.h>
-
-#include <optional>
-#include <utility>
-#include <vector>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <gpt/gpt.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
+#include <zircon/types.h>
 
-#include "partition-client.h"
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace paver {
 using gpt::GptDevice;
@@ -41,6 +39,10 @@ enum class Partition {
 
 const char* PartitionName(Partition type);
 
+// A special filter for test injection.
+// API should return true if device passed in should be filtered out.
+extern bool (*TestBlockFilter)(const fbl::unique_fd&);
+
 enum class Arch {
   kX64,
   kArm64,
@@ -59,17 +61,16 @@ class DevicePartitioner {
 
   virtual ~DevicePartitioner() = default;
 
-  // Whether or not the Fuchsia Volume Manager exists within an FTL.
-  virtual bool IsFvmWithinFtl() const = 0;
+  // Whether to use skip block interface or block interface for non-FVM
+  // partitions.
+  virtual bool UseSkipBlockInterface() const = 0;
 
-  // Returns a partition of type |partition_type|, creating it.
+  // Returns a file descriptor to a partition of type |partition_type|, creating it.
   // Assumes that the partition does not already exist.
-  virtual zx_status_t AddPartition(Partition partition_type,
-                                   std::unique_ptr<PartitionClient>* out_partition) const = 0;
+  virtual zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const = 0;
 
-  // Returns a partition of type |partition_type| if one exists.
-  virtual zx_status_t FindPartition(Partition partition_type,
-                                    std::unique_ptr<PartitionClient>* out_partition) const = 0;
+  // Returns a file descriptor to a partition of type |partition_type| if one exists.
+  virtual zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const = 0;
 
   // Finalizes the partition of type |partition_type| after it has been
   // written.
@@ -80,6 +81,9 @@ class DevicePartitioner {
 
   // Wipes partition tables.
   virtual zx_status_t WipePartitionTables() const = 0;
+
+  // Returns block size in bytes for specified device.
+  virtual zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -117,12 +121,11 @@ class GptDevicePartitioner {
   // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
   // Assumes that the partition does not already exist.
   zx_status_t AddPartition(const char* name, uint8_t* type, size_t minimum_size_bytes,
-                           size_t optional_reserve_bytes,
-                           std::unique_ptr<PartitionClient>* out_partition) const;
+                           size_t optional_reserve_bytes, fbl::unique_fd* out_fd) const;
 
   // Returns a file descriptor to a partition which can be paved,
   // if one exists.
-  zx_status_t FindPartition(FilterCallback filter, std::unique_ptr<PartitionClient>* out_partition,
+  zx_status_t FindPartition(FilterCallback filter, fbl::unique_fd* out_fd,
                             gpt_partition_t** out = nullptr) const;
 
   // Wipes a specified partition from the GPT, and overwrites first 8KiB with
@@ -171,19 +174,19 @@ class EfiDevicePartitioner : public DevicePartitioner {
                                 std::optional<fbl::unique_fd> block_device,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-  bool IsFvmWithinFtl() const override { return false; }
+  bool UseSkipBlockInterface() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
  private:
   EfiDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -198,19 +201,19 @@ class CrosDevicePartitioner : public DevicePartitioner {
                                 std::optional<fbl::unique_fd> block_device,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-  bool IsFvmWithinFtl() const override { return false; }
+  bool UseSkipBlockInterface() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
   zx_status_t FinalizePartition(Partition unused) const override;
 
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
  private:
   CrosDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -227,19 +230,19 @@ class FixedDevicePartitioner : public DevicePartitioner {
   static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-  bool IsFvmWithinFtl() const override { return false; }
+  bool UseSkipBlockInterface() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -257,19 +260,19 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-  bool IsFvmWithinFtl() const override { return true; }
+  bool UseSkipBlockInterface() const override { return true; }
 
-  zx_status_t AddPartition(Partition partition_type,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
  private:
   SkipBlockDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}

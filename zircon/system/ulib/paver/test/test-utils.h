@@ -15,8 +15,8 @@ constexpr uint64_t kBlockSize = 0x1000;
 constexpr uint64_t kBlockCount = 0x100;
 
 constexpr uint32_t kOobSize = 8;
-constexpr uint32_t kPageSize = 2048;
-constexpr uint32_t kPagesPerBlock = 128;
+constexpr uint32_t kPageSize = 1024;
+constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kSkipBlockSize = kPageSize * kPagesPerBlock;
 constexpr uint32_t kNumBlocks = 20;
 
