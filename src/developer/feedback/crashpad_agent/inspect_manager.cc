@@ -4,12 +4,14 @@
 
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 
+#include <lib/syslog/cpp/logger.h>
+
 #include <map>
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace feedback {
 
@@ -30,33 +32,51 @@ InspectManager::Report::Report(inspect::Node* parent_node, const std::string& lo
   creation_time_ = node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
-void InspectManager::Report::MarkAsUploaded(std::string server_report_id) {
+void InspectManager::Report::MarkAsUploaded(const std::string& server_report_id) {
   server_node_ = node_.CreateChild("crash_server");
-  server_id_ = server_node_.CreateString("id", std::move(server_report_id));
+  server_id_ = server_node_.CreateString("id", server_report_id);
   server_creation_time_ = server_node_.CreateString("creation_time", GetCurrentTimeString());
 }
 
 InspectManager::InspectManager(inspect::Node* root_node) : root_node_(root_node) {
   config_.node = root_node->CreateChild(kInspectConfigName);
-  crash_reports_.node = root_node_->CreateChild(kInspectReportsName);
+  reports_.node = root_node_->CreateChild(kInspectReportsName);
 }
 
-InspectManager::Report* InspectManager::AddReport(const std::string& program_name,
-                                                  const std::string& local_report_id) {
+bool InspectManager::AddReport(const std::string& program_name,
+                               const std::string& local_report_id) {
+  if (reports_.local_report_id_to_report.find(local_report_id) !=
+      reports_.local_report_id_to_report.end()) {
+    FX_LOGS(ERROR) << fxl::Substitute("Local crash report, ID $0, already exposed in Inspect",
+                                      local_report_id);
+    return false;
+  }
+
   // Find or create a Node for this program.
   InspectManager::ReportList* report_list;
-  auto* report_lists = &crash_reports_.report_lists;
-  auto it = report_lists->find(program_name);
-  if (it != report_lists->end()) {
+  auto* report_lists = &reports_.program_name_to_report_lists;
+  if (auto it = report_lists->find(program_name); it != report_lists->end()) {
     report_list = &it->second;
   } else {
-    (*report_lists)[program_name].node = crash_reports_.node.CreateChild(program_name);
+    (*report_lists)[program_name].node = reports_.node.CreateChild(program_name);
     report_list = &(*report_lists)[program_name];
   }
 
-  // Create a new Report object and return it.
+  // Create a new Report object and index it.
   report_list->reports.push_back(Report(&report_list->node, local_report_id));
-  return &report_list->reports.back();
+  reports_.local_report_id_to_report[local_report_id] = &report_list->reports.back();
+  return true;
+}
+
+bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
+                                          const std::string& server_report_id) {
+  if (auto it = reports_.local_report_id_to_report.find(local_report_id);
+      it != reports_.local_report_id_to_report.end()) {
+    it->second->MarkAsUploaded(server_report_id);
+    return true;
+  }
+  FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+  return false;
 }
 
 void InspectManager::ExposeConfig(const feedback::Config& config) {

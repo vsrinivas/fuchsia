@@ -60,8 +60,8 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
                              })));
 }
 
-TEST_F(InspectManagerTest, AddReport) {
-  inspect_manager_->AddReport("program_1", "local_report_id_1");
+TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
+  EXPECT_TRUE(inspect_manager_->AddReport("program_1", "local_report_id_1"));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -72,7 +72,7 @@ TEST_F(InspectManagerTest, AddReport) {
                   NameMatches("local_report_id_1"),
                   PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))))))))))));
 
-  inspect_manager_->AddReport("program_1", "local_report_id_2");
+  EXPECT_TRUE(inspect_manager_->AddReport("program_1", "local_report_id_2"));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -88,9 +88,9 @@ TEST_F(InspectManagerTest, AddReport) {
                             PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
               })))))))));
 
-  inspect_manager_->AddReport("program_2", "local_report_id_1");
-  inspect_manager_->AddReport("program_2", "local_report_id_2");
-  inspect_manager_->AddReport("program_2", "local_report_id_3");
+  EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_3"));
+  EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_4"));
+  EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_5"));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -108,36 +108,57 @@ TEST_F(InspectManagerTest, AddReport) {
               AllOf(NodeMatches(NameMatches("program_2")),
                     ChildrenMatch(UnorderedElementsAreArray({
                         NodeMatches(AllOf(
-                            NameMatches("local_report_id_1"),
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
-                        NodeMatches(AllOf(
-                            NameMatches("local_report_id_2"),
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
-                        NodeMatches(AllOf(
                             NameMatches("local_report_id_3"),
+                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
+                        NodeMatches(AllOf(
+                            NameMatches("local_report_id_4"),
+                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
+                        NodeMatches(AllOf(
+                            NameMatches("local_report_id_5"),
                             PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
                     }))),
           }))))));
 }
 
-TEST_F(InspectManagerTest, MarkAsUploaded) {
-  InspectManager::Report* report = inspect_manager_->AddReport("program_1", "local_report_id_1");
-  report->MarkAsUploaded("server_report_id_1");
+TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
+  EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
+  EXPECT_FALSE(inspect_manager_->AddReport("program", "local_report_id"));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches(kInspectReportsName)),
           ChildrenMatch(ElementsAre(AllOf(
-              NodeMatches(NameMatches("program_1")),
+              NodeMatches(NameMatches("program")),
+              ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                  NameMatches("local_report_id"),
+                  PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))))))))))));
+}
+
+TEST_F(InspectManagerTest, Succeed_MarkReportAsUploaded) {
+  EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
+  EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded("local_report_id", "server_report_id"));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches(kInspectReportsName)),
+          ChildrenMatch(ElementsAre(AllOf(
+              NodeMatches(NameMatches("program")),
               ChildrenMatch(ElementsAre(AllOf(
                   NodeMatches(AllOf(
-                      NameMatches("local_report_id_1"),
+                      NameMatches("local_report_id"),
                       PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
                   ChildrenMatch(ElementsAre(NodeMatches(AllOf(
                       NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
                                                        StringIs("creation_time", Not(IsEmpty())),
-                                                       StringIs("id", "server_report_id_1"),
+                                                       StringIs("id", "server_report_id"),
                                                    }))))))))))))))));
+}
+
+TEST_F(InspectManagerTest, Fail_MarkReportAsUploaded_UnknownReport) {
+  EXPECT_FALSE(inspect_manager_->MarkReportAsUploaded("unknown_report", "server_report_id"));
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches(kInspectReportsName)), ChildrenMatch(IsEmpty())))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {

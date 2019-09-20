@@ -232,7 +232,9 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
           return fit::error();
         }
 
-        if (!UploadReport(local_report_id, report.program_name(), annotations)) {
+        inspect_manager_->AddReport(report.program_name(), local_report_id.ToString());
+
+        if (!UploadReport(local_report_id, annotations)) {
           return fit::error();
         }
         return fit::ok();
@@ -240,11 +242,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 }
 
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
-                                 const std::string& program_name,
                                  const std::map<std::string, std::string>& annotations) {
-  InspectManager::Report* inspect_report =
-      inspect_manager_->AddReport(program_name, local_report_id.ToString());
-
   if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
                   << local_report_id.ToString() << ", available under "
@@ -299,7 +297,7 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     return false;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
-  inspect_report->MarkAsUploaded(server_report_id);
+  inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;

@@ -63,7 +63,7 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
   fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
   // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.
-  bool UploadReport(const crashpad::UUID& local_report_id, const std::string& program_name,
+  bool UploadReport(const crashpad::UUID& local_report_id,
                     const std::map<std::string, std::string>& annotations);
 
   // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|.
