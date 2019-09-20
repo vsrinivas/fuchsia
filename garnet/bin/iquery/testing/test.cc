@@ -10,16 +10,16 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
 #include <regex>
 
 #include "gmock/gmock.h"
-
-#include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace {
 
@@ -129,8 +129,7 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     ASSERT_EQ(status, ZX_OK);
 
     zx_signals_t observed{};
-    zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, zx::deadline_after(zx::sec(10)).get(),
-                       &observed);
+    zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, zx::time::infinite().get(), &observed);
     ASSERT_TRUE(observed & ZX_PROCESS_TERMINATED);
 
     std::string output;
