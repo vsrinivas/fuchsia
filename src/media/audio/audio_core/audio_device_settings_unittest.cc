@@ -198,5 +198,29 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
   EXPECT_EQ(1u, counter.callback_count());
 }
 
+TEST_F(AudioDeviceSettingsTest, Clone) {
+  HwGainState hw_gain_state = kDefaultInitialHwGainState;
+  hw_gain_state.cur_mute = true;
+  hw_gain_state.cur_agc = true;
+  hw_gain_state.can_mute = true;
+  hw_gain_state.can_agc = true;
+  hw_gain_state.cur_gain = 5.0;
+  AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
+  settings.SetIgnored(settings.Ignored());
+
+  auto clone = settings.Clone();
+
+  fuchsia::media::AudioGainInfo gain_info, clone_gain_info;
+  settings.GetGainInfo(&gain_info);
+  clone->GetGainInfo(&clone_gain_info);
+
+  EXPECT_EQ(gain_info.flags, clone_gain_info.flags);
+  EXPECT_EQ(gain_info.gain_db, clone_gain_info.gain_db);
+  EXPECT_EQ(settings.Ignored(), clone->Ignored());
+  EXPECT_EQ(settings.AutoRoutingDisabled(), clone->AutoRoutingDisabled());
+  EXPECT_EQ(settings.is_input(), clone->is_input());
+  EXPECT_EQ(0, memcmp(settings.uid().data, clone->uid().data, sizeof(settings.uid().data)));
+}
+
 }  // namespace
 }  // namespace media::audio

@@ -39,6 +39,7 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   // Initialize this object with the contents of another instance with the same unique
   // id. Do not make any attempt to persist these settings to disk from now on.
   void InitFromClone(const AudioDeviceSettings& other);
+  fbl::RefPtr<AudioDeviceSettings> Clone();
 
   // Simple accessors for constant properties
   const audio_stream_unique_id_t& uid() const { return uid_; }
@@ -55,8 +56,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
     observer_ = std::move(observer);
   }
 
-  // Disallow copy/move construction/assignment
-  AudioDeviceSettings(const AudioDeviceSettings&) = delete;
+  // Disallow move construction/assignment and copy assign.
+  // We keep a private copy ctor to assist in implementing the |Clone| operation.
   AudioDeviceSettings(AudioDeviceSettings&&) = delete;
   AudioDeviceSettings& operator=(const AudioDeviceSettings&) = delete;
   AudioDeviceSettings& operator=(AudioDeviceSettings&&) = delete;
@@ -100,6 +101,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   //////////////////////////////////////////////////////////////////////////////
 
  private:
+  AudioDeviceSettings(const AudioDeviceSettings& o);
+
   void NotifyObserver();
 
   const audio_stream_unique_id_t uid_;

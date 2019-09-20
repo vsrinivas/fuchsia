@@ -28,6 +28,14 @@ AudioDeviceSettings::AudioDeviceSettings(const audio_stream_unique_id_t& uid, co
   gain_state_.agc_enabled = hw.can_agc && hw.cur_agc;
 }
 
+AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
+    : uid_(o.uid_), is_input_(o.is_input_), can_mute_(o.can_mute_), can_agc_(o.can_agc_) {
+  fbl::AutoLock lock(&o.settings_lock_);
+  gain_state_.gain_db = o.gain_state_.gain_db;
+  gain_state_.muted = o.gain_state_.muted;
+  gain_state_.agc_enabled = o.gain_state_.agc_enabled;
+}
+
 void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
   TRACE_DURATION("audio", "AudioDeviceSettings::InitFromClone");
   FXL_DCHECK(memcmp(&uid_, &other.uid_, sizeof(uid_)) == 0);
@@ -40,6 +48,10 @@ void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
   // Clone misc. flags.
   ignored_ = other.Ignored();
   auto_routing_disabled_ = other.AutoRoutingDisabled();
+}
+
+fbl::RefPtr<AudioDeviceSettings> AudioDeviceSettings::Clone() {
+  return fbl::AdoptRef(new AudioDeviceSettings(*this));
 }
 
 bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
