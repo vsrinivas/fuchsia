@@ -954,7 +954,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   EXPECT_THAT(status, Eq(Status::OK));
   EXPECT_THAT(storage_entries, SizeIs(entries.size()));
   for (const auto& [key, unused_value] : entries) {
-    EXPECT_THAT(storage_entries, Contains(Field(&storage::Entry::key, key)));
+    EXPECT_THAT(storage_entries, Contains(Field("key", &storage::Entry::key, key)));
   }
   EXPECT_TRUE(on_empty_called);
 }

@@ -21,12 +21,13 @@ namespace storage {
 
 testing::Matcher<const ObjectIdentifier&> MatchesDigest(
     testing::Matcher<const std::string&> matcher) {
-  return Property(&ObjectIdentifier::object_digest, Property(&ObjectDigest::Serialize, matcher));
+  return Property("object_digest", &ObjectIdentifier::object_digest,
+                  Property("Serialize", &ObjectDigest::Serialize, matcher));
 }
 
 testing::Matcher<const ObjectIdentifier&> MatchesDigest(
     testing::Matcher<const ObjectDigest&> matcher) {
-  return Property(&ObjectIdentifier::object_digest, matcher);
+  return Property("object_digest", &ObjectIdentifier::object_digest, matcher);
 }
 
 testing::Matcher<const Entry&> MatchesEntry(
@@ -39,9 +40,9 @@ testing::Matcher<const Entry&> MatchesEntry(
     std::tuple<testing::Matcher<const std::string&>, testing::Matcher<const ObjectIdentifier&>,
                testing::Matcher<const KeyPriority&>>
         matcher) {
-  return AllOf(Field(&Entry::key, std::get<0>(matcher)),
-               Field(&Entry::object_identifier, std::get<1>(matcher)),
-               Field(&Entry::priority, std::get<2>(matcher)));
+  return AllOf(Field("key", &Entry::key, std::get<0>(matcher)),
+               Field("object_identifier", &Entry::object_identifier, std::get<1>(matcher)),
+               Field("priority", &Entry::priority, std::get<2>(matcher)));
 }
 
 testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
@@ -60,8 +61,8 @@ testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
 
 testing::Matcher<const PageStorage::CommitIdAndBytes&> MatchesCommitIdAndBytes(
     testing::Matcher<std::string> id, testing::Matcher<std::string> bytes) {
-  return AllOf(Field(&PageStorage::CommitIdAndBytes::id, id),
-               Field(&PageStorage::CommitIdAndBytes::bytes, bytes));
+  return AllOf(Field("id", &PageStorage::CommitIdAndBytes::id, id),
+               Field("bytes", &PageStorage::CommitIdAndBytes::bytes, bytes));
 }
 
 }  // namespace storage

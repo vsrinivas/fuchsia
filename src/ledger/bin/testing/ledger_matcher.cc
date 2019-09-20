@@ -115,8 +115,8 @@ testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(testing::Matcher<std
 
 testing::Matcher<const Entry&> MatchesEntry(
     std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>> matcher) {
-  return AllOf(Field(&Entry::key, MatchesView(matcher.first)),
-               Field(&Entry::value, Pointee(MatchesBuffer(matcher.second))));
+  return AllOf(Field("key", &Entry::key, MatchesView(matcher.first)),
+               Field("value", &Entry::value, Pointee(MatchesBuffer(matcher.second))));
 }
 
 testing::Matcher<const std::vector<Entry>&> MatchEntries(
