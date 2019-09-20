@@ -4,6 +4,8 @@
 
 #include "src/cobalt/bin/app/utils.h"
 
+#include <src/lib/syslog/cpp/logger.h>
+
 #include "third_party/cobalt/src/lib/util/pem_util.h"
 
 namespace cobalt {
@@ -43,6 +45,10 @@ Status ToCobaltStatus(logger::Status s) {
       return Status::BUFFER_FULL;
 
     case logger::Status::kOther:
+      return Status::INTERNAL_ERROR;
+
+    default:  // Needed so that the Cobalt core enum can be added to.
+      FX_LOGS(ERROR) << "Unimplemented translation for enum value: " << s;
       return Status::INTERNAL_ERROR;
   }
 }
