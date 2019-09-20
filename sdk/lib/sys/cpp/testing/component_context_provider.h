@@ -54,8 +54,22 @@ class ComponentContextProvider {
   template <typename Interface>
   void ConnectToPublicService(fidl::InterfaceRequest<Interface> request,
                               const std::string& name = Interface::Name_) const {
-    fdio_service_connect_at(public_directory_ptr_.channel().get(), name.c_str(),
-                            request.TakeChannel().release());
+    public_service_directory_->Connect(std::move(request), name);
+  }
+
+  // Returns a service directory which can be useful to test services published to out/svc.
+  // For example,
+  // context_provider.context()->AddPublicService("my service", ...);
+  // ...
+  // auto mock = MyMock(context_provider.public_service_directory());
+  // ...
+  // ...
+  // Code inside mock
+  // MyMock::MyMock(std::shared_ptr<sys::ServiceDirectory> svc) {
+  //  svc->Connect("my service", channel);
+  // }
+  std::shared_ptr<sys::ServiceDirectory> public_service_directory() {
+    return public_service_directory_;
   }
 
   // Gets a fake service directory that can be used to inject services
@@ -84,7 +98,7 @@ class ComponentContextProvider {
 
  private:
   fuchsia::io::DirectoryPtr outgoing_directory_ptr_;
-  fuchsia::io::DirectoryPtr public_directory_ptr_;
+  std::shared_ptr<sys::ServiceDirectory> public_service_directory_;
   std::shared_ptr<ServiceDirectoryProvider> svc_provider_;
   std::unique_ptr<sys::ComponentContext> component_context_;
 };

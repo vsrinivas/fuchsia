@@ -36,6 +36,15 @@ TEST_F(ComponentContextProviderTests, TestOutgoingPublicServices) {
 
   RunLoopUntilIdle();
   EXPECT_EQ("hello", result);
+
+  // Also try and connect using service directory
+  echo = provider_.public_service_directory()->Connect<fidl::examples::echo::Echo>();
+
+  result = "";
+  echo->EchoString("hello", [&result](fidl::StringPtr value) { result = *value; });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ("hello", result);
 }
 
 TEST_F(ComponentContextProviderTests, TestIncomingServices) {

@@ -21,8 +21,9 @@ ComponentContextProvider::ComponentContextProvider(async_dispatcher_t* dispatche
       svc_provider_->service_directory(),
       outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
 
-  fdio_service_connect_at(outgoing_directory_ptr_.channel().get(), "svc",
-                          public_directory_ptr_.NewRequest().TakeChannel().release());
+  zx::channel request;
+  public_service_directory_ = sys::ServiceDirectory::CreateWithRequest(&request);
+  fdio_service_connect_at(outgoing_directory_ptr_.channel().get(), "svc", request.release());
 }
 
 ComponentContextProvider::~ComponentContextProvider() = default;
