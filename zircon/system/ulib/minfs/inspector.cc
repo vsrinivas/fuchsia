@@ -5,6 +5,7 @@
 #include <lib/disk-inspector/common-types.h>
 #include <sys/stat.h>
 
+#include <block-client/cpp/block-device.h>
 #include <fbl/unique_fd.h>
 #include <minfs/bcache.h>
 #include <minfs/inspector.h>
@@ -276,7 +277,6 @@ std::unique_ptr<disk_inspector::DiskObject> JournalObject::GetElementAt(uint32_t
 }
 
 zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) {
-  std::unique_ptr<minfs::Bcache> bc;
   struct stat stats;
   if (fstat(fd_.get(), &stats) < 0) {
     fprintf(stderr, "minfsInspector: could not find end of file/device\n");
@@ -290,12 +290,21 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out)
 
   size_t size = stats.st_size / minfs::kMinfsBlockSize;
 
-  if (minfs::Bcache::Create(std::move(fd_), static_cast<uint32_t>(size), &bc) != ZX_OK) {
-    fprintf(stderr, "minfsInspector: cannot create block cache\n");
-    return ZX_ERR_IO;
+  std::unique_ptr<block_client::BlockDevice> device;
+  zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
+    return status;
   }
 
-  zx_status_t status = CreateRoot(std::move(bc), out);
+  std::unique_ptr<minfs::Bcache> bc;
+  status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(size), &bc);
+  if (status != ZX_OK) {
+    fprintf(stderr, "minfsInspector: cannot create block cache\n");
+    return status;
+  }
+
+  status = CreateRoot(std::move(bc), out);
   if (status != ZX_OK) {
     fprintf(stderr, "minfsInspector: cannot create root object\n");
     return status;

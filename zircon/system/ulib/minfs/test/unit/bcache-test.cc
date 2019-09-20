@@ -17,7 +17,7 @@ using block_client::BlockDevice;
 using block_client::FakeBlockDevice;
 
 constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kNumBlocks = 20;
+constexpr uint32_t kNumBlocks = 64;
 
 class MockBlockDevice : public FakeBlockDevice {
  public:
@@ -103,6 +103,32 @@ TEST_F(BcacheTest, RunOperation) {
   ASSERT_EQ(bcache_->BlockNumberToDevice(kVmoOffset), request.vmo_offset);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kDeviceOffset), request.dev_offset);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kLength), request.length);
+}
+
+TEST(BcacheTest, WriteblkThenReadblk) {
+  auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
+  std::unique_ptr<Bcache> bcache;
+  ASSERT_OK(Bcache::Create(std::move(device), kNumBlocks, &bcache));
+  std::unique_ptr<uint8_t[]> source_buffer(new uint8_t[kMinfsBlockSize]);
+
+  // Write 'a' to block 1.
+  memset(source_buffer.get(), 'a', kMinfsBlockSize);
+  ASSERT_OK(bcache->Writeblk(1, source_buffer.get()));
+
+  // Write 'b' to block 2.
+  memset(source_buffer.get(), 'b', kMinfsBlockSize);
+  ASSERT_OK(bcache->Writeblk(2, source_buffer.get()));
+
+  std::unique_ptr<uint8_t[]> destination_buffer(new uint8_t[kMinfsBlockSize]);
+  // Read 'a' from block 1.
+  memset(source_buffer.get(), 'a', kMinfsBlockSize);
+  ASSERT_OK(bcache->Readblk(1, destination_buffer.get()));
+  EXPECT_BYTES_EQ(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize);
+
+  // Read 'b' from block 2.
+  memset(source_buffer.get(), 'b', kMinfsBlockSize);
+  ASSERT_OK(bcache->Readblk(2, destination_buffer.get()));
+  EXPECT_BYTES_EQ(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize);
 }
 
 }  // namespace

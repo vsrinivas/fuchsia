@@ -1361,10 +1361,18 @@ zx_status_t CreateBcache(fbl::unique_fd fd, bool* out_readonly,
     return ZX_ERR_BAD_STATE;
   }
   size_t block_count = device_size / minfs::kMinfsBlockSize;
+  std::unique_ptr<block_client::BlockDevice> device;
+  status = FdToBlockDevice(fd, &device);
+  if (status != ZX_OK) {
+    fprintf(stderr, "minfs: Cannot convert fd to block device: %d\n", status);
+    return status;
+  }
 
-  if (minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(block_count), out) != ZX_OK) {
-    fprintf(stderr, "minfs: Cannot create block cache\n");
-    return ZX_ERR_BAD_STATE;
+  status = minfs::Bcache::Create(std::move(device),
+                                 static_cast<uint32_t>(block_count), out);
+  if (status != ZX_OK) {
+    fprintf(stderr, "minfs: Cannot create block cache: %d\n", status);
+    return status;
   }
   return ZX_OK;
 }
@@ -1493,8 +1501,7 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
                           fbl::Closure on_unmount) {
   TRACE_DURATION("minfs", "MountAndServe");
   fbl::RefPtr<VnodeMinfs> vn;
-  minfs::MountOptions options;
-  memcpy(&options, &mount_options, sizeof(mount_options));
+  minfs::MountOptions options = mount_options;
 
   zx_status_t status = MountWithRepair(std::move(device_fd), &options, &vn);
   if (status != ZX_OK) {

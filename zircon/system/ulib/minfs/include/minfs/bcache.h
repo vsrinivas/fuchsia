@@ -27,6 +27,7 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <fs/buffer/vmoid_registry.h>
+#include <fs/buffer/vmo_buffer.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fs/buffer/vmoid_registry.h>
@@ -40,6 +41,10 @@
 namespace minfs {
 
 #ifdef __Fuchsia__
+
+// A helper function for converting "fd" to "BlockDevice".
+zx_status_t FdToBlockDevice(fbl::unique_fd& fd,
+                            std::unique_ptr<block_client::BlockDevice>* out);
 
 class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
  public:
@@ -84,9 +89,6 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   ////////////////
   // Other methods.
 
-  // Use of this factory are discouraged. See the next one.
-  static zx_status_t Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out);
-
   // This factory allows building this object from a BlockDevice.
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device,
                             uint32_t max_blocks, std::unique_ptr<Bcache>* out);
@@ -101,16 +103,17 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   int Sync();
 
  private:
-  Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
+  Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
 
   // Used during initialization of this object.
   zx_status_t VerifyDeviceInfo();
 
-  const fbl::unique_fd fd_;
   uint32_t max_blocks_;
   fuchsia_hardware_block_BlockInfo info_ = {};
   std::atomic<groupid_t> next_group_ = 0;
   std::unique_ptr<block_client::BlockDevice> device_;
+  // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
+  fs::VmoBuffer buffer_;
 };
 
 #else  // __Fuchsia__

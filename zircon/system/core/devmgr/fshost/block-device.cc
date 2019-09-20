@@ -227,9 +227,15 @@ zx_status_t BlockDevice::CheckFilesystem() {
       });
       printf("fshost: fsck of %s started\n", disk_format_string_[format_]);
       uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      std::unique_ptr<block_client::BlockDevice> device;
+      zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
+      if (status != ZX_OK) {
+        fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
+        return status;
+      }
       std::unique_ptr<minfs::Bcache> bc;
-      zx_status_t status =
-          minfs::Bcache::Create(fd_.duplicate(), static_cast<uint32_t>(device_size), &bc);
+      status = minfs::Bcache::Create(std::move(device),
+                                     static_cast<uint32_t>(device_size), &bc);
       if (status != ZX_OK) {
         fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
         return status;
@@ -281,9 +287,15 @@ zx_status_t BlockDevice::FormatFilesystem() {
     case DISK_FORMAT_MINFS: {
       fprintf(stderr, "fshost: Formatting minfs.\n");
       uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      std::unique_ptr<block_client::BlockDevice> device;
+      zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
+      if (status != ZX_OK) {
+        fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
+        return status;
+      }
       std::unique_ptr<minfs::Bcache> bc;
-      zx_status_t status =
-          minfs::Bcache::Create(fd_.duplicate(), static_cast<uint32_t>(blocks), &bc);
+      status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(blocks),
+                                     &bc);
       if (status != ZX_OK) {
         fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
         return status;

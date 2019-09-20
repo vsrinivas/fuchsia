@@ -19,6 +19,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/buffer/block_buffer.h>
+#include <fs/buffer/vmo_buffer.h>
 #include <fs/operation/operation.h>
 #include <fs/trace.h>
 #include <minfs/format.h>
@@ -28,32 +29,27 @@
 namespace minfs {
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
-  off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
-  assert(off / kMinfsBlockSize == bno);  // Overflow
-  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
-    return ZX_ERR_IO;
+  fs::Operation operation = {};
+  operation.type = fs::OperationType::kRead;
+  operation.vmo_offset = 0;
+  operation.dev_offset = bno;
+  operation.length = 1;
+  zx_status_t status = RunOperation(operation, &buffer_);
+  if (status != ZX_OK) {
+    return status;
   }
-  if (read(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
-    FS_TRACE_ERROR("minfs: cannot read block %u\n", bno);
-    return ZX_ERR_IO;
-  }
+  memcpy(data, buffer_.Data(0), kMinfsBlockSize);
   return ZX_OK;
 }
 
 zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
-  off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
-  assert(off / kMinfsBlockSize == bno);  // Overflow
-  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FS_TRACE_ERROR("minfs: cannot seek to block %u. %d\n", bno, errno);
-    return ZX_ERR_IO;
-  }
-  ssize_t ret = write(fd_.get(), data, kMinfsBlockSize);
-  if (ret != kMinfsBlockSize) {
-    FS_TRACE_ERROR("minfs: cannot write block %u (%zd)\n", bno, ret);
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
+  fs::Operation operation = {};
+  operation.type = fs::OperationType::kWrite;
+  operation.vmo_offset = 0;
+  operation.dev_offset = bno;
+  operation.length = 1;
+  memcpy(buffer_.Data(0), data, kMinfsBlockSize);
+  return RunOperation(operation, &buffer_);
 }
 
 zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
@@ -77,8 +73,8 @@ int Bcache::Sync() {
   return sync_txn.Transact();
 }
 
-// Static.
-zx_status_t Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out) {
+zx_status_t FdToBlockDevice(fbl::unique_fd& fd,
+                            std::unique_ptr<block_client::BlockDevice>* out) {
   zx::channel channel, server;
   zx_status_t status = zx::channel::create(0, &channel, &server);
   if (status != ZX_OK) {
@@ -90,7 +86,6 @@ zx_status_t Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_p
   if (status != ZX_OK) {
     return status;
   }
-
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
   if (status != ZX_OK) {
@@ -98,28 +93,22 @@ zx_status_t Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_p
     return status;
   }
 
-  fbl::AllocChecker ac;
-  fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(std::move(fd), std::move(device), max_blocks));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = bc->VerifyDeviceInfo();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out = std::move(bc);
+  *out = std::move(device);
   return ZX_OK;
 }
 
 // Static.
 zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device,
                            uint32_t max_blocks, std::unique_ptr<Bcache>* out) {
-  fbl::unique_fd fd;
-  std::unique_ptr<Bcache> bcache(new Bcache(std::move(fd), std::move(device), max_blocks));
+  std::unique_ptr<Bcache> bcache(new Bcache(std::move(device), max_blocks));
 
-  zx_status_t status = bcache->VerifyDeviceInfo();
+  zx_status_t status = bcache->buffer_.Initialize(bcache.get(), 1, kMinfsBlockSize,
+                                                  "scratch-block");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = bcache->VerifyDeviceInfo();
   if (status != ZX_OK) {
     return status;
   }
@@ -154,9 +143,8 @@ zx_status_t Bcache::RunOperation(const fs::Operation& operation, fs::BlockBuffer
   return device_->FifoTransaction(&request, 1);
 }
 
-Bcache::Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device,
-               uint32_t max_blocks)
-    : fd_(std::move(fd)), max_blocks_(max_blocks), device_(std::move(device)) {}
+Bcache::Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks)
+    : max_blocks_(max_blocks), device_(std::move(device)) {}
 
 zx_status_t Bcache::VerifyDeviceInfo() {
   zx_status_t status = device_->BlockGetInfo(&info_);
