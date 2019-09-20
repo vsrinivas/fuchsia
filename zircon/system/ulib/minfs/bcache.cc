@@ -14,6 +14,7 @@
 
 #include <utility>
 
+#include <block-client/cpp/remote-block-device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>

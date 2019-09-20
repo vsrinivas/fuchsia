@@ -25,6 +25,7 @@
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
 #include <blobfs/node-reserver.h>
+#include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>

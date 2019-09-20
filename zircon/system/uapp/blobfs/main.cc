@@ -12,7 +12,7 @@
 
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
-#include <block-client/cpp/block-device.h>
+#include <block-client/cpp/remote-block-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
