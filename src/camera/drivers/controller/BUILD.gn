@@ -19,11 +19,11 @@ driver_module("controller-driver") {
 source_set("controller-source") {
   visibility = [ "../*" ]
   sources = [
-    "config.cc",
     "controller-device.cc",
     "controller-protocol.cc",
   ]
   deps = [
+    "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",

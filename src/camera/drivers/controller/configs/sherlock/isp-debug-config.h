@@ -6,7 +6,6 @@
 
 #include <vector>
 
-#include "controller-protocol.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
 
 // This file lists down all the configurations Sherlock
@@ -85,16 +84,10 @@ static fuchsia::camera2::hal::StreamConfig IspStreamConfig() {
   return stream_config;
 };
 
-static fuchsia::camera2::hal::Config DebugConfig() {
+fuchsia::camera2::hal::Config DebugConfig() {
   fuchsia::camera2::hal::Config config;
   config.stream_configs.push_back(std::move(IspStreamConfig()));
   return config;
-}
-
-std::vector<fuchsia::camera2::hal::Config> ControllerImpl::SherlockConfigs() {
-  std::vector<fuchsia::camera2::hal::Config> configs;
-  configs.push_back(std::move(DebugConfig()));
-  return configs;
 }
 
 }  // namespace camera
