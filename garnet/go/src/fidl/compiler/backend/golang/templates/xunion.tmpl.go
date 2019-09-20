@@ -20,7 +20,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`" + `fidl2:"x{{ if .IsStrict }}!{{end}},{{ .Size }},{{ .Alignment }}"` + "`" + `
+	{{ .TagName }} ` + "`" + `fidl:"x{{ if .IsStrict }}!{{end}},{{ .Size }},{{ .Alignment }}" fidl2:"x{{ if .IsStrict }}!{{end}},{{ .Size }},{{ .Alignment }}"` + "`" + `
 	I_unknownData []byte
 	{{- range .Members }}
 	{{- range .DocComments}}

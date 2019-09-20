@@ -28,7 +28,7 @@ func (x ErrorEnun) String() string {
 }
 
 type WithErrorSyntaxErrorAsPrimitiveResponse struct {
-	_ struct{} `fidl2:"s,1,1"`
+	_ struct{} `fidl:"s,1,1" fidl2:"s,1,1"`
 }
 
 var _mWithErrorSyntaxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxErrorAsPrimitiveResponse{})
@@ -38,7 +38,7 @@ func (msg *WithErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marsha
 }
 
 type WithErrorSyntaxErrorAsEnumResponse struct {
-	_ struct{} `fidl2:"s,1,1"`
+	_ struct{} `fidl:"s,1,1" fidl2:"s,1,1"`
 }
 
 var _mWithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxErrorAsEnumResponse{})
@@ -55,7 +55,7 @@ const (
 
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
-	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"tag" fidl2:"u,8,4"`
+	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"u,8,4" fidl2:"u,8,4"`
 	Response WithErrorSyntaxErrorAsPrimitiveResponse 
 	Err uint32 
 }
@@ -94,7 +94,7 @@ const (
 
 
 type WithErrorSyntaxErrorAsEnumResult struct {
-	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"tag" fidl2:"u,8,4"`
+	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"u,8,4" fidl2:"u,8,4"`
 	Response WithErrorSyntaxErrorAsEnumResponse 
 	Err ErrorEnun 
 }
@@ -136,7 +136,7 @@ const (
 )
 
 type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Ret string
 }
 
@@ -147,7 +147,7 @@ func (msg *withAndWithoutRequestResponseNoRequestWithResponseResponse) Marshaler
 }
 
 type withAndWithoutRequestResponseWithRequestNoResponseRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Arg string
 }
 
@@ -158,7 +158,7 @@ func (msg *withAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler(
 }
 
 type withAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Arg string
 }
 
@@ -169,7 +169,7 @@ func (msg *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshal
 }
 
 type withAndWithoutRequestResponseWithRequestWithResponseRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Arg string
 }
 
@@ -180,7 +180,7 @@ func (msg *withAndWithoutRequestResponseWithRequestWithResponseRequest) Marshale
 }
 
 type withAndWithoutRequestResponseWithRequestWithResponseResponse struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Ret string
 }
 
@@ -191,7 +191,7 @@ func (msg *withAndWithoutRequestResponseWithRequestWithResponseResponse) Marshal
 }
 
 type withAndWithoutRequestResponseOnWithResponseResponse struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	Ret string
 }
 
@@ -358,7 +358,7 @@ const (
 )
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	Result WithErrorSyntaxErrorAsPrimitiveResult
 }
 
@@ -369,7 +369,7 @@ func (msg *withErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marsha
 }
 
 type withErrorSyntaxErrorAsEnumResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	Result WithErrorSyntaxErrorAsEnumResult
 }
 
@@ -456,7 +456,7 @@ const (
 )
 
 type channelProtocolMethodARequest struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	A int64
 	B int64
 }
@@ -468,7 +468,7 @@ func (msg *channelProtocolMethodARequest) Marshaler() _bindings.Marshaler {
 }
 
 type channelProtocolEventAResponse struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	A int64
 	B int64
 }
@@ -480,7 +480,7 @@ func (msg *channelProtocolEventAResponse) Marshaler() _bindings.Marshaler {
 }
 
 type channelProtocolMethodBRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
+	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
 	A int64
 	B int64
 }
@@ -492,7 +492,7 @@ func (msg *channelProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
 }
 
 type channelProtocolMethodBResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	Result int64
 }
 
@@ -503,7 +503,7 @@ func (msg *channelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
 }
 
 type channelProtocolMutateSocketRequest struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	A _zx.Socket`fidl:"0" fidl2:"0"`
 }
 
@@ -514,7 +514,7 @@ func (msg *channelProtocolMutateSocketRequest) Marshaler() _bindings.Marshaler {
 }
 
 type channelProtocolMutateSocketResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	B _zx.Socket`fidl:"0" fidl2:"0"`
 }
 

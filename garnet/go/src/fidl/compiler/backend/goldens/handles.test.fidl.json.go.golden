@@ -13,7 +13,7 @@ import (
 
 
 type Handles struct {
-	_ struct{} `fidl2:"s,104,4"`
+	_ struct{} `fidl:"s,104,4" fidl2:"s,104,4"`
 	PlainHandle _zx.Handle`fidl:"0,0" fidl2:"0"`
 	BtiHandle _zx.Handle`fidl:"4,0" fidl2:"0"`
 	ChannelHandle _zx.Channel`fidl:"8,0" fidl2:"0"`

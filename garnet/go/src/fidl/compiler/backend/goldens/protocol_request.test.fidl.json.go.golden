@@ -65,7 +65,7 @@ const (
 )
 
 type parentGetChildResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	C ChildInterface
 }
 
@@ -76,7 +76,7 @@ func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
 }
 
 type parentGetChildRequestResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	R ChildInterfaceRequest`fidl:"0" fidl2:"0"`
 }
 
@@ -87,7 +87,7 @@ func (msg *parentGetChildRequestResponse) Marshaler() _bindings.Marshaler {
 }
 
 type parentTakeChildRequest struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	C ChildInterface
 }
 
@@ -98,7 +98,7 @@ func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
 }
 
 type parentTakeChildRequestRequest struct {
-	_ struct{} `fidl2:"s,8,0"`
+	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
 	R ChildInterfaceRequest`fidl:"0" fidl2:"0"`
 }
 

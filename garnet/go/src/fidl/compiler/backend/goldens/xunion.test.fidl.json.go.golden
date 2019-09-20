@@ -13,7 +13,7 @@ import (
 
 
 type Empty struct {
-	_ struct{} `fidl2:"s,1,1"`
+	_ struct{} `fidl:"s,1,1" fidl2:"s,1,1"`
 }
 
 var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
@@ -30,7 +30,7 @@ const (
 
 
 type OlderSimpleUnion struct {
-	I_olderSimpleUnionTag `fidl2:"x,24,8"`
+	I_olderSimpleUnionTag `fidl:"x,24,8" fidl2:"x,24,8"`
 	I_unknownData []byte
 	I int64 `fidl:"1026732503" fidl2:"1026732503"`
 	F float32 `fidl:"1362546558" fidl2:"1362546558"`
@@ -84,7 +84,7 @@ const (
 
 
 type NewerSimpleUnion struct {
-	I_newerSimpleUnionTag `fidl2:"x,24,8"`
+	I_newerSimpleUnionTag `fidl:"x,24,8" fidl2:"x,24,8"`
 	I_unknownData []byte
 	I int64 `fidl:"693944286" fidl2:"693944286"`
 	S string `fidl:"473666119," fidl2:"473666119,"`
@@ -151,7 +151,7 @@ const (
 
 
 type StrictSimpleXUnion struct {
-	I_strictSimpleXUnionTag `fidl2:"x!,24,8"`
+	I_strictSimpleXUnionTag `fidl:"x!,24,8" fidl2:"x!,24,8"`
 	I_unknownData []byte
 	I int32 `fidl:"1851697276" fidl2:"1851697276"`
 	F float32 `fidl:"855207063" fidl2:"855207063"`
@@ -208,7 +208,7 @@ const (
 
 
 type XUnionContainingEmptyStruct struct {
-	I_xUnionContainingEmptyStructTag `fidl2:"x,24,8"`
+	I_xUnionContainingEmptyStructTag `fidl:"x,24,8" fidl2:"x,24,8"`
 	I_unknownData []byte
 	Empty Empty `fidl:"424858069" fidl2:"424858069"`
 }
@@ -245,7 +245,7 @@ const (
 
 
 type StrictBoundedXUnion struct {
-	I_strictBoundedXUnionTag `fidl2:"x!,24,8"`
+	I_strictBoundedXUnionTag `fidl:"x!,24,8" fidl2:"x!,24,8"`
 	I_unknownData []byte
 	V []uint8 `fidl:"2024555624,10" fidl2:"2024555624,10"`
 }
@@ -276,7 +276,7 @@ const (
 )
 
 type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_ struct{} `fidl2:"s,24,0"`
+	_ struct{} `fidl:"s,24,0" fidl2:"s,24,0"`
 	Xu StrictBoundedXUnion
 }
 
@@ -287,7 +287,7 @@ func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Mar
 }
 
 type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_ struct{} `fidl2:"s,24,0"`
+	_ struct{} `fidl:"s,24,0" fidl2:"s,24,0"`
 	Xu OlderSimpleUnion
 }
 
