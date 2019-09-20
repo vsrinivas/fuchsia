@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INSPECT_MANAGER_H_
 
 #include <lib/inspect/cpp/vmo/types.h>
+#include <lib/timekeeper/clock.h>
 
 #include <map>
 #include <string>
@@ -19,7 +20,7 @@ namespace feedback {
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
  public:
-  InspectManager(inspect::Node* root_node);
+  InspectManager(inspect::Node* root_node, timekeeper::Clock* clock);
 
   // Records the configuration file of the CrashpadAgent.
   void ExposeConfig(const feedback::Config& config);
@@ -37,6 +38,9 @@ class InspectManager {
                             const std::string& server_report_id);
 
  private:
+  // Returns a non-localized human-readable timestamp of the current time according to |clock_|.
+  std::string CurrentTime();
+
   // Inspect node containing the configuration file.
   struct Config {
     // Inspect node containing the database configuration.
@@ -62,11 +66,12 @@ class InspectManager {
 
   // Inspect node for a single report.
   struct Report {
-    Report(inspect::Node* parent_node, const std::string& local_report_id);
+    Report(inspect::Node* parent_node, const std::string& local_report_id,
+           const std::string& creation_time);
     Report(Report&&) = default;
 
     // Adds the crash server entries after receiving a server response.
-    void MarkAsUploaded(const std::string& server_report_id);
+    void MarkAsUploaded(const std::string& server_report_id, const std::string& creation_time);
 
    private:
     inspect::Node node_;
@@ -95,6 +100,7 @@ class InspectManager {
   };
 
   inspect::Node* root_node_ = nullptr;
+  timekeeper::Clock* clock_;
   Config config_;
   Reports reports_;
 

@@ -11,6 +11,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/timekeeper/system_clock.h>
 
 #include <utility>
 
@@ -24,7 +25,8 @@ int main(int argc, const char** argv) {
 
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
-  feedback::InspectManager inspect_manager(&root_node);
+  timekeeper::SystemClock clock;
+  feedback::InspectManager inspect_manager(&root_node, &clock);
 
   std::unique_ptr<feedback::CrashpadAgent> agent =
       feedback::CrashpadAgent::TryCreate(loop.dispatcher(), context->svc(), &inspect_manager);

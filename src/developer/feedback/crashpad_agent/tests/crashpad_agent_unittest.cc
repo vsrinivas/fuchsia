@@ -14,8 +14,8 @@
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/timekeeper/test_clock.h>
 #include <lib/zx/time.h>
-#include <stdint.h>
 #include <zircon/errors.h>
 
 #include <algorithm>
@@ -136,7 +136,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 
     attachments_dir_ = files::JoinPath(config.crashpad_database.path, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot());
+    clock_ = std::make_unique<timekeeper::TestClock>();
+    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
     agent_ = CrashpadAgent::TryCreate(dispatcher(), service_directory_provider_.service_directory(),
                                       std::move(config), std::move(crash_server_),
                                       inspect_manager_.get());
@@ -334,6 +335,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
+  std::unique_ptr<timekeeper::TestClock> clock_;
   std::unique_ptr<InspectManager> inspect_manager_;
 };
 
