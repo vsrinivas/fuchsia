@@ -4,7 +4,10 @@
 
 #include "src/cobalt/bin/app/cobalt_app.h"
 
+#include <memory>
+
 #include "lib/backoff/exponential_backoff.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
@@ -76,14 +79,15 @@ std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_reg
 
 }  // namespace
 
-CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
-                     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
-                     size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
-                     bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-                     const std::string& product_name, const std::string& board_name,
-                     const std::string& version, cobalt::ReleaseStage release_stage)
+CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+                     std::chrono::seconds target_interval, std::chrono::seconds min_interval,
+                     std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
+                     bool start_event_aggregator_worker, bool use_memory_observation_store,
+                     size_t max_bytes_per_observation_store, const std::string& product_name,
+                     const std::string& board_name, const std::string& version,
+                     cobalt::ReleaseStage release_stage)
     : system_data_(product_name, board_name, release_stage, version),
-      context_(sys::ComponentContext::Create()),
+      context_(std::move(context)),
       system_clock_(FuchsiaSystemClock(context_.get())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
                        [this] { return context_->svc()->Connect<http::HttpService>(); }),

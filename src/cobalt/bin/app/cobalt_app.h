@@ -11,6 +11,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <memory>
 #include <string>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -97,12 +98,13 @@ class CobaltApp {
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
-  CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
-            std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
-            size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
-            bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-            const std::string& product_name, const std::string& board_name,
-            const std::string& version, cobalt::ReleaseStage release_stage);
+  CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+            std::chrono::seconds target_interval, std::chrono::seconds min_interval,
+            std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
+            bool start_event_aggregator_worker, bool use_memory_observation_store,
+            size_t max_bytes_per_observation_store, const std::string& product_name,
+            const std::string& board_name, const std::string& version,
+            cobalt::ReleaseStage release_stage);
 
  private:
   static encoder::ClientSecret getClientSecret();

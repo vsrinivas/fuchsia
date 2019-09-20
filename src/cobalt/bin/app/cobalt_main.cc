@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,6 +16,7 @@
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
+#include <zircon/types.h>
 
 #include <chrono>
 #include <fstream>
@@ -221,12 +223,36 @@ int main(int argc, const char** argv) {
                 << ", release_stage=" << release_stage << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  auto context = sys::ComponentContext::Create();
+
+  // Lower the priority of the main thread.
+  fuchsia::scheduler::ProfileProviderSyncPtr provider;
+  context->svc()->Connect<fuchsia::scheduler::ProfileProvider>(provider.NewRequest());
+  zx_status_t fidl_status;
+  zx::profile profile;
+  auto status =
+      provider->GetProfile(0 /* LOWEST_PRIORITY */, "src/cobalt/bin/app", &fidl_status, &profile);
+  if (status == ZX_OK) {
+    FX_CHECK(fidl_status == ZX_OK) << "Recieved error while acquiring profile";
+    FX_LOGS(INFO) << "Fetched profile!";
+    status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+    FX_CHECK(status == ZX_OK) << "Unable to set current thread priority";
+    FX_LOGS(INFO) << "Profile aplied to current thread";
+  } else {
+    // If we fail with ZX_ERR_PEER_CLOSED, then the ProfileProvider is down, and we should continue
+    // anyway.
+    FX_CHECK(status == ZX_ERR_PEER_CLOSED)
+        << "Unable to connect to ProfileProvider, received unexpected error (" << status << ")";
+    FX_LOGS(INFO) << "Unable to lower current thread provider. ProfileProvider is down.";
+  }
+
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
-  cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval, initial_interval,
-                        event_aggregator_backfill_days, start_event_aggregator_worker,
-                        use_memory_observation_store, max_bytes_per_observation_store,
-                        ReadBuildInfo("product"), ReadBoardName(), ReadBuildInfo("version"),
-                        release_stage);
+  cobalt::CobaltApp app(std::move(context), loop.dispatcher(), schedule_interval, min_interval,
+                        initial_interval, event_aggregator_backfill_days,
+                        start_event_aggregator_worker, use_memory_observation_store,
+                        max_bytes_per_observation_store, ReadBuildInfo("product"), ReadBoardName(),
+                        ReadBuildInfo("version"), release_stage);
   loop.Run();
   return 0;
 }
