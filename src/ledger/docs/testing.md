@@ -42,6 +42,11 @@ manually:
 
 It will also enable [Address Sanitizer] for ledger tests.
 
+You can run only [specific tests][gtest_filter] with `--gtest_filter`:
+```
+fx run-test ledger_tests -- --gtest_filter=FooTest.*
+```
+
 ## Unit tests
 
 **Unit tests** are low-level tests written against the smallest testable parts
@@ -184,6 +189,7 @@ You can refer to the full [fuzzing] instructions for details.
 
 [Address Sanitizer]: https://github.com/google/sanitizers/wiki/AddressSanitizer
 [Google Test]: https://github.com/google/googletest
+[gtest_filter]: https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#running-a-subset-of-the-tests
 [TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/gtest/test_loop_fixture.h
 [IntegrationTest]: /src/ledger/bin/tests/integration/integration_test.h
 [/bin/ledger/tests/integration]: /src/ledger/bin/tests/integration
