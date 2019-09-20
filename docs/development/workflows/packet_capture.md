@@ -61,6 +61,14 @@ The captured packets are first stored in the target's `/tmp/` directory. After t
 [host] $ fx sniff --view wireshark wlan
 ```
 
+### Force stop
+Packet capture runs for the specified duration (`--time` or `-t` option). If a user desires to stop early, presse one of the following keys:
+
+```
+c, q, C, Q
+```
+This will stop both a target side process and a host side process.
+
 ## How-to (on target device)
 
 ### Use netdump for debugging

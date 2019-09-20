@@ -29,9 +29,13 @@ $ fx sniff --help                  # show all command line options
 """
 
 import argparse
+import fcntl
 import os
 import subprocess
 import sys
+import termios
+import time
+
 
 LINUX_BIN_WIRESHARK = u"wireshark"
 LINUX_BIN_TSHARK = u"tshark"
@@ -74,7 +78,6 @@ def run_cmd(cmd):
     Returns:
       The stdout outcome of the shell command.
     """
-    print("Run: " + cmd)
     result = subprocess.run(
         cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return result.stdout.decode()
@@ -173,11 +176,14 @@ def has_fuzzy_name(name_under_test, names):
     return False
 
 
-def do_sniff(args):
-    """Performs sniffing and displaying.
+def build_cmd(args):
+    """Build cmd line for sniffing and displaying.
 
     Args:
       args: command line arguments.
+
+    Returns:
+      cmd string.
     """
     fx_workflow_filter = (
         u"not ( "
@@ -214,8 +220,50 @@ def do_sniff(args):
         cmd_suffix += u" | wireshark -k -i -"
 
     cmd = cmd_prefix + cmd_options + cmd_suffix
+    return cmd
 
-    invoke_shell(cmd)
+
+def get_keystroke_unblocking():
+    """Returns a keystroke in a non-blocking way.
+    """
+
+    fd = sys.stdin.fileno()
+
+    attr_org = termios.tcgetattr(fd)
+    flags_org = fcntl.fcntl(fd, fcntl.F_GETFL)
+
+    attr_new = attr_org[::]
+    attr_new[3] = attr_new[3] & ~termios.ICANON & ~termios.ECHO
+    flags_new = flags_org | os.O_NONBLOCK
+
+    try:
+        termios.tcsetattr(fd, termios.TCSANOW, attr_new)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags_new)
+        key = sys.stdin.read(1)
+    except:
+        pass
+    finally:
+        termios.tcsetattr(fd, termios.TCSAFLUSH, attr_org)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags_org)
+
+    return key
+
+
+def do_sniff(cmd):
+    """Run user-interruptible sniffer.
+
+    Args:
+      cmd: command string, which may include escape sequence.
+    """
+    print("Run: {}".format(cmd))
+    p = subprocess.Popen(cmd, shell=True)
+    while p.poll() is None:
+        time.sleep(0.07)  # To tame the CPU cycle consumption
+        user_key = get_keystroke_unblocking()
+        if user_key in ["q", "c", "Q", "C"]:
+            print(" ... forced stop by user ({})".format(user_key))
+            run_cmd("fx shell killall netdump")
+            p.terminate()
 
 
 def move_out_dumpfile(filename):
@@ -267,7 +315,6 @@ def main():
         default=u"",
         help=u"Choose one interface name from: %s" %
         (" ".join(i for i in iface_names)))
-
     parser.add_argument(
         u"-t", u"--timeout", default=30, help=u"Time duration to sniff")
     parser.add_argument(
@@ -310,7 +357,7 @@ def main():
         sys.exit(1)
 
     args.interface_filepath = iface_file_paths[0]
-    do_sniff(args)
+    do_sniff(build_cmd(args))
     print(u"\nEnd of fx sniff")
 
     move_out_dumpfile(args.file)
