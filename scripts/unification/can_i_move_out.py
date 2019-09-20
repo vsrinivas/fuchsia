@@ -50,8 +50,10 @@ class Finder(object):
 
     def find_libraries(self, type):
         base = os.path.join(self._zircon_dir, 'system', type)
+        def has_build_file(dir):
+            return os.path.isfile(os.path.join(base, dir, 'BUILD.gn'))
         for _, dirs, _ in os.walk(base):
-            return dirs
+            return filter(has_build_file, dirs)
 
 
 def main():
