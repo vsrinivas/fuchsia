@@ -16,6 +16,12 @@ supported language.
 The input files for GIDL are at <//tools/fidl/gidl-conformance-suite/>. That
 directory contains a `.gidl` file and multiple `.fidl` files.
 
+Before building and running tests, be sure that you have the [configured the
+build][fx set] to include the `tests` bundle. For example, if using the `core`
+product configuration and `x64` architecture:
+
+    fx set core.x64 --with //bundles:tests
+
 To re-generate all of GIDL's conformance tests:
 
     fx build tools/gidl
@@ -24,26 +30,31 @@ To re-generate all of GIDL's conformance tests:
 After generating the conformance tests, you must run them to validate that the
 conformance test passes. This is dependent on the language:
 
-* Go: `regen.sh` outputs the Go language bindings for the `.fidl` files to
-  <third_party/go/src/syscall/zx/fidl/conformance/impl.go>, and outputs the
-  conformance test to
-  <third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go>. To run the
-  Go conformance test:
+* Go:
+    * Bindings: <third_party/go/src/syscall/zx/fidl/conformance/impl.go>
+    * Test: <third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go>
+    * Build: `fx build third_party/go:go_fidl_tests`
+    * Run: `fx run-test go_fidl_tests -- -test.v`
 
-    fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases'
+* C++ (HLCPP):
+    * Bindings: <sdk/lib/fidl/cpp/conformance.fidl.h>
+    * Test: <sdk/lib/fidl/cpp/conformance_test.cc>
+    * Build: `fx build sdk/lib/fidl/cpp:conformance_test`
+    * Run: `fx run-test fidl_tests`
+    * Build (host): `fx build host_x64/fidl_cpp_host_conformance_test`
+    * Run (host): `fx run-host-tests fidl_cpp_host_conformance_test`
 
-* C++: `regen.sh` outputs the C++ bindings to
-  <sdk/lib/fidl/cpp/conformance.fidl.h> & .cc, and outputs the C++ conformance
-  test to <sdk/lib/fidl/cpp/conformance_test.cc>. To run this:
+* C++ (LLCPP):
+    * Bindings: <out/default/fidling/gen/tools/fidl/gidl-conformance-suite/conformance/llcpp/fidl.h>
+    * Test: <garnet/public/lib/fidl/llcpp/conformance_test.cc>
+    * Build: `fx build garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test`
+    * Run: `fx run-test fidl_llcpp_conformance_test`
 
-    # host tests (good for a fast edit-compile-test iteration)
-    fx build host_x64/fidl_cpp_host_conformance_test
-    fx run-host-tests fidl_cpp_host_conformance_test
-
-    # on-device test
-    fx build sdk/lib/fidl/cpp:conformance_test
-    fx serve
-    fx run-test fidl_tests  # includes //sdk/lib/fidl/cpp:conformance_test
+* Dart:
+    * Bindings: <bin/fidl_bindings_test/test/test/conformance_test_types.dart>
+    * Test: <bin/fidl_bindings_test/test/test/conformance_test.dart>
+    * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
+    * Run: `fx run-test fidl_bindings_test`
 
 ## Writing Conformance Tests
 
@@ -121,3 +132,5 @@ From this description, the following must be verified:
 
 * Decoding of the bytes encoding fails
 * Failure triggers exactly the expected error
+
+[fx set]: https://fuchsia.dev/fuchsia-src/development/workflows/fx#configure-a-build
