@@ -26,11 +26,24 @@ type statCounterInspectImpl struct {
 }
 
 func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
+	var properties []inspect.Property
 	var metrics []inspect.Metric
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		switch field := typ.Field(i); field.Type.Kind() {
 		case reflect.Struct:
+			if field.Anonymous {
+				obj, err := (&statCounterInspectImpl{Value: v.Field(i)}).ReadData()
+				if err != nil {
+					return inspect.Object{}, err
+				}
+				if p := obj.Properties; p != nil {
+					properties = append(properties, *p...)
+				}
+				if m := obj.Metrics; m != nil {
+					metrics = append(metrics, *m...)
+				}
+			}
 		case reflect.Ptr:
 			var value inspect.MetricValue
 			value.SetUintValue(v.Field(i).Interface().(*tcpip.StatCounter).Value())
@@ -43,8 +56,9 @@ func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 		}
 	}
 	return inspect.Object{
-		Name:    v.name,
-		Metrics: &metrics,
+		Name:       v.name,
+		Properties: &properties,
+		Metrics:    &metrics,
 	}, nil
 }
 
