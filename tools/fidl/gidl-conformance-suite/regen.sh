@@ -7,7 +7,14 @@ if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
   exit 1
 fi
 
-readonly GOFMT="${FUCHSIA_BUILD_DIR}/tools/goroot/bin/gofmt"
+readonly GOROOT="${FUCHSIA_BUILD_DIR}/tools/goroot"
+if [[ ! -d "${GOROOT}" ]]; then
+    echo "error: you must build Go before running this command"
+    echo "run \"fx build third_party/go:go_runtime\""
+    exit 1
+fi
+
+readonly GOFMT="${GOROOT}/bin/gofmt"
 if [ ! -x "${GOFMT}" ]; then
     echo "error: unable to find gofmt; did the path change?" 1>&2
     exit 1
