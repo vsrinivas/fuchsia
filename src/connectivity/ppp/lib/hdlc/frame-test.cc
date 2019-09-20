@@ -4,9 +4,9 @@
 
 #include "frame.h"
 
-#include <zxtest/zxtest.h>
-
 #include <vector>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 

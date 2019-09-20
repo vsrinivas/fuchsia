@@ -10,6 +10,7 @@ executable("ppp-tests") {
   output_name = "ppp-tests"
 
   deps = [
+    "//src/connectivity/ppp/drivers/serial-ppp:driver-test",
     "//src/connectivity/ppp/lib/hdlc:fcs-test",
     "//src/connectivity/ppp/lib/hdlc:frame-test",
   ]

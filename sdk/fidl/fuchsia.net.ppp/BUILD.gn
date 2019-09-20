@@ -10,7 +10,7 @@ fidl("fuchsia.net.ppp") {
   sources = [
     "ppp.fidl",
   ]
-  deps = [
+  public_deps = [
     "//zircon/system/fidl/fuchsia-net",
   ]
 }
