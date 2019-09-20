@@ -143,6 +143,18 @@ executable("utils_test") {
   deps = testing_deps
 }
 
+executable("wlan-device_test") {
+  output_name = "wlan-device_test"
+  testonly = true
+
+  sources = [
+    "wlan-device_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 unittest_package("iwlwifi_test") {
   package_name = "iwlwifi_test"
 
@@ -154,6 +166,7 @@ unittest_package("iwlwifi_test") {
     ":pcie_test",
     ":phy-ctxt_test",
     ":utils_test",
+    ":wlan-device_test",
   ]
 
   tests = [
@@ -183,6 +196,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "utils_test"
+      environments = basic_envs
+    },
+    {
+      name = "wlan-device_test"
       environments = basic_envs
     },
   ]
