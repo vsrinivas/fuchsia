@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{buffer_set::*, FatalError};
+use crate::FatalError;
 use failure::Error;
 use fidl_fuchsia_media::{FormatDetails, StreamOutputFormat};
 use fidl_table_validation::*;
+use fuchsia_stream_processors::*;
 use hex::{decode, encode};
 use mundane::hash::{Digest, Hasher, Sha256};
 use std::{convert::TryInto, fmt, rc::Rc};

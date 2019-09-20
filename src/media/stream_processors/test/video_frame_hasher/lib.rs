@@ -142,7 +142,9 @@ impl<'a> TryFrom<Frame<'a>> for Nv12Frame<'a> {
     }
 }
 
-fn packet_display_data<'a>(src: &'a OutputPacket) -> Result<Box<dyn Iterator<Item = u8> + 'a>, Error> {
+fn packet_display_data<'a>(
+    src: &'a OutputPacket,
+) -> Result<Box<dyn Iterator<Item = u8> + 'a>, Error> {
     let format = src
         .format
         .format_details
@@ -204,9 +206,10 @@ mod test {
     use super::{Error, *};
     use fidl::encoding::Decodable;
     use fidl_fuchsia_sysmem::{ColorSpace, PixelFormat, *};
+    use fuchsia_stream_processors::{ValidPacket, ValidPacketHeader};
     use rand::prelude::*;
     use std::rc::Rc;
-    use stream_processor_test::{ValidPacket, ValidPacketHeader, ValidStreamOutputFormat};
+    use stream_processor_test::ValidStreamOutputFormat;
 
     #[derive(Debug, Copy, Clone)]
     struct TestSpec {

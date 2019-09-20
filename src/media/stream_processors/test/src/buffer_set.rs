@@ -9,8 +9,8 @@ use failure::{self, Fail, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
-use fidl_table_validation::{ValidFidlTable, Validate};
 use fuchsia_component::client;
+use fuchsia_stream_processors::*;
 use fuchsia_zircon as zx;
 use std::{
     convert::TryFrom,
@@ -34,87 +34,6 @@ impl fmt::Display for Error {
 }
 
 impl Fail for Error {}
-
-#[allow(unused)]
-#[derive(ValidFidlTable, Copy, Clone, Debug, PartialEq)]
-#[fidl_table_src(StreamBufferSettings)]
-pub struct ValidStreamBufferSettings {
-    buffer_lifetime_ordinal: u64,
-    buffer_constraints_version_ordinal: u64,
-    packet_count_for_server: u32,
-    packet_count_for_client: u32,
-    per_packet_buffer_bytes: u32,
-    #[fidl_field_type(default = false)]
-    single_buffer_mode: bool,
-}
-
-#[allow(unused)]
-#[derive(ValidFidlTable)]
-#[fidl_table_src(StreamBufferConstraints)]
-#[fidl_table_validator(StreamBufferConstraintsValidator)]
-pub struct ValidStreamBufferConstraints {
-    buffer_constraints_version_ordinal: u64,
-    default_settings: ValidStreamBufferSettings,
-    per_packet_buffer_bytes_min: u32,
-    per_packet_buffer_bytes_recommended: u32,
-    per_packet_buffer_bytes_max: u32,
-    packet_count_for_server_min: u32,
-    packet_count_for_server_recommended: u32,
-    packet_count_for_server_recommended_max: u32,
-    packet_count_for_server_max: u32,
-    packet_count_for_client_min: u32,
-    packet_count_for_client_max: u32,
-    single_buffer_mode_allowed: bool,
-    #[fidl_field_type(default = false)]
-    is_physically_contiguous_required: bool,
-    #[fidl_field_type(optional)]
-    very_temp_kludge_bti_handle: Option<zx::Handle>,
-}
-
-#[derive(ValidFidlTable)]
-#[fidl_table_src(StreamOutputConstraints)]
-pub struct ValidStreamOutputConstraints {
-    pub stream_lifetime_ordinal: u64,
-    pub buffer_constraints_action_required: bool,
-    pub buffer_constraints: ValidStreamBufferConstraints,
-}
-
-pub struct StreamBufferConstraintsValidator;
-
-#[derive(Debug)]
-pub enum StreamBufferConstraintsError {
-    VersionOrdinalZero,
-    SingleBufferMode,
-    ConstraintsNoBtiHandleForPhysicalBuffers,
-}
-
-impl Validate<ValidStreamBufferConstraints> for StreamBufferConstraintsValidator {
-    type Error = StreamBufferConstraintsError;
-    fn validate(candidate: &ValidStreamBufferConstraints) -> std::result::Result<(), Self::Error> {
-        if candidate.buffer_constraints_version_ordinal == 0 {
-            // An ordinal of 0 in StreamBufferConstraints is not allowed.
-            return Err(StreamBufferConstraintsError::VersionOrdinalZero);
-        }
-
-        if candidate.default_settings.single_buffer_mode {
-            // StreamBufferConstraints should never suggest single buffer mode.
-            return Err(StreamBufferConstraintsError::SingleBufferMode);
-        }
-
-        if candidate.is_physically_contiguous_required
-            && candidate
-                .very_temp_kludge_bti_handle
-                .as_ref()
-                .map(|h| h.is_invalid())
-                .unwrap_or(true)
-        {
-            // The bti handle must be provided if the buffers need to be physically contiguous.
-            return Err(StreamBufferConstraintsError::ConstraintsNoBtiHandleForPhysicalBuffers);
-        }
-
-        Ok(())
-    }
-}
 
 /// The pattern to use when advancing ordinals.
 #[derive(Debug, Clone, Copy)]
@@ -156,11 +75,9 @@ impl BufferSetFactory {
         buffer_set_type: BufferSetType,
         buffer_collection_constraints: Option<BufferCollectionConstraints>,
     ) -> Result<BufferSet> {
-        let (collection_client, settings) = Self::settings(
-            buffer_lifetime_ordinal,
-            constraints,
-            buffer_collection_constraints
-        ).await?;
+        let (collection_client, settings) =
+            Self::settings(buffer_lifetime_ordinal, constraints, buffer_collection_constraints)
+                .await?;
 
         vlog!(2, "Got settings; waiting for buffers.");
 
@@ -173,8 +90,8 @@ impl BufferSetFactory {
                 .context("Sending output partial settings to codec")?,
         };
 
-        let (status, collection_info) = collection_client.wait_for_buffers_allocated().await
-            .context("Waiting for buffers")?;
+        let (status, collection_info) =
+            collection_client.wait_for_buffers_allocated().await.context("Waiting for buffers")?;
         vlog!(2, "Sysmem responded: {:?}", status);
         let collection_info = zx::Status::ok(status).map(|_| collection_info)?;
 
@@ -268,29 +185,6 @@ impl BufferSetFactory {
             },
         ))
     }
-}
-
-#[derive(ValidFidlTable, Clone, Copy, Debug, PartialEq)]
-#[fidl_table_src(PacketHeader)]
-pub struct ValidPacketHeader {
-    pub buffer_lifetime_ordinal: u64,
-    pub packet_index: u32,
-}
-
-#[derive(ValidFidlTable, Clone, Copy, Debug, PartialEq)]
-#[fidl_table_src(Packet)]
-pub struct ValidPacket {
-    pub header: ValidPacketHeader,
-    pub buffer_index: u32,
-    pub stream_lifetime_ordinal: u64,
-    pub start_offset: u32,
-    pub valid_length_bytes: u32,
-    #[fidl_field_type(optional)]
-    pub timestamp_ish: Option<u64>,
-    #[fidl_field_type(default = false)]
-    pub start_access_unit: bool,
-    #[fidl_field_type(default = false)]
-    pub known_end_access_unit: bool,
 }
 
 struct BufferSetSpec {

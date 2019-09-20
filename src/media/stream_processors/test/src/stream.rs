@@ -8,6 +8,7 @@ use crate::{
 };
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::BufferCollectionConstraints;
+use fuchsia_stream_processors::*;
 use std::{convert::TryFrom, rc::Rc};
 
 pub type OrdinalSequence = <OrdinalPattern as IntoIterator>::IntoIter;
@@ -85,7 +86,8 @@ impl<'a: 'b, 'b> Stream<'a> {
                     self.stream_processor,
                     BufferSetType::Input,
                     self.options.input_buffer_collection_constraints,
-                ).await?;
+                )
+                .await?;
 
                 vlog!(2, "Sending input format details in response to input constraints.");
                 self.stream_processor.queue_input_format_details(
@@ -107,13 +109,16 @@ impl<'a: 'b, 'b> Stream<'a> {
 
                 let constraints = ValidStreamOutputConstraints::try_from(output_config)?;
                 if constraints.buffer_constraints_action_required {
-                    self.output_buffer_set = Some(BufferSetFactory::buffer_set(
-                        get_ordinal(self.output_buffer_ordinals),
-                        constraints.buffer_constraints,
-                        self.stream_processor,
-                        BufferSetType::Output,
-                        self.options.output_buffer_collection_constraints,
-                    ).await?);
+                    self.output_buffer_set = Some(
+                        BufferSetFactory::buffer_set(
+                            get_ordinal(self.output_buffer_ordinals),
+                            constraints.buffer_constraints,
+                            self.stream_processor,
+                            BufferSetType::Output,
+                            self.options.output_buffer_collection_constraints,
+                        )
+                        .await?,
+                    );
                 }
             }
             StreamProcessorEvent::OnFreeInputPacket { free_input_packet } => {
