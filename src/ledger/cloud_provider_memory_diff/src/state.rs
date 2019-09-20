@@ -4,41 +4,14 @@
 
 use {
     crate::error::*,
+    crate::types::*,
     crate::utils::{Signal, SignalWatcher},
     std::collections::{HashMap, HashSet},
 };
 
-/// A wrapper for a position in the commit log.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Token(pub usize);
-
-/// A wrapper for the id of a commit.
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub struct CommitId(pub Vec<u8>);
-
-/// A wrapper for the id of an object.
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub struct ObjectId(pub Vec<u8>);
-
-/// A wrapper for application and page ids.
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub struct PageId(pub Vec<u8>, pub Vec<u8>);
-
-/// A wrapper for fingerprints.
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub struct Fingerprint(pub Vec<u8>);
-
 /// An object stored in the cloud.
 pub struct Object {
     /// The data associated to this object.
-    pub data: Vec<u8>,
-}
-
-/// A commit stored in the cloud.
-pub struct Commit {
-    /// The id of this commit.
-    pub id: CommitId,
-    /// Opaque data associated to the commit.
     pub data: Vec<u8>,
 }
 
@@ -100,10 +73,10 @@ impl PageCloud {
     /// Atomically adds a series a commits to the cloud and updates
     /// the commit log. Commits that were already present are not
     /// re-added to the log.
-    pub fn add_commits(&mut self, commits: Vec<Commit>) -> Result<(), ClientError> {
-        let mut will_insert = Vec::new();
+    pub fn add_commits(&mut self, commits: Vec<(Commit, Option<Diff>)>) -> Result<(), ClientError> {
+        let mut will_insert: Vec<CommitId> = Vec::new();
 
-        for commit in commits.iter() {
+        for (commit, _diff) in commits.iter() {
             if let Some(_existing) = self.commits.get(&commit.id) {
                 continue;
             };
@@ -113,7 +86,7 @@ impl PageCloud {
         // Mutate the data structure.
         self.commit_log.append(&mut will_insert);
         for commit in commits.into_iter() {
-            self.commits.insert(commit.id.clone(), commit);
+            self.commits.insert(commit.0.id.clone(), commit.0);
         }
 
         self.commit_signal.signal_and_rearm();
@@ -144,6 +117,15 @@ impl PageCloud {
             .map(|id| self.commits.get(id).expect("Unknown commit in commit log."))
             .collect();
         Some((Token(self.commit_log.len()), new_commits))
+    }
+
+    /// Returns a diff from one of the diff bases.
+    pub fn get_diff(
+        &self,
+        _commit: CommitId,
+        _possible_bases: Vec<CommitId>,
+    ) -> Result<Diff, ClientError> {
+        Err(client_error(Status::NotSupported).with_explanation("get_diff"))
     }
 }
 

@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::hash_map::{DefaultHasher, Entry, HashMap};
 use std::hash::{Hash, Hasher};
 
-use crate::state::*;
+use crate::types::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Status {
@@ -86,8 +86,8 @@ impl Flaky {
         std::mem::discriminant(req).hash(&mut hasher);
         match req {
             PageCloudRequest::AddCommits { commits, .. } => {
-                if let Ok(commits) = Commit::deserialize_vec(&commits.buffer) {
-                    for commit in commits.into_iter() {
+                if let Ok(commits) = Commit::deserialize_pack(&commits) {
+                    for (commit, _diff) in commits.into_iter() {
                         commit.id.0.hash(&mut hasher);
                     }
                 }

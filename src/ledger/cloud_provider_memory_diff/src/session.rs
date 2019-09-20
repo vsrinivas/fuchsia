@@ -4,9 +4,8 @@
 
 use fidl::encoding::OutOfLine;
 use fidl_fuchsia_ledger_cloud::{
-    CloudProviderRequest, CloudProviderRequestStream, CommitPack, DeviceSetRequest,
-    DeviceSetRequestStream, DeviceSetWatcherProxy, PageCloudRequest, PageCloudRequestStream,
-    PageCloudWatcherProxy, Status,
+    CloudProviderRequest, CloudProviderRequestStream, DeviceSetRequest, DeviceSetRequestStream,
+    DeviceSetWatcherProxy, PageCloudRequest, PageCloudRequestStream, PageCloudWatcherProxy, Status,
 };
 use futures::future;
 use futures::future::LocalFutureObj;
@@ -21,6 +20,7 @@ use crate::error::*;
 use crate::filter::{self, RequestFilter};
 use crate::serialization::*;
 use crate::state::*;
+use crate::types::*;
 use crate::utils::{FutureOrEmpty, Signal, SignalWatcher};
 
 /// Shared data accessible by any connection derived from a CloudSession.
@@ -214,14 +214,11 @@ impl PageSession {
                 exclusive_storage.get_page(page_id.clone()).get_commits(position)
             {
                 position = next_position;
-                let buf = Commit::serialize_vec(commits);
+                let mut pack = Commit::serialize_pack(commits);
                 // Release the storage before await-ing.
                 std::mem::drop(exclusive_storage);
 
-                match proxy
-                    .on_new_commits(&mut CommitPack { buffer: buf }, &mut position.into())
-                    .await
-                {
+                match proxy.on_new_commits(&mut pack, &mut position.into()).await {
                     Ok(()) => {}
                     Err(_) => return (), // Assume the connection closed.
                 }
@@ -234,7 +231,7 @@ impl PageSession {
         let page = storage.get_page(self.page_id.clone());
         match request {
             PageCloudRequest::AddCommits { commits, responder } => {
-                match Commit::deserialize_vec(&commits.buffer) {
+                match Commit::deserialize_pack(&commits) {
                     Err(e) => responder.send(e.report()),
                     Ok(commits) => responder.send(page.add_commits(commits).report_if_error()),
                 }
@@ -247,15 +244,11 @@ impl PageSession {
                             None => (None, Vec::new()),
                             Some((position, commits)) => (Some(position), commits),
                         };
-                        let buf = Commit::serialize_vec(commits);
+                        let mut pack = Commit::serialize_pack(commits);
                         // This must live until the end of the call.
                         let mut position = position.map(Token::into);
                         let position = position.as_mut().map(OutOfLine);
-                        responder.send(
-                            Status::Ok,
-                            Some(OutOfLine(&mut CommitPack { buffer: buf })),
-                            position,
-                        )
+                        responder.send(Status::Ok, Some(OutOfLine(&mut pack)), position)
                     }
                 }
             }
@@ -294,8 +287,18 @@ impl PageSession {
                     responder.send(Status::Ok)
                 }
             },
-            PageCloudRequest::GetDiff { responder, .. } => {
-                responder.send(Status::NotSupported, None)
+            PageCloudRequest::GetDiff { commit_id, possible_bases, responder } => {
+                let diff = page.get_diff(
+                    CommitId(commit_id),
+                    possible_bases.into_iter().map(CommitId).collect(),
+                );
+                match diff {
+                    Err(e) => responder.send(e.report(), None),
+                    Ok(diff) => {
+                        let mut pack = Diff::serialize_pack(diff);
+                        responder.send(Status::Ok, Some(OutOfLine(&mut pack)))
+                    }
+                }
             }
         }
     }
@@ -319,7 +322,7 @@ impl PageSession {
                 watcher.into_proxy()?.on_error(Status::NetworkError)
             }
             PageCloudRequest::GetDiff { responder, .. } => {
-                responder.send(Status::NotSupported, None)
+                responder.send(Status::NetworkError, None)
             }
         }
     }

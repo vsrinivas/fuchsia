@@ -10,6 +10,7 @@ mod filter;
 mod serialization;
 mod session;
 mod state;
+mod types;
 mod utils;
 
 use fidl_fuchsia_ledger_cloud::CloudProviderRequestStream;
