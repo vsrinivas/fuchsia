@@ -123,8 +123,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
                },
-               /*feedback_data_collection_timeout=*/
-               kFeedbackDataCollectionTimeout},
+               /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout},
         std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
@@ -186,7 +185,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     const std::string report_attachments_dir = files::JoinPath(attachments_dir_, subdirs[0]);
     ASSERT_TRUE(files::ReadDirContents(report_attachments_dir, &attachments));
     RemoveCurrentDirectory(&attachments);
-    EXPECT_THAT(attachments, testing::UnorderedElementsAreArray(expected_attachments));
+    EXPECT_THAT(attachments, UnorderedElementsAreArray(expected_attachments));
     for (const std::string& attachment : attachments) {
       uint64_t size;
       ASSERT_TRUE(files::GetFileSize(files::JoinPath(report_attachments_dir, attachment), &size));
@@ -338,7 +337,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<InspectManager> inspect_manager_;
 };
 
-TEST_F(CrashpadAgentTest, Succeed_OnDartException) {
+TEST_F(CrashpadAgentTest, Succeed_OnLegacyDartException) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   GenericException exception = {};
   const std::string type = "FileSystemException";
@@ -361,6 +360,86 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartException) {
   CheckAttachments({"DartError"});
 }
 
+TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneCrashReport().is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  std::vector<Attachment> attachments;
+  attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
+  ASSERT_TRUE(FileOneCrashReport(
+                  /*annotations=*/
+                  {
+                      BuildAnnotation("annotation.key"),
+                  },
+                  /*attachments=*/std::move(attachments))
+                  .is_response());
+  CheckAttachments({kSingleAttachmentKey});
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  CrashReport report;
+  report.set_program_name(kProgramName);
+  report.set_event_id("event-id");
+  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneGenericCrashReport("signature").is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  fuchsia::mem::Buffer minidump;
+  fsl::VmoFromString("minidump", &minidump);
+  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  fuchsia::mem::Buffer stack_trace;
+  fsl::VmoFromString("#0", &stack_trace);
+  ASSERT_TRUE(
+      FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
+          .is_response());
+  CheckAttachments({"DartError"});
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
+  CrashReport report;
+
+  CrashReporter_File_Result out_result;
+  agent_->File(std::move(report),
+               [&out_result](CrashReporter_File_Result result) { out_result = std::move(result); });
+  ASSERT_TRUE(out_result.is_err());
+}
+
 TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
@@ -375,8 +454,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout=*/
-                    kFeedbackDataCollectionTimeout});
+                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
   // We generate a crash report.
   EXPECT_TRUE(FileOneCrashReport().is_response());
@@ -409,8 +487,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout=*/
-                    kFeedbackDataCollectionTimeout});
+                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
   // We generate a first crash report.
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_response());
@@ -429,18 +506,18 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
   // previously (the directory name is the local crash report ID).
   const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirs();
   EXPECT_EQ(new_attachment_subdirs.size(), 1u);
-  EXPECT_THAT(new_attachment_subdirs,
-              testing::Not(testing::UnorderedElementsAreArray(attachment_subdirs)));
+  EXPECT_THAT(new_attachment_subdirs, Not(UnorderedElementsAreArray(attachment_subdirs)));
 }
 
-TEST_F(CrashpadAgentTest, Check_CleanDatabase_CleanOrphanedAttachments) {
+TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
+  // We generate an orphan attachment and check it is there.
   const std::string kOrphanedAttachmentDir = files::JoinPath(
       database_path_.path(), files::JoinPath(kCrashpadAttachmentsDir, kCrashpadUUIDString));
   files::CreateDirectory(kOrphanedAttachmentDir);
-
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
   EXPECT_THAT(attachment_subdirs, ElementsAre(kCrashpadUUIDString));
 
+  // We generate a crash report with its own attachment.
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment("an attachment").is_response());
 
   // We check that only one set of attachments is present and different than the
@@ -462,8 +539,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
-             /*feedback_data_collection_timeout=*/
-             kFeedbackDataCollectionTimeout},
+             /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout},
       std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
   EXPECT_TRUE(FileOneCrashReport().is_err());
@@ -481,8 +557,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
                     },
-                    /*feedback_data_collection_timeout=*/
-                    kFeedbackDataCollectionTimeout});
+                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
   EXPECT_TRUE(FileOneCrashReport().is_response());
 }
@@ -576,86 +651,6 @@ TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
                                                        StringIs("creation_time", Not(IsEmpty())),
                                                        StringIs("id", kStubServerReportId),
                                                    }))))))))))))))));
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneCrashReport().is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  std::vector<Attachment> attachments;
-  attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
-  ASSERT_TRUE(FileOneCrashReport(
-                  /*annotations=*/
-                  {
-                      BuildAnnotation("annotation.key"),
-                  },
-                  /*attachments=*/std::move(attachments))
-                  .is_response());
-  CheckAttachments({kSingleAttachmentKey});
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  CrashReport report;
-  report.set_program_name(kProgramName);
-  report.set_event_id("event-id");
-  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneGenericCrashReport("signature").is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  fuchsia::mem::Buffer minidump;
-  fsl::VmoFromString("minidump", &minidump);
-  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  fuchsia::mem::Buffer stack_trace;
-  fsl::VmoFromString("#0", &stack_trace);
-  ASSERT_TRUE(
-      FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
-          .is_response());
-  CheckAttachments({"DartError"});
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_response());
-  CheckAttachments();
-}
-
-TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
-  CrashReport report;
-
-  CrashReporter_File_Result out_result;
-  agent_->File(std::move(report),
-               [&out_result](CrashReporter_File_Result result) { out_result = std::move(result); });
-  ASSERT_TRUE(out_result.is_err());
 }
 
 }  // namespace
