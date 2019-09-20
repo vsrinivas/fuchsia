@@ -701,7 +701,7 @@ void SystemImpl::AttachToProcess(uint64_t pid, Target::Callback callback) {
   // See if there is a target that is not attached.
   Target* open_slot = nullptr;
   for (auto& target : targets_) {
-    if (!target->GetProcess()) {
+    if (target->GetState() == zxdb::Target::State::kNone) {
       open_slot = target.get();
       break;
     }

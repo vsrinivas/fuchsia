@@ -9,6 +9,8 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
+#include "src/developer/debug/zxdb/client/filter.h"
+#include "src/developer/debug/zxdb/client/job_context_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -20,9 +22,11 @@ namespace {
 
 using debug_ipc::MessageLoop;
 
+class SessionTest;
+
 class SessionSink : public RemoteAPI {
  public:
-  SessionSink() = default;
+  explicit SessionSink(SessionTest* session_test) : session_test_(session_test) {}
   ~SessionSink() override = default;
 
   // Returns the breakpoint IDs that the backend is supposed to know about now.
@@ -76,7 +80,14 @@ class SessionSink : public RemoteAPI {
     });
   }
 
+  void Attach(const debug_ipc::AttachRequest& request,
+              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {}
+
+  void JobFilter(const debug_ipc::JobFilterRequest& request,
+                 fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+
  private:
+  SessionTest* session_test_;
   debug_ipc::ResumeRequest resume_request_;
   int resume_count_ = 0;
   std::set<uint32_t> set_breakpoint_ids_;
@@ -115,6 +126,13 @@ class SessionTest : public RemoteAPITest {
   ~SessionTest() override = default;
 
   SessionSink* sink() { return sink_; }
+  const std::vector<std::pair<std::string, uint64_t>>& existing_processes() const {
+    return existing_processes_;
+  }
+
+  void AddExistingProcess(const char* name, uint64_t koid) {
+    existing_processes_.emplace_back(std::make_pair(std::string(name), koid));
+  }
 
   Err SyncSetSettings(Breakpoint* bp, const BreakpointSettings& settings) {
     Err out_err;
@@ -128,14 +146,32 @@ class SessionTest : public RemoteAPITest {
 
  protected:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
-    auto sink = std::make_unique<SessionSink>();
+    auto sink = std::make_unique<SessionSink>(this);
     sink_ = sink.get();
     return std::move(sink);
   }
 
  private:
   SessionSink* sink_;  // Owned by the session.
+  std::vector<std::pair<std::string, uint64_t>> existing_processes_;
 };
+
+void SessionSink::JobFilter(const debug_ipc::JobFilterRequest& request,
+                            fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+  debug_ipc::JobFilterReply reply;
+  std::vector<zxdb::Target*> targets = session_test_->session().system_impl().GetTargets();
+  for (const auto& filter : request.filters) {
+    for (const auto& process : session_test_->existing_processes()) {
+      // Basic simulation of filtering. We only expect to find the filter string within the
+      // process name.
+      if (process.first.find(filter) != std::string::npos) {
+        reply.matched_processes.emplace_back(process.second);
+      }
+    }
+  }
+  Err err;
+  cb(err, reply);
+}
 
 }  // namespace
 
@@ -238,6 +274,33 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   EXPECT_TRUE(weak_bp);
   InjectException(notify);
   EXPECT_FALSE(weak_bp);
+}
+
+TEST_F(SessionTest, FilterExistingProcesses) {
+  constexpr uint64_t kJobKoid = 3333;
+  constexpr uint64_t kProcessKoid1 = 1111;
+  constexpr uint64_t kProcessKoid2 = 2222;
+
+  JobContextImpl job(&session().system_impl(), false);
+  job.AddJobImplForTesting(kJobKoid, "job-name");
+
+  AddExistingProcess("test_1", kProcessKoid1);
+  AddExistingProcess("test_2", kProcessKoid2);
+
+  // First, we should have only one unused target.
+  ASSERT_EQ(session().system().GetTargets().size(), 1UL);
+  ASSERT_EQ(session().system().GetTargets()[0]->GetState(), zxdb::Target::State::kNone);
+
+  Filter* filter = session().system().CreateNewFilter();
+  filter->SetPattern("test");
+  filter->SetJob(session().system().GetJobContexts()[0]);
+
+  loop().RunUntilNoTasks();
+
+  // If both existing processes have been detected, we should have two used targets.
+  ASSERT_EQ(session().system().GetTargets().size(), 2UL);
+  ASSERT_NE(session().system().GetTargets()[0]->GetState(), zxdb::Target::State::kNone);
+  ASSERT_NE(session().system().GetTargets()[1]->GetState(), zxdb::Target::State::kNone);
 }
 
 }  // namespace zxdb
