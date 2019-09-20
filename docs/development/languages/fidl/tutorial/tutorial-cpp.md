@@ -235,7 +235,7 @@ int main(int argc, const char** argv) {
       msg = argv[++i];
     }
   }
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   echo::EchoClientApp app;
   app.Start(server_url);
   app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {
