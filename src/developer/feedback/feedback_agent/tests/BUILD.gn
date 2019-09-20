@@ -122,9 +122,9 @@ test_package("feedback_agent_tests") {
     ":feedback_agent_integration_test_invalid_override_config",
     ":feedback_agent_integration_test_valid_override_config",
     ":inspect_exe",
+    ":kernel_log_ptr_integration_test",
     ":screenshot_ptr_unittest",
     ":system_log_ptr_unittest",
-    ":kernel_log_ptr_integration_test",
   ]
 }
 

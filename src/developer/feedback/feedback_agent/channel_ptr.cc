@@ -16,7 +16,8 @@ namespace feedback {
 fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout) {
-  std::unique_ptr<ChannelProvider> update_info = std::make_unique<ChannelProvider>(dispatcher, services);
+  std::unique_ptr<ChannelProvider> update_info =
+      std::make_unique<ChannelProvider>(dispatcher, services);
 
   // We move |update_info| in a subsequent chained promise to guarantee its lifetime.
   return update_info->GetCurrent(timeout).then(
@@ -26,7 +27,7 @@ fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
 }
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<sys::ServiceDirectory> services)
+                                 std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<std::string> ChannelProvider::GetCurrent(zx::duration timeout) {

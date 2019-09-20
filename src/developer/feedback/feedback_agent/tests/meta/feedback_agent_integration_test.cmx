@@ -10,7 +10,7 @@
                 "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             },
-             "system-services": [
+            "system-services": [
                 "fuchsia.boot.ReadOnlyLog"
             ]
         }

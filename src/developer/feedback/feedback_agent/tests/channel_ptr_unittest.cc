@@ -56,7 +56,8 @@ class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(RetrieveCurrentChannelTest, Succeed_SomeChannel) {
-  std::unique_ptr<StubChannelProvider> stub_channel_provider = std::make_unique<StubChannelProvider>();
+  std::unique_ptr<StubChannelProvider> stub_channel_provider =
+      std::make_unique<StubChannelProvider>();
   stub_channel_provider->set_channel("my-channel");
   ResetChannelProvider(std::move(stub_channel_provider));
 

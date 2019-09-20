@@ -4,7 +4,7 @@
             "injected-services": {
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_feedback_agent_invalid_override_config#meta/feedback_agent.cmx"
             },
-            "system-services" : [
+            "system-services": [
                 "fuchsia.boot.ReadOnlyLog"
             ]
         }
