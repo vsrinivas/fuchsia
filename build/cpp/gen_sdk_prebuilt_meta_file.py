@@ -24,6 +24,10 @@ def main():
     parser.add_argument('--name',
                         help='Name of the library',
                         required=True)
+    parser.add_argument('--format',
+                        help='Format of the library',
+                        choices=['shared', 'static'],
+                        required=True)
     parser.add_argument('--root',
                         help='Root of the library in the SDK',
                         required=True)
@@ -36,9 +40,6 @@ def main():
     parser.add_argument('--include-dir',
                         help='Path to the include directory',
                         required=True)
-    parser.add_argument('--dist-path',
-                        help='Path to the library in Fuchsia packages',
-                        required=True)
     parser.add_argument('--arch',
                         help='Name of the target architecture',
                         required=True)
@@ -47,39 +48,44 @@ def main():
                         required=True)
     parser.add_argument('--lib-dist',
                         help='Path to the library to add to Fuchsia packages in the SDK',
-                        required=True)
+                        required=False)
+    parser.add_argument('--dist-path',
+                        help='Path to the library in Fuchsia packages',
+                        required=False)
     parser.add_argument('--lib-debug-file',
                         help='Path to the source debug version of the library',
-                        required=True)
+                        required=False)
     parser.add_argument('--debug-mapping',
                         help='Path to the file where to write the file mapping for the debug library',
-                        required=True)
+                        required=False)
     args = parser.parse_args()
-
-    # The path of the debug file in the SDK depends on its build id.
-    debug_path = binaries.get_sdk_debug_path(args.lib_debug_file)
-    with open(args.debug_mapping, 'w') as mappings_file:
-        mappings_file.write(debug_path + '=' + args.lib_debug_file + '\n')
 
     metadata = {
         'type': 'cc_prebuilt_library',
         'name': args.name,
         'root': args.root,
-        'format': 'shared',
+        'format': args.format,
         'headers': args.headers,
         'include_dir': args.include_dir,
     }
     metadata['binaries'] = {
         args.arch: {
             'link': args.lib_link,
-            'dist': args.lib_dist,
-            'dist_path': args.dist_path,
-            'debug': debug_path,
         },
     }
 
+    if args.lib_debug_file:
+        # The path of the debug file in the SDK depends on its build id.
+        debug_path = binaries.get_sdk_debug_path(args.lib_debug_file)
+        with open(args.debug_mapping, 'w') as mappings_file:
+            mappings_file.write(debug_path + '=' + args.lib_debug_file + '\n')
+        metadata['binaries'][args.arch]['debug'] = debug_path
+
+    if args.lib_dist:
+        metadata['binaries'][args.arch]['dist'] = args.lib_dist
+        metadata['binaries'][args.arch]['dist_path'] = args.dist_path
+
     deps = []
-    fidl_deps = []
     for spec in args.deps:
         with open(spec, 'r') as spec_file:
             data = json.load(spec_file)
@@ -90,7 +96,7 @@ def main():
             deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
-    metadata['deps'] = deps
+    metadata['deps'] = sorted(deps)
 
     with open(args.out, 'w') as out_file:
         json.dump(metadata, out_file, indent=2, sort_keys=True,

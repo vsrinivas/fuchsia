@@ -1,14 +1,12 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/extract_public_symbols.gni")
 import("//build/cpp/verify_pragma_once.gni")
-import("//build/cpp/verify_public_symbols.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
-# A shared library that can be exported to an SDK in binary form.
+# A static library that can be exported to an SDK in binary form.
 #
 # Parameters
 #
@@ -22,17 +20,6 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     explicitly acknowledged. It is mandatory for publication categories of
 #     "partner" or "public".
 #     Defaults to "<SDK name>.api".
-#
-#   symbols_api (optional)
-#     Path to the file containing the public symbols of this library.
-#     This file is used to ensure modifications to the library's API are
-#     explicitly acknowledged. It is mandatory for publication categories of
-#     "partner" or "public".
-#     Default to "<SDK name>.symbols.api".
-#
-#   no_headers (optional)
-#     Whether to include the library's headers in the SDK.
-#     Defaults to false.
 #
 #   libcxx_linkage (optional)
 #     Whether or how to link libc++. SDK shared libraries cannot link libc++.so
@@ -53,12 +40,12 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
 
-# The defaults for a sdk_shared_library should match that of a shared_library.
-set_defaults("sdk_shared_library") {
-  configs = default_shared_library_configs
+# The defaults for a sdk_static_library should match that of a shared_library.
+set_defaults("sdk_static_library") {
+  configs = default_common_binary_configs
 }
 
-template("sdk_shared_library") {
+template("sdk_static_library") {
   assert(defined(invoker.category), "Must define an SDK category")
 
   output_name = target_name
@@ -86,22 +73,19 @@ template("sdk_shared_library") {
   metadata_target_name = "${target_name}_sdk_metadata"
   manifest_target_name = "${target_name}_sdk_manifest"
   verify_pragma_target_name = "${target_name}_sdk_pragma"
-  extract_public_symbols_target_name =
-      "${target_name}_sdk_extract_public_symbols"
-  verify_public_symbols_target_name = "${target_name}_sdk_verify_public_symbols"
   sdk_target_name = "${target_name}_sdk"
 
-  shared_library(main_target_name) {
+  runtime_deps_file = "$target_out_dir/$target_name.runtime_deps"
+
+  static_library(main_target_name) {
     forward_variables_from(invoker,
                            "*",
                            [
                              "api",
                              "category",
                              "include_base",
-                             "no_headers",
                              "runtime_deps",
                              "sdk_name",
-                             "symbols_api",
                            ])
 
     if (defined(visibility)) {
@@ -135,7 +119,7 @@ template("sdk_shared_library") {
 
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
-    write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
+    write_runtime_deps = runtime_deps_file
   }
 
   # Base path for source files of this library in SDKs.
@@ -148,9 +132,7 @@ template("sdk_shared_library") {
   sdk_deps = []
   sdk_metas = []
 
-  # If a prebuilt library is only provided for packaging purposes (by not
-  # exposing headers) then its dependencies need not be included in an SDK.
-  if (defined(invoker.public_deps) && !no_headers) {
+  if (defined(invoker.public_deps)) {
     foreach(dep, invoker.public_deps) {
       full_label = get_label_info(dep, "label_no_toolchain")
       sdk_dep = "${full_label}_sdk"
@@ -170,17 +152,17 @@ template("sdk_shared_library") {
 
   # Process headers.
   all_headers = []
-  if ((defined(invoker.public) || defined(invoker.sources)) && !no_headers) {
-    if (defined(invoker.public)) {
-      all_headers += invoker.public
-    } else {
-      foreach(source_file, invoker.sources) {
-        extension = get_path_info(source_file, "extension")
-        if (extension == "h") {
-          all_headers += [ source_file ]
-        }
+  if (defined(invoker.public)) {
+    all_headers += invoker.public
+  } else if (defined(invoker.sources)) {
+    foreach(source_file, invoker.sources) {
+      extension = get_path_info(source_file, "extension")
+      if (extension == "h") {
+        all_headers += [ source_file ]
       }
     }
+  } else {
+    assert(false, "Library does not contain any headers or sources.")
   }
   sdk_metadata_headers = []
   sdk_header_files = []
@@ -201,33 +183,23 @@ template("sdk_shared_library") {
   }
 
   # Add binaries.
-  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
-  lib_name = "lib$output_name.so"
+  lib_name = "lib$output_name.a"
   link_lib = "$prebuilt_base/lib/$lib_name"
-  dist_lib = "$prebuilt_base/dist/$lib_name"
   sdk_files = sdk_header_files + [
                 {
-                  # TODO(TO-791): put ABI stubs under lib/, not the full thing.
-                  source = "$shared_out_dir/$lib_name"
+                  source = "$target_out_dir/$lib_name"
                   dest = link_lib
-                },
-                {
-                  source = "$shared_out_dir/$lib_name"
-                  dest = dist_lib
                 },
               ]
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
-  debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
-  debug_lib_file = "$shared_out_dir/lib.unstripped/$lib_name"
 
   action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
-    inputs = sdk_metas + [ debug_lib_file ]
+    inputs = sdk_metas
 
     outputs = [
-      debug_mapping_file,
       metadata_file,
     ]
 
@@ -237,13 +209,11 @@ template("sdk_shared_library") {
              "--name",
              atom_name,
              "--format",
-             "shared",
+             "static",
              "--root",
              file_base,
              "--include-dir",
              "$file_base/include",
-             "--dist-path",
-             "lib/$lib_name",
              "--deps",
            ] + sdk_metas + [ "--headers" ] + sdk_metadata_headers +
            [
@@ -251,12 +221,6 @@ template("sdk_shared_library") {
              target_cpu,
              "--lib-link",
              link_lib,
-             "--lib-dist",
-             dist_lib,
-             "--lib-debug-file",
-             rebase_path(debug_lib_file),
-             "--debug-mapping",
-             rebase_path(debug_mapping_file),
            ]
 
     deps = sdk_deps + [ ":$main_target_name" ]
@@ -264,29 +228,6 @@ template("sdk_shared_library") {
 
   verify_pragma_once(verify_pragma_target_name) {
     headers = all_headers
-  }
-
-  main_target_dir = get_label_info(":$main_target_name", "dir")
-  reference_symbols_file = "$main_target_dir/${output_name}.symbols.api"
-  if (defined(invoker.symbols_api)) {
-    reference_symbols_file = invoker.symbols_api
-  }
-  generated_symbols_file = "$target_gen_dir/${output_name}.symbols.api"
-  extract_public_symbols(extract_public_symbols_target_name) {
-    library = "$shared_out_dir/$lib_name"
-    deps = [
-      ":$main_target_name",
-    ]
-    symbols = generated_symbols_file
-  }
-
-  verify_public_symbols(verify_public_symbols_target_name) {
-    current = generated_symbols_file
-    reference = reference_symbols_file
-    library_name = main_target_dir
-    deps = [
-      ":$extract_public_symbols_target_name",
-    ]
   }
 
   sdk_atom(manifest_target_name) {
@@ -310,15 +251,12 @@ template("sdk_shared_library") {
 
     files = sdk_files
 
-    file_list = debug_mapping_file
-
     deps = sdk_deps
 
     non_sdk_deps = [
       ":$main_target_name",
       ":$metadata_target_name",
       ":$verify_pragma_target_name",
-      ":$verify_public_symbols_target_name",
     ]
 
     # Explicitly add non-public dependencies, in case some of the source files
@@ -328,8 +266,6 @@ template("sdk_shared_library") {
     }
   }
 
-  shared_gen_dir = get_label_info(":bogus($shlib_toolchain)", "target_out_dir")
-  runtime_deps_file = "$shared_gen_dir/$target_name.runtime_deps"
   sdk_manifest_file = "$target_gen_dir/$manifest_target_name.sdk"
   verify_target_name = "${target_name}_verify"
 
