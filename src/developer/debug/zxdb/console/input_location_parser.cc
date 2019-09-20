@@ -251,7 +251,7 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   std::vector<FoundName> found_names;
   FindName(*find_context, options, prefix_identifier, &found_names);
   for (const FoundName& found : found_names)
-    completions->push_back(found.GetName() + "::");
+    completions->push_back(found.GetName().GetFullName() + "::");
   options.find_namespaces = false;
 
   // Follow with types. Only do structure and class types since we're really looking for function
@@ -264,7 +264,7 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   for (const FoundName& found : found_names) {
     FXL_DCHECK(found.kind() == zxdb::FoundName::kType);
     if (const Collection* collection = found.type()->AsCollection())
-      completions->push_back(found.GetName() + "::");
+      completions->push_back(found.GetName().GetFullName() + "::");
   }
   options.find_types = false;
 

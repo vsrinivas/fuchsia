@@ -124,7 +124,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(function_context, all_kinds, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found.variable());
-  EXPECT_EQ(var_value->GetAssignedName(), found.GetName());
+  EXPECT_EQ(var_value->GetAssignedName(), found.GetName().GetFullName());
 
   // Find "::value" should match nothing.
   ParsedIdentifier value_global_ident(IdentifierQualification::kGlobal,
@@ -152,7 +152,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, all_kinds, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
-  EXPECT_EQ(block_other->GetAssignedName(), found.GetName());
+  EXPECT_EQ(block_other->GetAssignedName(), found.GetName().GetFullName());
   found = FindName(function_context, all_kinds, block_local_ident);
   EXPECT_FALSE(found);
 
@@ -169,7 +169,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, all_kinds, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
-  EXPECT_EQ(kNsVarName, found.GetName());
+  EXPECT_EQ(kNsVarName, found.GetName().GetFullName());
 
   // Loop up the global "ns_value" var with no global symbol context. This should fail and not
   // crash.
@@ -202,7 +202,7 @@ TEST(FindName, FindMember) {
   ASSERT_EQ(1u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
-  EXPECT_EQ("b", results[0].GetName());
+  EXPECT_EQ("b", results[0].GetName().GetFullName());
 
   // Increase the limit, it should find both in order of Base1, Base2.
   results.clear();
@@ -362,7 +362,7 @@ TEST(FindName, FindIndexedNameInModule) {
                           &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
-  EXPECT_EQ(kVarName, found[0].GetName());
+  EXPECT_EQ(kVarName, found[0].GetName().GetFullName());
 }
 
 TEST(FindName, FindTypeName) {
@@ -429,7 +429,9 @@ TEST(FindName, FindTypeName) {
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(global_type.get(), found.type().get());
-  EXPECT_EQ(kGlobalTypeName, found.GetName());
+  // This has gone through our ParsedIdentifier template canonicalization so doesn't have the
+  // space between the ">>" like the input had.
+  EXPECT_EQ("GlobalType<std::char_traits<char>>", found.GetName().GetFullName());
 
   // Prefix search same as above.
   FindNameOptions prefix_opts(FindNameOptions::kAllKinds);
@@ -491,7 +493,7 @@ TEST(FindName, FindTemplateName) {
   auto found = FindName(context, all_types, template_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kTemplate, found.kind());
-  EXPECT_EQ("Template", found.GetName());
+  EXPECT_EQ("Template", found.GetName().GetFullName());
 
   // The string "TemplateNot" is a type, it should be found as such.
   std::vector<FoundName> found_vect;
@@ -614,7 +616,7 @@ TEST(FindName, FindNamespace) {
   FindName(context, find_ns, ParsedIdentifier(kStd), &results);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(FoundName::kNamespace, results[0].kind());
-  EXPECT_EQ(kStd, results[0].GetName());
+  EXPECT_EQ(kStd, results[0].GetName().GetFullName());
 
   // Find "s..." namespaces by prefix.
   FindNameOptions find_ns_prefix = find_ns;
@@ -623,8 +625,9 @@ TEST(FindName, FindNamespace) {
   FindName(context, find_ns_prefix, ParsedIdentifier("s"), &results);
   ASSERT_EQ(2u, results.size());
   // Results can be in either order.
-  EXPECT_TRUE((results[0].GetName() == kStd && results[1].GetName() == kStar) ||
-              (results[0].GetName() == kStar && results[1].GetName() == kStd));
+  EXPECT_TRUE(
+      (results[0].GetName().GetFullName() == kStd && results[1].GetName().GetFullName() == kStar) ||
+      (results[0].GetName().GetFullName() == kStar && results[1].GetName().GetFullName() == kStd));
 
   // Find the "star::i" namespace by prefix.
   ParsedIdentifier star_internal_prefix;
@@ -632,7 +635,7 @@ TEST(FindName, FindNamespace) {
   results.clear();
   FindName(context, find_ns_prefix, star_internal_prefix, &results);
   ASSERT_EQ(1u, results.size());
-  EXPECT_EQ("star::internal", results[0].GetName());
+  EXPECT_EQ("star::internal", results[0].GetName().GetFullName());
 }
 
 }  // namespace zxdb

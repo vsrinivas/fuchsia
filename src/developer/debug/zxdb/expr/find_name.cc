@@ -144,9 +144,7 @@ VisitResult AddMatches(const FindNameOptions& options, const ModuleSymbols* modu
     for (const auto& current_node : walker.current()) {
       // Got a namespace with the name.
       if (current_node->kind() == IndexNode::Kind::kNamespace) {
-        // TODO(brettw) FoundName should take a ParsedIdentifier to avoid converting to a raw
-        // string here.
-        results->emplace_back(FoundName::kNamespace, looking_for.GetFullName());
+        results->emplace_back(FoundName::kNamespace, looking_for);
         if (results->size() >= options.max_results)
           return VisitResult::kDone;
         break;
@@ -209,9 +207,7 @@ VisitResult AddPrefixes(const FindNameOptions& options, const ModuleSymbols* mod
         ParsedIdentifier full_name = looking_for.GetScope();
         full_name.AppendComponent(ParsedIdentifierComponent(cur->first));
 
-        // TODO(brettw) FoundName should take a ParsedIdentifier to avoid converting to a raw
-        // string here.
-        results->emplace_back(FoundName::kNamespace, full_name.GetFullName());
+        results->emplace_back(FoundName::kNamespace, std::move(full_name));
         if (results->size() >= options.max_results)
           return VisitResult::kDone;
         ++cur;

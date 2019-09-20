@@ -6,21 +6,20 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FOUND_NAME_H_
 
 #include "src/developer/debug/zxdb/expr/found_member.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
 
-// This class represents the result of looking up a variable by name. It could
-// be a local or global variable (simple Variable* object), or it could be a
-// member of the current implicit object ("this" in C++). This class represents
-// either state.
+// This class represents the result of looking up a variable by name. It could be a local or global
+// variable (simple Variable* object), or it could be a member of the current implicit object
+// ("this" in C++). This class represents either state.
 class FoundName {
  public:
-  // Since identifiers with template parameters at the end are assumed to be
-  // a type, we don't need to check that "std::vector<int>" is a type. This
-  // will need to be revisited if we support templatized function names in
-  // expressions ("auto a = &MyClass::MyFunc<int>;");
+  // Since identifiers with template parameters at the end are assumed to be a type, we don't need
+  // to check that "std::vector<int>" is a type. This will need to be revisited if we support
+  // templatized function names in expressions ("auto a = &MyClass::MyFunc<int>;");
   enum Kind {
     kNone,            // Nothing with this name found.
     kVariable,        // Local and global variables.
@@ -35,14 +34,14 @@ class FoundName {
   FoundName();
 
   // Constructor for templates and namespaces that have no extra data.
-  FoundName(Kind kind, const std::string& name);
+  FoundName(Kind kind, ParsedIdentifier name);
 
   // Takes a reference to the object.
   explicit FoundName(const Variable* variable);
   explicit FoundName(const Function* function);
 
-  // Constructor for data member variables. The object_ptr may be null if this
-  // represents a query on a type with no corresponding variable).
+  // Constructor for data member variables. The object_ptr may be null if this represents a query on
+  // a type with no corresponding variable).
   FoundName(const Variable* object_ptr, FoundMember member);
   FoundName(const Variable* object_ptr, const DataMember* data_member, uint32_t data_member_offset);
 
@@ -58,10 +57,10 @@ class FoundName {
   operator bool() const { return kind_ != kNone; }
 
   // Abstracts away the kind and returns the full name of the match.
-  std::string GetName() const;
+  ParsedIdentifier GetName() const;
 
-  // Use when kind == kVariable and kMemberVariable. The variable may be null
-  // for member pointers if the call is just looking up the
+  // Use when kind == kVariable and kMemberVariable. The variable may be null for member pointers if
+  // the call is just looking up the
   const Variable* variable() const { return variable_.get(); }
   fxl::RefPtr<Variable> variable_ref() { return variable_; }
 
@@ -84,29 +83,27 @@ class FoundName {
  private:
   Kind kind_ = kNone;
 
-  // Represents the found variable when it's not a class member. When null,
-  // the result will be in object_member/data_member.
+  // Represents the found variable when it's not a class member. When null, the result will be in
+  // object_member/data_member.
   fxl::RefPtr<Variable> variable_;
 
-  // Represents the "this" object the data member is associated with it.
-  // Non-null when the found variable is a collection member. In this case,
-  // data_member and data_member_offset will be valid.
+  // Represents the "this" object the data member is associated with it. Non-null when the found
+  // variable is a collection member. In this case, data_member and data_member_offset will be
+  // valid.
   //
-  // This is the outermost object which one would evaluate to get the value of
-  // the object pointer rather than the class the data member is declared in
-  // (it could be a base class).
+  // This is the outermost object which one would evaluate to get the value of the object pointer
+  // rather than the class the data member is declared in (it could be a base class).
   fxl::RefPtr<Variable> object_ptr_;
 
-  // Valid when object_ptr_ is non-null. This indicates the location of the
-  // data inside the object.
+  // Valid when object_ptr_ is non-null. This indicates the location of the data inside the object.
   FoundMember member_;
 
   fxl::RefPtr<Type> type_;
   fxl::RefPtr<Function> function_;
 
-  // Valid only when there's no object to hold the intrinsic name. This is
-  // for templates and namespaces.
-  std::string name_;
+  // Valid only when there's no object to hold the intrinsic name. This is for templates and
+  // namespaces.
+  ParsedIdentifier name_;
 };
 
 }  // namespace zxdb
