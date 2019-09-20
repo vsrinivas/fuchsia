@@ -590,6 +590,10 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
   zx_signals_t observed = 0;
   ASSERT_OK(control_event.wait_one(::llcpp::fuchsia::hardware::pty::SIGNAL_EVENT,
                                    zx::time::infinite(), &observed));
+  // Wait again with no timeout, so that observed doesn't have any transient
+  // signals in it.
+  ASSERT_OK(control_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP, zx::time{},
+                                   &observed));
   ASSERT_EQ(observed, ::llcpp::fuchsia::hardware::pty::SIGNAL_EVENT |
                           ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP);
 
@@ -635,6 +639,9 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   zx_signals_t observed = 0;
   ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP, zx::time::infinite(),
                            &observed));
+  // Wait again with no timeout, so that observed doesn't have any transient
+  // signals in it.
+  ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP, zx::time{}, &observed));
   ASSERT_EQ(observed, ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP |
                           ::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE);
 
