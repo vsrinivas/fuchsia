@@ -4,3 +4,4 @@
 
 export 'src/brightness.dart';
 export 'src/cpu.dart';
+export 'src/memory.dart';

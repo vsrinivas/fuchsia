@@ -12,9 +12,11 @@ dart_library("settings") {
     "settings.dart",
     "src/brightness.dart",
     "src/cpu.dart",
+    "src/memory.dart",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//src/experiences/lib/quickui",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
@@ -26,6 +28,7 @@ flutter_test("ermine_settings_unittests") {
   sources = [
     "brightness_test.dart",
     "cpu_test.dart",
+    "memory_test.dart",
   ]
 
   deps = [
