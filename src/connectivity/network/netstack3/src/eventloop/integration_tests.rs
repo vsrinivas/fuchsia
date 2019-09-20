@@ -909,6 +909,161 @@ async fn test_disable_enable_interface() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_phy_admin_interface_state_interaction() {
+    let mut t = TestSetupBuilder::new()
+        .add_endpoint()
+        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .build()
+        .await
+        .unwrap();
+    let ep_name = test_ep_name(1);
+    let test_stack = t.get(0);
+    let stack = test_stack.connect_stack().unwrap();
+    let if_id = test_stack.get_endpoint_id(1);
+
+    t.get(0).wait_for_interface_online(if_id).await;
+
+    // Get the interface info to confirm that it is enabled.
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
+
+    // Disable the interface and test again, physical_status should be
+    // unchanged.
+    let () = t
+        .get(0)
+        .run_future(stack.disable_interface(if_id))
+        .await
+        .squash_result()
+        .expect("Disable interface succeeds");
+
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
+
+    // Ensure that the device has been removed from the core.
+    assert!(
+        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+    );
+
+    // Setting the link down now that the interface is already down should only
+    // change the cached state. Both phy and admin should be down now.
+    assert!(t.set_endpoint_link_up(&ep_name, false).await.is_ok());
+    t.get(0).wait_for_interface_offline(if_id).await;
+
+    // Get the interface info to confirm that it is disabled.
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
+
+    // Ensure that the device is still removed from the core.
+    assert!(
+        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+    );
+
+    // Enable the interface and test again, only cached status should be changed
+    // and core state should still be disabled.
+    let () = t
+        .get(0)
+        .run_future(stack.enable_interface(if_id))
+        .await
+        .squash_result()
+        .expect("Enable interface succeeds");
+
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
+
+    // Ensure that the device is still removed from the core.
+    assert!(
+        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+    );
+
+    // Disable the interface and test again, both should be down now.
+    let () = t
+        .get(0)
+        .run_future(stack.disable_interface(if_id))
+        .await
+        .squash_result()
+        .expect("Disable interface succeeds");
+
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
+
+    // Ensure that the device is still removed from the core.
+    assert!(
+        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+    );
+
+    // Setting the link up should only affect cached state
+    assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
+    t.get(0).wait_for_interface_online(if_id).await;
+
+    // Get the interface info to confirm that it is reenabled.
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
+
+    // Ensure that the device is still removed from the core.
+    assert!(
+        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+    );
+
+    // Finally, setting admin status up should update the cached state and
+    // re-add the device to the core.
+    let () = t
+        .get(0)
+        .run_future(stack.enable_interface(if_id))
+        .await
+        .squash_result()
+        .expect("Enable interface succeeds");
+
+    // Get the interface info to confirm that it is reenabled.
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .unwrap()
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+
+    // Ensure that the device has been added to the core.
+    assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_add_device_routes() {
     // create a stack and add a single endpoint to it so we have the interface
     // id:

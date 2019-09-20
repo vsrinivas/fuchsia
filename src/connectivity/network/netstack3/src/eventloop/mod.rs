@@ -294,14 +294,14 @@ impl EventLoop {
                     .await
                     .map(|s| s.contains(EthernetStatus::ONLINE))
                     .unwrap_or(false);
+                let comm_info = CommonInfo::new(setup.path, setup.client, true, online);
 
                 let id = if online {
                     let eth_id =
                         state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
-                    disp.devices
-                        .add_active_device(eth_id, CommonInfo::new(setup.path, setup.client, true))
+                    disp.devices.add_active_device(eth_id, comm_info)
                 } else {
-                    Some(disp.devices.add_device(CommonInfo::new(setup.path, setup.client, true)))
+                    Some(disp.devices.add_device(comm_info))
                 };
                 match id {
                     Some(id) => {
@@ -344,11 +344,11 @@ impl EventLoop {
                         // Handle the new device state. If this results in no change, no state
                         // will be modified.
                         if status.contains(EthernetStatus::ONLINE) {
-                            self.enable_interface(id, |_| {})
+                            self.phy_enable_interface(id)
                                 .await
                                 .unwrap_or_else(|e| trace!("Phy enable interface failed: {:?}", e));
                         } else {
-                            self.disable_interface(id, |_| {}).unwrap_or_else(|e| {
+                            self.phy_disable_interface(id).unwrap_or_else(|e| {
                                 trace!("Phy disable interface failed: {:?}", e)
                             });
                         }
@@ -532,7 +532,6 @@ impl EventLoop {
         for device in self.ctx.dispatcher().devices.iter_devices() {
             // TODO(wesleyac): Cache info and status
             let info = device.client().info().await;
-            let phy_status = device.client().get_status().await;
             let mut addresses = vec![];
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -558,15 +557,10 @@ impl EventLoop {
                     } else {
                         AdministrativeStatus::Disabled
                     },
-                    physical_status: match phy_status {
-                        Ok(status) => {
-                            if status.contains(EthernetStatus::ONLINE) {
-                                PhysicalStatus::Up
-                            } else {
-                                PhysicalStatus::Down
-                            }
-                        }
-                        Err(_) => PhysicalStatus::Down,
+                    physical_status: if device.phy_up() {
+                        PhysicalStatus::Up
+                    } else {
+                        PhysicalStatus::Down
                     },
                     addresses, // TODO(gongt) Handle tentative IPv6 addresses
                 },
@@ -583,8 +577,6 @@ impl EventLoop {
             self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(wesleyac): Cache info and status
         let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
-        let phy_status =
-            device.client().get_status().await.map_err(|_| fidl_net_stack::Error::Internal)?;
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -608,7 +600,7 @@ impl EventLoop {
                 } else {
                     AdministrativeStatus::Disabled
                 },
-                physical_status: if phy_status.contains(EthernetStatus::ONLINE) {
+                physical_status: if device.phy_up() {
                     PhysicalStatus::Up
                 } else {
                     PhysicalStatus::Down
@@ -699,53 +691,74 @@ impl EventLoop {
         }
     }
 
+    async fn phy_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+        self.update_device_state(id, |dev_info| dev_info.set_phy_up(true));
+        self.enable_interface(id).await
+    }
+
+    fn phy_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+        self.update_device_state(id, |dev_info| dev_info.set_phy_up(false));
+        self.disable_interface(id)
+    }
+
     async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.enable_interface(id, |dev_info| dev_info.set_admin_enabled(true)).await
+        self.update_device_state(id, |dev_info| dev_info.set_admin_enabled(true));
+        self.enable_interface(id).await
     }
 
     fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.disable_interface(id, |dev_info| dev_info.set_admin_enabled(false))
+        self.update_device_state(id, |dev_info| dev_info.set_admin_enabled(false));
+        self.disable_interface(id)
     }
 
-    async fn enable_interface<F: FnOnce(&mut DeviceInfo)>(
-        &mut self,
-        id: u64,
-        handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::Error> {
-        let (state, disp) = self.ctx.state_and_dispatcher();
-        let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
-        // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
-        // core to get an id, then reach into the driver to get updated info before triggering the
-        // core to allow traffic on the interface.
-        let generate_core_id =
-            |_dev_info: &DeviceInfo| state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
-        match disp.devices.activate_device(id, generate_core_id) {
-            Ok(device_info) => {
-                handle_device_state(device_info);
-                // we can unwrap core_id here because activate_device just succeeded.
-                let core_id = device_info.core_id().unwrap();
-                // don't forget to initialize the device in core!
-                initialize_device(&mut self.ctx, core_id);
-                Ok(())
-            }
-            Err(toggle_error) => {
-                match toggle_error {
-                    ToggleError::NoChange => Ok(()),
-                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound), // Invalid device ID
-                }
-            }
+    /// Updates cached device state
+    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, handle_device_state: F) {
+        if let Some(device_info) = self.ctx.dispatcher_mut().devices.get_device_mut(id) {
+            handle_device_state(device_info);
         }
     }
 
-    fn disable_interface<F: FnOnce(&mut DeviceInfo)>(
-        &mut self,
-        id: u64,
-        handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::Error> {
+    /// Enables an interface, adding it to the core if it is not currently enabled.
+    /// Both `admin_enabled` and `phy_up` must be true for the interface to be enabled.
+    async fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+        let (state, disp) = self.ctx.state_and_dispatcher();
+        let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+
+        if device.admin_enabled() && device.phy_up() {
+            let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
+            // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
+            // core to get an id, then reach into the driver to get updated info before triggering the
+            // core to allow traffic on the interface.
+            let generate_core_id = |_dev_info: &DeviceInfo| {
+                state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu)
+            };
+            match disp.devices.activate_device(id, generate_core_id) {
+                Ok(device_info) => {
+                    // we can unwrap core_id here because activate_device just succeeded.
+                    let core_id = device_info.core_id().unwrap();
+                    // don't forget to initialize the device in core!
+                    initialize_device(&mut self.ctx, core_id);
+                    Ok(())
+                }
+                Err(toggle_error) => {
+                    match toggle_error {
+                        ToggleError::NoChange => Ok(()),
+                        ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound), // Invalid device ID
+                    }
+                }
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Disables an interface, removing it from the core if it is currently enabled.
+    /// Either an Admin (fidl) or Phy change can disable an interface.
+    fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.ctx.dispatcher_mut().devices.deactivate_device(id) {
             Ok((core_id, device_info)) => {
-                handle_device_state(device_info);
+                // Sanity check that there is a reason that the device is disabled.
+                assert!(!device_info.admin_enabled() || !device_info.phy_up());
                 // Disabling the interface deactivates it in the bindings, and will remove
                 // it completely from the core.
                 match remove_device(&mut self.ctx, core_id) {

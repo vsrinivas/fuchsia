@@ -139,7 +139,7 @@ where
         &mut self,
         id: BindingId,
         generate_core_id: F,
-    ) -> Result<&mut DeviceInfo<C, I>, ToggleError> {
+    ) -> Result<&DeviceInfo<C, I>, ToggleError> {
         if self.id_map.contains_key(&id) {
             return Err(ToggleError::NoChange);
         }
@@ -157,7 +157,7 @@ where
                 self.active_devices.insert(&core_id, info);
                 // we can unwrap here because we just inserted the device
                 // above.
-                Ok(self.active_devices.get_mut(&core_id).unwrap())
+                Ok(self.active_devices.get(&core_id).unwrap())
             }
         }
     }
@@ -215,6 +215,15 @@ where
             .or_else(|| self.inactive_devices.get(&id))
     }
 
+    /// Retrieve mutable reference to device with [`BindingId`].
+    pub fn get_device_mut(&mut self, id: BindingId) -> Option<&mut DeviceInfo<C, I>> {
+        if let Some(device_id) = self.id_map.get(&id) {
+            self.active_devices.get_mut(&device_id)
+        } else {
+            self.inactive_devices.get_mut(&id)
+        }
+    }
+
     /// Retrieve associated `core_id` for [`BindingId`].
     pub fn get_core_id(&self, id: BindingId) -> Option<C> {
         self.id_map.get(&id).cloned()
@@ -236,11 +245,12 @@ pub struct CommonInfo {
     path: String,
     client: eth::Client,
     admin_enabled: bool,
+    phy_up: bool,
 }
 
 impl CommonInfo {
-    pub fn new(path: String, client: eth::Client, admin_enabled: bool) -> Self {
-        Self { path, client, admin_enabled }
+    pub fn new(path: String, client: eth::Client, admin_enabled: bool, phy_up: bool) -> Self {
+        Self { path, client, admin_enabled, phy_up }
     }
 }
 
@@ -289,6 +299,14 @@ impl<C> DeviceInfo<C, CommonInfo> {
 
     pub fn set_admin_enabled(&mut self, setting: bool) {
         self.info.admin_enabled = setting;
+    }
+
+    pub fn phy_up(&self) -> bool {
+        self.info.phy_up
+    }
+
+    pub fn set_phy_up(&mut self, setting: bool) {
+        self.info.phy_up = setting;
     }
 }
 
