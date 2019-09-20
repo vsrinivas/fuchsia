@@ -35,12 +35,10 @@ class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     root_module = command_line.GetOptionValueWithDefault("root_module", "example_recipe");
-    root_link = command_line.GetOptionValueWithDefault("root_link", "");
     story_id = command_line.GetOptionValueWithDefault("story_id", "story");
   }
 
   std::string root_module;
-  std::string root_link;
   std::string story_id;
 };
 
@@ -77,8 +75,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     FXL_CHECK(!!view_token_.value);
     FXL_CHECK(!!story_provider_);
     FXL_CHECK(!!puppet_master_);
-    FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module << " "
-                  << settings_.root_link;
+    FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module;
 
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
@@ -120,18 +117,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     story_controller_->RequestStart();
     focus_controller_->Set(story_id);
-
-    if (!settings_.root_link.empty()) {
-      fuchsia::modular::LinkPtr root;
-
-      fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
-      link_path.link_name = "root";
-      story_controller_->GetLink(std::move(link_path), root.NewRequest());
-
-      fsl::SizedVmo vmo;
-      FXL_CHECK(fsl::VmoFromString(settings_.root_link, &vmo));
-      root->Set(nullptr, std::move(vmo).ToTransport());
-    }
   }
 
   // |SessionShell|

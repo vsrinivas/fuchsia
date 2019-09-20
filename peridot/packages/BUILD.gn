@@ -26,7 +26,6 @@ group("all") {
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/ledger/cloud_provider_in_memory/bin",
     "//src/ledger/cloud_provider_memory_diff",
-    "//src/modular/benchmarks",
     "//src/modular/bin/voila",
   ]
 }

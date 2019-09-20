@@ -44,15 +44,6 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(fidl::StringPtr name,
-                                fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  fuchsia::modular::LinkPathPtr link_path;
-  // See if there's a parameter mapping for this link.
-  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path(),
-                                                                  name.value_or(""));
-  story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
-}
-
 void ModuleContextImpl::EmbedModule(
     std::string name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,

@@ -42,7 +42,6 @@
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_observer.h"
-#include "src/modular/bin/sessionmgr/story_runner/link_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_controller_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
@@ -53,20 +52,6 @@
 #include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
-
-// Used to create std::set<LinkPath>.
-namespace std {
-template <>
-struct less<fuchsia::modular::LinkPath> {
-  bool operator()(const fuchsia::modular::LinkPath& left,
-                  const fuchsia::modular::LinkPath& right) const {
-    if (left.module_path == right.module_path) {
-      return left.link_name < right.link_name;
-    }
-    return left.module_path < right.module_path;
-  }
-};
-}  // namespace std
 
 namespace modular {
 
@@ -529,7 +514,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
     did_teardowns.reserve(story_controller_impl_->running_mod_infos_.size());
 
     // Tear down all connections with a fuchsia::modular::ModuleController
-    // first, then the links between them.
     for (auto& running_mod_info : story_controller_impl_->running_mod_infos_) {
       auto did_teardown = Future<>::Create("StoryControllerImpl.StopCall.Run.did_teardown");
       running_mod_info.module_controller_impl->Teardown(did_teardown->Completer());
@@ -558,10 +542,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
           return story_controller_impl_->story_storage_->Sync();
         })
         ->Then([this] {
-          // Clear the remaining links and connections in case there are some
-          // left. At this point, no DisposeLink() calls can arrive anymore.
-          story_controller_impl_->link_impls_.CloseAll();
-
           story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::STOPPED);
 
           story_controller_impl_->DestroyStoryEnvironment();
@@ -1042,48 +1022,6 @@ void StoryControllerImpl::ReleaseModule(ModuleControllerImpl* const module_contr
 
 fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_observer_->model().name(); }
 
-// TODO(drees) Collapse functionality into GetLink.
-void StoryControllerImpl::ConnectLinkPath(fuchsia::modular::LinkPathPtr link_path,
-                                          fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  // Cache a copy of the current active links, because link_impls_.AddBinding()
-  // will change the set to include the newly created link connection.
-  auto active_links = GetActiveLinksInternal();
-
-  LinkPath link_path_clone;
-  link_path->Clone(&link_path_clone);
-  link_impls_.AddBinding(std::make_unique<LinkImpl>(story_storage_, std::move(link_path_clone)),
-                         std::move(request));
-}
-
-fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
-    const std::vector<std::string>& module_path, std::string name) {
-  auto mod_info = FindRunningModInfo(module_path);
-  // NOTE: |mod_info| will only be valid if the module at |module_path| is
-  // running. Strictly speaking, this is unsafe. The source of truth is the
-  // Ledger, accessible through StoryStorage, but the call would be dispatcher,
-  // which would change the flow of all clients of this method. For now, we
-  // leave as-is.
-  FXL_DCHECK(mod_info) << ModulePathToSurfaceID(module_path);
-
-  const auto& param_map = mod_info->module_data->parameter_map();
-  auto it = std::find_if(
-      param_map.entries.begin(), param_map.entries.end(),
-      [&name](const fuchsia::modular::ModuleParameterMapEntry& data) { return data.name == name; });
-
-  fuchsia::modular::LinkPathPtr link_path = nullptr;
-  if (it != param_map.entries.end()) {
-    link_path = CloneOptional(it->link_path);
-  }
-
-  if (!link_path) {
-    link_path = fuchsia::modular::LinkPath::New();
-    link_path->module_path = module_path;
-    link_path->link_name = name;
-  }
-
-  return link_path;
-}
-
 void StoryControllerImpl::EmbedModule(
     AddModParams add_mod_params,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
@@ -1156,16 +1094,6 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
     }
     ProcessPendingStoryShellViews();
   }
-}
-
-std::set<fuchsia::modular::LinkPath> StoryControllerImpl::GetActiveLinksInternal() {
-  std::set<fuchsia::modular::LinkPath> paths;
-  for (auto& entry : link_impls_.bindings()) {
-    LinkPath p;
-    entry->impl()->link_path().Clone(&p);
-    paths.insert(std::move(p));
-  }
-  return paths;
 }
 
 void StoryControllerImpl::OnModuleDataUpdated(fuchsia::modular::ModuleData module_data) {
@@ -1262,11 +1190,6 @@ void StoryControllerImpl::GetModuleController(
         // Trying to get a controller for a module that is not active just
         // drops the connection request.
       }));
-}
-
-void StoryControllerImpl::GetLink(fuchsia::modular::LinkPath link_path,
-                                  fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  ConnectLinkPath(fidl::MakeOptional(std::move(link_path)), std::move(request));
 }
 
 void StoryControllerImpl::StartStoryShell() {

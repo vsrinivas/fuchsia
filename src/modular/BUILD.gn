@@ -8,7 +8,6 @@ group("modular") {
   testonly = true
 
   deps = [
-    ":benchmarks",
     ":tests",
     "bin",
     "bundles",
@@ -23,14 +22,6 @@ group("tests") {
     ":modular_lib_tests",
     "tests",  # tests/ directory
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
-  ]
-}
-
-group("benchmarks") {
-  testonly = true
-
-  deps = [
-    "benchmarks",  # benchmarks/ directory
   ]
 }
 

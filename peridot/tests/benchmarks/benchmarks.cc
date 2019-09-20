@@ -94,11 +94,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   benchmarks_runner->AddTspecBenchmark("ledger.stories_memory", "/pkgfs/packages/ledger_benchmarks/0/data/stories_memory.tspec");
   // clang-format on
 
-  // Run Modular benchmarks.
-  benchmarks_runner->AddTspecBenchmark("modular.story_benchmark",
-                                       "/pkgfs/packages/modular_benchmarks/0/"
-                                       "data/story_benchmark.tspec");
-
   // TODO(PT-181, PT-182): The following input latency and graphics benchmarks
   // do not make an effort to close the graphics application being benchmarked
   // at exit (the app will continue to run even after the benchmark driver

@@ -53,9 +53,6 @@ protocol StoryController {
     /// (metadata about, and requesting changes to runtime state).
     GetModuleController(vector<string> module_path, request<ModuleController> request);
 
-    /// DEPRECATED
-    GetLink(LinkPath link_path, request<Link> link);
-
     /// Attach the `annotations` to the story.
     ///
     /// Existing annotations with the same key will be overwritten.

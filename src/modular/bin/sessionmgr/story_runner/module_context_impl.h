@@ -48,10 +48,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
  private:
   // |fuchsia::modular::ModuleContext|
-  void GetLink(fidl::StringPtr name,
-               fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
-
-  // |fuchsia::modular::ModuleContext|
   void EmbedModule(std::string name, fuchsia::modular::Intent intent,
                    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
                    fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) override;

@@ -68,12 +68,3 @@ group("tests") {
     "//src/modular:tests",
   ]
 }
-
-# Packages which contain benchmarks.
-group("benchmarks") {
-  testonly = true
-  public_deps = [
-    ":testing",
-    "//src/modular:benchmarks",
-  ]
-}

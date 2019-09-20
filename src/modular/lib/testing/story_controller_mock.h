@@ -18,11 +18,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
  public:
   StoryControllerMock() {}
 
-  struct GetLinkCall {
-    fuchsia::modular::LinkPath link_path;
-  };
-  std::vector<GetLinkCall> get_link_calls;
-
  private:
   // |fuchsia::modular::StoryController|
   void GetInfo2(GetInfo2Callback callback) override {
@@ -59,13 +54,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override {
     FXL_NOTIMPLEMENTED();
-  }
-
-  // |fuchsia::modular::StoryController|
-  void GetLink(fuchsia::modular::LinkPath link_path,
-               fidl::InterfaceRequest<fuchsia::modular::Link> request) override {
-    GetLinkCall call{std::move(link_path)};
-    get_link_calls.push_back(std::move(call));
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerMock);

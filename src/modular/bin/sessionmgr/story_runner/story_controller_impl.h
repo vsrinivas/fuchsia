@@ -4,9 +4,7 @@
 
 // The Story service is the context in which a story executes. It
 // starts modules and provides them with a handle to itself, so they
-// can start more modules. It also serves as the factory for
-// fuchsia::modular::Link instances, which are used to share data between
-// modules.
+// can start more modules.
 
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
@@ -39,7 +37,6 @@
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"
 #include "src/modular/bin/sessionmgr/story/model/story_observer.h"
-#include "src/modular/bin/sessionmgr/story_runner/link_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
@@ -55,9 +52,9 @@ class StoryProviderImpl;
 class StoryStorage;
 class StoryVisibilitySystem;
 
-// The story runner, which holds all the links and runs all the modules as well
-// as the story shell. It also implements the StoryController service to give
-// clients control over the story.
+// The story runner, which runs all the modules as well as the story shell.
+// It also implements the StoryController service to give clients control over
+// the story.
 class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
   StoryControllerImpl(SessionStorage* session_storage, StoryStorage* story_storage,
@@ -91,14 +88,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
-
-  // Called by ModuleContextImpl.
-  void ConnectLinkPath(fuchsia::modular::LinkPathPtr link_path,
-                       fidl::InterfaceRequest<fuchsia::modular::Link> request);
-
-  // Called by ModuleContextImpl.
-  fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
-      const std::vector<std::string>& module_path, std::string name);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
@@ -231,8 +220,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetModuleController(
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override;
-  void GetLink(fuchsia::modular::LinkPath link_path,
-               fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // |StoryController|
   void Annotate(std::vector<fuchsia::modular::Annotation> annotations,
@@ -252,7 +239,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void NotifyOneStoryWatcher(const fuchsia::modular::storymodel::StoryModel& model,
                              fuchsia::modular::StoryWatcher* watcher);
   void ProcessPendingStoryShellViews();
-  std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
   bool IsExternalModule(const std::vector<std::string>& module_path);
 
@@ -327,9 +313,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   std::map<std::string, PendingViewForStoryShell> pending_story_shell_views_;
 
   std::vector<RunningModInfo> running_mod_infos_;
-
-  // The second ingredient of a story: Links. They connect Modules.
-  fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
 
   // This is the source of truth on which activities are currently ongoing in
   // the story's modules.
