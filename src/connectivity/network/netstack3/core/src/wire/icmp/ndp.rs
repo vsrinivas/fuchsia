@@ -4,21 +4,12 @@
 
 //! Messages used for NDP (ICMPv6).
 
-#![allow(unused)] // FIXME(joshlf)
-
-use std::marker::PhantomData;
-use std::ops::Range;
-
-use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::{Ipv6, Ipv6Addr};
-use packet::{Nested, Serializer};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
-use crate::error::ParseError;
 use crate::wire::{U16, U32};
 
-use super::{IcmpIpExt, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use crate::wire::igmp::IgmpMessage;
+use super::{IcmpIpExt, IcmpUnusedCode};
 
 pub(crate) type Options<B> = crate::wire::records::options::Options<B, options::NdpOptionsImpl>;
 pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::OptionsSerializer<
@@ -483,12 +474,12 @@ pub(crate) mod options {
 
 #[cfg(test)]
 mod tests {
-    use packet::{InnerPacketBuilder, ParsablePacket, ParseBuffer};
+    use packet::{InnerPacketBuilder, ParseBuffer};
 
     use super::*;
-    use crate::ip;
-    use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use crate::wire::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
+    use crate::wire::ipv6::Ipv6Packet;
+    use byteorder::{ByteOrder, NetworkEndian};
     use packet::serialize::Serializer;
 
     #[test]
