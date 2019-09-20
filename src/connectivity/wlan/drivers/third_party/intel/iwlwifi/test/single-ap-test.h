@@ -18,6 +18,9 @@ namespace wlan::testing {
 // Helper class for unit test code to inherit in order to create an environment
 // with one virtual AP ready to scan/connect.
 //
+// Note that the contructor will call the init function of transportation layer,
+// and assert it is successful. The test case doesn't need to init again.
+//
 class SingleApTest : public ::testing::Test {
  public:
   SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), trans_(&env_) {
