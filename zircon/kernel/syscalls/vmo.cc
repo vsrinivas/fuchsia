@@ -233,7 +233,15 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
 
   zx_status_t status;
   fbl::RefPtr<VmObject> child_vmo;
-  zx_rights_t in_rights;
+  zx_rights_t in_rights = 0;
+  bool no_write = false;
+
+  // Writable is a property of the handle, not the object, so we consume this option here before
+  // calling CreateChild.
+  if (options & ZX_VMO_CHILD_NO_WRITE) {
+    no_write = true;
+    options &= ~ZX_VMO_CHILD_NO_WRITE;
+  }
 
   {
     // lookup the dispatcher from handle, save a copy of the rights for later
@@ -260,10 +268,13 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
     return result;
 
   // Set the rights to the new handle to no greater than the input
-  // handle, plus WRITE if making a COW clone, and always allow
-  // GET/SET_PROPERTY so the user can set ZX_PROP_NAME on the new clone.
+  // handle, and always allow GET/SET_PROPERTY so the user can set ZX_PROP_NAME on the new clone.
+  // Unless it was explicitly requested to be removed, Write can be added to CoW clones at the
+  // expense of executability.
   zx_rights_t rights = in_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
-  if (options & (ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_PRIVATE_PAGER_COPY)) {
+  if (no_write) {
+    rights &= ~ZX_RIGHT_WRITE;
+  } else if (options & (ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_PRIVATE_PAGER_COPY)) {
     rights &= ~ZX_RIGHT_EXECUTE;
     rights |= ZX_RIGHT_WRITE;
   }

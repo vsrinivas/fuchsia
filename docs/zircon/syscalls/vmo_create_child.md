@@ -62,6 +62,8 @@ further specify the child's behavior:
 
 - **ZX_VMO_CHILD_RESIZEABLE** - Create a resizeable child VMO.
 
+- **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to.
+
 *offset* must be page aligned.
 
 *offset* + *size* may not exceed the range of a 64bit unsigned value.
@@ -74,10 +76,11 @@ By default the rights of the child handled will be the same as the
 original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
 
-If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** or **ZX_VMO_CHILD_PRIVATE_PAGER_COPY**,
-then following rights are added:
+In all cases if **ZX_VMO_NO_WRITE** is set then **ZX_RIGHT_WRITE** will be removed.
 
-- **ZX_RIGHT_WRITE**
+If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** or **ZX_VMO_CHILD_PRIVATE_PAGER_COPY** and
+**ZX_VMO_CHILD_NO_WRITE** is not set then **ZX_RIGHT_WRITE** will be added and **ZX_RIGHT_EXECUTE**
+will be removed.
 
 ## NOTES
 

@@ -58,12 +58,10 @@ TEST(VmoTestCase, ReadWriteBadLen) {
   EXPECT_OK(status, "vm_object_create");
 
   char buf[len];
-  for (int i = 1; i <= 2 ; i++) {
-    status = zx_vmo_read(vmo, buf, 0,
-                         std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+  for (int i = 1; i <= 2; i++) {
+    status = zx_vmo_read(vmo, buf, 0, std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
-    status = zx_vmo_write(vmo, buf, 0,
-                          std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+    status = zx_vmo_write(vmo, buf, 0, std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
   }
   status = zx_vmo_read(vmo, buf, 0, len);
@@ -529,6 +527,35 @@ zx_rights_t GetHandleRights(zx_handle_t h) {
   return info.rights;
 }
 
+void ChildPermsTestHelper(const zx_handle_t vmo) {
+  // Read out the current rights;
+  const zx_rights_t parent_rights = GetHandleRights(vmo);
+
+  // Make different kinds of children and ensure we get the correct rights.
+  zx_handle_t child;
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &child));
+  EXPECT_EQ(GetHandleRights(child),
+            (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY | ZX_RIGHT_WRITE) &
+                ~ZX_RIGHT_EXECUTE);
+  EXPECT_OK(zx_handle_close(child));
+
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0,
+                                PAGE_SIZE, &child));
+  EXPECT_EQ(GetHandleRights(child),
+            (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY) & ~ZX_RIGHT_WRITE);
+  EXPECT_OK(zx_handle_close(child));
+
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &child));
+  EXPECT_EQ(GetHandleRights(child), parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY);
+  EXPECT_OK(zx_handle_close(child));
+
+  EXPECT_OK(
+      zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE | ZX_VMO_CHILD_NO_WRITE, 0, PAGE_SIZE, &child));
+  EXPECT_EQ(GetHandleRights(child),
+            (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY) & ~ZX_RIGHT_WRITE);
+  EXPECT_OK(zx_handle_close(child));
+}
+
 TEST(VmoTestCase, Rights) {
   char buf[4096];
   size_t len = PAGE_SIZE * 4;
@@ -582,6 +609,7 @@ TEST(VmoTestCase, Rights) {
             (kExpectedRights | ZX_RIGHT_EXECUTE) & GetHandleRights(vmo));
 
   // full perm test
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
   ASSERT_NO_FATAL_FAILURES(
@@ -593,9 +621,11 @@ TEST(VmoTestCase, Rights) {
   ASSERT_NO_FATAL_FAILURES(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0));
 
-  // try most of the permutations of mapping a vmo with various rights dropped
+  // try most of the permutations of mapping and clone a vmo with various rights dropped
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE, &vmo2);
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_DUPLICATE,
+                      &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
   ASSERT_NO_FATAL_FAILURES(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
@@ -611,7 +641,8 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP, &vmo2);
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
   ASSERT_NO_FATAL_FAILURES(
@@ -626,7 +657,7 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &vmo2);
+  zx_handle_duplicate(vmo, ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
@@ -642,7 +673,9 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &vmo2);
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
+                      &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
   ASSERT_NO_FATAL_FAILURES(
@@ -657,7 +690,9 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP, &vmo2);
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
+                      &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
   ASSERT_NO_FATAL_FAILURES(
@@ -672,7 +707,10 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP, &vmo2);
+  zx_handle_duplicate(
+      vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
+      &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
   ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
   ASSERT_NO_FATAL_FAILURES(
@@ -978,8 +1016,8 @@ TEST(VmoTestCase, PhysicalSlice) {
 
   // Map both VMOs in so we can access them.
   uintptr_t parent_vaddr;
-  EXPECT_OK(zx::vmar::root_self()->map(0, physical_vmo, 0, size,
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &parent_vaddr));
+  EXPECT_OK(zx::vmar::root_self()->map(0, physical_vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                       &parent_vaddr));
   uintptr_t slice_vaddr;
   EXPECT_OK(zx::vmar::root_self()->map(0, slice_vmo, 0, size / 2,
                                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &slice_vaddr));
