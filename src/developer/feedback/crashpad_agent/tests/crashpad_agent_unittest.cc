@@ -498,17 +498,16 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
   ASSERT_EQ(attachment_subdirs.size(), 1u);
 
-  // We sleep for one second to guarantee a different creation time for the next crash report.
-  zx::nanosleep(zx::deadline_after(zx::sec(1)));
-
   // We generate a new crash report.
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_response());
 
-  // We check that only one set of attachments is there and that it is a different directory than
-  // previously (the directory name is the local crash report ID).
+  // We check that only one set of attachments is there.
   const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirs();
   EXPECT_EQ(new_attachment_subdirs.size(), 1u);
-  EXPECT_THAT(new_attachment_subdirs, Not(UnorderedElementsAreArray(attachment_subdirs)));
+  // We cannot expect the set of attachments to be different than the first set as the real-time
+  // clock could go back in time between the generation of the two reports and then the second
+  // report would actually be older than the first report and be the one that was pruned, cf.
+  // fxb/37067.
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
