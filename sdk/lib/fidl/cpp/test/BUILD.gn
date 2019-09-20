@@ -39,6 +39,6 @@ fidl("frobinator") {
   name = "fidl.test.frobinator"
 
   sources = [
-    "frobinator.fidl",
+    "frobinator.test.fidl",
   ]
 }

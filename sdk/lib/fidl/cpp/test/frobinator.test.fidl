@@ -8,4 +8,7 @@ protocol Frobinator {
     Frob(string value);
     Grob(string value) -> (string value);
     -> Hrob(string value);
+    Fail(bool fail) -> () error uint32;
+    FailHard(bool fail) -> (string froyo) error uint32;
+    FailHardest(bool fail) -> (string fro, string yo) error uint32;
 };

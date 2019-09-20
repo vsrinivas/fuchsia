@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
+#include "fidl/test/frobinator/cpp/fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
@@ -324,6 +325,104 @@ TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
   EXPECT_EQ(ZX_OK, response.Write(h2.get(), 0));
   loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
+}
+
+TEST(InterfacePtr, ErrorNoValues) {
+  test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+
+  bool replied = false;
+  ptr->Fail(true, [&replied](fit::result<void, uint32_t> result) {
+    ASSERT_FALSE(replied);
+    replied = true;
+    EXPECT_TRUE(result.is_error());
+    EXPECT_EQ(result.error(), 42U);
+  });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
+
+  replied = false;
+  ptr->Fail(false, [&replied](fit::result<void, uint32_t> result) {
+    ASSERT_FALSE(replied);
+    replied = true;
+    EXPECT_TRUE(result.is_ok());
+  });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
+}
+
+TEST(InterfacePtr, ErrorOneValue) {
+  test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+
+  bool replied = false;
+  ptr->FailHard(true, [&replied](fit::result<std::string, uint32_t> result) {
+    ASSERT_FALSE(replied);
+    replied = true;
+    EXPECT_TRUE(result.is_error());
+    EXPECT_EQ(result.error(), 42U);
+  });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
+
+  replied = false;
+  ptr->FailHard(false, [&replied](fit::result<std::string, uint32_t> result) {
+    ASSERT_FALSE(replied);
+    replied = true;
+    EXPECT_TRUE(result.is_ok());
+    EXPECT_EQ(result.value(), "hello, world");
+  });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
+}
+
+TEST(InterfacePtr, ErrorTwoValues) {
+  test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+
+  bool replied = false;
+  ptr->FailHardest(true,
+                   [&replied](fit::result<std::tuple<std::string, std::string>, uint32_t> result) {
+                     ASSERT_FALSE(replied);
+                     replied = true;
+                     EXPECT_TRUE(result.is_error());
+                     EXPECT_EQ(result.error(), 42U);
+                   });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
+
+  replied = false;
+  ptr->FailHardest(false,
+                   [&replied](fit::result<std::tuple<std::string, std::string>, uint32_t> result) {
+                     ASSERT_FALSE(replied);
+                     replied = true;
+                     EXPECT_TRUE(result.is_ok());
+                     EXPECT_EQ(std::get<0>(result.value()), "hello");
+                     EXPECT_EQ(std::get<1>(result.value()), "world");
+                   });
+  EXPECT_FALSE(replied);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(replied);
 }
 
 }  // namespace

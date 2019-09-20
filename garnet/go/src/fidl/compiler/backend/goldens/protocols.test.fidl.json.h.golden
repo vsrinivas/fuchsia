@@ -80,6 +80,15 @@ constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
 class WithErrorSyntax_ErrorAsPrimitive_Response final {
  public:
   static const fidl_type_t* FidlType;
+  WithErrorSyntax_ErrorAsPrimitive_Response() = default;
+  explicit WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t&& v) : __reserved(std::move(v)) {}
+  uint8_t&& ResultValue_() { return std::move(__reserved); }
+  WithErrorSyntax_ErrorAsPrimitive_Response(std::tuple<>&& _value_tuple) {
+  }
+  operator std::tuple<>() && {
+    return std::make_tuple(
+    );
+  }
   
   uint8_t __reserved = 0u;
 
@@ -104,6 +113,27 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&&);
   WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&&);
+  WithErrorSyntax_ErrorAsPrimitive_Result(fit::result<void, uint32_t>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      set_response(WithErrorSyntax_ErrorAsPrimitive_Response{});
+    } else {
+      set_err(std::move(result.take_error()));
+    }
+  }
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(fit::ok_result<void>&& result)
+    : WithErrorSyntax_ErrorAsPrimitive_Result(fit::result<void, uint32_t>(std::move(result))) { }
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(fit::error_result<uint32_t>&& result)
+    : WithErrorSyntax_ErrorAsPrimitive_Result(fit::result<void, uint32_t>(std::move(result))) { }
+
+  operator fit::result<void, uint32_t>() && {
+    if (is_err()) {
+      return fit::error(err());
+    }
+    return fit::ok();
+  }
 
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
@@ -168,6 +198,15 @@ using WithErrorSyntax_ErrorAsPrimitive_ResultPtr = ::std::unique_ptr<WithErrorSy
 class WithErrorSyntax_ErrorAsEnum_Response final {
  public:
   static const fidl_type_t* FidlType;
+  WithErrorSyntax_ErrorAsEnum_Response() = default;
+  explicit WithErrorSyntax_ErrorAsEnum_Response(uint8_t&& v) : __reserved(std::move(v)) {}
+  uint8_t&& ResultValue_() { return std::move(__reserved); }
+  WithErrorSyntax_ErrorAsEnum_Response(std::tuple<>&& _value_tuple) {
+  }
+  operator std::tuple<>() && {
+    return std::make_tuple(
+    );
+  }
   
   uint8_t __reserved = 0u;
 
@@ -716,6 +755,27 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&);
   WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&&);
+  WithErrorSyntax_ErrorAsEnum_Result(fit::result<void, ErrorEnun>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      set_response(WithErrorSyntax_ErrorAsEnum_Response{});
+    } else {
+      set_err(std::move(result.take_error()));
+    }
+  }
+
+  WithErrorSyntax_ErrorAsEnum_Result(fit::ok_result<void>&& result)
+    : WithErrorSyntax_ErrorAsEnum_Result(fit::result<void, ErrorEnun>(std::move(result))) { }
+
+  WithErrorSyntax_ErrorAsEnum_Result(fit::error_result<ErrorEnun>&& result)
+    : WithErrorSyntax_ErrorAsEnum_Result(fit::result<void, ErrorEnun>(std::move(result))) { }
+
+  operator fit::result<void, ErrorEnun>() && {
+    if (is_err()) {
+      return fit::error(err());
+    }
+    return fit::ok();
+  }
 
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,

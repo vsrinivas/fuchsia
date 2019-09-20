@@ -16,6 +16,36 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
+
+  {{- if .IsResultValue }}
+  {{ .Name }}() = default;
+
+  {{- if eq 1 (len .Members) }}
+  explicit {{ .Name }}({{ (index .Members 0).Type.Decl }}&& v) : {{ (index .Members 0).Name }}(std::move(v)) {}
+  {{ (index .Members 0).Type.Decl }}&& ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
+  {{- end }}
+  {{ .Name }}({{ .Result.ValueTupleDecl }}&& _value_tuple) {
+    {{- if .Result.ValueArity }}
+    std::tie(
+      {{- range $index, $member := .Members }}
+      {{- if $index }}, {{ end -}}
+      {{.Name}}
+      {{- end -}}
+    ) = std::move(_value_tuple);
+    {{- end }}
+  }
+  operator {{ .Result.ValueTupleDecl }}() && {
+    return std::make_tuple(
+      {{- if .Result.ValueArity }}
+        {{- range $index, $member := .Members }}
+          {{- if $index }}, {{ end -}}
+          std::move({{.Name}})
+        {{- end -}}
+      {{- end }}
+    );
+  }
+  {{- end }}
+
   {{- range .Members }}
   {{range .DocComments}}
   //{{ . }}

@@ -21,6 +21,43 @@ class {{ .Name }} final {
   {{ .Name }}({{ .Name }}&&);
   {{ .Name }}& operator=({{ .Name }}&&);
 
+  {{- if .Result }}
+  {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      {{- if eq 0 .Result.ValueArity }}
+      set_response({{ .Result.ValueStructDecl }}{});
+      {{- else if eq 1 .Result.ValueArity }}
+      set_response({{ .Result.ValueStructDecl }}{result.take_value()});
+      {{- else }}
+      set_response(std::move(result.take_value()));
+      {{- end }}
+    } else {
+      set_err(std::move(result.take_error()));
+    }
+  }
+
+  {{ .Name }}(fit::ok_result<{{ .Result.ValueDecl }}>&& result)
+    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
+
+  {{ .Name }}(fit::error_result<{{ .Result.ErrorDecl }}>&& result)
+    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
+
+  operator fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>() && {
+    if (is_err()) {
+      return fit::error(err());
+    }
+    {{- if eq 0 .Result.ValueArity }}
+    return fit::ok();
+    {{- else if eq 1 .Result.ValueArity }}
+    {{ .Result.ValueTupleDecl }} value_tuple = std::move(response());
+    return fit::ok(std::move(std::get<0>(value_tuple)));
+    {{- else }}
+    return fit::ok(std::move(response()));
+    {{- end }}
+  }
+  {{- end }}
+
   enum class Tag : fidl_union_tag_t {
   {{- range $index, $member := .Members }}
     {{ .TagName }} = {{ $index }},

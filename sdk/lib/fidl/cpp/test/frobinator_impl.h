@@ -26,6 +26,9 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
 
   void Frob(std::string value) override;
   void Grob(std::string value, GrobCallback callback) override;
+  void Fail(bool fail, FailCallback callback) override;
+  void FailHard(bool fail, FailHardCallback callback) override;
+  void FailHardest(bool fail, FailHardestCallback callback) override;
 };
 
 }  // namespace test

@@ -44,17 +44,14 @@ void Flatland::Present(PresentCallback callback) {
     }
   }
 
-  fuchsia::ui::scenic::internal::Flatland_Present_Result result;
   if (success) {
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
     // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
     // always return 1 as the number of remaining presents.
-    result.set_response({num_presents_remaining_});
+    callback(fit::ok(num_presents_remaining_));
   } else {
-    result.set_err(fuchsia::ui::scenic::internal::Error::BAD_OPERATION);
+    callback(fit::error(fuchsia::ui::scenic::internal::Error::BAD_OPERATION));
   }
-
-  callback(std::move(result));
 }
 
 void Flatland::ClearGraph() {

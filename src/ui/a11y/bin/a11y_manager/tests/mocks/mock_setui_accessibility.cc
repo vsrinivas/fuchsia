@@ -19,9 +19,7 @@ void MockSetUIAccessibility::Watch(WatchCallback callback) { watchCallback_ = st
 void MockSetUIAccessibility::Set(fuchsia::settings::AccessibilitySettings settings,
                                  SetCallback callback) {
   if (watchCallback_) {
-    fuchsia::settings::Accessibility_Watch_Result result;
-    result.set_response({.settings = std::move(settings)});
-    watchCallback_(std::move(result));
+    watchCallback_(fit::ok(std::move(settings)));
   }
   callback({});
 }

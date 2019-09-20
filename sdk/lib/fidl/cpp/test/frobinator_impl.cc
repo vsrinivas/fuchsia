@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "lib/fit/result.h"
 
 namespace fidl {
 namespace test {
@@ -22,6 +23,30 @@ void FrobinatorImpl::Frob(std::string value) { frobs.push_back(std::move(value))
 void FrobinatorImpl::Grob(std::string value, GrobCallback callback) {
   grobs.push_back(std::move(value));
   callback("response");
+}
+
+void FrobinatorImpl::Fail(bool fail, FailCallback callback) {
+  if (fail) {
+    callback(fit::error(42U));
+  } else {
+    callback(fit::ok());
+  }
+}
+
+void FrobinatorImpl::FailHard(bool fail, FailHardCallback callback) {
+  if (fail) {
+    callback(fit::error(42U));
+  } else {
+    callback(fit::ok(std::string("hello, world")));
+  }
+}
+
+void FrobinatorImpl::FailHardest(bool fail, FailHardestCallback callback) {
+  if (fail) {
+    callback(fit::error(42U));
+  } else {
+    callback(fit::ok(std::make_tuple(std::string("hello"), std::string("world"))));
+  }
 }
 
 }  // namespace test

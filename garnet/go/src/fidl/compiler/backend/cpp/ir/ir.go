@@ -122,6 +122,8 @@ type Union struct {
 	Size         int
 	MaxHandles   int
 	MaxOutOfLine int
+	IsResult     bool
+	Result       *Result
 	Kind         unionKind
 }
 
@@ -194,15 +196,17 @@ type TableMember struct {
 
 type Struct struct {
 	types.Attributes
-	Namespace    string
-	Name         string
-	TableType    string
-	Members      []StructMember
-	Size         int
-	MaxHandles   int
-	MaxOutOfLine int
-	HasPadding   bool
-	Kind         structKind
+	Namespace     string
+	Name          string
+	TableType     string
+	Members       []StructMember
+	Size          int
+	MaxHandles    int
+	MaxOutOfLine  int
+	HasPadding    bool
+	IsResultValue bool
+	Result        *Result
+	Kind          structKind
 }
 
 type StructMember struct {
@@ -321,6 +325,15 @@ type Root struct {
 	Library         types.LibraryIdentifier
 	LibraryReversed types.LibraryIdentifier
 	Decls           []Decl
+}
+
+// Holds information about error results on methods
+type Result struct {
+	ValueArity      int
+	ErrorDecl       string
+	ValueDecl       string
+	ValueStructDecl string
+	ValueTupleDecl  string
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -520,6 +533,8 @@ type compiler struct {
 	library            types.LibraryIdentifier
 	handleTypes        map[types.HandleSubtype]bool
 	namespaceFormatter func(types.LibraryIdentifier, string) string
+	resultForStruct    map[types.EncodedCompoundIdentifier]*Result
+	resultForUnion     map[types.EncodedCompoundIdentifier]*Result
 }
 
 func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -932,6 +947,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
 			Transitional:         transitional,
 		}
+
 		m.LLProps = m.NewLLProps(r)
 		r.Methods = append(r.Methods, m)
 		if !v.HasRequest {
@@ -1000,6 +1016,28 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileStructMember(v, appendNamespace))
+	}
+
+	result := c.resultForStruct[val.Name]
+	if result != nil {
+		(*result).ValueArity = len(r.Members)
+		memberTypeDecls := []string{}
+		for _, m := range r.Members {
+			memberTypeDecls = append(memberTypeDecls, m.Type.Decl)
+		}
+		(*result).ValueTupleDecl = fmt.Sprintf("std::tuple<%s>", strings.Join(memberTypeDecls, ", "))
+
+		if len(r.Members) == 0 {
+			(*result).ValueDecl = "void"
+		} else if len(r.Members) == 1 {
+			(*result).ValueDecl = r.Members[0].Type.Decl
+		} else {
+
+			(*result).ValueDecl = (*result).ValueTupleDecl
+		}
+
+		r.IsResultValue = true
+		r.Result = result
 	}
 
 	if len(r.Members) == 0 {
@@ -1085,7 +1123,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	}
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val types.Union) *Union {
 	name := c.compileCompoundIdentifier(val.Name, "", "")
 	r := Union{
 		Attributes:   val.Attributes,
@@ -1102,7 +1140,30 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
-	return r
+	if val.Attributes.HasAttribute("Result") {
+		if len(r.Members) != 2 {
+			log.Fatal("A Result union must have two members: ", val.Name)
+		}
+		if val.Members[0].Type.Kind != types.IdentifierType {
+			log.Fatal("Value member of result union must be an identifier", val.Name)
+		}
+		valueStructDeclType, ok := (*c.decls)[val.Members[0].Type.Identifier]
+		if !ok {
+			log.Fatal("Unknown identifier: ", val.Members[0].Type.Identifier)
+		}
+		if valueStructDeclType != "struct" {
+			log.Fatal("First member of result union not a struct: ", val.Name)
+		}
+		result := Result{
+			ValueStructDecl: r.Members[0].Type.Decl,
+			ErrorDecl:       r.Members[1].Type.Decl,
+		}
+		c.resultForStruct[val.Members[0].Type.Identifier] = &result
+		c.resultForUnion[val.Name] = &result
+		r.Result = &result
+	}
+
+	return &r
 }
 
 func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
@@ -1155,6 +1216,8 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		types.ParseLibraryName(r.Name),
 		make(map[types.HandleSubtype]bool),
 		namespaceFormatter,
+		make(map[types.EncodedCompoundIdentifier]*Result),
+		make(map[types.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
@@ -1183,13 +1246,14 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		decls[v.Name] = &d
 	}
 
-	for _, v := range r.Interfaces {
-		d := c.compileInterface(v)
-		decls[v.Name] = &d
+	// Note: for Result calculation unions must be compiled before structs.
+	for _, v := range r.Unions {
+		d := c.compileUnion(v)
+		decls[v.Name] = d
 	}
 
-	for _, v := range r.Services {
-		d := c.compileService(v)
+	for _, v := range r.XUnions {
+		d := c.compileXUnion(v)
 		decls[v.Name] = &d
 	}
 
@@ -1203,13 +1267,13 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		decls[v.Name] = &d
 	}
 
-	for _, v := range r.Unions {
-		d := c.compileUnion(v)
+	for _, v := range r.Interfaces {
+		d := c.compileInterface(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range r.XUnions {
-		d := c.compileXUnion(v)
+	for _, v := range r.Services {
+		d := c.compileService(v)
 		decls[v.Name] = &d
 	}
 
