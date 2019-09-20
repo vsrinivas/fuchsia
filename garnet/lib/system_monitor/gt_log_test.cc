@@ -12,53 +12,66 @@ namespace {
 
 class GtLogTest : public ::testing::Test {
  public:
-  void SetUp() { SetUpLogging(/*argc=*/0, /*argv=*/nullptr); }
+  void SetUp() override { SetUpLogging(/*argc=*/0, /*argv=*/nullptr); }
 };
 
 TEST_F(GtLogTest, Levels) {
   // This series of Logger instances add to the |test_stream|. These are equal
   // to unwrapping the GT_LOG(), except that GT_LOG() outputs to std::cout
   // rather than this test stream.
-  GuiToolsLogLevel min_level = GuiToolsLogLevel::DEBUG;
+  GuiToolsLogLevel min_level = GuiToolsLogLevel::DEBUG3;
   std::ostringstream test_stream;
   {
     Logger logger(&test_stream, GuiToolsLogLevel::DEBUG, min_level,
-                  /*file_path=*/"apple/banana.h", /*line=*/55);
+                  /*file_path=*/"apple/banana.h", /*line=*/55,
+                  /*function=*/"foo");
     logger.out() << "carrot";
     logger.out() << " dog";
   }
-  EXPECT_EQ("[DEBUG]banana.h:55: carrot dog\n", test_stream.str());
+  EXPECT_EQ("[DEBUG]banana.h:55: foo: carrot dog\n", test_stream.str());
   {
     Logger logger(&test_stream, GuiToolsLogLevel::INFO, min_level,
                   /*file_path=*/"zebra/cow.h",
-                  /*line=*/2134132412);
+                  /*line=*/2134132412, /*function=*/"foo");
     logger.out() << "number is " << 5432;
   }
   EXPECT_EQ(
-      "[DEBUG]banana.h:55: carrot dog\n"
-      "[INFO]cow.h:2134132412: number is 5432\n",
+      "[DEBUG]banana.h:55: foo: carrot dog\n"
+      "[INFO]cow.h:2134132412: foo: number is 5432\n",
       test_stream.str());
   {
     Logger logger(&test_stream, GuiToolsLogLevel::WARNING, min_level,
                   /*file_path=*/"x.h",
-                  /*line=*/0);
+                  /*line=*/0, /*function=*/"foo");
     logger.out() << 5432 << " was the number";
   }
   EXPECT_EQ(
-      "[DEBUG]banana.h:55: carrot dog\n"
-      "[INFO]cow.h:2134132412: number is 5432\n"
-      "[WARNING]x.h:0: 5432 was the number\n",
+      "[DEBUG]banana.h:55: foo: carrot dog\n"
+      "[INFO]cow.h:2134132412: foo: number is 5432\n"
+      "[WARNING]x.h:0: foo: 5432 was the number\n",
       test_stream.str());
   {
     Logger logger(&test_stream, GuiToolsLogLevel::ERROR, min_level,
                   /*file_path=*/"e.cc",
-                  /*line=*/3);
+                  /*line=*/3, /*function=*/"foo");
   }
   EXPECT_EQ(
-      "[DEBUG]banana.h:55: carrot dog\n"
-      "[INFO]cow.h:2134132412: number is 5432\n"
-      "[WARNING]x.h:0: 5432 was the number\n"
-      "[ERROR]e.cc:3: \n",
+      "[DEBUG]banana.h:55: foo: carrot dog\n"
+      "[INFO]cow.h:2134132412: foo: number is 5432\n"
+      "[WARNING]x.h:0: foo: 5432 was the number\n"
+      "[ERROR]e.cc:3: foo: \n",
+      test_stream.str());
+  {
+    Logger logger(&test_stream, GuiToolsLogLevel::DEBUG3, min_level,
+                  /*file_path=*/"x3.cc",
+                  /*line=*/333, /*function=*/"bar");
+  }
+  EXPECT_EQ(
+      "[DEBUG]banana.h:55: foo: carrot dog\n"
+      "[INFO]cow.h:2134132412: foo: number is 5432\n"
+      "[WARNING]x.h:0: foo: 5432 was the number\n"
+      "[ERROR]e.cc:3: foo: \n"
+      "[DEBUG3]x3.cc:333: bar: \n",
       test_stream.str());
 }
 
@@ -68,18 +81,18 @@ TEST_F(GtLogTest, BadInput) {
   GuiToolsLogLevel min_level = GuiToolsLogLevel::DEBUG;
   std::ostringstream test_stream;
   {
-    Logger logger(&test_stream, (GuiToolsLogLevel)3000, min_level,
-                  /*file_path=*/"", /*line=*/-1);
+    Logger logger(&test_stream, static_cast<GuiToolsLogLevel>(3000), min_level,
+                  /*file_path=*/"", /*line=*/-1, /*function=*/"foo");
     logger.out() << "carrot\n";
     logger.out() << " dog";
   }
-  EXPECT_EQ("[UNKNOWN]:-1: carrot\n dog\n", test_stream.str());
+  EXPECT_EQ("[UNKNOWN]:-1: foo: carrot\n dog\n", test_stream.str());
   {
     // The -4 log level is below DEBUG, so this line will not be logged.
-    Logger logger(&test_stream, (GuiToolsLogLevel)-4, min_level,
-                  /*file_path=*/"hidden", /*line=*/-3);
+    Logger logger(&test_stream, static_cast<GuiToolsLogLevel>(-4), min_level,
+                  /*file_path=*/"hidden", /*line=*/-3, /*function=*/"foo");
   }
-  EXPECT_EQ("[UNKNOWN]:-1: carrot\n dog\n", test_stream.str());
+  EXPECT_EQ("[UNKNOWN]:-1: foo: carrot\n dog\n", test_stream.str());
 }
 
 TEST_F(GtLogTest, SetUpLogging) {

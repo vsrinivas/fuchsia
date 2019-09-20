@@ -17,6 +17,8 @@
 // disabled by ordinal value.
 // This is defined outside of the namespace for user ergonomics.
 enum class GuiToolsLogLevel : int {
+  DEBUG3 = -3,
+  DEBUG2 = -2,
   DEBUG = -1,
   INFO = 0,
   WARNING = 1,
@@ -34,7 +36,7 @@ class Logger {
   // Write the line prefix.
   // Note: |out| and |file_path| must not be null.
   Logger(std::ostream* out, GuiToolsLogLevel level, GuiToolsLogLevel limit,
-         const char* file_path, int line)
+         const char* file_path, int line, const char* function)
       : out_(out) {
     assert(out != nullptr);
     assert(file_path != nullptr);
@@ -58,11 +60,17 @@ class Logger {
       case GuiToolsLogLevel::DEBUG:
         *out_ << "[DEBUG]";
         break;
+      case GuiToolsLogLevel::DEBUG2:
+        *out_ << "[DEBUG2]";
+        break;
+      case GuiToolsLogLevel::DEBUG3:
+        *out_ << "[DEBUG3]";
+        break;
       default:
         *out_ << "[UNKNOWN]";
         break;
     }
-    *out_ << NameOnly(file_path) << ":" << line << ": ";
+    *out_ << NameOnly(file_path) << ":" << line << ": " << function << ": ";
   }
   // Put an end-line on the output.
   ~Logger() { *out_ << std::endl; }
@@ -99,7 +107,7 @@ inline std::ostream& GuiToolsLog(GuiToolsLogLevel level) { return std::cout; }
 // be two '\n' printed.)
 #define GT_LOG(x)                                                            \
   ::gt::Logger(&std::cout, GuiToolsLogLevel::x, ::gt::g_log_level, __FILE__, \
-               __LINE__)                                                     \
+               __LINE__, __FUNCTION__)                                       \
       .out()
 
 #endif  // GARNET_LIB_SYSTEM_MONITOR_GT_LOG_H_
