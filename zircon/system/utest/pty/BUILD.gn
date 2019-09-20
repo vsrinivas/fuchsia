@@ -11,5 +11,6 @@ test("pty") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zx",
   ]
 }

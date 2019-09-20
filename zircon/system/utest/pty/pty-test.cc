@@ -2,23 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/time.h>
+#include <poll.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <zircon/status.h>
+
+#include <unittest/unittest.h>
 
 // returns an int to avoid sign errors from ASSERT_*()
-static int fd_signals(int fd) {
+static int fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any, zx::time deadline) {
   uint32_t signals = 0;
-  fdio_wait_fd(fd, 0, &signals, 0);
+  fdio_wait_fd(fd.get(), wait_for_any, &signals, deadline.get());
+  if (deadline != zx::time{}) {
+    // If we waited for non-zero time, re-read with 0 time.  This call bottoms
+    // out in zx_object_wait_one, which will return signals that were
+    // transiently asserted during the wait.  The second call will allow us to
+    // ignore signals that aren't currently asserted.
+    fdio_wait_fd(fd.get(), wait_for_any, &signals, 0);
+  }
   return signals;
 }
 
@@ -105,8 +114,24 @@ static zx_status_t open_client(int fd, uint32_t client_id, int* out_fd) {
 static bool pty_test(void) {
   BEGIN_TEST;
 
-  fbl::unique_fd ps(open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK));
-  ASSERT_EQ(bool(ps), true, "");
+  // Connect to the PTY service.  We have to do this dance rather than just
+  // using open() because open() uses the DESCRIBE flag internally, and the
+  // plumbing of the PTY service through svchost causes the DESCRIBE to get
+  // consumed by the wrong code, resulting in the wrong NodeInfo being provided.
+  // This manifests as a loss of fd signals.
+  fbl::unique_fd ps;
+  {
+    zx::channel local, remote;
+    ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+    ASSERT_EQ(fdio_service_connect("/svc/fuchsia.hardware.pty.Device", remote.release()), ZX_OK);
+    int fd;
+    ASSERT_EQ(fdio_fd_create(local.release(), &fd), ZX_OK);
+    ps.reset(fd);
+    ASSERT_TRUE(ps.is_valid());
+    int flags = fcntl(ps.get(), F_GETFL);
+    ASSERT_GE(flags, 0);
+    ASSERT_EQ(fcntl(ps.get(), F_SETFL, flags | O_NONBLOCK), 0);
+  }
 
   fzl::UnownedFdioCaller ps_io(ps.get());
 
@@ -121,8 +146,8 @@ static bool pty_test(void) {
 
   char tmp[32];
 
-  ASSERT_EQ(fd_signals(ps.get()), POLLOUT, "");
-  ASSERT_EQ(fd_signals(pc.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(ps, POLLOUT, zx::time{}), POLLOUT, "");
+  ASSERT_EQ(fd_signals(pc, POLLOUT, zx::time{}), POLLOUT, "");
 
   // nothing to read
   ASSERT_EQ(read(ps.get(), tmp, 32), -1, "");
@@ -132,33 +157,33 @@ static bool pty_test(void) {
 
   // write server, read client
   ASSERT_EQ(write(ps.get(), "xyzzy", 5), 5, "");
-  ASSERT_EQ(fd_signals(pc.get()), POLLIN | POLLOUT, "");
+  ASSERT_EQ(fd_signals(pc, POLLIN | POLLOUT, zx::time{}), POLLIN | POLLOUT, "");
 
   memset(tmp, 0xee, 5);
   ASSERT_EQ(read(pc.get(), tmp, 5), 5, "");
   ASSERT_EQ(memcmp(tmp, "xyzzy", 5), 0, "");
-  ASSERT_EQ(fd_signals(pc.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(pc, POLLOUT, zx::time{}), POLLOUT, "");
 
   // write client, read server
   ASSERT_EQ(write(pc.get(), "xyzzy", 5), 5, "");
-  ASSERT_EQ(fd_signals(ps.get()), POLLIN | POLLOUT, "");
+  ASSERT_EQ(fd_signals(ps, POLLIN | POLLOUT, zx::time{}), POLLIN | POLLOUT, "");
 
   memset(tmp, 0xee, 5);
   ASSERT_EQ(read(ps.get(), tmp, 5), 5, "");
   ASSERT_EQ(memcmp(tmp, "xyzzy", 5), 0, "");
-  ASSERT_EQ(fd_signals(ps.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(ps, POLLOUT, zx::time{}), POLLOUT, "");
 
   // write server until full, then drain
   ASSERT_EQ(write_full(ps.get()), 4096, "");
-  ASSERT_EQ(fd_signals(ps.get()), 0, "");
+  ASSERT_EQ(fd_signals(ps, 0, zx::time{}), 0, "");
   ASSERT_EQ(read_all(pc.get()), 4096, "");
-  ASSERT_EQ(fd_signals(ps.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(ps, POLLOUT, zx::time{}), POLLOUT, "");
 
   // write client until full, then drain
   ASSERT_EQ(write_full(pc.get()), 4096, "");
-  ASSERT_EQ(fd_signals(pc.get()), 0, "");
+  ASSERT_EQ(fd_signals(pc, 0, zx::time{}), 0, "");
   ASSERT_EQ(read_all(ps.get()), 4096, "");
-  ASSERT_EQ(fd_signals(pc.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(pc, POLLOUT, zx::time{}), POLLOUT, "");
 
   // verify no events pending
   uint32_t events;
@@ -238,7 +263,7 @@ static bool pty_test(void) {
   fzl::UnownedFdioCaller pc1_io(pc1.get());
 
   // reads/writes to non-active client should block
-  ASSERT_EQ(fd_signals(pc1.get()), 0, "");
+  ASSERT_EQ(fd_signals(pc1, 0, zx::time{}), 0, "");
   ASSERT_EQ(write(pc1.get(), "test", 4), -1, "");
   ASSERT_EQ(errno, EAGAIN, "");
   ASSERT_EQ(read(pc1.get(), tmp, 4), -1, "");
@@ -256,8 +281,8 @@ static bool pty_test(void) {
   n = 1;
   ASSERT_EQ(fuchsia_hardware_pty_DeviceMakeActive(pc_io.borrow_channel(), n, &status), ZX_OK, "");
   ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(fd_signals(pc.get()), 0, "");
-  ASSERT_EQ(fd_signals(pc1.get()), POLLOUT, "");
+  ASSERT_EQ(fd_signals(pc, 0, zx::time{}), 0, "");
+  ASSERT_EQ(fd_signals(pc1, POLLOUT, zx::time{}), POLLOUT, "");
   ASSERT_EQ(write(pc1.get(), "test", 4), 4, "");
   ASSERT_EQ(read(ps.get(), tmp, 4), 4, "");
   ASSERT_EQ(memcmp(tmp, "test", 4), 0, "");
@@ -265,7 +290,7 @@ static bool pty_test(void) {
   // make sure controlling client observes departing active client
   pc1_io.reset();
   pc1.reset();
-  ASSERT_EQ(fd_signals(pc.get()), POLLHUP | POLLPRI, "");
+  ASSERT_EQ(fd_signals(pc, POLLHUP | POLLPRI, zx::time::infinite()), POLLHUP | POLLPRI, "");
   ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
             "");
   ASSERT_EQ(status, ZX_OK, "");
@@ -274,7 +299,7 @@ static bool pty_test(void) {
   // verify that server observes departure of last client
   pc_io.reset();
   pc.reset();
-  ASSERT_EQ(fd_signals(ps.get()), POLLHUP | POLLIN, "");
+  ASSERT_EQ(fd_signals(ps, POLLHUP | POLLIN, zx::time::infinite()), POLLHUP | POLLIN, "");
 
   ps_io.reset();
   ps.reset();
