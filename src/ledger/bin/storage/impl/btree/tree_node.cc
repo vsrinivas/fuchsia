@@ -77,10 +77,7 @@ void TreeNode::FromIdentifier(
 
 Status TreeNode::FromObject(const Object& object, std::unique_ptr<const TreeNode>* node) {
   fxl::StringView data;
-  Status status = object.GetData(&data);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(object.GetData(&data));
   uint8_t level;
   std::vector<Entry> entries;
   std::map<size_t, ObjectIdentifier> children;

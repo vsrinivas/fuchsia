@@ -81,14 +81,10 @@ class PageDbTest : public ledger::TestWithEnvironment {
   Status DeleteCommit(CoroutineHandler* handler, const CommitId& commit_id,
                       const ObjectDigest& root_node_digest) {
     std::unique_ptr<PageDbImpl::Batch> batch;
-    Status status = page_db_.StartBatch(handler, &batch);
-    if (status != Status::OK)
-      return status;
-    status = batch->DeleteCommit(
+    RETURN_ON_ERROR(page_db_.StartBatch(handler, &batch));
+    RETURN_ON_ERROR(batch->DeleteCommit(
         handler, commit_id,
-        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, root_node_digest));
-    if (status != Status::OK)
-      return status;
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, root_node_digest)));
     return batch->Execute(handler);
   }
 

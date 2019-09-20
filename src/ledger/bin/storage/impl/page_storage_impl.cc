@@ -860,22 +860,13 @@ void PageStorageImpl::GetClock(
 Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
                                       std::vector<std::unique_ptr<const Commit>> commits) {
   std::unique_ptr<PageDb::Batch> batch;
-  Status status = db_->StartBatch(handler, &batch);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
   for (const std::unique_ptr<const Commit>& commit : commits) {
     auto parents = commit->GetParentIds();
     if (parents.size() > 1) {
-      status = batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId());
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId()));
     }
-    status = batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier());
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier()));
   }
   return batch->Execute(handler);
 }
@@ -919,23 +910,14 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Ba
     const ObjectIdentifier& object_identifier = *(it.first);
     FXL_DCHECK(!GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
     FXL_DCHECK(IsTokenValid(object_identifier));
-    Status status = batch->SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(batch->SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL));
     if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type == PieceType::INDEX) {
       std::unique_ptr<const Piece> piece;
-      status = db_->ReadObject(handler, object_identifier, &piece);
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(db_->ReadObject(handler, object_identifier, &piece));
       fxl::StringView content = piece->GetData();
 
       const FileIndex* file_index;
-      status = FileIndexSerialization::ParseFileIndex(content, &file_index);
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(content, &file_index));
 
       object_identifiers.reserve(object_identifiers.size() + file_index->children()->size());
       for (const auto* child : *file_index->children()) {
@@ -1303,22 +1285,13 @@ CommitFactory* PageStorageImpl::GetCommitFactory() { return &commit_factory_; }
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Add the default page head if this page is empty.
   std::vector<std::pair<zx::time_utc, CommitId>> heads;
-  Status s = db_->GetHeads(handler, &heads);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(db_->GetHeads(handler, &heads));
   // Cache the heads and update the live commit tracker.
   std::vector<std::unique_ptr<const Commit>> commits;
   if (heads.empty()) {
-    s = db_->AddHead(handler, kFirstPageCommitId, zx::time_utc());
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(db_->AddHead(handler, kFirstPageCommitId, zx::time_utc()));
     std::unique_ptr<const Commit> head_commit;
-    s = SynchronousGetCommit(handler, kFirstPageCommitId.ToString(), &head_commit);
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(SynchronousGetCommit(handler, kFirstPageCommitId.ToString(), &head_commit));
     commits.push_back(std::move(head_commit));
   } else {
     auto waiter =
@@ -1327,44 +1300,35 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     for (const auto& head : heads) {
       GetCommit(head.second, waiter->NewCallback());
     }
-    if (coroutine::Wait(handler, std::move(waiter), &s, &commits) ==
+    Status status;
+    if (coroutine::Wait(handler, std::move(waiter), &status, &commits) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(status);
   }
   commit_factory_.AddHeads(std::move(commits));
 
   std::vector<std::unique_ptr<const Commit>> unsynced_commits;
-  s = SynchronousGetUnsyncedCommits(handler, &unsynced_commits);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(SynchronousGetUnsyncedCommits(handler, &unsynced_commits));
   for (const auto& commit : unsynced_commits) {
     // When this |commit| will be synced to the cloud we will compute the diff from its base parent
     // commit: make sure the base's root identifier is not garbage collected.
     ObjectIdentifier base_parent_root;
-    s = GetBaseParentRootIdentifier(handler, *commit, &base_parent_root);
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(GetBaseParentRootIdentifier(handler, *commit, &base_parent_root));
     commit_factory_.AddCommitDependencies(commit->GetId(),
                                           {commit->GetRootIdentifier(), base_parent_root});
   }
 
-  s = db_->GetDeviceId(handler, &device_id_);
-  if (s == Status::INTERNAL_NOT_FOUND) {
+  Status status = db_->GetDeviceId(handler, &device_id_);
+  if (status == Status::INTERNAL_NOT_FOUND) {
     char device_id[kDeviceIdSize];
     environment_->random()->Draw(device_id, kDeviceIdSize);
     device_id_ = std::string(device_id, kDeviceIdSize);
-    s = db_->SetDeviceId(handler, device_id_);
+    status = db_->SetDeviceId(handler, device_id_);
   }
 
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(status);
 
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
@@ -1385,10 +1349,7 @@ Status PageStorageImpl::SynchronousGetCommit(CoroutineHandler* handler, CommitId
     return s;
   }
   std::string bytes;
-  Status s = db_->GetCommitStorageBytes(handler, commit_id, &bytes);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(db_->GetCommitStorageBytes(handler, commit_id, &bytes));
   return commit_factory_.FromStorageBytes(commit_id, std::move(bytes), commit);
 }
 
@@ -1435,10 +1396,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     if (status == Status::OK) {
       // We only mark cloud-sourced commits as synced.
       if (source == ChangeSource::CLOUD) {
-        Status status = SynchronousMarkCommitSynced(handler, id);
-        if (status != Status::OK) {
-          return status;
-        }
+        RETURN_ON_ERROR(SynchronousMarkCommitSynced(handler, id));
       }
       continue;
     }
@@ -1518,10 +1476,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
     CoroutineHandler* handler, std::vector<std::unique_ptr<const Commit>>* unsynced_commits) {
   std::vector<CommitId> commit_ids;
-  Status s = db_->GetUnsyncedCommitIds(handler, &commit_ids);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(db_->GetUnsyncedCommitIds(handler, &commit_ids));
 
   auto waiter =
       fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
@@ -1529,14 +1484,13 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
     GetCommit(commit_id, waiter->NewCallback());
   }
 
+  Status status;
   std::vector<std::unique_ptr<const Commit>> result;
-  if (coroutine::Wait(handler, std::move(waiter), &s, &result) ==
+  if (coroutine::Wait(handler, std::move(waiter), &status, &result) ==
       coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(status);
   unsynced_commits->swap(result);
   return Status::OK;
 }
@@ -1544,15 +1498,9 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
 Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
                                                     const CommitId& commit_id) {
   std::unique_ptr<PageDb::Batch> batch;
-  Status status = db_->StartBatch(handler, &batch);
-  if (status != Status::OK) {
-    return status;
-  }
-  status = SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit_id);
-  if (status != Status::OK) {
-    return status;
-  }
-  status = batch->Execute(handler);
+  RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
+  RETURN_ON_ERROR(SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit_id));
+  Status status = batch->Execute(handler);
   if (status == Status::OK && commit_id != kFirstPageCommitId) {
     commit_factory_.RemoveCommitDependencies(commit_id);
   }
@@ -1562,10 +1510,7 @@ Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
 Status PageStorageImpl::SynchronousMarkCommitSyncedInBatch(CoroutineHandler* handler,
                                                            PageDb::Batch* batch,
                                                            const CommitId& commit_id) {
-  Status status = SynchronousMarkPageOnline(handler, batch);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(SynchronousMarkPageOnline(handler, batch));
   return batch->MarkCommitIdSynced(handler, commit_id);
 }
 
@@ -1587,10 +1532,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch;
-  Status status = db_->StartBatch(handler, &batch);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
   std::map<CommitId, std::unique_ptr<const Commit>> heads_to_add;
@@ -1609,10 +1551,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
     Status s = ContainsCommit(handler, commit->GetId());
     if (s == Status::OK) {
       if (source == ChangeSource::CLOUD) {
-        s = SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit->GetId());
-        if (s != Status::OK) {
-          return s;
-        }
+        RETURN_ON_ERROR(SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit->GetId()));
         // Synced commits will need to be removed from the commit factory once the batch is executed
         // successfully.
         if (commit->GetId() != kFirstPageCommitId) {
@@ -1630,10 +1569,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
     // If the commit is a merge, register it in the merge index.
     std::vector<CommitIdView> parent_ids = commit->GetParentIds();
     if (parent_ids.size() == 2) {
-      s = batch->AddMerge(handler, parent_ids[0], parent_ids[1], commit->GetId());
-      if (s != Status::OK) {
-        return s;
-      }
+      RETURN_ON_ERROR(batch->AddMerge(handler, parent_ids[0], parent_ids[1], commit->GetId()));
     }
 
     // Commits should arrive in order. Check that the parents are either
@@ -1664,10 +1600,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
       // Remove the parent from the list of heads.
       if (!heads_to_add.erase(parent_id.ToString())) {
         // parent_id was not added in the batch: remove it from heads in Db.
-        s = batch->RemoveHead(handler, parent_id);
-        if (s != Status::OK) {
-          return s;
-        }
+        RETURN_ON_ERROR(batch->RemoveHead(handler, parent_id));
         removed_heads.push_back(parent_id.ToString());
       }
     }
@@ -1678,28 +1611,20 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
       continue;
     }
 
-    s = batch->AddCommitStorageBytes(handler, commit->GetId(), commit->GetRootIdentifier(),
-                                     commit->GetStorageBytes());
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(batch->AddCommitStorageBytes(
+        handler, commit->GetId(), commit->GetRootIdentifier(), commit->GetStorageBytes()));
 
     if (source != ChangeSource::CLOUD) {
       // New commits from LOCAL or P2P are unsynced. They will be added to the commit factory once
       // the batch is executed successfully.
-      s = batch->MarkCommitIdUnsynced(handler, commit->GetId(), commit->GetGeneration());
-      if (s != Status::OK) {
-        return s;
-      }
+      RETURN_ON_ERROR(
+          batch->MarkCommitIdUnsynced(handler, commit->GetId(), commit->GetGeneration()));
       ObjectIdentifier base_parent_root;
       auto it = id_to_commit_map.find(&commit->GetParentIds()[0]);
       if (it != id_to_commit_map.end()) {
         base_parent_root = it->second->GetRootIdentifier();
       } else {
-        s = GetBaseParentRootIdentifier(handler, *commit, &base_parent_root);
-        if (s != Status::OK) {
-          return s;
-        }
+        RETURN_ON_ERROR(GetBaseParentRootIdentifier(handler, *commit, &base_parent_root));
       }
       unsynced_commits.push_back(
           {commit->GetId(), {commit->GetRootIdentifier(), base_parent_root}});
@@ -1723,22 +1648,12 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 
   // Update heads in Db.
   for (const auto& head : heads_to_add) {
-    Status s = batch->AddHead(handler, head.second->GetId(), head.second->GetTimestamp());
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(batch->AddHead(handler, head.second->GetId(), head.second->GetTimestamp()));
   }
 
   // If adding local commits, mark all new pieces as local.
-  Status s = MarkAllPiecesLocal(handler, batch.get(), std::move(new_objects));
-  if (s != Status::OK) {
-    return s;
-  }
-
-  s = batch->Execute(handler);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(MarkAllPiecesLocal(handler, batch.get(), std::move(new_objects)));
+  RETURN_ON_ERROR(batch->Execute(handler));
 
   // If these commits came from the cloud, they are marked as synced and we should remove them from
   // the commit factory. If they came from P2P or local they are marked as unsynced and should
@@ -1822,9 +1737,7 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier
             &status, &object_identifier) == coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(status);
     empty_node_id_ = std::make_unique<ObjectIdentifier>(std::move(object_identifier));
   }
   *empty_node_id = empty_node_id_.get();
@@ -1835,10 +1748,7 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::GetBaseParentRootIdentifier(
     coroutine::CoroutineHandler* handler, const Commit& commit,
     ObjectIdentifier* base_parent_root) {
   std::unique_ptr<const Commit> base_parent;
-  Status status = SynchronousGetCommit(handler, commit.GetParentIds()[0].ToString(), &base_parent);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(SynchronousGetCommit(handler, commit.GetParentIds()[0].ToString(), &base_parent));
   *base_parent_root = base_parent->GetRootIdentifier();
   return Status::OK;
 }

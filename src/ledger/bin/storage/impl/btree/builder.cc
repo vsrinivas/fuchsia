@@ -326,14 +326,11 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
           });
     }
     Status status;
-
     if (coroutine::Wait(page_storage->handler(), std::move(waiter), &status) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(status);
     to_build.clear();
   }
 
@@ -591,14 +588,10 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
                           SynchronousStorage* page_storage, NodeBuilder root, DiffType diff_type,
                           std::vector<EntryChange> changes, ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
-  Status status;
   for (auto& change : changes) {
     bool did_mutate;
-    status =
-        root.Apply(node_level_calculator, page_storage, diff_type, std::move(change), &did_mutate);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(
+        root.Apply(node_level_calculator, page_storage, diff_type, std::move(change), &did_mutate));
   }
   return root.Build(page_storage, object_identifier, new_identifiers);
 }

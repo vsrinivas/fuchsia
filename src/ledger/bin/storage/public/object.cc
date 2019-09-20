@@ -11,10 +11,7 @@
 namespace storage {
 Status Object::GetVmo(fsl::SizedVmo* vmo) const {
   fxl::StringView data;
-  Status status = GetData(&data);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(GetData(&data));
 
   if (!fsl::VmoFromString(data, vmo)) {
     FXL_LOG(WARNING) << "Unable to produce VMO for object " << GetIdentifier();

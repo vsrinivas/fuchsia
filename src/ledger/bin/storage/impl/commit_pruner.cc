@@ -51,22 +51,13 @@ Status CommitPruner::Prune(coroutine::CoroutineHandler* handler) {
   FXL_DCHECK(policy_ == CommitPruningPolicy::LOCAL_IMMEDIATE);
 
   std::unique_ptr<const storage::Commit> luca;
-  Status status = FindLatestUniqueCommonAncestorSync(handler, &luca);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(FindLatestUniqueCommonAncestorSync(handler, &luca));
   ClockEntry clock_entry{luca->GetId(), luca->GetGeneration()};
 
-  status = delegate_->UpdateSelfClockEntry(handler, clock_entry);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(delegate_->UpdateSelfClockEntry(handler, clock_entry));
 
   std::vector<std::unique_ptr<const Commit>> commits;
-  status = GetAllAncestors(handler, std::move(luca), &commits);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(GetAllAncestors(handler, std::move(luca), &commits));
   if (commits.empty()) {
     return Status::OK;
   }
@@ -89,10 +80,7 @@ Status CommitPruner::FindLatestUniqueCommonAncestorSync(
   while (commits.size() > 1) {
     // Pop the newest commits and retrieve their parents.
     std::vector<std::unique_ptr<const Commit>> parents;
-    Status status = ExploreGeneration(handler, delegate_, &commits, &parents);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(ExploreGeneration(handler, delegate_, &commits, &parents));
     // Once the parents have been retrieved, add these in the set.
     for (auto& parent : parents) {
       commits.insert(std::move(parent));
@@ -118,9 +106,7 @@ Status CommitPruner::GetAllAncestors(coroutine::CoroutineHandler* handler,
       // the loop.
       break;
     }
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(status);
 
     for (auto& parent : parents) {
       ancestor_set.insert(parent->Clone());

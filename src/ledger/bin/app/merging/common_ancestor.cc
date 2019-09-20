@@ -145,9 +145,7 @@ Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageSt
         coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(status);
     // Add the parents in the map of commits to be visited.
     for (auto& [parent, flags] : parents) {
       walk_state.SetFlag(std::move(parent), flags);

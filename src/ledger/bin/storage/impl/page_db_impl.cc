@@ -20,14 +20,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
-#define RETURN_ON_ERROR(expr)   \
-  do {                          \
-    Status status = (expr);     \
-    if (status != Status::OK) { \
-      return status;            \
-    }                           \
-  } while (0)
-
 namespace storage {
 
 using coroutine::CoroutineHandler;
@@ -208,11 +200,8 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler, const CommitId& com
 Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
                                      std::vector<ObjectIdentifier>* object_identifiers) {
   std::vector<std::string> encoded_identifiers;
-  Status status = db_->GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
-                                   &encoded_identifiers);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
+                                   &encoded_identifiers));
 
   object_identifiers->clear();
   ObjectIdentifier object_identifier;

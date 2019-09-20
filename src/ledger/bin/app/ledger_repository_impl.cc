@@ -229,10 +229,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
       environment_, encryption_service.get(), db_factory_.get(), GetPathFor(name_as_string),
       pruning_policy);
-  Status status = ledger_storage->Init();
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(ledger_storage->Init());
   auto result = ledger_managers_.try_emplace(
       name_as_string, environment_, name_as_string,
       ledgers_inspect_node_.CreateChild(name_as_string), std::move(encryption_service),

@@ -149,9 +149,7 @@ Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handle
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(status);
   FXL_DCHECK(can_evict_states.size() == 2);
   // Receiving status |PAGE_OPENED| means that the page was opened during the
   // query. If either result is |PAGE_OPENED| the page cannot be evicted, as the

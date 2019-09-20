@@ -16,14 +16,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
-#define RETURN_ON_ERROR(expr)   \
-  do {                          \
-    Status status = (expr);     \
-    if (status != Status::OK) { \
-      return status;            \
-    }                           \
-  } while (0)
-
 namespace storage {
 
 using coroutine::CoroutineHandler;

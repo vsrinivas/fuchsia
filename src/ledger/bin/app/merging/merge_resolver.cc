@@ -389,9 +389,7 @@ Status MergeResolver::FindMergesSync(coroutine::CoroutineHandler* handler,
   if (has_next_strategy_) {
     return Status::INTERRUPTED;
   }
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(status);
   for (auto& merge_list : merge_lists) {
     merges->insert(merges->end(), std::make_move_iterator(merge_list.begin()),
                    std::make_move_iterator(merge_list.end()));
@@ -426,10 +424,7 @@ Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
     std::vector<storage::CommitId> next_merges;
     auto& next_ancestor = *it;
 
-    Status status = FindMergesSync(handler, merges, next_ancestor->GetId(), &next_merges);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(FindMergesSync(handler, merges, next_ancestor->GetId(), &next_merges));
     // If |next_merges| is empty, the merges we need are not present yet. We
     // call RecursiveMergeOneStep recursively.
     if (next_merges.empty()) {
@@ -439,10 +434,7 @@ Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
       // Get |merge[0]| from storage, or from |ancestors[0]| if they are the
       // same commit.
       std::unique_ptr<const storage::Commit> last_merge;
-      Status status = GetCommitSync(handler, merges[0], std::move(ancestors[0]), &last_merge);
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(GetCommitSync(handler, merges[0], std::move(ancestors[0]), &last_merge));
       // We know that |last_merge->GetTimestamp() <=
       // next_ancestor->GetTimestamp()| but the commit id of |last_merge| may be
       // higher. In case of equality we need to reorder the calls.
@@ -473,14 +465,10 @@ Status MergeResolver::RecursiveMergeSync(coroutine::CoroutineHandler* handler,
 
   CommitComparison comparison;
   std::vector<std::unique_ptr<const storage::Commit>> common_ancestors;
-  Status status;
   {
     TRACE_DURATION("ledger", "merge_common_ancestor");
-    status = FindCommonAncestors(handler, storage_, left->Clone(), right->Clone(), &comparison,
-                                 &common_ancestors);
-  }
-  if (status != Status::OK) {
-    return status;
+    RETURN_ON_ERROR(FindCommonAncestors(handler, storage_, left->Clone(), right->Clone(),
+                                        &comparison, &common_ancestors));
   }
   // If the strategy has been changed, bail early.
   if (has_next_strategy_) {
@@ -504,10 +492,7 @@ Status MergeResolver::RecursiveMergeSync(coroutine::CoroutineHandler* handler,
   //  - a commit returned in merge_base
   //  - OK with an empty merge_base
   std::unique_ptr<const storage::Commit> merge_base;
-  status = MergeSetSync(handler, std::move(common_ancestors), &merge_base);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(MergeSetSync(handler, std::move(common_ancestors), &merge_base));
   if (!merge_base) {
     // A commit was made, resume when notified of it.
     return Status::OK;

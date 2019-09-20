@@ -245,10 +245,7 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
   while (rows->Valid()) {
     if (storage::DeserializeData<zx::time_utc>((*rows)->second) == PageInfo::kOpenedPageTimestamp) {
       // No need to deserialize the key.
-      Status status = Put(handler, (*rows)->first, storage::SerializeData(now));
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(Put(handler, (*rows)->first, storage::SerializeData(now)));
     }
     rows->Next();
   }
@@ -264,10 +261,7 @@ Status PageUsageDb::GetPages(coroutine::CoroutineHandler* handler,
   std::unique_ptr<
       storage::Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>
       it;
-  status = db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it));
   *pages = std::make_unique<PageInfoIterator>(std::move(it));
   return Status::OK;
 }
@@ -283,14 +277,8 @@ Status PageUsageDb::Put(coroutine::CoroutineHandler* handler, fxl::StringView ke
       coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  Status status = db_->StartBatch(handler, &batch);
-  if (status != Status::OK) {
-    return status;
-  }
-  status = batch->Put(handler, key, value);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->Put(handler, key, value));
   return batch->Execute(handler);
 }
 
@@ -302,14 +290,8 @@ Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler, fxl::StringView
       coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  Status status = db_->StartBatch(handler, &batch);
-  if (status != Status::OK) {
-    return status;
-  }
-  status = batch->Delete(handler, key);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->Delete(handler, key));
   return batch->Execute(handler);
 }
 

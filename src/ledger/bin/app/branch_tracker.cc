@@ -258,10 +258,7 @@ BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
 Status BranchTracker::Init() {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  Status status = storage_->GetHeadCommits(&commits);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(storage_->GetHeadCommits(&commits));
 
   FXL_DCHECK(!commits.empty());
   FXL_DCHECK(commits[0]);

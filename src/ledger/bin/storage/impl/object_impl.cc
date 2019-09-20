@@ -32,10 +32,7 @@ Status BasePiece::AppendReferences(ObjectReferencesAndPriority* references) cons
   FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
   // The piece is an index: parse it and append its children to references.
   const FileIndex* file_index;
-  Status status = FileIndexSerialization::ParseFileIndex(GetData(), &file_index);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(GetData(), &file_index));
   for (const auto* child : *file_index->children()) {
     ObjectDigest child_digest =
         ToObjectIdentifier(child->object_identifier(), GetIdentifier().factory()).object_digest();
@@ -84,10 +81,7 @@ Status BaseObject::AppendReferences(ObjectReferencesAndPriority* references) con
   FXL_DCHECK(digest_info.object_type == ObjectType::TREE_NODE);
   // Parse the object into a TreeNode.
   std::unique_ptr<const btree::TreeNode> node;
-  Status status = btree::TreeNode::FromObject(*this, &node);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(btree::TreeNode::FromObject(*this, &node));
   node->AppendReferences(references);
   return Status::OK;
 }
@@ -118,10 +112,7 @@ VmoObject::~VmoObject() {
 ObjectIdentifier VmoObject::GetIdentifier() const { return identifier_; }
 
 Status VmoObject::GetData(fxl::StringView* data) const {
-  Status status = Initialize();
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(Initialize());
   *data = data_;
   return Status::OK;
 }

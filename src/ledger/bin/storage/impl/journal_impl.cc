@@ -98,9 +98,7 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
           &status, &root_identifier) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(status);
   return CreateCommitFromChanges(handler, std::move(parents),
                                  {std::move(root_identifier), PageStorage::Location::Local()},
                                  std::move(changes), commit, objects_to_sync);
@@ -137,11 +135,8 @@ Status JournalImpl::CreateCommitFromChanges(
     std::vector<ObjectIdentifier>* objects_to_sync) {
   ObjectIdentifier object_identifier;
   std::set<ObjectIdentifier> new_nodes;
-  ledger::Status status = btree::ApplyChanges(handler, page_storage_, std::move(root_identifier),
-                                              std::move(changes), &object_identifier, &new_nodes);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(btree::ApplyChanges(handler, page_storage_, std::move(root_identifier),
+                                      std::move(changes), &object_identifier, &new_nodes));
   // If the commit is a no-op, return early, without creating a new
   // commit.
   if (parents.size() == 1 && parents.front()->GetRootIdentifier() == object_identifier) {
@@ -158,6 +153,7 @@ Status JournalImpl::CreateCommitFromChanges(
       page_storage_->GetCommitFactory()->FromContentAndParents(
           environment_->clock(), object_identifier, std::move(parents));
 
+  Status status;
   if (coroutine::SyncCall(
           handler,
           [this](fit::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
@@ -166,10 +162,7 @@ Status JournalImpl::CreateCommitFromChanges(
           &status, objects_to_sync) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
-
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(status);
 
   objects_to_sync->reserve(objects_to_sync->size() + new_nodes.size());
   // TODO(qsr): When using C++17, move data out of the set using

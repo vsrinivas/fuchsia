@@ -393,16 +393,10 @@ void SplitDataSource(DataSource* source, ObjectType object_type,
 Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory* factory,
                          fit::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
-  Status status = FileIndexSerialization::ParseFileIndex(index_content, &file_index);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(index_content, &file_index));
 
   for (const auto* child : *file_index->children()) {
-    Status status = callback(ToObjectIdentifier(child->object_identifier(), factory));
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(callback(ToObjectIdentifier(child->object_identifier(), factory)));
   }
 
   return Status::OK;

@@ -65,10 +65,7 @@ size_t ComputeEntrySize(const InlinedEntry& entry) {
 // Fills an Entry from the content of object.
 Status FillSingleEntry(const storage::Object& object, Entry* entry) {
   fsl::SizedVmo vmo;
-  Status status = object.GetVmo(&vmo);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(object.GetVmo(&vmo));
   entry->value = fidl::MakeOptional(std::move(vmo).ToTransport());
   return Status::OK;
 }
@@ -76,10 +73,7 @@ Status FillSingleEntry(const storage::Object& object, Entry* entry) {
 // Fills an InlinedEntry from the content of object.
 Status FillSingleEntry(const storage::Object& object, InlinedEntry* entry) {
   fxl::StringView data;
-  Status status = object.GetData(&data);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(object.GetData(&data));
   entry->inlined_value = std::make_unique<InlinedValue>();
   entry->inlined_value->value = convert::ToArray(data);
   return Status::OK;

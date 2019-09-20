@@ -326,10 +326,7 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
       staging_path_.SubPath(convert::ToHex(fxl::StringView(name, kRandomBytesCount)));
   // Create a LevelDb instance in a temporary path.
   auto result = std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
-  Status status = result->Init();
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(result->Init());
   // If the parent directory doesn't exist, renameat will fail.
   // Note that |cached_db_path_| will also be created throught the staging path
   // and thus, this code path will be reached. Its parent directory is lazily
