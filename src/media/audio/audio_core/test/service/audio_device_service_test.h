@@ -33,12 +33,10 @@ class AudioDeviceServiceTest : public HermeticAudioTest {
   void HandleCommandStart(audio_rb_cmd_start_req_t& request);
   void HandleCommandStop(audio_rb_cmd_stop_req_t& request);
 
-  void GetDevices();
-
-  bool stream_config_complete() { return stream_config_complete_; }
-  void set_stream_config_complete(bool complete) { stream_config_complete_ = complete; }
-
-  std::vector<fuchsia::media::AudioDeviceInfo>& devices() { return devices_; }
+  const std::vector<fuchsia::media::AudioDeviceInfo>& devices() { return devices_; }
+  fuchsia::media::AudioDeviceEnumerator& audio_device_enumerator() {
+    return *audio_device_enumerator_.get();
+  }
 
   uint64_t device_token() { return device_token_; }
   void set_device_token(uint64_t token) { device_token_ = token; }

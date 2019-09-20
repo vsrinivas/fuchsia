@@ -22,12 +22,16 @@ void AudioDeviceServiceTest::SetUp() {
   zx_status_t status = zx::channel::create(0u, &local_channel, &remote_channel);
   EXPECT_EQ(ZX_OK, status);
 
-  audio_device_enumerator_->AddDeviceByChannel(std::move(remote_channel), "test device", false);
-
   status = stream_transceiver_.Init(
       std::move(local_channel),
       fit::bind_member(this, &AudioDeviceServiceTest::OnInboundStreamMessage), ErrorHandler());
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status);
+
+  audio_device_enumerator_.events().OnDeviceAdded = [this](fuchsia::media::AudioDeviceInfo info) {
+    devices_.push_back(std::move(info));
+  };
+
+  audio_device_enumerator_->AddDeviceByChannel(std::move(remote_channel), "test device", false);
 }
 
 void AudioDeviceServiceTest::TearDown() {
@@ -219,27 +223,33 @@ void AudioDeviceServiceTest::HandleCommandStop(audio_rb_cmd_stop_req_t& request)
   ASSERT_TRUE(false) << "Unexpected STOP command received";
 }
 
-void AudioDeviceServiceTest::GetDevices() {
-  devices_.clear();
-  audio_device_enumerator_->GetDevices(
-      [this](std::vector<fuchsia::media::AudioDeviceInfo> devices) mutable {
-        for (auto device : devices) {
-          devices_.push_back(device);
-        }
-      });
-}
-
+// Test that |AddDeviceByChannel| results in an |OnDeviceAdded| event.
 TEST_F(AudioDeviceServiceTest, AddDevice) {
-  // Wait for interrogation and config through setting the format.
-  set_stream_config_complete(false);
-  ExpectCondition([this]() { return stream_config_complete(); });
-
   // Expect that the added device is enumerated via the device enumerator.
-  GetDevices();
   ExpectCondition([this]() { return !devices().empty(); });
 
-  EXPECT_EQ(1u, devices().size());
+  ASSERT_EQ(1u, devices().size());
   auto device = devices()[0];
+  EXPECT_EQ(kManufacturer + " " + kProduct, device.name);
+  EXPECT_EQ(kUniqueIdString, device.unique_id);
+  EXPECT_EQ(false, device.is_input);
+
+  set_device_token(device.token_id);
+}
+
+// Test that the info in |GetDevices| matches the info in the |OnDeviceAdded| event.
+TEST_F(AudioDeviceServiceTest, GetDevices) {
+  ExpectCondition([this]() { return !devices().empty(); });
+
+  std::optional<std::vector<fuchsia::media::AudioDeviceInfo>> devices;
+  audio_device_enumerator().GetDevices(
+      [&devices](std::vector<fuchsia::media::AudioDeviceInfo> devices_in) {
+        devices = std::move(devices_in);
+      });
+  ExpectCondition([&devices]() { return devices.has_value(); });
+
+  ASSERT_EQ(1u, devices->size());
+  auto device = (*devices)[0];
   EXPECT_EQ(kManufacturer + " " + kProduct, device.name);
   EXPECT_EQ(kUniqueIdString, device.unique_id);
   EXPECT_EQ(false, device.is_input);

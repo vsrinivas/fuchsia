@@ -130,6 +130,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
                           bool is_input) final;
 
  private:
+  void ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> device,
+                                  fbl::RefPtr<AudioDeviceSettings> settings);
   // Find the most-recently plugged device (per type: input or output) excluding throttle_output. If
   // allow_unplugged, return the most-recently UNplugged device if no plugged devices are found --
   // otherwise return nullptr.

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async/cpp/time.h>
+#include <lib/fit/bridge.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -28,6 +29,16 @@ static const AudioDeviceSettingsPersistence::ConfigSource kDefaultConfigSources[
     {.prefix = kDefaultSettingsPath, .is_default = true},
 };
 
+void CreateSettingsPath(const AudioDeviceSettings& settings, const std::string& prefix,
+                        char* out_path, size_t out_path_len) {
+  TRACE_DURATION("audio", "CreateSettingsPath");
+  const uint8_t* x = settings.uid().data;
+  snprintf(out_path, out_path_len,
+           "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s.json",
+           prefix.c_str(), x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11],
+           x[12], x[13], x[14], x[15], settings.is_input() ? "input" : "output");
+}
+
 }  // namespace
 
 // static
@@ -46,12 +57,6 @@ AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(ThreadingModel* t
 
 AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
     ThreadingModel* threading_model,
-    std::unique_ptr<AudioDeviceSettingsSerialization> serialization)
-    : AudioDeviceSettingsPersistence(threading_model, std::move(serialization),
-                                     kDefaultConfigSources) {}
-
-AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
-    ThreadingModel* threading_model,
     std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
     const AudioDeviceSettingsPersistence::ConfigSource (&configs)[2])
     : configs_(configs),
@@ -63,86 +68,95 @@ AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
   FXL_DCHECK(serialization_);
 }
 
-void AudioDeviceSettingsPersistence::Initialize() {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::Initialize");
-  for (const auto& cfg_src : configs_) {
-    if (!cfg_src.is_default) {
-      if (!files::CreateDirectory(cfg_src.prefix)) {
-        FXL_LOG(ERROR) << "Failed to ensure that \"" << cfg_src.prefix
-                       << "\" exists!  Settings will neither be persisted nor restored.";
-      }
-    }
-  }
-}
-
-void AudioDeviceSettingsPersistence::CancelPendingWriteback() { commit_settings_task_.Cancel(); }
-
-zx_status_t AudioDeviceSettingsPersistence::LoadSettings(
-    const fbl::RefPtr<AudioDeviceSettings>& settings) {
+fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::LoadSettings(
+    fbl::RefPtr<AudioDeviceSettings> settings) {
   TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::LoadSettings");
   FXL_DCHECK(settings != nullptr);
-  AudioDeviceSettingsHolder holder;
-  holder.settings = settings;
-  auto [it, inserted] = persisted_device_settings_.insert({settings.get(), std::move(holder)});
-  if (inserted) {
-    zx_status_t status = ReadSettingsFromDisk(&it->second);
-    if (status != ZX_OK) {
-      persisted_device_settings_.erase(it);
-      return status;
+  std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
+  return ReadSettingsFromDisk(settings).and_then([this, settings = std::move(settings)](
+                                                     fbl::unique_fd& storage) mutable {
+    std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
+    auto [it, inserted] = persisted_device_settings_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(settings.get()),
+        std::forward_as_tuple(settings, std::move(storage)));
+    if (inserted) {
+      // Setup an observer on the settings data structure. When changes are applied, we'll schedule
+      // and update to write back to disk.
+      settings->set_observer([this, nonce = it->second.nonce](auto* settings) {
+        TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::settings_observer");
+        std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
+        auto it = persisted_device_settings_.find(settings);
+        if (it != persisted_device_settings_.end() && writes_enabled_.load()) {
+          RescheduleCommitTask(&it->second);
+        }
+      });
+      // This is the handler to actually perform the writeback when the deadline has expired.
+      it->second.commit_task.set_handler(
+          [this, holder = &it->second](async_dispatcher_t*, async::Task*, zx_status_t) {
+            holder->max_commit_time = zx::time::infinite();
+            threading_model_.FidlDomain().executor()->schedule_task(
+                Commit(holder->settings, holder->storage.get(), holder->nonce));
+          });
+      return fit::ok();
+    } else {
+      const uint8_t* id = settings->uid().data;
+      char id_buf[33];
+      std::snprintf(id_buf, sizeof(id_buf),
+                    "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", id[0],
+                    id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11],
+                    id[12], id[13], id[14], id[15]);
+      FXL_LOG(WARNING) << "Warning: Device shares a persistent unique ID (" << id_buf
+                       << ") with another device in the system.  Initial Settings will be cloned "
+                          "from this device, and not persisted";
+      settings->InitFromClone(*it->first);
+      return fit::ok();
     }
-    settings->set_observer([this](auto* settings) {
-      auto it = persisted_device_settings_.find(settings);
-      if (it != persisted_device_settings_.end() && writes_enabled_) {
-        UpdateCommitTimeouts(&it->second);
-      }
-    });
-    return ZX_OK;
-  } else {
-    const uint8_t* id = settings->uid().data;
-    char id_buf[33];
-    std::snprintf(id_buf, sizeof(id_buf),
-                  "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", id[0], id[1],
-                  id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12],
-                  id[13], id[14], id[15]);
-    FXL_LOG(WARNING) << "Warning: Device shares a persistent unique ID (" << id_buf
-                     << ") with another device in the system.  Initial Settings will be cloned "
-                        "from this device, and not persisted";
-    settings->InitFromClone(*it->first);
-    return ZX_OK;
-  }
+  });
 }
 
-zx_status_t AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
-    AudioDeviceSettingsHolder* holder) {
+fit::promise<fbl::unique_fd, zx_status_t> AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
+    fbl::RefPtr<AudioDeviceSettings> settings) {
+  auto nonce = TRACE_NONCE();
   TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDisk");
-  FXL_DCHECK(static_cast<bool>(holder->storage) == false);
+  TRACE_FLOW_BEGIN("audio", "AudioDeviceSettingsPersistence.read_from_disk", nonce);
+  fit::bridge<fbl::unique_fd, zx_status_t> bridge;
+  async::PostTask(
+      threading_model_.IoDomain().dispatcher(), [this, completer = std::move(bridge.completer),
+                                                 settings = std::move(settings), nonce]() mutable {
+        TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDisk.thunk");
+        TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.read_from_disk", nonce);
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
+        completer.complete_or_abandon(ReadSettingsFromDiskBlocking(std::move(settings)));
+      });
+  return bridge.consumer.promise();
+}
 
+fit::result<fbl::unique_fd, zx_status_t>
+AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking(
+    fbl::RefPtr<AudioDeviceSettings> settings) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking");
+
+  fbl::unique_fd storage;
   for (const auto& cfg_src : configs_) {
     // Start by attempting to open a pre-existing file which has our settings in
     // it. If we cannot find such a file, or if the file exists but is invalid,
     // simply create a new file and write out our current settings.
     char path[256];
-    fbl::unique_fd storage;
 
-    CreateSettingsPath(*holder->settings, cfg_src.prefix, path, sizeof(path));
+    CreateSettingsPath(*settings, cfg_src.prefix, path, sizeof(path));
     storage.reset(open(path, cfg_src.is_default ? O_RDONLY : O_RDWR));
 
     if (storage) {
-      zx_status_t res = serialization_->Deserialize(storage.get(), holder->settings.get());
+      zx_status_t res = serialization_->Deserialize(storage.get(), settings.get());
       if (res == ZX_OK) {
         if (cfg_src.is_default) {
           // If we just loaded and deserialized the fallback default config,
           // break out of the loop and fall thru to serialization code.
           break;
         }
-
-        // We successfully loaded our persisted settings. Cancel our commit
-        // timer, hold onto the FD, and we should be good to go.
-        CancelCommitTimeouts(holder);
-        holder->storage = std::move(storage);
-        return ZX_OK;
+        return fit::ok(std::move(storage));
       } else {
-        holder->storage.reset();
+        storage.reset();
         if (!cfg_src.is_default) {
           FXL_PLOG(INFO, res) << "Failed to read device settings at \"" << path
                               << "\". Re-creating file from defaults";
@@ -155,8 +169,8 @@ zx_status_t AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
   }
 
   // If persisting of device settings is disabled, don't create a new file.
-  if (!writes_enabled_) {
-    return ZX_OK;
+  if (!writes_enabled_.load()) {
+    return fit::ok(fbl::unique_fd());
   }
 
   FXL_DCHECK(configs_[0].is_default || configs_[1].is_default);
@@ -166,109 +180,106 @@ zx_status_t AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
   // We failed to load persisted settings for one reason or another.
   // Create a new settings file for this device; persist our defaults there.
   char path[256];
-  CreateSettingsPath(*holder->settings, writable_settings_path, path, sizeof(path));
-  FXL_DCHECK(!holder->storage);
-  holder->storage.reset(open(path, O_RDWR | O_CREAT));
+  CreateSettingsPath(*settings, writable_settings_path, path, sizeof(path));
+  if (!files::CreateDirectory(writable_settings_path)) {
+    FXL_LOG(ERROR) << "Failed to ensure that \"" << writable_settings_path
+                   << "\" exists!  Settings will neither be persisted nor restored.";
+    return fit::error(ZX_ERR_IO);
+  }
+  storage.reset(open(path, O_RDWR | O_CREAT));
 
-  if (!holder->storage) {
+  if (!storage) {
     // TODO(mpuryear): define and enforce a limit for the number of settings
     // files allowed to be created.
     FXL_LOG(WARNING) << "Failed to create new audio settings file \"" << path << "\" (err " << errno
                      << "). Settings for this device will not be persisted.";
-    return ZX_ERR_IO;
+    return fit::error(ZX_ERR_IO);
   }
 
-  CancelCommitTimeouts(holder);
-  zx_status_t res = serialization_->Serialize(holder->storage.get(), *holder->settings);
+  zx_status_t res = serialization_->Serialize(storage.get(), *settings);
   if (res != ZX_OK) {
     FXL_PLOG(WARNING, res) << "Failed to write new settings file at \"" << path
                            << "\". Settings for this device will not be persisted";
-    holder->storage.reset();
+    storage.reset();
     unlink(path);
+    return fit::error(res);
   }
 
-  return res;
+  return fit::ok(std::move(storage));
 }
 
-zx::time AudioDeviceSettingsPersistence::Commit(AudioDeviceSettingsHolder* holder, bool force) {
+fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::Commit(
+    const fbl::RefPtr<AudioDeviceSettings> settings, int fd, trace_async_id_t nonce) {
   TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::Commit");
-  // If 1) we aren't backed by storage, or 2) device settings persistence is disabled, or 3) the
-  // cache is clean, then there is nothing to commit.
-  if (!holder->storage || !writes_enabled_ || (holder->next_commit_time == zx::time::infinite())) {
-    return zx::time::infinite();
+  TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.schedule_commit", nonce);
+  if (!writes_enabled_.load()) {
+    return fit::make_result_promise<void, zx_status_t>(fit::ok());
   }
 
-  zx::time now = async::Now(threading_model_.FidlDomain().dispatcher());
-  if (force || (now >= holder->next_commit_time)) {
-    CancelCommitTimeouts(holder);
-    serialization_->Serialize(holder->storage.get(), *holder->settings);
-  }
-
-  return holder->next_commit_time;
+  // Clone the settings before writeback to snapshot the current state of the settings.
+  fit::bridge<void, zx_status_t> bridge;
+  TRACE_FLOW_BEGIN("audio", "AudioDeviceSettingsPersistence.commit", nonce);
+  async::PostTask(threading_model_.IoDomain().dispatcher(),
+                  [this, completer = std::move(bridge.completer), settings = settings->Clone(), fd,
+                   nonce]() mutable {
+                    TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::Commit.thunk");
+                    TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.commit", nonce);
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
+                    zx_status_t status = WriteSettingsToFile(std::move(settings), fd);
+                    if (status == ZX_OK) {
+                      completer.complete_ok();
+                    } else {
+                      completer.complete_error(status);
+                    }
+                  });
+  return bridge.consumer.promise();
 }
 
-void AudioDeviceSettingsPersistence::UpdateCommitTimeouts(AudioDeviceSettingsHolder* holder) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::UpdateCommitTimeouts");
-  if (!writes_enabled_) {
-    FXL_LOG(DFATAL) << "Device settings files disabled; we should not be here.";
-  }
+zx_status_t AudioDeviceSettingsPersistence::WriteSettingsToFile(
+    fbl::RefPtr<AudioDeviceSettings> settings, int fd) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::WriteSettingsToFile");
+  return serialization_->Serialize(fd, *settings);
+}
 
+void AudioDeviceSettingsPersistence::RescheduleCommitTask(AudioDeviceSettingsHolder* holder) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::RescheduleCommitTask");
+  std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
   zx::time now = async::Now(threading_model_.FidlDomain().dispatcher());
   if (holder->max_commit_time == zx::time::infinite()) {
     holder->max_commit_time = now + kMaxUpdateDelay;
   }
 
-  holder->next_commit_time = std::min(now + kUpdateDelay, holder->max_commit_time);
-}
-
-void AudioDeviceSettingsPersistence::CancelCommitTimeouts(AudioDeviceSettingsHolder* holder) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::CancelCommitTimeouts");
-  holder->next_commit_time = zx::time::infinite();
-  holder->max_commit_time = zx::time::infinite();
-}
-
-void AudioDeviceSettingsPersistence::CreateSettingsPath(const AudioDeviceSettings& settings,
-                                                        const std::string& prefix, char* out_path,
-                                                        size_t out_path_len) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::CreateSettingsPath");
-  const uint8_t* x = settings.uid().data;
-  snprintf(out_path, out_path_len,
-           "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s.json",
-           prefix.c_str(), x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11],
-           x[12], x[13], x[14], x[15], settings.is_input() ? "input" : "output");
-}
-
-void AudioDeviceSettingsPersistence::CommitDirtySettings() {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::CommitDirtySettings");
-  zx::time next = zx::time::infinite();
-
-  for (auto& settings : persisted_device_settings_) {
-    zx::time tmp = Commit(&settings.second);
-    if (tmp < next) {
-      next = tmp;
-    }
-  }
-
-  // If our commit task is waiting to fire, try to cancel it.
-  if (commit_settings_task_.is_pending()) {
-    commit_settings_task_.Cancel();
-  }
-
-  // If we need to update in the future, schedule a commit task to do so.
-  if (next != zx::time::infinite()) {
-    commit_settings_task_.PostForTime(threading_model_.IoDomain().dispatcher(), next);
-  }
-}
-
-void AudioDeviceSettingsPersistence::FinalizeDeviceSettings(const AudioDeviceSettings& settings) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::FinalizeDeviceSettings");
-  auto it = persisted_device_settings_.find(&settings);
-  if (it != persisted_device_settings_.end()) {
-    Commit(&it->second, true);
-    persisted_device_settings_.erase(it);
+  if (!holder->commit_task.is_pending()) {
+    TRACE_FLOW_BEGIN("audio", "AudioDeviceSettingsPersistence.schedule_commit", holder->nonce);
   } else {
-    FXL_LOG(INFO) << "Not found!";
+    TRACE_FLOW_STEP("audio", "AudioDeviceSettingsPersistence.schedule_commit", holder->nonce);
+    holder->commit_task.Cancel();
   }
+
+  holder->commit_task.PostForTime(threading_model_.FidlDomain().dispatcher(),
+                                  std::min(now + kUpdateDelay, holder->max_commit_time));
+}
+
+fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::FinalizeSettings(
+    const AudioDeviceSettings& settings) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::FinalizeSettings");
+  std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
+  auto it = persisted_device_settings_.find(&settings);
+  if (it == persisted_device_settings_.end() || !it->second.storage ||
+      // We need this check because the map uses the device ID for tracking instances, so it is
+      // possible that we'll end up with different AudioDeviceSettings instances that would both
+      // return a valid iterator from the map despite the pointers being non-equal. For write back
+      // we only want to perform the write if we have this pointer equality.
+      it->second.settings.get() != &settings) {
+    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+  }
+  // We pass a continuation to take ownership of the fbl::unique_fd to ensure we don't close the
+  // fd before the async write back completes.
+  auto p = Commit(it->second.settings, it->second.storage.get(), it->second.nonce)
+               .inspect([storage = std::move(it->second.storage)](
+                            fit::result<void, zx_status_t>& result) {});
+  persisted_device_settings_.erase(it);
+  return std::move(p);
 }
 
 }  // namespace media::audio
