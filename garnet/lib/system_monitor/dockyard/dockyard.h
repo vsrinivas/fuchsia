@@ -180,7 +180,16 @@ struct ConnectionRequest : public MessageRequest {
 // |ConnectionRequest|.
 // See: ConnectionRequest.
 struct ConnectionResponse : public MessageResponse {
-  ConnectionResponse() = default;
+  ConnectionResponse(uint32_t dockyard_version, uint32_t harvester_version)
+      : dockyard_version_(dockyard_version),
+        harvester_version_(harvester_version) {}
+
+  uint32_t DockyardVersion() const { return dockyard_version_; }
+  uint32_t HarvesterVersion() const { return harvester_version_; }
+
+ private:
+  uint32_t dockyard_version_;
+  uint32_t harvester_version_;
 };
 
 // To delete/remove samples from a sample stream, create a DiscardSamplesRequest
@@ -380,8 +389,8 @@ using IgnoreSamplesCallback =
 
 // Called when a connection is made between the Dockyard and Harvester on a
 // Fuchsia device.
-using OnConnectionCallback =
-    std::function<void(const std::string& device_name)>;
+using OnConnectionCallback = std::function<void(
+    const ConnectionRequest& request, const ConnectionResponse& response)>;
 
 // Called when new streams are added or removed. Added values include their ID
 // and string path. Removed values only have the ID.
@@ -494,21 +503,20 @@ class Dockyard {
                      IgnoreSamplesCallback callback);
 
   // Called by server when a connection is made.
-  void OnConnection();
+  void OnConnection(MessageType message_type, uint32_t harvester_version);
 
   // Start collecting data from a named device. Tip: device names are normally
   // four short words, such as "duck-floor-quick-rock". If |StartCollectingFrom|
   // was previously called, call |StopCollectingFromDevice| before starting a
   // new connection (otherwise this call will fail and return false).
   // Returns true if successful.
-  bool StartCollectingFrom(const std::string& device);
+  bool StartCollectingFrom(ConnectionRequest&& request,
+                           OnConnectionCallback callback);
 
   // The inverse of |StartCollectingFrom|. It's safe to call this regardless of
   // whether |StartCollectingFrom| succeeded (no work is done unless
   // |StartCollectingFrom| had succeeded).
   void StopCollectingFromDevice();
-
-  OnConnectionCallback SetConnectionHandler(OnConnectionCallback callback);
 
   // Sets the function called when sample streams are added or removed. Pass
   // nullptr as |callback| to stop receiving calls.
@@ -565,6 +573,7 @@ class Dockyard {
   SampleTimeNs latest_sample_time_ns_;
 
   // Communication with the GUI.
+  ConnectionRequest on_connection_request_;
   OnConnectionCallback on_connection_handler_;
   OnPathsCallback on_paths_handler_;
   OnStreamSetsCallback on_stream_sets_handler_;

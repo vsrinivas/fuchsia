@@ -52,8 +52,6 @@ void TestFetchKoidNames(DockyardHost& dockyard_host,
 
 DockyardHost::DockyardHost() : is_connected_(false) {
   // Set up callback handlers.
-  dockyard_.SetConnectionHandler(
-      std::bind(&DockyardHost::OnConnection, this, std::placeholders::_1));
   dockyard_.SetDockyardPathsHandler(std::bind(&DockyardHost::OnPaths, this,
                                               std::placeholders::_1,
                                               std::placeholders::_2));
@@ -62,8 +60,22 @@ DockyardHost::DockyardHost() : is_connected_(false) {
 }
 
 void DockyardHost::StartCollectingFrom(const std::string& device_name) {
-  dockyard_.StartCollectingFrom(device_name);
-  device_name_ = device_name;
+  dockyard::ConnectionRequest request;
+  request.SetDeviceName(device_name);
+  bool started = dockyard_.StartCollectingFrom(
+      std::move(request),
+      [this, device_name](const dockyard::ConnectionRequest& request,
+                          const dockyard::ConnectionResponse& response) {
+        if (!response.Ok()) {
+          GT_LOG(FATAL) << "StartCollectingFrom failed";
+          return;
+        }
+        OnConnection(device_name);
+      });
+  if (!started) {
+    GT_LOG(FATAL) << "Call StopCollectingFromDevice before calling"
+                     " StartCollectingFrom again";
+  }
 }
 
 std::optional<std::future<std::unique_ptr<AsyncQuery>>>
@@ -144,8 +156,9 @@ DockyardHost::GetSampleStringsForIds(
 }
 
 void DockyardHost::OnConnection(const std::string& device_name) {
-  is_connected_ = true;
   GT_LOG(DEBUG) << "Connection from " << device_name;
+  is_connected_ = true;
+  device_name_ = device_name;
 
   // This might not be the right choice for all clients. For this application
   // starting fresh with the new connection is a reasonable approach.

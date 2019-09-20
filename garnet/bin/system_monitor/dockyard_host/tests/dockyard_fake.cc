@@ -74,17 +74,15 @@ void Dockyard::ResetHarvesterData() {
 
 void Dockyard::GetStreamSets(StreamSetsRequest* request) {}
 
-void Dockyard::OnConnection() {}
+void Dockyard::OnConnection(MessageType message_type,
+                            uint32_t harvester_version) {}
 
-bool Dockyard::StartCollectingFrom(const std::string& device) { return true; }
+bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
+                                   OnConnectionCallback callback) {
+  return true;
+}
 
 void Dockyard::StopCollectingFromDevice() {}
-
-OnConnectionCallback Dockyard::SetConnectionHandler(
-    OnConnectionCallback callback) {
-  on_connection_handler_ = callback;
-  return nullptr;
-}
 
 OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
   on_paths_handler_ = callback;

@@ -695,11 +695,50 @@ TEST_F(SystemMonitorDockyardTest, DockyardIdToString) {
 
 TEST_F(SystemMonitorDockyardTest, ServerListening) {
   // Test for: https://bugs.chromium.org/p/fuchsia/issues/detail?id=72
-  EXPECT_TRUE(dockyard_.StartCollectingFrom("apple-banana-carrot-dog"));
-  EXPECT_FALSE(dockyard_.StartCollectingFrom("apple-banana-carrot-dog"));
+  const std::string kDeviceName = "apple.banana.carrot.dog";
+  ConnectionRequest request;
+  request.SetDeviceName(kDeviceName);
+  EXPECT_TRUE(dockyard_.StartCollectingFrom(
+      std::move(request), [](const dockyard::ConnectionRequest& request,
+                             const dockyard::ConnectionResponse& response) {
+        EXPECT_EQ(request.RequestId(), response.RequestId());
+        EXPECT_EQ(request.GetMessageType(),
+                  dockyard::MessageType::kConnectionRequest);
+        EXPECT_EQ(response.GetMessageType(),
+                  dockyard::MessageType::kResponseOk);
+        EXPECT_EQ(response.DockyardVersion(), response.HarvesterVersion());
+      }));
+  ConnectionRequest second_request;
+  second_request.SetDeviceName(kDeviceName);
+  EXPECT_FALSE(dockyard_.StartCollectingFrom(
+      std::move(second_request),
+      [](const dockyard::ConnectionRequest& request,
+         const dockyard::ConnectionResponse& response) {
+        FAIL() << "Unexpected callback";
+      }));
+  dockyard_.OnConnection(dockyard::MessageType::kResponseOk,
+                         /*harvester_version=*/dockyard::DOCKYARD_VERSION);
   EXPECT_TRUE(IsGrpcServerActive());
   dockyard_.StopCollectingFromDevice();
   EXPECT_FALSE(IsGrpcServerActive());
+}
+
+TEST_F(SystemMonitorDockyardTest, VersionMismatch) {
+  const std::string kDeviceName = "apple.banana.carrot.dog";
+  ConnectionRequest request;
+  request.SetDeviceName(kDeviceName);
+  EXPECT_TRUE(dockyard_.StartCollectingFrom(
+      std::move(request), [](const dockyard::ConnectionRequest& request,
+                             const dockyard::ConnectionResponse& response) {
+        EXPECT_EQ(request.RequestId(), response.RequestId());
+        EXPECT_EQ(request.GetMessageType(),
+                  dockyard::MessageType::kConnectionRequest);
+        EXPECT_EQ(response.GetMessageType(),
+                  dockyard::MessageType::kVersionMismatch);
+        EXPECT_NE(response.DockyardVersion(), response.HarvesterVersion());
+      }));
+  dockyard_.OnConnection(dockyard::MessageType::kVersionMismatch,
+                         /*harvester_version=*/dockyard::DOCKYARD_VERSION - 1);
 }
 
 TEST_F(SystemMonitorDockyardTest, StreamRef) {

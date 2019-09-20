@@ -18,10 +18,11 @@ grpc::Status DockyardServiceImpl::Init(
                          .count();
   dockyard_->SetDeviceTimeDeltaNs(nanoseconds - request->device_time_ns());
   if (request->version() != DOCKYARD_VERSION) {
+    dockyard_->OnConnection(MessageType::kVersionMismatch, request->version());
     return grpc::Status::CANCELLED;
   }
   reply->set_version(DOCKYARD_VERSION);
-  dockyard_->OnConnection();
+  dockyard_->OnConnection(MessageType::kResponseOk, request->version());
   return grpc::Status::OK;
 }
 

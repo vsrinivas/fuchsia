@@ -348,20 +348,29 @@ void Dockyard::IgnoreSamples(const IgnoreSamplesRequest& request,
   pending_ignore_samples_owned_.emplace_back(request, std::move(callback));
 }
 
-void Dockyard::OnConnection() {
+void Dockyard::OnConnection(MessageType message_type,
+                            uint32_t harvester_version) {
   if (on_connection_handler_ != nullptr) {
-    on_connection_handler_("");
+    ConnectionResponse response(DOCKYARD_VERSION, harvester_version);
+    response.SetMessageType(message_type);
+    response.SetRequestId(on_connection_request_.RequestId());
+    on_connection_handler_(on_connection_request_, response);
+    on_connection_request_ = {};
+    on_connection_handler_ = nullptr;
   }
 }
 
-bool Dockyard::StartCollectingFrom(const std::string& device) {
+bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
+                                   OnConnectionCallback callback) {
   if (server_thread_.joinable()) {
     return false;
   }
   ResetHarvesterData();
   Initialize();
+  on_connection_request_ = request;
+  on_connection_handler_ = callback;
   server_thread_ = std::thread([this]() { RunGrpcServer(); });
-  GT_LOG(INFO) << "Starting collecting from " << device;
+  GT_LOG(INFO) << "Starting collecting from " << request.DeviceName();
   // TODO(smbug.com/39): Connect to the device and start the harvester.
   return server_thread_.joinable();
 }
@@ -421,14 +430,6 @@ void Dockyard::RunGrpcServer() {
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
   grpc_server_->Wait();
-}
-
-OnConnectionCallback Dockyard::SetConnectionHandler(
-    OnConnectionCallback callback) {
-  assert(!server_thread_.joinable());
-  auto old_handler = on_connection_handler_;
-  on_connection_handler_ = callback;
-  return old_handler;
 }
 
 OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {

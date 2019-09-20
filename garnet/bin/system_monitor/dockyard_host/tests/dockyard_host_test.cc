@@ -28,7 +28,6 @@ class SystemMonitorDockyardHostTest : public ::testing::Test {
 namespace {
 
 TEST_F(SystemMonitorDockyardHostTest, ProcessRequests) {
-  EXPECT_TRUE(GetConnectionHandler());
   EXPECT_TRUE(GetPathsHandler());
   EXPECT_TRUE(GetStreamSetsHandler());
   dockyard_host.StartCollectingFrom("apple.banana.carrot.dog");
