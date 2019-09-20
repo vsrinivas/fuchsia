@@ -302,8 +302,9 @@ template("rustc_artifact") {
   test_spec_target_name = "${target_name}_spec"
   if (with_unit_tests && (is_linux || is_mac)) {
     test_spec(test_spec_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
       name = invoker.target_name
-      install_path = test_output_file
+      install_path = test_output_path
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps

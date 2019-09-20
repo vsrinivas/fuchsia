@@ -66,3 +66,11 @@ test_package("rust_fidl_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":rust_fidl_tests",
+    ":fidl_test($host_toolchain)",
+  ]
+}
