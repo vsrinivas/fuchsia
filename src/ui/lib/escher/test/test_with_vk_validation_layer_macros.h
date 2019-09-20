@@ -24,13 +24,13 @@
   SuppressAllDebugReports_()
 #define SUPPRESS_VK_VALIDATION_ERRORS()             \
   CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT(); \
-  SuppressDebugReportsWithFlag_(~vk::DebugReportFlagBitsEXT::eError)
+  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::eError)
 #define SUPPRESS_VK_VALIDATION_WARNINGS()           \
   CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT(); \
-  SuppressDebugReportsWithFlag_(~vk::DebugReportFlagBitsEXT::eWarning)
+  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::eWarning)
 #define SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS() \
   CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();   \
-  SuppressDebugReportsWithFlag_(~vk::DebugReportFlagBitsEXT::ePerformanceWarning)
+  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::ePerformanceWarning)
 
 // Vulkan validation message check macros.
 // EXPECT_... macro will not terminate the test when it fails.
@@ -98,4 +98,4 @@
   ASSERT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS()
 // clang-format on
 
-#endif //SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_

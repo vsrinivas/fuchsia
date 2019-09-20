@@ -12,7 +12,9 @@
 
 namespace escher {
 
-VK_TEST(Frame, CreateDestroyFrame) {
+using FrameTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(FrameTest, CreateDestroyFrame) {
   auto escher = test::GetEscher()->GetWeakPtr();
   {
     auto frame = escher->NewFrame("test_frame", 0, false);
@@ -20,7 +22,7 @@ VK_TEST(Frame, CreateDestroyFrame) {
   }
 }
 
-VK_TEST(Frame, ValidCommandBufferTypes) {
+VK_TEST_F(FrameTest, ValidCommandBufferTypes) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   auto graphics_frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kGraphics);
@@ -38,14 +40,14 @@ VK_TEST(Frame, ValidCommandBufferTypes) {
   transfer_frame->EndFrame(SemaphorePtr(), [] {});
 }
 
-VK_TEST(Frame, InvalidCommandBufferType) {
+VK_TEST_F(FrameTest, InvalidCommandBufferType) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   EXPECT_DEATH_IF_SUPPORTED(
       escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kEnumCount), "");
 }
 
-VK_TEST(Frame, SubmitPartialFrameCreatesCleanCommandBuffer) {
+VK_TEST_F(FrameTest, SubmitPartialFrameCreatesCleanCommandBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
   EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());

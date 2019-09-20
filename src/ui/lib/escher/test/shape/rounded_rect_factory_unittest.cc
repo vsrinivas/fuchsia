@@ -11,7 +11,9 @@
 namespace {
 using namespace escher;
 
-VK_TEST(RoundedRectFactory, NegativeBounds) {
+using RoundedRectFactoryTest = escher::test::TestWithVkValidationLayer;
+
+VK_TEST_F(RoundedRectFactoryTest, NegativeBounds) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher, /*frame_trace_number=*/0);
   RoundedRectSpec rect_spec(-1.f, -1.f, -2.f, -2.f, -2.f, -2.f);

@@ -9,7 +9,9 @@
 
 namespace escher {
 
-VK_TEST(BufferTest, CreateWithPreExistingMemory) {
+using BufferTest = escher::test::TestWithVkValidationLayer;
+
+VK_TEST_F(BufferTest, CreateWithPreExistingMemory) {
   auto escher = test::GetEscher();
   auto allocator = escher->gpu_allocator();
   auto recycler = escher->resource_recycler();
@@ -44,6 +46,12 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
   auto buf2 = impl::NaiveBuffer::New(recycler, mem2, kBufferUsageFlags);
   EXPECT_EQ(mem1->mapped_ptr(), buf1->host_ptr());
   EXPECT_EQ(mem2->mapped_ptr(), buf2->host_ptr());
+
+  // TODO(36828): Now Vulkan validation layer has warnings:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidBuffer ] Object: 0x116 (Type = 9) |
+  //   vkBindBufferMemory(): Binding memory to VkBuffer 0x116[] but vkGetBufferMemoryRequirements()
+  //   has not been called on that buffer.
+  SUPPRESS_VK_VALIDATION_WARNINGS();
 }
 
 }  // namespace escher

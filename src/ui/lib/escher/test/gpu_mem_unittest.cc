@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+#include "test_with_vk_validation_layer.h"
 
 namespace {
 using namespace escher;
@@ -93,13 +94,14 @@ TEST(GpuMem, ErroneousSuballocations) {
   EXPECT_EQ(0, obj_count);
 }
 
-// This test should be updated to include all hashed types used by Escher.
-VK_TEST(GpuMem, AdoptVkMemory) {
-  VulkanInstance::Params instance_params(
-      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+using GpuMemTest = escher::test::TestWithVkValidationLayer;
 
-  auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
-  auto vulkan_queues = VulkanDeviceQueues::New(vulkan_instance, {});
+// This test should be updated to include all hashed types used by Escher.
+VK_TEST_F(GpuMemTest, AdoptVkMemory) {
+  auto vulkan_instance =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
+  auto vulkan_queues =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanDevice();
   auto device = vulkan_queues->GetVulkanContext().device;
   auto physical_device = vulkan_queues->GetVulkanContext().physical_device;
 
@@ -118,7 +120,7 @@ VK_TEST(GpuMem, AdoptVkMemory) {
   EXPECT_NE(nullptr, mem->mapped_ptr());
 }
 
-TEST(GpuMem, RecursiveAllocations) {
+TEST_F(GpuMemTest, RecursiveAllocations) {
   const vk::DeviceMemory kVkMem(reinterpret_cast<VkDeviceMemory>(10000));
 
   const vk::DeviceSize kSize0 = 100;
@@ -145,7 +147,7 @@ TEST(GpuMem, RecursiveAllocations) {
   EXPECT_EQ(kOffset1 + kOffset2 + kOffset3, subsubsub->offset());
 }
 
-TEST(GpuMem, MappedPointer) {
+TEST_F(GpuMemTest, MappedPointer) {
   const vk::DeviceMemory kVkMem(reinterpret_cast<VkDeviceMemory>(10000));
 
   uint8_t* const kNullPtr = nullptr;

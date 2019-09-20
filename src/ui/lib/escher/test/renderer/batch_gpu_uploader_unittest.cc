@@ -15,7 +15,9 @@
 
 namespace escher {
 
-VK_TEST(BatchGpuUploader, CreateDestroyUploader) {
+using BatchGpuUploaderTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(BatchGpuUploaderTest, CreateDestroyUploader) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   {
@@ -28,13 +30,13 @@ VK_TEST(BatchGpuUploader, CreateDestroyUploader) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, InvalidUploader) {
+VK_TEST_F(BatchGpuUploaderTest, InvalidUploader) {
   // A BatchGpuUploader without an escher should not be created.
   auto uploader = BatchGpuUploader::New(EscherWeakPtr());
   EXPECT_FALSE(uploader);
 }
 
-VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
+VK_TEST_F(BatchGpuUploaderTest, AcquireSubmitWriter) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
@@ -47,7 +49,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, AcquireSubmitReader) {
+VK_TEST_F(BatchGpuUploaderTest, AcquireSubmitReader) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
@@ -60,7 +62,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitReader) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, AcquireSubmitMultipleWriters) {
+VK_TEST_F(BatchGpuUploaderTest, AcquireSubmitMultipleWriters) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
@@ -87,7 +89,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitMultipleWriters) {
   EXPECT_TRUE(batched_upload_done);
 }
 
-VK_TEST(BatchGpuUploader, AcquireSubmitMultipleReaders) {
+VK_TEST_F(BatchGpuUploaderTest, AcquireSubmitMultipleReaders) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
@@ -114,7 +116,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitMultipleReaders) {
   EXPECT_TRUE(batched_upload_done);
 }
 
-VK_TEST(BatchGpuUploader, WriteBuffer) {
+VK_TEST_F(BatchGpuUploaderTest, WriteBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher);
   const size_t buffer_size = 3 * sizeof(vec3);
@@ -143,7 +145,7 @@ VK_TEST(BatchGpuUploader, WriteBuffer) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, WriteImage) {
+VK_TEST_F(BatchGpuUploaderTest, WriteImage) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher);
   const size_t image_size = sizeof(uint8_t) * 4;
@@ -182,7 +184,7 @@ VK_TEST(BatchGpuUploader, WriteImage) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, DISABLED_WriterNotPostedFails) {
+VK_TEST_F(BatchGpuUploaderTest, DISABLED_WriterNotPostedFails) {
   // This successfully tests death. However, when unsupported, death kills the
   // test process. Disabled until EXPECT_DEATH_IF_SUPPORTED can graduate to
   // EXPECT_DEATH.
@@ -194,7 +196,7 @@ VK_TEST(BatchGpuUploader, DISABLED_WriterNotPostedFails) {
   EXPECT_DEATH_IF_SUPPORTED(uploader->Submit(), "");
 }
 
-VK_TEST(BatchGpuUploader, DISABLED_WriterPostedToWrongUploaderFails) {
+VK_TEST_F(BatchGpuUploaderTest, DISABLED_WriterPostedToWrongUploaderFails) {
   // This successfully tests death. However, when unsupported, death kills the
   // test process. Disabled until EXPECT_DEATH_IF_SUPPORTED can graduate to
   // EXPECT_DEATH.
@@ -214,7 +216,7 @@ VK_TEST(BatchGpuUploader, DISABLED_WriterPostedToWrongUploaderFails) {
   EXPECT_DEATH_IF_SUPPORTED(uploader->Submit(), "");
 }
 
-VK_TEST(BatchGpuUploader, DISABLED_ReadAWriteSucceeds) {
+VK_TEST_F(BatchGpuUploaderTest, DISABLED_ReadAWriteSucceeds) {
   // TODO (SCN-1197) Enable once memory barriers are added to the
   // BatchGpuUploader and it can be used for reads and writes on the same
   // resource.
@@ -267,7 +269,7 @@ VK_TEST(BatchGpuUploader, DISABLED_ReadAWriteSucceeds) {
   EXPECT_TRUE(read_buffer_done);
 }
 
-VK_TEST(BatchGpuUploader, ReadImageTest) {
+VK_TEST_F(BatchGpuUploaderTest, ReadImageTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto image = escher->NewNoiseImage(512, 512);
 
@@ -298,7 +300,7 @@ VK_TEST(BatchGpuUploader, ReadImageTest) {
   EXPECT_TRUE(read_image_done);
 }
 
-VK_TEST(BatchGpuUploader, ReadBufferTest) {
+VK_TEST_F(BatchGpuUploaderTest, ReadBufferTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
   // Create buffer to read from.
   const size_t buffer_size = 3 * sizeof(vec3);

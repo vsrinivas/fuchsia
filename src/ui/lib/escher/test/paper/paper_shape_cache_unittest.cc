@@ -14,9 +14,11 @@
 namespace {
 using namespace escher;
 
+using PaperShapeCacheTest = escher::test::TestWithVkValidationLayer;
+
 // Make sure that the PaperShapeCache properly creates
 // a box mesh.
-VK_TEST(PaperShapeCache, TestBoundingBox) {
+VK_TEST_F(PaperShapeCacheTest, TestBoundingBox) {
   EscherWeakPtr escher = test::GetEscher()->GetWeakPtr();
   PaperShapeCache cache(escher, PaperRendererConfig());
 
@@ -47,7 +49,7 @@ VK_TEST(PaperShapeCache, TestBoundingBox) {
   ASSERT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(PaperShapeCache, TestCaching) {
+VK_TEST_F(PaperShapeCacheTest, TestCaching) {
   EscherWeakPtr escher = test::GetEscher()->GetWeakPtr();
 
   plane3 planes[2] = {plane3(vec3(1, 0, 0), -1.f), plane3(vec3(0, 1, 0), -1.f)};
@@ -162,7 +164,7 @@ VK_TEST(PaperShapeCache, TestCaching) {
   }
 }
 
-VK_TEST(PaperShapeCache, WaitSemaphores) {
+VK_TEST_F(PaperShapeCacheTest, WaitSemaphores) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   PaperShapeCache cache(escher, PaperRendererConfig());

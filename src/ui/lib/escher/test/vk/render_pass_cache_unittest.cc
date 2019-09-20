@@ -35,7 +35,9 @@ void CompareRenderPassWithInfo(const impl::RenderPassPtr& render_pass, const Ren
   }
 }
 
-VK_TEST(RenderPassCache, DefaultSubpass) {
+using RenderPassCacheTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   auto escher = test::GetEscher();
 
   impl::RenderPassCache cache(escher->resource_recycler());
@@ -75,6 +77,11 @@ VK_TEST(RenderPassCache, DefaultSubpass) {
   depth_tex1 = depth_tex2 = color_tex = nullptr;
 
   EXPECT_TRUE(escher->Cleanup());
+
+  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
+  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
 }
 
 // Helper function for RenderPassCache.RespectsSampleCount.
@@ -134,7 +141,7 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
   }
 }
 
-VK_TEST(RenderPassCache, RespectsSampleCount) {
+VK_TEST_F(RenderPassCacheTest, RespectsSampleCount) {
   auto escher = test::GetEscher();
 
   impl::RenderPassCache cache(escher->resource_recycler());

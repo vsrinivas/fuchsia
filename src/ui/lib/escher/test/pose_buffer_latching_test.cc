@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+#include "gtest_escher.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -52,15 +53,11 @@ glm::mat4 MatrixFromPose(const hmd::Pose& pose) {
          glm::translate(mat4(), glm::vec3(pose.x, pose.y, pose.z));
 }
 
-VK_TEST(PoseBuffer, ComputeShaderLatching) {
-  // Initialize Vulkan.
-  VulkanInstance::Params instance_params(
-      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+using PoseBufferTest = escher::test::TestWithVkValidationLayer;
 
-  auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
-  auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});
-
-  auto escher = std::make_unique<escher::Escher>(vulkan_device);
+// TODO(36692): This test now causes Vulkan validation errors on AEMU.
+VK_TEST_F(PoseBufferTest, ComputeShaderLatching) {
+  auto escher = escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
   escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest", 0);
 
   uint32_t num_entries = 8;

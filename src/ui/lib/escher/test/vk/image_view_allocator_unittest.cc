@@ -12,7 +12,9 @@
 namespace {
 using namespace escher;
 
-VK_TEST(ImageViewAllocator, CacheReclamation) {
+using ImageViewAllocatorTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(ImageViewAllocatorTest, CacheReclamation) {
   auto escher = test::GetEscher();
 
   ImageViewAllocator allocator(escher->resource_recycler());

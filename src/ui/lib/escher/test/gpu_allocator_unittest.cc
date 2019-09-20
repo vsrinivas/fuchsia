@@ -16,6 +16,19 @@ VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
       {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
+  // This test doesn't use the global Escher environment so TestWithVkValidationLayer won't work.
+  // We set up a custom debug callback function to fail the test when there is errors / warnings /
+  // performance warnings.
+  vulkan_instance->RegisterDebugReportCallback(
+      [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
+         size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
+         void* pUserData) -> VkBool32 {
+        ADD_FAILURE() << "Debug report: " << vk::to_string(vk::DebugReportFlagsEXT(flags))
+                      << " Object: " << object << " Location: " << location
+                      << " Message code: " << messageCode << " Message: " << pMessage;
+        return VK_FALSE;
+      });
+
   VulkanDeviceQueues::Params::Flags flags =
       VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent;
   if (use_protected_memory) {

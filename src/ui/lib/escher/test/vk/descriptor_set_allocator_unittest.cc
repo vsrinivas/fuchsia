@@ -9,7 +9,9 @@
 namespace {
 using namespace escher;
 
-VK_TEST(DescriptorSetAllocatorTest, General) {
+using DescriptorSetAllocatorTest = escher::test::TestWithVkValidationLayer;
+
+VK_TEST_F(DescriptorSetAllocatorTest, General) {
   impl::DescriptorSetLayout layout = {};
   layout.sampled_image_mask = 0x5;
   layout.storage_image_mask = 0x2;

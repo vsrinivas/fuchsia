@@ -158,12 +158,12 @@ source_set("gtest_escher") {
   sources = [
     "gtest_escher.cc",
     "gtest_escher.h",
-    "test_with_vk_validation_layer_macros.h",
-    "test_with_vk_validation_layer_macros_internal.h",
     "test_with_vk_validation_layer.cc",
     "test_with_vk_validation_layer.h",
     "test_with_vk_validation_layer_base.cc",
     "test_with_vk_validation_layer_base.h",
+    "test_with_vk_validation_layer_macros.h",
+    "test_with_vk_validation_layer_macros_internal.h",
   ]
 }
 
