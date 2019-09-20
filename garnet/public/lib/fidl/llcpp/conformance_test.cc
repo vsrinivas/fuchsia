@@ -745,35 +745,35 @@ TEST(Conformance, Optionals_Encode) {
     char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
     llcpp::conformance::EmptyStruct* v3 = new (buf_v4) llcpp::conformance::EmptyStruct();
     v1->s = std::move(*v3);
-    char buf_v6[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v5 = new (buf_v6) llcpp::conformance::EmptyStruct();
+    llcpp::conformance::EmptyStruct v5_pointee{};
+    auto v5 = &v5_pointee;
     v1->s2 = v5;
-    auto v7 = llcpp::conformance::TableWithEmptyStruct::Build();
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v8 = new (buf_v9) llcpp::conformance::EmptyStruct();
-    v7.set_s(v8);
-    auto v10 = v7.view();
-    v1->t = std::move(v10);
-    llcpp::conformance::XUnionWithEmptyStruct v11;
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v12 = new (buf_v13) llcpp::conformance::EmptyStruct();
-    v11.set_s(v12);
-    v1->xu = std::move(v11);
-    llcpp::conformance::XUnionWithEmptyStruct v14;
-    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v15 = new (buf_v16) llcpp::conformance::EmptyStruct();
-    v14.set_s(v15);
-    v1->xu2 = std::move(v14);
-    llcpp::conformance::UnionWithEmptyStruct v17;
-    char buf_v19[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v18 = new (buf_v19) llcpp::conformance::EmptyStruct();
-    v17.set_s(*v18);
-    v1->u = std::move(v17);
-    llcpp::conformance::UnionWithEmptyStruct v20;
-    char buf_v22[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v21 = new (buf_v22) llcpp::conformance::EmptyStruct();
-    v20.set_s(*v21);
-    v1->u2 = &v20;
+    auto v6 = llcpp::conformance::TableWithEmptyStruct::Build();
+    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v7 = new (buf_v8) llcpp::conformance::EmptyStruct();
+    v6.set_s(v7);
+    auto v9 = v6.view();
+    v1->t = std::move(v9);
+    llcpp::conformance::XUnionWithEmptyStruct v10;
+    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v11 = new (buf_v12) llcpp::conformance::EmptyStruct();
+    v10.set_s(v11);
+    v1->xu = std::move(v10);
+    llcpp::conformance::XUnionWithEmptyStruct v13;
+    char buf_v15[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v14 = new (buf_v15) llcpp::conformance::EmptyStruct();
+    v13.set_s(v14);
+    v1->xu2 = std::move(v13);
+    llcpp::conformance::UnionWithEmptyStruct v16;
+    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v17 = new (buf_v18) llcpp::conformance::EmptyStruct();
+    v16.set_s(*v17);
+    v1->u = std::move(v16);
+    llcpp::conformance::UnionWithEmptyStruct v19;
+    char buf_v21[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v20 = new (buf_v21) llcpp::conformance::EmptyStruct();
+    v19.set_s(*v20);
+    v1->u2 = &v19;
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
   }
@@ -781,12 +781,17 @@ TEST(Conformance, Optionals_Encode) {
 
 TEST(Conformance, Arrays_Encode) {
   const auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,
 
   };
 
@@ -801,26 +806,37 @@ TEST(Conformance, Arrays_Encode) {
     fidl::StringView v7("b", 1);
     auto v8 = fidl::Array<fidl::StringView, 2>{v6, v7};
     v1->arr_string = std::move(v8);
-    char buf_v10[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v9 = new (buf_v10) llcpp::conformance::StructWithInt();
-    int32_t v11 = 1ull;
-    v9->x = std::move(v11);
+    fidl::StringView v9("c", 1);
+    fidl::StringView v10{};
+    auto v11 = fidl::Array<fidl::StringView, 2>{v9, v10};
+    v1->arr_nullable_string = std::move(v11);
     char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
     llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 2ull;
+    int32_t v14 = 1ull;
     v12->x = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v9, *v12};
-    v1->arr_struct = std::move(v15);
-    int32_t v16 = 1ull;
+    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
+    llcpp::conformance::StructWithInt* v15 = new (buf_v16) llcpp::conformance::StructWithInt();
     int32_t v17 = 2ull;
-    int32_t v18 = 3ull;
-    auto v19 = fidl::Array<int32_t, 3>{v16, v17, v18};
-    int32_t v20 = 4ull;
-    int32_t v21 = 5ull;
-    int32_t v22 = 6ull;
-    auto v23 = fidl::Array<int32_t, 3>{v20, v21, v22};
-    auto v24 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v19, v23};
-    v1->arr_arr_int = std::move(v24);
+    v15->x = std::move(v17);
+    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v12, *v15};
+    v1->arr_struct = std::move(v18);
+    llcpp::conformance::StructWithInt* v19{};
+    llcpp::conformance::StructWithInt v20_pointee{};
+    auto v20 = &v20_pointee;
+    int32_t v21 = 16909060ull;
+    v20->x = std::move(v21);
+    auto v22 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{v19, v20};
+    v1->arr_nullable_struct = std::move(v22);
+    int32_t v23 = 1ull;
+    int32_t v24 = 2ull;
+    int32_t v25 = 3ull;
+    auto v26 = fidl::Array<int32_t, 3>{v23, v24, v25};
+    int32_t v27 = 4ull;
+    int32_t v28 = 5ull;
+    int32_t v29 = 6ull;
+    auto v30 = fidl::Array<int32_t, 3>{v27, v28, v29};
+    auto v31 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v26, v30};
+    v1->arr_arr_int = std::move(v31);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
   }
@@ -831,13 +847,21 @@ TEST(Conformance, Vectors_Encode) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -860,23 +884,38 @@ TEST(Conformance, Vectors_Encode) {
     auto v10 = fidl::Array<fidl::StringView, 2>{v8, v9};
     auto v11 = fidl::VectorView<fidl::StringView>(v10.data(), 2);
     v1->vec_string = std::move(v11);
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 1ull;
-    v12->x = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v12};
-    auto v16 = fidl::VectorView<llcpp::conformance::StructWithInt>(v15.data(), 1);
-    v1->vec_struct = std::move(v16);
-    int32_t v17 = 1ull;
-    int32_t v18 = 2ull;
-    auto v19 = fidl::Array<int32_t, 2>{v17, v18};
-    auto v20 = fidl::VectorView<int32_t>(v19.data(), 2);
-    int32_t v21 = 3ull;
-    auto v22 = fidl::Array<int32_t, 1>{v21};
-    auto v23 = fidl::VectorView<int32_t>(v22.data(), 1);
-    auto v24 = fidl::Array<fidl::VectorView<int32_t>, 2>{v20, v23};
-    auto v25 = fidl::VectorView<fidl::VectorView<int32_t>>(v24.data(), 2);
-    v1->vec_vec_int = std::move(v25);
+    fidl::StringView v12{};
+    fidl::StringView v13("c", 1);
+    fidl::StringView v14{};
+    auto v15 = fidl::Array<fidl::StringView, 3>{v12, v13, v14};
+    auto v16 = fidl::VectorView<fidl::StringView>(v15.data(), 3);
+    v1->vec_nullable_string = std::move(v16);
+    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
+    llcpp::conformance::StructWithInt* v17 = new (buf_v18) llcpp::conformance::StructWithInt();
+    int32_t v19 = 1ull;
+    v17->x = std::move(v19);
+    auto v20 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v17};
+    auto v21 = fidl::VectorView<llcpp::conformance::StructWithInt>(v20.data(), 1);
+    v1->vec_struct = std::move(v21);
+    llcpp::conformance::StructWithInt* v22{};
+    llcpp::conformance::StructWithInt* v23{};
+    llcpp::conformance::StructWithInt v24_pointee{};
+    auto v24 = &v24_pointee;
+    int32_t v25 = 2ull;
+    v24->x = std::move(v25);
+    auto v26 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{v22, v23, v24};
+    auto v27 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v26.data(), 3);
+    v1->vec_nullable_struct = std::move(v27);
+    int32_t v28 = 1ull;
+    int32_t v29 = 2ull;
+    auto v30 = fidl::Array<int32_t, 2>{v28, v29};
+    auto v31 = fidl::VectorView<int32_t>(v30.data(), 2);
+    int32_t v32 = 3ull;
+    auto v33 = fidl::Array<int32_t, 1>{v32};
+    auto v34 = fidl::VectorView<int32_t>(v33.data(), 1);
+    auto v35 = fidl::Array<fidl::VectorView<int32_t>, 2>{v31, v34};
+    auto v36 = fidl::VectorView<fidl::VectorView<int32_t>>(v35.data(), 2);
+    v1->vec_vec_int = std::move(v36);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
   }
@@ -2126,35 +2165,35 @@ TEST(Conformance, Optionals_Decode) {
     char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
     llcpp::conformance::EmptyStruct* v3 = new (buf_v4) llcpp::conformance::EmptyStruct();
     v1->s = std::move(*v3);
-    char buf_v6[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v5 = new (buf_v6) llcpp::conformance::EmptyStruct();
+    llcpp::conformance::EmptyStruct v5_pointee{};
+    auto v5 = &v5_pointee;
     v1->s2 = v5;
-    auto v7 = llcpp::conformance::TableWithEmptyStruct::Build();
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v8 = new (buf_v9) llcpp::conformance::EmptyStruct();
-    v7.set_s(v8);
-    auto v10 = v7.view();
-    v1->t = std::move(v10);
-    llcpp::conformance::XUnionWithEmptyStruct v11;
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v12 = new (buf_v13) llcpp::conformance::EmptyStruct();
-    v11.set_s(v12);
-    v1->xu = std::move(v11);
-    llcpp::conformance::XUnionWithEmptyStruct v14;
-    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v15 = new (buf_v16) llcpp::conformance::EmptyStruct();
-    v14.set_s(v15);
-    v1->xu2 = std::move(v14);
-    llcpp::conformance::UnionWithEmptyStruct v17;
-    char buf_v19[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v18 = new (buf_v19) llcpp::conformance::EmptyStruct();
-    v17.set_s(*v18);
-    v1->u = std::move(v17);
-    llcpp::conformance::UnionWithEmptyStruct v20;
-    char buf_v22[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v21 = new (buf_v22) llcpp::conformance::EmptyStruct();
-    v20.set_s(*v21);
-    v1->u2 = &v20;
+    auto v6 = llcpp::conformance::TableWithEmptyStruct::Build();
+    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v7 = new (buf_v8) llcpp::conformance::EmptyStruct();
+    v6.set_s(v7);
+    auto v9 = v6.view();
+    v1->t = std::move(v9);
+    llcpp::conformance::XUnionWithEmptyStruct v10;
+    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v11 = new (buf_v12) llcpp::conformance::EmptyStruct();
+    v10.set_s(v11);
+    v1->xu = std::move(v10);
+    llcpp::conformance::XUnionWithEmptyStruct v13;
+    char buf_v15[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v14 = new (buf_v15) llcpp::conformance::EmptyStruct();
+    v13.set_s(v14);
+    v1->xu2 = std::move(v13);
+    llcpp::conformance::UnionWithEmptyStruct v16;
+    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v17 = new (buf_v18) llcpp::conformance::EmptyStruct();
+    v16.set_s(*v17);
+    v1->u = std::move(v16);
+    llcpp::conformance::UnionWithEmptyStruct v19;
+    char buf_v21[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
+    llcpp::conformance::EmptyStruct* v20 = new (buf_v21) llcpp::conformance::EmptyStruct();
+    v19.set_s(*v20);
+    v1->u2 = &v19;
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
   }
@@ -2162,12 +2201,17 @@ TEST(Conformance, Optionals_Decode) {
 
 TEST(Conformance, Arrays_Decode) {
   const auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,
 
   };
 
@@ -2182,26 +2226,37 @@ TEST(Conformance, Arrays_Decode) {
     fidl::StringView v7("b", 1);
     auto v8 = fidl::Array<fidl::StringView, 2>{v6, v7};
     v1->arr_string = std::move(v8);
-    char buf_v10[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v9 = new (buf_v10) llcpp::conformance::StructWithInt();
-    int32_t v11 = 1ull;
-    v9->x = std::move(v11);
+    fidl::StringView v9("c", 1);
+    fidl::StringView v10{};
+    auto v11 = fidl::Array<fidl::StringView, 2>{v9, v10};
+    v1->arr_nullable_string = std::move(v11);
     char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
     llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 2ull;
+    int32_t v14 = 1ull;
     v12->x = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v9, *v12};
-    v1->arr_struct = std::move(v15);
-    int32_t v16 = 1ull;
+    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
+    llcpp::conformance::StructWithInt* v15 = new (buf_v16) llcpp::conformance::StructWithInt();
     int32_t v17 = 2ull;
-    int32_t v18 = 3ull;
-    auto v19 = fidl::Array<int32_t, 3>{v16, v17, v18};
-    int32_t v20 = 4ull;
-    int32_t v21 = 5ull;
-    int32_t v22 = 6ull;
-    auto v23 = fidl::Array<int32_t, 3>{v20, v21, v22};
-    auto v24 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v19, v23};
-    v1->arr_arr_int = std::move(v24);
+    v15->x = std::move(v17);
+    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v12, *v15};
+    v1->arr_struct = std::move(v18);
+    llcpp::conformance::StructWithInt* v19{};
+    llcpp::conformance::StructWithInt v20_pointee{};
+    auto v20 = &v20_pointee;
+    int32_t v21 = 16909060ull;
+    v20->x = std::move(v21);
+    auto v22 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{v19, v20};
+    v1->arr_nullable_struct = std::move(v22);
+    int32_t v23 = 1ull;
+    int32_t v24 = 2ull;
+    int32_t v25 = 3ull;
+    auto v26 = fidl::Array<int32_t, 3>{v23, v24, v25};
+    int32_t v27 = 4ull;
+    int32_t v28 = 5ull;
+    int32_t v29 = 6ull;
+    auto v30 = fidl::Array<int32_t, 3>{v27, v28, v29};
+    auto v31 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v26, v30};
+    v1->arr_arr_int = std::move(v31);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
   }
@@ -2212,13 +2267,21 @@ TEST(Conformance, Vectors_Decode) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2241,23 +2304,38 @@ TEST(Conformance, Vectors_Decode) {
     auto v10 = fidl::Array<fidl::StringView, 2>{v8, v9};
     auto v11 = fidl::VectorView<fidl::StringView>(v10.data(), 2);
     v1->vec_string = std::move(v11);
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 1ull;
-    v12->x = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v12};
-    auto v16 = fidl::VectorView<llcpp::conformance::StructWithInt>(v15.data(), 1);
-    v1->vec_struct = std::move(v16);
-    int32_t v17 = 1ull;
-    int32_t v18 = 2ull;
-    auto v19 = fidl::Array<int32_t, 2>{v17, v18};
-    auto v20 = fidl::VectorView<int32_t>(v19.data(), 2);
-    int32_t v21 = 3ull;
-    auto v22 = fidl::Array<int32_t, 1>{v21};
-    auto v23 = fidl::VectorView<int32_t>(v22.data(), 1);
-    auto v24 = fidl::Array<fidl::VectorView<int32_t>, 2>{v20, v23};
-    auto v25 = fidl::VectorView<fidl::VectorView<int32_t>>(v24.data(), 2);
-    v1->vec_vec_int = std::move(v25);
+    fidl::StringView v12{};
+    fidl::StringView v13("c", 1);
+    fidl::StringView v14{};
+    auto v15 = fidl::Array<fidl::StringView, 3>{v12, v13, v14};
+    auto v16 = fidl::VectorView<fidl::StringView>(v15.data(), 3);
+    v1->vec_nullable_string = std::move(v16);
+    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
+    llcpp::conformance::StructWithInt* v17 = new (buf_v18) llcpp::conformance::StructWithInt();
+    int32_t v19 = 1ull;
+    v17->x = std::move(v19);
+    auto v20 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v17};
+    auto v21 = fidl::VectorView<llcpp::conformance::StructWithInt>(v20.data(), 1);
+    v1->vec_struct = std::move(v21);
+    llcpp::conformance::StructWithInt* v22{};
+    llcpp::conformance::StructWithInt* v23{};
+    llcpp::conformance::StructWithInt v24_pointee{};
+    auto v24 = &v24_pointee;
+    int32_t v25 = 2ull;
+    v24->x = std::move(v25);
+    auto v26 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{v22, v23, v24};
+    auto v27 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v26.data(), 3);
+    v1->vec_nullable_struct = std::move(v27);
+    int32_t v28 = 1ull;
+    int32_t v29 = 2ull;
+    auto v30 = fidl::Array<int32_t, 2>{v28, v29};
+    auto v31 = fidl::VectorView<int32_t>(v30.data(), 2);
+    int32_t v32 = 3ull;
+    auto v33 = fidl::Array<int32_t, 1>{v32};
+    auto v34 = fidl::VectorView<int32_t>(v33.data(), 1);
+    auto v35 = fidl::Array<fidl::VectorView<int32_t>, 2>{v31, v34};
+    auto v36 = fidl::VectorView<fidl::VectorView<int32_t>>(v35.data(), 2);
+    v1->vec_vec_int = std::move(v36);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
   }

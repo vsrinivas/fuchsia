@@ -21,7 +21,7 @@ func ExtractDeclaration(value interface{}, fidl fidlir.Root) (Declaration, error
 		return nil, err
 	}
 	if err := decl.conforms(value); err != nil {
-		return nil, fmt.Errorf("value %v failed to conform to declartion (type %T): %v", value, decl, err)
+		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
 	}
 	return decl, nil
 }
@@ -32,7 +32,7 @@ func ExtractDeclaration(value interface{}, fidl fidlir.Root) (Declaration, error
 func ExtractDeclarationUnsafe(value interface{}, fidl fidlir.Root) (Declaration, error) {
 	switch value := value.(type) {
 	case gidlir.Object:
-		decl, ok := schema(fidl).LookupDeclByName(value.Name)
+		decl, ok := schema(fidl).LookupDeclByName(value.Name, false)
 		if !ok {
 			return nil, fmt.Errorf("unknown declaration %s", value.Name)
 		}
@@ -48,13 +48,14 @@ type ValueVisitor interface {
 	OnInt64(value int64, typ fidlir.PrimitiveSubtype)
 	OnUint64(value uint64, typ fidlir.PrimitiveSubtype)
 	OnFloat64(value float64, typ fidlir.PrimitiveSubtype)
-	OnString(value string)
+	OnString(value string, decl *StringDecl)
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
 	OnXUnion(value gidlir.Object, decl *XUnionDecl)
 	OnUnion(value gidlir.Object, decl *UnionDecl)
 	OnArray(value []interface{}, decl *ArrayDecl)
 	OnVector(value []interface{}, decl *VectorDecl)
+	OnNull(decl Declaration)
 }
 
 // Visit is the entry point into visiting a value, it dispatches appropriately
@@ -70,7 +71,12 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	case float64:
 		visitor.OnFloat64(value, extractSubtype(decl))
 	case string:
-		visitor.OnString(value)
+		switch decl := decl.(type) {
+		case *StringDecl:
+			visitor.OnString(value, decl)
+		default:
+			panic(fmt.Sprintf("string value has non-string decl: %T", decl))
+		}
 	case gidlir.Object:
 		switch decl := decl.(type) {
 		case *StructDecl:
@@ -93,6 +99,11 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		default:
 			panic(fmt.Sprintf("not implemented: %T", decl))
 		}
+	case nil:
+		if !decl.IsNullable() {
+			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
+		}
+		visitor.OnNull(decl)
 	default:
 		panic(fmt.Sprintf("not implemented: %T", value))
 	}
@@ -111,6 +122,10 @@ func extractSubtype(decl Declaration) fidlir.PrimitiveSubtype {
 
 // Declaration describes a FIDL declaration.
 type Declaration interface {
+	// IsNullable returns true for nullable types. For example, it returns false
+	// for string and true for string?.
+	IsNullable() bool
+
 	// conforms verifies that the value conforms to this declaration.
 	conforms(value interface{}) error
 }
@@ -130,8 +145,6 @@ var _ = []Declaration{
 
 type KeyedDeclaration interface {
 	Declaration
-	// ForKey looks up the type of the member with the given key.
-	MemberType(key gidlir.FieldKey) (fidlir.Type, bool)
 	// ForKey looks up the declaration for a specific key.
 	ForKey(key gidlir.FieldKey) (Declaration, bool)
 }
@@ -155,7 +168,15 @@ var _ = []ListDeclaration{
 	&VectorDecl{},
 }
 
+// Helper struct for implementing IsNullable on types that are never nullable.
+type NeverNullable struct{}
+
+func (NeverNullable) IsNullable() bool {
+	return false
+}
+
 type BoolDecl struct {
+	NeverNullable
 }
 
 func (decl *BoolDecl) conforms(value interface{}) error {
@@ -168,6 +189,7 @@ func (decl *BoolDecl) conforms(value interface{}) error {
 }
 
 type NumberDecl struct {
+	NeverNullable
 	Typ   fidlir.PrimitiveSubtype
 	lower int64
 	upper uint64
@@ -197,6 +219,7 @@ func (decl *NumberDecl) conforms(value interface{}) error {
 }
 
 type FloatDecl struct {
+	NeverNullable
 	Typ fidlir.PrimitiveSubtype
 }
 
@@ -205,7 +228,12 @@ func (decl *FloatDecl) conforms(value interface{}) error {
 }
 
 type StringDecl struct {
-	bound *int
+	bound    *int
+	nullable bool
+}
+
+func (decl *StringDecl) IsNullable() bool {
+	return decl.nullable
 }
 
 func (decl *StringDecl) conforms(value interface{}) error {
@@ -222,13 +250,23 @@ func (decl *StringDecl) conforms(value interface{}) error {
 				bound, len(value))
 		}
 		return nil
+	case nil:
+		if decl.nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-null string, found nil")
 	}
 }
 
 // StructDecl describes a struct declaration.
 type StructDecl struct {
 	fidlir.Struct
-	schema schema
+	schema   schema
+	nullable bool
+}
+
+func (decl *StructDecl) IsNullable() bool {
+	return decl.nullable
 }
 
 func (decl *StructDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
@@ -248,21 +286,10 @@ func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	return nil, false
 }
 
-// IsKeyNullable indicates whether this key is optional, i.e. whether it
-// represents an optional field.
-func (decl *StructDecl) IsKeyNullable(key gidlir.FieldKey) bool {
-	for _, member := range decl.Members {
-		if string(member.Name) == key.Name {
-			return member.Type.Nullable
-		}
-	}
-	return false
-}
-
 func (decl *StructDecl) conforms(value interface{}) error {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting string, found %T (%v)", value, value)
+		return fmt.Errorf("expecting struct %s, found %T (%v)", decl.Name, value, value)
 	case gidlir.Object:
 		for _, field := range value.Fields {
 			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
@@ -272,11 +299,17 @@ func (decl *StructDecl) conforms(value interface{}) error {
 			}
 		}
 		return nil
+	case nil:
+		if decl.nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-null struct %s, found nil", decl.Name)
 	}
 }
 
 // TableDecl describes a table declaration.
 type TableDecl struct {
+	NeverNullable
 	fidlir.Table
 	schema schema
 }
@@ -301,7 +334,7 @@ func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 func (decl *TableDecl) conforms(untypedValue interface{}) error {
 	switch value := untypedValue.(type) {
 	default:
-		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
+		return fmt.Errorf("expecting table %s, found %T (%v)", decl.Name, untypedValue, untypedValue)
 	case gidlir.Object:
 		for _, field := range value.Fields {
 			if field.Key.Name == "" {
@@ -323,7 +356,12 @@ func (decl *TableDecl) conforms(untypedValue interface{}) error {
 // XUnionDecl describes a xunion declaration.
 type XUnionDecl struct {
 	fidlir.XUnion
-	schema schema
+	schema   schema
+	nullable bool
+}
+
+func (decl *XUnionDecl) IsNullable() bool {
+	return decl.nullable
 }
 
 func (decl *XUnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
@@ -346,7 +384,7 @@ func (decl XUnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 func (decl XUnionDecl) conforms(untypedValue interface{}) error {
 	switch value := untypedValue.(type) {
 	default:
-		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
+		return fmt.Errorf("expecting xunion %s, found %T (%v)", decl.Name, untypedValue, untypedValue)
 	case gidlir.Object:
 		if num := len(value.Fields); num != 1 {
 			return fmt.Errorf("must have one field, found %d", num)
@@ -365,13 +403,23 @@ func (decl XUnionDecl) conforms(untypedValue interface{}) error {
 			}
 		}
 		return nil
+	case nil:
+		if decl.nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-null xunion %s, found nil", decl.Name)
 	}
 }
 
 // UnionDecl describes a xunion declaration.
 type UnionDecl struct {
 	fidlir.Union
-	schema schema
+	schema   schema
+	nullable bool
+}
+
+func (decl *UnionDecl) IsNullable() bool {
+	return decl.nullable
 }
 
 func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
@@ -407,12 +455,19 @@ func (decl UnionDecl) conforms(untypedValue interface{}) error {
 			}
 		}
 		return nil
+	case nil:
+		if decl.nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-null union %s, found nil", decl.Name)
 	}
 }
 
 type ArrayDecl struct {
+	NeverNullable
 	schema schema
-	typ    fidlir.Type
+	// The array has type `typ`, and it contains `typ.ElementType` elements.
+	typ fidlir.Type
 }
 
 func (decl ArrayDecl) Elem() (Declaration, bool) {
@@ -439,7 +494,12 @@ func (decl ArrayDecl) conforms(untypedValue interface{}) error {
 
 type VectorDecl struct {
 	schema schema
-	typ    fidlir.Type
+	// The vector has type `typ`, and it contains `typ.ElementType` elements.
+	typ fidlir.Type
+}
+
+func (decl VectorDecl) IsNullable() bool {
+	return decl.typ.Nullable
 }
 
 func (decl VectorDecl) Elem() (Declaration, bool) {
@@ -447,6 +507,12 @@ func (decl VectorDecl) Elem() (Declaration, bool) {
 }
 
 func (decl VectorDecl) conforms(untypedValue interface{}) error {
+	if untypedValue == nil {
+		if decl.typ.Nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-nullable vector, got nil")
+	}
 	if _, ok := untypedValue.([]interface{}); !ok {
 		return fmt.Errorf("expecting []interface{}, got %T (%v)", untypedValue, untypedValue)
 	}
@@ -459,17 +525,21 @@ func (decl VectorDecl) conforms(untypedValue interface{}) error {
 type schema fidlir.Root
 
 // LookupDeclByName looks up a message declaration by name.
-func (s schema) LookupDeclByName(name string) (Declaration, bool) {
+func (s schema) LookupDeclByName(name string, nullable bool) (Declaration, bool) {
 	for _, decl := range s.Structs {
 		if decl.Name == s.name(name) {
 			return &StructDecl{
-				Struct: decl,
-				schema: s,
+				Struct:   decl,
+				schema:   s,
+				nullable: nullable,
 			}, true
 		}
 	}
 	for _, decl := range s.Tables {
 		if decl.Name == s.name(name) {
+			if nullable {
+				panic(fmt.Sprintf("nullable table %s is not allowed", name))
+			}
 			return &TableDecl{
 				Table:  decl,
 				schema: s,
@@ -479,20 +549,22 @@ func (s schema) LookupDeclByName(name string) (Declaration, bool) {
 	for _, decl := range s.XUnions {
 		if decl.Name == s.name(name) {
 			return &XUnionDecl{
-				XUnion: decl,
-				schema: s,
+				XUnion:   decl,
+				schema:   s,
+				nullable: nullable,
 			}, true
 		}
 	}
 	for _, decl := range s.Unions {
 		if decl.Name == s.name(name) {
 			return &UnionDecl{
-				Union:  decl,
-				schema: s,
+				Union:    decl,
+				schema:   s,
+				nullable: nullable,
 			}, true
 		}
 	}
-	// TODO(pascallouis): add support missing declarations (e.g. xunions)
+	// TODO(pascallouis): add support missing declarations
 	return nil, false
 }
 
@@ -501,7 +573,8 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	switch typ.Kind {
 	case fidlir.StringType:
 		return &StringDecl{
-			bound: typ.ElementCount,
+			bound:    typ.ElementCount,
+			nullable: typ.Nullable,
 		}, true
 	case fidlir.PrimitiveType:
 		switch typ.PrimitiveSubtype {
@@ -535,7 +608,7 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 		if len(parts) != 2 {
 			panic(fmt.Sprintf("malformed identifier: %s", typ.Identifier))
 		}
-		return s.LookupDeclByName(parts[1])
+		return s.LookupDeclByName(parts[1], typ.Nullable)
 	case fidlir.ArrayType:
 		return &ArrayDecl{schema: s, typ: typ}, true
 	case fidlir.VectorType:

@@ -13,6 +13,7 @@ package ir
 // - `bool` for booleans
 // - `Object` for structs, unions, tables
 // - `[]interface{}` for slices of values
+// - `nil` for null values (only allowed for nullable types)
 type Value interface{}
 
 type FieldKey struct {

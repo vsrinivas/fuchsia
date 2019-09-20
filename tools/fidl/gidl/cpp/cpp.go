@@ -185,17 +185,6 @@ type cppValueBuilder struct {
 
 	varidx  int
 	lastVar string
-
-	// `context` references the FIDL declaration that a visited object is
-	// contained in when one of the On*() methods is called. Given "struct S1 { };
-	// struct S2 { S1 s1; };", if the .s1 field in an S2 struct is being visited,
-	// `context.decl` will be S1, while `context.key` will be "s1".
-	context cppValueBuilderContext
-}
-
-type cppValueBuilderContext struct {
-	key  gidlir.FieldKey
-	decl gidlmixer.Declaration
 }
 
 func (b *cppValueBuilder) newVar() string {
@@ -241,7 +230,7 @@ func (b *cppValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) 
 	b.lastVar = newVar
 }
 
-func (b *cppValueBuilder) OnString(value string) {
+func (b *cppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
 
 	// strconv.Quote() below produces a quoted _Go_ string (not C string), which
@@ -249,7 +238,7 @@ func (b *cppValueBuilder) OnString(value string) {
 	// characters, etc. However, this should be OK until we we find a use-case
 	// that breaks it.
 	b.Builder.WriteString(fmt.Sprintf(
-		"std::string %s = %s;\n", newVar, strconv.Quote(value)))
+		"%s %s(%s);\n", typeName(decl), newVar, strconv.Quote(value)))
 
 	b.lastVar = newVar
 }
@@ -270,31 +259,14 @@ func (b *cppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl
 	b.onObject(value, decl)
 }
 
-func (b *cppValueBuilder) onObjectField(decl gidlmixer.Declaration, key gidlir.FieldKey, f func()) {
-	oldContext := b.context
-	defer func() {
-		b.context = oldContext
-	}()
-
-	b.context = cppValueBuilderContext{decl: decl, key: key}
-	f()
-}
-
 func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
 	containerVar := b.newVar()
-
-	isOptionalStructMember := false
-	switch decl := b.context.decl.(type) {
-	case *gidlmixer.StructDecl:
-		isOptionalStructMember = decl.IsKeyNullable(b.context.key)
-	}
-
-	if isOptionalStructMember {
+	nullable := decl.IsNullable()
+	if nullable {
 		b.Builder.WriteString(fmt.Sprintf(
-			"auto %s = std::make_unique<conformance::%s>();\n", containerVar, value.Name))
+			"%s %s = std::make_unique<conformance::%s>();\n", typeName(decl), containerVar, value.Name))
 	} else {
-		b.Builder.WriteString(fmt.Sprintf(
-			"conformance::%s %s;\n", value.Name, containerVar))
+		b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), containerVar))
 	}
 
 	for _, field := range value.Fields {
@@ -304,47 +276,61 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 		b.Builder.WriteString("\n")
 
 		fieldDecl, _ := decl.ForKey(field.Key)
-
-		b.onObjectField(decl, field.Key, func() {
-			gidlmixer.Visit(b, field.Value, fieldDecl)
-		})
+		gidlmixer.Visit(b, field.Value, fieldDecl)
+		fieldVar := b.lastVar
 
 		accessor := "."
-		if isOptionalStructMember {
+		if nullable {
 			accessor = "->"
 		}
 
 		switch decl.(type) {
 		case *gidlmixer.StructDecl:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Key.Name, b.lastVar))
+				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Key.Name, fieldVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Key.Name, b.lastVar))
+				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Key.Name, fieldVar))
 		}
 	}
 	b.lastVar = containerVar
 }
 
-func (b *cppValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclaration) {
+func (b *cppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
+	var elements []string
+	elemDecl, _ := decl.Elem()
+	for _, item := range value {
+		gidlmixer.Visit(b, item, elemDecl)
+		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
+	}
+	arrayVar := b.newVar()
+	// Populate the array using aggregate initialization.
+	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
+		arrayVar, typeName(decl), strings.Join(elements, ", ")))
+	b.lastVar = arrayVar
+}
+
+func (b *cppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
 	var elements []string
 	elemDecl, _ := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		elements = append(elements, b.lastVar)
 	}
-	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
-		sliceVar, typeName(decl), strings.Join(elements, ", ")))
-	b.lastVar = sliceVar
+	vectorVar := b.newVar()
+	// Populate the vector using push_back. We can't use an initializer list
+	// because they always copy, which breaks if the element is a unique_ptr.
+	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), vectorVar))
+	for _, element := range elements {
+		b.Builder.WriteString(fmt.Sprintf("%s.push_back(std::move(%s));\n", vectorVar, element))
+	}
+	b.lastVar = vectorVar
 }
 
-func (b *cppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
-	b.onList(value, decl)
-}
-
-func (b *cppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
-	b.onList(value, decl)
+func (b *cppValueBuilder) OnNull(decl gidlmixer.Declaration) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), newVar))
+	b.lastVar = newVar
 }
 
 func typeName(decl gidlmixer.Declaration) string {
@@ -356,18 +342,33 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.FloatDecl:
 		return numberName(decl.Typ)
 	case *gidlmixer.StringDecl:
+		if decl.IsNullable() {
+			return "::fidl::StringPtr"
+		}
 		return "std::string"
 	case *gidlmixer.StructDecl:
+		if decl.IsNullable() {
+			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
+		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.UnionDecl:
+		if decl.IsNullable() {
+			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
+		}
 		return identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
+		if decl.IsNullable() {
+			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
+		}
 		return identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("std::array<%s, %d>", elemName(decl), decl.Size())
 	case *gidlmixer.VectorDecl:
+		if decl.IsNullable() {
+			return fmt.Sprintf("::fidl::VectorPtr<%s>", elemName(decl))
+		}
 		return fmt.Sprintf("std::vector<%s>", elemName(decl))
 	default:
 		panic("unhandled case")

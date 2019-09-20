@@ -262,6 +262,12 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		case *gidlmixer.VectorDecl:
 			return onList(value, decl)
 		}
+	case nil:
+		if !decl.IsNullable() {
+			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
+		}
+		return "null"
+
 	}
 	panic(fmt.Sprintf("unexpected value visited %v (decl %v)", value, decl))
 }

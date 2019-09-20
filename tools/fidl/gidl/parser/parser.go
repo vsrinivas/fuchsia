@@ -382,6 +382,9 @@ func (p *Parser) parseValue() (interface{}, error) {
 		if '0' <= tok.value[0] && tok.value[0] <= '9' {
 			return parseNum(tok, false)
 		}
+		if tok.value == "null" {
+			return nil, nil
+		}
 		if tok.value == "true" {
 			return true, nil
 		}

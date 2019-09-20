@@ -284,10 +284,15 @@ func (b *goValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
 	b.lastVar = newVar
 }
 
-func (b *goValueBuilder) OnString(value string) {
+func (b *goValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"%s := %s\n", newVar, strconv.Quote(value)))
+	if decl.IsNullable() {
+		pointee := newVar
+		newVar = b.newVar()
+		b.Builder.WriteString(fmt.Sprintf("%s := &%s\n", newVar, pointee))
+	}
 	b.lastVar = newVar
 }
 
@@ -297,8 +302,7 @@ func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDec
 
 func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
 	containerVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"var %s conformance.%s\n", containerVar, value.Name))
+	b.Builder.WriteString(fmt.Sprintf("%s := %s{}\n", containerVar, typeLiteral(decl)))
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
 			panic("unknown field not supported")
@@ -307,11 +311,8 @@ func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecla
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
-		switch structDecl := decl.(type) {
+		switch decl.(type) {
 		case *gidlmixer.StructDecl:
-			if structDecl.IsKeyNullable(field.Key) {
-				fieldVar = "&" + fieldVar
-			}
 			b.Builder.WriteString(fmt.Sprintf(
 				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(field.Key.Name), fieldVar))
 		default:
@@ -342,7 +343,7 @@ func (b *goValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclarat
 		argStr += b.lastVar + ", "
 	}
 	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s := %s{%s}\n", sliceVar, typeName(decl), argStr))
+	b.Builder.WriteString(fmt.Sprintf("%s := %s{%s}\n", sliceVar, typeLiteral(decl), argStr))
 	b.lastVar = sliceVar
 }
 
@@ -354,7 +355,25 @@ func (b *goValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDec
 	b.onList(value, decl)
 }
 
+func (b *goValueBuilder) OnNull(decl gidlmixer.Declaration) {
+	newVar := b.newVar()
+	b.WriteString(fmt.Sprintf("var %s %s = nil\n", newVar, typeName(decl)))
+	b.lastVar = newVar
+}
+
 func typeName(decl gidlmixer.Declaration) string {
+	return typeNameHelper(decl, "*")
+}
+
+func typeLiteral(decl gidlmixer.Declaration) string {
+	return typeNameHelper(decl, "&")
+}
+
+func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
+	if !decl.IsNullable() {
+		pointerPrefix = ""
+	}
+
 	switch decl := decl.(type) {
 	case *gidlmixer.BoolDecl:
 		return "bool"
@@ -363,19 +382,19 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.FloatDecl:
 		return string(decl.Typ)
 	case *gidlmixer.StringDecl:
-		return "string"
+		return pointerPrefix + "string"
 	case *gidlmixer.StructDecl:
-		return identifierName(decl.Name)
+		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
-		return identifierName(decl.Name)
+		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.UnionDecl:
-		return identifierName(decl.Name)
+		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
-		return identifierName(decl.Name)
+		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("[%d]%s", decl.Size(), elemName(decl))
 	case *gidlmixer.VectorDecl:
-		return fmt.Sprintf("[]%s", elemName(decl))
+		return fmt.Sprintf("%s[]%s", pointerPrefix, elemName(decl))
 	default:
 		panic("unhandled case")
 	}

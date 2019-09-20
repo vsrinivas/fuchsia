@@ -145,10 +145,6 @@ func bytesBuilder(bytes []byte) string {
 type llcppValueBuilder struct {
 	strings.Builder
 	varidx int
-
-	context    gidlmixer.Declaration
-	contextKey gidlir.FieldKey
-
 	lastVar string
 }
 
@@ -218,7 +214,7 @@ func (b *llcppValueBuilder) OnFloat64(value float64, subtype fidlir.PrimitiveSub
 	b.lastVar = newVar
 }
 
-func (b *llcppValueBuilder) OnString(value string) {
+func (b *llcppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"fidl::StringView %s(%s, %d)\n;", newVar, strconv.Quote(value), len(value)))
@@ -227,20 +223,13 @@ func (b *llcppValueBuilder) OnString(value string) {
 
 func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
 	containerVar := b.newVar()
-
-	in_heap := false
-	switch context := b.context.(type) {
-	case *gidlmixer.StructDecl:
-		in_heap = context.IsKeyNullable(b.contextKey)
-	}
-
-	if in_heap {
+	nullable := decl.IsNullable()
+	if nullable {
 		b.Builder.WriteString(fmt.Sprintf(
 			"llcpp::conformance::%s %s_pointee{};\n", value.Name, containerVar))
 		b.Builder.WriteString(fmt.Sprintf(
 			"auto %s = &%s_pointee;\n", containerVar, containerVar))
 	} else {
-
 		bufName := b.newVar()
 		b.Builder.WriteString(
 			fmt.Sprintf("char buf_%s[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::%s))];\n",
@@ -250,23 +239,20 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 				value.Name, containerVar, bufName, value.Name))
 	}
 
-	b.context = decl
-
 	for _, field := range value.Fields {
-		b.contextKey = field.Key
-		typ, _ := decl.MemberType(field.Key)
 		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldNullable := fieldDecl.IsNullable()
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
 		var rhs string
-		if _, ok := fieldDecl.(*gidlmixer.StructDecl); ok {
-			if typ.Nullable {
+		if _, isStruct := fieldDecl.(*gidlmixer.StructDecl); isStruct {
+			if fieldNullable {
 				rhs = fieldVar
 			} else {
 				rhs = fmt.Sprintf("std::move(*%s)", fieldVar)
 			}
-		} else if _, isXUnion := fieldDecl.(*gidlmixer.XUnionDecl); typ.Nullable && !isXUnion {
+		} else if _, isXUnion := fieldDecl.(*gidlmixer.XUnionDecl); fieldNullable && !isXUnion {
 			rhs = fmt.Sprintf("&%s", fieldVar)
 		} else {
 			rhs = fmt.Sprintf("std::move(%s)", fieldVar)
@@ -276,15 +262,6 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 			"%s->%s = %s;\n", containerVar, field.Key.Name, rhs))
 	}
 	b.lastVar = containerVar
-}
-
-func (b *llcppValueBuilder) declIsNullable() bool {
-	switch context := b.context.(type) {
-	case *gidlmixer.StructDecl:
-		return context.IsKeyNullable(b.contextKey)
-	default:
-		return false
-	}
 }
 
 func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
@@ -367,13 +344,13 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
 	var elements []string
 	elemDecl, _ := decl.Elem()
+	dereference := ""
+	if _, ok := elemDecl.(*gidlmixer.StructDecl); ok && !elemDecl.IsNullable() {
+		dereference = "*"
+	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		if _, ok := elemDecl.(*gidlmixer.StructDecl); ok {
-			elements = append(elements, "*"+b.lastVar)
-		} else {
-			elements = append(elements, b.lastVar)
-		}
+		elements = append(elements, dereference + b.lastVar)
 	}
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
@@ -392,13 +369,13 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	}
 	var elements []string
 	elemDecl, _ := decl.Elem()
+	dereference := ""
+	if _, ok := elemDecl.(*gidlmixer.StructDecl); ok && !elemDecl.IsNullable() {
+		dereference = "*"
+	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		if _, ok := elemDecl.(*gidlmixer.StructDecl); ok {
-			elements = append(elements, "*"+b.lastVar)
-		} else {
-			elements = append(elements, b.lastVar)
-		}
+		elements = append(elements, dereference + b.lastVar)
 	}
 	arrayVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
@@ -407,6 +384,12 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s.data(), %d);\n",
 		sliceVar, typeName(decl), arrayVar, len(elements)))
 	b.lastVar = sliceVar
+}
+
+func (b *llcppValueBuilder) OnNull(decl gidlmixer.Declaration) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("%s %s{};\n", typeName(decl), newVar))
+	b.lastVar = newVar
 }
 
 func typeName(decl gidlmixer.Declaration) string {
@@ -418,10 +401,16 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.StringDecl:
 		return "fidl::StringView"
 	case *gidlmixer.StructDecl:
+		if (decl.IsNullable()) {
+			return fmt.Sprintf("%s*", identifierName(decl.Name))
+		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.UnionDecl:
+		if (decl.IsNullable()) {
+			return fmt.Sprintf("%s*", identifierName(decl.Name))
+		}
 		return identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
 		return identifierName(decl.Name)

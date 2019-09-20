@@ -129,7 +129,10 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
 
   uint8_t v13 = 9ull;
   v10.elem3 = std::move(v13);
-  auto v14 = std::vector<conformance::ThreeByte>{v2, v6, v10};
+  std::vector<conformance::ThreeByte> v14;
+  v14.push_back(std::move(v2));
+  v14.push_back(std::move(v6));
+  v14.push_back(std::move(v10));
   v1.elems = std::move(v14);
 
   auto expected = std::vector<uint8_t>{
@@ -166,7 +169,10 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
 
   uint8_t v10 = 15ull;
   v8.elem2 = std::move(v10);
-  auto v11 = std::vector<conformance::FiveByte>{v2, v5, v8};
+  std::vector<conformance::FiveByte> v11;
+  v11.push_back(std::move(v2));
+  v11.push_back(std::move(v5));
+  v11.push_back(std::move(v8));
   v1.elems = std::move(v11);
 
   auto expected = std::vector<uint8_t>{
@@ -212,7 +218,7 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
 
   uint8_t v13 = 9ull;
   v10.elem3 = std::move(v13);
-  auto v14 = std::array<conformance::ThreeByte, 3>{v2, v6, v10};
+  auto v14 = std::array<conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
   v1.elems = std::move(v14);
 
   auto expected = std::vector<uint8_t>{
@@ -248,7 +254,7 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
 
   uint8_t v10 = 15ull;
   v8.elem2 = std::move(v10);
-  auto v11 = std::array<conformance::FiveByte, 3>{v2, v5, v8};
+  auto v11 = std::array<conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
   v1.elems = std::move(v11);
 
   auto expected = std::vector<uint8_t>{
@@ -274,13 +280,13 @@ TEST(Conformance, EmptyStruct_Encode) {
 TEST(Conformance, EmptyStructSandwich_Encode) {
   conformance::EmptyStructSandwich v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
   conformance::EmptyStruct v3;
   v1.es = std::move(v3);
 
-  std::string v4 = "after";
+  std::string v4("after");
   v1.after = std::move(v4);
 
   auto expected = std::vector<uint8_t>{
@@ -412,7 +418,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
 
   conformance::TableWithStringAndVector v2;
 
-  std::string v3 = "hello";
+  std::string v3("hello");
   v2.set_foo(std::move(v3));
 
   int32_t v4 = 27ull;
@@ -465,7 +471,7 @@ TEST(Conformance, SimpleTableThenUint64_Encode) {
 TEST(Conformance, InlineXUnionInStruct_Encode) {
   conformance::TestInlineXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
   conformance::SampleXUnion v3;
@@ -474,7 +480,7 @@ TEST(Conformance, InlineXUnionInStruct_Encode) {
   v3.set_u(std::move(v4));
   v1.xu = std::move(v3);
 
-  std::string v5 = "after";
+  std::string v5("after");
   v1.after = std::move(v5);
 
   auto expected = std::vector<uint8_t>{
@@ -493,10 +499,10 @@ TEST(Conformance, InlineXUnionInStruct_Encode) {
 TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
   conformance::TestOptionalXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
-  std::string v3 = "after";
+  std::string v3("after");
   v1.after = std::move(v3);
 
   auto expected = std::vector<uint8_t>{
@@ -514,16 +520,16 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
 TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
   conformance::TestOptionalXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
-  auto v3 = std::make_unique<conformance::SampleXUnion>();
+  std::unique_ptr<conformance::SampleXUnion> v3 = std::make_unique<conformance::SampleXUnion>();
 
   uint32_t v4 = 3735928559ull;
   v3->set_u(std::move(v4));
   v1.xu = std::move(v3);
 
-  std::string v5 = "after";
+  std::string v5("after");
   v1.after = std::move(v5);
 
   auto expected = std::vector<uint8_t>{
@@ -544,10 +550,10 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
 
   conformance::XUnionInTable v2;
 
-  std::string v3 = "before";
+  std::string v3("before");
   v2.set_before(std::move(v3));
 
-  std::string v4 = "after";
+  std::string v4("after");
   v2.set_after(std::move(v4));
   v1.value = std::move(v2);
 
@@ -571,7 +577,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
 
   conformance::XUnionInTable v2;
 
-  std::string v3 = "before";
+  std::string v3("before");
   v2.set_before(std::move(v3));
 
   conformance::SampleXUnion v4;
@@ -580,7 +586,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
   v4.set_u(std::move(v5));
   v2.set_xu(std::move(v4));
 
-  std::string v6 = "after";
+  std::string v6("after");
   v2.set_after(std::move(v6));
   v1.value = std::move(v2);
 
@@ -623,12 +629,12 @@ TEST(Conformance, StrictXUnion_Encode) {
 TEST(Conformance, AddEthernetDeviceRequest_Encode) {
   conformance::TestAddEthernetDeviceRequest v1;
 
-  std::string v2 = "@/dev/sys/pci/00:03.0/e1000/ethernet";
+  std::string v2("@/dev/sys/pci/00:03.0/e1000/ethernet");
   v1.topological_path = std::move(v2);
 
   conformance::InterfaceConfig v3;
 
-  std::string v4 = "ethp0003";
+  std::string v4("ethp0003");
   v3.name = std::move(v4);
 
   conformance::IpAddressConfig v5;
@@ -704,7 +710,7 @@ TEST(Conformance, Optionals_Encode) {
   conformance::EmptyStruct v2;
   v1.s = std::move(v2);
 
-  auto v3 = std::make_unique<conformance::EmptyStruct>();
+  std::unique_ptr<conformance::EmptyStruct> v3 = std::make_unique<conformance::EmptyStruct>();
   v1.s2 = std::move(v3);
 
   conformance::TableWithEmptyStruct v4;
@@ -719,7 +725,8 @@ TEST(Conformance, Optionals_Encode) {
   v6.set_s(std::move(v7));
   v1.xu = std::move(v6);
 
-  auto v8 = std::make_unique<conformance::XUnionWithEmptyStruct>();
+  std::unique_ptr<conformance::XUnionWithEmptyStruct> v8 =
+      std::make_unique<conformance::XUnionWithEmptyStruct>();
 
   conformance::EmptyStruct v9;
   v8->set_s(std::move(v9));
@@ -731,7 +738,8 @@ TEST(Conformance, Optionals_Encode) {
   v10.set_s(std::move(v11));
   v1.u = std::move(v10);
 
-  auto v12 = std::make_unique<conformance::UnionWithEmptyStruct>();
+  std::unique_ptr<conformance::UnionWithEmptyStruct> v12 =
+      std::make_unique<conformance::UnionWithEmptyStruct>();
 
   conformance::EmptyStruct v13;
   v12->set_s(std::move(v13));
@@ -761,43 +769,62 @@ TEST(Conformance, Arrays_Encode) {
 
   int32_t v2 = 1ull;
   int32_t v3 = 2ull;
-  auto v4 = std::array<int32_t, 2>{v2, v3};
+  auto v4 = std::array<int32_t, 2>{std::move(v2), std::move(v3)};
   v1.arr_int = std::move(v4);
 
-  std::string v5 = "a";
-  std::string v6 = "b";
-  auto v7 = std::array<std::string, 2>{v5, v6};
+  std::string v5("a");
+  std::string v6("b");
+  auto v7 = std::array<std::string, 2>{std::move(v5), std::move(v6)};
   v1.arr_string = std::move(v7);
 
-  conformance::StructWithInt v8;
+  ::fidl::StringPtr v8("c");
+  ::fidl::StringPtr v9;
+  auto v10 = std::array<::fidl::StringPtr, 2>{std::move(v8), std::move(v9)};
+  v1.arr_nullable_string = std::move(v10);
 
-  int32_t v9 = 1ull;
-  v8.x = std::move(v9);
-  conformance::StructWithInt v10;
+  conformance::StructWithInt v11;
 
-  int32_t v11 = 2ull;
-  v10.x = std::move(v11);
-  auto v12 = std::array<conformance::StructWithInt, 2>{v8, v10};
-  v1.arr_struct = std::move(v12);
+  int32_t v12 = 1ull;
+  v11.x = std::move(v12);
+  conformance::StructWithInt v13;
 
-  int32_t v13 = 1ull;
   int32_t v14 = 2ull;
-  int32_t v15 = 3ull;
-  auto v16 = std::array<int32_t, 3>{v13, v14, v15};
-  int32_t v17 = 4ull;
-  int32_t v18 = 5ull;
-  int32_t v19 = 6ull;
-  auto v20 = std::array<int32_t, 3>{v17, v18, v19};
-  auto v21 = std::array<std::array<int32_t, 3>, 2>{v16, v20};
-  v1.arr_arr_int = std::move(v21);
+  v13.x = std::move(v14);
+  auto v15 = std::array<conformance::StructWithInt, 2>{std::move(v11), std::move(v13)};
+  v1.arr_struct = std::move(v15);
+
+  std::unique_ptr<conformance::StructWithInt> v16;
+  std::unique_ptr<conformance::StructWithInt> v17 = std::make_unique<conformance::StructWithInt>();
+
+  int32_t v18 = 16909060ull;
+  v17->x = std::move(v18);
+  auto v19 =
+      std::array<std::unique_ptr<conformance::StructWithInt>, 2>{std::move(v16), std::move(v17)};
+  v1.arr_nullable_struct = std::move(v19);
+
+  int32_t v20 = 1ull;
+  int32_t v21 = 2ull;
+  int32_t v22 = 3ull;
+  auto v23 = std::array<int32_t, 3>{std::move(v20), std::move(v21), std::move(v22)};
+  int32_t v24 = 4ull;
+  int32_t v25 = 5ull;
+  int32_t v26 = 6ull;
+  auto v27 = std::array<int32_t, 3>{std::move(v24), std::move(v25), std::move(v26)};
+  auto v28 = std::array<std::array<int32_t, 3>, 2>{std::move(v23), std::move(v27)};
+  v1.arr_arr_int = std::move(v28);
 
   auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,
 
   };
 
@@ -807,45 +834,84 @@ TEST(Conformance, Arrays_Encode) {
 TEST(Conformance, Vectors_Encode) {
   conformance::StructWithVectors v1;
 
-  auto v2 = std::vector<int32_t>{};
+  std::vector<int32_t> v2;
   v1.vec_empty = std::move(v2);
 
   int32_t v3 = 1ull;
   int32_t v4 = 2ull;
-  auto v5 = std::vector<int32_t>{v3, v4};
+  std::vector<int32_t> v5;
+  v5.push_back(std::move(v3));
+  v5.push_back(std::move(v4));
   v1.vec_int = std::move(v5);
 
-  std::string v6 = "a";
-  std::string v7 = "b";
-  auto v8 = std::vector<std::string>{v6, v7};
+  std::string v6("a");
+  std::string v7("b");
+  std::vector<std::string> v8;
+  v8.push_back(std::move(v6));
+  v8.push_back(std::move(v7));
   v1.vec_string = std::move(v8);
 
-  conformance::StructWithInt v9;
+  ::fidl::StringPtr v9;
+  ::fidl::StringPtr v10("c");
+  ::fidl::StringPtr v11;
+  std::vector<::fidl::StringPtr> v12;
+  v12.push_back(std::move(v9));
+  v12.push_back(std::move(v10));
+  v12.push_back(std::move(v11));
+  v1.vec_nullable_string = std::move(v12);
 
-  int32_t v10 = 1ull;
-  v9.x = std::move(v10);
-  auto v11 = std::vector<conformance::StructWithInt>{v9};
-  v1.vec_struct = std::move(v11);
+  conformance::StructWithInt v13;
 
-  int32_t v12 = 1ull;
-  int32_t v13 = 2ull;
-  auto v14 = std::vector<int32_t>{v12, v13};
-  int32_t v15 = 3ull;
-  auto v16 = std::vector<int32_t>{v15};
-  auto v17 = std::vector<std::vector<int32_t>>{v14, v16};
-  v1.vec_vec_int = std::move(v17);
+  int32_t v14 = 1ull;
+  v13.x = std::move(v14);
+  std::vector<conformance::StructWithInt> v15;
+  v15.push_back(std::move(v13));
+  v1.vec_struct = std::move(v15);
+
+  std::unique_ptr<conformance::StructWithInt> v16;
+  std::unique_ptr<conformance::StructWithInt> v17;
+  std::unique_ptr<conformance::StructWithInt> v18 = std::make_unique<conformance::StructWithInt>();
+
+  int32_t v19 = 2ull;
+  v18->x = std::move(v19);
+  std::vector<std::unique_ptr<conformance::StructWithInt>> v20;
+  v20.push_back(std::move(v16));
+  v20.push_back(std::move(v17));
+  v20.push_back(std::move(v18));
+  v1.vec_nullable_struct = std::move(v20);
+
+  int32_t v21 = 1ull;
+  int32_t v22 = 2ull;
+  std::vector<int32_t> v23;
+  v23.push_back(std::move(v21));
+  v23.push_back(std::move(v22));
+  int32_t v24 = 3ull;
+  std::vector<int32_t> v25;
+  v25.push_back(std::move(v24));
+  std::vector<std::vector<int32_t>> v26;
+  v26.push_back(std::move(v23));
+  v26.push_back(std::move(v25));
+  v1.vec_vec_int = std::move(v26);
 
   auto expected = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1433,7 +1499,10 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
 
   uint8_t v13 = 9ull;
   v10.elem3 = std::move(v13);
-  auto v14 = std::vector<conformance::ThreeByte>{v2, v6, v10};
+  std::vector<conformance::ThreeByte> v14;
+  v14.push_back(std::move(v2));
+  v14.push_back(std::move(v6));
+  v14.push_back(std::move(v10));
   v1.elems = std::move(v14);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1471,7 +1540,10 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
 
   uint8_t v10 = 15ull;
   v8.elem2 = std::move(v10);
-  auto v11 = std::vector<conformance::FiveByte>{v2, v5, v8};
+  std::vector<conformance::FiveByte> v11;
+  v11.push_back(std::move(v2));
+  v11.push_back(std::move(v5));
+  v11.push_back(std::move(v8));
   v1.elems = std::move(v11);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1517,7 +1589,7 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
 
   uint8_t v13 = 9ull;
   v10.elem3 = std::move(v13);
-  auto v14 = std::array<conformance::ThreeByte, 3>{v2, v6, v10};
+  auto v14 = std::array<conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
   v1.elems = std::move(v14);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1554,7 +1626,7 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
 
   uint8_t v10 = 15ull;
   v8.elem2 = std::move(v10);
-  auto v11 = std::array<conformance::FiveByte, 3>{v2, v5, v8};
+  auto v11 = std::array<conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
   v1.elems = std::move(v11);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1584,13 +1656,13 @@ TEST(Conformance, EmptyStructSandwich_Decode) {
 
   conformance::EmptyStructSandwich v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
   conformance::EmptyStruct v3;
   v1.es = std::move(v3);
 
-  std::string v4 = "after";
+  std::string v4("after");
   v1.after = std::move(v4);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1730,7 +1802,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
 
   conformance::TableWithStringAndVector v2;
 
-  std::string v3 = "hello";
+  std::string v3("hello");
   v2.set_foo(std::move(v3));
 
   int32_t v4 = 27ull;
@@ -1785,7 +1857,7 @@ TEST(Conformance, InlineXUnionInStruct_Decode) {
 
   conformance::TestInlineXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
   conformance::SampleXUnion v3;
@@ -1794,7 +1866,7 @@ TEST(Conformance, InlineXUnionInStruct_Decode) {
   v3.set_u(std::move(v4));
   v1.xu = std::move(v3);
 
-  std::string v5 = "after";
+  std::string v5("after");
   v1.after = std::move(v5);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1813,10 +1885,10 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
 
   conformance::TestOptionalXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
-  std::string v3 = "after";
+  std::string v3("after");
   v1.after = std::move(v3);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1836,16 +1908,16 @@ TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
 
   conformance::TestOptionalXUnionInStruct v1;
 
-  std::string v2 = "before";
+  std::string v2("before");
   v1.before = std::move(v2);
 
-  auto v3 = std::make_unique<conformance::SampleXUnion>();
+  std::unique_ptr<conformance::SampleXUnion> v3 = std::make_unique<conformance::SampleXUnion>();
 
   uint32_t v4 = 3735928559ull;
   v3->set_u(std::move(v4));
   v1.xu = std::move(v3);
 
-  std::string v5 = "after";
+  std::string v5("after");
   v1.after = std::move(v5);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -1869,10 +1941,10 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
 
   conformance::XUnionInTable v2;
 
-  std::string v3 = "before";
+  std::string v3("before");
   v2.set_before(std::move(v3));
 
-  std::string v4 = "after";
+  std::string v4("after");
   v2.set_after(std::move(v4));
   v1.value = std::move(v2);
 
@@ -1899,7 +1971,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
 
   conformance::XUnionInTable v2;
 
-  std::string v3 = "before";
+  std::string v3("before");
   v2.set_before(std::move(v3));
 
   conformance::SampleXUnion v4;
@@ -1908,7 +1980,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
   v4.set_u(std::move(v5));
   v2.set_xu(std::move(v4));
 
-  std::string v6 = "after";
+  std::string v6("after");
   v2.set_after(std::move(v6));
   v1.value = std::move(v2);
 
@@ -1951,12 +2023,12 @@ TEST(Conformance, AddEthernetDeviceRequest_Decode) {
 
   conformance::TestAddEthernetDeviceRequest v1;
 
-  std::string v2 = "@/dev/sys/pci/00:03.0/e1000/ethernet";
+  std::string v2("@/dev/sys/pci/00:03.0/e1000/ethernet");
   v1.topological_path = std::move(v2);
 
   conformance::InterfaceConfig v3;
 
-  std::string v4 = "ethp0003";
+  std::string v4("ethp0003");
   v3.name = std::move(v4);
 
   conformance::IpAddressConfig v5;
@@ -2038,7 +2110,7 @@ TEST(Conformance, Optionals_Decode) {
   conformance::EmptyStruct v2;
   v1.s = std::move(v2);
 
-  auto v3 = std::make_unique<conformance::EmptyStruct>();
+  std::unique_ptr<conformance::EmptyStruct> v3 = std::make_unique<conformance::EmptyStruct>();
   v1.s2 = std::move(v3);
 
   conformance::TableWithEmptyStruct v4;
@@ -2053,7 +2125,8 @@ TEST(Conformance, Optionals_Decode) {
   v6.set_s(std::move(v7));
   v1.xu = std::move(v6);
 
-  auto v8 = std::make_unique<conformance::XUnionWithEmptyStruct>();
+  std::unique_ptr<conformance::XUnionWithEmptyStruct> v8 =
+      std::make_unique<conformance::XUnionWithEmptyStruct>();
 
   conformance::EmptyStruct v9;
   v8->set_s(std::move(v9));
@@ -2065,7 +2138,8 @@ TEST(Conformance, Optionals_Decode) {
   v10.set_s(std::move(v11));
   v1.u = std::move(v10);
 
-  auto v12 = std::make_unique<conformance::UnionWithEmptyStruct>();
+  std::unique_ptr<conformance::UnionWithEmptyStruct> v12 =
+      std::make_unique<conformance::UnionWithEmptyStruct>();
 
   conformance::EmptyStruct v13;
   v12->set_s(std::move(v13));
@@ -2077,12 +2151,17 @@ TEST(Conformance, Optionals_Decode) {
 
 TEST(Conformance, Arrays_Decode) {
   auto input = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,
 
   };
 
@@ -2090,35 +2169,49 @@ TEST(Conformance, Arrays_Decode) {
 
   int32_t v2 = 1ull;
   int32_t v3 = 2ull;
-  auto v4 = std::array<int32_t, 2>{v2, v3};
+  auto v4 = std::array<int32_t, 2>{std::move(v2), std::move(v3)};
   v1.arr_int = std::move(v4);
 
-  std::string v5 = "a";
-  std::string v6 = "b";
-  auto v7 = std::array<std::string, 2>{v5, v6};
+  std::string v5("a");
+  std::string v6("b");
+  auto v7 = std::array<std::string, 2>{std::move(v5), std::move(v6)};
   v1.arr_string = std::move(v7);
 
-  conformance::StructWithInt v8;
+  ::fidl::StringPtr v8("c");
+  ::fidl::StringPtr v9;
+  auto v10 = std::array<::fidl::StringPtr, 2>{std::move(v8), std::move(v9)};
+  v1.arr_nullable_string = std::move(v10);
 
-  int32_t v9 = 1ull;
-  v8.x = std::move(v9);
-  conformance::StructWithInt v10;
+  conformance::StructWithInt v11;
 
-  int32_t v11 = 2ull;
-  v10.x = std::move(v11);
-  auto v12 = std::array<conformance::StructWithInt, 2>{v8, v10};
-  v1.arr_struct = std::move(v12);
+  int32_t v12 = 1ull;
+  v11.x = std::move(v12);
+  conformance::StructWithInt v13;
 
-  int32_t v13 = 1ull;
   int32_t v14 = 2ull;
-  int32_t v15 = 3ull;
-  auto v16 = std::array<int32_t, 3>{v13, v14, v15};
-  int32_t v17 = 4ull;
-  int32_t v18 = 5ull;
-  int32_t v19 = 6ull;
-  auto v20 = std::array<int32_t, 3>{v17, v18, v19};
-  auto v21 = std::array<std::array<int32_t, 3>, 2>{v16, v20};
-  v1.arr_arr_int = std::move(v21);
+  v13.x = std::move(v14);
+  auto v15 = std::array<conformance::StructWithInt, 2>{std::move(v11), std::move(v13)};
+  v1.arr_struct = std::move(v15);
+
+  std::unique_ptr<conformance::StructWithInt> v16;
+  std::unique_ptr<conformance::StructWithInt> v17 = std::make_unique<conformance::StructWithInt>();
+
+  int32_t v18 = 16909060ull;
+  v17->x = std::move(v18);
+  auto v19 =
+      std::array<std::unique_ptr<conformance::StructWithInt>, 2>{std::move(v16), std::move(v17)};
+  v1.arr_nullable_struct = std::move(v19);
+
+  int32_t v20 = 1ull;
+  int32_t v21 = 2ull;
+  int32_t v22 = 3ull;
+  auto v23 = std::array<int32_t, 3>{std::move(v20), std::move(v21), std::move(v22)};
+  int32_t v24 = 4ull;
+  int32_t v25 = 5ull;
+  int32_t v26 = 6ull;
+  auto v27 = std::array<int32_t, 3>{std::move(v24), std::move(v25), std::move(v26)};
+  auto v28 = std::array<std::array<int32_t, 3>, 2>{std::move(v23), std::move(v27)};
+  v1.arr_arr_int = std::move(v28);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
@@ -2129,13 +2222,21 @@ TEST(Conformance, Vectors_Decode) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2144,33 +2245,64 @@ TEST(Conformance, Vectors_Decode) {
 
   conformance::StructWithVectors v1;
 
-  auto v2 = std::vector<int32_t>{};
+  std::vector<int32_t> v2;
   v1.vec_empty = std::move(v2);
 
   int32_t v3 = 1ull;
   int32_t v4 = 2ull;
-  auto v5 = std::vector<int32_t>{v3, v4};
+  std::vector<int32_t> v5;
+  v5.push_back(std::move(v3));
+  v5.push_back(std::move(v4));
   v1.vec_int = std::move(v5);
 
-  std::string v6 = "a";
-  std::string v7 = "b";
-  auto v8 = std::vector<std::string>{v6, v7};
+  std::string v6("a");
+  std::string v7("b");
+  std::vector<std::string> v8;
+  v8.push_back(std::move(v6));
+  v8.push_back(std::move(v7));
   v1.vec_string = std::move(v8);
 
-  conformance::StructWithInt v9;
+  ::fidl::StringPtr v9;
+  ::fidl::StringPtr v10("c");
+  ::fidl::StringPtr v11;
+  std::vector<::fidl::StringPtr> v12;
+  v12.push_back(std::move(v9));
+  v12.push_back(std::move(v10));
+  v12.push_back(std::move(v11));
+  v1.vec_nullable_string = std::move(v12);
 
-  int32_t v10 = 1ull;
-  v9.x = std::move(v10);
-  auto v11 = std::vector<conformance::StructWithInt>{v9};
-  v1.vec_struct = std::move(v11);
+  conformance::StructWithInt v13;
 
-  int32_t v12 = 1ull;
-  int32_t v13 = 2ull;
-  auto v14 = std::vector<int32_t>{v12, v13};
-  int32_t v15 = 3ull;
-  auto v16 = std::vector<int32_t>{v15};
-  auto v17 = std::vector<std::vector<int32_t>>{v14, v16};
-  v1.vec_vec_int = std::move(v17);
+  int32_t v14 = 1ull;
+  v13.x = std::move(v14);
+  std::vector<conformance::StructWithInt> v15;
+  v15.push_back(std::move(v13));
+  v1.vec_struct = std::move(v15);
+
+  std::unique_ptr<conformance::StructWithInt> v16;
+  std::unique_ptr<conformance::StructWithInt> v17;
+  std::unique_ptr<conformance::StructWithInt> v18 = std::make_unique<conformance::StructWithInt>();
+
+  int32_t v19 = 2ull;
+  v18->x = std::move(v19);
+  std::vector<std::unique_ptr<conformance::StructWithInt>> v20;
+  v20.push_back(std::move(v16));
+  v20.push_back(std::move(v17));
+  v20.push_back(std::move(v18));
+  v1.vec_nullable_struct = std::move(v20);
+
+  int32_t v21 = 1ull;
+  int32_t v22 = 2ull;
+  std::vector<int32_t> v23;
+  v23.push_back(std::move(v21));
+  v23.push_back(std::move(v22));
+  int32_t v24 = 3ull;
+  std::vector<int32_t> v25;
+  v25.push_back(std::move(v24));
+  std::vector<std::vector<int32_t>> v26;
+  v26.push_back(std::move(v23));
+  v26.push_back(std::move(v25));
+  v1.vec_vec_int = std::move(v26);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
@@ -2660,7 +2792,7 @@ TEST(Conformance, Float64Max_Decode) {
 TEST(Conformance, StringExceedsLimit_Encode_Failure) {
   conformance::Length2StringWrapper v1;
 
-  std::string v2 = "abc";
+  std::string v2("abc");
   v1.length_2_string = std::move(v2);
 
   zx_status_t expected = ZX_ERR_INVALID_ARGS;
