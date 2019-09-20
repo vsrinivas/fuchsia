@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "threading_model_fixture.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/media/audio/audio_core:audio_core_lib",
+    "//zircon/public/lib/async-testing",
+  ]
+}

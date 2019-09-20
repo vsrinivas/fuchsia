@@ -4,8 +4,6 @@
 
 #include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/files/directory.h"
@@ -13,6 +11,7 @@
 #include "src/lib/files/path.h"
 #include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
 namespace media::audio {
 namespace {
@@ -43,7 +42,7 @@ static constexpr HwGainState kDefaultInitialHwGainState = {
     1.0f     /* gain_step */
 };
 
-class AudioDeviceSettingsPersistenceTest : public gtest::TestLoopFixture {
+class AudioDeviceSettingsPersistenceTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() override {
     TestLoopFixture::SetUp();
@@ -67,7 +66,7 @@ class AudioDeviceSettingsPersistenceTest : public gtest::TestLoopFixture {
 
 TEST_F(AudioDeviceSettingsPersistenceTest, InitializeShouldCreateSettingsPath) {
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
 
   EXPECT_FALSE(files::IsDirectory(kSettingsPath));
@@ -78,7 +77,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, InitializeShouldCreateSettingsPath) {
 TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithNoDefaultShouldWriteSettings) {
   {
     AudioDeviceSettingsPersistence settings_persistence(
-        dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+        &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
         kTestConfigSources);
     settings_persistence.Initialize();
 
@@ -99,7 +98,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithNoDefaultShouldWriteS
   // Create a new AudioDeviceSettingsPersistence/AudioDeviceSettings; verify settings are loaded.
   {
     AudioDeviceSettingsPersistence settings_persistence(
-        dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+        &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
         kTestConfigSources);
     settings_persistence.Initialize();
     auto settings =
@@ -127,7 +126,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithDefault) {
                                kDefaultSettings.data(), kDefaultSettings.size()));
 
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
   settings_persistence.Initialize();
 
@@ -166,7 +165,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithDefault) {
 
 TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldNotWriteUnmodifiedSettings) {
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
   settings_persistence.Initialize();
 
@@ -192,7 +191,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldNotWriteUnmo
 
 TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldWriteModifiedSettings) {
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
   settings_persistence.Initialize();
 
@@ -219,7 +218,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldWriteModifie
 
 TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsModificationsExtendsWritebackDelay) {
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
   settings_persistence.Initialize();
 
@@ -258,7 +257,7 @@ TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsModificationsExten
 
 TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsWritebackIsBoundedByMaxUpdateDelay) {
   AudioDeviceSettingsPersistence settings_persistence(
-      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      &threading_model(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
       kTestConfigSources);
   settings_persistence.Initialize();
 

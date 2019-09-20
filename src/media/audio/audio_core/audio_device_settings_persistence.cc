@@ -40,21 +40,26 @@ AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer() {
   return result;
 }
 
-AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher)
-    : AudioDeviceSettingsPersistence(dispatcher, CreateDefaultSettingsSerializer(),
+AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(ThreadingModel* threading_model)
+    : AudioDeviceSettingsPersistence(threading_model, CreateDefaultSettingsSerializer(),
                                      kDefaultConfigSources) {}
 
 AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
-    async_dispatcher_t* dispatcher, std::unique_ptr<AudioDeviceSettingsSerialization> serialization)
-    : AudioDeviceSettingsPersistence(dispatcher, std::move(serialization), kDefaultConfigSources) {}
+    ThreadingModel* threading_model,
+    std::unique_ptr<AudioDeviceSettingsSerialization> serialization)
+    : AudioDeviceSettingsPersistence(threading_model, std::move(serialization),
+                                     kDefaultConfigSources) {}
 
 AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
-    async_dispatcher_t* dispatcher, std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
+    ThreadingModel* threading_model,
+    std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
     const AudioDeviceSettingsPersistence::ConfigSource (&configs)[2])
-    : configs_(configs), dispatcher_(dispatcher), serialization_(std::move(serialization)) {
+    : configs_(configs),
+      threading_model_(*threading_model),
+      serialization_(std::move(serialization)) {
   // We expect one default one non-default config path.
   FXL_DCHECK(configs_[0].is_default != configs_[1].is_default);
-  FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(threading_model);
   FXL_DCHECK(serialization_);
 }
 
@@ -193,7 +198,7 @@ zx::time AudioDeviceSettingsPersistence::Commit(AudioDeviceSettingsHolder* holde
     return zx::time::infinite();
   }
 
-  zx::time now = async::Now(dispatcher_);
+  zx::time now = async::Now(threading_model_.FidlDomain().dispatcher());
   if (force || (now >= holder->next_commit_time)) {
     CancelCommitTimeouts(holder);
     serialization_->Serialize(holder->storage.get(), *holder->settings);
@@ -208,7 +213,7 @@ void AudioDeviceSettingsPersistence::UpdateCommitTimeouts(AudioDeviceSettingsHol
     FXL_LOG(DFATAL) << "Device settings files disabled; we should not be here.";
   }
 
-  zx::time now = async::Now(dispatcher_);
+  zx::time now = async::Now(threading_model_.FidlDomain().dispatcher());
   if (holder->max_commit_time == zx::time::infinite()) {
     holder->max_commit_time = now + kMaxUpdateDelay;
   }
@@ -251,7 +256,7 @@ void AudioDeviceSettingsPersistence::CommitDirtySettings() {
 
   // If we need to update in the future, schedule a commit task to do so.
   if (next != zx::time::infinite()) {
-    commit_settings_task_.PostForTime(dispatcher_, next);
+    commit_settings_task_.PostForTime(threading_model_.IoDomain().dispatcher(), next);
   }
 }
 

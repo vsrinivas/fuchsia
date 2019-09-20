@@ -13,6 +13,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/media/audio/audio_core/audio_device_settings_serialization.h"
+#include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
 
@@ -23,9 +24,9 @@ class AudioDeviceSettingsPersistence {
 
   static std::unique_ptr<AudioDeviceSettingsSerialization> CreateDefaultSettingsSerializer();
 
-  explicit AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher);
+  explicit AudioDeviceSettingsPersistence(ThreadingModel* threading_model);
 
-  AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher,
+  AudioDeviceSettingsPersistence(ThreadingModel* threading_model,
                                  std::unique_ptr<AudioDeviceSettingsSerialization> serialization);
 
   struct ConfigSource {
@@ -39,7 +40,7 @@ class AudioDeviceSettingsPersistence {
   //
   // The array reference must be guaranteed to outlive this instance as an internal reference will
   // be retained.
-  AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher,
+  AudioDeviceSettingsPersistence(ThreadingModel* threading_model,
                                  std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
                                  const AudioDeviceSettingsPersistence::ConfigSource (&configs)[2]);
 
@@ -109,7 +110,7 @@ class AudioDeviceSettingsPersistence {
                     &AudioDeviceSettingsPersistence::CommitDirtySettingsThunk>
       commit_settings_task_{this};
 
-  async_dispatcher_t* dispatcher_;
+  ThreadingModel& threading_model_;
   std::unique_ptr<AudioDeviceSettingsSerialization> serialization_;
 };
 

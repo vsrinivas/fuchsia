@@ -43,7 +43,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
                              CommandLineOptions options)
     : threading_model_(*threading_model),
       effects_loader_{CreateEffectsLoaderWithFallback()},
-      device_settings_persistence_(threading_model->IoDomain().dispatcher()),
+      device_settings_persistence_(threading_model),
       device_manager_(threading_model, effects_loader_.get(), &device_settings_persistence_, *this),
       audio_admin_(this, threading_model->FidlDomain().dispatcher()),
       component_context_(std::move(component_context)),

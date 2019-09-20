@@ -243,6 +243,7 @@ executable("unittest_bin") {
 
   deps = [
     ":audio_core_lib",
+    "testing",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
