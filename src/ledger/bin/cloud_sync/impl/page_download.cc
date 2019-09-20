@@ -376,7 +376,8 @@ bool PageDownload::ReadDiffEntry(const cloud_provider::DiffEntry& change,
                             storage_->GetObjectIdentifierFactory(), &result->entry);
 }
 
-// TODO(35364): decrypt commit ids.
+// TODO(35364): The cloud now sends us remote commit identifiers. We need some way to map them to
+// local commit identifiers for this to work.
 bool PageDownload::DecodeAndParseDiff(const cloud_provider::DiffPack& diff_pack,
                                       storage::CommitId* base_commit,
                                       std::vector<storage::EntryChange>* changes) {

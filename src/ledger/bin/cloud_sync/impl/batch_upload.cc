@@ -317,7 +317,8 @@ void BatchUpload::EncodeDiff(storage::CommitIdView commit_id,
   if (commit_id == storage::kFirstPageCommitId) {
     diff.mutable_base_state()->set_empty_page({});
   } else {
-    diff.mutable_base_state()->set_at_commit(convert::ToArray(commit_id));
+    diff.mutable_base_state()->set_at_commit(
+        convert::ToArray(encryption_service_->EncodeCommitId(commit_id.ToString())));
   }
 
   for (auto& entry : entries) {

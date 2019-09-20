@@ -328,14 +328,16 @@ TEST_F(BatchUploadTest, DiffFromEmpty) {
   EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 }
 
-// Test an upload of a commit with a diff from another commit.
+// Test an upload of a commit with a diff from another commit uploaded in the same batch. Check that
+// the commit ids are consistent.
 TEST_F(BatchUploadTest, DiffFromCommit) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content", true));
+  commits.push_back(storage_.NewCommit("id1", "base_content", true));
+  commits.push_back(storage_.NewCommit("id2", "content", true));
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
-  storage_.diffs_to_return["id"] =
-      std::make_pair("other_commit", std::vector<storage::EntryChange>{});
+  storage_.diffs_to_return["id1"] = std::make_pair("id0", std::vector<storage::EntryChange>{});
+  storage_.diffs_to_return["id2"] = std::make_pair("id1", std::vector<storage::EntryChange>{});
 
   batch_upload->Start();
   RunLoopUntilIdle();
@@ -343,26 +345,44 @@ TEST_F(BatchUploadTest, DiffFromCommit) {
   EXPECT_EQ(error_calls_, 0u);
 
   // Verify the artifacts uploaded to cloud provider.
-  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
-  EXPECT_EQ(page_cloud_.received_commits.front().id(),
-            convert::ToArray(encryption_service_.EncodeCommitId("id")));
-  EXPECT_EQ(
-      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
-      "content");
-  ASSERT_TRUE(page_cloud_.received_commits.front().has_diff());
-  ASSERT_TRUE(page_cloud_.received_commits.front().diff().has_base_state());
-  ASSERT_TRUE(page_cloud_.received_commits.front().diff().base_state().is_at_commit());
-  EXPECT_EQ(page_cloud_.received_commits.front().diff().base_state().at_commit(),
-            convert::ToArray("other_commit"));
-  ASSERT_TRUE(page_cloud_.received_commits.front().diff().has_changes());
-  EXPECT_THAT(page_cloud_.received_commits.front().diff().changes(), SizeIs(0));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id1")));
+  EXPECT_EQ(page_cloud_.received_commits[1].id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id2")));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
+            "base_content");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
+            "content");
+
+  // Check the diffs.
+  ASSERT_TRUE(page_cloud_.received_commits[0].has_diff());
+  ASSERT_TRUE(page_cloud_.received_commits[0].diff().has_base_state());
+  ASSERT_TRUE(page_cloud_.received_commits[0].diff().base_state().is_at_commit());
+  EXPECT_EQ(page_cloud_.received_commits[0].diff().base_state().at_commit(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id0")));
+  ASSERT_TRUE(page_cloud_.received_commits[0].diff().has_changes());
+  EXPECT_THAT(page_cloud_.received_commits[0].diff().changes(), SizeIs(0));
+
+  ASSERT_TRUE(page_cloud_.received_commits[1].has_diff());
+  ASSERT_TRUE(page_cloud_.received_commits[1].diff().has_base_state());
+  ASSERT_TRUE(page_cloud_.received_commits[1].diff().base_state().is_at_commit());
+  EXPECT_EQ(page_cloud_.received_commits[1].diff().base_state().at_commit(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id1")));
+  ASSERT_TRUE(page_cloud_.received_commits[1].diff().has_changes());
+  EXPECT_THAT(page_cloud_.received_commits[1].diff().changes(), SizeIs(0));
+
+  // Check that the base commit id in the second diff is the remote commit id of the first commit.
+  EXPECT_EQ(page_cloud_.received_commits[1].diff().base_state().at_commit(),
+            page_cloud_.received_commits[0].id());
 
   EXPECT_TRUE(page_cloud_.received_objects.empty());
 
   // Verify the sync status in storage.
-  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
-  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id2"), 1u);
   EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 }
 
