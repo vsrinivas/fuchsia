@@ -74,6 +74,10 @@ void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id, Mes
 bool ReadRequest(MessageReader* reader, SysInfoRequest* request, uint32_t* transaction_id);
 void WriteReply(const SysInfoReply& reply, uint32_t transaction_id, MessageWriter* writer);
 
+// ProcessStatus
+bool ReadRequest(MessageReader* reader, ProcessStatusRequest* request, uint32_t* transaction_id);
+void WriteReply(const ProcessStatusReply& reply, uint32_t transaction_id, MessageWriter* writer);
+
 // ThreadStatus
 bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request, uint32_t* transaction_id);
 void WriteReply(const ThreadStatusReply& reply, uint32_t transaction_id, MessageWriter* writer);

@@ -71,6 +71,9 @@ class RemoteAPI {
   virtual void OnSysInfo(const debug_ipc::SysInfoRequest& request,
                          debug_ipc::SysInfoReply* reply) = 0;
 
+  virtual void OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
+                               debug_ipc::ProcessStatusReply* reply) = 0;
+
   virtual void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                               debug_ipc::ThreadStatusReply* reply) = 0;
 

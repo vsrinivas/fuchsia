@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/features.h>
 #include <zircon/status.h>
@@ -31,8 +32,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
-#include <lib/fit/defer.h>
 
 namespace debug_agent {
 
@@ -354,6 +353,32 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
   zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &reply->hw_breakpoint_count);
 
   zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &reply->hw_watchpoint_count);
+}
+
+void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
+                                 debug_ipc::ProcessStatusReply* reply) {
+  auto it = procs_.find(request.process_koid);
+  if (it == procs_.end()) {
+    reply->status = ZX_ERR_NOT_FOUND;
+    return;
+  }
+
+  DebuggedProcess* process = it->second.get();
+
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this, process]() mutable {
+    debug_ipc::NotifyProcessStarting notify = {};
+    notify.koid = process->koid();
+    notify.name = process->name();
+
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteNotifyProcessStarting(notify, &writer);
+    stream()->Write(writer.MessageComplete());
+
+    // Send the modules notification.
+    process->SuspendAndSendModulesIfKnown();
+  });
+
+  reply->status = ZX_OK;
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
@@ -709,8 +734,7 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
                      << ", koid: " << process_koid << ", filter: " << filter
                      << ", component id: " << description.component_id;
 
-  // Send notification, then create debug process so that thread notification is
-  // sent after this.
+  // Send notification, then create debug process so that thread notification is sent after this.
   debug_ipc::NotifyProcessStarting notify;
   notify.koid = process_koid;
   notify.name = description.process_name;

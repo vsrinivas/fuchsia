@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 14;
+constexpr uint32_t kProtocolVersion = 15;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -37,6 +37,7 @@ struct MsgHeader {
     kLaunch,
     kModules,
     kPause,
+    kProcessStatus,
     kProcessTree,
     kQuitAgent,
     kReadMemory,
@@ -107,6 +108,17 @@ struct StatusRequest {};
 struct StatusReply {
   // All the processes that the debug agent is currently attached.
   std::vector<uint64_t> process_koids;
+};
+
+// Triggers the system to send the notifications (process starting, modules) for an already
+// attached process.
+struct ProcessStatusRequest {
+  uint64_t process_koid = 0;
+};
+
+struct ProcessStatusReply {
+  // Returns ZX_OK if the process exists and the agent was able to retrieve the data.
+  uint32_t status = 0;
 };
 
 struct LaunchRequest {

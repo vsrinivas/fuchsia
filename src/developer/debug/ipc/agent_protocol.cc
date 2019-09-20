@@ -146,6 +146,24 @@ void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter
   Serialize(reply.process_koids, writer);
 }
 
+// ProcessStatus -----------------------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, ProcessStatusRequest* request, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint64(&request->process_koid))
+    return false;
+  return true;
+}
+
+void WriteReply(const ProcessStatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kProcessStatus, transaction_id);
+  writer->WriteUint32(reply.status);
+}
+
 // Launch ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transaction_id) {

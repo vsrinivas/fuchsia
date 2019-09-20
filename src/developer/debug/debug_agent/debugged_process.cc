@@ -76,6 +76,9 @@ void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process handle)
     : koid(process_koid), handle(std::move(handle)) {}
+DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
+                                                     std::string process_name, zx::process handle)
+    : koid(process_koid), handle(std::move(handle)), name(std::move(process_name)) {}
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info,
                                  std::shared_ptr<ObjectProvider> object_provider)

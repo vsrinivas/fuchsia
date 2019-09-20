@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_IPC_MESSAGE_WRITER_H_
 #define SRC_DEVELOPER_DEBUG_IPC_MESSAGE_WRITER_H_
 
+#include <stdint.h>
+
 #include <vector>
 
 #include "src/developer/debug/ipc/protocol.h"

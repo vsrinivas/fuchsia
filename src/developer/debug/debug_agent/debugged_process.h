@@ -36,6 +36,7 @@ struct DebuggedProcessCreateInfo {
   DebuggedProcessCreateInfo();
   // Constructor with only the required fields.
   DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process);
+  DebuggedProcessCreateInfo(zx_koid_t process_koid, std::string process_name, zx::process);
 
   // Required.
   zx_koid_t koid = 0;
@@ -111,7 +112,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // This is used in the case where we attach to an existing process or a new forked process and the
   // debug address is known. The client expects the threads to be suspended so it can resolve
   // breakpoints and resume them.
-  void SuspendAndSendModulesIfKnown();
+  virtual void SuspendAndSendModulesIfKnown();
 
   // Sends the currently loaded modules to the client with the given list of paused threads.
   void SendModuleNotification(std::vector<uint64_t> paused_thread_koids);
@@ -205,7 +206,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
                                  size_t* actual) override;
 
-  DebugAgent* debug_agent_ = nullptr;           // Non-owning.
+  DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
   zx_koid_t koid_;
   zx::process process_;

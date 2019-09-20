@@ -101,6 +101,11 @@ void RemoteAPI::SysInfo(const debug_ipc::SysInfoRequest& request,
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::ProcessStatus(const debug_ipc::ProcessStatusRequest& request,
+                              fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 void RemoteAPI::ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                              fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   FXL_NOTREACHED();

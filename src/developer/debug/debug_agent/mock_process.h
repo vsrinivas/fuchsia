@@ -14,6 +14,7 @@ namespace debug_agent {
 class MockProcess : public DebuggedProcess {
  public:
   MockProcess(zx_koid_t koid, std::shared_ptr<ObjectProvider> object_provider);
+  MockProcess(zx_koid_t koid, std::string name, std::shared_ptr<ObjectProvider> object_provider);
   ~MockProcess();
 
   DebuggedThread* AddThread(zx_koid_t koid);

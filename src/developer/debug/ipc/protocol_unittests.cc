@@ -135,6 +135,26 @@ TEST(Protocol, StatusReply) {
   EXPECT_EQ(second.process_koids[2], initial.process_koids[2]);
 }
 
+// ProcessStatus -----------------------------------------------------------------------------------
+
+TEST(Protocol, ProcessStatusRequest) {
+  ProcessStatusRequest initial;
+  initial.process_koid = 0x1234;
+
+  ProcessStatusRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(second.process_koid, initial.process_koid);
+}
+
+TEST(Protocol, ProcessStatusReply) {
+  ProcessStatusReply initial;
+  initial.status = 0x1234;
+
+  ProcessStatusReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(second.status, initial.status);
+}
+
 // Launch ------------------------------------------------------------------------------------------
 
 TEST(Protocol, LaunchRequest) {

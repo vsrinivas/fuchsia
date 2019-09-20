@@ -67,6 +67,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "RemoveBreakpoint";
     case MsgHeader::Type::kSysInfo:
       return "SysInfo";
+    case MsgHeader::Type::kProcessStatus:
+      return "ProcessStatus";
     case MsgHeader::Type::kThreadStatus:
       return "ThreadStatus";
     case MsgHeader::Type::kAddressSpace:
