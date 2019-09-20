@@ -74,7 +74,6 @@ group("banjo") {
     "ddk.protocol.usb.modeswitch",
     "ddk.protocol.usb.phy",
     "ddk.protocol.usb.request",
-    "ddk.protocol.wlanphy",
     "ddk.protocol.wlanphyimpl",
     "zircon.device.audio",
     "zircon.device.block",
