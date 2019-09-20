@@ -17,6 +17,7 @@
 #include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
+#include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/logging.h"
@@ -187,6 +188,9 @@ void BatchUpload::UploadEncryptedObject(storage::ObjectIdentifier object_identif
                         current_uploads_--;
 
                         if (status != cloud_provider::Status::OK) {
+                          if (IsPermanentError(status)) {
+                            error_type_ = ErrorType::PERMANENT;
+                          }
                           EnqueueForRetryAndSignalError(std::move(object_identifier));
                           return;
                         }
@@ -387,7 +391,8 @@ void BatchUpload::UploadCommits() {
                                FXL_DCHECK(!errored_);
                                if (status != cloud_provider::Status::OK) {
                                  errored_ = true;
-                                 on_error_(ErrorType::TEMPORARY);
+                                 on_error_(IsPermanentError(status) ? ErrorType::PERMANENT
+                                                                    : ErrorType::TEMPORARY);
                                  return;
                                }
                                auto waiter =

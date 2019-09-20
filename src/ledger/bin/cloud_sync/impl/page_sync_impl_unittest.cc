@@ -387,7 +387,7 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   EXPECT_EQ(page_cloud_.get_commits_calls, 1u);
 
   // Create a local commit, but make the upload fail.
-  page_cloud_.commit_status_to_return = cloud_provider::Status::SERVER_ERROR;
+  page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   auto commit1 = AddLocalCommit("content1");
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 

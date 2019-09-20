@@ -267,6 +267,34 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   EXPECT_TRUE(storage_.objects_marked_as_synced.empty());
 }
 
+// Test an upload that fails on uploading objects with a permanent error.
+TEST_F(BatchUploadTest, FailedObjectUploadPermanentError) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
+
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  page_cloud_.object_status_to_return = cloud_provider::Status::NOT_FOUND;
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::PERMANENT);
+
+  // Verify that no commits were uploaded.
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
+
+  // Verify that neither the objects nor the commit were marked as synced.
+  EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
+  EXPECT_TRUE(storage_.objects_marked_as_synced.empty());
+}
+
 // Test an upload of a commit with a diff from the empty page.
 TEST_F(BatchUploadTest, DiffFromEmpty) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
@@ -476,8 +504,7 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   EXPECT_EQ(error_calls_, 1u);
   EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::TEMPORARY);
 
-  // Verify that the objects were uploaded to cloud provider and marked as
-  // synced.
+  // Verify that the objects were uploaded to cloud provider and marked as synced.
   EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
   EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
                 page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
@@ -489,7 +516,43 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
   EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
 
-  // Verify that neither the commit wasn't marked as synced.
+  // Verify that the commit wasn't marked as synced.
+  EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
+}
+
+// Test an upload that fails permanently on uploading the commit.
+TEST_F(BatchUploadTest, FailedCommitUploadPermanentError) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
+
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  page_cloud_.commit_status_to_return = cloud_provider::Status::NOT_FOUND;
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::PERMANENT);
+
+  // Verify that the objects were uploaded to cloud provider and marked as synced.
+  EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]),
+            "obj_data2");
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
+
+  // Verify that neither commit was marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
 }
 

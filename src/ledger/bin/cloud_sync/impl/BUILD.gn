@@ -25,6 +25,8 @@ source_set("impl") {
     "page_sync_impl.h",
     "page_upload.cc",
     "page_upload.h",
+    "status.cc",
+    "status.h",
     "user_sync_impl.cc",
     "user_sync_impl.h",
   ]
