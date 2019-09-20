@@ -46,18 +46,24 @@ def main():
     source_dir = os.path.join(fidl_base, lib_with_dash)
 
     # Move the sources.
-    shutil.move(source_dir, sdk_dir)
+    # The destination directory sometimes already exists.
+    if not os.path.isdir(sdk_dir):
+        os.mkdir(sdk_dir)
+    for _, _, files in os.walk(source_dir):
+        for file in files:
+            shutil.move(os.path.join(source_dir, file), sdk_dir)
+        break
 
     # Edit the build file in its new location.
     in_sdk = False
     for line in fileinput.FileInput(os.path.join(sdk_dir, 'BUILD.gn'),
                                     inplace=True):
-        if line == 'sdk = false':
+        if 'sdk = false' in line:
             continue
-        if line == 'sdk = true':
+        if 'sdk = true' in line:
             in_sdk = True
-            print('sdk_category = "partner"')
-            print('api = "//sdk/fidl/' + lib + '/' + lib + '.api"')
+            print('  sdk_category = "partner"')
+            print('  api = "' + lib + '.api"')
             continue
         line = line.replace('$zx_build/public/gn/fidl.gni',
                             '//build/fidl/fidl.gni')
@@ -73,7 +79,6 @@ def main():
 
     # Set up an alias in the old location.
     # Fixing references to the library will likely require a soft transition.
-    os.mkdir(source_dir)
     with open(os.path.join(source_dir, 'BUILD.gn'), 'w') as build_file:
         build_file.writelines([
             '# Copyright 2019 The Fuchsia Authors. All rights reserved.\n',
