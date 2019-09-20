@@ -8,7 +8,6 @@ group("tools") {
   public_deps = [
     ":infratools",
     "//tools/blackout:all",
-    "//tools/build:tools($host_toolchain)",
     "//tools/debroot($host_toolchain)",
     "//tools/fidl/fidldoc",
     "//tools/fidlcat:fidlcat_host",
@@ -19,23 +18,28 @@ group("tools") {
 
 group("infratools") {
   testonly = true
-  toolchains = [ host_toolchain ]
 
-  # When building for linux, the infrastructure requires tooling across
-  # both architectures.
+  # Building with the following toolchains ensures that, for the associated
+  # tools, there will be at most one tool for every (name, cpu, os) tuple.
+  toolchains = []
   if (host_os == "linux") {
-    toolchains += [ linux_arm64_toolchain ]
+    toolchains += [
+      linux_arm64_toolchain,
+      linux_x64_toolchain,
+    ]
+  } else if (host_os == "mac") {
+    toolchains += [ host_toolchain ]
   }
 
   public_deps = []
-  foreach(tc, toolchains) {
+  foreach(toolchain, toolchains) {
     public_deps += [
-      "//tools/botanist($tc)",
-      "//tools/build/ninjatrace($tc)",
-      "//tools/debug:tools($tc)",
-      "//tools/integration:tools($tc)",
-      "//tools/size_checker/cmd:size_checker($tc)",
-      "//tools/testing:tools($tc)",
+      "//tools/botanist($toolchain)",
+      "//tools/build:tools($toolchain)",
+      "//tools/debug:tools($toolchain)",
+      "//tools/integration:tools($toolchain)",
+      "//tools/size_checker/cmd:size_checker($toolchain)",
+      "//tools/testing:tools($toolchain)",
     ]
   }
 }
