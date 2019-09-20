@@ -204,4 +204,45 @@ TEST(IndexWalker2, WalkIntoMultiple) {
   EXPECT_TRUE(EqualsElements(walker.current(), expected_root));
 }
 
+TEST(IndexWalker2, WalkIntoAnonNS) {
+  Index2 index;
+  auto& root = index.root();
+
+  // Anonymous and "ns" namespace at the top level.
+  auto anon_ns = root.AddChild(IndexNode2::Kind::kNamespace, "");
+  const char kNsName[] = "ns";
+  auto ns_ns = root.AddChild(IndexNode2::Kind::kNamespace, kNsName);
+
+  // Add a "Struct" at the toplevel and in the anon namespace.
+  const char kStructName[] = "Struct";
+  auto toplevel_struct = root.AddChild(IndexNode2::Kind::kType, kStructName);
+  auto anon_struct = anon_ns->AddChild(IndexNode2::Kind::kType, kStructName);
+
+  // Add a ns::<anon>::<anon>::OtherStruct type.
+  const char kOtherStructName[] = "OtherStruct";
+  auto ns_anon_ns = ns_ns->AddChild(IndexNode2::Kind::kNamespace, "");
+  auto ns_anon_anon_ns = ns_anon_ns->AddChild(IndexNode2::Kind::kNamespace, "");
+  auto otherstruct = ns_anon_anon_ns->AddChild(IndexNode2::Kind::kType, kOtherStructName);
+
+  IndexWalker2 walker(&index);
+  // The initial search should be in the root and in the toplevel anonymous namespace.
+  IndexWalker2::Stage expected_root{&root, anon_ns};
+  EXPECT_TRUE(EqualsElements(walker.current(), expected_root));
+
+  // Walking into "Struct" should give both since we implicitly went into the anon namespace.
+  EXPECT_TRUE(walker.WalkInto(ParsedIdentifier(kStructName)));
+  IndexWalker2::Stage expected_struct{toplevel_struct, anon_struct};
+  EXPECT_TRUE(EqualsElements(walker.current(), expected_struct));
+
+  // Go back to the root.
+  EXPECT_TRUE(walker.WalkUp());
+
+  // Walk into "ns::OtherStruct" which should find the one with two anon namespaces in it.
+  ParsedIdentifier ns_otherstruct;
+  ASSERT_TRUE(ExprParser::ParseIdentifier("ns::OtherStruct", &ns_otherstruct).ok());
+  EXPECT_TRUE(walker.WalkInto(ns_otherstruct));
+  IndexWalker2::Stage expected_otherstruct{otherstruct};
+  EXPECT_TRUE(EqualsElements(walker.current(), expected_otherstruct));
+}
+
 }  // namespace zxdb

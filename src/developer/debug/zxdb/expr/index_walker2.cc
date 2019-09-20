@@ -23,6 +23,31 @@ namespace {
 // considering the name at the space.
 inline bool IsNameEnd(char ch) { return isspace(ch) || ch == '<'; }
 
+// Finds all anonymous children of the nodes in the given stage and appends them recursively until
+// there are no more to add.
+//
+// In the future we may want an option to trigger whether this function is called or not.
+void AddAnonymousChildrenToStage(IndexWalker2::Stage* stage) {
+  // This implements a breadth-first search, adding all unnamed items.
+  const std::string kEmpty;
+
+  size_t last_pass_begin = 0;
+  while (last_pass_begin < stage->size()) {
+    size_t last_pass_end = stage->size();
+    for (size_t i = last_pass_begin; i < last_pass_end; i++) {
+      const IndexNode2* node = (*stage)[i];
+
+      // Add unnamed items. The common case is anonymous namespaces but we might also have unnamed
+      // types for anonymous enums and structs.
+      if (auto found = node->namespaces().find(kEmpty); found != node->namespaces().end())
+        stage->push_back(&found->second);
+      if (auto found = node->types().find(kEmpty); found != node->types().end())
+        stage->push_back(&found->second);
+    }
+    last_pass_begin = last_pass_end;
+  }
+}
+
 }  // namespace
 
 IndexWalker2::IndexWalker2(const Index2* index) {
@@ -31,6 +56,7 @@ IndexWalker2::IndexWalker2(const Index2* index) {
   path_.reserve(8);
 
   path_.push_back({&index->root()});
+  AddAnonymousChildrenToStage(&path_[0]);
 }
 
 IndexWalker2::~IndexWalker2() = default;
@@ -44,6 +70,9 @@ bool IndexWalker2::WalkUp() {
   return false;
 }
 
+// TODO(bug 6410) When we encounter an "inline" namespace, implicitly walk into it here, or have
+// that controllable as an option. Inline namespaces produce a namespace with an implicit "using"
+// statement.
 bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
   const Stage& old_stage = path_.back();
 
@@ -87,6 +116,8 @@ bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
 
   if (new_stage.empty())
     return false;  // No children found.
+
+  AddAnonymousChildrenToStage(&new_stage);
 
   // Commit the new found stuff.
   path_.push_back(std::move(new_stage));
