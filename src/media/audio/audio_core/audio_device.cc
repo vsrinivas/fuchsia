@@ -167,18 +167,18 @@ void AudioDevice::ShutdownSelf() {
 fit::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
   fit::bridge<void, zx_status_t> bridge;
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this),
-                                              completer = std::move(bridge.completer)]() mutable {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
-    zx_status_t res = self->Init();
-    if (res != ZX_OK) {
-      self->Cleanup();
-      completer.complete_error(res);
-      return;
-    }
-    self->OnWakeup();
-    completer.complete_ok();
-  });
+  async::PostTask(mix_domain_->dispatcher(),
+                  [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+                    zx_status_t res = self->Init();
+                    if (res != ZX_OK) {
+                      self->Cleanup();
+                      completer.complete_error(res);
+                      return;
+                    }
+                    self->OnWakeup();
+                    completer.complete_ok();
+                  });
   return bridge.consumer.promise();
 }
 
@@ -195,12 +195,12 @@ fit::promise<void> AudioDevice::Shutdown() {
 
   // Give our derived class, and our driver, a chance to clean up resources.
   fit::bridge<void> bridge;
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this),
-                                              completer = std::move(bridge.completer)]() mutable {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
-    self->Cleanup();
-    completer.complete_ok();
-  });
+  async::PostTask(mix_domain_->dispatcher(),
+                  [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+                    self->Cleanup();
+                    completer.complete_ok();
+                  });
   return bridge.consumer.promise();
 }
 

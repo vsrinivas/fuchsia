@@ -35,6 +35,12 @@ fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
   };
 }
 
+fit::function<fuchsia::sys::LaunchInfo()> AudioLaunchInfo(
+    std::shared_ptr<sys::ServiceDirectory> services) {
+  return LaunchInfoWithIsolatedDevmgrForUrl(
+      "fuchsia-pkg://fuchsia.com/audio#meta/audio.cmx", {}, services);
+}
+
 fit::function<fuchsia::sys::LaunchInfo()> AudioCoreLaunchInfo(
     std::shared_ptr<sys::ServiceDirectory> services) {
   return LaunchInfoWithIsolatedDevmgrForUrl(
@@ -103,6 +109,8 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
                                      fuchsia::media::AudioCore::Name_);
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
                                      fuchsia::media::AudioDeviceEnumerator::Name_);
+  services->AddServiceWithLaunchInfo("audio", AudioLaunchInfo(real_services),
+                                     fuchsia::media::Audio::Name_);
   services->AddServiceWithLaunchInfo("virtual_audio", VirtualAudioLaunchInfo(real_services),
                                      fuchsia::virtualaudio::Control::Name_);
   services->AddServiceWithLaunchInfo("virtual_audio", VirtualAudioLaunchInfo(real_services),

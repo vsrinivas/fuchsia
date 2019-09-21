@@ -10,7 +10,7 @@
 #include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/media/audio/lib/test/audio_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -18,7 +18,7 @@ namespace media::audio::test {
 // AudioLoopbackTest
 //
 // Base Class for testing simple playback and capture with loopback.
-class AudioLoopbackTest : public media::audio::test::AudioTestBase {
+class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
  protected:
   static constexpr int32_t kSampleRate = 8000;
   static constexpr int kChannelCount = 1;
@@ -69,43 +69,32 @@ std::shared_ptr<sys::ServiceDirectory> AudioLoopbackTest::service_directory_ = n
 
 // static
 void AudioLoopbackTest::SetUpTestSuite() {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  if (!service_directory_) {
-    service_directory_ = sys::ComponentContext::Create()->svc();
-  }
-  ASSERT_NE(service_directory_, nullptr);
-
-  // Disable device settings files
-  fuchsia::media::AudioCoreSyncPtr audio_core_sync;
-  service_directory_->Connect(audio_core_sync.NewRequest());
-  ASSERT_EQ(ZX_OK, audio_core_sync->EnableDeviceSettings(false));
+  HermeticAudioTest::SetUpTestSuite();
 
   // Ensure that virtualaudio is enabled, before testing commences.
   fuchsia::virtualaudio::ControlSyncPtr control_sync;
-  service_directory_->Connect(control_sync.NewRequest());
+  environment()->ConnectToService(control_sync.NewRequest());
   ASSERT_EQ(ZX_OK, control_sync->Enable());
 }
 
 // static
 void AudioLoopbackTest::TearDownTestSuite() {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_NE(service_directory_, nullptr);
 
   // Ensure that virtualaudio is disabled, by the time we leave.
   fuchsia::virtualaudio::ControlSyncPtr control_sync;
-  service_directory_->Connect(control_sync.NewRequest());
+  environment()->ConnectToService(control_sync.NewRequest());
   ASSERT_EQ(ZX_OK, control_sync->Disable());
 
-  media::audio::test::AudioTestBase::TearDownTestSuite();
+  HermeticAudioTest::TearDownTestSuite();
 }
 
 // AudioLoopbackTest implementation
 //
 void AudioLoopbackTest::SetUp() {
-  AudioTestBase::SetUp();
-  ASSERT_NE(service_directory_, nullptr);
+  HermeticAudioTest::SetUp();
 
-  service_directory_->Connect(audio_dev_enum_.NewRequest());
+  environment()->ConnectToService(audio_dev_enum_.NewRequest());
   ASSERT_TRUE(audio_dev_enum_.is_bound());
   audio_dev_enum_.set_error_handler(ErrorHandler());
 
@@ -126,7 +115,7 @@ void AudioLoopbackTest::SetUp() {
         ASSERT_TRUE(false) << "Default route changed while test was running.";
       });
 
-  service_directory_->Connect(audio_sync_.NewRequest());
+  environment()->ConnectToService(audio_sync_.NewRequest());
   audio_sync_->SetSystemGain(0.0f);
   audio_sync_->SetSystemMute(false);
 }
@@ -160,7 +149,7 @@ void AudioLoopbackTest::TearDown() {
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   EXPECT_TRUE(audio_sync_.is_bound());
 
-  AudioTestBase::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 // SetUpVirtualAudioOutput
@@ -198,7 +187,7 @@ void AudioLoopbackTest::SetUpVirtualAudioOutput() {
   ExpectCallback();
 
   // Loopback capture requires an active audio output. Use virtualaudio to add a virtual output.
-  service_directory_->Connect(virtual_audio_output_sync_.NewRequest());
+  environment()->ConnectToService(virtual_audio_output_sync_.NewRequest());
 
   // Create an output device using default settings, save it while tests run.
   auto status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
