@@ -71,7 +71,15 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
   void Quit() { quit_callback_(); }
 
-  size_t num_sessions();
+  size_t num_sessions() {
+    int num_sessions = 0;
+    for (auto& binding : session_bindings_.bindings()) {
+      if (binding->is_bound()) {
+        num_sessions++;
+      }
+    }
+    return num_sessions;
+  }
 
   void SetInitialized();
 
@@ -102,10 +110,10 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // Closures that will be run when all systems are initialized.
   std::vector<fit::closure> run_after_initialized_;
 
+  // Session bindings rely on setup of systems_; order matters.
+  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
-
-  std::map<Session*, std::unique_ptr<Session>> sessions_;
 
   size_t next_session_id_ = 1;
 

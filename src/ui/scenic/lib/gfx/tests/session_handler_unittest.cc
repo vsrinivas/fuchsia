@@ -16,7 +16,7 @@ TEST(SessionHandlerTest,
      WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
   SessionManager manager;
   SessionContext session_context;
-  scenic_impl::Session session(kSessionId, nullptr, nullptr);
+  scenic_impl::Session session(kSessionId, nullptr);
 
   CommandDispatcherContext dispatch_context(nullptr, &session, kSessionId);
 

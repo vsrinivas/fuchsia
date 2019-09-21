@@ -29,8 +29,7 @@ using SessionId = uint64_t;
 
 class Session final : public fuchsia::ui::scenic::Session {
  public:
-  Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-          fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+  Session(SessionId id, fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(
@@ -64,8 +63,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   void set_error_callback(fit::function<void(std::string)> callback) {
     reporter_->set_error_callback(std::move(callback));
   }
-
-  bool is_bound() { return binding_.is_bound(); }
 
  private:
   // Helper class which manages the reporting of events and errors to Scenic clients.
@@ -147,8 +144,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   TempSessionDelegate* GetTempSessionDelegate();
 
   std::shared_ptr<EventAndErrorReporter> reporter_;
-
-  fidl::Binding<fuchsia::ui::scenic::Session> binding_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 

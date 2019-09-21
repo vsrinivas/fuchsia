@@ -11,15 +11,11 @@
 
 namespace scenic_impl {
 
-Session::Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-                 fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+Session::Session(SessionId id, fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
     : id_(id),
       listener_(listener.Bind()),
       reporter_(std::make_shared<EventAndErrorReporter>(this)),
-      binding_(this, std::move(session_request)),
-      weak_factory_(this) {
-  FXL_DCHECK(!binding_.channel() || binding_.is_bound());
-}
+      weak_factory_(this) {}
 
 Session::~Session() {
   valid_ = false;

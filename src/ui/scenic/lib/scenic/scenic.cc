@@ -35,7 +35,10 @@ void Scenic::SetInitialized() {
   run_after_initialized_.clear();
 }
 
-void Scenic::CloseSession(Session* session) { sessions_.erase(session); }
+void Scenic::CloseSession(Session* session) {
+  const bool removed = session_bindings_.RemoveBinding(session);
+  FXL_DCHECK(removed) << "No binding found for Session " << session->id();
+}
 
 void Scenic::RunAfterInitialized(fit::closure closure) {
   if (initialized_) {
@@ -56,8 +59,8 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
 void Scenic::CreateSessionImmediately(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  auto session = std::make_unique<Session>(next_session_id_++, std::move(session_request),
-                                           std::move(listener));
+  auto session = std::make_unique<Session>(next_session_id_++, std::move(listener));
+
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
   std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers;
@@ -69,7 +72,7 @@ void Scenic::CreateSessionImmediately(
   }
   session->SetCommandDispatchers(std::move(dispatchers));
 
-  sessions_[session.get()] = std::move(session);
+  session_bindings_.AddBinding(std::move(session), std::move(session_request));
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
@@ -113,15 +116,6 @@ void Scenic::InitializeSnapshotService(
     std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot) {
   snapshot_ = std::move(snapshot);
   app_context_->outgoing()->AddPublicService(snapshot_bindings_.GetHandler(snapshot_.get()));
-}
-
-size_t Scenic::num_sessions() {
-  int num_sessions = 0;
-  for (auto&& elem : sessions_) {
-    if (elem.second->is_bound())
-      ++num_sessions;
-  }
-  return num_sessions;
 }
 
 }  // namespace scenic_impl
