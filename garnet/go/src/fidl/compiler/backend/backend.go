@@ -6,8 +6,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
@@ -32,9 +34,18 @@ var generators = map[string]GenerateFidl{
 
 func main() {
 	baseFlags := cmdline.BaseFlags()
+
+	validGenerators := make([]string, 0, len(generators))
+	for name := range generators {
+		validGenerators = append(validGenerators, name)
+	}
 	var generatorNames CommaSeparatedList
 	flag.Var(&generatorNames, "generators",
-		"Comma-separated list of names of generators to run")
+		fmt.Sprintf(`comma-separated list of names of generators to run
+valid generators: %s
+for Dart, use the fidlgen_dart executable
+for LLCPP, use the fidlgen_llcpp executable`,
+			strings.Join(validGenerators, ", ")))
 	flag.Parse()
 
 	if !flag.Parsed() || !baseFlags.Valid() {
