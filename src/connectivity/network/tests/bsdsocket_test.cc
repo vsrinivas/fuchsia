@@ -19,7 +19,71 @@
 #include "gtest/gtest.h"
 #include "util.h"
 
-namespace netstack {
+namespace {
+
+static void fill_stream_send_buf(int fd, int peer_fd) {
+  // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
+  // minimum allowed.
+  {
+    const int bufsize = 1;
+    socklen_t optlen = sizeof(bufsize);
+
+    EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsize, optlen), 0) << strerror(errno);
+    EXPECT_EQ(setsockopt(peer_fd, SOL_SOCKET, SO_RCVBUF, &bufsize, optlen), 0) << strerror(errno);
+  }
+
+  int sndbuf_opt;
+  socklen_t sndbuf_optlen = sizeof(sndbuf_opt);
+  EXPECT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf_opt, &sndbuf_optlen), 0)
+      << strerror(errno);
+  EXPECT_EQ(sndbuf_optlen, sizeof(sndbuf_opt));
+
+  int rcvbuf_opt;
+  socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
+  EXPECT_EQ(getsockopt(peer_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen), 0)
+      << strerror(errno);
+  EXPECT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
+
+  // Now that the buffers involved are minimal, we can temporarily make the socket non-blocking on
+  // Linux without introducing flakiness. We can't do that on Fuchsia because of the asynchronous
+  // copy from the zircon socket to the "real" send buffer, which takes a bit of time, so we use
+  // a small timeout which was empirically tested to ensure no flakiness is introduced.
+#if defined(__linux__)
+  int flags;
+  EXPECT_GE(flags = fcntl(fd, F_GETFL), 0) << strerror(errno);
+  EXPECT_EQ(fcntl(fd, F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
+#else
+  struct timeval original_tv;
+  socklen_t tv_len = sizeof(original_tv);
+  EXPECT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, &tv_len), 0) << strerror(errno);
+  EXPECT_EQ(tv_len, sizeof(original_tv));
+  const struct timeval tv = {
+      .tv_sec = 0,
+      .tv_usec = 1 << 16,  // ~65ms
+  };
+  EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+#endif
+
+  // buf size should be neither too small in which case too many writes operation is required
+  // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
+  // array.
+  int cnt = 0;
+  {
+    char buf[sndbuf_opt + rcvbuf_opt];
+    int size;
+    while ((size = write(fd, buf, sizeof(buf))) > 0) {
+      cnt += size;
+    }
+  }
+  EXPECT_GT(cnt, 0);
+  ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
+
+#if defined(__linux__)
+  EXPECT_EQ(fcntl(fd, F_SETFL, flags), 0) << strerror(errno);
+#else
+  EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, tv_len), 0) << strerror(errno);
+#endif
+}
 
 // Raw sockets are typically used for implementing custom protocols. We intend to support custom
 // protocols through structured FIDL APIs in the future, so this test ensures that raw sockets are
@@ -252,6 +316,55 @@ TEST(LocalhostTest, GetSockName) {
   ASSERT_EQ(sa.sa_family, AF_INET6);
 }
 
+TEST(NetStreamTest, PeerClosedPOLLOUT) {
+  int acptfd;
+  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  EXPECT_EQ(bind(acptfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  EXPECT_EQ(getsockname(acptfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  EXPECT_EQ(addrlen, sizeof(addr));
+
+  EXPECT_EQ(listen(acptfd, 1), 0) << strerror(errno);
+
+  int clientfd;
+  EXPECT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  EXPECT_EQ(connect(clientfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  int connfd;
+  EXPECT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+
+  fill_stream_send_buf(connfd, clientfd);
+
+  EXPECT_EQ(close(clientfd), 0) << strerror(errno);
+
+  struct pollfd pfd = {};
+  pfd.fd = connfd;
+  pfd.events = POLLOUT;
+  int n = poll(&pfd, 1, kTimeout);
+  EXPECT_GE(n, 0) << strerror(errno);
+  EXPECT_EQ(n, 1);
+#if defined(__linux__)
+  EXPECT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
+#else
+  // TODO(crbug.com/1005300): we should check that revents is exactly
+  // OUT|ERR|HUP. Currently, this is a bit racey, and we might see OUT and HUP
+  // but not ERR due to the hack in socket_server.go which references this same
+  // bug.
+  EXPECT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
+#endif
+
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
+}
+
 TEST(NetStreamTest, BlockingAcceptWrite) {
   int acptfd;
   ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
@@ -323,48 +436,7 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
 
   if (optname == SO_SNDTIMEO) {
-    // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
-    // minimum allowed.
-    int opt = 1;
-    socklen_t optlen = sizeof(opt);
-
-    EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &opt, optlen), 0) << strerror(errno);
-    EXPECT_EQ(setsockopt(server_fd, SOL_SOCKET, SO_RCVBUF, &opt, optlen), 0) << strerror(errno);
-
-    EXPECT_EQ(getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &opt, &optlen), 0) << strerror(errno);
-    EXPECT_EQ(optlen, sizeof(opt));
-
-    // Now that the buffers involved are minimal, we can temporarily make the socket non-blocking on
-    // Linux without introducing flakiness. We can't do that on Fuchsia because of the asynchronous
-    // copy from the zircon socket to the "real" send buffer, which takes a bit of time, so we use
-    // a small timeout which was empirically tested to ensure no flakiness is introduced.
-#if defined(__linux__)
-    int flags;
-    EXPECT_GE(flags = fcntl(client_fd, F_GETFL), 0) << strerror(errno);
-    EXPECT_EQ(fcntl(client_fd, F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
-#else
-    const struct timeval tv = {
-        .tv_sec = 0,
-        .tv_usec = 1 << 16,  // ~65ms
-    };
-    EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
-#endif
-
-    // buf size should be neither too small in which case too many writes operation is required
-    // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
-    // array.
-    char buf[opt];
-    int size = 0;
-    int cnt = 0;
-    while ((size = write(client_fd, buf, sizeof(buf))) > 0) {
-      cnt += size;
-    }
-    EXPECT_GT(cnt, 0);
-    ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
-
-#if defined(__linux__)
-    EXPECT_EQ(fcntl(client_fd, F_SETFL, flags), 0) << strerror(errno);
-#endif
+    fill_stream_send_buf(client_fd, server_fd);
   }
 
   // We want this to be a small number so the test is fast, but at least 1
@@ -1584,4 +1656,4 @@ TEST_P(NetSocketTest, SocketPeekTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
-}  // namespace netstack
+}  // namespace

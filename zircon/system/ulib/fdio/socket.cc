@@ -148,30 +148,34 @@ static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* ha
       }
     }
   }
-  zx_signals_t signals = ZXSIO_SIGNAL_ERROR;
+
+  zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
+  if (events & (POLLOUT | POLLHUP)) {
+    signals |= ZX_SOCKET_WRITE_DISABLED;
+  }
+  if (events & (POLLIN | POLLRDHUP)) {
+    signals |= ZX_SOCKET_PEER_WRITE_DISABLED;
+  }
+
   if (*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED) {
-    // if socket is connected
-    if (events & POLLIN) {
-      signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
-    }
+    // Can't subscribe to ZX_SOCKET_WRITABLE unless we're connected; such a subscription would
+    // immediately fire, since the socket buffer is almost certainly empty.
     if (events & POLLOUT) {
-      signals |= ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED;
+      signals |= ZX_SOCKET_WRITABLE;
+    }
+    // This is just here for symmetry with POLLOUT above.
+    if (events & POLLIN) {
+      signals |= ZX_SOCKET_READABLE;
     }
   } else {
-    // if socket is not connected
-    if (events & POLLIN) {
-      // signal when a listening socket gets an incoming connection
-      // or a connecting socket gets connected and receives data
-      signals |= ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
-                 ZX_SOCKET_PEER_CLOSED;
-    }
     if (events & POLLOUT) {
-      // signal when connect() operation is finished
+      // signal when connect() operation is finished.
       signals |= ZXSIO_SIGNAL_OUTGOING;
     }
-  }
-  if (events & POLLRDHUP) {
-    signals |= ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
+    if (events & POLLIN) {
+      // signal when a listening socket gets an incoming connection.
+      signals |= ZXSIO_SIGNAL_INCOMING;
+    }
   }
   *_signals = signals;
 }
@@ -185,26 +189,29 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
     }
   }
   uint32_t events = 0;
+  if (signals & ZX_SOCKET_PEER_CLOSED) {
+    events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
+  }
+  if (signals & ZX_SOCKET_WRITE_DISABLED) {
+    events |= POLLHUP | POLLOUT;
+  }
+  if (signals & ZX_SOCKET_PEER_WRITE_DISABLED) {
+    events |= POLLRDHUP | POLLIN;
+  }
   if (*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED) {
-    if (signals & (ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
-      events |= POLLIN;
-    }
-    if (signals & (ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED)) {
+    if (signals & ZX_SOCKET_WRITABLE) {
       events |= POLLOUT;
     }
-  } else {
-    if (signals & (ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED)) {
+    if (signals & ZX_SOCKET_READABLE) {
       events |= POLLIN;
     }
+  } else {
     if (signals & ZXSIO_SIGNAL_OUTGOING) {
       events |= POLLOUT;
     }
-  }
-  if (signals & ZXSIO_SIGNAL_ERROR) {
-    events |= POLLERR;
-  }
-  if (signals & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {
-    events |= POLLRDHUP;
+    if (signals & ZXSIO_SIGNAL_INCOMING) {
+      events |= POLLIN;
+    }
   }
   *_events = events;
 }
@@ -217,7 +224,7 @@ static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* han
                                    zx_signals_t* _signals) {
   zxio_socket_t* sio = fdio_get_zxio_socket(io);
   *handle = sio->pipe.socket.get();
-  zx_signals_t signals = ZXSIO_SIGNAL_ERROR;
+  zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
   if (events & POLLIN) {
     signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
   }
@@ -238,7 +245,7 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
   if (signals & (ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED)) {
     events |= POLLOUT;
   }
-  if (signals & ZXSIO_SIGNAL_ERROR) {
+  if (signals & ZX_SOCKET_PEER_CLOSED) {
     events |= POLLERR;
   }
   if (signals & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED)) {

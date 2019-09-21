@@ -100,20 +100,6 @@ executable("udptest") {
   ]
 }
 
-executable("closetest") {
-  testonly = true
-
-  sources = [
-    "closetest.c",
-  ]
-
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
-
-  libs = [ "zircon" ]
-}
-
 executable("sockopttest") {
   testonly = true
 

@@ -9,7 +9,6 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
-    "manual:closetest",
     "manual:gethostbyname_test",
     "manual:keepalivetest",
     "manual:mctest",
@@ -23,11 +22,6 @@ package("netstack_manual_tests") {
   ]
 
   binaries = [
-    {
-      name = "closetest"
-      shell = true
-    },
-
     {
       name = "gethostbyname_test"
       shell = true
