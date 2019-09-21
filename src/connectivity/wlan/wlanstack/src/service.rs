@@ -44,7 +44,7 @@ impl IfaceCounter {
 }
 
 pub async fn serve_device_requests(
-    iface_counter: IfaceCounter,
+    iface_counter: Arc<IfaceCounter>,
     cfg: ServiceCfg,
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
@@ -280,7 +280,10 @@ async fn create_iface<'a>(
     let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
 
-    let phy_info = phy.proxy.query().await
+    let phy_info = phy
+        .proxy
+        .query()
+        .await
         .map_err(|e| {
             error!("error sending query request to phy #{}: {}", phy_id, e);
             zx::Status::INTERNAL

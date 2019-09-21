@@ -12,6 +12,7 @@ test_package("wlan-hw-sim-test") {
     "connect_to_open_network",
     "connect_to_wpa2_network",
     "ethernet_tx_rx",
+    "multi_ifaces",
     "open_ap_connect",
     "rate_selection",
     "set_country",
@@ -60,6 +61,10 @@ test_package("wlan-hw-sim-test") {
     },
     {
       name = "simulate_scan"
+      environments = basic_envs
+    },
+    {
+      name = "multi_ifaces"
       environments = basic_envs
     },
     {

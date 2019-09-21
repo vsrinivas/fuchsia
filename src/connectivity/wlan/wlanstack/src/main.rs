@@ -107,7 +107,8 @@ async fn main() -> Result<(), Error> {
         iface_server,
         cobalt_reporter.map(Ok),
         telemetry_server.map(Ok),
-    ).await?;
+    )
+    .await?;
     Ok(())
 }
 
@@ -125,6 +126,7 @@ async fn serve_fidl(
     cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
+    let iface_counter = Arc::new(service::IfaceCounter::new());
 
     let fdio_server = fs.for_each_concurrent(CONCURRENT_LIMIT, move |s| {
         let phys = phys.clone();
@@ -133,19 +135,23 @@ async fn serve_fidl(
         let cobalt_sender = cobalt_sender.clone();
         let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
+        let iface_counter = iface_counter.clone();
         async move {
             match s {
-                IncomingServices::Device(stream) => service::serve_device_requests(
-                    service::IfaceCounter::new(),
-                    cfg,
-                    phys,
-                    ifaces,
-                    watcher_service,
-                    stream,
-                    inspect_tree,
-                    cobalt_sender,
-                )
-                .unwrap_or_else(|e| println!("{:?}", e)).await,
+                IncomingServices::Device(stream) => {
+                    service::serve_device_requests(
+                        iface_counter,
+                        cfg,
+                        phys,
+                        ifaces,
+                        watcher_service,
+                        stream,
+                        inspect_tree,
+                        cobalt_sender,
+                    )
+                    .unwrap_or_else(|e| println!("{:?}", e))
+                    .await
+                }
             }
         }
     });
