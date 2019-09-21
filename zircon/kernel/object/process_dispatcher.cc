@@ -779,7 +779,7 @@ class FindProcessByKoid final : public JobEnumerator {
  private:
   bool OnProcess(ProcessDispatcher* process) final {
     if (process->get_koid() == koid_) {
-      pd_ = fbl::WrapRefPtr(process);
+      pd_ = fbl::RefPtr(process);
       // Stop the enumeration.
       return false;
     }
@@ -804,7 +804,7 @@ fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(zx_koid_t koid
 
   auto iter =
       thread_list_.find_if([koid](const ThreadDispatcher& t) { return t.get_koid() == koid; });
-  return fbl::WrapRefPtr(iter.CopyPointer());
+  return fbl::RefPtr(iter.CopyPointer());
 }
 
 uintptr_t ProcessDispatcher::get_debug_addr() const {

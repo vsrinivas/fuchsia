@@ -1530,9 +1530,9 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // was to attenuate the rights of local_child_vmo.  The local_child_vmo counts as a child of
   // raw_parent_vmo for ZX_VMO_ZERO_CHILDREN.
   //
-  // The fbl::WrapRefPtr(this) is fairly similar (in this usage) to shared_from_this().
+  // The fbl::RefPtr(this) is fairly similar (in this usage) to shared_from_this().
   auto tracked_parent_vmo = std::unique_ptr<TrackedParentVmo>(new TrackedParentVmo(
-      fbl::WrapRefPtr(this), std::move(raw_parent_vmo),
+      fbl::RefPtr(this), std::move(raw_parent_vmo),
       [this, allocator](TrackedParentVmo* tracked_parent_vmo) mutable {
         auto node_handle = parent_vmos_.extract(tracked_parent_vmo->vmo().get());
         ZX_DEBUG_ASSERT(!node_handle || node_handle.mapped().get() == tracked_parent_vmo);

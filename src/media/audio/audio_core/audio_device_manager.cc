@@ -306,7 +306,7 @@ void AudioDeviceManager::OnSystemGain(bool changed) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnSystemGain");
   for (auto& device : devices_) {
     if (device.is_output() && (changed || device.system_gain_dirty)) {
-      UpdateDeviceToSystemGain(fbl::WrapRefPtr(&device));
+      UpdateDeviceToSystemGain(fbl::RefPtr(&device));
       NotifyDeviceGainChanged(device);
       device.system_gain_dirty = false;
     }
@@ -425,7 +425,7 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(AudioOutput* output,
     return;
 
   fbl::RefPtr<AudioLink> link =
-      AudioObject::LinkObjects(fbl::WrapRefPtr(audio_renderer), fbl::WrapRefPtr(output));
+      AudioObject::LinkObjects(fbl::RefPtr(audio_renderer), fbl::RefPtr(output));
   // TODO(johngro): get rid of the throttle output.  See MTWN-52
   if ((link != nullptr) && (output == throttle_output_.get())) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
@@ -498,7 +498,7 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
   if (!allow_unplugged && best && !best->plugged())
     return nullptr;
 
-  return fbl::WrapRefPtr(best);
+  return fbl::RefPtr(best);
 }
 
 // Our policy governing the routing of audio outputs has changed. For the output
@@ -705,7 +705,7 @@ void AudioDeviceManager::LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& de
   for (auto& audio_capturer : audio_capturers_) {
     if (audio_capturer.loopback() == link_to_loopbacks) {
       audio_capturer.UnlinkSources();
-      AudioObject::LinkObjects(std::move(device), fbl::WrapRefPtr(&audio_capturer));
+      AudioObject::LinkObjects(std::move(device), fbl::RefPtr(&audio_capturer));
     }
   }
 }

@@ -207,7 +207,7 @@ void PinnedMemoryTokenDispatcher::on_zero_handles() {
   } else {
     // Add to the quarantine list to prevent the underlying VMO from being
     // unpinned.
-    bti_->Quarantine(fbl::WrapRefPtr(this));
+    bti_->Quarantine(fbl::RefPtr(this));
   }
 }
 

@@ -207,7 +207,7 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   }
 
   childvn->RemoveInodeLink(transaction);
-  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(childvn);
   return kDirIteratorSaveSync;
 }
@@ -399,7 +399,7 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
   inode_.dirent_count++;
   inode_.seq_num++;
   InodeSync(args->transaction, kMxFsSyncMtime);
-  args->transaction->PinVnode(fbl::WrapRefPtr(this));
+  args->transaction->PinVnode(fbl::RefPtr(this));
   return ZX_OK;
 }
 
@@ -437,7 +437,7 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
       case kDirIteratorSaveSync:
         inode_.seq_num++;
         InodeSync(args->transaction, kMxFsSyncMtime);
-        args->transaction->PinVnode(fbl::WrapRefPtr(this));
+        args->transaction->PinVnode(fbl::RefPtr(this));
         return ZX_OK;
       case kDirIteratorDone:
       default:
@@ -650,7 +650,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     return status;
   }
 
-  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(vn);
   fs_->CommitTransaction(std::move(transaction));
 
@@ -681,7 +681,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   if (status != ZX_OK) {
     return status;
   }
-  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::RefPtr(this));
   fs_->CommitTransaction(std::move(transaction));
   success = true;
   return ZX_OK;
@@ -882,7 +882,7 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   // We have successfully added the vn to a new location. Increment the link count.
   target->AddLink();
   target->InodeSync(transaction.get(), kMxFsSyncDefault);
-  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(target);
   fs_->CommitTransaction(std::move(transaction));
   return ZX_OK;

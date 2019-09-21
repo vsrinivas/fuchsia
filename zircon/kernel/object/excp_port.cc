@@ -49,7 +49,7 @@ zx_status_t ExceptionPort::Create(Type type, fbl::RefPtr<PortDispatcher> port, u
 
   // ExceptionPort's ctor causes the first ref to be adopted,
   // so we should only wrap.
-  *out_eport = fbl::WrapRefPtr<ExceptionPort>(eport);
+  *out_eport = fbl::RefPtr<ExceptionPort>(eport);
   return ZX_OK;
 }
 

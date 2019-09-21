@@ -249,7 +249,7 @@ void IntelHDAController::DeviceRelease() {
 
 zx_status_t IntelHDAController::GetChannel(fidl_txn_t* txn) {
   dispatcher::Channel::ProcessHandler phandler(
-      [controller = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [controller = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
         return controller->ProcessClientRequest(channel);
       });

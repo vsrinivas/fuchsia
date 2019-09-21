@@ -72,7 +72,7 @@ class AsyncTearDownVnode : public FdCountVnode {
     fs::Vnode::SyncCallback callback;
     {
       fbl::RefPtr<AsyncTearDownVnode> vn =
-          fbl::WrapRefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
+          fbl::RefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
       // A) Identify when the sync has started being processed.
       sync_completion_signal(&vn->completions_[0]);
       // B) Wait until the connection has been closed.

@@ -31,7 +31,7 @@ void Task::ExecuteTask(async_dispatcher_t* dispatcher, async::TaskBase* task, zx
 void Task::AddDependency(const fbl::RefPtr<Task>& dependency) {
   dependencies_.push_back(dependency.get());
   dependency->self_ = dependency;
-  dependency->RegisterDependent(fbl::WrapRefPtr(this));
+  dependency->RegisterDependent(fbl::RefPtr(this));
 }
 
 void Task::RegisterDependent(fbl::RefPtr<Task> dependent) {

@@ -147,7 +147,7 @@ void File::AllocateData() {
 
     // In the future we could resolve on a per state (i.e. promise) basis, but since swaps are
     // currently only made within a single thread, for now it is okay to resolve everything.
-    transaction->PinVnode(fbl::WrapRefPtr(this));
+    transaction->PinVnode(fbl::RefPtr(this));
     transaction->Resolve();
 
     // Return remaining reserved blocks back to the allocation state.
@@ -300,13 +300,13 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   if (*out_actual != 0) {
     // Enqueue metadata allocated via write.
     InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
-    transaction->PinVnode(fbl::WrapRefPtr(this));
+    transaction->PinVnode(fbl::RefPtr(this));
     fs_->CommitTransaction(std::move(transaction));
 
 #ifdef __Fuchsia__
     // Enqueue data allocated via write.
     fs_->EnqueueDataTask(
-        [file = fbl::WrapRefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
+        [file = fbl::RefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
 #endif
   }
 
@@ -355,13 +355,13 @@ zx_status_t File::Truncate(size_t len) {
   //
   // Ensure our inode is consistent with that metadata.
   InodeSync(transaction.get(), kMxFsSyncMtime);
-  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::RefPtr(this));
   fs_->CommitTransaction(std::move(transaction));
 #ifdef __Fuchsia__
   // Enqueue data allocated via write.
   if (len != inode_.size) {
     fs_->EnqueueDataTask(
-        [file = fbl::WrapRefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
+        [file = fbl::RefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
   }
 #endif
   return ZX_OK;

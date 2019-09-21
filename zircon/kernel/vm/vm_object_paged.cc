@@ -465,7 +465,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     vmo->parent_offset_ = offset;
     vmo->parent_limit_ = size;
 
-    vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(this), offset);
+    vmo->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
 
     // add the new vmo as a child before we do anything, since its
     // dtor expects to find it in its parent's child list
@@ -590,7 +590,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
       clone_parent = this;
     }
 
-    vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(clone_parent), offset);
+    vmo->InitializeOriginalParentLocked(fbl::RefPtr(clone_parent), offset);
 
     // add the new vmo as a child before we do anything, since its
     // dtor expects to find it in its parent's child list

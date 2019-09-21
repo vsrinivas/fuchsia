@@ -844,7 +844,7 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
   if (status != ZX_OK) {
     return status;
   }
-  *dev = fbl::WrapRefPtr(inout->device);
+  *dev = fbl::RefPtr(inout->device);
   return ZX_OK;
 }
 

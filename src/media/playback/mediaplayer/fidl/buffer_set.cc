@@ -208,7 +208,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
   // buffer set is no longer current when the buffer is recycled.
   fbl::RefPtr<PayloadBuffer> payload_buffer = PayloadBuffer::Create(
       buffer_size_, payload_vmo->at_offset(offset_in_vmo), payload_vmo, offset_in_vmo,
-      [this, buffer_index, this_ref = fbl::WrapRefPtr(this)](PayloadBuffer* payload_buffer) {
+      [this, buffer_index, this_ref = fbl::RefPtr(this)](PayloadBuffer* payload_buffer) {
         fit::closure free_buffer_callback;
 
         {

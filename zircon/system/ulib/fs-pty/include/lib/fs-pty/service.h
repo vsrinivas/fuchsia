@@ -46,7 +46,7 @@ class Service : public fs::Vnode {
   }
 
   zx_status_t Serve(fs::Vfs* vfs, zx::channel svc_request, uint32_t flags) override {
-    return vfs->ServeConnection(std::make_unique<Connection>(console_, vfs, fbl::WrapRefPtr(this),
+    return vfs->ServeConnection(std::make_unique<Connection>(console_, vfs, fbl::RefPtr(this),
                                                              std::move(svc_request), flags));
   }
 

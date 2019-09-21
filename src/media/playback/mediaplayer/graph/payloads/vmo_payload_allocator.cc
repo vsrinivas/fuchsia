@@ -126,7 +126,7 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
     // Success!
     return PayloadBuffer::Create(
         size, payload_vmo->start(), payload_vmo, 0,
-        [this, this_refptr = fbl::WrapRefPtr(this)](PayloadBuffer* payload_buffer) {
+        [this, this_refptr = fbl::RefPtr(this)](PayloadBuffer* payload_buffer) {
           FXL_DCHECK(payload_buffer->vmo());
           // Take the |VmoPayloadAllocator|'s mutex to
           // serialize access to the |allocated_| field
@@ -151,7 +151,7 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
   // Success!
   return PayloadBuffer::Create(
       size, reinterpret_cast<uint8_t*>(payload_vmo->start()) + offset, payload_vmo, offset,
-      [this, this_refptr = fbl::WrapRefPtr(this), offset](PayloadBuffer* payload_buffer) {
+      [this, this_refptr = fbl::RefPtr(this), offset](PayloadBuffer* payload_buffer) {
         FXL_DCHECK(payload_buffer->vmo());
         FXL_DCHECK(payload_buffer->vmo()->allocator_);
         // Take the |VmoPayloadAllocator|'s mutex to serialize access to the

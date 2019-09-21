@@ -124,7 +124,7 @@ zx_status_t ThreadPool::AddDomainToPool(fbl::RefPtr<ExecutionDomain> domain) {
 
   while ((active_thread_count_ < active_domain_count_) &&
          (active_thread_count_ < zx_system_get_num_cpus())) {
-    auto thread = Thread::Create(fbl::WrapRefPtr(this), active_thread_count_);
+    auto thread = Thread::Create(fbl::RefPtr(this), active_thread_count_);
     if (thread == nullptr) {
       LOG("Failed to create new thread\n");
       break;

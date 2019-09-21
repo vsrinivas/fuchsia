@@ -93,7 +93,7 @@ zx_status_t ExceptionDispatcher::MakeProcessHandle(HandleOwner* handle) const {
 
   // We have a RefPtr to |thread_| so it can't die, and the thread keeps its
   // process alive, so we know the process is safe to wrap in a RefPtr.
-  *handle = Handle::Make(fbl::WrapRefPtr(thread_->process()), process_rights_);
+  *handle = Handle::Make(fbl::RefPtr(thread_->process()), process_rights_);
   if (!(*handle)) {
     return ZX_ERR_NO_MEMORY;
   }

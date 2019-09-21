@@ -45,8 +45,7 @@ class RefCountedBase {
     // 2) someone calls AddRef() on a ref-counted object that has
     // reached ref_count_ == 0 but has not been destroyed yet. This
     // could happen by manually calling AddRef(), or re-wrapping such a
-    // pointer with WrapRefPtr() or RefPtr<T>(T*) (both of which call
-    // AddRef()).
+    // pointer with RefPtr<T>(T*) (which calls AddRef()).
     //
     // Note: leave the ASSERT on in all builds.  The constant
     // EnableAdoptionValidator check above should cause this code path to be

@@ -203,7 +203,7 @@ static handler_status_t exception_handler_worker(uint exception_type,
   ExceptionPort::BuildArchReport(&report, exception_type, context);
 
   fbl::RefPtr<ExceptionDispatcher> exception =
-      ExceptionDispatcher::Create(fbl::WrapRefPtr(thread), exception_type, &report, context);
+      ExceptionDispatcher::Create(fbl::RefPtr(thread), exception_type, &report, context);
   if (!exception) {
     // No memory to create the exception, we just have to drop it which
     // will kill the process.

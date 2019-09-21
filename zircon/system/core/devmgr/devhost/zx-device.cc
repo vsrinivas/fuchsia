@@ -171,7 +171,7 @@ void zx_device::set_local_id(uint64_t id) {
 
   local_id_ = id;
   if (id != 0) {
-    local_id_map_.insert(fbl::WrapRefPtr(this));
+    local_id_map_.insert(fbl::RefPtr(this));
   }
 }
 
@@ -181,7 +181,7 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
   if (itr == local_id_map_.end()) {
     return nullptr;
   }
-  return fbl::WrapRefPtr(&*itr);
+  return fbl::RefPtr(&*itr);
 }
 
 bool zx_device::has_composite() { return !!composite_; }

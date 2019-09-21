@@ -177,12 +177,12 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
   // channel to our Codec will cause it to exist in the same serialization
   // domain as all of the other channels being serviced by this codec owner.
   dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         return stream->ProcessClientRequest(channel);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         stream->ProcessClientDeactivate(channel);
       });
 

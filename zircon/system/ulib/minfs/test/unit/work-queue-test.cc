@@ -188,7 +188,7 @@ TEST(DataAssignerTest, ProcessSingleNode) {
   fbl::RefPtr<MockVnode> mock_vnode;
   ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(10, &mock_vnode));
   ASSERT_EQ(10, mock_vnode->GetReserved());
-  test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
+  test->EnqueueAllocation(fbl::RefPtr(mock_vnode.get()));
   ASSERT_OK(test->Sync());
   ASSERT_EQ(0, mock_vnode->GetReserved());
 }
@@ -201,7 +201,7 @@ TEST(DataAssignerTest, EnqueueMany) {
 
   for (unsigned i = 0; i < kMaxQueued; i++) {
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(kMaxQueued * i, &mock_vnode[i]));
-    test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode[i].get()));
+    test->EnqueueAllocation(fbl::RefPtr(mock_vnode[i].get()));
   }
 
   ASSERT_OK(test->Sync());
@@ -221,7 +221,7 @@ TEST(DataAssignerTest, EnqueueFull) {
 
   for (unsigned i = 0; i < kMaxQueued; i++) {
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(kMaxQueued * i, &mock_vnode[i]));
-    test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode[i].get()));
+    test->EnqueueAllocation(fbl::RefPtr(mock_vnode[i].get()));
   }
 
   auto process_tasks = [](void* arg) {
@@ -277,7 +277,7 @@ TEST(DataAssignerTest, EnqueueWait) {
 
   fbl::RefPtr<MockVnode> mock_vnode;
   ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(10, &mock_vnode));
-  test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
+  test->EnqueueAllocation(fbl::RefPtr(mock_vnode.get()));
 
   ASSERT_OK(test->Sync());
   ASSERT_EQ(0, mock_vnode->GetReserved());
@@ -291,7 +291,7 @@ TEST(DataAssignerTest, DestructAssigner) {
 
   for (unsigned i = 0; i < kMaxQueued; i++) {
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(kMaxQueued * i, &mock_vnode[i]));
-    test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode[i].get()));
+    test->EnqueueAllocation(fbl::RefPtr(mock_vnode[i].get()));
   }
 
   test->Teardown();
@@ -307,7 +307,7 @@ TEST(DataAssignerTest, DestructVnode) {
   ASSERT_OK(DataAssignerTest::Create(&test));
   fbl::RefPtr<MockVnode> mock_vnode;
   ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(1, &mock_vnode));
-  test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
+  test->EnqueueAllocation(fbl::RefPtr(mock_vnode.get()));
   mock_vnode.reset();
   ASSERT_OK(test->Sync());
 }

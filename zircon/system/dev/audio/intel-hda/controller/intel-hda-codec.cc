@@ -253,7 +253,7 @@ zx_status_t IntelHDACodec::ParseRevisionId(const CodecResponse& resp) {
 
 zx_status_t IntelHDACodec::GetChannel(fidl_txn_t* txn) {
   dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         return codec->ProcessClientRequest(channel, false);
       });
@@ -397,7 +397,7 @@ zx_status_t IntelHDACodec::ProcessSendCORBCmd(dispatcher::Channel* channel,
   }
 
   fbl::RefPtr<dispatcher::Channel> chan_ref =
-      (req.hdr.cmd & IHDA_NOACK_FLAG) ? nullptr : fbl::WrapRefPtr(channel);
+      (req.hdr.cmd & IHDA_NOACK_FLAG) ? nullptr : fbl::RefPtr(channel);
 
   auto job = CodecCmdJobAllocator::New(std::move(chan_ref), req.hdr.transaction_id,
                                        CodecCommand(id(), req.nid, verb));
@@ -525,13 +525,13 @@ zx_status_t IntelHDACodec::CodecGetDispatcherChannel(zx_handle_t* remote_endpoin
     return ZX_ERR_INVALID_ARGS;
 
   dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         return codec->ProcessClientRequest(channel, true);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         codec->ProcessClientDeactivate(channel);
       });

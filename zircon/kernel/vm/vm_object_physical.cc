@@ -118,7 +118,7 @@ zx_status_t VmObjectPhysical::CreateChildSlice(uint64_t offset, uint64_t size, b
     // Inherit the current cache policy
     vmo->mapping_cache_flags_ = mapping_cache_flags_;
     // Initialize parent
-    vmo->parent_ = fbl::WrapRefPtr(this);
+    vmo->parent_ = fbl::RefPtr(this);
 
     // add the new vmo as a child.
     notify_one_child = AddChildLocked(vmo.get());

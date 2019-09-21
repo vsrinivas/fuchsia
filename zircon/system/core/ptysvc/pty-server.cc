@@ -85,7 +85,7 @@ zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
   }
 
   fbl::RefPtr<PtyClient> client;
-  zx_status_t status = PtyClient::Create(fbl::WrapRefPtr(this), id, &client);
+  zx_status_t status = PtyClient::Create(fbl::RefPtr(this), id, &client);
   if (status != ZX_OK) {
     return status;
   }
@@ -227,7 +227,7 @@ zx_status_t PtyServer::Send(const void* data, size_t len, size_t* actual) {
 zx_status_t PtyServer::MakeActive(uint32_t id) {
   for (auto& client : clients_) {
     if (client.id() == id) {
-      MakeActive(fbl::WrapRefPtr(&client));
+      MakeActive(fbl::RefPtr(&client));
       return ZX_OK;
     }
   }

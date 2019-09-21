@@ -134,7 +134,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
 
   static fbl::RefPtr<VmAspace> test_aspace;
   if (!test_aspace) {
-    test_aspace = fbl::WrapRefPtr(VmAspace::kernel_aspace());
+    test_aspace = fbl::RefPtr(VmAspace::kernel_aspace());
   }
 
   if (!strcmp(argv[1].str, "aspaces")) {
@@ -194,7 +194,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
       goto notenoughargs;
     }
 
-    fbl::RefPtr<VmAspace> aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
+    fbl::RefPtr<VmAspace> aspace = fbl::RefPtr((VmAspace*)(void*)argv[2].u);
     if (test_aspace == aspace) {
       test_aspace = nullptr;
     }
@@ -211,7 +211,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
       goto notenoughargs;
     }
 
-    test_aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
+    test_aspace = fbl::RefPtr((VmAspace*)(void*)argv[2].u);
     get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());
     thread_sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
   } else {

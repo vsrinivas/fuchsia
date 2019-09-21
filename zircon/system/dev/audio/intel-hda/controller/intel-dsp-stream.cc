@@ -111,13 +111,13 @@ zx_status_t IntelDspStream::CreateClientRingBufferChannelLocked(zx::channel&& ri
   }
 
   dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
         return stream->ProcessRbRequest(channel);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
         stream->ProcessRbDeactivate(channel);
       });
@@ -140,13 +140,13 @@ zx_status_t IntelDspStream::CreateClientRingBufferChannelLocked(zx::channel&& ri
   }
 
   dispatcher::Channel::ProcessHandler client_phandler(
-      [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
         return stream->ProcessClientRbRequest(channel);
       });
 
   dispatcher::Channel::ChannelClosedHandler client_chandler(
-      [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
         stream->ProcessClientRbDeactivate(channel);
       });

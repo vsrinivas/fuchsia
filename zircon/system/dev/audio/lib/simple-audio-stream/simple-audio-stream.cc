@@ -199,13 +199,13 @@ zx_status_t SimpleAudioStream::GetChannel(fidl_txn_t* txn) {
   }
 
   dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::WrapRefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
         return stream->ProcessStreamChannel(channel, privileged);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler = dispatcher::Channel::ChannelClosedHandler(
-      [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
         fbl::AutoLock channel_lock(&stream->channel_lock_);
         stream->DeactivateStreamChannel(channel);
@@ -450,13 +450,13 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
       resp.result = ZX_ERR_NO_MEMORY;
     } else {
       dispatcher::Channel::ProcessHandler phandler(
-          [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+          [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
             return stream->ProcessRingBufferChannel(channel);
           });
 
       dispatcher::Channel::ChannelClosedHandler chandler(
-          [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+          [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
             fbl::AutoLock channel_lock(&stream->channel_lock_);
             stream->DeactivateRingBufferChannel(channel);
@@ -536,7 +536,7 @@ zx_status_t SimpleAudioStream::OnPlugDetect(dispatcher::Channel* channel,
         EnableAsyncNotification(true);
       }
       if (!audio_stream_channel->InContainer()) {
-        plug_notify_channels_.push_back(fbl::WrapRefPtr(audio_stream_channel));
+        plug_notify_channels_.push_back(fbl::RefPtr(audio_stream_channel));
       }
     } else if (disable) {
       if (audio_stream_channel->InContainer()) {

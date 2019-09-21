@@ -792,7 +792,7 @@ zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstre
   if (!legacy_irq_pin() || (legacy_irq_pin() > PCIE_MAX_LEGACY_IRQ_PINS))
     return ZX_ERR_BAD_STATE;
 
-  auto dev = fbl::WrapRefPtr(this);
+  auto dev = fbl::RefPtr(this);
   uint pin = legacy_irq_pin() - 1;  // Change to 0s indexing
 
   // Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop

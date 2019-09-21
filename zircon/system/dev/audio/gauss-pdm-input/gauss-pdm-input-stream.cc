@@ -142,7 +142,7 @@ zx_status_t GaussPdmInputStream::GetChannel(fidl_txn_t* txn) {
     return ZX_ERR_NO_MEMORY;
 
   dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::WrapRefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
         return stream->ProcessStreamChannel(channel, privileged);
       });
@@ -150,7 +150,7 @@ zx_status_t GaussPdmInputStream::GetChannel(fidl_txn_t* txn) {
   dispatcher::Channel::ChannelClosedHandler chandler;
   if (privileged) {
     chandler = dispatcher::Channel::ChannelClosedHandler(
-        [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+        [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
           OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
           stream->DeactivateStreamChannel(channel);
         });
@@ -358,13 +358,13 @@ zx_status_t GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
       resp.result = ZX_ERR_NO_MEMORY;
     } else {
       dispatcher::Channel::ProcessHandler phandler(
-          [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+          [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
             return stream->ProcessRingBufferChannel(channel);
           });
 
       dispatcher::Channel::ChannelClosedHandler chandler(
-          [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+          [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
             stream->DeactivateRingBufferChannel(channel);
           });

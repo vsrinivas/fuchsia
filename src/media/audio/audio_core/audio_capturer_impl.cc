@@ -139,7 +139,7 @@ void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format)
 void AudioCapturerImpl::Shutdown() {
   TRACE_DURATION("audio", "AudioCapturerImpl::Shutdown");
   // Take a local ref to ourselves, else we might get freed before we return!
-  auto self_ref = fbl::WrapRefPtr(this);
+  auto self_ref = fbl::RefPtr(this);
 
   ReportStop();
   // TODO(mpuryear): Considering eliminating this; it may not be needed.
@@ -195,7 +195,7 @@ fit::promise<> AudioCapturerImpl::Cleanup() {
   TRACE_FLOW_BEGIN("audio.debug", "AudioCapturerImpl.capture_cleanup", nonce);
   async::PostTask(
       mix_domain_->dispatcher(),
-      [self = fbl::WrapRefPtr(this), completer = std::move(bridge.completer), nonce]() mutable {
+      [self = fbl::RefPtr(this), completer = std::move(bridge.completer), nonce]() mutable {
         TRACE_DURATION("audio.debug", "AudioCapturerImpl.cleanup_thunk");
         TRACE_FLOW_END("audio.debug", "AudioCapturerImpl.capture_cleanup", nonce);
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
@@ -384,7 +384,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // Activate the dispatcher primitives we will use to drive the mixing process. Note we must call
   // Activate on the WakeupEvent from the mix domain, but Signal can be called anytime, even before
   // this Activate occurs.
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this)] {
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this)] {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
     zx_status_t status =
         self->mix_wakeup_.Activate(self->mix_domain_->dispatcher(),
@@ -448,7 +448,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // which already would be rather difficult to do).
   std::vector<fbl::RefPtr<AudioLink>> cleanup_list;
   ForEachSourceLink([this, &cleanup_list](auto& link) {
-    auto copy = fbl::WrapRefPtr(&link);
+    auto copy = fbl::RefPtr(&link);
     if (ChooseMixer(copy) != ZX_OK) {
       cleanup_list.emplace_back(std::move(copy));
     }
@@ -943,7 +943,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
       async::PostTask(threading_model_.FidlDomain().dispatcher(),
-                      [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishBuffersThunk(); });
+                      [thiz = fbl::RefPtr(this)]() { thiz->FinishBuffersThunk(); });
     }
 
     // If we are in async mode, and we just finished a buffer, queue a new
@@ -1063,7 +1063,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
   ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
     if (link.source_type() != AudioLink::SourceType::Packet) {
-      src_link_refs->emplace_back(fbl::WrapRefPtr(&link));
+      src_link_refs->emplace_back(fbl::RefPtr(&link));
     }
   });
 
@@ -1438,7 +1438,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
   async::PostTask(threading_model_.FidlDomain().dispatcher(),
-                  [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
+                  [thiz = fbl::RefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -1482,7 +1482,7 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
 void AudioCapturerImpl::ShutdownFromMixDomain() {
   TRACE_DURATION("audio", "AudioCapturerImpl::ShutdownFromMixDomain");
   async::PostTask(threading_model_.FidlDomain().dispatcher(),
-                  [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
+                  [thiz = fbl::RefPtr(this)]() { thiz->Shutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {

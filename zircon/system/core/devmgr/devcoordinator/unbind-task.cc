@@ -32,7 +32,7 @@ void UnbindTask::ScheduleUnbindChildren() {
   }
 
   // Remove task needs to wait for the current unbind task to complete.
-  remove_task->AddDependency(fbl::WrapRefPtr(this));
+  remove_task->AddDependency(fbl::RefPtr(this));
 
   fbl::RefPtr<UnbindTask> proxy_unbind_task = nullptr;
   if (device_->proxy() != nullptr) {
@@ -53,7 +53,7 @@ void UnbindTask::ScheduleUnbindChildren() {
         // The proxy's unbind task may have already completed, in which case we only
         // have to wait on the remove task.
         if (proxy_unbind_task) {
-          proxy_unbind_task->AddDependency(fbl::WrapRefPtr(this));
+          proxy_unbind_task->AddDependency(fbl::RefPtr(this));
         }
         // The device should not be removed until its children have been removed.
         remove_task->AddDependency(device_->proxy()->GetActiveRemove());

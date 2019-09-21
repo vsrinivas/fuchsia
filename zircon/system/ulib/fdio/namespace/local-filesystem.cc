@@ -190,7 +190,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, void* buffer, size_t l
 }
 
 fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<const LocalVnode> vn) const {
-  return fdio_internal::CreateLocalConnection(fbl::WrapRefPtr(this), std::move(vn));
+  return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
 zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags, zx::channel channel) const {

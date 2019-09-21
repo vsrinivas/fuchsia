@@ -71,7 +71,7 @@ class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
   //
   // void Thingy::Activate() {
   //     Channel::ProcessHandler phandler(
-  //     [thingy = fbl::WrapRefPtr(this)](Channel* ch) {
+  //     [thingy = fbl::RefPtr(this)](Channel* ch) {
   //       // Establish the fact that this callback is running in my_domain_
   //       ExecutionDomain::ScopedToken token(my_domain_->token());
   //       thingy->HandleChannel(ch);

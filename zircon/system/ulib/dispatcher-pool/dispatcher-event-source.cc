@@ -70,7 +70,7 @@ zx_status_t EventSource::ActivateLocked(zx::handle handle, fbl::RefPtr<Execution
     return ZX_ERR_BAD_STATE;
 
   // Add ourselves to our domain's list of event sources.
-  zx_status_t res = domain->AddEventSource(fbl::WrapRefPtr(this));
+  zx_status_t res = domain->AddEventSource(fbl::RefPtr(this));
   if (res != ZX_OK)
     return res;
 

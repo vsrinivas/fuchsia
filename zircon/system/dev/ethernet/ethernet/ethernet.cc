@@ -521,7 +521,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
   if (status == ZX_OK) {
     state_ |= kStateRunning;
     edev0_->list_idle_.erase(*this);
-    edev0_->list_active_.push_back(fbl::WrapRefPtr(this));
+    edev0_->list_active_.push_back(fbl::RefPtr(this));
     // Trigger the status signal so the client will query the status at the start.
     receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
   } else {
@@ -537,7 +537,7 @@ zx_status_t EthDev::StopLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
   if (state_ & kStateRunning) {
     state_ &= (~kStateRunning);
     edev0_->list_active_.erase(*this);
-    edev0_->list_idle_.push_back(fbl::WrapRefPtr(this));
+    edev0_->list_idle_.push_back(fbl::RefPtr(this));
     // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
     // this ethdev had any state set. Ignore failures, which may come from drivers not
     // supporting the feature. (TODO: check failure codes).

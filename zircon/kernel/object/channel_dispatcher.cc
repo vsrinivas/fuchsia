@@ -229,7 +229,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
   canary_.Assert();
 
   auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
-  if (unlikely(waiter->BeginWait(fbl::WrapRefPtr(this)) != ZX_OK)) {
+  if (unlikely(waiter->BeginWait(fbl::RefPtr(this)) != ZX_OK)) {
     // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
     // channel calls has been violated.  Shoot the misbehaving process.
     ProcessDispatcher::GetCurrent()->Kill(ZX_TASK_RETCODE_VDSO_KILL);

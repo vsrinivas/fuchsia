@@ -67,7 +67,7 @@ zx_status_t Vnode::Getattr(vnattr_t* attr) {
 
 zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
   return vfs->ServeConnection(
-      std::make_unique<Connection>(vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
 }
 
 zx_status_t Vnode::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {

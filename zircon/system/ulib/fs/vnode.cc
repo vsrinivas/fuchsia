@@ -19,7 +19,7 @@ Vnode::~Vnode() = default;
 #ifdef __Fuchsia__
 zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
   return vfs->ServeConnection(
-      std::make_unique<Connection>(vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
 }
 
 zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {

@@ -105,7 +105,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 zx_status_t AudioDevice::Init() {
   TRACE_DURATION("audio", "AudioDevice::Init");
   WakeupEvent::ProcessHandler process_handler(
-      [output = fbl::WrapRefPtr(this)](WakeupEvent* event) -> zx_status_t {
+      [output = fbl::RefPtr(this)](WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->OnWakeup();
         return ZX_OK;
@@ -143,7 +143,7 @@ void AudioDevice::ActivateSelf() {
 
     // Now poke our manager.
     FXL_DCHECK(manager_);
-    manager_->ScheduleMainThreadTask([manager = manager_, self = fbl::WrapRefPtr(this)]() {
+    manager_->ScheduleMainThreadTask([manager = manager_, self = fbl::RefPtr(this)]() {
       manager->ActivateDevice(std::move(self));
     });
   }
@@ -160,14 +160,14 @@ void AudioDevice::ShutdownSelf() {
 
     FXL_DCHECK(manager_);
     manager_->ScheduleMainThreadTask(
-        [manager = manager_, self = fbl::WrapRefPtr(this)]() { manager->RemoveDevice(self); });
+        [manager = manager_, self = fbl::RefPtr(this)]() { manager->RemoveDevice(self); });
   }
 }
 
 fit::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
   fit::bridge<void, zx_status_t> bridge;
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this),
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this),
                                               completer = std::move(bridge.completer)]() mutable {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
     zx_status_t res = self->Init();
@@ -195,7 +195,7 @@ fit::promise<void> AudioDevice::Shutdown() {
 
   // Give our derived class, and our driver, a chance to clean up resources.
   fit::bridge<void> bridge;
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::WrapRefPtr(this),
+  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this),
                                               completer = std::move(bridge.completer)]() mutable {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
     self->Cleanup();

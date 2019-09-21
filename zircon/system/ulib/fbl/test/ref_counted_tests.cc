@@ -130,7 +130,7 @@ static bool wrap_dead_pointer_asserts() {
   ASSERT_DEATH(
       [](void* void_raw) {
         auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        __UNUSED fbl::RefPtr<DestructionTracker<true>> zombie = fbl::WrapRefPtr(raw);
+        __UNUSED fbl::RefPtr<DestructionTracker<true>> zombie = fbl::RefPtr(raw);
       },
       raw, "Assert should have fired after wraping dead object\n");
 
@@ -212,7 +212,7 @@ static bool unadopted_add_ref_asserts() {
         auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
         // Adding a ref (by wrapping) without adopting first should trigger an
         // assertion.
-        fbl::RefPtr<DestructionTracker<true>> unadopted = fbl::WrapRefPtr(raw);
+        fbl::RefPtr<DestructionTracker<true>> unadopted = fbl::RefPtr(raw);
       },
       raw, "Assert should have fired after wraping non-adopted object\n");
 

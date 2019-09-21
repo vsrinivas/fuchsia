@@ -192,7 +192,7 @@ void PagerSource::OnDispatcherClosed() {
       // PagerSource::Free. We need to make sure the object isn't deleted too early,
       // so have it keep a reference to itself, which PagerSource::Free will then
       // clean up.
-      self_ref_ = fbl::WrapRefPtr(this);
+      self_ref_ = fbl::RefPtr(this);
     }
   } else {
     // Either the complete message had already been dispatched when this object was closed or

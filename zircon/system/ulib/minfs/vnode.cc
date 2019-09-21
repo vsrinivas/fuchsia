@@ -805,7 +805,7 @@ VnodeMinfs::~VnodeMinfs() {
 #ifdef __Fuchsia__
 zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
   return vfs->ServeConnection(
-      std::make_unique<MinfsConnection>(vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+      std::make_unique<MinfsConnection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
 }
 #endif
 
@@ -1047,7 +1047,7 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
       return status;
     }
     InodeSync(transaction.get(), kMxFsSyncDefault);
-    transaction->PinVnode(fbl::WrapRefPtr(this));
+    transaction->PinVnode(fbl::RefPtr(this));
     fs_->CommitTransaction(std::move(transaction));
   }
   return ZX_OK;

@@ -1130,7 +1130,7 @@ zx_status_t SocketDevice::Connection::DoSocketTx(bool force_credit_request, TxIo
 }
 
 void SocketDevice::Connection::BeginWait(async_dispatcher_t* disp) {
-  fbl::RefPtr<Connection> wait_ref = fbl::WrapRefPtr(this);
+  fbl::RefPtr<Connection> wait_ref = fbl::RefPtr(this);
   zx_status_t __UNUSED status = async::PostTask(disp, [wait_ref, disp] {
     fbl::AutoLock lock(&wait_ref->lock_);
 

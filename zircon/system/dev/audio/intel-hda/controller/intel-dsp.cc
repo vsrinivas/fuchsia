@@ -153,13 +153,13 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
     return ZX_ERR_INVALID_ARGS;
 
   dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
         return codec->ProcessClientRequest(channel, true);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
         codec->ProcessClientDeactivate(channel);
       });

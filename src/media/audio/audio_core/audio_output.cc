@@ -179,7 +179,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
         continue;
       }
 
-      source_link_refs_.emplace_back(fbl::WrapRefPtr(&link));
+      source_link_refs_.emplace_back(fbl::RefPtr(&link));
     }
   }
 

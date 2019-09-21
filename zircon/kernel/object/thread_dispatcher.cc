@@ -1050,7 +1050,7 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
   ExceptionPort::BuildArchReport(&report, exception_type, &context);
 
   fbl::RefPtr<ExceptionDispatcher> exception =
-      ExceptionDispatcher::Create(fbl::WrapRefPtr(this), exception_type, &report, &context);
+      ExceptionDispatcher::Create(fbl::RefPtr(this), exception_type, &report, &context);
   if (!exception) {
     printf("KERN: failed to allocate memory for exception type %u in thread %lu.%lu\n",
            exception_type, process_->get_koid(), get_koid());

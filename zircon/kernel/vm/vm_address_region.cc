@@ -371,7 +371,7 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
   canary_.Assert();
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
-  auto vmar = WrapRefPtr(this);
+  auto vmar = fbl::RefPtr(this);
   while (auto next = vmar->FindRegionLocked(va)) {
     if (next->is_mapping()) {
       return next->PageFault(va, pf_flags, page_request);

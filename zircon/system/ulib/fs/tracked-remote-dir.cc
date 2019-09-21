@@ -27,7 +27,7 @@ zx_status_t TrackedRemoteDir::AddAsTrackedEntry(async_dispatcher_t* dispatcher,
   ZX_DEBUG_ASSERT(container_ == nullptr);
   ZX_DEBUG_ASSERT(container != nullptr);
 
-  zx_status_t status = container->AddEntry(name, fbl::WrapRefPtr(this));
+  zx_status_t status = container->AddEntry(name, fbl::RefPtr(this));
   if (status != ZX_OK) {
     return status;
   }

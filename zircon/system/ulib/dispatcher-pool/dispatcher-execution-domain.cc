@@ -186,7 +186,7 @@ bool ExecutionDomain::AddPendingWork(EventSource* event_source) {
   }
 
   event_source->dispatch_state_ = DispatchState::DispatchPending;
-  pending_work_.push_back(fbl::WrapRefPtr(event_source));
+  pending_work_.push_back(fbl::RefPtr(event_source));
 
   return ret;
 }

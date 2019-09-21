@@ -350,13 +350,13 @@ zx_status_t IntelHDAStreamBase::GetChannel(fidl_txn_t* txn) {
     return ZX_ERR_NO_MEMORY;
 
   dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::WrapRefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
+      [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
         return stream->ProcessClientRequest(channel, privileged);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = fbl::WrapRefPtr(this), privileged](const dispatcher::Channel* channel) -> void {
+      [stream = fbl::RefPtr(this), privileged](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
         stream->ProcessClientDeactivate(channel, privileged);
       });

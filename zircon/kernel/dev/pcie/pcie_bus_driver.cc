@@ -245,13 +245,13 @@ void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upst
 
   // Have the device hold a reference to its upstream bridge.
   DEBUG_ASSERT(dev.upstream_ == nullptr);
-  dev.upstream_ = fbl::WrapRefPtr(&upstream);
+  dev.upstream_ = fbl::RefPtr(&upstream);
 
   // Have the bridge hold a reference to the device
   uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
   DEBUG_ASSERT(ndx < fbl::count_of(upstream.downstream_));
   DEBUG_ASSERT(upstream.downstream_[ndx] == nullptr);
-  upstream.downstream_[ndx] = fbl::WrapRefPtr(&dev);
+  upstream.downstream_[ndx] = fbl::RefPtr(&dev);
 }
 
 void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {

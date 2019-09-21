@@ -78,13 +78,13 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   // Activate our device channel.  If something goes wrong, clear out the
   // internal device_channel_ reference.
   dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         return codec->ProcessClientRequest(channel);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
-      [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+      [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         codec->ProcessClientDeactivate(channel);
       });
@@ -387,7 +387,7 @@ zx_status_t IntelHDACodecDriverBase::ActivateStream(const fbl::RefPtr<IntelHDASt
   }
 
   // Go ahead and activate the stream.
-  return stream->Activate(fbl::WrapRefPtr(this), device_channel);
+  return stream->Activate(fbl::RefPtr(this), device_channel);
 }
 
 zx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(const IntelHDAStreamBase& stream,

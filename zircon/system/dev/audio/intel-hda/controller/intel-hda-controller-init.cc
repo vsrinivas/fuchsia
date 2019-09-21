@@ -255,7 +255,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   }
 
   ZX_DEBUG_ASSERT(irq_ != nullptr);
-  auto irq_handler = [controller = fbl::WrapRefPtr(this)](const dispatcher::Interrupt* irq,
+  auto irq_handler = [controller = fbl::RefPtr(this)](const dispatcher::Interrupt* irq,
                                                           zx_time_t timestamp) -> zx_status_t {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
     LOG_EX(SPEW, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
@@ -579,7 +579,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
 
   res = irq_wakeup_event_->Activate(
       default_domain_,
-      [controller = fbl::WrapRefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {
+      [controller = fbl::RefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
         LOG_EX(SPEW, *controller, "SW IRQ Wakeup\n");
         return controller->HandleIrq();

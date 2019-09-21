@@ -733,7 +733,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
       fbl::RefPtr<Device> next;
       fbl::RefPtr<Device> last;
       while (!dh->devices().is_empty()) {
-        next = fbl::WrapRefPtr(&dh->devices().front());
+        next = fbl::RefPtr(&dh->devices().front());
         if (last == next) {
           // This shouldn't be possible, but let's not infinite-loop if it happens
           log(ERROR, "devcoordinator: fatal: failed to remove dev %p from devhost\n", next.get());
@@ -832,7 +832,7 @@ zx_status_t Coordinator::AddCompositeDevice(
       continue;
     }
 
-    auto dev_ref = fbl::WrapRefPtr(&dev);
+    auto dev_ref = fbl::RefPtr(&dev);
     size_t index;
     if (new_device->TryMatchComponents(dev_ref, &index)) {
       log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
@@ -1404,7 +1404,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   printf("devcoordinator: driver '%s' added\n", drv->name.data());
   for (auto& dev : devices_) {
     zx_status_t status =
-        BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */, attempt_bind);
+        BindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);
     if (status == ZX_ERR_NEXT) {
       continue;
     }

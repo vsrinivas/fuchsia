@@ -258,27 +258,27 @@ zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
 __EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
                                          size_t* actual) {
   ApiAutoLock lock;
-  auto dev_ref = fbl::WrapRefPtr(dev);
+  auto dev_ref = fbl::RefPtr(dev);
   return devhost_get_metadata(dev_ref, type, buf, buflen, actual);
 }
 
 __EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* out_size) {
   ApiAutoLock lock;
-  auto dev_ref = fbl::WrapRefPtr(dev);
+  auto dev_ref = fbl::RefPtr(dev);
   return devhost_get_metadata_size(dev_ref, type, out_size);
 }
 
 __EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
                                          size_t length) {
   ApiAutoLock lock;
-  auto dev_ref = fbl::WrapRefPtr(dev);
+  auto dev_ref = fbl::RefPtr(dev);
   return devhost_add_metadata(dev_ref, type, data, length);
 }
 
 __EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                              const void* data, size_t length) {
   ApiAutoLock lock;
-  auto dev_ref = fbl::WrapRefPtr(dev);
+  auto dev_ref = fbl::RefPtr(dev);
   return devhost_publish_metadata(dev_ref, path, type, data, length);
 }
 
@@ -288,7 +288,7 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                           size_t components_count,
                                           uint32_t coresident_device_index) {
   ApiAutoLock lock;
-  auto dev_ref = fbl::WrapRefPtr(dev);
+  auto dev_ref = fbl::RefPtr(dev);
   return devhost_device_add_composite(dev_ref, name, props, props_count, components,
                                       components_count, coresident_device_index);
 }

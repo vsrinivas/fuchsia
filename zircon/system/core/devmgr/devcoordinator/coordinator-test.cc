@@ -314,7 +314,7 @@ TEST(CoordinatorTestCase, BindDevices) {
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
   // Bind the device to a fake devhost.
-  fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
+  fbl::RefPtr<devmgr::Device> dev = fbl::RefPtr(&coordinator.devices().front());
   devmgr::Devhost host;
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);
@@ -487,7 +487,7 @@ TEST(CoordinatorTestCase, TestOutput) {
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
   // Bind the device to a fake devhost.
-  fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
+  fbl::RefPtr<devmgr::Device> dev = fbl::RefPtr(&coordinator.devices().front());
   devmgr::Devhost host;
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);

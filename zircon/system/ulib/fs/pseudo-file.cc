@@ -64,7 +64,7 @@ zx_status_t BufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_red
     }
   }
 
-  *out_redirect = fbl::AdoptRef(new Content(fbl::WrapRefPtr(this), flags, std::move(output)));
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), flags, std::move(output)));
   return ZX_OK;
 }
 
@@ -175,7 +175,7 @@ UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandle
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
 zx_status_t UnbufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-  *out_redirect = fbl::AdoptRef(new Content(fbl::WrapRefPtr(this), flags));
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), flags));
   return ZX_OK;
 }
 

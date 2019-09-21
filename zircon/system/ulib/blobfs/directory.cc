@@ -208,7 +208,7 @@ class DirectoryConnection : public fs::Connection {
 #ifdef __Fuchsia__
 zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
   return vfs->ServeConnection(
-      std::make_unique<DirectoryConnection>(vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+      std::make_unique<DirectoryConnection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
 }
 #endif
 

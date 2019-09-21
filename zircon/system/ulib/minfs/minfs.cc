@@ -792,7 +792,7 @@ fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
   }
   return vn;
 #else
-  return fbl::WrapRefPtr(vnode_hash_.find(ino).CopyPointer());
+  return fbl::RefPtr(vnode_hash_.find(ino).CopyPointer());
 #endif
 }
 

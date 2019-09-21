@@ -70,7 +70,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
     return ZX_ERR_BAD_STATE;
   }
 
-  return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), ktl::move(pinned_vmo), perms,
+  return PinnedMemoryTokenDispatcher::Create(fbl::RefPtr(this), ktl::move(pinned_vmo), perms,
                                              pmt_handle, pmt_rights);
 }
 

@@ -24,9 +24,6 @@ RefPtr<T> AdoptRef(T* ptr);
 template <typename T>
 RefPtr<T> ImportFromRawPtr(T*);
 
-template <typename T>
-RefPtr<T> WrapRefPtr(T* ptr);
-
 namespace internal {
 template <typename T>
 RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
@@ -226,12 +223,6 @@ static inline bool operator!=(decltype(nullptr), const RefPtr<T>& ptr) {
 template <typename T>
 inline RefPtr<T> AdoptRef(T* ptr) {
   return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
-}
-
-// Convenience wrappers to construct a RefPtr with argument type deduction.
-template <typename T>
-inline RefPtr<T> WrapRefPtr(T* ptr) {
-  return RefPtr<T>(ptr);
 }
 
 // Export a pointer from a smart pointer to a raw pointer without modifying its
