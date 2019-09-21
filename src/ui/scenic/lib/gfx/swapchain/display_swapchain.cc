@@ -91,6 +91,9 @@ DisplaySwapchain::DisplaySwapchain(
     display_->Claim();
     frames_.resize(kSwapchainImageCount);
 
+    if (!InitializeDisplayLayer()) {
+      FXL_LOG(FATAL) << "Initializing display layer failed";
+    }
     if (!InitializeFramebuffers(escher_->resource_recycler(), /*use_protected_memory=*/false)) {
       FXL_LOG(FATAL) << "Initializing buffers for display swapchain failed - check "
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
@@ -144,21 +147,6 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
   FXL_DLOG(ERROR) << "Display swapchain only supported on intel and arm";
   return false;
 #endif
-
-  zx_status_t create_layer_status;
-  zx_status_t transport_status =
-      (*display_controller_)->CreateLayer(&create_layer_status, &primary_layer_id_);
-  if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to create layer";
-    return false;
-  }
-
-  zx_status_t status =
-      (*display_controller_)->SetDisplayLayers(display_->display_id(), {primary_layer_id_});
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to configure display layers";
-    return false;
-  }
 
   const uint32_t width_in_px = display_->width_in_px();
   const uint32_t height_in_px = display_->height_in_px();
@@ -589,6 +577,24 @@ void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
   }
 
   use_protected_memory_ = use_protected_memory;
+}
+
+bool DisplaySwapchain::InitializeDisplayLayer() {
+  zx_status_t create_layer_status;
+  zx_status_t transport_status =
+      (*display_controller_)->CreateLayer(&create_layer_status, &primary_layer_id_);
+  if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to create layer";
+    return false;
+  }
+
+  zx_status_t status =
+      (*display_controller_)->SetDisplayLayers(display_->display_id(), {primary_layer_id_});
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to configure display layers";
+    return false;
+  }
+  return true;
 }
 
 void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {

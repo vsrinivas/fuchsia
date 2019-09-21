@@ -38,6 +38,8 @@ const std::map<std::string, std::pair</*url*/std::string, /*args*/std::vector<st
 };
 // clang-format on
 
+const int64_t kTestTimeout = 60;
+
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and
 // RootPresenter, and their dependencies.
@@ -99,7 +101,8 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
   });
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&view_state_changed_observed] { return view_state_changed_observed; }, zx::sec(10)));
+      [&view_state_changed_observed] { return view_state_changed_observed; },
+      zx::sec(kTestTimeout)));
 }
 
 }  // namespace

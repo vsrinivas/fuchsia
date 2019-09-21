@@ -98,6 +98,8 @@ class DisplaySwapchain : public Swapchain {
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                               bool use_protected_memory);
 
+  bool InitializeDisplayLayer();
+
   // When a frame is presented, the previously-presented frame becomes available
   // as a render target.
   void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
