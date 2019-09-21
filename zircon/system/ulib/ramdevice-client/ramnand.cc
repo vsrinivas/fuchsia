@@ -112,13 +112,10 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
   path.Append(name);
   fprintf(stderr, "Trying to open (%s)\n", path.c_str());
 
-  // TODO(ZX-3192): We should use RecursiveWaitForFile here but it doesn't seem to
-  // work, so we sleep instead.
-  sleep(1);
-  fbl::unique_fd fd(openat(ctl->devfs_root().get(), path.c_str(), O_RDWR));
-  if (!fd) {
-    fprintf(stderr, "Could not open ram_nand\n");
-    return ZX_ERR_IO;
+  fbl::unique_fd fd;
+  st = devmgr_integration_test::RecursiveWaitForFile(ctl->devfs_root(), path.c_str(), &fd);
+  if (st != ZX_OK) {
+    return st;
   }
 
   *out = RamNand(std::move(fd), std::move(ctl));
