@@ -170,6 +170,16 @@ pub enum LoadError {
     },
 }
 
+impl LoadError {
+    /// Returns true iff we're an IO not found error
+    pub fn is_not_found(&self) -> bool {
+        match self {
+            LoadError::Io { path: _, error } => error.kind() == io::ErrorKind::NotFound,
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

@@ -178,7 +178,14 @@ fn load_repo_manager(
         .load_static_configs_dir(STATIC_REPO_DIR)
         .unwrap_or_else(|(builder, errs)| {
             for err in errs {
-                fx_log_err!("error loading static repo config: {}", err);
+                match err {
+                    crate::repository_manager::LoadError::Io { path: _, error }
+                        if error.kind() == io::ErrorKind::NotFound =>
+                    {
+                        fx_log_info!("no statically configured repositories present");
+                    }
+                    _ => fx_log_err!("error loading static repo config: {}", err),
+                };
             }
             builder
         })
@@ -211,11 +218,20 @@ fn load_font_package_manager() -> FontPackageManager {
     FontPackageManagerBuilder::new()
         .add_registry_file(STATIC_FONT_REGISTRY_PATH)
         .unwrap_or_else(|(builder, errs)| {
-            fx_log_err!(
-                "error(s) loading font package registry:{}",
-                errs.iter()
-                    .fold(String::new(), |acc, err| acc + "\n" + format!("{}", err).as_str())
-            );
+            let errors = errs
+                .iter()
+                .filter(|err| {
+                    if err.is_not_found() {
+                        fx_log_info!("no font package registry present");
+                        false
+                    } else {
+                        true
+                    }
+                })
+                .fold(String::new(), |acc, err| acc + "\n" + format!("{}", err).as_str());
+            if !errors.is_empty() {
+                fx_log_err!("error(s) loading font package registry:{}", errors);
+            }
             builder
         })
         .build()
