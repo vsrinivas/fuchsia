@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Error;
-use crypto::hmac::Hmac;
-use crypto::pbkdf2;
-use crypto::sha1::Sha1;
-use failure::{self, ensure};
+use {
+    crate::Error,
+    failure::{self, ensure},
+    std::num::NonZeroU32,
+};
+
+// PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
+#[allow(deprecated)]
+use mundane::insecure::insecure_pbkdf2_hmac_sha1;
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
@@ -28,10 +32,11 @@ pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, failure::Error> {
     }
 
     // Compute PSK: IEEE Std 802.11-2016, J.4.1
-    let size: usize = 256 / 8;
-    let mut psk: Vec<u8> = vec![0; size];
-    let mut hmac = Hmac::new(Sha1::new(), &passphrase[..]);
-    pbkdf2::pbkdf2(&mut hmac, &ssid[..], 4096, &mut psk[..]);
+    let size = 256 / 8;
+    let mut psk = vec![0_u8; size];
+    // Safe: Using constant non-zero value.
+    let iters = unsafe { NonZeroU32::new_unchecked(4096) };
+    insecure_pbkdf2_hmac_sha1(&passphrase[..], &ssid[..], iters, &mut psk[..]);
     Ok(psk.into_boxed_slice())
 }
 
