@@ -214,6 +214,11 @@ where
                 let channel = server.app_set.get_current_channel().await;
                 responder.send(&channel).context("error sending response")?;
             }
+            ChannelControlRequest::GetTargetList { responder } => {
+                responder
+                    .send(&mut vec!["some-channel", "some-other-channel"].iter().copied())
+                    .context("error sending channel list response")?;
+            }
         }
         Ok(())
     }
@@ -443,5 +448,21 @@ mod tests {
         let storage = fidl.storage_ref.lock().await;
         storage.get_string(&apps[0].id).await.unwrap();
         assert_eq!(true, storage.committed());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_target_list() {
+        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+
+        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
+        fasync::spawn_local(
+            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
+                .unwrap_or_else(|e| panic!(e)),
+        );
+        let response = proxy.get_target_list().await.unwrap();
+
+        assert_eq!(2, response.len());
+        assert!(response.contains(&"some-channel".to_string()));
+        assert!(response.contains(&"some-other-channel".to_string()));
     }
 }

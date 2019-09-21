@@ -30,6 +30,10 @@ protocol ChannelControl {
     ///
     /// - response `channel` the current target channel.
     GetTarget() -> (string:128 channel);
+
+    /// Get the list of well-known target channels that can be passed to SetTarget().
+    /// There may be other, unlisted channels.
+    GetTargetList() -> (vector<string:128>:100 channels);
 };
 
 [Discoverable]
