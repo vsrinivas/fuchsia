@@ -354,9 +354,7 @@ impl RoutingTest {
         let mut out_dir = None;
         for expose in decl.exposes.iter() {
             match expose {
-                ExposeDecl::Service(s) if s.source == ExposeSource::Self_ => {
-                    panic!("service capability unsupported")
-                }
+                ExposeDecl::Service(_) => panic!("service capability unsupported"),
                 ExposeDecl::LegacyService(s) if s.source == ExposeSource::Self_ => {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
@@ -368,9 +366,7 @@ impl RoutingTest {
         }
         for offer in decl.offers.iter() {
             match offer {
-                OfferDecl::Service(s) if s.source == OfferServiceSource::Self_ => {
-                    panic!("service capability unsupported")
-                }
+                OfferDecl::Service(_) => panic!("service capability unsupported"),
                 OfferDecl::LegacyService(s) if s.source == OfferServiceSource::Self_ => {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
