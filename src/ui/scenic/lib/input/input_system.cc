@@ -137,7 +137,7 @@ std::vector<gfx::Hit> PerformGlobalHitTest(gfx::Engine* engine, GlobalId composi
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
   FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
 
-  auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
+  auto hit_tester = std::make_unique<gfx::HitTester>();
   std::vector<gfx::Hit> hits = layer_stack->HitTest(ray, hit_tester.get());
 
   FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
