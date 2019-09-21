@@ -17,6 +17,16 @@ table ProductInfo {
     2: string language;
     3: fuchsia.intl.RegulatoryDomain regulatory_domain;
     4: vector<fuchsia.intl.LocaleId> locale_list;
+    5: string name;
+    6: string model;
+    7: string manufacturer;
+};
+
+/// Collection of properties that are common among a set of devices based on
+/// hardware type
+table BoardInfo {
+    1: string name;
+    2: string revision;
 };
 
 /// Device provides an interface to retrieve device-specific properties.
@@ -29,4 +39,10 @@ protocol Device {
 [Discoverable]
 protocol Product {
     GetInfo() -> (ProductInfo info);
+};
+
+/// Board provides an interface to retrieve hardware-specific information.
+[Discoverable]
+protocol Board {
+    GetInfo() -> (BoardInfo info);
 };
