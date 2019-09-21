@@ -111,6 +111,7 @@ template("prebuilt_package") {
   }
 
   group(target_name + ".manifest") {
+    forward_variables_from(invoker, [ "testonly" ])
     public_deps = [
       ":$pkg_target_name",
     ]

@@ -12,7 +12,7 @@ import("//build/testing/test_spec.gni")
 #   archive (required)
 #     [string] Path to archive containing a package.
 #
-#   package (required)
+#   package (optional)
 #     [string] Name of the package.
 #
 #   component_name (required)
@@ -31,25 +31,44 @@ import("//build/testing/test_spec.gni")
 #
 template("prebuilt_test_package") {
   assert(defined(invoker.archive), "archive must be defined.")
-  assert(defined(invoker.package), "package must be defined.")
   assert(defined(invoker.component_name), "component_name must be defined.")
   assert(defined(invoker.runner), "runner must be defined.")
 
-  _spec_name = "${target_name}_${invoker.component_name}_spec"
-  test_spec(_spec_name) {
-    name = "${target_name}"
+  package_name = target_name
+  if (defined(invoker.package)) {
+    package_name = invoker.package
+  }
+  package_deps = []
+
+  if (invoker.runner == "run") {
+    package_deps += [ "//garnet/packages/prod:run" ]
+  } else if (invoker.runner == "run_test_component") {
+    package_deps += [ "//garnet/packages/testing:run_test_component" ]
+  } else {
+    assert(
+        false,
+        "unexpected runner \"${invoker.runner}; must be one of \"run\" or \"run_test_component\"")
+  }
+  spec_target_name = "${target_name}_${invoker.component_name}_spec"
+  test_spec(spec_target_name) {
+    name = "$target_name"
     command = [
       "${invoker.runner}",
-      "fuchsia-pkg://fuchsia.com/${invoker.package}#meta/${invoker.component_name}.cmx",
+      "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx",
     ]
 
-    forward_variables_from(invoker, [ "deps" ])
-    forward_variables_from(invoker, [ "environments" ])
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "environments",
+                           ])
   }
-  prebuilt_package(invoker.package) {
+  package_deps += [ ":$spec_target_name" ]
+
+  prebuilt_package(target_name) {
+    package_name = package_name
+    testonly = true
     archive = invoker.archive
-    deps = [
-      ":${_spec_name}",
-    ]
+    deps = package_deps
   }
 }
