@@ -56,12 +56,14 @@ rustup default fuchsia
 ```
 
 Run this command to get the paths to use in the following step.
+
 ```sh
 ./scripts/youcompleteme/paths.py FUCHSIA_ROOT
 ./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
 ```
 
 Open VS Code settings
+
   * MacOS X: Code>Preferences>Settings
   * Linux: File>Preferences>Settings
 
