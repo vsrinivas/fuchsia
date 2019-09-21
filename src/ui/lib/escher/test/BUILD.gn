@@ -160,10 +160,12 @@ source_set("gtest_escher") {
     "gtest_escher.h",
     "test_with_vk_validation_layer.cc",
     "test_with_vk_validation_layer.h",
-    "test_with_vk_validation_layer_base.cc",
-    "test_with_vk_validation_layer_base.h",
     "test_with_vk_validation_layer_macros.h",
     "test_with_vk_validation_layer_macros_internal.h",
+    "vk_debug_report_callback_registry.cc",
+    "vk_debug_report_callback_registry.h",
+    "vk_debug_report_collector.cc",
+    "vk_debug_report_collector.h",
   ]
 }
 

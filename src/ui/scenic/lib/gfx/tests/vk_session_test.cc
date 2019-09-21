@@ -5,6 +5,8 @@
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
 
 using namespace escher;
 
@@ -13,12 +15,8 @@ namespace gfx {
 namespace test {
 
 VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues() {
-  VulkanInstance::Params instance_params(
-      {{"VK_LAYER_KHRONOS_validation"},
-       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
-       false});
-
-  auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
+  auto vulkan_instance =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
   // This extension is necessary to support exporting Vulkan memory to a VMO.
   return VulkanDeviceQueues::New(
       vulkan_instance,
@@ -78,6 +76,7 @@ vk::MemoryRequirements VkSessionTest::GetBufferRequirements(vk::Device device, v
 }
 
 void VkSessionTest::SetUp() {
+  vk_debug_report_callback_registry_.RegisterDebugReportCallbacks();
   SessionTest::SetUp();
 
   sysmem_ = std::make_unique<Sysmem>();
@@ -88,6 +87,8 @@ void VkSessionTest::SetUp() {
       /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
 }
 void VkSessionTest::TearDown() {
+  EXPECT_VULKAN_VALIDATION_OK();
+  vk_debug_report_callback_registry_.DeregisterDebugReportCallbacks();
   SessionTest::TearDown();
 
   image_factory_.reset();
@@ -96,6 +97,16 @@ void VkSessionTest::TearDown() {
   sysmem_.reset();
   display_manager_.reset();
 }
+
+VkSessionTest::VkSessionTest()
+    : SessionTest(),
+      vk_debug_report_callback_registry_(
+          escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance(),
+          std::make_optional<VulkanInstance::DebugReportCallback>(
+              escher::test::impl::VkDebugReportCollector::HandleDebugReport,
+              &vk_debug_report_collector_),
+          {}),
+      vk_debug_report_collector_() {}
 
 SessionContext VkSessionTest::CreateSessionContext() {
   auto session_context = SessionTest::CreateSessionContext();

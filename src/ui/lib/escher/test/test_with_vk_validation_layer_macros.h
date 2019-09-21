@@ -7,8 +7,8 @@
 
 #include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros_internal.h"
 
-// Note: All the macros below can be only used in TestWithVkValidationLayer and its derived
-// classes.
+// Note: All the macros below can be only used in classes containing  and its derived
+// classes (e.g. TestWithVkValidationLayer)
 //
 // Disable code formatter to allow for longer line length.
 // clang-format off
@@ -19,18 +19,26 @@
 //
 // These macros suppress the after-test validation check by removing all debug reports (or all
 // debug reports with specific flag bits).
-#define SUPPRESS_VK_VALIDATION_DEBUG_REPORTS()      \
-  CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT(); \
-  SuppressAllDebugReports_()
-#define SUPPRESS_VK_VALIDATION_ERRORS()             \
-  CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT(); \
-  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::eError)
-#define SUPPRESS_VK_VALIDATION_WARNINGS()           \
-  CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT(); \
-  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::eWarning)
-#define SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS() \
-  CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();   \
-  SuppressDebugReportsWithFlag_(vk::DebugReportFlagBitsEXT::ePerformanceWarning)
+#define SUPPRESS_VK_VALIDATION_DEBUG_REPORTS()             \
+  do {                                                     \
+    CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();      \
+    vk_debug_report_collector().SuppressAllDebugReports(); \
+  } while (0)
+#define SUPPRESS_VK_VALIDATION_ERRORS()                                                           \
+  do {                                                                                            \
+    CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();                                             \
+    vk_debug_report_collector().SuppressDebugReportsWithFlag(vk::DebugReportFlagBitsEXT::eError); \
+  } while (0)
+#define SUPPRESS_VK_VALIDATION_WARNINGS()                                                           \
+  do {                                                                                              \
+    CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();                                               \
+    vk_debug_report_collector().SuppressDebugReportsWithFlag(vk::DebugReportFlagBitsEXT::eWarning); \
+  } while (0)
+#define SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS()                                                          \
+  do {                                                                                                         \
+    CHECK_IS_TEST_WITH_VK_VALIDATION_LAYER_DEFAULT();                                                          \
+    vk_debug_report_collector().SuppressDebugReportsWithFlag(vk::DebugReportFlagBitsEXT::ePerformanceWarning); \
+  } while (0)
 
 // Vulkan validation message check macros.
 // EXPECT_... macro will not terminate the test when it fails.
@@ -87,15 +95,19 @@
 #define ASSERT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS() \
   ASSERT_VULKAN_VALIDATION_PERFORMANCE_WARNINGS_EQ(0)
 
-#define EXPECT_VULKAN_VALIDATION_OK()     \
-  EXPECT_NO_VULKAN_VALIDATION_ERRORS();   \
-  EXPECT_NO_VULKAN_VALIDATION_WARNINGS(); \
-  EXPECT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS()
+#define EXPECT_VULKAN_VALIDATION_OK()                   \
+  do {                                                  \
+    EXPECT_NO_VULKAN_VALIDATION_ERRORS();               \
+    EXPECT_NO_VULKAN_VALIDATION_WARNINGS();             \
+    EXPECT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS(); \
+  } while (0)
 
-#define ASSERT_VULKAN_VALIDATION_OK()     \
-  ASSERT_NO_VULKAN_VALIDATION_ERRORS();   \
-  ASSERT_NO_VULKAN_VALIDATION_WARNINGS(); \
-  ASSERT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS()
+#define ASSERT_VULKAN_VALIDATION_OK()                   \
+  do {                                                  \
+    ASSERT_NO_VULKAN_VALIDATION_ERRORS();               \
+    ASSERT_NO_VULKAN_VALIDATION_WARNINGS();             \
+    ASSERT_NO_VULKAN_VALIDATION_PERFORMANCE_WARNINGS(); \
+  } while (0)
 // clang-format on
 
 #endif  // SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_

@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 
+#include "src/ui/lib/escher/test/vk_debug_report_callback_registry.h"
+#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
@@ -30,10 +32,20 @@ class VkSessionTest : public SessionTest {
   escher::Escher* escher() { return escher_.get(); }
 
  protected:
+  VkSessionTest();
+
   // |SessionTest|
   SessionContext CreateSessionContext() override;
   // |SessionTest|
   CommandContext CreateCommandContext() override;
+
+  escher::test::impl::VkDebugReportCallbackRegistry& vk_debug_report_callback_registry() {
+    return vk_debug_report_callback_registry_;
+  }
+
+  escher::test::impl::VkDebugReportCollector& vk_debug_report_collector() {
+    return vk_debug_report_collector_;
+  }
 
  private:
   std::unique_ptr<Sysmem> sysmem_;
@@ -41,6 +53,9 @@ class VkSessionTest : public SessionTest {
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
+
+  escher::test::impl::VkDebugReportCallbackRegistry vk_debug_report_callback_registry_;
+  escher::test::impl::VkDebugReportCollector vk_debug_report_collector_;
 };
 
 }  // namespace test

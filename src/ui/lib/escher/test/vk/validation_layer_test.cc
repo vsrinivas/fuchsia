@@ -6,6 +6,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -90,53 +91,9 @@ VK_TEST_F(ValidationLayerDefaultHandler, HandlerTest) {
   SUPPRESS_VK_VALIDATION_DEBUG_REPORTS();
 }
 
-class ValidationLayerCustomHandler : public TestWithVkValidationLayerBase {
+class ValidationLayerWithCustomHandler : public TestWithVkValidationLayer {
  public:
-  ValidationLayerCustomHandler() : TestWithVkValidationLayerBase() {
-    SetMainDebugReportCallback(
-        {[this](VkDebugReportFlagsEXT flags_in, VkDebugReportObjectTypeEXT object_type_in,
-                uint64_t object, size_t location, int32_t message_code, const char* pLayerPrefix,
-                const char* pMessage, void* pUserData) -> bool {
-           if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags_in) {
-             ++count_errors_;
-           }
-           return false;
-         },
-         nullptr});
-  }
-  int GetCountErrors() const { return count_errors_; }
-
- private:
-  int count_errors_ = 0;
-};
-
-VK_TEST_F(ValidationLayerCustomHandler, HandlerTest) {
-  Escher* escher = GetEscher();
-  auto device = escher->vk_device();
-  {
-    auto create_info = ErrorImageCreateInfo();
-    auto create_result = device.createImage(create_info);
-    auto vk_image = create_result.value;
-    device.destroyImage(vk_image);
-    device.waitIdle();
-  }
-  EXPECT_EQ(GetCountErrors(), 1);
-
-  // In this case the createImage() command is valid. We should not see any Vulkan validation
-  // errors nor warnings here.
-  {
-    auto create_info = CorrectImageCreateInfo();
-    auto create_result = device.createImage(create_info);
-    auto vk_image = create_result.value;
-    device.destroyImage(vk_image);
-    device.waitIdle();
-  }
-  EXPECT_EQ(GetCountErrors(), 1);  // no new errors occurred.
-}
-
-class ValidationLayerBothHandlers : public TestWithVkValidationLayer {
- public:
-  ValidationLayerBothHandlers()
+  ValidationLayerWithCustomHandler()
       : TestWithVkValidationLayer(
             {{[this](VkDebugReportFlagsEXT flags_in, VkDebugReportObjectTypeEXT object_type_in,
                      uint64_t object, size_t location, int32_t message_code,
@@ -153,7 +110,7 @@ class ValidationLayerBothHandlers : public TestWithVkValidationLayer {
   int count_errors_ = 0;
 };
 
-VK_TEST_F(ValidationLayerBothHandlers, HandlerTest) {
+VK_TEST_F(ValidationLayerWithCustomHandler, HandlerTest) {
   Escher* escher = GetEscher();
   auto device = escher->vk_device();
   {
