@@ -80,7 +80,8 @@ void SessionHandlerTest::InitializeEngine() {
 
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
-  scenic_session_ = std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
+  scenic_session_ =
+      std::make_unique<scenic_impl::Session>(session_id, nullptr, std::move(listener));
 }
 
 SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
