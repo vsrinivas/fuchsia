@@ -5,7 +5,10 @@
 #ifndef PLATFORM_THREAD_H
 #define PLATFORM_THREAD_H
 
+#include <limits.h>  // ensure stdc-predef.h is included for __STDC_NO_THREADS__
+#ifndef __STDC_NO_THREADS__
 #include <threads.h>
+#endif
 
 #include <cstdint>
 #include <string>
@@ -37,7 +40,9 @@ class PlatformThreadHelper {
   static std::string GetCurrentThreadName();
 
   static bool SetProfile(PlatformHandle* profile);
+#ifndef __STDC_NO_THREADS__
   static bool SetThreadProfile(thrd_t thread, PlatformHandle* profile);
+#endif
 };
 
 class PlatformProcessHelper {

@@ -52,6 +52,7 @@ TEST(PlatformDevice, SchedulerProfile) {
   test_thread.join();
 }
 
+#ifndef __STDC_NO_THREADS__
 static int thread_function(void* input) { return 0; }
 
 TEST(PlatformDevice, SchedulerThreadProfile) {
@@ -67,6 +68,7 @@ TEST(PlatformDevice, SchedulerThreadProfile) {
   EXPECT_TRUE(magma::PlatformThreadHelper::SetThreadProfile(thread, profile.get()));
   thrd_join(thread, nullptr);
 }
+#endif
 
 TEST(PlatformDevice, FirmwareLoader) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
