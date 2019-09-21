@@ -71,8 +71,6 @@ def main():
                             'fidl')
         line = line.replace(lib_with_dash,
                             lib)
-        line = line.replace('public_deps',
-                            'deps')
         line = line.replace('$zx/system/fidl',
                             '//zircon/system/fidl')
         sys.stdout.write(line)
