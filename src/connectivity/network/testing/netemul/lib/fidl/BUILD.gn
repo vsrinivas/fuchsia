@@ -16,7 +16,7 @@ fidl("network") {
     "network.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//zircon/system/fidl/fuchsia-hardware-ethernet",
   ]
 }
@@ -33,7 +33,7 @@ fidl("environment") {
     "environment.fidl",
   ]
 
-  deps = [
+  public_deps = [
     ":network",
     "//sdk/fidl/fuchsia.sys",
     "//zircon/system/fidl/fuchsia-logger",
@@ -61,7 +61,7 @@ fidl("sandbox") {
     "sandbox.fidl",
   ]
 
-  deps = [
+  public_deps = [
     ":environment",
     ":network",
     ":sync",
@@ -74,7 +74,7 @@ fidl("devmgr") {
   sources = [
     "devmgr.fidl",
   ]
-  deps = [
+  public_deps = [
     "//zircon/system/fidl/fuchsia-io",
   ]
 }

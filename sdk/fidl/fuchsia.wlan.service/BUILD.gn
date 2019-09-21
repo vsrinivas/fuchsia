@@ -20,7 +20,7 @@ fidl("fuchsia.wlan.service") {
     "wlan_service.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.stats",
   ]

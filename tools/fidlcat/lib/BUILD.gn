@@ -109,7 +109,7 @@ fidl("fidl-composed") {
     "testdata/composed_into.test.fidl",
   ]
 
-  deps = [
+  public_deps = [
     ":fidl",
   ]
 }

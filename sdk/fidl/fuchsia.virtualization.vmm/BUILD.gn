@@ -9,7 +9,7 @@ fidl("fuchsia.virtualization.vmm") {
     "vmm.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.virtualization",
   ]
 }

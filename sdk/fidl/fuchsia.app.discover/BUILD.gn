@@ -20,7 +20,7 @@ fidl("fuchsia.app.discover") {
     "suggestions_service.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//zircon/system/fidl/fuchsia-mem",
   ]

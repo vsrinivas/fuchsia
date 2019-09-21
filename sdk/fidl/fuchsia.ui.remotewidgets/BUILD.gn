@@ -9,7 +9,7 @@ fidl("fuchsia.ui.remotewidgets") {
     "quickui.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.fonts",
   ]
 }

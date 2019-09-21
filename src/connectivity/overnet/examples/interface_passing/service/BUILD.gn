@@ -21,7 +21,7 @@ fidl("interface_passing") {
     "interface_passing.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/examples/fidl/services:echo",
   ]
 }

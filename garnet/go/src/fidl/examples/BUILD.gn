@@ -84,7 +84,7 @@ fidl("view") {
     "//zircon/tools/fidl/examples/library-b/view.test.fidl",
   ]
 
-  deps = [
+  public_deps = [
     ":point",
   ]
 }

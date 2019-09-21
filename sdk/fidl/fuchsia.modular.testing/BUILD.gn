@@ -17,7 +17,7 @@ fidl("fuchsia.modular.testing") {
     "test_harness.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",

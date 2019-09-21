@@ -16,7 +16,7 @@ fidl("wisdom") {
   sources = [
     "intl_wisdom.fidl",
   ]
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.intl",
   ]
   sdk_category = "internal"

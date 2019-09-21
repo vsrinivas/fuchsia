@@ -42,7 +42,7 @@ fidl("fidl.rust.test.compilation.compose") {
     "compilation_compose.test.fidl",
   ]
 
-  deps = [
+  public_deps = [
     ":fidl.rust.test.compilation",
   ]
 }

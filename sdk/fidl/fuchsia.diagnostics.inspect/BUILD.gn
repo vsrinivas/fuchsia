@@ -10,11 +10,8 @@ fidl("fuchsia.diagnostics.inspect") {
     "selector.fidl",
   ]
 
-  deps = [
-    "//sdk/fidl/fuchsia.diagnostics",
-  ]
-
   public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }

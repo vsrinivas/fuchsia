@@ -92,5 +92,5 @@ fidl("mock-device") {
     "//zircon/system/dev/test/mock-device/mock-device.fidl",
   ]
 
-  deps = []
+  public_deps = []
 }

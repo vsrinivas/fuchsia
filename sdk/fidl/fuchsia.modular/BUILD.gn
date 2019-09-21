@@ -59,7 +59,7 @@ fidl("fuchsia.modular") {
     "user_intelligence/user_intelligence_provider.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",

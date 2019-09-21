@@ -18,7 +18,7 @@ fidl("fuchsia.developer.tiles") {
     "tiles.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",
   ]

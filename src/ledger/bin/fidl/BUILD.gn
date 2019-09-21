@@ -19,7 +19,7 @@ fidl("fidl") {
     "internal.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
   ]

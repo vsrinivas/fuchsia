@@ -14,7 +14,7 @@ fidl("fuchsia.sys2") {
 
   sdk_category = "internal"
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.data",
     "//zircon/system/fidl/fuchsia-io",
   ]
