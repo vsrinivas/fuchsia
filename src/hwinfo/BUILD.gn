@@ -1,0 +1,174 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("hwinfo_bin") {
+  name = "hwinfo"
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+config_data("hwinfo_service_config") {
+  for_pkg = "sysmgr"
+
+  sources = [
+    "hwinfo.config",
+  ]
+}
+
+package("hwinfo") {
+  deps = [
+    ":hwinfo_bin",
+  ]
+
+  binaries = [
+    {
+      name = "hwinfo"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hwinfo.cmx")
+      dest = "hwinfo.cmx"
+    },
+  ]
+}
+
+rustc_test("hwinfo_positive_test") {
+  edition = "2018"
+  source_root = "tests/hwinfo_positive_test.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+rustc_test("hwinfo_negative_test") {
+  edition = "2018"
+  source_root = "tests/hwinfo_negative_test.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+test_package("hwinfo_positive_tests") {
+  deps = [
+    ":hwinfo_bin",
+    ":hwinfo_positive_test",
+  ]
+
+  binaries = [
+    {
+      name = "hwinfo"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hwinfo.cmx")
+      dest = "hwinfo.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "hwinfo_positive_test"
+    },
+  ]
+}
+
+test_package("hwinfo_negative_tests") {
+  deps = [
+    ":hwinfo_bin",
+    ":hwinfo_negative_test",
+  ]
+
+  binaries = [
+    {
+      name = "hwinfo"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hwinfo.cmx")
+      dest = "hwinfo.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "hwinfo_negative_test"
+    },
+  ]
+}
+
+config_data("hwinfo_tests_factory_config") {
+  for_pkg = "fake_factory_store_providers"
+
+  sources = [
+    "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
+  ]
+}
+
+config_data("hwinfo_tests_config") {
+  for_pkg = "hwinfo_positive_tests"
+
+  sources = [
+    "testdata/board_config.json",
+    "testdata/product_config.json",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":hwinfo_negative_tests",
+    ":hwinfo_positive_tests",
+    ":hwinfo_tests_config",
+    ":hwinfo_tests_factory_config",
+    "//src/factory/fake_factory_store_providers",
+  ]
+}

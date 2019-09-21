@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/json/validate_json.gni")
+
+# Validates a hwinfo configuration file against a schema.
+#
+# Parameters
+#   config (required)
+#     This is a hwinfo config file that needs to be validated.
+#   type (required)
+#     This is a hwinfo config type that needs to be validated.
+#     Must be one of the following:
+#       board
+#       product
+template("hwinfo_config_validate") {
+  validate_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.config
+    schema = "//src/hwinfo/hwinfo_${invoker.type}_config_schema.json"
+  }
+}
+
+# Packages a hwinfo configuration after validating it.
+#
+# Parameters
+#   config (required)
+#     A file containing a configuration for hwinfo product/board protocol.
+#     It will be schema-validated.
+#   type (required)
+#     The hwinfo config can be of of type board or product.
+#     Must be one of the following:
+#       board
+#       product
+template("hwinfo_config") {
+  validate_target = target_name + "_${invoker.type}_validate"
+
+  hwinfo_config_validate(validate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    type = invoker.type
+    config = invoker.config
+  }
+
+  config_data(target_name) {
+    for_pkg = "hwinfo"
+    sources = [
+      rebase_path(invoker.config),
+    ]
+
+    outputs = [
+      "${invoker.type}_config.json",
+    ]
+
+    deps = [
+      ":${validate_target}",
+    ]
+  }
+}

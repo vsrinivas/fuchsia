@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/hwinfo"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.factory.MiscFactoryStoreProvider",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
