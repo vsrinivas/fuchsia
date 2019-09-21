@@ -122,6 +122,7 @@ def main():
               len(failed), num_tests, 's' if num_tests > 1 else ''
           ) +
           '\n'.join(failed))
+      return 1
     else:
       info_print('%d of %d test%s passed' % (
           num_tests, num_tests, 's' if num_tests > 1 else ''))
