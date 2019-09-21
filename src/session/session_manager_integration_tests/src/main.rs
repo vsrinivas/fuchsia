@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
 ///
 /// `outcome`: The outcome of running a session, either Ok(()) or an Err()
 async fn run_session(outcome: &mut ftest::Outcome) -> Result<(), Error> {
-    match startup::launch_root_session().await {
+    match startup::launch_session().await {
         Ok(_) => {}
         Err(e) => {
             outcome.status = Some(ftest::Status::Failed);

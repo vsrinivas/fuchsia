@@ -2,20 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::{self, Error, ResultExt},
-    fuchsia_async as fasync,
-    session_manager_lib::startup,
-};
+use {failure::Error, fuchsia_async as fasync, session_manager_lib::startup};
 
-const NUM_THREADS: usize = 1;
-
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor.")?;
-    executor
-        .run(startup::launch_root_session(), NUM_THREADS)
-        .context("Error launching root session.")
-        .expect("Error launching root session.");
-
-    Ok(())
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    startup::launch_session().await
 }

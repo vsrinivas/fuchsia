@@ -23,7 +23,9 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/argh",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -39,7 +41,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/argh",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

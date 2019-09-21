@@ -2,7 +2,7 @@
     "program": {
         "binary": "bin/session_manager",
         // The root session.
-        "args": [ "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm" ],
+        "args": [ "-s", "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm" ],
     },
     "use": [
         {

@@ -3,106 +3,86 @@
 // found in the LICENSE file.
 
 use {
+    argh::FromArgs,
     failure::{self, format_err, Error, ResultExt},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
 };
 
-/// The name of the root session.
-const ROOT_SESSION_NAME: &str = "root_session";
-/// The name of the collection child session components will be added to.
-const COLLECTION_NAME: &str = "session";
-/// The name of this component.
-const SESSION_MANAGER_NAME: &str = "session_manager";
+#[derive(FromArgs)]
+/// The session manager component.
+struct SessionManagerArgs {
+    #[argh(option, short = 's')]
+    /// the URL for the session to start.
+    session_url: String,
+}
 
-/// Parse arguments from [std::env::args()].
-/// A single non-flag argument is expected for the root session URL.
+/// The name of the session child component.
+const SESSION_NAME: &str = "session";
+
+/// The name of the child collection the session is added to, must match the declaration in
+/// session_manager.cml.
+const SESSION_CHILD_COLLECTION: &str = "session";
+
+/// Launches the "root" session, as specified in `std::env::args()`.
 ///
-/// `args`: Arguments from [std::env::args()]
-fn parse_session_url(args: Vec<String>) -> Result<String, Error> {
-    if args.len() < 1 {
-        return Err(format_err!("Please specify a startup session."));
-    } else if args.len() > 2 {
-        return Err(format_err!("Multiple arguments given."));
-    }
+/// # Returns
+/// `Ok` if the session component is added and bound successfully.
+pub async fn launch_session() -> Result<(), Error> {
+    let SessionManagerArgs { session_url } = argh::from_env();
 
-    Ok(args[0].clone())
-}
-
-/// Returns a usage message for session_manager.
-fn usage() -> String {
-    format!(
-        "Usage: {} <session-url>\n",
-        std::env::args().next().unwrap_or(SESSION_MANAGER_NAME.to_string())
-    )
-}
-
-/// Launches the root session specified in [std::env::args()] as a child component. Returns Ok(())
-/// if this successfully creates and binds to the session.
-pub async fn launch_root_session() -> Result<(), Error> {
-    let root_session_url = parse_session_url(std::env::args().skip(1).collect()).context(usage());
-
-    // Create the session child component.
     let realm =
         connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
-    let mut collection_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_string() };
-    let child_decl = fsys::ChildDecl {
-        name: Some(ROOT_SESSION_NAME.to_string()),
-        url: Some(root_session_url?.to_string()),
-        startup: Some(fsys::StartupMode::Lazy), // Dynamic children can only be started lazily.
-    };
-    match realm.create_child(&mut collection_ref, child_decl).await {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(format_err!("Failed to create root session. Error: {}", err));
-        }
-    };
-
-    // Run the session component.
-    let mut child_ref = fsys::ChildRef {
-        name: ROOT_SESSION_NAME.to_string(),
-        collection: Some(COLLECTION_NAME.to_string()),
-    };
-    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-    match realm.bind_child(&mut child_ref, server_end).await {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(format_err!("Failed to bind root session. Error: {}", err));
-        }
-    };
+    add_session_to_realm(&session_url, &realm).await?;
+    bind_session(&realm).await?;
 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use {super::*, fuchsia_async as fasync};
+/// Adds the session component as a child in the provided realm.
+///
+/// # Parameters
+/// - `session_url`: The URL of the session component.
+/// - `realm`: The realm to create the child in.
+///
+/// # Returns
+/// `Ok` if the child was successfully added to the realm.
+async fn add_session_to_realm(session_url: &str, realm: &fsys::RealmProxy) -> Result<(), Error> {
+    let mut collection_ref = fsys::CollectionRef { name: SESSION_CHILD_COLLECTION.to_string() };
+    let child_decl = fsys::ChildDecl {
+        name: Some(SESSION_NAME.to_string()),
+        url: Some(session_url.to_string()),
+        startup: Some(fsys::StartupMode::Lazy), // Dynamic children can only be started lazily.
+    };
 
-    #[fasync::run_singlethreaded(test)]
-    async fn parse_session_url_test() -> Result<(), Error> {
-        let session_url = "fuchsia-pkg://fuchsia.com/session_pkg#meta/session.cm";
-        let second_url = "fuchsia-pkg://fuchsia.com/session_pkg#meta/another.cm";
-        let flag = "--flag";
+    realm
+        .create_child(&mut collection_ref, child_decl)
+        .await?
+        .map_err(|err: fsys::Error| format_err!("Failed to create session child: {:?}", err))?;
 
-        // Single session url is parsed correctly.
-        match parse_session_url(vec![session_url.to_string()]) {
-            Ok(url) => {
-                assert_eq!(url, session_url);
-            }
-            Err(err) => {
-                panic!("Session url not parsed correctly. Error: {}", err);
-            }
-        };
+    Ok(())
+}
 
-        // Zero or multiple arguments should fail parsing. Must be exactly one URL.
-        assert!(parse_session_url(vec![]).is_err());
-        assert!(parse_session_url(vec![
-            session_url.to_string(),
-            second_url.to_string(),
-            flag.to_string()
-        ])
-        .is_err());
-        Ok(())
-    }
+/// Binds the session child which runs the session component.
+///
+/// # Parameters
+/// - `realm`: The realm used to bind the child.
+///
+/// # Returns
+/// `Ok` if the session child was successfully bound.
+async fn bind_session(realm: &fsys::RealmProxy) -> Result<(), Error> {
+    let mut child_ref = fsys::ChildRef {
+        name: SESSION_NAME.to_string(),
+        collection: Some(SESSION_CHILD_COLLECTION.to_string()),
+    };
+
+    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
+        .context("Could not create directory proxy.")?;
+    realm
+        .bind_child(&mut child_ref, server_end)
+        .await?
+        .map_err(|err: fsys::Error| format_err!("Failed to bind session child: {:?}", err))?;
+
+    Ok(())
 }
