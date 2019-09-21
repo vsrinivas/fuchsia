@@ -7,7 +7,6 @@ source_set("test") {
   testonly = true
 
   public_deps = [
-    ":audio_test_base",
     ":constants",
     ":hermetic_audio_test",
     ":message_transceiver",
@@ -41,26 +40,6 @@ source_set("constants") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
-  ]
-}
-
-# Base class for non-hermetic test cases
-source_set("audio_test_base") {
-  testonly = true
-
-  sources = [
-    "audio_core_test_base.cc",
-    "audio_core_test_base.h",
-    "audio_test_base.cc",
-    "audio_test_base.h",
-  ]
-
-  public_deps = [
-    ":constants",
-    ":test_fixture",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//sdk/lib/sys/cpp",
   ]
 }
 
