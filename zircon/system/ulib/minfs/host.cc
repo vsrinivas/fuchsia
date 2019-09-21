@@ -125,7 +125,7 @@ int emu_mkfs(const char* path) {
     return -1;
   }
 
-  return Mkfs(std::move(bc));
+  return Mkfs(bc.get());
 }
 
 static const minfs::MountOptions kDefaultMountOptions = {

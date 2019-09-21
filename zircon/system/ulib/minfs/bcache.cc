@@ -28,6 +28,11 @@
 
 namespace minfs {
 
+void Bcache::DestroyBcache(std::unique_ptr<Bcache> bcache,
+                           std::unique_ptr<block_client::BlockDevice>* out) {
+  *out = std::move(bcache->device_);
+}
+
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
   fs::Operation operation = {};
   operation.type = fs::OperationType::kRead;

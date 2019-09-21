@@ -301,7 +301,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
         return status;
       }
       minfs::MountOptions options = {};
-      if ((status = minfs::Mkfs(options, std::move(bc))) != ZX_OK) {
+      if ((status = minfs::Mkfs(options, bc.get())) != ZX_OK) {
         fprintf(stderr, "fshost: Could not format minfs filesystem.\n");
         return status;
       }

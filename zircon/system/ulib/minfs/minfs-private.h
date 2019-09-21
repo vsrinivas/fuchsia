@@ -191,6 +191,9 @@ class Minfs :
 
   ~Minfs();
 
+  // Destroys a "minfs" object, but take back ownership of the bcache object.
+  static void DestroyMinfs(std::unique_ptr<Minfs> minfs, std::unique_ptr<Bcache>* out);
+
   static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                             IntegrityCheck checks, fbl::unique_ptr<Minfs>* out);
 

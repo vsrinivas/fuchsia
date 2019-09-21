@@ -360,7 +360,7 @@ zx_status_t MinfsCreator::Mkfs() {
   }
 
   // Consume the bcache to mkfs.
-  if ((status = minfs::Mkfs(std::move(bc))) != ZX_OK) {
+  if ((status = minfs::Mkfs(bc.get())) != ZX_OK) {
     return status;
   }
 

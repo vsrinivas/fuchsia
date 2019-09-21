@@ -51,7 +51,11 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
   friend class BlockNode;
 
-  ~Bcache() {}
+  ~Bcache() = default;
+
+  // Destroys a "bcache" object, but take back ownership of the underlying block device.
+  static void DestroyBcache(std::unique_ptr<Bcache> bcache,
+                            std::unique_ptr<block_client::BlockDevice>* out);
 
   ////////////////
   // fs::TransactionHandler interface.

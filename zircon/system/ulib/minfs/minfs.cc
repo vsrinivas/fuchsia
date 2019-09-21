@@ -421,6 +421,10 @@ BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
 }
 #endif
 
+void Minfs::DestroyMinfs(std::unique_ptr<Minfs> minfs, std::unique_ptr<Bcache>* out) {
+  *out = std::move(minfs->bc_);
+}
+
 zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                     fbl::unique_ptr<Transaction>* out) {
   ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
@@ -1570,7 +1574,7 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
   return safemath::checked_cast<uint32_t>((bit_count + kMinfsBlockBits - 1) / kMinfsBlockBits);
 }
 
-zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
+zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   Superblock info;
   memset(&info, 0x00, sizeof(info));
   info.magic0 = kMinfsMagic0;

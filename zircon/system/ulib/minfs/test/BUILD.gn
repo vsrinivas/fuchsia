@@ -15,6 +15,7 @@ test("minfs-unit") {
   sources = [
     "unit/bcache-test.cc",
     "unit/format-test.cc",
+    "unit/fsck-test.cc",
     "unit/inspector-test.cc",
     "unit/superblock-test.cc",
     "unit/transaction-test.cc",

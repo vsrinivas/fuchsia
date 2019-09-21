@@ -57,10 +57,10 @@ struct MountOptions {
 };
 
 // Format the partition backed by |bc| as MinFS.
-zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc);
+zx_status_t Mkfs(const MountOptions& options, Bcache* bc);
 
 // Format the partition backed by |bc| as MinFS.
-inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) { return Mkfs({}, std::move(bc)); }
+inline zx_status_t Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 
 #ifdef __Fuchsia__
 

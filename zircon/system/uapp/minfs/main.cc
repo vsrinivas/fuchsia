@@ -70,7 +70,7 @@ int Mount(fbl::unique_fd device_fd, const minfs::MountOptions& options) {
 }
 
 int Mkfs(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-  return Mkfs(options, std::move(bc));
+  return Mkfs(options, bc.get());
 }
 
 struct {
