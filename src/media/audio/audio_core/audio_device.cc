@@ -32,7 +32,7 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
 
 AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
     : AudioObject(type),
-      manager_(manager),
+      device_manager_(*manager),
       mix_domain_(manager ? manager->threading_model().AcquireMixDomain() : nullptr),
       driver_(new AudioDriver(this)) {
   // audio_core_inspect_tests currently relies on creating a subclass of AudioDevice with a null
@@ -41,6 +41,8 @@ AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
 }
 
 AudioDevice::~AudioDevice() = default;
+
+ThreadingModel& AudioDevice::threading_model() { return device_manager_.threading_model(); }
 
 void AudioDevice::Wakeup() {
   TRACE_DURATION("audio", "AudioDevice::Wakeup");
@@ -106,7 +108,7 @@ zx_status_t AudioDevice::Init() {
   TRACE_DURATION("audio", "AudioDevice::Init");
   WakeupEvent::ProcessHandler process_handler(
       [output = fbl::RefPtr(this)](WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &output->mix_domain());
         output->OnWakeup();
         return ZX_OK;
       });
@@ -142,10 +144,8 @@ void AudioDevice::ActivateSelf() {
     device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());
 
     // Now poke our manager.
-    FXL_DCHECK(manager_);
-    manager_->ScheduleMainThreadTask([manager = manager_, self = fbl::RefPtr(this)]() {
-      manager->ActivateDevice(std::move(self));
-    });
+    device_manager().ScheduleMainThreadTask(
+        [self = fbl::RefPtr(this)]() { self->device_manager().ActivateDevice(std::move(self)); });
   }
 }
 
@@ -158,9 +158,8 @@ void AudioDevice::ShutdownSelf() {
     // TODO(mpuryear): Considering eliminating this; it may not be needed.
     PreventNewLinks();
 
-    FXL_DCHECK(manager_);
-    manager_->ScheduleMainThreadTask(
-        [manager = manager_, self = fbl::RefPtr(this)]() { manager->RemoveDevice(self); });
+    device_manager().ScheduleMainThreadTask(
+        [self = fbl::RefPtr(this)]() { self->device_manager().RemoveDevice(self); });
   }
 }
 
@@ -169,7 +168,7 @@ fit::promise<void, zx_status_t> AudioDevice::Startup() {
   fit::bridge<void, zx_status_t> bridge;
   async::PostTask(mix_domain_->dispatcher(),
                   [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
                     zx_status_t res = self->Init();
                     if (res != ZX_OK) {
                       self->Cleanup();
@@ -197,7 +196,7 @@ fit::promise<void> AudioDevice::Shutdown() {
   fit::bridge<void> bridge;
   async::PostTask(mix_domain_->dispatcher(),
                   [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
                     self->Cleanup();
                     completer.complete_ok();
                   });

@@ -50,7 +50,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   //             this output or input last changed.
   bool plugged() const { return plugged_; }
   zx_time_t plug_time() const { return plug_time_; }
-  const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
+  AudioDriver* driver() const { return driver_.get(); }
   uint64_t token() const;
   uint64_t GetKey() const { return token(); }
   bool activated() const { return activated_; }
@@ -64,7 +64,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   //
   // TODO(johngro): Remove, when driver format selection is controlled by a policy manager layer.
   virtual void NotifyDestFormatPreference(const fuchsia::media::AudioStreamTypePtr& fmt)
-      FXL_LOCKS_EXCLUDED(mix_domain_->token()) {}
+      FXL_LOCKS_EXCLUDED(mix_domain().token()) {}
 
   // GetSourceFormatPreference
   //
@@ -103,14 +103,14 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // Called during startup on the mixer thread. Derived classes should begin the
   // process of driver initialization at this point. Return ZX_OK if things have
   // started and we are waiting for driver init.
-  virtual zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  virtual zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Cleanup
   //
   // Called at shutdown on the mixer thread to allow derived classes to clean
   // up any allocated resources. All other audio objects have been
   // disconnected/unlinked. No locks are being held.
-  virtual void Cleanup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  virtual void Cleanup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // ApplyGainLimits
   //
@@ -132,13 +132,13 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // Called in response to someone from outside the domain poking the
   // mix_wakeup_ WakeupEvent.  At a minimum, the framework will call this once
   // at startup to get the output running.
-  virtual void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
+  virtual void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
   // ActivateSelf
   //
   // Send a message to the audio device manager to let it know that we are ready
   // to be added to the set of active devices.
-  void ActivateSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void ActivateSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // ShutdownSelf
   //
@@ -146,7 +146,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // method is called, no new callbacks may be scheduled. When the main message
   // loop gets our shutdown request, it completes the process by unlinking us
   // from our AudioRenderers/AudioCapturers and calling our Cleanup.
-  void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Check the shutting down flag.  We are in the process of shutting down when
   // we have become deactivated at the dispatcher framework level.
@@ -158,16 +158,16 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   //
   // Hooks used by encapsulated AudioDriver instances to notify AudioDevices
   // about internal state machine changes.
-  virtual void OnDriverInfoFetched() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+  virtual void OnDriverInfoFetched() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
-  virtual void OnDriverConfigComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+  virtual void OnDriverConfigComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
-  virtual void OnDriverStartComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+  virtual void OnDriverStartComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
-  virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+  virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
   virtual void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -186,13 +186,18 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   // AudioDriver accessors.
   const fbl::RefPtr<DriverRingBuffer>& driver_ring_buffer() const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   const TimelineFunction& driver_clock_mono_to_ring_pos_bytes() const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  AudioDeviceManager* manager_;
+  ExecutionDomain& mix_domain() const { return *mix_domain_; }
+  ThreadingModel& threading_model();
+  AudioDeviceManager& device_manager() { return device_manager_; }
+  const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
+ private:
+  AudioDeviceManager& device_manager_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
   WakeupEvent mix_wakeup_;
 
@@ -206,7 +211,6 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // class lives for as long as the AudioDevice does.
   fbl::RefPtr<AudioDeviceSettings> device_settings_;
 
- private:
   // It's always nice when you manager is also your friend.  Seriously though,
   // the AudioDeviceManager gets to call Startup and Shutdown, no one else
   // (including derived classes) should be able to.
@@ -232,13 +236,6 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
     FXL_DCHECK(!activated());
     activated_ = true;
   }
-
-  // Accessor used by AudioDeviceManager to access the device_settings object.
-  //
-  // Note: it is certainly possible for AudioDeviceManager to simply access the
-  // device_settings_ pointer directly. Code should use this accessor instead,
-  // however, to avoid accidentally releasing the device_settings object.
-  const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
   bool system_gain_dirty = true;
 

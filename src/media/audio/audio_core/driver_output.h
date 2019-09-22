@@ -22,11 +22,11 @@ class DriverOutput : public AudioOutput {
 
  protected:
   // AudioOutput implementation
-  zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
-  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
+  zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
+  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
-  bool FinishMixJob(const MixJob& job) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
+  bool FinishMixJob(const MixJob& job) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
   // AudioDevice implementation
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
@@ -47,14 +47,14 @@ class DriverOutput : public AudioOutput {
 
   // Callbacks triggered by our driver object as it completes various
   // asynchronous tasks.
-  void OnDriverInfoFetched() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverInfoFetched() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  void OnDriverConfigComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverConfigComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   State state_ = State::Uninitialized;
   zx::channel initial_stream_channel_;

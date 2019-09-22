@@ -29,7 +29,7 @@ zx_status_t AudioInput::Init() {
     return res;
   }
 
-  res = driver_->Init(std::move(initial_stream_channel_));
+  res = driver()->Init(std::move(initial_stream_channel_));
   if (res == ZX_OK) {
     state_ = State::Initialized;
   }
@@ -41,7 +41,7 @@ void AudioInput::OnWakeup() {
   TRACE_DURATION("audio", "AudioInput::OnWakeup");
   // We were poked.  Are we just starting up?
   if (state_ == State::Initialized) {
-    if (driver_->GetDriverInfo() != ZX_OK) {
+    if (driver()->GetDriverInfo() != ZX_OK) {
       ShutdownSelf();
     } else {
       state_ = State::FetchingFormats;
@@ -60,7 +60,7 @@ void AudioInput::OnDriverInfoFetched() {
   uint32_t pref_chan = 1;
   fuchsia::media::AudioSampleFormat pref_fmt = fuchsia::media::AudioSampleFormat::SIGNED_16;
 
-  zx_status_t res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
+  zx_status_t res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Audio input failed to find any compatible driver formats.  Req was "
                    << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x" << std::hex
@@ -80,11 +80,11 @@ void AudioInput::OnDriverInfoFetched() {
   // TODO(mpuryear): Save to the hub the configured format for this input.
 
   // Send config request; recompute distance between start|end sampling fences.
-  driver_->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
+  driver()->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
 
   int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance);
   FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
-  driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
+  driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 
   // Tell AudioDeviceManager it can add us to the set of active audio devices.
   ActivateSelf();
@@ -92,39 +92,38 @@ void AudioInput::OnDriverInfoFetched() {
 
 void AudioInput::OnDriverConfigComplete() {
   TRACE_DURATION("audio", "AudioInput::OnDriverConfigComplete");
-  driver_->SetPlugDetectEnabled(true);
+  driver()->SetPlugDetectEnabled(true);
 }
 
 void AudioInput::OnDriverStartComplete() {
   TRACE_DURATION("audio", "AudioInput::OnDriverStartComplete");
   // If we were unplugged while starting, stop now.
-  if (!driver_->plugged()) {
-    driver_->Stop();
+  if (!driver()->plugged()) {
+    driver()->Stop();
   }
 }
 
 void AudioInput::OnDriverStopComplete() {
   TRACE_DURATION("audio", "AudioInput::OnDriverStopComplete");
   // If we were plugged while stopping, start now.
-  if (driver_->plugged()) {
-    driver_->Start();
+  if (driver()->plugged()) {
+    driver()->Start();
   }
 }
 
 void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   TRACE_DURATION("audio", "AudioInput::OnDriverPlugStateChange");
-  if (plugged && (driver_->state() == AudioDriver::State::Configured)) {
-    driver_->Start();
-  } else if (!plugged && (driver_->state() == AudioDriver::State::Started)) {
-    driver_->Stop();
+  if (plugged && (driver()->state() == AudioDriver::State::Configured)) {
+    driver()->Start();
+  } else if (!plugged && (driver()->state() == AudioDriver::State::Started)) {
+    driver()->Stop();
   }
 
   // Reflect this message to the AudioDeviceManager so it can deal with the
   // routing consequences of the plug state change.
-  manager_->ScheduleMainThreadTask(
-      [manager = manager_, output = fbl::RefPtr(this), plugged, plug_time]() {
-        manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
-      });
+  device_manager().ScheduleMainThreadTask([output = fbl::RefPtr(this), plugged, plug_time]() {
+    output->device_manager().HandlePlugStateChange(std::move(output), plugged, plug_time);
+  });
 }
 
 void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
@@ -172,12 +171,13 @@ void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uin
 
 void AudioInput::UpdateDriverGainState() {
   TRACE_DURATION("audio", "AudioInput::UpdateDriverGainState");
-  if ((state_ != State::Idle) || (device_settings_ == nullptr)) {
+  auto settings = device_settings();
+  if ((state_ != State::Idle) || (settings == nullptr)) {
     return;
   }
 
   AudioDeviceSettings::GainState state;
-  audio_set_gain_flags_t dirty_flags = device_settings_->SnapshotGainState(&state);
+  audio_set_gain_flags_t dirty_flags = settings->SnapshotGainState(&state);
   if (!dirty_flags) {
     return;
   }

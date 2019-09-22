@@ -30,7 +30,7 @@ class ThrottleOutput : public AudioOutput {
   explicit ThrottleOutput(AudioDeviceManager* manager) : AudioOutput(manager) {}
 
   // AudioOutput Implementation
-  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override {
+  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     if (uninitialized_) {
       last_sched_time_ = fxl::TimePoint::Now();
       UpdatePlugState(true, 0);

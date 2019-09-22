@@ -100,7 +100,7 @@ void AudioOutput::Process() {
   }
 
   zx::time next_time(static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds()));
-  zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_time);
+  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_time);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();
@@ -140,9 +140,10 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
   // The renderer will set this link's source gain once this call returns.
   //
   // Set the dest gain -- device gain retrieved from device settings.
-  if (device_settings_ != nullptr) {
+  const auto& settings = device_settings();
+  if (settings != nullptr) {
     AudioDeviceSettings::GainState cur_gain_state;
-    device_settings_->SnapshotGainState(&cur_gain_state);
+    settings->SnapshotGainState(&cur_gain_state);
 
     mix_bookkeeping->gain.SetDestMute(cur_gain_state.muted);
     mix_bookkeeping->gain.SetDestGain(cur_gain_state.gain_db);

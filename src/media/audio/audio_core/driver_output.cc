@@ -61,7 +61,7 @@ zx_status_t DriverOutput::Init() {
     return res;
   }
 
-  res = driver_->Init(std::move(initial_stream_channel_));
+  res = driver()->Init(std::move(initial_stream_channel_));
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to initialize driver object";
     return res;
@@ -82,7 +82,7 @@ void DriverOutput::OnWakeup() {
 
   // Kick off the process of driver configuration by requesting the basic driver
   // info, which will include the modes which the driver supports.
-  driver_->GetDriverInfo();
+  driver()->GetDriverInfo();
   state_ = State::FetchingFormats;
 }
 
@@ -111,9 +111,10 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   //    the SW component), and then in the other (as the HW gain command takes
   //    effect).
   //
-  if (device_settings_ != nullptr) {
+  const auto& settings = device_settings();
+  if (settings != nullptr) {
     AudioDeviceSettings::GainState cur_gain_state;
-    device_settings_->SnapshotGainState(&cur_gain_state);
+    settings->SnapshotGainState(&cur_gain_state);
     job->sw_output_gain_db = cur_gain_state.gain_db;
     job->sw_output_muted = cur_gain_state.muted;
   } else {
@@ -127,7 +128,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   const auto& cm2frames = cm2rd_pos.rate();
   const auto& rb = *driver_ring_buffer();
-  uint32_t fifo_frames = driver_->fifo_depth_frames();
+  uint32_t fifo_frames = driver()->fifo_depth_frames();
 
   // If frames_to_mix_ is 0, then this is the start of a new mix. Ensure we have not underflowed
   // while sleeping, then compute how many frames to mix during this wakeup cycle, and return a job
@@ -312,7 +313,7 @@ void DriverOutput::OnDriverInfoFetched() {
   zx_duration_t min_rb_duration =
       kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
-  res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
+  res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Output: cannot match a driver format to this request: " << pref_fps
@@ -327,7 +328,7 @@ void DriverOutput::OnDriverInfoFetched() {
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
   FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
   FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
-  driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
+  driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
 
   // Select our output producer
   fuchsia::media::AudioStreamTypePtr config(fuchsia::media::AudioStreamType::New());
@@ -344,7 +345,7 @@ void DriverOutput::OnDriverInfoFetched() {
   }
 
   // Start the process of configuring our driver
-  res = driver_->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
+  res = driver()->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
                    << "-channel, sample format 0x" << std::hex << static_cast<uint32_t>(pref_fmt)
@@ -357,7 +358,7 @@ void DriverOutput::OnDriverInfoFetched() {
     uint32_t instance_count = final_mix_instance_num_.fetch_add(1);
     file_name_ += (std::to_string(instance_count) + kWavFileExtension);
     wav_writer_.Initialize(file_name_.c_str(), pref_fmt, pref_chan, pref_fps,
-                           driver_->bytes_per_frame() * 8 / pref_chan);
+                           driver()->bytes_per_frame() * 8 / pref_chan);
   }
 
   // Tell AudioDeviceManager we are ready to be an active audio device.
@@ -383,9 +384,9 @@ void DriverOutput::OnDriverConfigComplete() {
   // Now that our driver is completely configured, we have all the info needed
   // to compute the minimum clock lead time requrirement for this output.
   int64_t fifo_depth_nsec =
-      TimelineRate::Scale(driver_->fifo_depth_frames(), ZX_SEC(1), driver_->frames_per_sec());
+      TimelineRate::Scale(driver()->fifo_depth_frames(), ZX_SEC(1), driver()->frames_per_sec());
   min_clock_lead_time_nsec_ =
-      driver_->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec;
+      driver()->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec;
 
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);
@@ -406,14 +407,14 @@ void DriverOutput::OnDriverConfigComplete() {
   // TODO(mpuryear) : Don't actually start things up here.  We should start only
   // when we have clients with work to do, and we should stop when we have no
   // work to do.  See MTWN-5
-  zx_status_t res = driver_->Start();
+  zx_status_t res = driver()->Start();
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to start ring buffer";
     return;
   }
 
   // Start monitoring plug state.
-  res = driver_->SetPlugDetectEnabled(true);
+  res = driver()->SetPlugDetectEnabled(true);
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to enable plug detection";
     return;
@@ -435,7 +436,7 @@ void DriverOutput::OnDriverStartComplete() {
   // in frames, rounded up.  Then compute our low water mark (in frames) and
   // where we want to start mixing.  Finally kick off the mixing engine by
   // manually calling Process.
-  uint32_t bytes_per_frame = driver_->bytes_per_frame();
+  uint32_t bytes_per_frame = driver()->bytes_per_frame();
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
@@ -444,7 +445,7 @@ void DriverOutput::OnDriverStartComplete() {
   clock_mono_to_ring_buf_pos_id_.Next();
 
   const TimelineFunction& trans = clock_mono_to_ring_buf_pos_frames_;
-  uint32_t fd_frames = driver_->fifo_depth_frames();
+  uint32_t fd_frames = driver()->fifo_depth_frames();
   low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec);
   frames_sent_ = low_water_frames_;
   frames_to_mix_ = 0;
@@ -465,10 +466,9 @@ void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   TRACE_DURATION("audio", "DriverOutput::OnDriverPlugStateChange");
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
-  manager_->ScheduleMainThreadTask(
-      [manager = manager_, output = fbl::RefPtr(this), plugged, plug_time]() {
-        manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
-      });
+  device_manager().ScheduleMainThreadTask([output = fbl::RefPtr(this), plugged, plug_time]() {
+    output->device_manager().HandlePlugStateChange(std::move(output), plugged, plug_time);
+  });
 }
 
 }  // namespace media::audio

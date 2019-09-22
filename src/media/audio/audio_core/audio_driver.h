@@ -140,56 +140,56 @@ class AudioDriver {
   // Dispatchers for messages received over stream and ring buffer channels.
   zx_status_t ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
                           uint32_t* bytes_read_out, zx::handle* handle_out)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessStreamChannelMessage()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessRingBufferChannelMessage()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Stream channel message handlers.
   zx_status_t ProcessGetStringResponse(audio_stream_cmd_get_string_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessGetGainResponse(audio_stream_cmd_get_gain_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessGetFormatsResponse(const audio_stream_cmd_get_formats_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessSetFormatResponse(const audio_stream_cmd_set_format_resp_t& resp,
                                        zx::channel rb_channel)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Ring buffer message handlers.
   zx_status_t ProcessGetFifoDepthResponse(const audio_rb_cmd_get_fifo_depth_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_resp_t& resp, zx::vmo rb_vmo)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessStopResponse(const audio_rb_cmd_stop_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessPositionNotify(const audio_rb_position_notify_t& notify)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Transition to the Shutdown state and begin the process of shutting down.
   void ShutdownSelf(const char* debug_reason = nullptr, zx_status_t debug_status = ZX_OK)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Evaluate each currently pending timeout. Program the command timeout timer appropriately.
-  void SetupCommandTimeout() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+  void SetupCommandTimeout() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Update internal plug state bookkeeping and report up to our owner (if enabled).
   void ReportPlugStateChange(bool plugged, zx_time_t plug_time)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Handle a new piece of driver info being fetched.
   zx_status_t OnDriverInfoFetched(uint32_t info)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Simple accessors
-  bool operational() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+  bool operational() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
     return (state_ != State::Uninitialized) && (state_ != State::Shutdown);
   }
 
-  bool fetching_driver_info() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+  bool fetching_driver_info() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
     return (fetch_driver_info_timeout_ != ZX_TIME_INFINITE);
   }
 
@@ -214,12 +214,12 @@ class AudioDriver {
   }
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   void RingBufferChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
-  void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+  void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
     ShutdownSelf("Unexpected command timeout", ZX_ERR_TIMED_OUT);
   }
 
@@ -229,14 +229,14 @@ class AudioDriver {
   zx::channel stream_channel_;
   zx::channel ring_buffer_channel_;
 
-  async::Wait stream_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain_->token());
-  async::Wait ring_buffer_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain_->token());
-  async::TaskClosure cmd_timeout_ FXL_GUARDED_BY(owner_->mix_domain_->token());
+  async::Wait stream_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain().token());
+  async::Wait ring_buffer_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain().token());
+  async::TaskClosure cmd_timeout_ FXL_GUARDED_BY(owner_->mix_domain().token());
 
   zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
   zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
   zx_time_t fetch_driver_info_timeout_ = ZX_TIME_INFINITE;
-  uint32_t fetched_driver_info_ FXL_GUARDED_BY(owner_->mix_domain_->token()) = 0;
+  uint32_t fetched_driver_info_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;
 
   // State fetched at driver startup time.
   audio_stream_unique_id_t persistent_unique_id_ = {0};

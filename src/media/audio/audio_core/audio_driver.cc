@@ -41,7 +41,7 @@ AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) { FXL_DCHECK(owner_
 zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   TRACE_DURATION("audio", "AudioDriver::Init");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   FXL_DCHECK(state_ == State::Uninitialized);
 
   // Fetch the KOID of our stream channel. We use this unique ID as our device's device token.
@@ -59,10 +59,10 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   stream_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
   stream_channel_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                           zx_status_t status, const zx_packet_signal_t* signal) {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     StreamChannelSignalled(dispatcher, wait, status, signal);
   });
-  res = stream_channel_wait_.Begin(owner_->mix_domain_->dispatcher());
+  res = stream_channel_wait_.Begin(owner_->mix_domain().dispatcher());
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to wait on stream channel for AudioDriver";
     return res;
@@ -70,7 +70,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   stream_channel_ = std::move(stream_channel);
 
   cmd_timeout_.set_handler([this] {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     DriverCommandTimedOut();
   });
 
@@ -86,7 +86,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
 void AudioDriver::Cleanup() {
   TRACE_DURATION("audio", "AudioDriver::Cleanup");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   fbl::RefPtr<DriverRingBuffer> ring_buffer;
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
@@ -128,7 +128,7 @@ fuchsia::media::AudioStreamTypePtr AudioDriver::GetSourceFormat() const {
 zx_status_t AudioDriver::GetDriverInfo() {
   TRACE_DURATION("audio", "AudioDriver::GetDriverInfo");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // We have to be operational in order to fetch supported formats.
   if (!operational()) {
@@ -221,7 +221,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
                                    zx_duration_t min_ring_buffer_duration) {
   TRACE_DURATION("audio", "AudioDriver::Configure");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // Sanity check arguments.
   audio_sample_format_t driver_format;
@@ -306,7 +306,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
 zx_status_t AudioDriver::Start() {
   TRACE_DURATION("audio", "AudioDriver::Start");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // In order to start, we must be in the Configured state.
   //
@@ -340,7 +340,7 @@ zx_status_t AudioDriver::Start() {
 zx_status_t AudioDriver::Stop() {
   TRACE_DURATION("audio", "AudioDriver::Stop");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   // In order to stop, we must be in the Started state.
   // TODO(MTWN-388): make Stop idempotent. Allow Stop when Configured/Stopping; disallow if
@@ -384,7 +384,7 @@ zx_status_t AudioDriver::Stop() {
 zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   TRACE_DURATION("audio", "AudioDriver::SetPlugDetectEnabled");
   // TODO(MTWN-385): Figure out a better way to assert this!
-  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
   if (enabled == pd_enabled_) {
     return ZX_OK;
@@ -747,10 +747,10 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   ring_buffer_channel_wait_.set_handler([this](async_dispatcher_t* dispatcher,
                                                async::WaitBase* wait, zx_status_t status,
                                                const zx_packet_signal_t* signal) {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     RingBufferChannelSignalled(dispatcher, wait, status, signal);
   });
-  zx_status_t res = ring_buffer_channel_wait_.Begin(owner_->mix_domain_->dispatcher());
+  zx_status_t res = ring_buffer_channel_wait_.Begin(owner_->mix_domain().dispatcher());
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to wait on ring buffer channel for AudioDriver";
     return res;
@@ -991,7 +991,7 @@ void AudioDriver::SetupCommandTimeout() {
 
   if (last_set_timeout_ != timeout) {
     if (timeout != ZX_TIME_INFINITE) {
-      cmd_timeout_.PostDelayed(owner_->mix_domain_->dispatcher(), zx::duration(timeout));
+      cmd_timeout_.PostDelayed(owner_->mix_domain().dispatcher(), zx::duration(timeout));
     } else {
       cmd_timeout_.Cancel();
     }
