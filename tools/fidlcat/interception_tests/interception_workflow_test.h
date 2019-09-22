@@ -564,6 +564,13 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
     AlwaysQuit aq(controller_);
   }
 
+  void ProcessLaunched(const std::string& command, std::string_view error_message) override {}
+
+  void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                        std::string_view error_message) override {}
+
+  void StopMonitoring(zx_koid_t koid) override {}
+
  private:
   ProcessController* controller_;
 };

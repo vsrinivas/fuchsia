@@ -149,35 +149,12 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& s
   });
 }
 
-void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
-                                                  bool /*autoattached_to_new_process*/) {
-  process->AddObserver(&dispatcher_);
+void InterceptingSystemObserver::GlobalDidCreateProcess(zxdb::Process* process) {
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
-  workflow_->SetBreakpoints(target);
-  // Register a new target to be able to attach to more processes.
-  zxdb::Target* next_target = workflow_->GetNewTarget();
-  workflow_->AddObserver(next_target);
+  workflow_->SetBreakpoints(process);
 }
 
-void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* /*target*/,
-                                                    zxdb::Process* process, DestroyReason reason,
-                                                    int /*exit_code*/) {
-  std::string action;
-  switch (reason) {
-    case zxdb::TargetObserver::DestroyReason::kExit:
-      action = "exited";
-      break;
-    case zxdb::TargetObserver::DestroyReason::kDetach:
-      action = "detached";
-      break;
-    case zxdb::TargetObserver::DestroyReason::kKill:
-      action = "killed";
-      break;
-    default:
-      action = "detached for unknown reason";
-      break;
-  }
-  FXL_LOG(INFO) << "Process " << process->GetKoid() << " " << action;
+void InterceptingSystemObserver::GlobalWillDestroyProcess(zxdb::Process* process) {
   workflow_->ProcessDetached(process->GetKoid());
 }
 
@@ -186,7 +163,9 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
-      observer_(this) {}
+      system_observer_(this) {
+  session_->system().AddObserver(&system_observer_);
+}
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
                                            debug_ipc::PlatformMessageLoop* loop)
@@ -194,9 +173,12 @@ InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
       delete_session_(false),
       loop_(loop),
       delete_loop_(false),
-      observer_(this) {}
+      system_observer_(this) {
+  session_->system().AddObserver(&system_observer_);
+}
 
 InterceptionWorkflow::~InterceptionWorkflow() {
+  session_->system().RemoveObserver(&system_observer_);
   if (delete_session_) {
     delete session_;
   }
@@ -253,7 +235,7 @@ void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
 
 // Helper function that finds a target for fidlcat to attach itself to. The
 // target with |process_koid| must already be running.
-zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
+zxdb::Target* InterceptionWorkflow::GetTarget(zx_koid_t process_koid) {
   for (zxdb::Target* target : session_->system().GetTargets()) {
     if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
       return target;
@@ -271,11 +253,8 @@ zxdb::Target* InterceptionWorkflow::GetNewTarget() {
   return session_->system().CreateNewTarget(nullptr);
 }
 
-// Gets the workflow to observe the given target.
-void InterceptionWorkflow::AddObserver(zxdb::Target* target) { target->AddObserver(&observer_); }
-
-void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids) {
-  for (uint64_t process_koid : process_koids) {
+void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
+  for (zx_koid_t process_koid : process_koids) {
     // Get a target for this process.
     zxdb::Target* target = GetTarget(process_koid);
     // If we are already attached, then we are done.
@@ -289,19 +268,21 @@ void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids) {
     target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
                                                               const zxdb::Err& err) {
       if (!err.ok()) {
-        FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
+        syscall_decoder_dispatcher()->ProcessMonitored("", process_koid, err.msg());
         return;
       }
 
-      FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
-      target->GetProcess()->AddObserver(&observer_.process_observer());
-      SetBreakpoints(target);
+      SetBreakpoints(target->GetProcess());
     });
   }
 }
 
-void InterceptionWorkflow::ProcessDetached(uint64_t koid) {
+void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
+  if (configured_processes_.find(koid) == configured_processes_.end()) {
+    return;
+  }
   configured_processes_.erase(koid);
+  syscall_decoder_dispatcher()->StopMonitoring(koid);
   Detach();
 }
 
@@ -339,18 +320,13 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter) {
 void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::string>& command) {
   FXL_CHECK(!command.empty()) << "No arguments passed to launcher";
 
-  auto on_err = [command](const zxdb::Err& err) {
+  auto on_err = [this, command](const zxdb::Err& err) {
     std::string cmd;
     for (auto& param : command) {
       cmd.append(param);
       cmd.append(" ");
     }
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Unable to launch " << cmd << ": " << err.msg();
-    } else {
-      FXL_LOG(INFO) << "Launched " << cmd;
-    }
-    return err.ok();
+    syscall_decoder_dispatcher()->ProcessLaunched(cmd, err.ok() ? "" : err.msg());
   };
 
   if (command[0] == "run") {
@@ -361,16 +337,17 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
     session_->remote_api()->Launch(
         request, [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
                      const zxdb::Err& err, debug_ipc::LaunchReply reply) {
-          if (!on_err(err)) {
-            return;
-          }
-          if (reply.status != debug_ipc::kZxOk) {
-            FXL_LOG(INFO) << "Could not start component " << reply.process_name << ": "
-                          << DisplayStatus(reply.status);
+          if (err.ok() && (reply.status != debug_ipc::kZxOk)) {
+            std::stringstream status;
+            StatusName(reply.status, status);
+            zxdb::Err status_err(zxdb::ErrType::kGeneral, status.str());
+            on_err(status_err);
+          } else {
+            on_err(err);
           }
           target->session()->ExpectComponent(reply.component_id);
           if (target->GetProcess() != nullptr) {
-            SetBreakpoints(target.get());
+            SetBreakpoints(target->GetProcess());
           }
         });
     return;
@@ -379,20 +356,22 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
   target->SetArgs(command);
   target->Launch(
       [this, on_err = std::move(on_err)](fxl::WeakPtr<zxdb::Target> target, const zxdb::Err& err) {
-        if (!on_err(err)) {
-          return;
-        }
+        on_err(err);
         if (target->GetProcess() != nullptr) {
-          SetBreakpoints(target.get());
+          SetBreakpoints(target->GetProcess());
         }
       });
 }
 
-void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
-  if (configured_processes_.find(target->GetProcess()->GetKoid()) != configured_processes_.end()) {
+void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
+  if (configured_processes_.find(process->GetKoid()) != configured_processes_.end()) {
     return;
   }
-  configured_processes_.emplace(target->GetProcess()->GetKoid());
+  configured_processes_.emplace(process->GetKoid());
+
+  process->AddObserver(&system_observer_.process_observer());
+  syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(), "");
+
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;
     if (!syscall_decoder_dispatcher()->decode_options().syscall_filters.empty()) {
@@ -422,7 +401,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
         settings.location.symbol = zxdb::Identifier(syscall->breakpoint_name());
         settings.location.type = zxdb::InputLocation::Type::kSymbol;
         settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-        settings.scope_target = target;
+        settings.scope_target = process->GetTarget();
 
         zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
 

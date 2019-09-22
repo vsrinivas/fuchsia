@@ -92,10 +92,11 @@ fx fidlcat run echo_client_cpp.cmx
 
 ### Attaching to a program on startup
 
-You can also attach to programs that have not started yet by passing a regex to
-match their names. If you issue the following command, fidlcat will connect to
-the system, wait for a program with the substring "echo_client" to start, and
-automatically attach to it.
+You can also attach to programs with their names by passing a regex to
+match their names. Fidlcat will attach to all currently running and
+subsequently started programs that satisfy the regex. If you issue the following
+command, fidlcat will connect to the system, and attach to all programs with the
+substring "echo_client".
 
 ```sh
 fx fidlcat --remote-name=echo_client

@@ -45,10 +45,11 @@ const char* const kRemotePidHelp = R"(  --remote-pid
 const char* const kRemoteNameHelp = R"(  --remote-name=<regexp>
   -f <regexp>
       Adds a filter to the default job that will cause fidlcat to attach
-      to processes whose name matches this regexp that are launched in the
-      job (e.g., "--remote-name echo_client.*.cmx", or even just "--remote-name
-      echo_client).  Multiple filters can be specified to match more than one
-      process.)";
+      to existing or future processes whose names match this regexp.
+      For example:
+          --remote-name echo_client.*.cmx
+          --remote-name echo_client
+      Multiple filters can be specified to match more than one process.)";
 
 const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json

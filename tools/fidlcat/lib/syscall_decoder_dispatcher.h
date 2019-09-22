@@ -2049,6 +2049,18 @@ class SyscallDecoderDispatcher {
   // displayed or the exception had an error.
   virtual void DeleteDecoder(ExceptionDecoder* decoder);
 
+  // Called when a process is launched (by using the run option). If |error_message| is not empty,
+  // the the process didn't launch and |error_message| explains why.
+  virtual void ProcessLaunched(const std::string& command, std::string_view error_message) {}
+
+  // Called when a process is monitored. If |error_message| is not empty, we haven't been able to
+  // monitor the process.
+  virtual void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                std::string_view error_message) {}
+
+  // Called when a process is no longer monitored.
+  virtual void StopMonitoring(zx_koid_t koid) {}
+
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
   void Populate();
@@ -2106,6 +2118,13 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
                                                   zxdb::Thread* thread,
                                                   uint64_t thread_id) override;
+
+  void ProcessLaunched(const std::string& command, std::string_view error_message) override;
+
+  void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                        std::string_view error_message) override;
+
+  void StopMonitoring(zx_koid_t koid) override;
 
  private:
   // Class which can decode a FIDL message.

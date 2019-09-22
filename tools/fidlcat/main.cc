@@ -60,10 +60,10 @@ void CatchSigterm() {
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
 void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& options,
                     const std::vector<std::string>& params) {
-  std::vector<uint64_t> process_koids;
+  std::vector<zx_koid_t> process_koids;
   if (!options.remote_pid.empty()) {
     for (const std::string& pid_str : options.remote_pid) {
-      uint64_t process_koid = strtoull(pid_str.c_str(), nullptr, fidl_codec::kDecimalBase);
+      zx_koid_t process_koid = strtoull(pid_str.c_str(), nullptr, fidl_codec::kDecimalBase);
       // There is no process 0, and if there were, we probably wouldn't be able to
       // talk with it.
       if (process_koid == 0) {
@@ -94,12 +94,10 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     if (remote_name.empty()) {
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         zxdb::Target* target = workflow->GetNewTarget();
-        workflow->AddObserver(target);
         workflow->Launch(target, params);
       }
     } else {
       zxdb::Target* target = workflow->GetNewTarget();
-      workflow->AddObserver(target);
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         workflow->Launch(target, params);
       }

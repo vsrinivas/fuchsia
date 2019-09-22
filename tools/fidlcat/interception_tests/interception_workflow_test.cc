@@ -325,30 +325,16 @@ ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb:
 
 ProcessController::~ProcessController() {
   for (zxdb::Process* process : processes_) {
-    process->RemoveObserver(&workflow_.observer_.process_observer());
-  }
-  for (zxdb::Target* target : targets_) {
-    target->RemoveObserver(&workflow_.observer_);
+    process->RemoveObserver(&workflow_.system_observer_.process_observer());
   }
 }
 
 void ProcessController::InjectProcesses(zxdb::Session& session) {
   for (auto process_koid : process_koids_) {
-    zxdb::TargetImpl* found_target = nullptr;
-    for (zxdb::TargetImpl* target : session.system_impl().GetTargetImpls()) {
-      if (target->GetState() == zxdb::Target::State::kNone && target->GetArgs().empty()) {
-        found_target = target;
-        break;
-      }
-    }
-
-    if (!found_target) {  // No empty target, make a new one.
-      found_target = session.system_impl().CreateNewTargetImpl(nullptr);
-    }
-
     std::string test_name = "test_" + std::to_string(process_koid);
-    found_target->CreateProcessForTesting(process_koid, test_name);
-    processes_.push_back(found_target->GetProcess());
+    zxdb::TargetImpl* target = session.system_impl().CreateNewTargetImpl(nullptr);
+    target->CreateProcessForTesting(process_koid, test_name);
+    processes_.push_back(target->GetProcess());
   }
 }
 
@@ -371,10 +357,6 @@ void ProcessController::Initialize(zxdb::Session& session,
     // have to register the observer manually.
     zxdb::Target* target = process->GetTarget();
     targets_.push_back(target);
-    workflow_.AddObserver(target);
-    process->AddObserver(&workflow_.observer_.process_observer());
-    workflow_.SetBreakpoints(target);
-    workflow_.observer_.process_observer().DidCreateThread(process, the_thread);
     remote_api_->AddThread(the_thread);
   }
 
@@ -385,8 +367,7 @@ void ProcessController::Initialize(zxdb::Session& session,
   });
   debug_ipc::MessageLoop::Current()->Run();
 
-  // Load modules into program (including the one with the zx_channel_write
-  // and zx_channel_read symbols)
+  // Load modules into program (including the one with the |syscall_name| symbol)
   auto module_symbols = fxl::MakeRefCounted<zxdb::MockModuleSymbols>("zx.so");
   module_symbols->AddSymbolLocations(
       syscall_name, {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
@@ -398,11 +379,13 @@ void ProcessController::Initialize(zxdb::Session& session,
     std::vector<debug_ipc::Module> modules;
     // Force system to load modules.  Callback doesn't need to do anything
     // interesting.
-    target->GetProcess()->GetModules(
-        [](const zxdb::Err& /*err*/, std::vector<debug_ipc::Module> /*modules*/) {
-          debug_ipc::MessageLoop::Current()->QuitNow();
-        });
-    debug_ipc::MessageLoop::Current()->Run();
+    if (target->GetProcess() != nullptr) {
+      target->GetProcess()->GetModules(
+          [](const zxdb::Err& /*err*/, std::vector<debug_ipc::Module> /*modules*/) {
+            debug_ipc::MessageLoop::Current()->QuitNow();
+          });
+      debug_ipc::MessageLoop::Current()->Run();
+    }
   }
 }
 

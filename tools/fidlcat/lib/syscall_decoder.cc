@@ -197,10 +197,10 @@ void SyscallDecoder::LoadStack() {
         --pending_request_count_;
         if (!err.ok()) {
           Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load stack at " << address << ": " << err.msg();
+              << "Can't load stack at " << address << '/' << stack_size << ": " << err.msg();
         } else if ((dump.size() != stack_size) || !dump.AllValid()) {
           Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load stack at " << address << ": not enough data";
+              << "Can't load stack at " << address << '/' << stack_size << ": not enough data";
         } else {
           std::vector<uint8_t> data;
           MemoryDumpToVector(dump, &data);

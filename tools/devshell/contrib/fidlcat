@@ -55,10 +55,9 @@
 ##                         verbosity comes with lower levels.
 ##    --log-file=<path>    The log file destination.
 ##    --remote-pid         The koid of the remote process to trace
-##    --remote-name        A set of comma-separated regexes.  When a process
-##                         whose name matches one of the regexes starts, fidlcat
-##                         will trace it.  Can be provided multiple times for
-##                         multiple regexes.
+##    --remote-name        A set of comma-separated regexes. Fidlcat will monitor all existing
+##                         and future processes whose names match one of the regexes.
+##                         Can be provided multiple times for multiple regexes.
 ##    run                  A token indicating that you want to invoke and trace
 ##                         the following component. The component is specified
 ##                         with either a bash regex that matches a component URL
@@ -76,7 +75,7 @@
 ## # Also launches the echo client, and monitors its FIDL chatter:
 ## fx fidlcat run echo_client_cpp.cmx
 ##
-## # Will trace the next process that starts whose name contains "echo_client"
+## # Will trace existing and future processes whose name contains "echo_client"
 ## fx fidlcat --remote-name echo_client
 ##
 ## All three options --remote-pid, --remote-name and run can be used together.

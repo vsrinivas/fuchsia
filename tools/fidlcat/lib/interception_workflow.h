@@ -16,7 +16,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
-#include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -81,21 +81,13 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
   InterceptingThreadObserver dispatcher_;
 };
 
-class InterceptingTargetObserver : public zxdb::TargetObserver {
+class InterceptingSystemObserver : public zxdb::SystemObserver {
  public:
-  explicit InterceptingTargetObserver(InterceptionWorkflow* workflow)
+  explicit InterceptingSystemObserver(InterceptionWorkflow* workflow)
       : dispatcher_(workflow), workflow_(workflow) {}
 
-  InterceptingTargetObserver(const InterceptingTargetObserver&) = delete;
-  InterceptingTargetObserver& operator=(const InterceptingTargetObserver&) = delete;
-
-  virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
-                                bool autoattached_to_new_process) override;
-
-  virtual void WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
-                                  DestroyReason reason, int exit_code) override;
-
-  virtual ~InterceptingTargetObserver() {}
+  void GlobalDidCreateProcess(zxdb::Process* process) override;
+  void GlobalWillDestroyProcess(zxdb::Process* process) override;
 
   InterceptingProcessObserver& process_observer() { return dispatcher_; }
 
@@ -105,7 +97,7 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
 };
 
 using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
-using KoidFunction = std::function<void(const zxdb::Err&, uint64_t)>;
+using KoidFunction = std::function<void(const zxdb::Err&, zx_koid_t)>;
 
 // Controls the interactions with the debug agent.
 //
@@ -140,11 +132,11 @@ class InterceptionWorkflow {
 
   // Attach the workflow to the given koids.  Must be connected.  |and_then| is
   // posted to the loop on completion.
-  void Attach(const std::vector<uint64_t>& process_koids);
+  void Attach(const std::vector<zx_koid_t>& process_koids);
 
   // Called when a monitored process is detached/dead. This function can
   // called several times with the same koid.
-  void ProcessDetached(uint64_t koid);
+  void ProcessDetached(zx_koid_t koid);
 
   // Detach from one target.  session() keeps track of details about the Target
   // object; this just reduces the number of targets to which we are attached by
@@ -161,7 +153,7 @@ class InterceptionWorkflow {
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |target|
-  void SetBreakpoints(zxdb::Target* target);
+  void SetBreakpoints(zxdb::Process* process);
 
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
   static void Go();
@@ -172,13 +164,11 @@ class InterceptionWorkflow {
     });
   }
 
-  zxdb::Target* GetTarget(uint64_t process_koid);
+  zxdb::Target* GetTarget(zx_koid_t process_koid);
   zxdb::Target* GetNewTarget();
 
-  void AddObserver(zxdb::Target* target);
-
   zxdb::Session* session() const { return session_; }
-  std::unordered_set<uint64_t>& configured_processes() { return configured_processes_; }
+  std::unordered_set<zx_koid_t>& configured_processes() { return configured_processes_; }
   SyscallDecoderDispatcher* syscall_decoder_dispatcher() const {
     return syscall_decoder_dispatcher_.get();
   }
@@ -196,11 +186,11 @@ class InterceptionWorkflow {
   bool shutdown_done_ = false;
 
   // All the processes for which the breapoints have been set.
-  std::unordered_set<uint64_t> configured_processes_;
+  std::unordered_set<zx_koid_t> configured_processes_;
 
   std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher_;
 
-  InterceptingTargetObserver observer_;
+  InterceptingSystemObserver system_observer_;
 };
 
 }  // namespace fidlcat

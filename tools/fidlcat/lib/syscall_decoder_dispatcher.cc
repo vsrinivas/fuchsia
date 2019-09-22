@@ -191,4 +191,43 @@ std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
                                             std::make_unique<ExceptionDisplay>(this, os_));
 }
 
+void SyscallDisplayDispatcher::ProcessLaunched(const std::string& command,
+                                               std::string_view error_message) {
+  last_displayed_syscall_ = nullptr;
+  if (error_message.empty()) {
+    os_ << colors().green << "\nLaunched " << colors().blue << command << colors().reset << '\n';
+  } else {
+    os_ << colors().red << "\nCan't launch " << colors().blue << command << colors().reset << " : "
+        << colors().red << error_message << colors().reset << '\n';
+  }
+}
+
+void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                                std::string_view error_message) {
+  last_displayed_syscall_ = nullptr;
+  if (error_message.empty()) {
+    os_ << colors().green << "\nMonitoring ";
+  } else {
+    os_ << colors().red << "\nCan't monitor ";
+  }
+
+  if (name.empty()) {
+    os_ << colors().reset << "process with koid ";
+  } else {
+    os_ << colors().blue << name << colors().reset << " koid=";
+  }
+
+  os_ << colors().red << koid << colors().reset;
+  if (!error_message.empty()) {
+    os_ << " : " << colors().red << error_message << colors().reset;
+  }
+  os_ << '\n';
+}
+
+void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
+  last_displayed_syscall_ = nullptr;
+  os_ << colors().green << "\nStop monitoring process with koid ";
+  os_ << colors().red << koid << colors().reset << '\n';
+}
+
 }  // namespace fidlcat
