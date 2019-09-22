@@ -119,16 +119,36 @@ fail:
 
 static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool make_active,
                                          const color_scheme_t* color_scheme) {
-  // The ptmx device can start later than these threads
-  int retry = 30;
-  int raw_fd;
-  while ((raw_fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
-    if (--retry == 0) {
+  // Connect to the PTY service.  We have to do this dance rather than just
+  // using open() because open() uses the DESCRIBE flag internally, and the
+  // plumbing of the PTY service through svchost causes the DESCRIBE to get
+  // consumed by the wrong code, resulting in the wrong NodeInfo being provided.
+  // This manifests as a loss of fd signals.
+  fbl::unique_fd fd;
+  {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_service_connect("/svc/fuchsia.hardware.pty.Device", remote.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+    int raw_fd;
+    status = fdio_fd_create(local.release(), &raw_fd);
+    if (status != ZX_OK) {
+      return status;
+    }
+    fd.reset(raw_fd);
+    int flags = fcntl(fd.get(), F_GETFL);
+    if (flags < 0) {
       return ZX_ERR_IO;
     }
-    usleep(100000);
+    if (fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK) < 0) {
+      return ZX_ERR_IO;
+    }
   }
-  fbl::unique_fd fd(raw_fd);
 
   fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
   if (io == nullptr) {
@@ -156,16 +176,14 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
     return r;
   }
 
-  if (isatty(fd.get())) {
-    fuchsia_hardware_pty_WindowSize wsz = {
-        .width = vc->columns,
-        .height = vc->rows,
-    };
+  fuchsia_hardware_pty_WindowSize wsz = {
+      .width = vc->columns,
+      .height = vc->rows,
+  };
 
-    io = fdio_unsafe_fd_to_io(fd.get());
-    fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
-    fdio_unsafe_release(io);
-  }
+  io = fdio_unsafe_fd_to_io(fd.get());
+  fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
+  fdio_unsafe_release(io);
 
   vc->fd = fd.release();
   if (make_active) {
