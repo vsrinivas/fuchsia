@@ -81,9 +81,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer);
   void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer);
 
-  // Schedule a closure to run on our encapsulating service's main message loop.
-  void ScheduleMainThreadTask(fit::closure task);
-
   // Begin initializing a device and add it to the set of devices waiting to be initialized.
   //
   // Called from the plug detector when a new stream device first shows up.

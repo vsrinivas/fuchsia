@@ -163,27 +163,26 @@ void AudioCapturerImpl::Shutdown() {
     device_manager_.RemoveAudioCapturer(this);
   }
 
-  threading_model_.FidlDomain().executor()->schedule_task(
-      Cleanup().then([self = self_ref](fit::result<>&) {
-        // Release our buffer resources.
-        //
-        // It's important that we don't release the buffer until the mix thread cleanup has run as
-        // the mixer could still be accessing the memory backing the buffer.
-        //
-        // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
-        // class (and perhaps rename DriverRingBuffer to something more generic like
-        // RingBufferHelper, since this would be a use which is not driver specific).
-        if (self->payload_buf_virt_ != nullptr) {
-          FXL_DCHECK(self->payload_buf_size_ != 0);
-          zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
-                                       self->payload_buf_size_);
-          self->payload_buf_virt_ = nullptr;
-          self->payload_buf_size_ = 0;
-          self->payload_buf_frames_ = 0;
-        }
+  threading_model_.FidlDomain().ScheduleTask(Cleanup().then([self = self_ref](fit::result<>&) {
+    // Release our buffer resources.
+    //
+    // It's important that we don't release the buffer until the mix thread cleanup has run as
+    // the mixer could still be accessing the memory backing the buffer.
+    //
+    // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
+    // class (and perhaps rename DriverRingBuffer to something more generic like
+    // RingBufferHelper, since this would be a use which is not driver specific).
+    if (self->payload_buf_virt_ != nullptr) {
+      FXL_DCHECK(self->payload_buf_size_ != 0);
+      zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
+                                   self->payload_buf_size_);
+      self->payload_buf_virt_ = nullptr;
+      self->payload_buf_size_ = 0;
+      self->payload_buf_frames_ = 0;
+    }
 
-        self->payload_buf_vmo_.reset();
-      }));
+    self->payload_buf_vmo_.reset();
+  }));
 }
 
 fit::promise<> AudioCapturerImpl::Cleanup() {

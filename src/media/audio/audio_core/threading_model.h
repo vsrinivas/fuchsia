@@ -5,9 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_THREADING_MODEL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THREADING_MODEL_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fit/promise.h>
+#include <lib/zx/time.h>
 #include <zircon/compiler.h>
 
 #include <memory>
@@ -67,6 +69,30 @@ class ExecutionDomain {
   //    Data data_ __TA_GUARDED(domain_->token());
   //  };
   const ThreadToken& token() const { return token_; }
+
+  // Convenience access to post a task to this domains dispatcher.
+  //
+  // Ex, we can write:
+  //   threading_model().FidlDomain().PostTask([] {...});
+  // Instead of:
+  //   async::PostTask(threading_model().FidlDomain().dispatcher(), [] {...});
+  zx_status_t PostTask(fit::closure task) const {
+    return async::PostTask(dispatcher_, std::move(task));
+  }
+  zx_status_t PostDelayedTask(fit::closure task, zx::duration delay) const {
+    return async::PostDelayedTask(dispatcher_, std::move(task), delay);
+  }
+  zx_status_t PostTaskForTime(fit::closure task, zx::time deadline) const {
+    return async::PostTaskForTime(dispatcher_, std::move(task), deadline);
+  }
+
+  // Convenience access to schedule a task to this domains executor.
+  //
+  // Ex, we can write:
+  //   threading_model().FidlDomain().ScheduleTask(...);
+  // Instead of:
+  //   threading_model().FidlDomain().executor().schedule_task(...);
+  void ScheduleTask(fit::pending_task task) const { executor_->schedule_task(std::move(task)); }
 
  private:
   async_dispatcher_t* const dispatcher_;

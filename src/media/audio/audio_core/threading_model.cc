@@ -56,11 +56,11 @@ class ThreadingModelBase : public ThreadingModel {
   void RunAndJoinAllThreads() override {
     io_domain_.loop.StartThread("io");
     fidl_domain_.loop.Run();
-    async::PostTask(IoDomain().dispatcher(), [this] { io_domain_.loop.Quit(); });
+    IoDomain().PostTask([this] { io_domain_.loop.Quit(); });
     io_domain_.loop.JoinThreads();
   }
   void Quit() final {
-    async::PostTask(FidlDomain().dispatcher(), [this] { fidl_domain_.loop.Quit(); });
+    FidlDomain().PostTask([this] { fidl_domain_.loop.Quit(); });
   }
 
  private:
@@ -90,7 +90,7 @@ class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
     mix_domain_.loop.StartThread("mixer");
     SetMixDispatcherThreadProfile(mix_domain_.loop.dispatcher());
     ThreadingModelBase::RunAndJoinAllThreads();
-    async::PostTask(mix_domain_.loop.dispatcher(), [this] { mix_domain_.loop.Quit(); });
+    mix_domain_.domain.PostTask([this] { mix_domain_.loop.Quit(); });
     mix_domain_.loop.JoinThreads();
   }
 
@@ -129,7 +129,7 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
       // operations
       auto nonce = TRACE_NONCE();
       TRACE_FLOW_BEGIN("audio.debug", "ThreadingModelThreadPerMix.release", nonce);
-      async::PostTask(IoDomain().dispatcher(), [this, dispatcher = domain->dispatcher(), nonce] {
+      IoDomain().PostTask([this, dispatcher = domain->dispatcher(), nonce] {
         TRACE_DURATION("audio.debug", "ThreadingModelThreadPerMix.release_thunk");
         TRACE_FLOW_END("audio.debug", "ThreadingModelThreadPerMix.release", nonce);
         ReleaseDomainForDispatcher(dispatcher);

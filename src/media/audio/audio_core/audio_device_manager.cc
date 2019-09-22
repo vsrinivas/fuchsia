@@ -468,11 +468,6 @@ void AudioDeviceManager::RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) 
   audio_capturers_.erase(*audio_capturer);
 }
 
-void AudioDeviceManager::ScheduleMainThreadTask(fit::closure task) {
-  TRACE_DURATION("audio", "AudioDeviceManager::ScheduleMainThreadTask");
-  async::PostTask(threading_model_.FidlDomain().dispatcher(), std::move(task));
-}
-
 fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
                                                              bool allow_unplugged) {
   TRACE_DURATION("audio", "AudioDeviceManager::FindLastPlugged");

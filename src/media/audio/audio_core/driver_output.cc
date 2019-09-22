@@ -466,7 +466,7 @@ void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   TRACE_DURATION("audio", "DriverOutput::OnDriverPlugStateChange");
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
-  device_manager().ScheduleMainThreadTask([output = fbl::RefPtr(this), plugged, plug_time]() {
+  threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
     output->device_manager().HandlePlugStateChange(std::move(output), plugged, plug_time);
   });
 }

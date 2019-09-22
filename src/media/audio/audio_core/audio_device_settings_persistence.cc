@@ -120,14 +120,13 @@ fit::promise<fbl::unique_fd, zx_status_t> AudioDeviceSettingsPersistence::ReadSe
   TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDisk");
   TRACE_FLOW_BEGIN("audio", "AudioDeviceSettingsPersistence.read_from_disk", nonce);
   fit::bridge<fbl::unique_fd, zx_status_t> bridge;
-  async::PostTask(
-      threading_model_.IoDomain().dispatcher(), [this, completer = std::move(bridge.completer),
-                                                 settings = std::move(settings), nonce]() mutable {
-        TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDisk.thunk");
-        TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.read_from_disk", nonce);
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
-        completer.complete_or_abandon(ReadSettingsFromDiskBlocking(std::move(settings)));
-      });
+  threading_model_.IoDomain().PostTask([this, completer = std::move(bridge.completer),
+                                        settings = std::move(settings), nonce]() mutable {
+    TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::ReadSettingsFromDisk.thunk");
+    TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.read_from_disk", nonce);
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
+    completer.complete_or_abandon(ReadSettingsFromDiskBlocking(std::move(settings)));
+  });
   return bridge.consumer.promise();
 }
 
@@ -219,19 +218,19 @@ fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::Commit(
   // Clone the settings before writeback to snapshot the current state of the settings.
   fit::bridge<void, zx_status_t> bridge;
   TRACE_FLOW_BEGIN("audio", "AudioDeviceSettingsPersistence.commit", nonce);
-  async::PostTask(threading_model_.IoDomain().dispatcher(),
-                  [this, completer = std::move(bridge.completer), settings = settings->Clone(), fd,
-                   nonce]() mutable {
-                    TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::Commit.thunk");
-                    TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.commit", nonce);
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
-                    zx_status_t status = WriteSettingsToFile(std::move(settings), fd);
-                    if (status == ZX_OK) {
-                      completer.complete_ok();
-                    } else {
-                      completer.complete_error(status);
-                    }
-                  });
+
+  threading_model_.IoDomain().PostTask([this, completer = std::move(bridge.completer),
+                                        settings = settings->Clone(), fd, nonce]() mutable {
+    TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::Commit.thunk");
+    TRACE_FLOW_END("audio", "AudioDeviceSettingsPersistence.commit", nonce);
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &threading_model_.IoDomain());
+    zx_status_t status = WriteSettingsToFile(std::move(settings), fd);
+    if (status == ZX_OK) {
+      completer.complete_ok();
+    } else {
+      completer.complete_error(status);
+    }
+  });
   return bridge.consumer.promise();
 }
 

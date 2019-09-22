@@ -144,7 +144,7 @@ void AudioDevice::ActivateSelf() {
     device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());
 
     // Now poke our manager.
-    device_manager().ScheduleMainThreadTask(
+    threading_model().FidlDomain().PostTask(
         [self = fbl::RefPtr(this)]() { self->device_manager().ActivateDevice(std::move(self)); });
   }
 }
@@ -158,7 +158,7 @@ void AudioDevice::ShutdownSelf() {
     // TODO(mpuryear): Considering eliminating this; it may not be needed.
     PreventNewLinks();
 
-    device_manager().ScheduleMainThreadTask(
+    threading_model().FidlDomain().PostTask(
         [self = fbl::RefPtr(this)]() { self->device_manager().RemoveDevice(self); });
   }
 }
@@ -166,18 +166,18 @@ void AudioDevice::ShutdownSelf() {
 fit::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
   fit::bridge<void, zx_status_t> bridge;
-  async::PostTask(mix_domain_->dispatcher(),
-                  [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
-                    zx_status_t res = self->Init();
-                    if (res != ZX_OK) {
-                      self->Cleanup();
-                      completer.complete_error(res);
-                      return;
-                    }
-                    self->OnWakeup();
-                    completer.complete_ok();
-                  });
+  mix_domain_->PostTask(
+      [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
+        zx_status_t res = self->Init();
+        if (res != ZX_OK) {
+          self->Cleanup();
+          completer.complete_error(res);
+          return;
+        }
+        self->OnWakeup();
+        completer.complete_ok();
+      });
   return bridge.consumer.promise();
 }
 
@@ -194,12 +194,12 @@ fit::promise<void> AudioDevice::Shutdown() {
 
   // Give our derived class, and our driver, a chance to clean up resources.
   fit::bridge<void> bridge;
-  async::PostTask(mix_domain_->dispatcher(),
-                  [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
-                    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
-                    self->Cleanup();
-                    completer.complete_ok();
-                  });
+  mix_domain_->PostTask(
+      [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
+        self->Cleanup();
+        completer.complete_ok();
+      });
   return bridge.consumer.promise();
 }
 
