@@ -268,7 +268,7 @@ class VirtioBlockGuestTest : public GuestTest<T> {
 };
 
 // The Debian tests are temporarily disabled until the test utilities roll.
-using GuestTypes = ::testing::Types<VirtioBlockZirconGuest /*, VirtioBlockDebianGuest*/>;
+using GuestTypes = ::testing::Types<VirtioBlockZirconGuest , VirtioBlockDebianGuest>;
 TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
 
 TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
