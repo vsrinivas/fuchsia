@@ -1205,8 +1205,7 @@ struct iwl_mvm {
 
 // Given a 'iwl_trans' pointer, this function will follow up the data structure to return the
 // 'iwl_mvm' pointer. It returns NULL if it fails to find out the MVM instance.
-static inline struct iwl_mvm* iwl_trans_get_mvm(void* ctx) {
-  struct iwl_trans* trans = (struct iwl_trans*)ctx;
+static inline struct iwl_mvm* iwl_trans_get_mvm(struct iwl_trans* trans) {
   if (!trans) {
     return NULL;
   }
@@ -1216,7 +1215,7 @@ static inline struct iwl_mvm* iwl_trans_get_mvm(void* ctx) {
     return NULL;
   }
 
-  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(((struct iwl_trans*)ctx)->op_mode);
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(trans->op_mode);
   if (!mvm) {
     return NULL;
   }

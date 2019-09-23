@@ -23,8 +23,8 @@ namespace wlan::testing {
 //
 class SingleApTest : public ::testing::Test {
  public:
-  SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), trans_(&env_) {
-    zx_status_t status = trans_.Init();
+  SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), sim_trans_(&env_) {
+    zx_status_t status = sim_trans_.Init();
     ZX_ASSERT_MSG(ZX_OK == status, "Transportation initialization failed: %s",
                   zx_status_get_string(status));
     env_.AddStation(&ap_);
@@ -41,7 +41,7 @@ class SingleApTest : public ::testing::Test {
 
   ::wlan::simulation::Environment env_;
   ::wlan::simulation::FakeAp ap_;
-  TransportSim trans_;
+  TransportSim sim_trans_;
 };
 
 const common::MacAddr SingleApTest::default_macaddr_(kApAddr);

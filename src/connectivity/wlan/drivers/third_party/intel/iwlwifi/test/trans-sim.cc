@@ -211,7 +211,11 @@ static zx_protocol_device_t device_ops = {
     .release = transport_sim_release,
 };
 
-static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev) {
+// This function intends to be like this because we want to mimic the transport_pcie_bind().
+// But definitely can be refactored into the TransportSim::Init().
+// 'out_trans' is used to return the new allocated 'struct iwl_trans'.
+static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
+                                      struct iwl_trans** out_iwl_trans) {
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
   struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg, fw);
   zx_status_t status;
@@ -219,6 +223,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev) {
   if (!iwl_trans) {
     return ZX_ERR_INTERNAL;
   }
+  ZX_ASSERT(out_iwl_trans);
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -266,6 +271,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev) {
     iwl_notification_notify(&mvm->notif_wait);
 
     // Hopefully everything should be ready. Go!
+    *out_iwl_trans = iwl_trans;
     return iwl_mvm_mac_start(mvm);
   }
 
@@ -280,7 +286,9 @@ free_iwl_trans:
 namespace wlan {
 namespace testing {
 
-zx_status_t TransportSim::Init() { return transport_sim_bind(this, fake_ddk::kFakeParent); }
+zx_status_t TransportSim::Init() {
+  return transport_sim_bind(this, fake_ddk::kFakeParent, &iwl_trans_);
+}
 
 }  // namespace testing
 }  // namespace wlan
