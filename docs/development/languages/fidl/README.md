@@ -6,7 +6,7 @@ FIDL (or "**F**uchsia **I**nterface **D**efinition **L**anguage") is the IPC sys
 
 The [tutorial](tutorial/README.md) presents a simple "*Hello, world*" client
 and server, showing the FIDL language definitions and continuing with sections
-specific to each supported target language (e.g., C++, Go).
+specific to each supported target language (e.g., C++, Dart).
 
 Read the [Introduction](intro/README.md) section to get a brief overview of what FIDL is,
 including some of its design goals, requirements, and workflow.
@@ -24,7 +24,6 @@ Language                     | Examples
 [Low-Level C++][llcpp-lang]  | [client][llcppcli-ex], [server][llcppsrv-ex]
 [High-Level C++][hlcpp-lang] | [client][hlcppcli-ex], [server][hlcppsrv-ex]
 [Dart][dart-lang]            | [client][dartcli-ex],  [server][dartsrv-ex]
-[Go][go-lang]                | [client][gocli-ex],    [server][gosrv-ex]
 [Rust][rust-lang]            | [client][rustcli-ex],  [server][rustsrv-ex]
 
 # Contributing
@@ -74,10 +73,6 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 [dart-lang]: /docs/development/languages/fidl/tutorial/tutorial-dart.md
 [dartcli-ex]: https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_async_dart/
 [dartsrv-ex]: https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_async_dart/
-
-[go-lang]: /docs/development/languages/fidl/tutorial/tutorial-go.md
-[gocli-ex]: /garnet/examples/fidl/echo_client_go/
-[gosrv-ex]: /garnet/examples/fidl/echo_server_go/
 
 [rust-lang]: /docs/development/languages/fidl/tutorial/tutorial-rust.md
 [rustcli-ex]: /garnet/examples/fidl/echo_client_rust/

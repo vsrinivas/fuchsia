@@ -23,8 +23,6 @@ toc:
     path: /docs/development/languages/fidl/tutorial/tutorial-llcpp.md
   - title: "Dart"
     path:  /docs/development/languages/fidl/tutorial/tutorial-dart.md
-  - title: "Go"
-    path:  /docs/development/languages/fidl/tutorial/tutorial-go.md
   - title: "Rust"
     path:  /docs/development/languages/fidl/tutorial/tutorial-rust.md
 - title: "Style guide"
