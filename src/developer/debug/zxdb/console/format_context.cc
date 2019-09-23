@@ -14,12 +14,15 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"  // ERASEME?
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -49,10 +52,45 @@ OutputBuffer HighlightLine(std::string str, int column) {
   return result;
 }
 
+// Generates the source listing for source intersperced with assembly code for the source between
+// the given two lines. The prev_line is the last one outputted.
+//
+// This re-opens and line splits the file for each block of source shown. This is very inefficient
+// but normally disassembly is not performance sensitive. If needed this could be cached.
+OutputBuffer FormatAsmSourceForRange(Process* process, const SourceFileProvider& file_provider,
+                                     const FileLine& prev_line, const FileLine& line) {
+  // Maximum number of lines of source we'll include.
+  constexpr int kMaxContext = 4;
+
+  int first_num = line.line() - kMaxContext + 1;  // Most context we'll show.
+  if (prev_line.file() == line.file())            // Same file, try to include since the last line.
+    first_num = std::max(prev_line.line() + 1, first_num);
+  first_num = std::max(1, first_num);  // Clamp to beginning of file.
+
+  FormatSourceOpts opts;
+  opts.first_line = first_num;
+  opts.last_line = line.line();
+  opts.left_indent = 2;
+  opts.dim_others = true;  // Dim everything (we didn't specify an active line).
+
+  FileLine start_line(line.file(), first_num);
+  OutputBuffer out;
+  if (FormatSourceFileContext(start_line, file_provider, opts, &out).ok()) {
+    // The formatted table will end in a newline which will combine with our table's newline and
+    // insert a blank below the source code. Trim the embedded newline so we only get one.
+    out.TrimTrailingNewlines();
+    return out;
+  }
+
+  // Some error getting the source code, show the location file/line number instead.
+  return OutputBuffer(Syntax::kComment,
+                      DescribeFileLine(process->GetSymbols()->target_symbols(), start_line));
+}
+
 }  // namespace
 
-Err OutputSourceContext(Process* process, const Location& location,
-                        SourceAffinity source_affinity) {
+Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> file_provider,
+                        const Location& location, SourceAffinity source_affinity) {
   if (source_affinity != SourceAffinity::kAssembly && location.file_line().is_valid()) {
     // Synchronous source output.
     FormatSourceOpts source_opts;
@@ -64,10 +102,7 @@ Err OutputSourceContext(Process* process, const Location& location,
     source_opts.dim_others = true;
 
     OutputBuffer out;
-    Err err = FormatSourceFileContext(
-        location.file_line(),
-        process->GetTarget()->settings().GetList(ClientSettings::Target::kBuildDirs), source_opts,
-        &out);
+    Err err = FormatSourceFileContext(location.file_line(), *file_provider, source_opts, &out);
     if (err.has_error())
       return err;
 
@@ -77,6 +112,7 @@ Err OutputSourceContext(Process* process, const Location& location,
     FormatAsmOpts options;
     options.emit_addresses = true;
     options.emit_bytes = false;
+    options.include_source = true;
     options.active_address = location.address();
 
     uint64_t start_address;
@@ -101,7 +137,8 @@ Err OutputSourceContext(Process* process, const Location& location,
 
     process->ReadMemory(
         start_address, size,
-        [options, weak_process = process->GetWeakPtr()](const Err& in_err, MemoryDump dump) {
+        [options, weak_process = process->GetWeakPtr(), file_provider = std::move(file_provider)](
+            const Err& in_err, MemoryDump dump) {
           if (!weak_process)
             return;  // Give up when the process went away.
 
@@ -111,7 +148,8 @@ Err OutputSourceContext(Process* process, const Location& location,
             return;
           }
           OutputBuffer out;
-          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump, options, &out);
+          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump, options,
+                                     weak_process.get(), *file_provider, &out);
           if (err.has_error())
             console->Output(err);
           else
@@ -123,14 +161,13 @@ Err OutputSourceContext(Process* process, const Location& location,
 
 // This doesn't cache the file contents. We may want to add that for performance, but we should be
 // careful to always pick the latest version since it can get updated.
-Err FormatSourceFileContext(const FileLine& file_line,
-                            const std::vector<std::string>& build_dir_prefs,
+Err FormatSourceFileContext(const FileLine& file_line, const SourceFileProvider& file_provider,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
   std::string contents;
-  Err err = GetFileContents(file_line.file(), file_line.comp_dir(), build_dir_prefs, &contents);
-  if (err.has_error())
-    return err;
-  return FormatSourceContext(file_line.file(), contents, opts, out);
+  auto contents_or = file_provider.GetFileContents(file_line.file(), file_line.comp_dir());
+  if (contents_or.has_error())
+    return contents_or.err();
+  return FormatSourceContext(file_line.file(), contents_or.value(), opts, out);
 }
 
 Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
@@ -157,6 +194,9 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
                                  file_name_for_errors.c_str()));
   }
 
+  // String to put at the beginning of each line.
+  std::string indent(opts.left_indent, ' ');
+
   std::vector<std::vector<OutputBuffer>> rows;
   for (size_t i = 0; i < context.size(); i++) {
     int line_number = first_line + i;
@@ -167,6 +207,9 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
 
     // Compute markers in the left margin.
     OutputBuffer margin;
+    if (opts.left_indent)
+      margin.Append(indent);
+
     auto found_bp = opts.bp_lines.find(line_number);
     if (found_bp != opts.bp_lines.end()) {
       std::string breakpoint_marker =
@@ -211,7 +254,7 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
 }
 
 Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
-                     OutputBuffer* out) {
+                     Process* process, const SourceFileProvider& file_provider, OutputBuffer* out) {
   // Make the disassembler.
   Disassembler disassembler;
   Err my_err = disassembler.Init(arch_info);
@@ -223,10 +266,24 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
   std::vector<Disassembler::Row> rows;
   disassembler.DisassembleDump(dump, dump.address(), options, opts.max_instructions, &rows);
 
+  FileLine prev_file_line;  // Last source line printed.
+
   std::vector<std::vector<OutputBuffer>> table;
   for (auto& row : rows) {
-    table.emplace_back();
-    std::vector<OutputBuffer>& out_row = table.back();
+    if (opts.include_source) {
+      // Output source code if necessary.
+      std::vector<Location> loc =
+          process->GetSymbols()->ResolveInputLocation(InputLocation(row.address));
+      if (!loc.empty() && loc[0].file_line().is_valid() && prev_file_line != loc[0].file_line()) {
+        std::vector<OutputBuffer>& out_row = table.emplace_back();
+        out_row.push_back(
+            FormatAsmSourceForRange(process, file_provider, prev_file_line, loc[0].file_line()));
+
+        prev_file_line = loc[0].file_line();
+      }
+    }
+
+    std::vector<OutputBuffer>& out_row = table.emplace_back();
 
     // Compute markers in the left margin.
     OutputBuffer margin;
@@ -254,9 +311,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
     }
     out_row.push_back(std::move(margin));
 
-    if (opts.emit_addresses) {
+    if (opts.emit_addresses)
       out_row.emplace_back(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, row.address));
-    }
     if (opts.emit_bytes) {
       std::string bytes_str;
       for (size_t i = 0; i < row.bytes.size(); i++) {
@@ -300,9 +356,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
   return Err();
 }
 
-Err FormatBreakpointContext(const Location& location,
-                            const std::vector<std::string>& build_dir_prefs, bool enabled,
-                            OutputBuffer* out) {
+Err FormatBreakpointContext(const Location& location, const SourceFileProvider& file_provider,
+                            bool enabled, OutputBuffer* out) {
   if (!location.has_symbols())
     return Err("No symbols for this location.");
 
@@ -314,7 +369,7 @@ Err FormatBreakpointContext(const Location& location,
   opts.last_line = line + kBreakpointContext;
   opts.highlight_line = line;
   opts.bp_lines[line] = enabled;
-  return FormatSourceFileContext(location.file_line(), build_dir_prefs, opts, out);
+  return FormatSourceFileContext(location.file_line(), file_provider, opts, out);
 }
 
 }  // namespace zxdb

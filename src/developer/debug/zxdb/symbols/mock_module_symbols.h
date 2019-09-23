@@ -16,8 +16,10 @@ namespace zxdb {
 // A mock for symbol lookup.
 class MockModuleSymbols : public ModuleSymbols {
  public:
-  // Adds a mock mapping from the given name to the list of locations.
+  // Adds a mock mapping from the given name/address to the list of locations. The addresses are
+  // mapped exactly to queries, we don't do anything fancy with ranges.
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
+  void AddSymbolLocations(uint64_t address, std::vector<Location> locs);
 
   // Adds a mock mapping from address to line details. This matches an exact address only, not a
   // range.
@@ -59,7 +61,8 @@ class MockModuleSymbols : public ModuleSymbols {
   std::string local_file_name_;
 
   // Maps manually-added symbols to their locations.
-  std::map<std::string, std::vector<Location>> symbols_;
+  std::map<std::string, std::vector<Location>> named_symbols_;
+  std::map<uint64_t, std::vector<Location>> addr_symbols_;
 
   // Maps manually-added addresses to line details.
   std::map<uint64_t, LineDetails> lines_;

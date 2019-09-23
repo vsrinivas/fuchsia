@@ -24,6 +24,7 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -38,12 +39,11 @@ constexpr int kNumSwitch = 2;
 constexpr int kOffsetSwitch = 3;
 constexpr int kRawSwitch = 4;
 
-// Gives 20 lines of output which fits on a terminal without scrolling (plus
-// one line of help text, the next prompt, and the command itself).
+// Gives 20 lines of output which fits on a terminal without scrolling (plus one line of help text,
+// the next prompt, and the command itself).
 constexpr uint32_t kDefaultAnalyzeByteSize = 160;
 
-// Shared for commands that take both a num (lines, 8 bytes each), or a byte
-// size.
+// Shared for commands that take both a num (lines, 8 bytes each), or a byte size.
 Err ReadNumAndSize(const Command& cmd, std::optional<uint32_t>* out_size) {
   if (cmd.HasSwitch(kNumSwitch) && cmd.HasSwitch(kSizeSwitch))
     return Err("Can't specify both --num and --size.");
@@ -66,10 +66,9 @@ Err ReadNumAndSize(const Command& cmd, std::optional<uint32_t>* out_size) {
   return Err();
 }
 
-// Converts argument 0 (required or it will produce an error) and converts it
-// to a unique location (or error). If the input indicates a thing that has
-// an intrinsic size like a function name, the size will be placed in
-// *location_size. Otherwise, *location_size will be 0.
+// Converts argument 0 (required or it will produce an error) and converts it to a unique location
+// (or error). If the input indicates a thing that has an intrinsic size like a function name, the
+// size will be placed in *location_size. Otherwise, *location_size will be 0.
 //
 // The command_name is used for writing the current command to error messages.
 Err ReadLocation(const Command& cmd, const char* command_name, Location* location,
@@ -79,8 +78,7 @@ Err ReadLocation(const Command& cmd, const char* command_name, Location* locatio
     return Err("%s requires exactly one argument specifying a location.", command_name);
   }
 
-  // We need to check the type of the parsed input location so parse and
-  // resolve in two steps.
+  // We need to check the type of the parsed input location so parse and resolve in two steps.
   InputLocation input_location;
   Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &input_location);
   if (err.has_error())
@@ -102,7 +100,7 @@ Err ReadLocation(const Command& cmd, const char* command_name, Location* locatio
   return Err();
 }
 
-// stack -----------------------------------------------------------------------
+// stack -------------------------------------------------------------------------------------------
 
 const char kStackShortHelp[] = "stack / st: Analyze the stack.";
 const char kStackHelp[] =
@@ -202,7 +200,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// mem-analyze -----------------------------------------------------------------
+// mem-analyze -------------------------------------------------------------------------------------
 
 const char kMemAnalyzeShortHelp[] = "mem-analyze / ma: Analyze a memory region.";
 const char kMemAnalyzeHelp[] =
@@ -265,9 +263,8 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
           return;
         }
         if (!weak_target) {
-          // Target has been destroyed during evaluation. Normally a message
-          // will be printed when that happens so we can skip reporting the
-          // error.
+          // Target has been destroyed during evaluation. Normally a message will be printed when
+          // that happens so we can skip reporting the error.
           return;
         }
 
@@ -304,7 +301,7 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
       });
 }
 
-// mem-read --------------------------------------------------------------------
+// mem-read ----------------------------------------------------------------------------------------
 
 void MemoryReadComplete(const Err& err, MemoryDump dump) {
   OutputBuffer out;
@@ -379,9 +376,8 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
           return;
         }
         if (!weak_target) {
-          // Target has been destroyed during evaluation. Normally a message
-          // will be printed when that happens so we can skip reporting the
-          // error.
+          // Target has been destroyed during evaluation. Normally a message will be printed when
+          // that happens so we can skip reporting the error.
           return;
         }
 
@@ -405,7 +401,7 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// disassemble -----------------------------------------------------------------
+// disassemble -------------------------------------------------------------------------------------
 
 // Completion callback after reading process memory.
 void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> weak_process,
@@ -420,7 +416,9 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> 
     return;  // Give up if the process went away.
 
   OutputBuffer out;
-  Err format_err = FormatAsmContext(weak_process->session()->arch_info(), dump, options, &out);
+  Err format_err =
+      FormatAsmContext(weak_process->session()->arch_info(), dump, options, weak_process.get(),
+                       SourceFileProviderImpl(weak_process->GetTarget()->settings()), &out);
   if (format_err.has_error()) {
     console->Output(err);
     return;
@@ -475,9 +473,8 @@ Examples
       Disassembles instructions in process 1 starting at the given address.
 )";
 Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
-  // Can take process overrides (to specify which process to read) and thread
-  // and frame ones (to specify which thread to read the instruction pointer
-  // from).
+  // Can take process overrides (to specify which process to read) and thread and frame ones (to
+  // specify which thread to read the instruction pointer from).
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
     return err;
@@ -491,10 +488,9 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty()) {
     // No args: implicitly read the frame's instruction pointer.
     //
-    // TODO(brettw) by default it would be nice if this showed a few lines
-    // of disassembly before the given address. Going backwards in x86 can be
-    // dicey though, the formatter may have to guess-and-check about a good
-    // starting boundary for the dump.
+    // TODO(brettw) by default it would be nice if this showed a few lines of disassembly before the
+    // given address. Going backwards in x86 can be dicey though, the formatter may have to
+    // guess-and-check about a good starting boundary for the dump.
     Frame* frame = cmd.frame();
     if (!frame) {
       return Err(
@@ -515,11 +511,13 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
   if (cmd.frame())
     options.active_address = cmd.frame()->GetAddress();
 
+  // We may want to add an option for this.
+  options.include_source = true;
+
   // Num argument (optional).
   //
-  // When there is no known byte size, compute the max bytes requires to get
-  // the requested instructions. It doesn't matter if we request more memory
-  // than necessary so use a high bound.
+  // When there is no known byte size, compute the max bytes requires to get the requested
+  // instructions. It doesn't matter if we request more memory than necessary so use a high bound.
   size_t size = 0;
   if (cmd.HasSwitch(kNumSwitch)) {
     // Num lines explicitly given.

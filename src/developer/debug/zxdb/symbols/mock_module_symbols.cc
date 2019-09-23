@@ -18,7 +18,11 @@ MockModuleSymbols::MockModuleSymbols(const std::string& local_file_name)
 MockModuleSymbols::~MockModuleSymbols() = default;
 
 void MockModuleSymbols::AddSymbolLocations(const std::string& name, std::vector<Location> locs) {
-  symbols_[name] = std::move(locs);
+  named_symbols_[name] = std::move(locs);
+}
+
+void MockModuleSymbols::AddSymbolLocations(uint64_t address, std::vector<Location> locs) {
+  addr_symbols_[address] = std::move(locs);
 }
 
 void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
@@ -34,7 +38,7 @@ void MockModuleSymbols::AddFileName(const std::string& file_name) { files_.push_
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
   ModuleSymbolStatus status;
   status.name = local_file_name_;
-  status.functions_indexed = symbols_.size();
+  status.functions_indexed = named_symbols_.size();
   status.symbols_loaded = true;
   return status;
 }
@@ -45,12 +49,16 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
   std::vector<Location> result;
   switch (input_location.type) {
     case InputLocation::Type::kAddress:
-      // Always return identity for the address case.
-      result.emplace_back(Location::State::kAddress, input_location.address);
+      if (auto found = addr_symbols_.find(input_location.address); found != addr_symbols_.end()) {
+        result = found->second;
+      } else {
+        // Return identity for all non-found addresses.
+        result.emplace_back(Location::State::kAddress, input_location.address);
+      }
       break;
     case InputLocation::Type::kSymbol: {
-      auto found = symbols_.find(input_location.symbol.GetFullName());
-      if (found != symbols_.end())
+      auto found = named_symbols_.find(input_location.symbol.GetFullName());
+      if (found != named_symbols_.end())
         result = found->second;
       break;
     }

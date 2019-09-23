@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -355,8 +356,10 @@ void ConsoleContext::OutputThreadContext(
       out.Append(" (no symbol info)\n");
     }
     console->Output(out);
-    Err err =
-        OutputSourceContext(thread->GetProcess(), location, GetSourceAffinityForThread(thread));
+    Err err = OutputSourceContext(
+        thread->GetProcess(),
+        std::make_unique<SourceFileProviderImpl>(thread->GetProcess()->GetTarget()->settings()),
+        location, GetSourceAffinityForThread(thread));
     if (err.has_error())
       console->Output(err);
   }

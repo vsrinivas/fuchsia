@@ -7,7 +7,12 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util_test_support.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
 
@@ -114,10 +119,11 @@ TEST(FormatContext, FormatAsmContext) {
   opts.emit_bytes = false;
   opts.active_address = 0x123456785;
   opts.max_instructions = 100;
+  opts.include_source = false;
   opts.bp_addrs[start_address] = true;
 
   OutputBuffer out;
-  err = FormatAsmContext(&arch, dump, opts, &out);
+  err = FormatAsmContext(&arch, dump, opts, nullptr, SourceFileProvider(), &out);
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
@@ -132,13 +138,64 @@ TEST(FormatContext, FormatAsmContext) {
   opts.emit_bytes = true;
   opts.bp_addrs.clear();
   opts.bp_addrs[opts.active_address] = false;
-  err = FormatAsmContext(&arch, dump, opts, &out);
+  err = FormatAsmContext(&arch, dump, opts, nullptr, SourceFileProvider(), &out);
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
       "   0x123456780  bf e0 e5 28 00  mov  edi, 0x28e5e0 \n"
       "◯▶ 0x123456785  48 89 de        mov  rsi, rbx \n"
       "   0x123456788  48 8d 7c 24 0c  lea  rdi, [rsp + 0xc] \n",
+      out.AsString());
+
+  // Combined source/assembly.
+  out = OutputBuffer();
+  opts.emit_bytes = false;
+  opts.include_source = true;
+  opts.bp_addrs.clear();
+
+  // Source code.
+  MockSourceFileProvider file_provider;
+  const char kFileName[] = "file.cc";
+  file_provider.SetFileContents(kFileName,
+                                "// Copyright\n"                  // Line 1.
+                                "\n"                              // Line 2.
+                                "int main() {\n"                  // Line 3.
+                                "  printf(\"Hello, world.\");\n"  // Line 4.
+                                "  return 0;\n"                   // Line 5.
+                                "}\n"                             // Line 6.
+  );
+
+  // Process setup for mocking the symbol requests.
+  ProcessSymbolsTestSetup symbols;
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
+  constexpr uint64_t kModuleLoadAddress = 0x10000;
+  SymbolContext symbol_context(kModuleLoadAddress);
+  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, module_symbols);
+  Session session;
+  MockProcess process(&session);
+  process.set_symbols(&symbols.process());
+
+  // Setup address-to-source mapping. These must match the addresses in the assembly. Line 4
+  // maps to two addresses.
+  module_symbols->AddSymbolLocations(
+      0x123456780, {Location(0x123456780, FileLine(kFileName, 4), 0, symbol_context)});
+  module_symbols->AddSymbolLocations(
+      0x123456785, {Location(0x123456785, FileLine(kFileName, 4), 0, symbol_context)});
+  module_symbols->AddSymbolLocations(
+      0x123456788, {Location(0x123456788, FileLine(kFileName, 5), 0, symbol_context)});
+
+  err = FormatAsmContext(&arch, dump, opts, &process, file_provider, &out);
+  ASSERT_FALSE(err.has_error());
+
+  EXPECT_EQ(
+      "     1 // Copyright\n"
+      "     2 \n"
+      "     3 int main() {\n"
+      "     4   printf(\"Hello, world.\");\n"
+      "   0x123456780  mov  edi, 0x28e5e0 \n"
+      " ▶ 0x123456785  mov  rsi, rbx \n"
+      "     5   return 0;\n"
+      "   0x123456788  lea  rdi, [rsp + 0xc] \n",
       out.AsString());
 }
 

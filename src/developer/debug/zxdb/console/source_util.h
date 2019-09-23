@@ -8,17 +8,39 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 
 namespace zxdb {
 
-// Reads the source file_name from disk.
-//
-// This function applies the build directory searching logic. It is provided the file's build dir as
-// reported by the symbols (for in-tree-built files, this is not useful), and the ordered
-// preferences for the build directories. It will search for the files in these different locations.
-Err GetFileContents(const std::string& file_name, const std::string& file_build_dir,
-                    const std::vector<std::string>& build_dir_prefs, std::string* contents);
+class SettingStore;
+
+// Interface to provide source code. The default implementation fails for all requests. See
+// SourceFileProviderImpl.
+class SourceFileProvider {
+ public:
+  virtual ~SourceFileProvider() = default;
+
+  // Attempts to read the contents of the given file. It is provided the file's build dir as
+  // reported by the symbols (for in-tree-built files, this is not useful).
+  virtual ErrOr<std::string> GetFileContents(const std::string& file_name,
+                                             const std::string& file_build_dir) const {
+    return Err("Source not available.");
+  }
+};
+
+// Implementation of SourceFileProvider that searches the local disk. It uses the build directory
+// preferences from the SettingStore to search in.
+class SourceFileProviderImpl : public SourceFileProvider {
+ public:
+  explicit SourceFileProviderImpl(std::vector<std::string> build_dirs);
+  explicit SourceFileProviderImpl(const SettingStore& settings);
+
+  ErrOr<std::string> GetFileContents(const std::string& file_name,
+                                     const std::string& file_build_dir) const override;
+
+ private:
+  const std::vector<std::string> build_dir_prefs_;
+};
 
 // Extracts the given ranges of lines from the source contents. Line numbers are
 // 1-based and inclusive. This may do short reads if the file isn't large

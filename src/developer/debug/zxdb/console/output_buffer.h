@@ -120,6 +120,11 @@ class OutputBuffer {
   // version in string_util.h, see that for documentation.
   size_t UnicodeCharWidth() const;
 
+  // Removes all trailing newlines from the buffer. This is sometimes necessary when putting one
+  // buffer inside another that might otherwise be designed to be standalone (and include a
+  // newline).
+  void TrimTrailingNewlines();
+
   void Clear();
 
   std::vector<Span>& spans() { return spans_; }

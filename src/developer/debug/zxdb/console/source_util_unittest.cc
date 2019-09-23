@@ -12,7 +12,7 @@
 
 namespace zxdb {
 
-TEST(SourceUtil, GetFileContents) {
+TEST(SourceUtil, SourceFileProviderImpl) {
   // Make a temp file with known contents.
   ScopedTempFile temp_file;
   ASSERT_NE(-1, temp_file.fd());
@@ -22,29 +22,31 @@ TEST(SourceUtil, GetFileContents) {
   std::string file_part(ExtractLastFileComponent(temp_file.name()));
 
   // Test with full input path.
-  std::string contents;
-  Err err = GetFileContents(temp_file.name(), "", {}, &contents);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(expected, contents);
+  SourceFileProviderImpl provider_no_build_dirs({});
+  ErrOr<std::string> result = provider_no_build_dirs.GetFileContents(temp_file.name(), "");
+  ASSERT_FALSE(result.has_error()) << result.err().msg();
+  EXPECT_EQ(expected, result.value());
 
   // With just file part, should not be found.
-  err = GetFileContents(file_part, "", {}, &contents);
-  EXPECT_TRUE(err.has_error());
+  result = provider_no_build_dirs.GetFileContents(file_part, "");
+  EXPECT_TRUE(result.has_error());
 
   // With DWARF compilation dir of "/tmp" it should be found again.
-  err = GetFileContents(file_part, "/tmp", {}, &contents);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(expected, contents);
+  result = provider_no_build_dirs.GetFileContents(file_part, "/tmp");
+  ASSERT_FALSE(result.has_error()) << result.err().msg();
+  EXPECT_EQ(expected, result.value());
 
   // With symbol search path it should be found.
-  err = GetFileContents(file_part, "", {"/tmp"}, &contents);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(expected, contents);
+  SourceFileProviderImpl provider_tmp_build_dir({"/tmp"});
+  result = provider_tmp_build_dir.GetFileContents(file_part, "");
+  ASSERT_FALSE(result.has_error()) << result.err().msg();
+  EXPECT_EQ(expected, result.value());
 
   // Combination of preference and relative search path.
-  err = GetFileContents(file_part, "tmp", {"/"}, &contents);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(expected, contents);
+  SourceFileProviderImpl provider_slash_build_dir({"/"});
+  result = provider_slash_build_dir.GetFileContents(file_part, "tmp");
+  ASSERT_FALSE(result.has_error()) << result.err().msg();
+  EXPECT_EQ(expected, result.value());
 }
 
 TEST(SourceUtil, ExtractSourceLines) {

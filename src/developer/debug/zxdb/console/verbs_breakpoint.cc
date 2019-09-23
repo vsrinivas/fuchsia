@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -69,10 +70,9 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const E
   // in the global scope we have to use the global settings for the build dir. We could use the
   // process build dir for process-specific breakpoints but both process-specific breakpoints and
   // process-specific build settings are rare.
-  FormatBreakpointContext(
-      locs[0]->GetLocation(),
-      breakpoint->session()->system().settings().GetList(ClientSettings::Target::kBuildDirs),
-      breakpoint->GetSettings().enabled, &out);
+  FormatBreakpointContext(locs[0]->GetLocation(),
+                          SourceFileProviderImpl(breakpoint->session()->system().settings()),
+                          breakpoint->GetSettings().enabled, &out);
   console->Output(out);
 }
 

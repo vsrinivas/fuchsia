@@ -23,6 +23,7 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -356,8 +357,8 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   }
 
   OutputBuffer out;
-  err = FormatSourceFileContext(
-      file_line, cmd.target()->settings().GetList(ClientSettings::Target::kBuildDirs), opts, &out);
+  err = FormatSourceFileContext(file_line, SourceFileProviderImpl(cmd.target()->settings()), opts,
+                                &out);
   if (err.has_error())
     return err;
 

@@ -291,6 +291,19 @@ size_t OutputBuffer::UnicodeCharWidth() const {
   return result;
 }
 
+void OutputBuffer::TrimTrailingNewlines() {
+  while (!spans_.empty()) {
+    std::string& text = spans_.back().text;
+    size_t last_good = text.find_last_not_of("\n");
+    if (last_good != std::string::npos) {
+      text.resize(last_good + 1);
+      break;
+    }
+
+    spans_.pop_back();
+  }
+}
+
 void OutputBuffer::Clear() { spans_.clear(); }
 
 std::vector<OutputBuffer::Span> OutputBuffer::NormalizedSpans() const {

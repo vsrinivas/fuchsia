@@ -6,29 +6,37 @@
 
 #include <limits>
 
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
-Err GetFileContents(const std::string& file_name, const std::string& file_build_dir,
-                    const std::vector<std::string>& build_dir_prefs, std::string* contents) {
-  contents->clear();
+SourceFileProviderImpl::SourceFileProviderImpl(std::vector<std::string> build_dirs)
+    : build_dir_prefs_(std::move(build_dirs)) {}
+
+SourceFileProviderImpl::SourceFileProviderImpl(const SettingStore& settings)
+    : build_dir_prefs_(settings.GetList(ClientSettings::Target::kBuildDirs)) {}
+
+ErrOr<std::string> SourceFileProviderImpl::GetFileContents(
+    const std::string& file_name, const std::string& file_build_dir) const {
+  std::string contents;
 
   // Search for the source file. If it's relative, try to find it relative to the build dir, and if
   // that doesn't exist, try relative to the current directory).
   if (IsPathAbsolute(file_name)) {
     // Absolute path, expect it to be readable or fail.
-    if (files::ReadFileToString(file_name, contents))
-      return Err();
+    if (files::ReadFileToString(file_name, &contents))
+      return contents;
     return Err("Source file not found: " + file_name);
   }
 
   // Search the build directory preferences in order.
-  for (const auto& cur : build_dir_prefs) {
-    if (files::ReadFileToString(CatPathComponents(cur, file_name), contents))
-      return Err();
+  for (const auto& cur : build_dir_prefs_) {
+    if (files::ReadFileToString(CatPathComponents(cur, file_name), &contents))
+      return contents;
   }
 
   // Try to find relative to the build directory given in the symbols.
@@ -41,22 +49,22 @@ Err GetFileContents(const std::string& file_name, const std::string& file_build_
       // to the same place as the preference but will be different when shelling out to the separate
       // Zircon build). Even when we fix the multiple build mess in Fuchsia, this relative directory
       // feature can be useful for projects building in different parts.
-      for (const auto& cur : build_dir_prefs) {
+      for (const auto& cur : build_dir_prefs_) {
         if (files::ReadFileToString(
-                CatPathComponents(cur, CatPathComponents(file_build_dir, file_name)), contents))
-          return Err();
+                CatPathComponents(cur, CatPathComponents(file_build_dir, file_name)), &contents))
+          return contents;
       }
     }
 
     // Try to find relative to the file build dir. Even do this if the file build dir is relative to
     // search relative to the current working directory.
-    if (files::ReadFileToString(CatPathComponents(file_build_dir, file_name), contents))
-      return Err();
+    if (files::ReadFileToString(CatPathComponents(file_build_dir, file_name), &contents))
+      return contents;
   }
 
   // Fall back on reading relative to the working directory.
-  if (files::ReadFileToString(file_name, contents))
-    return Err();
+  if (files::ReadFileToString(file_name, &contents))
+    return contents;
 
   return Err("Source file not found: " + file_name);
 }
