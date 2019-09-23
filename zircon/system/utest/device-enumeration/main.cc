@@ -110,7 +110,6 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
       // "sys/platform/05:00:3/aml-uart/serial/bt-transport-uart/bcm-hci",
       // "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/block",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-81/rtc",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-70/led2472g",
       "sys/platform/00:00:2/xhci/usb-bus",
       "sys/platform/05:02:17/aml-gpu",
       "dwmac/eth_phy/phy_null_device",
