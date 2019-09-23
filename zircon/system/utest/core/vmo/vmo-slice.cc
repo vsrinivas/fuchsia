@@ -8,6 +8,7 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <zircon/syscalls/iommu.h>
+
 #include <zxtest/zxtest.h>
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
@@ -250,7 +251,8 @@ TEST(VmoSliceTestCase, ZeroChildren) {
   // Currently the parent has one child, so ZX_VMO_ZERO_CHILDREN should be
   // cleared.  Since child VMO creation is synchronous, this signal must already
   // be clear.
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
   ASSERT_EQ(pending & ZX_VMO_ZERO_CHILDREN, 0);
 
   // Close child slice.
@@ -279,7 +281,8 @@ TEST(VmoSliceTestCase, ZeroChildrenGrandchildClosedLast) {
   // Currently the parent has one child, so ZX_VMO_ZERO_CHILDREN should be
   // cleared.  Since child VMO creation is synchronous, this signal must already
   // be clear.
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
   ASSERT_EQ(pending & ZX_VMO_ZERO_CHILDREN, 0);
 
   // Create grandchild slice.
@@ -288,7 +291,8 @@ TEST(VmoSliceTestCase, ZeroChildrenGrandchildClosedLast) {
 
   // Currently the parent has one child and one grandchild, so ZX_VMO_ZERO_CHILDREN should be
   // cleared.
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
   ASSERT_EQ(pending & ZX_VMO_ZERO_CHILDREN, 0);
 
   // Close child slice.  Leave grandchild alone.
@@ -296,7 +300,8 @@ TEST(VmoSliceTestCase, ZeroChildrenGrandchildClosedLast) {
 
   // Currently the parent has one grandchild, so ZX_VMO_ZERO_CHILDREN should be
   // cleared.
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &pending));
   ASSERT_EQ(pending & ZX_VMO_ZERO_CHILDREN, 0);
 
   // Close grandchild slice.
@@ -306,6 +311,38 @@ TEST(VmoSliceTestCase, ZeroChildrenGrandchildClosedLast) {
   // that ZX_VMO_ZERO_CHILDREN is set immediately, but it should be set very soon if not already.
   ASSERT_OK(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite(), &pending));
   ASSERT_EQ(pending & ZX_VMO_ZERO_CHILDREN, ZX_VMO_ZERO_CHILDREN);
+}
+
+TEST(VmoSliceTestCase, CowPageSourceThroughSlices) {
+  // Create parent VMO.
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  // Commit the page so it becomes the initial content for future children.
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, nullptr, 0));
+
+  // Create a COW child so that we have a hidden parent as the root page source.
+  zx::vmo cow_child;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &cow_child));
+
+  // Now create a slice of the cow_child
+  zx::vmo slice;
+  ASSERT_OK(cow_child.create_child(ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &slice));
+
+  // Now create a cow child of the slice.
+  // Currently this is forbidden and returns ZX_ERR_NOT_SUPPORTED. If it didn't the
+  // cow_child2.write would cause a kernel assertion to trigger. Once bug 36841 is fixed the else
+  // branch can be removed.
+  zx::vmo cow_child2;
+  zx_status_t result = slice.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &cow_child2);
+  if (result == ZX_OK) {
+    // Attempt to write to this child. This will require propagating page through both hidden and
+    // non hidden VMOs.
+    uint8_t val;
+    EXPECT_OK(cow_child2.write(&val, 0, 1));
+  } else {
+    EXPECT_EQ(result, ZX_ERR_NOT_SUPPORTED);
+  }
 }
 
 }  // namespace
