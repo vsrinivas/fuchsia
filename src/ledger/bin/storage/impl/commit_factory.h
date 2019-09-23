@@ -54,13 +54,12 @@ class CommitFactory : public LiveCommitTracker {
   std::vector<std::unique_ptr<const Commit>> GetHeads() const;
 
   // Adds a mapping from an unsynced commit with id |commit_id| to the identifiers it requires to be
-  // alive. This method should only be called on unsynced commits.
+  // alive.
   void AddCommitDependencies(CommitIdView commit_id,
                              std::vector<ObjectIdentifier> root_identifiers);
 
   // Removes the associated identifiers that were requested to be maintained alive for |commit_id|.
-  // It is not an error if the entry is not present. This method should only be called on
-  // successfully synced commits.
+  // It is not an error if the entry is not present.
   void RemoveCommitDependencies(CommitIdView commit_id);
 
   // Returns the set of live root identifiers.

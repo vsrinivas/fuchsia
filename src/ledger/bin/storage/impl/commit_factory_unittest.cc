@@ -404,5 +404,57 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiersOnMergeCommit) {
   EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
 }
 
+// Tests that DeleteCommits updates the set of root identifiers. During this test the following
+// commit graph is created:
+//
+// commit1 -> commit2 -> commit3
+TEST_F(CommitFactoryTest, GetLiveRootIdentifiersOnDeleteCommits) {
+  RunInCoroutine([this](coroutine::CoroutineHandler* handler) {
+    CommitFactory* factory = storage_->GetCommitFactory();
+
+    std::unique_ptr<const Commit> commit1 = GetFirstHead();
+    ObjectIdentifier commit1_root = commit1->GetRootIdentifier();
+
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
+
+    // Add a commit and expect its root and that of its parent (commit1) to be found in
+    // GetLiveRootIdentifiers
+    std::unique_ptr<const Commit> commit2 = CreateRandomCommit(commit1->Clone());
+    ObjectIdentifier commit2_root = commit2->GetRootIdentifier();
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+                UnorderedElementsAre(commit1_root, commit2_root));
+
+    // Add another commit as child of commit2.
+    std::unique_ptr<const Commit> commit3 = CreateRandomCommit(commit2->Clone());
+    ObjectIdentifier commit3_root = commit3->GetRootIdentifier();
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+                UnorderedElementsAre(commit1_root, commit2_root, commit3_root));
+
+    // Delete commit1. Nothing should change: commit1_root is a dependency for commit2.
+    std::vector<std::unique_ptr<const Commit>> commits;
+    commits.emplace_back(std::move(commit1));
+    Status status = storage_->DeleteCommits(handler, std::move(commits));
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+                UnorderedElementsAre(commit1_root, commit2_root, commit3_root));
+
+    // Delete commit2: commit1_root should be removed. commit2_root stays alive because it is a
+    // dependency of commit3.
+    commits.clear();
+    commits.emplace_back(std::move(commit2));
+    status = storage_->DeleteCommits(handler, std::move(commits));
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(),
+                UnorderedElementsAre(commit2_root, commit3_root));
+
+    // Delete commit3. Now that all commits are deleted the set should be empty.
+    commits.clear();
+    commits.emplace_back(std::move(commit3));
+    status = storage_->DeleteCommits(handler, std::move(commits));
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_THAT(factory->GetLiveRootIdentifiers(), IsEmpty());
+  });
+}
+
 }  // namespace
 }  // namespace storage

@@ -32,6 +32,7 @@
 #include "lib/async/cpp/task.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
@@ -868,7 +869,11 @@ Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
     }
     RETURN_ON_ERROR(batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier()));
   }
-  return batch->Execute(handler);
+  RETURN_ON_ERROR(batch->Execute(handler));
+  for (const std::unique_ptr<const Commit>& commit : commits) {
+    commit_factory_.RemoveCommitDependencies(commit->GetId());
+  }
+  return Status::OK;
 }
 
 Status PageStorageImpl::UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
