@@ -641,18 +641,14 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Decodable> Decodable for [T; $len] {
-        // TODO(tmandry): Remove once mem::uninitialized() is gone
-        #[allow(deprecated)]
         fn new_empty() -> Self {
+            let mut arr = mem::MaybeUninit::<[T; $len]>::uninit();
             unsafe {
-                // We wrap the `arr` in a `ManuallyDrop` to prevent it from
-                // being dropped during a failure partway through initialization.
-                let mut arr: mem::ManuallyDrop<[T; $len]> = mem::uninitialized();
-                let arr_ptr: *mut T = arr.as_mut_ptr();
+                let arr_ptr = arr.as_mut_ptr() as *mut T;
                 for i in 0..$len {
                     ptr::write(arr_ptr.offset(i as isize), T::new_empty());
                 }
-                mem::ManuallyDrop::into_inner(arr)
+                arr.assume_init()
             }
         }
 

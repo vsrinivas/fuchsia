@@ -99,11 +99,8 @@ pub const COUNT: usize = 268;
 pub struct List([Rgb; COUNT]);
 
 impl<'a> From<&'a Colors> for List {
-    // TODO(tmandry): Remove once mem::uninitialized() is gone
-    #[allow(deprecated)]
     fn from(colors: &Colors) -> List {
-        // Type inference fails without this annotation
-        let mut list: List = unsafe { ::std::mem::uninitialized() };
+        let mut list = List([Rgb::default(); COUNT]);
 
         list.fill_named(colors);
         list.fill_cube();

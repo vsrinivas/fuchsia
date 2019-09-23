@@ -145,24 +145,20 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
         self.handle.poll_read(cx)
     }
 
-    // TODO(tmandry): Remove this once mem::uninitialized() is gone
-    #[allow(deprecated)]
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     pub fn try_read(&self, cx: &mut Context<'_>) -> Poll<Result<Option<R>, zx::Status>> {
         let clear_closed = ready!(self.handle.poll_read(cx)?);
-        let mut element = unsafe { ::std::mem::uninitialized() };
+        let mut element = ::std::mem::MaybeUninit::<R>::uninit();
         let elembuf = unsafe {
             ::std::slice::from_raw_parts_mut(
-                &mut element as *mut R as *mut u8,
+                element.as_mut_ptr() as *mut u8,
                 ::std::mem::size_of::<R>(),
             )
         };
 
         match self.as_ref().read(::std::mem::size_of::<R>(), elembuf) {
             Err(e) => {
-                // Ensure `drop` isn't called on uninitialized memory.
-                ::std::mem::forget(element);
                 if e == zx::Status::SHOULD_WAIT {
                     self.handle.need_read(cx, clear_closed)?;
                     return Poll::Pending;
@@ -174,6 +170,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
             }
             Ok(count) => {
                 debug_assert_eq!(1, count);
+                let element = unsafe { element.assume_init() };
                 return Poll::Ready(Ok(Some(element)));
             }
         }

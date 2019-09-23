@@ -270,21 +270,19 @@ pub fn object_get_info<Q: ObjectQuery>(
     ok(status).map(|_| (actual, avail - actual))
 }
 
-// TODO(tmandry): Remove once mem::uninitialized() is gone
-#[allow(deprecated)]
 /// Get a property on a zircon object
 pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
-    let mut out: P::PropTy = unsafe { std::mem::uninitialized() };
+    let mut out = ::std::mem::MaybeUninit::<P::PropTy>::uninit();
     let status = unsafe {
         sys::zx_object_get_property(
             handle.raw_handle(),
             *P::PROPERTY,
-            &mut out as *mut P::PropTy as *mut u8,
+            out.as_mut_ptr() as *mut u8,
             std::mem::size_of::<P::PropTy>(),
         )
     };
-    ok(status).map(|_| out)
+    ok(status).map(|_| unsafe { out.assume_init() })
 }
 
 /// Set a property on a zircon object

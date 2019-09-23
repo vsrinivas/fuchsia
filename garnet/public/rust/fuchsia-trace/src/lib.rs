@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(cramertj): Remove once mem::uninitialized is gone
-#![allow(deprecated)]
-
 pub use cstr::cstr;
 
 use {
@@ -149,15 +146,16 @@ pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args:
     // - category and name are static null-terminated strings (`&'static CStr).
     // - the refs must be valid for the given call
     unsafe {
-        let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-        let context = sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+        let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+        let context =
+            sys::trace_acquire_context_for_category(category.as_ptr(), category_ref.as_mut_ptr());
         if context != ptr::null() {
             let helper = EventHelper::new(context, name);
             sys::trace_context_write_instant_event_record(
                 context,
                 helper.ticks,
                 &helper.thread_ref,
-                &category_ref,
+                category_ref.as_ptr(),
                 &helper.name_ref,
                 scope.into_raw(),
                 args.as_ptr() as *const sys::trace_arg_t,
@@ -207,16 +205,17 @@ pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, ar
 
     // See unsafety justification in `instant`
     unsafe {
-        let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-        let context = sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+        let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+        let context = sys::trace_acquire_context_for_category(
+            category.as_ptr(), category_ref.as_mut_ptr()
+        );
         if context != ptr::null() {
             let helper = EventHelper::new(context, name);
-
             sys::trace_context_write_counter_event_record(
                 context,
                 helper.ticks,
                 &helper.thread_ref,
-                &category_ref,
+                category_ref.as_ptr(),
                 &helper.name_ref,
                 counter_id,
                 args.as_ptr() as *const sys::trace_arg_t,
@@ -251,18 +250,18 @@ impl<'a> Drop for DurationScope<'a> {
         // See unsafety justification in `instant`
         unsafe {
             let DurationScope { category, name, args, start_time } = self;
-            let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-            let context =
-                sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+            let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+            let context = sys::trace_acquire_context_for_category(
+                category.as_ptr(), category_ref.as_mut_ptr()
+            );
             if context != ptr::null() {
                 let helper = EventHelper::new(context, name);
-
                 sys::trace_context_write_duration_event_record(
                     context,
                     *start_time,
                     helper.ticks,
                     &helper.thread_ref,
-                    &category_ref,
+                    category_ref.as_ptr(),
                     &helper.name_ref,
                     args.as_ptr() as *const sys::trace_arg_t,
                     args.len(),
@@ -375,16 +374,17 @@ macro_rules! duration_event {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {
-                let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-                let context =
-                    sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+                let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+                let context = sys::trace_acquire_context_for_category(
+                    category.as_ptr(), category_ref.as_mut_ptr()
+                );
                 if context != ptr::null() {
                     let helper = EventHelper::new(context, name);
                     $sys_method(
                         context,
                         helper.ticks,
                         &helper.thread_ref,
-                        &category_ref,
+                        category_ref.as_ptr(),
                         &helper.name_ref,
                         args.as_ptr() as *const sys::trace_arg_t,
                         args.len(),
@@ -500,16 +500,17 @@ macro_rules! flow_event {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {
-                let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-                let context =
-                    sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+                let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+                let context = sys::trace_acquire_context_for_category(
+                    category.as_ptr(), category_ref.as_mut_ptr()
+                );
                 if context != ptr::null() {
                     let helper = EventHelper::new(context, name);
                     $sys_method(
                         context,
                         helper.ticks,
                         &helper.thread_ref,
-                        &category_ref,
+                        category_ref.as_ptr(),
                         &helper.name_ref,
                         flow_id,
                         args.as_ptr() as *const sys::trace_arg_t,
@@ -598,11 +599,13 @@ impl EventHelper {
     unsafe fn new(context: *const sys::trace_context_t, name: &'static CStr) -> Self {
         let ticks = zx::ticks_get();
 
-        let mut thread_ref: sys::trace_thread_ref_t = mem::uninitialized();
-        sys::trace_context_register_current_thread(context, &mut thread_ref);
+        let mut thread_ref = mem::MaybeUninit::<sys::trace_thread_ref_t>::uninit();
+        sys::trace_context_register_current_thread(context, thread_ref.as_mut_ptr());
+        let thread_ref = thread_ref.assume_init();
 
-        let mut name_ref: sys::trace_string_ref_t = mem::uninitialized();
-        sys::trace_context_register_string_literal(context, name.as_ptr(), &mut name_ref);
+        let mut name_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+        sys::trace_context_register_string_literal(context, name.as_ptr(), name_ref.as_mut_ptr());
+        let name_ref = name_ref.assume_init();
 
         EventHelper { ticks, thread_ref, name_ref }
     }
