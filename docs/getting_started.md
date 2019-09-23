@@ -278,6 +278,6 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 more](/docs/zircon/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Documentation Standards](best-practices/documentation_standards.md) - best practices
   for documentation
-* [Information on the system bootstrap component](/garnet/bin/sysmgr/).
+* [Information on the system bootstrap component](/src/sys/sysmgr/).
 * [Workflow tips and FAQ](development/workflows/workflow_tips_and_faq.md) that help increase
   productivity.

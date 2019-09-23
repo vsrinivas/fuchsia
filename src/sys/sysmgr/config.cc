@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/sysmgr/config.h"
+#include "src/sys/sysmgr/config.h"
 
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "rapidjson/document.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "rapidjson/document.h"
 
 namespace sysmgr {
 namespace {

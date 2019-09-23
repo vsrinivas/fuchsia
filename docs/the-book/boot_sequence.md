@@ -18,7 +18,7 @@ that environment. Typically, these applications create environments nested
 directly in the root environment. The default configuration contains one initial
 app: `bootstrap`.
 
-# Layer 2: [sysmgr](/garnet/bin/sysmgr/)
+# Layer 2: [sysmgr](/src/sys/sysmgr/)
 
 `sysmgr`'s job is to create the boot environment and create a number of
  initial components in the boot environment.

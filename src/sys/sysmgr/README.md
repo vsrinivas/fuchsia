@@ -22,7 +22,7 @@ Additional configurations can be contributed to `sysmgr` using the
 ## Building
 
 This project is typically included in Fuchsia builds by default, but it can be
-added to a build by adding `--with //garnet/bin/sysmgr` to the `fx set`
+added to a build by adding `--with //src/sys/sysmgr` to the `fx set`
 invocation.
 
 ## Running

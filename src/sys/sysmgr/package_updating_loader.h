@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSMGR_PACKAGE_UPDATING_LOADER_H_
-#define GARNET_BIN_SYSMGR_PACKAGE_UPDATING_LOADER_H_
-
-#include <string>
-#include <unordered_set>
+#ifndef SRC_SYS_SYSMGR_PACKAGE_UPDATING_LOADER_H_
+#define SRC_SYS_SYSMGR_PACKAGE_UPDATING_LOADER_H_
 
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
+#include <string>
+#include <unordered_set>
+
 #include "garnet/lib/loader/package_loader.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
@@ -49,4 +50,4 @@ class PackageUpdatingLoader final : public component::PackageLoader {
 
 }  // namespace sysmgr
 
-#endif  // GARNET_BIN_SYSMGR_PACKAGE_UPDATING_LOADER_H_
+#endif  // SRC_SYS_SYSMGR_PACKAGE_UPDATING_LOADER_H_

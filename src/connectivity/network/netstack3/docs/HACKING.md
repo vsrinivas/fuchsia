@@ -63,8 +63,8 @@ To run Netstack3 as the replacement netstack, you'll probably want to disable
 the Go `netstack` first, so as to avoid conflicts and confusion between the two
 stacks.
 
-In [`garnet/bin/sysmgr/config/services.config`](
-../../../../../garnet/bin/sysmgr/config/services.config):
+In [`src/sys/sysmgr/config/services.config`](
+../../../sys/sysmgr/config/services.config):
 
 * Replace `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx` on the
   `fuchsia.net.stack.Stack` line with
@@ -77,12 +77,13 @@ In [`garnet/bin/sysmgr/config/services.config`](
   make sure to check your config for that.
 
 If you frequently work on Netstack3 like this, consider telling git to ignore
-changes to `bin/sysmgr/config/services.config` - you can do this with the
-command `git update-index --skip-worktree bin/sysmgr/config/services.config`.
-This comes with the caveat that when you _do_ want to edit the file and check it
-in (or someone else has made a breaking change to the config format), you need
-to remember that you've done this, though. It can be undone by the same command
-with the `--no-skip-worktree` flag.
+changes to `src/sys/sysmgr/config/services.config` - you can do this with the
+command `git update-index --skip-worktree
+src/sys/sysmgr/config/services.config`.  This comes with the caveat that when
+you _do_ want to edit the file and check it in (or someone else has made a
+breaking change to the config format), you need to remember that you've done
+this, though. It can be undone by the same command with the `--no-skip-worktree`
+flag.
 
 **NOTE:** At the time of this writing, Netstack3 is not complete enough to allow
 for dynamic package download and install. So make sure that every package that

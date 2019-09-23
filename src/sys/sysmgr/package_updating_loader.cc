@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/sysmgr/package_updating_loader.h"
+#include "src/sys/sysmgr/package_updating_loader.h"
 
 #include <fcntl.h>
-
-#include <string>
-#include <utility>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <string>
+#include <utility>
 
 #include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"

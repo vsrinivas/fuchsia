@@ -165,7 +165,7 @@ For more detail on driver logging, see [Zircon driver logging](https://fuchsia.g
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
 The mapping between environment service names and their handlers is defined in
-[//garnet/bin/sysmgr/config/services.config](/garnet/bin/sysmgr/config/services.config).
+[//src/sys/sysmgr/config/services.config](/src/sys/sysmgr/config/services.config).
 Add the `--verbose` option to the Bluetooth entries to increase verbosity, for
 example:
 

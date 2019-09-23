@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <string.h>
-#include <sys/types.h>
-#include <string>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include "garnet/bin/sysmgr/app.h"
+#include <string.h>
+#include <sys/types.h>
+
+#include <string>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/sys/sysmgr/app.h"
 
 constexpr char kConfigDataDir[] = "/config/data/";
 

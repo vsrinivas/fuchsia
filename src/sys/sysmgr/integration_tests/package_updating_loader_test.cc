@@ -2,15 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/sysmgr/package_updating_loader.h"
+#include "src/sys/sysmgr/package_updating_loader.h"
 
-#include <memory>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
-
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -22,9 +15,17 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include <fidl/examples/echo/cpp/fidl.h>
+#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
 

@@ -1,97 +1,38 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/package.gni")
-
-declare_args() {
-  # Whether the component loader should automatically update packages.
-  auto_update_packages = true
-}
-
-source_set("lib") {
-  sources = [
-    "app.cc",
-    "app.h",
-    "config.cc",
-    "config.h",
-    "package_updating_loader.cc",
-    "package_updating_loader.h",
-  ]
-
+# Do not use this target directly, instead depend on //src/sys/sysmgr:network_config.
+group("network_config") {
   public_deps = [
-    "//garnet/lib/loader",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/json",
-    "//sdk/fidl/fuchsia.pkg",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/pkg_url",
-    "//third_party/rapidjson",
-  ]
-
-  if (auto_update_packages) {
-    public_configs = [ ":update_packages_config" ]
-  }
-}
-
-executable("bin") {
-  output_name = "sysmgr"
-
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//src/sys/sysmgr:network_config",
   ]
 }
 
-package("sysmgr") {
-  deps = [
-    ":bin",
-  ]
-  binaries = [
-    {
-      name = "sysmgr"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/sysmgr.cmx")
-      dest = "sysmgr.cmx"
-    },
+# Do not use this target directly, instead depend on //src/sys/sysmgr:router_config.
+group("router_config") {
+  public_deps = [
+    "//src/sys/sysmgr:router_config",
   ]
 }
 
-template("cfg") {
-  config_data(target_name) {
-    for_pkg = "sysmgr"
-    sources = [
-      rebase_path("config/${invoker.name}"),
-    ]
-  }
+# Do not use this target directly, instead depend on //src/sys/sysmgr:sysmgr.
+group("sysmgr") {
+  public_deps = [
+    "//src/sys/sysmgr:sysmgr",
+  ]
 }
 
-cfg("network_config") {
-  name = "network.config"
+# Do not use this target directly, instead depend on //src/sys/sysmgr:services_config.
+group("services_config") {
+  public_deps = [
+    "//src/sys/sysmgr:services_config",
+  ]
 }
 
-cfg("services_config") {
-  name = "services.config"
-}
-
-cfg("router_config") {
-  name = "router.config"
-}
-
-config("update_packages_config") {
-  defines = [ "AUTO_UPDATE_PACKAGES" ]
+# Do not use this target directly, instead depend on //src/sys/sysmgr:lib.
+group("lib") {
+  public_deps = [
+    "//src/sys/sysmgr:lib",
+  ]
 }

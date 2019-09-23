@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSMGR_APP_H_
-#define GARNET_BIN_SYSMGR_APP_H_
+#ifndef SRC_SYS_SYSMGR_APP_H_
+#define SRC_SYS_SYSMGR_APP_H_
 
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -16,9 +16,9 @@
 #include <string>
 #include <unordered_set>
 
-#include "garnet/bin/sysmgr/config.h"
-#include "garnet/bin/sysmgr/package_updating_loader.h"
 #include "src/lib/fxl/macros.h"
+#include "src/sys/sysmgr/config.h"
+#include "src/sys/sysmgr/package_updating_loader.h"
 
 namespace sysmgr {
 
@@ -67,4 +67,4 @@ class App {
 
 }  // namespace sysmgr
 
-#endif  // GARNET_BIN_SYSMGR_APP_H_
+#endif  // SRC_SYS_SYSMGR_APP_H_

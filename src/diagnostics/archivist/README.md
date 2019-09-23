@@ -36,5 +36,5 @@ The entrypoint is located in `src/main.rs`, with the rest of the code living in
 are located in the `tests/` directory.
 
 [log_listener]: ../../../garnet/bin/log_listener/README.md
-[sysmgr]: ../../../garnet/bin/sysmgr/README.md
+[sysmgr]: ../../sys/sysmgr/README.md
 [fidl-file]: ../../../zircon/system/fidl/fuchsia-logger/logger.fidl

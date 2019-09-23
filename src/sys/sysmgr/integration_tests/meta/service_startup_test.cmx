@@ -10,7 +10,9 @@
         "binary": "test/service_startup_test"
     },
     "sandbox": {
-        "features": [ "deprecated-ambient-replace-as-executable" ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "pkgfs": [
             "packages"
         ],
