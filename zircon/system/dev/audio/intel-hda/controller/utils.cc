@@ -25,13 +25,7 @@
 namespace audio {
 namespace intel_hda {
 
-fbl::RefPtr<fzl::VmarManager> DriverVmars::registers_;
-
-zx_status_t DriverVmars::Initialize() {
-  if (registers_ != nullptr) {
-    return ZX_ERR_BAD_STATE;
-  }
-
+fbl::RefPtr<fzl::VmarManager> CreateDriverVmars() {
   // Create a compact VMAR to map all of our registers into.
   //
   // TODO(johngro): See ZX-1822 for details.
@@ -54,21 +48,13 @@ zx_status_t DriverVmars::Initialize() {
   // One alloc for the main registers, one for the CORB/RIRB, two for DSP,
   // and one for each possible stream BDL.
   constexpr size_t MAX_ALLOCS_PER_CONTROLLER = 2 + MAX_ALLOCS_PER_DSP + MAX_STREAMS_PER_CONTROLLER;
-  constexpr size_t MAX_CONTROLLERS = 4;
   constexpr size_t VMAR_SIZE =
-      2 * ((MAX_CONTROLLERS * MAX_SIZE_PER_CONTROLLER) +
-           (((MAX_CONTROLLERS * MAX_ALLOCS_PER_CONTROLLER) - 1) * (512u << 10)));
+      2 * (MAX_SIZE_PER_CONTROLLER + ((MAX_ALLOCS_PER_CONTROLLER - 1) * (512u << 10)));
 
   GLOBAL_LOG(TRACE, "Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
-  registers_ = fzl::VmarManager::Create(VMAR_SIZE);
-  if (registers_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
-  return ZX_OK;
+  return fzl::VmarManager::Create(VMAR_SIZE);
 }
-
-void DriverVmars::Shutdown() { registers_.reset(); }
 
 zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
                                      dispatcher::Channel::ProcessHandler phandler,

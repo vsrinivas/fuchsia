@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 
 #include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/handle.h>
@@ -40,7 +41,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   static constexpr size_t MAX_BDL_LENGTH = 256;
 
   static fbl::RefPtr<IntelHDAStream> Create(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
-                                            const fbl::RefPtr<RefCountedBti>& pci_bti);
+                                            const fbl::RefPtr<RefCountedBti>& pci_bti,
+                                            fbl::RefPtr<fzl::VmarManager> vmar_manager);
 
   const char* log_prefix() const { return log_prefix_; }
   Type type() const { return type_; }
@@ -65,7 +67,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
 
   IntelHDAStream(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
-                 const fbl::RefPtr<RefCountedBti>& pci_bti);
+                 const fbl::RefPtr<RefCountedBti>& pci_bti,
+                 fbl::RefPtr<fzl::VmarManager> vmar_manager);
   ~IntelHDAStream();
 
   zx_status_t Initialize();
@@ -120,6 +123,9 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
 
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
+
+  // VMAR manager, shared with other streams and controller.
+  fbl::RefPtr<fzl::VmarManager> vmar_manager_;
 
   // A reference to our controller's BTI.  We will need to this to grant the
   // controller access to the BDLs and the ring buffers that this stream needs

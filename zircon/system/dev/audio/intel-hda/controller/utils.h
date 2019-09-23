@@ -40,17 +40,9 @@ static inline constexpr T AND(T x, T y) {
   return static_cast<T>(x & y);
 }
 
-// Static container for the driver wide VMARs that we stash all of our register
+// Create a set of driver-wide VMARs that we stash all of our register
 // mappings in, in order to make efficient use of kernel PTEs
-class DriverVmars {
- public:
-  static zx_status_t Initialize();
-  static void Shutdown();
-  static const fbl::RefPtr<fzl::VmarManager>& registers() { return registers_; }
-
- private:
-  static fbl::RefPtr<fzl::VmarManager> registers_;
-};
+fbl::RefPtr<fzl::VmarManager> CreateDriverVmars();
 
 struct StreamFormat {
   // Stream format bitfields documented in section 3.7.1

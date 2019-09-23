@@ -34,9 +34,10 @@ constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 
 fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,
                                                    hda_stream_desc_regs_t* regs,
-                                                   const fbl::RefPtr<RefCountedBti>& pci_bti) {
+                                                   const fbl::RefPtr<RefCountedBti>& pci_bti,
+                                                   fbl::RefPtr<fzl::VmarManager> vmar_manager) {
   fbl::AllocChecker ac;
-  auto ret = fbl::AdoptRef(new (&ac) IntelHDAStream(type, id, regs, pci_bti));
+  auto ret = fbl::AdoptRef(new (&ac) IntelHDAStream(type, id, regs, pci_bti, vmar_manager));
   if (!ac.check()) {
     return nullptr;
   }
@@ -52,8 +53,9 @@ fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,
 }
 
 IntelHDAStream::IntelHDAStream(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
-                               const fbl::RefPtr<RefCountedBti>& pci_bti)
-    : type_(type), id_(id), regs_(regs), pci_bti_(pci_bti) {
+                               const fbl::RefPtr<RefCountedBti>& pci_bti,
+                               fbl::RefPtr<fzl::VmarManager> vmar_manager)
+    : type_(type), id_(id), regs_(regs), vmar_manager_(std::move(vmar_manager)), pci_bti_(pci_bti) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA_SD #%u", id_);
 }
 
@@ -70,7 +72,7 @@ zx_status_t IntelHDAStream::Initialize() {
   constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   zx::vmo bdl_vmo;
   zx_status_t res;
-  res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, DriverVmars::registers(), &bdl_vmo,
+  res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, vmar_manager_, &bdl_vmo,
                                   ZX_RIGHT_SAME_RIGHTS, ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to create and map %u bytes for stream BDL! (res %d)\n", PAGE_SIZE, res);

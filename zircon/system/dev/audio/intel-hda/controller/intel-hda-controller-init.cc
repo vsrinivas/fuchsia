@@ -218,7 +218,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   // Map the VMO in, make sure to put it in the same VMAR as the rest of our
   // registers.
   constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  res = mapped_regs_.Map(bar_vmo, 0, bar_info.size, CPU_MAP_FLAGS, DriverVmars::registers());
+  res = mapped_regs_.Map(bar_vmo, 0, bar_info.size, CPU_MAP_FLAGS, vmar_manager_);
   if (res != ZX_OK) {
     LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
     return res;
@@ -308,7 +308,8 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
                     : ((i < input_stream_cnt + output_stream_cnt) ? IntelHDAStream::Type::OUTPUT
                                                                   : IntelHDAStream::Type::BIDIR);
 
-    auto stream = IntelHDAStream::Create(type, stream_id, &regs()->stream_desc[i], pci_bti_);
+    auto stream =
+        IntelHDAStream::Create(type, stream_id, &regs()->stream_desc[i], pci_bti_, vmar_manager_);
     if (stream == nullptr) {
       LOG(ERROR, "Failed to create HDA stream context %u/%u\n", i, total_stream_cnt);
       return ZX_ERR_NO_MEMORY;
@@ -359,9 +360,8 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
   constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   static_assert(PAGE_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
                 "PAGE_SIZE to small to hold CORB and RIRB buffers!");
-  res = cmd_buf_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, DriverVmars::registers(),
-                                      &cmd_buf_vmo, ZX_RIGHT_SAME_RIGHTS,
-                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  res = cmd_buf_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, vmar_manager_, &cmd_buf_vmo,
+                                      ZX_RIGHT_SAME_RIGHTS, ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to create and map %u bytes for CORB/RIRB command buffers! (res %d)\n",
@@ -694,6 +694,11 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
 }
 
 zx_status_t IntelHDAController::Init(zx_device_t* pci_dev) {
+  vmar_manager_ = CreateDriverVmars();
+  if (vmar_manager_.get() == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   zx_status_t res = InitInternal(pci_dev);
   if (res != ZX_OK) {
     DeviceShutdown();

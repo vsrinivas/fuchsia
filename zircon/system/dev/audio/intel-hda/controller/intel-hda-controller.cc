@@ -356,19 +356,6 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .message = nullptr,
 };
 
-zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
-  // Note: It is assumed that calls to Init/Release are serialized by the
-  // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
-  // serialization will need to be added here.
-  zx_status_t res = DriverVmars::Initialize();
-  if (res != ZX_OK) {
-    DriverVmars::Shutdown();
-    return res;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
   fbl::AllocChecker ac;
   fbl::RefPtr<IntelHDAController> controller(fbl::AdoptRef(new (&ac) IntelHDAController()));
@@ -405,13 +392,11 @@ zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
 void IntelHDAController::DriverRelease(void* ctx) {
   // If we are the last one out the door, turn off the lights in the thread pool.
   dispatcher::ThreadPool::ShutdownAll();
-  DriverVmars::Shutdown();
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.init = IntelHDAController::DriverInit;
   ops.bind = IntelHDAController::DriverBind;
   ops.release = IntelHDAController::DriverRelease;
   return ops;

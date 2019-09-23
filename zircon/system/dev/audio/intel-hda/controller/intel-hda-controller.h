@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -140,6 +141,9 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
   zx_status_t SnapshotRegs(dispatcher::Channel* channel,
                            const ihda_controller_snapshot_regs_req_t& req);
+
+  // VMAR for memory mapped registers.
+  fbl::RefPtr<fzl::VmarManager> vmar_manager_;
 
   // Dispatcher framework state
   fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
