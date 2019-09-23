@@ -974,6 +974,7 @@ group("system_update_checker") {
   testonly = true
   public_deps = [
     "//garnet/bin/system-update-checker:system-update-checker-tests",
+    "//garnet/tests/system-update-checker:system-update-checker-integration-tests",
   ]
 }
 

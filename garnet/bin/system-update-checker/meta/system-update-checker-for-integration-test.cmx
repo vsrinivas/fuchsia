@@ -3,15 +3,6 @@
         "binary": "bin/system-update-checker"
     },
     "sandbox": {
-        "features": [
-            "config-data",
-            "deprecated-misc-storage",
-            "isolated-persistent-storage"
-        ],
-        "pkgfs": [
-            "ctl",
-            "packages"
-        ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.logger.LogSink",
@@ -21,9 +12,6 @@
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Launcher",
             "fuchsia.update.channel.Provider"
-        ],
-        "system": [
-            "meta"
         ]
     }
 }
