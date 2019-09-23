@@ -1,20 +1,10 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
-source_set("chrealm") {
-  sources = [
-    "chrealm.cc",
-    "chrealm.h",
-  ]
-
+# Do not use this target directly, instead depend on //src/sys/lib/chrealm:chrealm.
+group("chrealm") {
   public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/zx",
+    "//src/sys/lib/chrealm:chrealm",
   ]
 }
