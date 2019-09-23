@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <array>
@@ -59,6 +61,34 @@ StatusOr<std::vector<fbl::String>> GetFilesInDir(const char* path) {
   return result;
 }
 
+// Create a new stream on the default device.
+//
+// Return nullptr if there was an error during creation.
+template <typename T>
+fbl::unique_ptr<T> CreateAndOpenStream(uint32_t device) {
+  // Create the stream.
+  fbl::unique_ptr<T> stream = T::Create(device);
+  if (stream == nullptr) {
+    return nullptr;
+  }
+
+  // Open the stream.
+  zx_status_t status = stream->Open();
+  if (status != ZX_OK) {
+    std::cerr << "Failed to open audio stream: " << zx_status_get_string(status) << "\n";
+    return nullptr;
+  }
+
+  return stream;
+}
+
+int DeviceNumberFromDevicePath(const char* path) {
+  // We assume a format of "/.../123"
+  ZX_ASSERT(strlen(path) >= 4);
+  ZX_ASSERT(strlen(path) >= 4);
+  return atoi(path + strlen(path) - 3);
+}
+
 }  // namespace
 
 SystemAudioDevices GetSystemAudioDevices() {
@@ -80,12 +110,6 @@ bool IsIntelHdaDevicePresent() {
   return !devices.controllers.empty() && !devices.inputs.empty() && !devices.outputs.empty();
 }
 
-int DeviceNumberFromDevicePath(fbl::String& path) {
-  // We assume a format of "/.../123"
-  ZX_ASSERT(path.length() > 3);
-  return 3;
-}
-
 StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
                                             audio_stream_string_id_t id) {
   // Fetch information from stream.
@@ -103,6 +127,14 @@ StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* str
   }
 
   return fbl::String(reinterpret_cast<const char*>(response.str), response.strlen);
+}
+
+fbl::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device) {
+  return CreateAndOpenStream<audio::utils::AudioOutput>(DeviceNumberFromDevicePath(device));
+}
+
+fbl::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device) {
+  return CreateAndOpenStream<audio::utils::AudioInput>(DeviceNumberFromDevicePath(device));
 }
 
 }  // namespace audio::intel_hda

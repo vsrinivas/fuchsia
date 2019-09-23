@@ -37,6 +37,12 @@ struct SystemAudioDevices {
 // Get the audio devices present in the system.
 SystemAudioDevices GetSystemAudioDevices();
 
+// Create and open an input/output audio device at |device|.
+//
+// Return nullptr on error.
+fbl::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device);
+fbl::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device);
+
 // Fetch the string |id| from the given audio stream / device node.
 StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
                                             audio_stream_string_id_t id);

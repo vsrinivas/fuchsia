@@ -17,6 +17,8 @@ source_set("test_libs") {
     "audio_test_tools.h",
     "board_name.cc",
     "board_name.h",
+    "silence_generator.cc",
+    "silence_generator.h",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
