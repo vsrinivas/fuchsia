@@ -675,6 +675,7 @@ fn handle_mlme_assoc_conf(
             context.info.report_assoc_success(context.att_id);
             match cmd.protection {
                 Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
+                    context.info.report_rsna_started(context.att_id);
                     match rsna.supplicant.start() {
                         Err(e) => {
                             handle_supplicant_start_failure(cmd.responder, cmd.bss, context, e);
@@ -682,8 +683,6 @@ fn handle_mlme_assoc_conf(
                             State::Idle { cfg }
                         }
                         Ok(_) => {
-                            context.info.report_rsna_started(context.att_id);
-
                             let rsna_timeout =
                                 Some(context.timer.schedule(event::EstablishingRsnaTimeout));
                             state_change_msg.replace("successful association".to_string());
@@ -1446,6 +1445,7 @@ mod tests {
         let result: ConnectResult = EstablishRsnaFailure::StartSupplicantFailed.into();
         expect_result(receiver, result.clone());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
+        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 0 });
         expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
