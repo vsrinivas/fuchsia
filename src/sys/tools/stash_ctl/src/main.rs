@@ -13,7 +13,7 @@ use std::convert::{TryFrom, TryInto};
 use std::env;
 use std::str;
 
-use fidl_fuchsia_stash::{KeyValue, ListItem, StoreMarker, SecureStoreMarker, Value};
+use fidl_fuchsia_stash::{KeyValue, ListItem, SecureStoreMarker, StoreMarker, Value};
 
 fn main() -> Result<(), Error> {
     let cfg: StashCtlConfig = env::args().try_into()?;
@@ -47,12 +47,11 @@ fn main() -> Result<(), Error> {
     // Perform the operation
     match cfg.op {
         StashOperation::Get(k) => {
-            let fut = acc.get_value(&k)
-                .map(|res| match res {
-                    Ok(Some(val)) => print_val(&val),
-                    Ok(None) => println!("no such key: {}", k),
-                    Err(e) => println!("fidl error encountered: {:?}", e),
-                });
+            let fut = acc.get_value(&k).map(|res| match res {
+                Ok(Some(val)) => print_val(&val),
+                Ok(None) => println!("no such key: {}", k),
+                Err(e) => println!("fidl error encountered: {:?}", e),
+            });
             executor.run_singlethreaded(fut);
         }
         StashOperation::Set(k, mut v) => {
@@ -96,8 +95,7 @@ fn main() -> Result<(), Error> {
             resp?;
         }
         StashOperation::DeletePrefix(k) => {
-            acc.delete_prefix(&k)
-                .map(|_| println!("{} prefix deleted successfully", k))?;
+            acc.delete_prefix(&k).map(|_| println!("{} prefix deleted successfully", k))?;
             acc.commit()?;
         }
     };
@@ -129,9 +127,9 @@ impl TryFrom<env::Args> for StashCtlConfig {
             let _ = args.next();
         }
         // take advantage of the fact that `next()` will keep returning `None`
-        let op  = args.next();
+        let op = args.next();
         let key = args.next();
-        let ty  = args.next();
+        let ty = args.next();
         let val = args.next();
 
         let op = match (
@@ -140,25 +138,21 @@ impl TryFrom<env::Args> for StashCtlConfig {
             ty.as_ref().map(|s| s.as_str()),
             val.as_ref().map(|s| s.as_str()),
         ) {
-            (Some("get"), Some(key), None, None) =>
-                StashOperation::Get(key),
-            (Some("set"), Some(key), Some(type_), Some(val)) =>
-                StashOperation::Set(key, to_val(type_, val)?),
-            (Some("delete"), Some(key), None, None) =>
-                StashOperation::Delete(key),
-            (Some("list-prefix"), Some(key), None, None) =>
-                StashOperation::ListPrefix(key),
-            (Some("get-prefix"), Some(key), None, None) =>
-                StashOperation::GetPrefix(key),
-            (Some("delete-prefix"), Some(key), None, None) =>
-                StashOperation::DeletePrefix(key),
+            (Some("get"), Some(key), None, None) => StashOperation::Get(key),
+            (Some("set"), Some(key), Some(type_), Some(val)) => {
+                StashOperation::Set(key, to_val(type_, val)?)
+            }
+            (Some("delete"), Some(key), None, None) => StashOperation::Delete(key),
+            (Some("list-prefix"), Some(key), None, None) => StashOperation::ListPrefix(key),
+            (Some("get-prefix"), Some(key), None, None) => StashOperation::GetPrefix(key),
+            (Some("delete-prefix"), Some(key), None, None) => StashOperation::DeletePrefix(key),
 
             _ => {
                 help();
                 return Err(err_msg("unable to parse args"));
             }
         };
-        Ok(StashCtlConfig{ secure, op })
+        Ok(StashCtlConfig { secure, op })
     }
 }
 
@@ -174,10 +168,7 @@ fn to_val(typ: &str, input: &str) -> Result<Value, Error> {
                 .map_err(|s| err_msg(format!("error creating bytes buffer, zx status: {}", s)))?;
             vmo.write(&bytes, 0)
                 .map_err(|s| err_msg(format!("error writing bytes buffer, zx status: {}", s)))?;
-            Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer {
-                vmo: vmo,
-                size: bytes.len() as u64,
-            }))
+            Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer { vmo: vmo, size: bytes.len() as u64 }))
         }
         _ => Err(err_msg(format!("unknown type: {}", typ))),
     }
