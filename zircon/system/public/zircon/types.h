@@ -261,7 +261,7 @@ typedef struct zx_iovec {
 #define ZX_CPRNG_DRAW_MAX_LEN        ((size_t)256u)
 #define ZX_CPRNG_ADD_ENTROPY_MAX_LEN ((size_t)256u)
 
-// interrupt bind flags
+// interrupt_create flags
 #define ZX_INTERRUPT_REMAP_IRQ       ((uint32_t)0x1u)
 #define ZX_INTERRUPT_MODE_DEFAULT    ((uint32_t)0u << 1)
 #define ZX_INTERRUPT_MODE_EDGE_LOW   ((uint32_t)1u << 1)
@@ -271,6 +271,10 @@ typedef struct zx_iovec {
 #define ZX_INTERRUPT_MODE_EDGE_BOTH  ((uint32_t)5u << 1)
 #define ZX_INTERRUPT_MODE_MASK       ((uint32_t)0xe)
 #define ZX_INTERRUPT_VIRTUAL         ((uint32_t)0x10)
+
+// interrupt_bind flags
+#define ZX_INTERRUPT_BIND            ((uint32_t)0x0u)
+#define ZX_INTERRUPT_UNBIND          ((uint32_t)0x1u)
 
 // Preallocated virtual interrupt slot, typically used for signaling interrupt threads to exit.
 #define ZX_INTERRUPT_SLOT_USER              ((uint32_t)62u)

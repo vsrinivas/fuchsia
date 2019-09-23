@@ -506,7 +506,7 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num, uint32_t
 zx_status_t sys_interrupt_bind(zx_handle_t handle, zx_handle_t port_handle, uint64_t key,
                                uint32_t options) {
   LTRACEF("handle %x\n", handle);
-  if (options) {
+  if ((options != ZX_INTERRUPT_BIND) && (options != ZX_INTERRUPT_UNBIND)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -527,7 +527,11 @@ zx_status_t sys_interrupt_bind(zx_handle_t handle, zx_handle_t port_handle, uint
     return ZX_ERR_WRONG_TYPE;
   }
 
-  return interrupt->Bind(ktl::move(port), key);
+  if (options == ZX_INTERRUPT_BIND) {
+    return interrupt->Bind(ktl::move(port), key);
+  } else {
+    return interrupt->Unbind(ktl::move(port));
+  }
 }
 
 // zx_status_t zx_interrupt_bind_vcpu

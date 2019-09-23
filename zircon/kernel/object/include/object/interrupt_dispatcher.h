@@ -41,6 +41,7 @@ class InterruptDispatcher
   zx_status_t Destroy();
   void InterruptHandler();
   zx_status_t Bind(fbl::RefPtr<PortDispatcher> port_dispatcher, uint64_t key);
+  zx_status_t Unbind(fbl::RefPtr<PortDispatcher> port_dispatcher);
   virtual zx_status_t BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) {
     return ZX_ERR_NOT_SUPPORTED;
   }

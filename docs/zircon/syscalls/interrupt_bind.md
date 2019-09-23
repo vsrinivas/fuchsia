@@ -21,7 +21,7 @@ zx_status_t zx_interrupt_bind(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_interrupt_bind()` binds an interrupt object to a port.
+`zx_interrupt_bind()` binds or unbinds an interrupt object to a port.
 
 An interrupt object may only be bound to a single port and may only be bound once.
 The interrupt can only bind to a port which is created with **ZX_PORT_BIND_TO_INTERRUPT**
@@ -31,6 +31,12 @@ When a bound interrupt object is triggered, a **ZX_PKT_TYPE_INTERRUPT** packet w
 be delivered to the port it is bound to, with the timestamp (relative to **ZX_CLOCK_MONOTONIC**)
 of when the interrupt was triggered in the `zx_packet_interrupt_t`.  The *key* used
 when binding the interrupt will be present in the `key` field of the `zx_port_packet_t`.
+
+To bind to a port pass **ZX_INTERRUPT_BIND** in *options*.
+
+To unbind a previously bound port pass **ZX_INTERRUPT_UNBIND** in *options*. For unbind the
+*port_handle* is required but the *key* is ignored. Unbinding the port removes previously
+queued packets to the port.
 
 Before another packet may be delivered, the bound interrupt must be re-armed using the
 [`zx_interrupt_ack()`] syscall.  This is (in almost all cases) best done after the interrupt
@@ -69,7 +75,9 @@ lacks **ZX_RIGHT_WRITE**
 
 **ZX_ERR_ALREADY_BOUND** this interrupt object is already bound.
 
-**ZX_ERR_INVALID_ARGS** *options* contains a non-zero value.
+**ZX_ERR_INVALID_ARGS** *options* is not **ZX_INTERRUPT_BIND** or **ZX_INTERRUPT_UNBIND**.
+
+**ZX_ERR_NOT_FOUND** the *port* does not match the bound port.
 
 ## SEE ALSO
 

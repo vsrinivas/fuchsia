@@ -179,6 +179,29 @@ zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatche
   return ZX_OK;
 }
 
+zx_status_t InterruptDispatcher::Unbind(fbl::RefPtr<PortDispatcher> port_dispatcher) {
+  // Moving port_dispatcher_ to the local variable ensures it will not be destroyed while
+  // holding this spinlock.
+  fbl::RefPtr<PortDispatcher> dispatcher;
+  {
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
+    if (port_dispatcher_ != port_dispatcher) {
+      // This case also covers the HasVcpu() case.
+      return ZX_ERR_NOT_FOUND;
+    }
+    if (state_ == InterruptState::DESTROYED) {
+      return ZX_ERR_CANCELED;
+    }
+    // Remove the packet for this interrupt from this port on an unbind before actually
+    // doing the unbind. This protects against the case where the interrupt dispatcher
+    // goes away between an unbind and a port_wait.
+    port_dispatcher_->RemoveInterruptPacket(&port_packet_);
+    port_packet_.key = 0;
+    dispatcher.swap(port_dispatcher_);
+  }
+  return ZX_OK;
+}
+
 zx_status_t InterruptDispatcher::Ack() {
   // Using AutoReschedDisable is necessary for correctness to prevent
   // context-switching to the woken thread while holding spinlock_.

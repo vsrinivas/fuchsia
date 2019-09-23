@@ -135,6 +135,48 @@ TEST_F(InterruptTest, BindPort) {
   ASSERT_EQ(interrupt.trigger(0, kSignaledTimeStamp1), ZX_ERR_CANCELED);
 }
 
+// Tests Interrupt Unbind
+TEST_F(InterruptTest, UnBindPort) {
+  zx::interrupt interrupt;
+  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  zx::port port;
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+
+  // Test port binding
+  ASSERT_OK(interrupt.bind(port, kKey, ZX_INTERRUPT_BIND));
+  ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
+  zx_port_packet_t out;
+  ASSERT_OK(port.wait(zx::time::infinite(), &out));
+  ASSERT_EQ(out.interrupt.timestamp, kSignaledTimeStamp1.get());
+
+  // Ubind port, and test the unbind-trigger-port_wait sequence. The interrupt packet
+  // should not be delivered from port_wait, since the trigger happened after the Unbind.
+  // not receive the interrupt packet. But test some invalid use cases of unbind first.
+  ASSERT_STATUS(interrupt.bind(port, 0, 2), ZX_ERR_INVALID_ARGS);
+  zx::port port2;
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port2));
+  ASSERT_STATUS(interrupt.bind(port2, 0, ZX_INTERRUPT_UNBIND), ZX_ERR_NOT_FOUND);
+  ASSERT_OK(interrupt.bind(port, 0, ZX_INTERRUPT_UNBIND));
+  ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
+  ASSERT_STATUS(port.wait(zx::deadline_after(zx::msec(10)), &out), ZX_ERR_TIMED_OUT);
+
+  // Bind again, and test the trigger-unbind-port_wait sequence. Interrupt packet should
+  // be removed from the port at unbind, so there should be no interrupt packets to read here.
+  ASSERT_OK(interrupt.bind(port, kKey, ZX_INTERRUPT_BIND));
+  ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
+  ASSERT_OK(interrupt.bind(port, 0, ZX_INTERRUPT_UNBIND));
+  ASSERT_STATUS(port.wait(zx::deadline_after(zx::msec(10)), &out), ZX_ERR_TIMED_OUT);
+  ASSERT_EQ(out.interrupt.timestamp, kSignaledTimeStamp1.get());
+
+  // Finally test the case of an UNBIND after the interrupt dispatcher object has been
+  // destroyed.
+  ASSERT_OK(interrupt.bind(port, kKey, ZX_INTERRUPT_BIND));
+  // destroy the interrupt and try unbind. For the destroy, we expect ZX_ERR_CANCELED,
+  // since the packet has been read but the interrupt hasn't been re-armed.
+  ASSERT_STATUS(interrupt.destroy(), ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(interrupt.bind(port, 0, ZX_INTERRUPT_UNBIND), ZX_ERR_CANCELED);
+}
+
 // Tests support for virtual interrupts
 TEST_F(InterruptTest, VirtualInterrupts) {
   zx::interrupt interrupt;
