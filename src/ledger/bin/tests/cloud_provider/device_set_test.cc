@@ -15,7 +15,7 @@ namespace {
 
 class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
  public:
-  DeviceSetTest() {}
+  DeviceSetTest() = default;
   ~DeviceSetTest() override = default;
 
  protected:

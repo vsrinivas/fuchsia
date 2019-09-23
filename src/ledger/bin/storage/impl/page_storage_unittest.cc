@@ -143,7 +143,7 @@ class FakeErrorDataSource : public DataSource {
 
 class FakeCommitWatcher : public CommitWatcher {
  public:
-  FakeCommitWatcher() {}
+  FakeCommitWatcher() = default;
 
   void OnNewCommits(const std::vector<std::unique_ptr<const Commit>>& commits,
                     ChangeSource source) override {

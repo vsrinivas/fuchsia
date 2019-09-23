@@ -138,7 +138,7 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
 
 class RecordingTestStrategy : public MergeStrategy {
  public:
-  RecordingTestStrategy() {}
+  RecordingTestStrategy() = default;
   ~RecordingTestStrategy() override = default;
   void SetOnError(fit::closure on_error) override { this->on_error = std::move(on_error); }
 
@@ -187,7 +187,7 @@ class RecordingTestStrategy : public MergeStrategy {
 
 class MergeResolverTest : public TestWithPageStorage {
  public:
-  MergeResolverTest() {}
+  MergeResolverTest() = default;
   ~MergeResolverTest() override = default;
 
  protected:

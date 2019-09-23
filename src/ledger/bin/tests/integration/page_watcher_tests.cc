@@ -33,7 +33,7 @@ using ::testing::SizeIs;
 
 class PageWatcherIntegrationTest : public IntegrationTest {
  public:
-  PageWatcherIntegrationTest() {}
+  PageWatcherIntegrationTest() = default;
   ~PageWatcherIntegrationTest() override = default;
 
  private:

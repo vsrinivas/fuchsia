@@ -28,7 +28,7 @@ namespace ledger {
 namespace {
 class ConflictResolverClientTest : public TestWithPageStorage {
  public:
-  ConflictResolverClientTest() {}
+  ConflictResolverClientTest() = default;
   ~ConflictResolverClientTest() override = default;
 
  protected:

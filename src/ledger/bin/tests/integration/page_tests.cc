@@ -22,7 +22,7 @@ namespace {
 
 class PageIntegrationTest : public IntegrationTest {
  public:
-  PageIntegrationTest() {}
+  PageIntegrationTest() = default;
   ~PageIntegrationTest() override = default;
 
   // Returns the id of the given page.

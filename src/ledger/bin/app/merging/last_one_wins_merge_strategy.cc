@@ -125,7 +125,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
                                   std::move(on_diff_done));
 }
 
-LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
+LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() = default;
 
 LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() = default;
 

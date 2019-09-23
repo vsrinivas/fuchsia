@@ -57,7 +57,7 @@ namespace {
 
 class PageCloudTest : public ValidationTest, public PageCloudWatcher {
  public:
-  PageCloudTest() {}
+  PageCloudTest() = default;
   ~PageCloudTest() override = default;
 
  protected:

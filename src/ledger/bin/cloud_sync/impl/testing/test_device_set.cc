@@ -8,7 +8,7 @@
 
 namespace cloud_sync {
 
-TestDeviceSet::TestDeviceSet() {}
+TestDeviceSet::TestDeviceSet() = default;
 TestDeviceSet::~TestDeviceSet() = default;
 
 void TestDeviceSet::CheckFingerprint(std::vector<uint8_t> fingerprint,

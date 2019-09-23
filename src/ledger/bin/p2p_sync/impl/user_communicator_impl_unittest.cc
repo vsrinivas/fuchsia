@@ -66,7 +66,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
 
 class UserCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
-  UserCommunicatorImplTest() {}
+  UserCommunicatorImplTest() = default;
   ~UserCommunicatorImplTest() override = default;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(uint64_t node_id,

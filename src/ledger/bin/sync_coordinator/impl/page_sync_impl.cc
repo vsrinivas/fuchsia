@@ -38,7 +38,7 @@ class SyncProviderHolderBase : public storage::PageSyncClient, public storage::P
   storage::PageSyncDelegate* page_sync_delegate_;
 };
 
-SyncProviderHolderBase::SyncProviderHolderBase() {}
+SyncProviderHolderBase::SyncProviderHolderBase() = default;
 
 SyncProviderHolderBase::~SyncProviderHolderBase() = default;
 
@@ -76,7 +76,7 @@ class PageSyncImpl::CloudSyncHolder : public SyncProviderHolderBase {
   std::unique_ptr<cloud_sync::PageSync> cloud_sync_;
 };
 
-PageSyncImpl::CloudSyncHolder::CloudSyncHolder() {}
+PageSyncImpl::CloudSyncHolder::CloudSyncHolder() = default;
 
 PageSyncImpl::CloudSyncHolder::~CloudSyncHolder() = default;
 
@@ -102,9 +102,9 @@ class PageSyncImpl::P2PSyncHolder : public SyncProviderHolderBase {
   std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync_;
 };
 
-PageSyncImpl::P2PSyncHolder::P2PSyncHolder() {}
+PageSyncImpl::P2PSyncHolder::P2PSyncHolder() = default;
 
-PageSyncImpl::P2PSyncHolder::~P2PSyncHolder() {}
+PageSyncImpl::P2PSyncHolder::~P2PSyncHolder() = default;
 
 void PageSyncImpl::P2PSyncHolder::SetP2PSync(std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
   FXL_DCHECK(!p2p_sync_);

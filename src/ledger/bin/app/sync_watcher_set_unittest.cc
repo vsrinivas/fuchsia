@@ -18,7 +18,7 @@ namespace {
 
 class SyncWatcherSetTest : public gtest::TestLoopFixture {
  public:
-  SyncWatcherSetTest() {}
+  SyncWatcherSetTest() = default;
   ~SyncWatcherSetTest() override = default;
 
  protected:

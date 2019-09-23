@@ -37,7 +37,7 @@ void Aggregator::Listener::Notify(SyncStateWatcher::SyncStateContainer sync_stat
 
 SyncStateWatcher::SyncStateContainer Aggregator::Listener::GetCurrentState() { return state_; }
 
-Aggregator::Aggregator() {}
+Aggregator::Aggregator() = default;
 
 Aggregator::~Aggregator() {
   // There should be no listener left when destroying this object.

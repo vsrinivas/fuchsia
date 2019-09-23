@@ -50,7 +50,7 @@ constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
 
 class PageManagerTest : public TestWithEnvironment {
  public:
-  PageManagerTest() {}
+  PageManagerTest() = default;
 
   ~PageManagerTest() override = default;
 

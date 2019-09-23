@@ -31,7 +31,7 @@ namespace {
 
 class PageSnapshotIntegrationTest : public IntegrationTest {
  public:
-  PageSnapshotIntegrationTest() {}
+  PageSnapshotIntegrationTest() = default;
   ~PageSnapshotIntegrationTest() override = default;
 
   // Returns a snapshot of |page|, checking success.

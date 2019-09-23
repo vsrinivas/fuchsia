@@ -137,7 +137,7 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
   return interrupted_ ? ContinuationStatus::INTERRUPTED : ContinuationStatus::OK;
 }
 
-CoroutineServiceImpl::CoroutineServiceImpl() {}
+CoroutineServiceImpl::CoroutineServiceImpl() = default;
 
 CoroutineServiceImpl::~CoroutineServiceImpl() {
   while (!handlers_.empty()) {

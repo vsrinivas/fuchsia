@@ -76,7 +76,7 @@ class MergeResolver::MergeCandidates {
   bool had_network_errors_ = false;
 };
 
-MergeResolver::MergeCandidates::MergeCandidates() {}
+MergeResolver::MergeCandidates::MergeCandidates() = default;
 
 void MergeResolver::MergeCandidates::ResetCandidates(size_t head_count) {
   head_count_ = head_count;

@@ -51,7 +51,7 @@ class VectorIterator : public storage::Iterator<T> {
 // A fake PageEvictionDelegate, that stores the set of pages that were evicted.
 class FakePageEvictionDelegate : public PageEvictionDelegate {
  public:
-  FakePageEvictionDelegate() {}
+  FakePageEvictionDelegate() = default;
   ~FakePageEvictionDelegate() = default;
 
   void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,

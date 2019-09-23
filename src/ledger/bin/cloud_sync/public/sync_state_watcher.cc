@@ -12,7 +12,7 @@ SyncStateWatcher::SyncStateContainer::SyncStateContainer(DownloadSyncState downl
                                                          UploadSyncState upload)
     : download(download), upload(upload) {}
 
-SyncStateWatcher::SyncStateContainer::SyncStateContainer() {}
+SyncStateWatcher::SyncStateContainer::SyncStateContainer() = default;
 
 void SyncStateWatcher::SyncStateContainer::Merge(SyncStateContainer other) {
   if (other.download > this->download) {

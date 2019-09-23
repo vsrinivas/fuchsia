@@ -174,7 +174,7 @@ Entry WithoutEntryId(Entry e) {
   return e;
 }
 
-StorageTest::StorageTest() {}
+StorageTest::StorageTest() = default;
 
 StorageTest::~StorageTest() = default;
 

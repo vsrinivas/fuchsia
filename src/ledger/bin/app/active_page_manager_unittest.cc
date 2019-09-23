@@ -331,7 +331,7 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
 
 class ActivePageManagerTest : public TestWithEnvironment {
  public:
-  ActivePageManagerTest() {}
+  ActivePageManagerTest() = default;
   ~ActivePageManagerTest() override = default;
 
  protected:

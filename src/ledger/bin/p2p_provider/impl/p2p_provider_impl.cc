@@ -52,7 +52,7 @@ P2PProviderImpl::P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
       overnet_(std::move(overnet)),
       user_id_provider_(std::move(user_id_provider)) {}
 
-P2PProviderImpl::~P2PProviderImpl() {}
+P2PProviderImpl::~P2PProviderImpl() = default;
 
 void P2PProviderImpl::Start(Client* client) {
   FXL_DCHECK(!client_);

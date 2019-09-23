@@ -37,7 +37,7 @@ void SetTimestamp(google::firestore::v1beta1::Document* document, int64_t second
 
 class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
  public:
-  TestPageCloudWatcher() {}
+  TestPageCloudWatcher() = default;
   ~TestPageCloudWatcher() override = default;
 
   std::vector<cloud_provider::CommitPackEntry> received_commits;

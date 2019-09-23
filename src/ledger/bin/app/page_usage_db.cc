@@ -98,7 +98,7 @@ bool LogOnInitializationError(fxl::StringView operation_description, Status stat
 }
 }  // namespace
 
-PageUsageDb::Completer::Completer() {}
+PageUsageDb::Completer::Completer() = default;
 
 PageUsageDb::Completer::~Completer() {
   // We should not call the callbacks: they are SyncCall callbacks, so when we

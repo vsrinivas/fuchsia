@@ -142,7 +142,7 @@ void MessageRelayBase::WriteChannelMessages(async_dispatcher_t* dispatcher, asyn
   }
 }
 
-MessageRelay::MessageRelay() {}
+MessageRelay::MessageRelay() = default;
 
 MessageRelay::~MessageRelay() = default;
 

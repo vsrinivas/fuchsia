@@ -24,7 +24,7 @@ using ::testing::IsEmpty;
 
 class OvernetFactoryTest : public gtest::TestLoopFixture {
  public:
-  OvernetFactoryTest() {}
+  OvernetFactoryTest() = default;
   ~OvernetFactoryTest() override = default;
 
  protected:

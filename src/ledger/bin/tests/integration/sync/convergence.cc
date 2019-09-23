@@ -48,7 +48,7 @@ std::vector<uint8_t> DoubleToArray(double dbl) {
 
 class RefCountedPageSnapshot : public fxl::RefCountedThreadSafe<RefCountedPageSnapshot> {
  public:
-  RefCountedPageSnapshot() {}
+  RefCountedPageSnapshot() = default;
 
   PageSnapshotPtr& operator->() { return snapshot_; }
   PageSnapshotPtr& operator*() { return snapshot_; }

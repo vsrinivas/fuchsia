@@ -61,7 +61,7 @@ class PathologicalDataSource : public DataSource {
 // DataSource that returns an error.
 class ErrorDataSource : public DataSource {
  public:
-  ErrorDataSource() {}
+  ErrorDataSource() = default;
 
   uint64_t GetSize() override { return 1; }
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {

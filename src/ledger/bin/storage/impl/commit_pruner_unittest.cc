@@ -27,7 +27,7 @@ namespace {
 
 class FakeCommitTracker : public LiveCommitTracker {
  public:
-  FakeCommitTracker() {}
+  FakeCommitTracker() = default;
 
   ~FakeCommitTracker() override{};
 
@@ -96,7 +96,7 @@ class FakeCommitPrunerDelegate : public CommitPruner::CommitPrunerDelegate {
 
 class CommitPrunerTest : public ledger::TestWithEnvironment {
  public:
-  CommitPrunerTest() {}
+  CommitPrunerTest() = default;
 
   ~CommitPrunerTest() override = default;
 

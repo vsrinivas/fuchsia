@@ -99,7 +99,7 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherContainer);
 };
 
-SyncWatcherSet::SyncWatcherSet() {}
+SyncWatcherSet::SyncWatcherSet() = default;
 
 SyncWatcherSet::~SyncWatcherSet() = default;
 

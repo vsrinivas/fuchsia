@@ -74,7 +74,7 @@ PageId SpecificId(const storage::PageId& page_id) {
 
 class LedgerManagerTest : public TestWithEnvironment {
  public:
-  LedgerManagerTest() {}
+  LedgerManagerTest() = default;
 
   ~LedgerManagerTest() override = default;
 
@@ -406,7 +406,7 @@ TEST_F(LedgerManagerTest, TrySyncClosedPageWithOpenedPage) {
 
 class DelayingLedgerStorage : public storage::LedgerStorage {
  public:
-  DelayingLedgerStorage() {}
+  DelayingLedgerStorage() = default;
   ~DelayingLedgerStorage() override = default;
 
   void CreatePageStorage(storage::PageId page_id,

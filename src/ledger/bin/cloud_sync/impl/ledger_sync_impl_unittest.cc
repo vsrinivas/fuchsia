@@ -20,7 +20,7 @@ namespace {
 
 class TestSyncStateWatcher : public SyncStateWatcher {
  public:
-  TestSyncStateWatcher() {}
+  TestSyncStateWatcher() = default;
   ~TestSyncStateWatcher() override{};
 
   void Notify(SyncStateContainer sync_state) override {

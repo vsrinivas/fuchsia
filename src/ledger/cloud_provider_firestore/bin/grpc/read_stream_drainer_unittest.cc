@@ -22,7 +22,7 @@ using IntegerStream = grpc::ClientAsyncReaderInterface<int>;
 
 class TestIntegerStream : public IntegerStream {
  public:
-  TestIntegerStream() {}
+  TestIntegerStream() = default;
   ~TestIntegerStream() override = default;
 
   // IntegerStream:

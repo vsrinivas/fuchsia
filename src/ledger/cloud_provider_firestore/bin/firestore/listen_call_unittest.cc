@@ -12,7 +12,7 @@ namespace cloud_provider_firestore {
 
 class TestListenStream : public ListenStream {
  public:
-  TestListenStream() {}
+  TestListenStream() = default;
   ~TestListenStream() override = default;
 
   // ListenStream:

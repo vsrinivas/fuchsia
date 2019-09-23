@@ -11,7 +11,7 @@ namespace cloud_provider_firestore {
 namespace {
 class TestListenCallHandler : public ListenCallHandler {
  public:
-  TestListenCallHandler() {}
+  TestListenCallHandler() = default;
 
   ~TestListenCallHandler() override = default;
 

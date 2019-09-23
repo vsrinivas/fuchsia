@@ -29,7 +29,7 @@ namespace ledger {
 namespace {
 class CommonAncestorTest : public TestWithPageStorage {
  public:
-  CommonAncestorTest() {}
+  CommonAncestorTest() = default;
   ~CommonAncestorTest() override = default;
 
  protected:

@@ -190,7 +190,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
 class FakeDeviceMesh : public DeviceMesh {
  public:
-  FakeDeviceMesh() {}
+  FakeDeviceMesh() = default;
   ~FakeDeviceMesh() override = default;
 
   void OnNextSend(p2p_provider::P2PClientId device_name, fit::closure callback) {
@@ -356,7 +356,7 @@ void ConnectToDevice(PageCommunicatorImpl* page_communicator, p2p_provider::P2PC
 
 class PageCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
-  PageCommunicatorImplTest() {}
+  PageCommunicatorImplTest() = default;
   ~PageCommunicatorImplTest() override = default;
 
  protected:

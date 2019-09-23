@@ -28,7 +28,7 @@ namespace {
 
 class MergingIntegrationTest : public IntegrationTest {
  public:
-  MergingIntegrationTest() {}
+  MergingIntegrationTest() = default;
   ~MergingIntegrationTest() override = default;
 
  private:
