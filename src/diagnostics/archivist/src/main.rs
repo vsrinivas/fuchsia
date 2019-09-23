@@ -10,7 +10,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
-    fuchsia_syslog::{self, macros::*},
     futures::{future, FutureExt, StreamExt},
     io_util,
     std::path::{Path, PathBuf},
@@ -37,7 +36,6 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
 
     diagnostics::init();
-    fx_log_info!("Archivist is starting up...");
 
     // Ensure that an archive exists.
     std::fs::create_dir_all(ARCHIVE_PATH).expect("failed to initialize archive");
@@ -176,7 +174,7 @@ async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
             let mut state = collector_state.lock().unwrap();
             component::health().set_unhealthy("Collection loop stopped");
             inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
-            fx_log_err!("Collection ended with result {:?}", e);
+            eprintln!("Collection ended with result {:?}", e);
         }
     }));
 
@@ -187,7 +185,7 @@ async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
         process_event(state.clone(), event).await.unwrap_or_else(|e| {
             let mut state = state.lock().unwrap();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
-            fx_log_err!("Failed to log event: {:?}", e);
+            eprintln!("Failed to log event: {:?}", e);
         });
     }
 
@@ -252,7 +250,7 @@ async fn archive_event(
     let mut current_archive_size = current_group_stats.size + state.archived_size();
     if current_archive_size > state.configuration.max_archive_size_bytes {
         let dates = state.writer.get_archive().get_dates().unwrap_or_else(|e| {
-            fx_log_err!("Garbage collection failure");
+            eprintln!("Garbage collection failure");
             inspect_log!(state.log_node, event: "Failed to get dates for garbage collection",
                          reason: format!("{:?}", e));
             vec![]
@@ -261,7 +259,7 @@ async fn archive_event(
         for date in dates {
             let groups =
                 state.writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
-                    fx_log_err!("Garbage collection failure");
+                    eprintln!("Garbage collection failure");
                     inspect_log!(state.log_node, event: "Failed to get event file",
                              date: &date,
                              reason: format!("{:?}", e));

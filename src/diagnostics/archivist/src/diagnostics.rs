@@ -63,8 +63,7 @@ impl Stats {
 }
 
 pub fn init() {
-    fuchsia_syslog::init_with_tags(&["archivist"]).expect("can't init logger");
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
+    //TODO(36574): Replace log calls once archivist can use LogSink service.
 }
 
 pub fn root() -> &'static Node {
