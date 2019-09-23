@@ -24,7 +24,7 @@ class A11ySettingsWatcher : public fuchsia::accessibility::SettingsWatcher {
   ~A11ySettingsWatcher() = default;
 
   // |fuchsia::accessibility::SettingsWatcher|
-  void OnSettingsChange(fuchsia::accessibility::Settings settings) override;
+  void OnSettingsChange(fuchsia::accessibility::Settings new_settings) override;
 
   fuchsia::accessibility::SettingsPtr CloneA11ySettings() {
     fuchsia::accessibility::SettingsPtr settings_ptr = fuchsia::accessibility::Settings::New();
@@ -32,12 +32,13 @@ class A11ySettingsWatcher : public fuchsia::accessibility::SettingsWatcher {
     return settings_ptr;
   }
 
-  bool HasColorConversionChanged(const fuchsia::accessibility::Settings& provided_settings);
+  bool HasColorConversionChanged(const fuchsia::accessibility::Settings& new_settings);
 
  private:
-  void SaveSettings(const fuchsia::accessibility::Settings& provided_settings);
+  void SaveSettings(const fuchsia::accessibility::Settings& new_settings);
   void InitColorConversionCmd(
-      fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK* display_color_conversion_cmd);
+      fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK* display_color_conversion_cmd,
+      const fuchsia::accessibility::Settings& new_settings);
 
   scenic::Session* const session_;  // No ownership.
   scenic::ResourceId compositor_id_;

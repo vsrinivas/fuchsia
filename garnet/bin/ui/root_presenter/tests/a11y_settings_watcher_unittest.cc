@@ -194,6 +194,10 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_NoChange) {
   RunLoopUntilIdle();
 
   Settings provided_settings;
+  // Set Default values to provided_settings.
+  provided_settings.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
+  provided_settings.set_color_inversion_enabled(false);
+
   EXPECT_FALSE(settings_watcher->HasColorConversionChanged(provided_settings));
 }
 
@@ -216,6 +220,7 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_ColorCorrectionChanged
   provided_settings.set_color_correction(
       fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
   provided_settings.set_color_adjustment_matrix(kIdentityMatrix);
+  provided_settings.set_color_inversion_enabled(false);
   ASSERT_TRUE(settings_watcher->HasColorConversionChanged(provided_settings));
 
   // Save Settings in Settings Watcher.
@@ -244,6 +249,7 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_ColorInversionChanged)
   RunLoopUntilIdle();
 
   Settings provided_settings;
+  provided_settings.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
   provided_settings.set_color_inversion_enabled(true);
   ASSERT_TRUE(settings_watcher->HasColorConversionChanged(provided_settings));
 
