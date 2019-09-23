@@ -17,6 +17,8 @@ source_set("test_libs") {
     "audio_test_tools.h",
     "board_name.cc",
     "board_name.h",
+    "sample_count_sink.cc",
+    "sample_count_sink.h",
     "silence_generator.cc",
     "silence_generator.h",
   ]

@@ -25,6 +25,7 @@
 
 #include "audio_test_tools.h"
 #include "board_name.h"
+#include "sample_count_sink.h"
 #include "silence_generator.h"
 
 namespace audio::intel_hda {
@@ -81,6 +82,36 @@ TEST(IntelHda, PlaySilence) {
     // We can't verify that the data is being pumped out to the speaker,
     // but this exercises the DMA, ring buffers, etc etc.
     ASSERT_OK(output->Play(silence_generator));
+  }
+}
+
+void TestAudioInputRecord(audio::utils::AudioInput* input) {
+  // Set the output stream format.
+  audio::utils::AudioStream::Format format;
+  format.channels = 2;
+  format.frame_rate = 48'000U;
+  format.sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
+  input->SetFormat(format.frame_rate, format.channels, format.sample_format);
+
+  // Record a small number of samples of audio.
+  //
+  // We don't attempt to verify the contents, but rather just exercise
+  // DMA, ring buffers, etc.
+  constexpr int kSamplesToCapture = 5'000;
+  SampleCountSink sink{/*samples_to_capture=*/kSamplesToCapture};
+  zx_status_t result = input->Record(sink, /*duration_seconds=*/10.0f);
+  // We receive "ZX_ERR_STOP" if we received all of our samples.
+  // If we get another error, something has gone wrong.
+  EXPECT_EQ(result, ZX_ERR_STOP);
+  EXPECT_GE(sink.total_samples(), kSamplesToCapture);
+}
+
+TEST(IntelHda, RecordData) {
+  for (const auto& path : GetSystemAudioDevices().inputs) {
+    // Open the stream.
+    std::cerr << "Recording input from device '" << path.c_str() << "'\n";
+    fbl::unique_ptr<audio::utils::AudioInput> input = CreateAndOpenInputStream(path.c_str());
+    TestAudioInputRecord(input.get());
   }
 }
 
