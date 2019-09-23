@@ -62,10 +62,10 @@ class Clusters extends StatelessWidget {
           ],
         ),
       ),
-      builder: (context, child) =>
-          model.isFullscreen || model.overviewVisibility.value
-              ? Offstage()
-              : child,
+      builder: (context, child) => Offstage(
+        offstage: model.isFullscreen || model.overviewVisibility.value,
+        child: child,
+      ),
     );
   }
 }

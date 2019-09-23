@@ -5,13 +5,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'
-    show RawKeyDownEvent, RawKeyEventDataFuchsia;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
-import 'package:ermine_library/src/models/ask_model.dart';
 import 'package:ermine_library/src/utils/suggestions.dart';
 import 'package:ermine_library/src/widgets/ask/ask.dart';
 
@@ -23,28 +20,6 @@ void main() {
 
     final hintFinder = find.text('TYPE TO ASK');
     expect(hintFinder, findsOneWidget);
-  });
-
-  testWidgets('Hide Ask Widget', (tester) async {
-    final suggestionService = MockSuggestionService();
-    final key = GlobalKey<AskState>();
-    bool visible;
-    final widget = MaterialApp(
-      home: Ask(
-        key: key,
-        suggestionService: suggestionService,
-        onDismiss: () => visible = false,
-      ),
-    );
-    await tester.pumpWidget(widget);
-
-    // Press Esc.
-    key.currentState.model.handleKey(RawKeyDownEvent(
-      data: RawKeyEventDataFuchsia(
-        hidUsage: AskModel.kEsc,
-      ),
-    ));
-    expect(visible, false);
   });
 
   testWidgets('Hide hint text on typing', (tester) async {

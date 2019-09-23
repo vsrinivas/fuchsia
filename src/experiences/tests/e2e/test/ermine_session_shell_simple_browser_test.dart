@@ -32,6 +32,8 @@ void main() {
     // so here we use sessionctl to do guest login. Once final
     // OOBE UI is established for Ermine, this could be revisited
     // so as to provide for more robust testing of no-auth login.
+    await sl4fDriver.ssh.run('sessionctl restart_session');
+
     final result = await sl4fDriver.ssh.run('sessionctl login_guest');
 
     if (result.exitCode != 0) {
@@ -56,12 +58,7 @@ void main() {
     }
 
     // Logout for next test
-    await sl4fDriver.ssh.run('input keyevent 63');
-
-    // allow time for logout to settle
-    await Future.delayed(Duration(seconds: 5));
-
-    return;
+    await sl4fDriver.ssh.run('sessionctl restart_session');
   });
 }
 

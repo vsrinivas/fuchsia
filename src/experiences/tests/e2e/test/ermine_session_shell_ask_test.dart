@@ -43,17 +43,6 @@ void main() {
     // allow time for shell to startup and ask bar to show
     await Future.delayed(Duration(seconds: 3));
 
-    // Inspect shell to see if Ask has started.
-    final inspect = Inspect(sl4fDriver.ssh);
-    var json = await inspect.inspectComponentRoot('ermine');
-
-    // verify that ask bar is active
-    bool askBarActive = json['ask'] != null;
-
-    if (!askBarActive) {
-      fail('ask bar is not active');
-    }
-
     // Ask bar should have focus at this point, so we should
     // be able to inject text entry via the shell and have it
     // enter the bar.
@@ -88,7 +77,7 @@ void main() {
     }
 
     // Logout for next test
-    await sl4fDriver.ssh.run('input keyevent 63');
+    await sl4fDriver.ssh.run('sessionctl restart_session');
 
     // allow time for logout
     await Future.delayed(Duration(seconds: 3));

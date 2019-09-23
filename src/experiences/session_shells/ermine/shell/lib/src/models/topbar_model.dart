@@ -36,6 +36,9 @@ class TopbarModel implements Inspectable {
   RelativeRect get statusButtonRect =>
       relativeRectFromGlobalKey(statusButtonKey);
 
+  /// Display the Overview.
+  void showOverview() => appModel.onOverview();
+
   /// Display the Ask bar. Called by Ask Button.
   void showAsk() => appModel.onMeta();
 

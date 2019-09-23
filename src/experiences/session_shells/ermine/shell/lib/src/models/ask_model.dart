@@ -39,7 +39,6 @@ class AskModel extends ChangeNotifier {
   static const int kDownArrow = 81;
   static const int kPageDown = 78;
   static const int kPageUp = 75;
-  static const int kEsc = 41;
 
   final SuggestionService _suggestionService;
   String _currentQuery;
@@ -129,9 +128,6 @@ class AskModel extends ChangeNotifier {
         data.codePoint == 0 &&
         data.modifiers == 0) {
       switch (data.hidUsage) {
-        case kEsc:
-          onDismiss?.call();
-          return;
         case kDownArrow:
           newSelection++;
           break;

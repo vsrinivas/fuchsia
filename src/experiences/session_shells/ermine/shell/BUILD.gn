@@ -80,6 +80,7 @@ dart_library("ermine_library") {
     "src/widgets/story/fullscreen_story.dart",
     "src/widgets/story/remove_button_target_widget.dart",
     "src/widgets/story/story_widget.dart",
+    "src/widgets/story/thumbnails.dart",
     "src/widgets/story/tile_chrome.dart",
     "src/widgets/story/tile_sizer.dart",
     "src/widgets/story/tile_tab.dart",

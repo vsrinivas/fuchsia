@@ -34,6 +34,20 @@ class Topbar extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
+                // Overview.
+                Button(
+                  child: Text('OVERVIEW'),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(
+                        color: ErmineStyle.kOverlayBorderColor,
+                        width: ErmineStyle.kOverlayBorderWidth,
+                      ),
+                    ),
+                  ),
+                  onTap: model.showOverview,
+                ),
+
                 Spacer(),
 
                 // Status.

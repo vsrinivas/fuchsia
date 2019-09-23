@@ -97,29 +97,6 @@ void main() {
     expect(model.selection.value, 1);
   });
 
-  test('Dismiss Ask', () async {
-    // Type: 't'.
-    when(suggestionService.getSuggestions('t'))
-        .thenAnswer((_) => Future<Iterable<Suggestion>>.value(<Suggestion>[
-              Suggestion(id: 'one', displayInfo: DisplayInfo(title: '')),
-              Suggestion(id: 'two', displayInfo: DisplayInfo(title: '')),
-            ]));
-    model.query('t');
-
-    await suggestionsCompleter.future;
-    expect(model.suggestions.value.length, 2);
-    await selectionCompleter.future;
-    expect(model.selection.value, 0);
-
-    // Press Esc.
-    model.handleKey(RawKeyDownEvent(
-      data: RawKeyEventDataFuchsia(
-        hidUsage: AskModel.kEsc,
-      ),
-    ));
-    expect(visibility.value, false);
-  });
-
   test('Select Suggestion', () {
     model.handleSuggestion(Suggestion(id: 'one'));
     expect(

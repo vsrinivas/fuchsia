@@ -44,6 +44,12 @@ class ClustersModel extends ChangeNotifier {
   bool get isLast =>
       currentCluster.value == null || currentCluster.value == clusters.last;
 
+  /// Returns [true] is there are stories running.
+  bool get hasStories => _storyToCluster.isNotEmpty;
+
+  /// Returns a iterable of all [Story] objects.
+  Iterable<ErmineStory> get stories => _storyToCluster.keys.map(getStory);
+
   /// Maximize the story to fullscreen: it's visual state to IMMERSIVE.
   void maximize(String id) {
     if (fullscreenStoryNotifier.value?.id == id) {
@@ -123,6 +129,18 @@ class ClustersModel extends ChangeNotifier {
       }
       clusters.remove(cluster);
 
+      notifyListeners();
+    }
+  }
+
+  /// Called when any story attribute changes.
+  void changeStory(Story story) {
+    if (story != null) {
+      // If this story has focus, bring its cluster on screen.
+      final storyCluster = _storyToCluster[story.id];
+      if (story.focused && storyCluster != currentCluster.value) {
+        currentCluster.value = storyCluster;
+      }
       notifyListeners();
     }
   }

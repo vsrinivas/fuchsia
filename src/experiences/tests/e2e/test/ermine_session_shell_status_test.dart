@@ -37,16 +37,16 @@ void main() {
     // allow time for shell to startup
     await Future.delayed(Duration(seconds: 3));
 
+    // Launch simple_browser, to dismiss Overview.
+    await sl4fDriver.ssh.run('sessionctl add_mod simple_browser');
+
+    // allow time for simple_browser to startup
+    await Future.delayed(Duration(seconds: 5));
+
     // Note sl4f library 'input' support doesn't currently support
     // text or keyevents. In addition to that, input keyevent doesn't
     // appear to support keyevents with modifiers (otherwise we could
     // tie into the show/hide of the askbar and test with esc/ALT+space)
-
-    // Dismiss ask menu before screenshot test by injecting 'esc'
-    await sl4fDriver.ssh.run('input keyevent 41');
-
-    // allow time for ask to dismiss
-    await Future.delayed(Duration(seconds: 1));
 
     // Get state of screen before launching status menu. Status should be
     // missing.
@@ -56,8 +56,8 @@ void main() {
       fail('Status should not be visible at start');
     }
 
-    // Inject 'F5' to trigger launching status.
-    await sl4fDriver.ssh.run('input keyevent 62');
+    // Inject 'F6' to trigger launching status.
+    await sl4fDriver.ssh.run('input keyevent 63');
 
     // allow time for status startup
     await Future.delayed(Duration(seconds: 1));
@@ -68,7 +68,7 @@ void main() {
     }
 
     // Logout for next test
-    await sl4fDriver.ssh.run('input keyevent 63');
+    await sl4fDriver.ssh.run('sessionctl restart_session');
 
     return;
   });

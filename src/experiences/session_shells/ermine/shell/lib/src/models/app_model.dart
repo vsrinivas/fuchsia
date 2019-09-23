@@ -46,7 +46,7 @@ class AppModel {
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
-  ValueNotifier<bool> overviewVisibility = ValueNotifier(false);
+  ValueNotifier<bool> overviewVisibility = ValueNotifier(true);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
@@ -68,6 +68,7 @@ class AppModel {
       startupContext: _startupContext,
       onStoryStarted: clustersModel.addStory,
       onStoryDeleted: clustersModel.removeStory,
+      onStoryChanged: clustersModel.changeStory,
     )..start();
 
     clustersModel.useInProcessStoryShell = _useInProcessStoryShell();
@@ -86,6 +87,8 @@ class AppModel {
   SuggestionService get suggestions => SuggestionService(_suggestionsService);
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
+
+  bool get hasStories => clustersModel.hasStories;
 
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
@@ -122,9 +125,6 @@ class AppModel {
     Timer.periodic(
         Duration(seconds: 1), (timer) => currentTime.value = DateTime.now());
 
-    // Display the Ask bar after a brief duration.
-    Timer(Duration(milliseconds: 500), onMeta);
-
     // Hide the ask bar when:
     // - a story is started from outside of ask bar.
     // - a story toggles fullscreen state.
@@ -150,17 +150,23 @@ class AppModel {
     }
   }
 
-  /// Shows the Ask bar and sets the focus on it.
+  /// Toggles the Ask bar.
   void onMeta() {
+    if (!hasStories) {
+      return;
+    }
     if (askVisibility.value == false) {
       // Close other system overlays.
       onCancel();
-      askVisibility.value = true;
     }
+    askVisibility.value = !askVisibility.value;
   }
 
   /// Toggles overview.
   void onOverview() {
+    if (!hasStories) {
+      return;
+    }
     if (overviewVisibility.value == false) {
       // Close other system overlays.
       onCancel();
@@ -171,11 +177,14 @@ class AppModel {
 
   /// Toggles the Status menu on/off.
   void onStatus() {
+    if (!hasStories) {
+      return;
+    }
     if (statusVisibility.value == false) {
       // Close other system overlays.
       onCancel();
-      statusVisibility.value = true;
     }
+    statusVisibility.value = !statusVisibility.value;
   }
 
   /// Called when tapped behind Ask bar, quick settings, notifications or the
@@ -184,7 +193,7 @@ class AppModel {
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
-    overviewVisibility.value = false;
+    overviewVisibility.value = !hasStories;
   }
 
   /// Called when the user wants to delete the story.
@@ -194,6 +203,9 @@ class AppModel {
 
   /// Called when the keyboard help button is tapped.
   void onKeyboard() {
+    if (!hasStories) {
+      return;
+    }
     if (helpVisibility.value == false) {
       // Close other system overlays.
       onCancel();

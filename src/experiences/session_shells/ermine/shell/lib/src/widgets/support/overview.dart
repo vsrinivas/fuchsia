@@ -8,6 +8,7 @@ import '../../models/app_model.dart';
 import '../../utils/styles.dart';
 import '../../widgets/ask/ask.dart';
 import '../../widgets/status/status.dart';
+import '../../widgets/story/thumbnails.dart';
 
 /// Defines a widget that holds the [Overview] widget and manages its animation.
 class OverviewContainer extends StatelessWidget {
@@ -40,6 +41,7 @@ class Overview extends StatelessWidget {
     return Container(
       color: ErmineStyle.kBackgroundColor,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Expanded(
             flex: 2,
@@ -49,6 +51,8 @@ class Overview extends StatelessWidget {
                   right: BorderSide(width: 1, color: Colors.white),
                 ),
               ),
+              constraints: BoxConstraints.expand(),
+              child: Thumbnails(model: model.clustersModel, overview: true),
             ),
           ),
           Expanded(
