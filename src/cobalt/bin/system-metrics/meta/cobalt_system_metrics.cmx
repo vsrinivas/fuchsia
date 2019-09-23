@@ -11,7 +11,6 @@
             "fuchsia.boot.RootResource",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

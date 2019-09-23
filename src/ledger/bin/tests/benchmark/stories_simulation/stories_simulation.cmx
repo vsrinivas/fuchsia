@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.boot.RootJob",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Launcher"
         ]

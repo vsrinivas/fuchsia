@@ -11,18 +11,18 @@
         "binary": "test/vp9_decoder_conformance_test"
     },
     "sandbox": {
-        "features": [
-            "isolated-temp"
-        ],
         "dev": [
             "class/media-codec",
             "class/sysmem"
+        ],
+        "features": [
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.sysmem.Allocator"
         ]
     }
