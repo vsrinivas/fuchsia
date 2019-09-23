@@ -143,10 +143,9 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     });
   }
 
-  void AddCommitsFromSync(
-      std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
-      const storage::ChangeSource /*source*/,
-      fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) override {
+  void AddCommitsFromSync(std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
+                          const storage::ChangeSource /*source*/,
+                          fit::function<void(ledger::Status)> callback) override {
     commits_from_sync_.emplace_back(std::move(ids_and_bytes), std::move(callback));
   }
 
@@ -173,7 +172,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::CommitWatcher* watcher_ = nullptr;
   std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
-                        fit::function<void(ledger::Status, std::vector<storage::CommitId>)>>>
+                        fit::function<void(ledger::Status)>>>
       commits_from_sync_;
   ledger::Status mark_synced_to_peer_status = ledger::Status::OK;
   std::map<storage::CommitId, std::pair<uint64_t, std::vector<storage::CommitId>>>
@@ -1012,7 +1011,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
                           MatchesCommitIdAndBytes("id 2", "data 2")));
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
+  storage_2.commits_from_sync_[0].second(ledger::Status::OK);
   RunLoopUntilIdle();
 }
 
@@ -1242,7 +1241,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
                           MatchesCommitIdAndBytes("id 2", "data 2")));
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
+  storage_2.commits_from_sync_[0].second(ledger::Status::OK);
 }
 
 class FakePageStorageDelayingMarkSyncedToPeer : public FakePageStorage {

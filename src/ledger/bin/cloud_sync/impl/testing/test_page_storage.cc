@@ -50,14 +50,14 @@ ledger::Status TestPageStorage::GetHeadCommits(
   return ledger::Status::OK;
 }
 
-void TestPageStorage::AddCommitsFromSync(
-    std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource /*source*/,
-    fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) {
+void TestPageStorage::AddCommitsFromSync(std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
+                                         storage::ChangeSource /*source*/,
+                                         fit::function<void(ledger::Status)> callback) {
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {
     async::PostTask(dispatcher_,
-                    [callback = std::move(callback)]() { callback(ledger::Status::IO_ERROR, {}); });
+                    [callback = std::move(callback)]() { callback(ledger::Status::IO_ERROR); });
     return;
   }
 
@@ -66,9 +66,8 @@ void TestPageStorage::AddCommitsFromSync(
     for (auto& commit : ids_and_bytes) {
       if (commit.id != storage::ComputeCommitId(commit.bytes)) {
         FXL_LOG(ERROR) << "Commit id doesn't match its content";
-        async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-          callback(ledger::Status::IO_ERROR, {});
-        });
+        async::PostTask(dispatcher_,
+                        [callback = std::move(callback)]() { callback(ledger::Status::IO_ERROR); });
         return;
       }
 
@@ -82,7 +81,7 @@ void TestPageStorage::AddCommitsFromSync(
           unsynced_commits_to_return.end());
     }
     async::PostTask(dispatcher_,
-                    [callback = std::move(callback)] { callback(ledger::Status::OK, {}); });
+                    [callback = std::move(callback)] { callback(ledger::Status::OK); });
   };
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(std::move(confirm));

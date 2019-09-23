@@ -63,12 +63,11 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     callback(ledger::Status::OK, generation, missing_parents);
   }
 
-  void AddCommitsFromSync(
-      std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
-      const storage::ChangeSource /*source*/,
-      fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) override {
+  void AddCommitsFromSync(std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
+                          const storage::ChangeSource /*source*/,
+                          fit::function<void(ledger::Status)> callback) override {
     commits_from_sync_.push_back(std::move(ids_and_bytes));
-    callback(status_to_return_, {});
+    callback(status_to_return_);
   }
 
   ledger::Status status_to_return_ = ledger::Status::OK;

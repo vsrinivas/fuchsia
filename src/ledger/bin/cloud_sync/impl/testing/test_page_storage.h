@@ -38,9 +38,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
   ledger::Status GetHeadCommits(
       std::vector<std::unique_ptr<const storage::Commit>>* head_commits) override;
-  void AddCommitsFromSync(
-      std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
-      fit::function<void(ledger::Status status, std::vector<storage::CommitId>)> callback) override;
+  void AddCommitsFromSync(std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
+                          storage::ChangeSource source,
+                          fit::function<void(ledger::Status)> callback) override;
   void GetUnsyncedPieces(fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
                              callback) override;
   void AddCommitWatcher(storage::CommitWatcher* watcher) override;

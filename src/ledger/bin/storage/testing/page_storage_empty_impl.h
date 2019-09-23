@@ -42,7 +42,7 @@ class PageStorageEmptyImpl : public PageStorage {
       fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) override;
 
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
-                          fit::function<void(Status, std::vector<CommitId>)> callback) override;
+                          fit::function<void(Status)> callback) override;
 
   std::unique_ptr<Journal> StartCommit(std::unique_ptr<const Commit> commit_id) override;
 

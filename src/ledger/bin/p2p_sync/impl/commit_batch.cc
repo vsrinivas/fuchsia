@@ -118,16 +118,14 @@ void CommitBatch::AddCommits() {
 
   storage_->AddCommitsFromSync(
       std::move(commits), storage::ChangeSource::P2P,
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this](ledger::Status status, std::vector<storage::CommitId> missing_ids) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
-            }
-            if (on_empty_) {
-              on_empty_();
-            }
-          }));
+      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
+        }
+        if (on_empty_) {
+          on_empty_();
+        }
+      }));
 }
 
 }  // namespace p2p_sync

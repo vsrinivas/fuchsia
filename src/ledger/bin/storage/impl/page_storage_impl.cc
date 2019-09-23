@@ -206,18 +206,15 @@ void PageStorageImpl::GetGenerationAndMissingParents(
   });
 }
 
-void PageStorageImpl::AddCommitsFromSync(
-    std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
-    fit::function<void(Status, std::vector<CommitId>)> callback) {
+void PageStorageImpl::AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
+                                         ChangeSource source,
+                                         fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, ids_and_bytes = std::move(ids_and_bytes), source](
-          CoroutineHandler* handler,
-          fit::function<void(Status, std::vector<CommitId>)> callback) mutable {
-        std::vector<CommitId> missing_ids;
-        Status status =
-            SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes), source, &missing_ids);
-        callback(status, std::move(missing_ids));
+          CoroutineHandler* handler, fit::function<void(Status)> callback) mutable {
+        Status status = SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes), source);
+        callback(status);
       });
 }
 
@@ -1368,13 +1365,12 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(CoroutineHandler* handler,
   commits.push_back(std::move(commit));
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::LOCAL,
-                               std::move(new_objects), nullptr);
+                               std::move(new_objects));
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
                                                       std::vector<CommitIdAndBytes> ids_and_bytes,
-                                                      ChangeSource source,
-                                                      std::vector<CommitId>* missing_ids) {
+                                                      ChangeSource source) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
   // The set of commit whose objects we have to download. If |source| is |ChangeSource::CLOUD|, we
@@ -1466,8 +1462,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     return waiter_status;
   }
 
-  Status status = SynchronousAddCommits(handler, std::move(commits), source,
-                                        std::vector<ObjectIdentifier>(), missing_ids);
+  Status status =
+      SynchronousAddCommits(handler, std::move(commits), source, std::vector<ObjectIdentifier>());
   if (status == Status::OK) {
     // We only remove the commits from the map once they have been successfully added to storage:
     // this ensures we never lose a CommitId / root ObjectIdentifier association.
@@ -1522,8 +1518,7 @@ Status PageStorageImpl::SynchronousMarkCommitSyncedInBatch(CoroutineHandler* han
 Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
                                               std::vector<std::unique_ptr<const Commit>> commits,
                                               ChangeSource source,
-                                              std::vector<ObjectIdentifier> new_objects,
-                                              std::vector<CommitId>* missing_ids) {
+                                              std::vector<ObjectIdentifier> new_objects) {
   // Make sure that only one AddCommits operation is executed at a time.
   // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
   // return NOT_FOUND while another commit is added, and batch->Execute() will
@@ -1546,7 +1541,6 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
   std::vector<std::pair<CommitId, std::vector<ObjectIdentifier>>> unsynced_commits;
   std::map<const CommitId*, const Commit*, StringPointerComparator> id_to_commit_map;
 
-  int orphaned_commits = 0;
   for (auto& commit : commits) {
     // We need to check if we are adding an already present remote commit here
     // because we might both download and locally commit the same commit at
@@ -1579,10 +1573,6 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 
     // Commits should arrive in order. Check that the parents are either
     // present in PageDb or in the list of already processed commits.
-    // If the commit arrive out of order, print an error, but skip it
-    // temporarily so that the Ledger can recover if all the needed commits
-    // are received in a single batch.
-    bool orphaned_commit = false;
     for (const CommitIdView& parent_id : parent_ids) {
       if (id_to_commit_map.find(&parent_id) == id_to_commit_map.end()) {
         s = ContainsCommit(handler, parent_id);
@@ -1593,13 +1583,11 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
           FXL_LOG(ERROR) << "Failed to find parent commit \"" << ToHex(parent_id)
                          << "\" of commit \"" << convert::ToHex(commit->GetId()) << "\".";
           if (s == Status::INTERNAL_NOT_FOUND) {
-            if (missing_ids) {
-              missing_ids->push_back(parent_id.ToString());
-            }
-            orphaned_commit = true;
-            continue;
+            ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
+            return s;
+          } else {
+            return Status::INTERNAL_ERROR;
           }
-          return Status::INTERNAL_ERROR;
         }
       }
       // Remove the parent from the list of heads.
@@ -1608,12 +1596,6 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
         RETURN_ON_ERROR(batch->RemoveHead(handler, parent_id));
         removed_heads.push_back(parent_id.ToString());
       }
-    }
-
-    // The commit could not be added. Skip it.
-    if (orphaned_commit) {
-      orphaned_commits++;
-      continue;
     }
 
     RETURN_ON_ERROR(batch->AddCommitStorageBytes(
@@ -1640,15 +1622,6 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 
     id_to_commit_map[&commit->GetId()] = commit.get();
     commits_to_send.push_back(std::move(commit));
-  }
-
-  if (orphaned_commits > 0) {
-    if (source != ChangeSource::P2P) {
-      ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
-      FXL_LOG(ERROR) << "Failed adding commits. Found " << orphaned_commits
-                     << " orphaned commits (one of their parent was not found).";
-    }
-    return Status::INTERNAL_NOT_FOUND;
   }
 
   // Update heads in Db.

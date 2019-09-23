@@ -83,16 +83,14 @@ void BatchDownload::Start() {
 
         storage_->AddCommitsFromSync(
             std::move(commits), storage::ChangeSource::CLOUD,
-            callback::MakeScoped(
-                weak_ptr_factory_.GetWeakPtr(),
-                [this](ledger::Status status, std::vector<storage::CommitId> /*commit_ids*/) {
-                  if (status != ledger::Status::OK) {
-                    on_error_();
-                    return;
-                  }
+            callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
+              if (status != ledger::Status::OK) {
+                on_error_();
+                return;
+              }
 
-                  UpdateTimestampAndQuit();
-                }));
+              UpdateTimestampAndQuit();
+            }));
       }));
 }
 

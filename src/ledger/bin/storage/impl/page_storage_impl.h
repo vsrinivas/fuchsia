@@ -74,7 +74,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
       const CommitIdAndBytes& id_and_bytes,
       fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
-                          fit::function<void(Status, std::vector<CommitId>)> callback) override;
+                          fit::function<void(Status)> callback) override;
   std::unique_ptr<Journal> StartCommit(std::unique_ptr<const Commit> commit_id) override;
   std::unique_ptr<Journal> StartMergeCommit(std::unique_ptr<const Commit> left,
                                             std::unique_ptr<const Commit> right) override;
@@ -230,9 +230,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
       coroutine::CoroutineHandler* handler, std::unique_ptr<const Commit> commit,
       std::vector<ObjectIdentifier> new_objects);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousAddCommitsFromSync(
-      coroutine::CoroutineHandler* handler, std::vector<CommitIdAndBytes> ids_and_bytes,
-      ChangeSource source, std::vector<CommitId>* missing_ids);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddCommitsFromSync(coroutine::CoroutineHandler* handler,
+                                std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source);
 
   FXL_WARN_UNUSED_RESULT Status
   SynchronousGetUnsyncedCommits(coroutine::CoroutineHandler* handler,
@@ -246,8 +246,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   FXL_WARN_UNUSED_RESULT Status SynchronousAddCommits(
       coroutine::CoroutineHandler* handler, std::vector<std::unique_ptr<const Commit>> commits,
-      ChangeSource source, std::vector<ObjectIdentifier> new_objects,
-      std::vector<CommitId>* missing_ids);
+      ChangeSource source, std::vector<ObjectIdentifier> new_objects);
 
   FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
                                                     const Piece& piece, ChangeSource source,

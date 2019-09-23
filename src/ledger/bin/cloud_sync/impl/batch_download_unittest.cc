@@ -37,15 +37,13 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  void AddCommitsFromSync(
-      std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
-      storage::ChangeSource source,
-      fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) override {
+  void AddCommitsFromSync(std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
+                          storage::ChangeSource source,
+                          fit::function<void(ledger::Status)> callback) override {
     ASSERT_EQ(source, storage::ChangeSource::CLOUD);
     if (should_fail_add_commit_from_sync) {
-      async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-        callback(ledger::Status::IO_ERROR, {});
-      });
+      async::PostTask(dispatcher_,
+                      [callback = std::move(callback)]() { callback(ledger::Status::IO_ERROR); });
       return;
     }
     async::PostTask(dispatcher_, [this, ids_and_bytes = std::move(ids_and_bytes),
@@ -53,7 +51,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       for (auto& commit : ids_and_bytes) {
         received_commits[std::move(commit.id)] = std::move(commit.bytes);
       }
-      callback(ledger::Status::OK, {});
+      callback(ledger::Status::OK);
     });
   }
 
