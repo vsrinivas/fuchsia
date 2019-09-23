@@ -136,21 +136,12 @@ static const minfs::MountOptions kDefaultMountOptions = {
 };
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-  zx_status_t status = ZX_OK;
-  minfs::Superblock info = {};
-  status = LoadSuperblock(bc.get(), &info);
+  zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("error: could not read info block: %d\n", status);
-    return status;
+    return -1;
   }
-
-  status = minfs::Mount(std::move(bc), kDefaultMountOptions, &info, &fakeFs.fake_root);
-  if (status == ZX_OK) {
-    fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
-    return 0;
-  }
-
-  return -1;
+  fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+  return 0;
 }
 
 int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) {

@@ -5,7 +5,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/fd.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -13,21 +17,19 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <fbl/unique_ptr.h>
-#include <fs/trace.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/fd.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
-#include <trace-provider/provider.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
 #include <utility>
+
+#include <block-client/cpp/block-device.h>
+#include <block-client/cpp/remote-block-device.h>
+#include <fbl/unique_ptr.h>
+#include <fs/trace.h>
+#include <minfs/fsck.h>
+#include <minfs/minfs.h>
+#include <trace-provider/provider.h>
 
 namespace {
 
@@ -38,7 +40,7 @@ int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
   return Fsck(std::move(bc), minfs::Repair::kEnabled);
 }
 
-int Mount(fbl::unique_fd device_fd, const minfs::MountOptions& options) {
+int Mount(std::unique_ptr<block_client::BlockDevice> device, const minfs::MountOptions& options) {
   zx::channel root(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
   if (!root) {
     FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -52,17 +54,18 @@ int Mount(fbl::unique_fd device_fd, const minfs::MountOptions& options) {
     loop.Quit();
     FS_TRACE_WARN("minfs: Unmounted\n");
   };
-  zx_status_t status;
-  if ((status = MountAndServe(options, loop.dispatcher(), std::move(device_fd), std::move(root),
-                              std::move(loop_quit)) != ZX_OK)) {
+
+  zx_status_t status = MountAndServe(options, loop.dispatcher(), std::move(device), std::move(root),
+                                     std::move(loop_quit));
+  if (status != ZX_OK) {
     if (options.verbose) {
-      fprintf(stderr, "minfs: Failed to mount: %d\n", status);
+      FS_TRACE_ERROR("minfs: Failed to mount: %d\n", status);
     }
     return -1;
   }
 
   if (options.verbose) {
-    fprintf(stderr, "minfs: Mounted successfully\n");
+    FS_TRACE_ERROR("minfs: Mounted successfully\n");
   }
 
   loop.Run();
@@ -182,25 +185,27 @@ int main(int argc, char** argv) {
   char* cmd = argv[0];
 
   // Block device passed by handle
-  zx::channel device = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
-  int device_fd = -1;
+  zx::channel device_channel = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
 
-  zx_status_t status = fdio_fd_create(device.release(), &device_fd);
+  std::unique_ptr<block_client::RemoteBlockDevice> device;
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
-    fprintf(stderr, "blobfs: Could not access block device\n");
+    FS_TRACE_ERROR("minfs: Could not access block device\n");
     return -1;
   }
-  fbl::unique_fd fd(device_fd);
 
   if (strcmp(cmd, "mount") == 0) {
-    return Mount(std::move(fd), options);
+    return Mount(std::move(device), options);
   }
 
   fbl::unique_ptr<minfs::Bcache> bc;
-  if (CreateBcache(std::move(fd), &options.readonly, &bc) != ZX_OK) {
+
+  bool readonly_device = false;
+  if (CreateBcache(std::move(device), &readonly_device, &bc) != ZX_OK) {
     fprintf(stderr, "minfs: error: cannot create block cache\n");
     return -1;
   }
+  options.readonly |= readonly_device;
 
   for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
     if (strcmp(cmd, CMDS[i].name) == 0) {

@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/fsck.h>
-
 #include <lib/cksum.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utility>
 
 #include <utility>
 
 #include <fs/journal/format.h>
 #include <minfs/format.h>
+#include <minfs/fsck.h>
 
 #include "minfs-private.h"
 
@@ -32,8 +30,13 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 class MinfsChecker {
  public:
-  MinfsChecker();
-  zx_status_t Init(fbl::unique_ptr<Bcache> bc, const Superblock* info);
+  static zx_status_t Create(std::unique_ptr<Bcache> bc, const Superblock* info,
+                            std::unique_ptr<MinfsChecker>* out);
+
+  static void DestroyChecker(std::unique_ptr<MinfsChecker> checker, std::unique_ptr<Bcache>* out) {
+    Minfs::DestroyMinfs(std::move(checker->fs_), out);
+  }
+
   void CheckReserved();
   zx_status_t CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
   zx_status_t CheckUnlinkedInodes();
@@ -50,6 +53,7 @@ class MinfsChecker {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 
+  MinfsChecker();
   zx_status_t GetInode(Inode* inode, ino_t ino);
 
   // Returns the nth block within an inode, relative to the start of the
@@ -618,8 +622,7 @@ zx_status_t MinfsChecker::CheckIntegrity() const {
 
   uint32_t old_checksum = journal_info->checksum;
   journal_info->checksum = 0;
-  journal_info->checksum =
-      crc32(0, reinterpret_cast<uint8_t*>(data), sizeof(fs::JournalInfo));
+  journal_info->checksum = crc32(0, reinterpret_cast<uint8_t*>(data), sizeof(fs::JournalInfo));
   if (journal_info->checksum != old_checksum) {
     FS_TRACE_ERROR("minfs: invalid journal checksum\n");
     return ZX_ERR_BAD_STATE;
@@ -653,19 +656,20 @@ zx_status_t MinfsChecker::CheckIntegrity() const {
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {}
 
-zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* info) {
-  links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
-  links_[0] = -1;
-
-  cached_doubly_indirect_ = 0;
-  cached_indirect_ = 0;
+zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const Superblock* info,
+                                 std::unique_ptr<MinfsChecker>* out) {
+  auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker());
+  checker->links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
+  checker->links_[0] = -1;
+  checker->cached_doubly_indirect_ = 0;
+  checker->cached_indirect_ = 0;
 
   zx_status_t status;
-  if ((status = checked_inodes_.Reset(info->inode_count)) != ZX_OK) {
+  if ((status = checker->checked_inodes_.Reset(info->inode_count)) != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked inodes: %d\n", status);
     return status;
   }
-  if ((status = checked_blocks_.Reset(info->block_count)) != ZX_OK) {
+  if ((status = checker->checked_blocks_.Reset(info->block_count)) != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked blocks: %d\n", status);
     return status;
   }
@@ -674,8 +678,8 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
     FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
     return status;
   }
-  fs_ = std::move(fs);
-
+  checker->fs_ = std::move(fs);
+  *out = std::move(checker);
   return ZX_OK;
 }
 
@@ -758,8 +762,7 @@ zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
     return status;
   }
   // Found a valid backup superblock. Confirm if the FVM flags are set in the backup superblock.
-  if ((backup_location == kFvmSuperblockBackup) &&
-      ((out_backup->flags & kMinfsFlagFVM) == 0)) {
+  if ((backup_location == kFvmSuperblockBackup) && ((out_backup->flags & kMinfsFlagFVM) == 0)) {
     return ZX_ERR_BAD_STATE;
   } else if ((backup_location == kNonFvmSuperblockBackup) &&
              ((out_backup->flags & kMinfsFlagFVM) != 0)) {
@@ -782,8 +785,8 @@ zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
 
   if (status != ZX_OK) {
     // Try the non-fvm backup superblock location.
-    status = ReadBackupSuperblock(transaction_handler, device, max_blocks,
-                                  kNonFvmSuperblockBackup, &backup_info);
+    status = ReadBackupSuperblock(transaction_handler, device, max_blocks, kNonFvmSuperblockBackup,
+                                  &backup_info);
   }
 
   if (status != ZX_OK) {
@@ -816,9 +819,9 @@ zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
 }
 #endif
 
- // TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
- // with LoadSuperblock.
- // Loads the superblock and upgrades if needed from version 7 or 8 to version 9.
+// TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
+// with LoadSuperblock.
+// Loads the superblock and upgrades if needed from version 7 or 8 to version 9.
 zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
                                                Superblock* out_info) {
   zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
@@ -870,8 +873,7 @@ zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
   fs::JournalSuperblock unused_journal_superblock;
   status = ReplayJournal(bc, bc, *out_info, &unused_journal_superblock);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Fsck: Failed to replay journal: %s\n",
-                   zx_status_get_string(status));
+    FS_TRACE_ERROR("Fsck: Failed to replay journal: %s\n", zx_status_get_string(status));
     return status;
   }
   status = bc->Readblk(kSuperblockStart, out_info);
@@ -1041,14 +1043,13 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
   return ZX_OK;
 }
 
-zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
+zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr<Bcache>* out_bc) {
   Superblock info = {};
 
   // TODO(36164): Remove this code after migration to major version 9 and replace with
   // LoadSuperblock.
-  zx_status_t status = LoadAndUpgradeSuperblockAndJournal(bc.get(),
-                                                          fsck_repair == minfs::Repair::kEnabled,
-                                                          &info);
+  zx_status_t status =
+      LoadAndUpgradeSuperblockAndJournal(bc.get(), fsck_repair == minfs::Repair::kEnabled, &info);
   if (status != ZX_OK) {
     if (fsck_repair == Repair::kDisabled) {
       FS_TRACE_ERROR("Fsck: LoadSuperblock failure: %d\n", status);
@@ -1063,16 +1064,17 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
     }
   }
 
-  MinfsChecker chk;
-  if ((status = chk.Init(std::move(bc), &info)) != ZX_OK) {
+  std::unique_ptr<MinfsChecker> chk;
+  status = MinfsChecker::Create(std::move(bc), &info, &chk);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: Init failure: %d\n", status);
     return status;
   }
 
-  chk.CheckReserved();
+  chk->CheckReserved();
 
   // TODO: check root not a directory
-  if ((status = chk.CheckInode(1, 1, 0)) != ZX_OK) {
+  if ((status = chk->CheckInode(1, 1, 0)) != ZX_OK) {
     FS_TRACE_ERROR("Fsck: CheckInode failure: %d\n", status);
     return status;
   }
@@ -1080,26 +1082,32 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
   zx_status_t r;
 
   // Save an error if it occurs, but check for subsequent errors anyway.
-  r = chk.CheckUnlinkedInodes();
+  r = chk->CheckUnlinkedInodes();
   status |= (status != ZX_OK) ? 0 : r;
-  r = chk.CheckForUnusedBlocks();
+  r = chk->CheckForUnusedBlocks();
   status |= (status != ZX_OK) ? 0 : r;
-  r = chk.CheckForUnusedInodes();
+  r = chk->CheckForUnusedInodes();
   status |= (status != ZX_OK) ? 0 : r;
-  r = chk.CheckLinkCounts();
+  r = chk->CheckLinkCounts();
   status |= (status != ZX_OK) ? 0 : r;
-  r = chk.CheckAllocatedCounts();
+  r = chk->CheckAllocatedCounts();
   status |= (status != ZX_OK) ? 0 : r;
 
-  r = chk.CheckIntegrity();
+  r = chk->CheckIntegrity();
   status |= (status != ZX_OK) ? 0 : r;
 
   // TODO: check allocated inodes that were abandoned
   // TODO: check allocated blocks that were not accounted for
   // TODO: check unallocated inodes where magic != 0
-  status |= (status != ZX_OK) ? 0 : (chk.conforming_ ? ZX_OK : ZX_ERR_BAD_STATE);
+  status |= (status != ZX_OK) ? 0 : (chk->conforming_ ? ZX_OK : ZX_ERR_BAD_STATE);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  return status;
+  if (out_bc != nullptr) {
+    MinfsChecker::DestroyChecker(std::move(chk), out_bc);
+  }
+  return ZX_OK;
 }
 
 }  // namespace minfs

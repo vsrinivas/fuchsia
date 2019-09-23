@@ -519,7 +519,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
 zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
-                  minfs::Superblock* info, fbl::RefPtr<VnodeMinfs>* root_out);
+                  fbl::RefPtr<VnodeMinfs>* root_out);
 }  // namespace minfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_MINFS_MINFS_PRIVATE_H_

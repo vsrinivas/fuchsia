@@ -64,8 +64,10 @@ inline zx_status_t Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 
 #ifdef __Fuchsia__
 
-// Creates a Bcache using |fd| and updates the readonly flag.
-zx_status_t CreateBcache(fbl::unique_fd fd, bool* out_readonly,
+// Creates a Bcache using |device|.
+//
+// Identifies if the underlying device is read-only in |out_readonly|.
+zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
                          fbl::unique_ptr<minfs::Bcache>* out);
 
 // Mount the filesystem backed by |device_fd| using the VFS layer |vfs|,
@@ -75,8 +77,8 @@ zx_status_t CreateBcache(fbl::unique_fd fd, bool* out_readonly,
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
 zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
-                          fbl::unique_fd device_fd, zx::channel mount_channel,
-                          fbl::Closure on_unmount);
+                          std::unique_ptr<block_client::BlockDevice> device,
+                          zx::channel mount_channel, fbl::Closure on_unmount);
 #endif
 
 }  // namespace minfs

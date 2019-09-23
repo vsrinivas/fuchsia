@@ -49,9 +49,9 @@ enum class Repair {
 // Updates generation_count and checksum of the superblock.
 void UpdateChecksum(Superblock* info);
 
- // TODO(ZX-4623): Remove this code after migration to major version 9 and replace calling sites
- // with LoadSuperblock.
- // Loads the superblock and upgrades if needed from version 7 or version 8 to version 9.
+// TODO(ZX-4623): Remove this code after migration to major version 9 and replace calling sites
+// with LoadSuperblock.
+// Loads the superblock and upgrades if needed from version 7 or version 8 to version 9.
 zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
                                                Superblock* out_info);
 
@@ -80,7 +80,9 @@ zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size);
 // Run fsck on an unmounted filesystem backed by |bc|.
 //
 // Invokes CheckSuperblock, and repairs filesystem if needed.
-zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair repair_fs);
+// On success, returns bcache to |out_bc|, if supplied.
+zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair repair_fs,
+                 std::unique_ptr<Bcache>* out_bc = nullptr);
 
 // Returns number of blocks required to store inode_count inodes
 uint32_t BlocksRequiredForInode(uint64_t inode_count);
