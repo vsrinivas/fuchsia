@@ -7,12 +7,11 @@ more of its basic operations (creating a page, writing/deleting entries, ...).
 
 ## Building benchmarks
 
-To build the benchmarks, add
-`//src/ledger/bin/tests/benchmark:ledger_benchmarks` to the list of packages
-available in your build:
+To build the benchmarks, add `//src/ledger/bin/tests/benchmark` to the list of
+packages available in your build:
 
 ```sh
-fx set core.x64 --release --with //src/ledger/bin/tests/benchmark:ledger_benchmarks
+fx set core.x64 --release --with //src/ledger/bin/tests/benchmark
 fx build ledger_benchmarks
 ```
 
