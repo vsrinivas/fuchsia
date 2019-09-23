@@ -263,6 +263,7 @@ cpu_num_t Scheduler::FindTargetCpu(thread_t* thread) {
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->last_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
+  const cpu_mask_t idle_mask = mp_get_idle_mask();
 
   // Determine the set of CPUs the thread is allowed to run on.
   //
@@ -282,7 +283,7 @@ cpu_num_t Scheduler::FindTargetCpu(thread_t* thread) {
   Scheduler* target_queue;
 
   // Select an initial target.
-  if (last_cpu_mask & available_mask) {
+  if (last_cpu_mask & available_mask && (!idle_mask || last_cpu_mask & idle_mask)) {
     target_cpu = thread->last_cpu;
   } else if (current_cpu_mask & available_mask) {
     target_cpu = arch_curr_cpu_num();
