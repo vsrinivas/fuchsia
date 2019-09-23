@@ -61,7 +61,6 @@ group("all") {
     "//garnet/packages/tools:iperf",
     "//garnet/packages/tools:magma",
     "//garnet/packages/tools:make-efi",
-    "//garnet/packages/tools:make-fuchsia-vol",
     "//garnet/packages/tools:mediasession",
     "//garnet/packages/tools:netstack",
     "//garnet/packages/tools:runmany",
@@ -114,13 +113,6 @@ group("curl") {
   testonly = true
   public_deps = [
     "//third_party/curl",
-  ]
-}
-
-group("make-fuchsia-vol") {
-  testonly = true
-  public_deps = [
-    "//garnet/go/src/make-fuchsia-vol:host",
   ]
 }
 
