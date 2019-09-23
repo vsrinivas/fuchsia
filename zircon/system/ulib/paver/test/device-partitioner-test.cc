@@ -38,6 +38,7 @@ constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
 constexpr uint8_t kVbMetaAType[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
 constexpr uint8_t kVbMetaBType[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
+constexpr uint8_t kVbMetaRType[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
 constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
@@ -57,7 +58,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .partition_map =
                 {
                     .device_guid = {},
-                    .partition_count = 7,
+                    .partition_count = 6,
                     .partitions =
                         {
                             {
@@ -116,24 +117,13 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .bbt = false,
                             },
                             {
-                                .type_guid = GUID_VBMETA_A_VALUE,
+                                .type_guid = GUID_SYS_CONFIG_VALUE,
                                 .unique_guid = {},
                                 .first_block = 14,
-                                .last_block = 15,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_VBMETA_B_VALUE,
-                                .unique_guid = {},
-                                .first_block = 16,
                                 .last_block = 17,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
-                                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
+                                .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
                                 .hidden = false,
                                 .bbt = false,
                             },
@@ -366,7 +356,7 @@ TEST_F(FixedDevicePartitionerTests, UseBlockInterfaceTest) {
   fbl::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
-  ASSERT_FALSE(partitioner->UseSkipBlockInterface());
+  ASSERT_FALSE(partitioner->IsFvmWithinFtl());
 }
 
 TEST_F(FixedDevicePartitionerTests, AddPartitionTest) {
@@ -397,70 +387,37 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
 }
 
 TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
-  fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
+  fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b, vbmeta_r;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconAType, &zircon_a));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconBType, &zircon_b));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconRType, &zircon_r));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaAType, &vbmeta_a));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaBType, &vbmeta_b));
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaRType, &vbmeta_r));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &fvm));
 
   auto partitioner =
       paver::DevicePartitioner::Create(devmgr_.devfs_root().duplicate(), paver::Arch::kArm64);
   ASSERT_NE(partitioner.get(), nullptr);
 
-  fbl::unique_fd fd;
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd));
+  std::unique_ptr<paver::PartitionClient> partition;
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &partition));
 }
 
-TEST_F(FixedDevicePartitionerTests, GetBlockSizeTest) {
-  fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconAType, &zircon_a));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconBType, &zircon_b));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconRType, &zircon_r));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaAType, &vbmeta_a));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaBType, &vbmeta_b));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &fvm));
-
-  auto partitioner =
-      paver::DevicePartitioner::Create(devmgr_.devfs_root().duplicate(), paver::Arch::kArm64);
-  ASSERT_NE(partitioner.get(), nullptr);
-
-  fbl::unique_fd fd;
-  uint32_t block_size;
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
-}
-
-TEST(SkipBlockDevicePartitionerTests, UseSkipBlockInterfaceTest) {
+TEST(SkipBlockDevicePartitionerTests, IsFvmWithinFtl) {
   fbl::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
+  ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   fbl::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
             ZX_OK);
-  ASSERT_TRUE(partitioner->UseSkipBlockInterface());
+  ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
 TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
@@ -472,7 +429,7 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
 
   auto partitioner = paver::DevicePartitioner::Create(std::move(devfs_root), paver::Arch::kArm64);
   ASSERT_NE(partitioner.get(), nullptr);
-  ASSERT_TRUE(partitioner->UseSkipBlockInterface());
+  ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
 TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
@@ -522,50 +479,14 @@ TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(std::move(devfs_root), &partitioner),
             ZX_OK);
 
-  fbl::unique_fd fd;
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd));
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd));
+  std::unique_ptr<paver::PartitionClient> partition;
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));
 
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd));
-}
-
-TEST(SkipBlockDevicePartitionerTests, GetBlockSizeTest) {
-  fbl::unique_ptr<SkipBlockDevice> device;
-  SkipBlockDevice::Create(kNandInfo, &device);
-  auto devfs_root = device->devfs_root();
-  fbl::unique_ptr<BlockDevice> fvm;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
-
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(std::move(devfs_root), &partitioner),
-            ZX_OK);
-
-  fbl::unique_fd fd;
-  uint32_t block_size;
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
-
-  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd));
-  ASSERT_OK(partitioner->GetBlockSize(fd, &block_size));
-  ASSERT_EQ(block_size, kBlockSize);
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &partition));
 }
