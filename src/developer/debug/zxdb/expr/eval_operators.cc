@@ -587,6 +587,12 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
     case ExprTokenType::kCaret:
       IMPLEMENT_INTEGER_BINARY_OP(^, false);
       break;
+    case ExprTokenType::kShiftLeft:
+      IMPLEMENT_INTEGER_BINARY_OP(<<, false);
+      break;
+    case ExprTokenType::kShiftRight:
+      IMPLEMENT_INTEGER_BINARY_OP(>>, false);
+      break;
 
     case ExprTokenType::kEquality:
       IMPLEMENT_COMPARISON_BINARY_OP(==);

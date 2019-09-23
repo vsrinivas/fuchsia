@@ -185,6 +185,16 @@ TEST_F(EvalOperators, IntArithmetic) {
   out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kCaret, ExprValue(0b1100));
   ASSERT_FALSE(out.has_error()) << out.err().msg();
   EXPECT_EQ(0b1000, out.value().GetAs<int64_t>());
+
+  // <<
+  out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kShiftLeft, ExprValue(2));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0b10000, out.value().GetAs<int64_t>());
+
+  // >>
+  out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kShiftRight, ExprValue(2));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0b1, out.value().GetAs<int64_t>());
 }
 
 TEST_F(EvalOperators, FloatArithmetic) {

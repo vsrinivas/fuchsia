@@ -31,14 +31,14 @@ TEST(ExprTokenizer, InvalidChar) {
 }
 
 TEST(ExprTokenizer, Punctuation) {
-  // Char offsets: 0 123456789012345678901234567890123456
-  // Token #'s:      0 1 2  3 45 67 8 9  0 1 2  3 4 5 6 7
-  ExprTokenizer t("\n. * -> & () [] - :: < > == = % + ^ /");
+  // Char offsets: 0 12345678901234567890123456789012
+  // Token #'s:      0 1 2  3 45 67 8 9  0  1 2 3 4 5
+  ExprTokenizer t("\n. * -> & () [] - :: == = % + ^ /");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(18u, tokens.size());
+  ASSERT_EQ(16u, tokens.size());
 
   EXPECT_EQ(ExprTokenType::kDot, tokens[0].type());
   EXPECT_EQ(".", tokens[0].value());
@@ -80,37 +80,83 @@ TEST(ExprTokenizer, Punctuation) {
   EXPECT_EQ("::", tokens[9].value());
   EXPECT_EQ(18u, tokens[9].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kLess, tokens[10].type());
-  EXPECT_EQ("<", tokens[10].value());
+  EXPECT_EQ(ExprTokenType::kEquality, tokens[10].type());
+  EXPECT_EQ("==", tokens[10].value());
   EXPECT_EQ(21u, tokens[10].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kGreater, tokens[11].type());
-  EXPECT_EQ(">", tokens[11].value());
-  EXPECT_EQ(23u, tokens[11].byte_offset());
+  EXPECT_EQ(ExprTokenType::kEquals, tokens[11].type());
+  EXPECT_EQ("=", tokens[11].value());
+  EXPECT_EQ(24u, tokens[11].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kEquality, tokens[12].type());
-  EXPECT_EQ("==", tokens[12].value());
-  EXPECT_EQ(25u, tokens[12].byte_offset());
+  EXPECT_EQ(ExprTokenType::kPercent, tokens[12].type());
+  EXPECT_EQ("%", tokens[12].value());
+  EXPECT_EQ(26u, tokens[12].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kEquals, tokens[13].type());
-  EXPECT_EQ("=", tokens[13].value());
+  EXPECT_EQ(ExprTokenType::kPlus, tokens[13].type());
+  EXPECT_EQ("+", tokens[13].value());
   EXPECT_EQ(28u, tokens[13].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kPercent, tokens[14].type());
-  EXPECT_EQ("%", tokens[14].value());
+  EXPECT_EQ(ExprTokenType::kCaret, tokens[14].type());
+  EXPECT_EQ("^", tokens[14].value());
   EXPECT_EQ(30u, tokens[14].byte_offset());
 
-  EXPECT_EQ(ExprTokenType::kPlus, tokens[15].type());
-  EXPECT_EQ("+", tokens[15].value());
+  EXPECT_EQ(ExprTokenType::kSlash, tokens[15].type());
+  EXPECT_EQ("/", tokens[15].value());
   EXPECT_EQ(32u, tokens[15].byte_offset());
+}
 
-  EXPECT_EQ(ExprTokenType::kCaret, tokens[16].type());
-  EXPECT_EQ("^", tokens[16].value());
-  EXPECT_EQ(34u, tokens[16].byte_offset());
+TEST(ExprTokenizer, LessGreater) {
+  // "<<" is identified normally, but ">>" is always tokenized as two separate '>' tokens. The
+  // parser will disambiguate in the next phase which we don't see here.
 
-  EXPECT_EQ(ExprTokenType::kSlash, tokens[17].type());
-  EXPECT_EQ("/", tokens[17].value());
-  EXPECT_EQ(36u, tokens[17].byte_offset());
+  // Char offsets: 0123456789012345678901234567890123456
+  // Token #'s:    0 1 2  34 5 6789
+  ExprTokenizer t("< > << >> <<<>>>");
+
+  EXPECT_TRUE(t.Tokenize());
+  EXPECT_FALSE(t.err().has_error()) << t.err().msg();
+  const auto& tokens = t.tokens();
+  ASSERT_EQ(10u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kLess, tokens[0].type());
+  EXPECT_EQ("<", tokens[0].value());
+  EXPECT_EQ(0u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[1].type());
+  EXPECT_EQ(">", tokens[1].value());
+  EXPECT_EQ(2u, tokens[1].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kShiftLeft, tokens[2].type());
+  EXPECT_EQ("<<", tokens[2].value());
+  EXPECT_EQ(4u, tokens[2].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[3].type());
+  EXPECT_EQ(">", tokens[3].value());
+  EXPECT_EQ(7u, tokens[3].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[4].type());
+  EXPECT_EQ(">", tokens[4].value());
+  EXPECT_EQ(8u, tokens[4].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kShiftLeft, tokens[5].type());
+  EXPECT_EQ("<<", tokens[5].value());
+  EXPECT_EQ(10u, tokens[5].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kLess, tokens[6].type());
+  EXPECT_EQ("<", tokens[6].value());
+  EXPECT_EQ(12u, tokens[6].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[7].type());
+  EXPECT_EQ(">", tokens[7].value());
+  EXPECT_EQ(13u, tokens[7].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[8].type());
+  EXPECT_EQ(">", tokens[8].value());
+  EXPECT_EQ(14u, tokens[8].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kGreater, tokens[9].type());
+  EXPECT_EQ(">", tokens[9].value());
+  EXPECT_EQ(15u, tokens[9].byte_offset());
 }
 
 TEST(ExprTokenizer, Integers) {

@@ -78,6 +78,8 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kCaret,           kLangAll, "^"},
     {ExprTokenType::kPercent,         kLangAll, "%"},
     {ExprTokenType::kColonColon,      kLangAll, "::"},
+    {ExprTokenType::kShiftLeft,       kLangAll, "<<"},
+    {ExprTokenType::kShiftRight,      0},  // See header.
     {ExprTokenType::kTrue,            kLangAll, "true"},
     {ExprTokenType::kFalse,           kLangAll, "false"},
     {ExprTokenType::kConst,           kLangAll, "const"},

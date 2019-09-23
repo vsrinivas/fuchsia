@@ -65,7 +65,7 @@ constexpr int kPrecedenceBitwiseAnd = 70;             // &
 constexpr int kPrecedenceEquality = 80;               // == !=
 constexpr int kPrecedenceComparison = 90;             // < <= > >=
 constexpr int kPrecedenceThreeWayComparison = 100;    // <=>
-//constexpr int kPrecedenceShift = 110;               // << >>
+constexpr int kPrecedenceShift = 110;                 // << >>
 constexpr int kPrecedenceAddition = 120;              // + -
 constexpr int kPrecedenceMultiplication = 130;        // * / %
 //constexpr int kPrecedencePointerToMember = 140;     // .* ->*
@@ -73,6 +73,11 @@ constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
 constexpr int kPrecedenceCallAccess = 160;            // () . -> []
 //constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
 // clang-format on
+
+// Returns true if two tokens are adjacent (have no space between them).
+bool IsAdjacent(const ExprToken& a, const ExprToken& b) {
+  return a.byte_offset() + a.value().size() == b.byte_offset();
+}
 
 }  // namespace
 
@@ -116,6 +121,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kColonColon
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftLeft
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftRight
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kTrue
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kFalse
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kConst
@@ -187,7 +194,9 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (at_end())
     return nullptr;
 
-  const ExprToken& token = Consume();
+  // Here we need ">>" to be treated as a shift operation. When that appears as part of a name and
+  // should be separated, the identifier parser will handle it separately.
+  ExprToken token = ConsumeWithShiftTokenConversion();
   PrefixFunc prefix = DispatchForToken(token).prefix;
 
   if (!prefix) {
@@ -199,8 +208,8 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (has_error())
     return left;
 
-  while (!at_end() && precedence < DispatchForToken(cur_token()).precedence) {
-    const ExprToken& next_token = Consume();
+  while (!at_end() && precedence < CurPrecedenceWithShiftTokenConversion()) {
+    const ExprToken& next_token = ConsumeWithShiftTokenConversion();
     InfixFunc infix = DispatchForToken(next_token).infix;
     if (!infix) {
       SetError(next_token, fxl::StringPrintf("Unexpected token '%s'.", next_token.value().c_str()));
@@ -679,18 +688,8 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
   return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left), std::move(inner));
 }
 
-fxl::RefPtr<ExprNode> ExprParser::LessInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token) {
-  SetError(token, "Comparisons not supported yet.");
-  return nullptr;
-}
-
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<LiteralExprNode>(token);
-}
-
-fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token) {
-  SetError(token, "Comparisons not supported yet.");
-  return nullptr;
 }
 
 fxl::RefPtr<ExprNode> ExprParser::UnaryPrefix(const ExprToken& token) {
@@ -822,6 +821,16 @@ const ExprToken& ExprParser::Consume(ExprTokenType type, const char* error_msg,
   return kInvalidToken;
 }
 
+ExprToken ExprParser::ConsumeWithShiftTokenConversion() {
+  if (IsCurTokenShiftRight()) {
+    // Eat both ">" operators and synthesize a shift operator.
+    const ExprToken& first = Consume();
+    Consume();
+    return ExprToken(ExprTokenType::kShiftRight, ">>", first.byte_offset());
+  }
+  return Consume();
+}
+
 void ExprParser::ConsumeCVQualifier(std::vector<DwarfTag>* qual) {
   while (!at_end()) {
     const ExprToken& token = cur_token();
@@ -864,6 +873,24 @@ fxl::RefPtr<Type> ExprParser::ApplyQualifiers(fxl::RefPtr<Type> input,
 void ExprParser::SetError(const ExprToken& token, std::string msg) {
   err_ = Err(std::move(msg));
   error_token_ = token;
+}
+
+bool ExprParser::IsCurTokenShiftRight() const {
+  if (cur_ > tokens_.size() - 2)
+    return false;  // Not enough room for two tokens.
+
+  if (tokens_[cur_].type() != ExprTokenType::kGreater ||
+      tokens_[cur_ + 1].type() != ExprTokenType::kGreater)
+    return false;  // Not two ">" in a row.
+
+  // They must also be next to each other with no space.
+  return IsAdjacent(tokens_[cur_], tokens_[cur_ + 1]);
+}
+
+int ExprParser::CurPrecedenceWithShiftTokenConversion() const {
+  if (IsCurTokenShiftRight())
+    return kPrecedenceShift;
+  return DispatchForToken(cur_token()).precedence;
 }
 
 // static

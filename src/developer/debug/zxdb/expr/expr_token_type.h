@@ -42,6 +42,12 @@ enum class ExprTokenType : size_t {
   kCaret,         // ^
   kPercent,       // %
   kColonColon,    // ::
+  kShiftLeft,     // <<
+
+  // The shift right token is not produced by the tokenizer which will always produce two adjacent
+  // ">" tokens. The parser will disambiguate ">>" as a shift operator vs. two template endings and
+  // generate a "shift right" at that time.
+  kShiftRight,  // >>
 
   // Special keywords.
   kTrue,             // true

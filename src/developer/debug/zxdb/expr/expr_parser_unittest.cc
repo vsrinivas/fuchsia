@@ -37,7 +37,11 @@ FoundName TestLookupName(const ParsedIdentifier& ident, const FindNameOptions& o
   if (opts.find_templates && StringBeginsWith(name, "Template")) {
     if (comp.has_template()) {
       // Assume templates with arguments are types.
-      return FoundName(fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
+      auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+      // This name won't always be correct if the input has a namespace or other qualifier, but is
+      // good enough for this test.
+      collection->set_assigned_name(ident.GetFullName());
+      return FoundName(std::move(collection));
     }
     return FoundName(FoundName::kTemplate, ident.GetFullName());
   }
@@ -390,6 +394,26 @@ TEST_F(ExprParserTest, Identifiers) {
       "  IDENTIFIER(\"foo\")\n",
       GetParseString("foo->Baz::bar"));
   */
+}
+
+// Tests << and >> operators. They are challenging because this can also appear in template
+// expressions and are parsed as something else.
+TEST_F(ExprParserTest, Shift) {
+  // This is parsed as (2 << 2) < (static_cast<Template<int>>(2) >> 2) > 2" with the < and > then
+  // parsed left-to-right.
+  EXPECT_EQ(
+      "BINARY_OP(>)\n"
+      " BINARY_OP(<)\n"
+      "  BINARY_OP(<<)\n"
+      "   LITERAL(2)\n"
+      "   LITERAL(2)\n"
+      "  BINARY_OP(>>)\n"
+      "   CAST(static_cast)\n"
+      "    TYPE(Template<int>)\n"
+      "    LITERAL(2)\n"
+      "   LITERAL(2)\n"
+      " LITERAL(2)\n",
+      GetParseString("2<<2<static_cast<Template<int>>(2)>>2>2", &TestLookupName));
 }
 
 TEST_F(ExprParserTest, FunctionCall) {
