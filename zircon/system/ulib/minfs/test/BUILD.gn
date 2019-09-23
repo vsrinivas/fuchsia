@@ -17,6 +17,7 @@ test("minfs-unit") {
     "unit/format-test.cc",
     "unit/fsck-test.cc",
     "unit/inspector-test.cc",
+    "unit/mkfs-test.cc",
     "unit/superblock-test.cc",
     "unit/transaction-test.cc",
     "unit/work-queue-test.cc",

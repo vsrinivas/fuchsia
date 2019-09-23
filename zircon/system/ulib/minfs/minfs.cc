@@ -1750,6 +1750,13 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(blk), sizeof(fs::JournalInfo));
   bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info)), blk);
 
+  // Clear the journal from disk.
+  memset(blk, 0, sizeof(blk));
+
+  for (size_t i = fs::kJournalMetadataBlocks; i < JournalBlocks(info); i++) {
+    bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + i), blk);
+  }
+
 #ifdef __Fuchsia__
   fvm_cleanup.cancel();
 #endif
