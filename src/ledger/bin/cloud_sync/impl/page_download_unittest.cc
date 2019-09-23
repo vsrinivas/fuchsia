@@ -13,6 +13,7 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <utility>
@@ -30,11 +31,13 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 namespace {
 
+using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
@@ -65,7 +68,7 @@ std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time.
 template <typename E>
-class BasePageDownloadTest : public gtest::TestLoopFixture, public PageDownload::Delegate {
+class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDownload::Delegate {
  public:
   BasePageDownloadTest()
       : storage_(dispatcher()),
@@ -361,9 +364,7 @@ TEST_F(PageDownloadTest, GetObject) {
   EXPECT_EQ(source, storage::ChangeSource::CLOUD);
   EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
   EXPECT_EQ(data_chunk->Get().ToString(), "content");
-  EXPECT_EQ(states_.size(), 2u);
-  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
-  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.
@@ -496,33 +497,47 @@ class PageDownloadDiffTest
     states_.clear();
   }
 
+  cloud_provider::DiffEntry MakeDiffEntry(const storage::EntryChange& change) {
+    cloud_provider::DiffEntry entry;
+    entry.set_entry_id(convert::ToArray(change.entry.entry_id));
+    entry.set_operation(change.deleted ? cloud_provider::Operation::DELETION
+                                       : cloud_provider::Operation::INSERTION);
+    entry.set_data(
+        convert::ToArray(EncodeEntryPayload(change.entry, storage_.GetObjectIdentifierFactory())));
+    return entry;
+  }
+
+  // Create a diff from the empty page with the given changes, with randomly shuffled changes.
+  cloud_provider::Diff MakeShuffledDiff(const std::vector<storage::EntryChange>& changes) {
+    std::vector<cloud_provider::DiffEntry> entries;
+    std::transform(changes.begin(), changes.end(), std::back_inserter(entries),
+                   [this](const storage::EntryChange& change) { return MakeDiffEntry(change); });
+    std::shuffle(entries.begin(), entries.end(),
+                 environment_.random()->NewBitGenerator<uint64_t>());
+    cloud_provider::Diff diff;
+    diff.mutable_base_state()->set_empty_page({});
+    diff.set_changes(std::move(entries));
+    return diff;
+  }
+
+  // Generates a test diff and the expected entry changes after normalization.
   std::pair<cloud_provider::Diff, std::vector<storage::EntryChange>> MakeTestDiff() {
     cloud_provider::Diff diff;
     std::vector<storage::EntryChange> changes;
 
     diff.mutable_base_state()->set_at_commit(convert::ToArray("base1"));
 
-    changes.push_back(
-        {{"key1", storage::ObjectIdentifier(1u, storage::ObjectDigest("digest1"), nullptr),
-          storage::KeyPriority::EAGER, "entry1"},
-         false});
-    cloud_provider::DiffEntry entry1;
-    entry1.set_entry_id(convert::ToArray("entry1"));
-    entry1.set_operation(cloud_provider::Operation::INSERTION);
-    entry1.set_data(convert::ToArray(
-        EncodeEntryPayload(changes.back().entry, storage_.GetObjectIdentifierFactory())));
-    diff.mutable_changes()->push_back(std::move(entry1));
-
+    // The deletion will appear before the insertion after normalization.
     changes.push_back(
         {{"key1", storage::ObjectIdentifier(0u, storage::ObjectDigest("digest2"), nullptr),
           storage::KeyPriority::LAZY, "entry2"},
-         true});
-    cloud_provider::DiffEntry entry2;
-    entry2.set_entry_id(convert::ToArray("entry2"));
-    entry2.set_operation(cloud_provider::Operation::DELETION);
-    entry2.set_data(convert::ToArray(
-        EncodeEntryPayload(changes.back().entry, storage_.GetObjectIdentifierFactory())));
-    diff.mutable_changes()->push_back(std::move(entry2));
+         /*deleted*/ true});
+    changes.push_back(
+        {{"key1", storage::ObjectIdentifier(1u, storage::ObjectDigest("digest1"), nullptr),
+          storage::KeyPriority::EAGER, "entry1"},
+         /*deleted*/ false});
+    diff.mutable_changes()->push_back(MakeDiffEntry(changes[1]));
+    diff.mutable_changes()->push_back(MakeDiffEntry(changes[0]));
 
     return {std::move(diff), std::move(changes)};
   }
@@ -550,9 +565,7 @@ TEST_F(PageDownloadDiffTest, GetDiff) {
   EXPECT_EQ(base_commit, "base1");
   EXPECT_EQ(changes, expected_changes);
 
-  EXPECT_EQ(states_.size(), 2u);
-  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
-  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
 }
 
 TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
@@ -578,9 +591,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
   EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
   EXPECT_EQ(changes, expected_changes);
 
-  EXPECT_EQ(states_.size(), 2u);
-  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
-  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
 }
 
 TEST_F(PageDownloadDiffTest, GetDiffFallback) {
@@ -604,9 +615,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFallback) {
   EXPECT_EQ(base_commit, "commit");
   EXPECT_THAT(changes, IsEmpty());
 
-  EXPECT_EQ(states_.size(), 2u);
-  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
-  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
 }
 
 TEST_F(PageDownloadDiffTest, GetDiffRetryOnNetworkError) {
@@ -746,6 +755,170 @@ INSTANTIATE_TEST_SUITE_P(
         [](cloud_provider::Diff* diff) {
           (*diff->mutable_changes())[0].set_data(convert::ToArray("invalid"));
         }));
+
+// Tests that diff normalization sorts changes by key, then operation.
+TEST_F(PageDownloadDiffTest, NormalizationSortByKey) {
+  // Create a diff with a deletion for key1, an insertion for key1 and a deletion for key2.
+  std::vector<storage::EntryChange> expected_changes = {
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry2"}, true},
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::EAGER, "entry1"}, false},
+      {{"key2", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry3"}, true}};
+  page_cloud_.diff_to_return = MakeShuffledDiff(expected_changes);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  // Entries are received in sorted order.
+  EXPECT_EQ(changes, expected_changes);
+
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
+}
+
+// Tests that the normalization removes duplicate operations.
+TEST_F(PageDownloadDiffTest, NormalizationRemoveDuplicates) {
+  std::vector<storage::Entry> entries = {
+      {"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry0"},
+      {"key1", MakeObjectIdentifier(), storage::KeyPriority::EAGER, "entry1"},
+      {"key2", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry2"}};
+  std::vector<storage::EntryChange> received_changes;
+  std::vector<storage::EntryChange> expected_changes;
+  // We have three copies of entry0: one insertion, two deletions.
+  // We expect to see one deletion after normalization.
+  received_changes.push_back({entries[0], false});
+  received_changes.push_back({entries[0], true});
+  received_changes.push_back({entries[0], true});
+  expected_changes.push_back({entries[0], true});
+  // We have four copies of entry1: two insertions, two deletions.
+  // We expect it to not be present after normalization.
+  received_changes.push_back({entries[1], false});
+  received_changes.push_back({entries[1], false});
+  received_changes.push_back({entries[1], true});
+  received_changes.push_back({entries[1], true});
+  // We have three copies of entry2: one deletion, two insertions.
+  // We expect to see one insertion after normalization.
+  received_changes.push_back({entries[2], false});
+  received_changes.push_back({entries[2], false});
+  received_changes.push_back({entries[2], true});
+  expected_changes.push_back({entries[2], false});
+
+  page_cloud_.diff_to_return = MakeShuffledDiff(received_changes);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  // Changes are correctly simplified.
+  EXPECT_EQ(changes, expected_changes);
+
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
+}
+
+// Normalization should not fail on duplicate keys.
+TEST_F(PageDownloadDiffTest, NormalizationDuplicateKeys) {
+  // Create a diff with a three operations for key1 that don't cancel.
+  std::vector<storage::EntryChange> expected_changes = {
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry2"}, true},
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::EAGER, "entry1"}, true},
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry3"}, false}};
+  page_cloud_.diff_to_return = MakeShuffledDiff(expected_changes);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  // The diff is accepted by PageDownload.
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  // Entries are received in sorted order. The order between the two deletions is undefined.
+  EXPECT_THAT(changes,
+              AnyOf(ElementsAre(expected_changes[0], expected_changes[1], expected_changes[2]),
+                    ElementsAre(expected_changes[1], expected_changes[0], expected_changes[2])));
+
+  EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
+}
+
+// Tests that normalization fails if multiple insertions with the same entry id remain.
+TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleInsertions) {
+  std::vector<storage::EntryChange> received_changes = {
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry1"}, false},
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry1"}, false}};
+  page_cloud_.diff_to_return = MakeShuffledDiff(received_changes);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+}
+
+// Tests that normalization fails if multiple deletions with the same entry id remain.
+TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleDeletions) {
+  std::vector<storage::EntryChange> received_changes = {
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry1"}, true},
+      {{"key1", MakeObjectIdentifier(), storage::KeyPriority::LAZY, "entry1"}, true}};
+  page_cloud_.diff_to_return = MakeShuffledDiff(received_changes);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+}
 
 }  // namespace
 }  // namespace cloud_sync

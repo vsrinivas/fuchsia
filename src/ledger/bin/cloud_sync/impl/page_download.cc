@@ -24,6 +24,75 @@ DownloadSyncState GetMergedState(DownloadSyncState commit_state, int current_get
   }
   return current_get_object_calls == 0 ? DOWNLOAD_IDLE : DOWNLOAD_IN_PROGRESS;
 }
+
+// Normalizes a diff so that the cloud cannot learn anything from knowing whether it applies
+// successfully or not.
+//
+// We fail for diffs that the cloud would know are invalid. We can learn here that some other diffs
+// are invalid, eg. those that insert a key twice, but it would be to risky to reject them here: we
+// do not want the cloud to be able to distinguish between a failure due to having duplicate keys
+// and a failure due to not getting the expected tree after applying the diff, and it's easier to do
+// this if we follow the same code/error handling path in those two cases.
+//
+// We rely on diffs being applied strictly: deletions are only valid if they matchh precisely the
+// entry present in the tree, and the diff is rejected otherwise. Similarly, insertions are rejected
+// if the key exists instead of being turned into updates.
+//
+// Some parts of the diff might have been shuffled before being sent. For simplicity, we completely
+// ignore the order in which changes have been sent. Once we've matched and simplified insertions
+// and deletions based on the entry id (which is non-secret), the diff can only apply successfully
+// if all deletions delete things that are in the base version, and all insertions insert things
+// that are in the target version, and there is no entry with this key in the base version or it has
+// been deleted. If that's the case, it will apply successfully if we apply deletions at a given key
+// before insertions at this key. We sort by key because this is expected by
+// |storage::btree::ApplyChangesFromCloud|.
+bool NormalizeDiff(std::vector<storage::EntryChange>* changes) {
+
+  auto compare_by_entryid = [](const storage::Entry& lhs, const storage::Entry& rhs) {
+    return lhs.entry_id < rhs.entry_id;
+  };
+  // To each entry id, we associate the first entry we found with this id, and the count of entries
+  // with this id. Inserted entries are counted as +1, deleted entries as -1.
+  std::map<storage::Entry, int64_t, decltype(compare_by_entryid)> entries(compare_by_entryid);
+
+  for (auto& change : *changes) {
+    entries[std::move(change.entry)] += change.deleted ? -1 : +1;
+  }
+  // Changes have been invalidated by the move.
+  changes->clear();
+
+  // Serialize the map back to a vector. We expect all counts to be 0, +1 or -1: other diffs will
+  // not apply successfully and can be rejected now because the count is only based on the
+  // non-secret entry ids.
+  while (!entries.empty()) {
+    auto node = entries.extract(entries.begin());
+    if (node.mapped() == 0) {
+      // Insertions and deletions cancel.
+    } else if (node.mapped() == -1) {
+      // Only one deletion remains.
+      changes->push_back({std::move(node.key()), true});
+    } else if (node.mapped() == 1) {
+      // Only one insertion remains.
+      changes->push_back({std::move(node.key()), false});
+    } else {
+      // Multiple insertions or deletions remain, the diff is invalid. Failing here is OK, because
+      // we only depend on information known to the cloud.
+      return false;
+    }
+  }
+
+  // Sort the vector by entry name, putting deletions before insertions.
+  auto compare_by_key_deletions_first = [](const storage::EntryChange& lhs,
+                                           const storage::EntryChange& rhs) {
+    // We want deleted = true before deleted = false, but false < true.
+    return std::forward_as_tuple(lhs.entry.key, !lhs.deleted) <
+           std::forward_as_tuple(rhs.entry.key, !rhs.deleted);
+  };
+  std::sort(changes->begin(), changes->end(), compare_by_key_deletions_first);
+
+  return true;
+}
+
 }  // namespace
 
 PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
@@ -441,7 +510,15 @@ void PageDownload::GetDiff(
                   std::vector<storage::EntryChange> changes;
                   if (!DecodeAndParseDiff(*diff_pack, &base_commit, &changes)) {
                     HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
-                                       /*is_permanent*/ true, "invalid diff", std::move(callback));
+                                       /*is_permanent*/ true, "invalid diff during decoding",
+                                       std::move(callback));
+                    return;
+                  }
+
+                  if (!NormalizeDiff(&changes)) {
+                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                       /*is_permanent*/ true, "invalid diff during normalization",
+                                       std::move(callback));
                     return;
                   }
 
