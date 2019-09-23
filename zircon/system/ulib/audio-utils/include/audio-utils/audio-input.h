@@ -22,8 +22,9 @@ class AudioInput : public AudioDeviceStream {
   friend class std::default_delete<AudioInput>;
   friend class AudioDeviceStream;
 
-  explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) {}
-  explicit AudioInput(const char* dev_path) : AudioDeviceStream(true, dev_path) {}
+  explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(StreamDirection::kInput, dev_id) {}
+  explicit AudioInput(const char* dev_path)
+      : AudioDeviceStream(StreamDirection::kInput, dev_path) {}
 };
 
 }  // namespace utils

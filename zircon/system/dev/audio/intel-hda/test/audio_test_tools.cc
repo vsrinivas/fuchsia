@@ -65,7 +65,7 @@ StatusOr<std::vector<fbl::String>> GetFilesInDir(const char* path) {
 //
 // Return nullptr if there was an error during creation.
 template <typename T>
-fbl::unique_ptr<T> CreateAndOpenStream(uint32_t device) {
+fbl::unique_ptr<T> CreateAndOpenStream(const char* device) {
   // Create the stream.
   fbl::unique_ptr<T> stream = T::Create(device);
   if (stream == nullptr) {
@@ -80,13 +80,6 @@ fbl::unique_ptr<T> CreateAndOpenStream(uint32_t device) {
   }
 
   return stream;
-}
-
-int DeviceNumberFromDevicePath(const char* path) {
-  // We assume a format of "/.../123"
-  ZX_ASSERT(strlen(path) >= 4);
-  ZX_ASSERT(strlen(path) >= 4);
-  return atoi(path + strlen(path) - 3);
 }
 
 }  // namespace
@@ -130,11 +123,11 @@ StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* str
 }
 
 fbl::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device) {
-  return CreateAndOpenStream<audio::utils::AudioOutput>(DeviceNumberFromDevicePath(device));
+  return CreateAndOpenStream<audio::utils::AudioOutput>(device);
 }
 
 fbl::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device) {
-  return CreateAndOpenStream<audio::utils::AudioInput>(DeviceNumberFromDevicePath(device));
+  return CreateAndOpenStream<audio::utils::AudioInput>(device);
 }
 
 }  // namespace audio::intel_hda

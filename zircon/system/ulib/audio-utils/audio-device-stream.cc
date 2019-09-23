@@ -81,11 +81,14 @@ zx_status_t DoNoFailCall(const zx::channel& channel, const ReqType& req, RespTyp
   return DoCallImpl(channel, req, resp, resp_handle_out);
 }
 
-AudioDeviceStream::AudioDeviceStream(bool input, uint32_t dev_id) : input_(input) {
-  snprintf(name_, sizeof(name_), "/dev/class/audio-%s/%03u", input_ ? "input" : "output", dev_id);
+AudioDeviceStream::AudioDeviceStream(StreamDirection direction, uint32_t dev_id)
+    : direction_(direction) {
+  snprintf(name_, sizeof(name_), "/dev/class/audio-%s/%03u",
+           direction == StreamDirection::kInput ? "input" : "output", dev_id);
 }
 
-AudioDeviceStream::AudioDeviceStream(bool input, const char* dev_path) : input_(input) {
+AudioDeviceStream::AudioDeviceStream(StreamDirection direction, const char* dev_path)
+    : direction_(direction) {
   strncpy(name_, dev_path, sizeof(name_) - 1);
   name_[sizeof(name_) - 1] = 0;
 }
@@ -561,7 +564,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
 
   // Map the VMO into our address space
   // TODO(johngro) : How do I specify the cache policy for this mapping?
-  uint32_t flags = input_ ? ZX_VM_PERM_READ : ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+  uint32_t flags = input() ? ZX_VM_PERM_READ : ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   res = zx::vmar::root_self()->map(0u, rb_vmo_, 0u, rb_sz_, flags,
                                    reinterpret_cast<uintptr_t*>(&rb_virt_));
 
@@ -571,7 +574,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
   }
 
   // Success!  If this is an output device, zero out the buffer and we are done.
-  if (!input_) {
+  if (!input()) {
     memset(rb_virt_, 0, rb_sz_);
   }
 

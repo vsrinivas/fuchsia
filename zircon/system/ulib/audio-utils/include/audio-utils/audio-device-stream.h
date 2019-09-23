@@ -16,6 +16,11 @@ namespace utils {
 
 class AudioDeviceStream {
  public:
+  enum class StreamDirection {
+    kInput,
+    kOutput,
+  };
+
   zx_status_t Open();
   zx_status_t GetSupportedFormats(fbl::Vector<audio_stream_format_range_t>* out_formats) const;
   zx_status_t SetMute(bool mute);
@@ -42,7 +47,7 @@ class AudioDeviceStream {
   bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_); }
 
   const char* name() const { return name_; }
-  bool input() const { return input_; }
+  bool input() const { return direction_ == StreamDirection::kInput; }
   uint32_t frame_rate() const { return frame_rate_; }
   uint32_t sample_size() const { return sample_size_; }
   uint32_t channel_cnt() const { return channel_cnt_; }
@@ -61,15 +66,15 @@ class AudioDeviceStream {
                            bool enable_notify) const;
   void DisablePlugNotifications();
 
-  AudioDeviceStream(bool input, uint32_t dev_id);
-  AudioDeviceStream(bool input, const char* dev_path);
+  AudioDeviceStream(StreamDirection direction, uint32_t dev_id);
+  AudioDeviceStream(StreamDirection direction, const char* dev_path);
   virtual ~AudioDeviceStream();
 
   zx::channel stream_ch_;
   zx::channel rb_ch_;
   zx::vmo rb_vmo_;
 
-  const bool input_;
+  const StreamDirection direction_;
   char name_[64] = {0};
 
   audio_sample_format_t sample_format_;
