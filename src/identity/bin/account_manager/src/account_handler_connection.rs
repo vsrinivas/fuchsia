@@ -126,8 +126,8 @@ impl AccountHandlerConnection {
             .load_account(context_client_end, account_id.clone().as_mut().into()).await
         .account_manager_status(Status::IoError)?
         {
-            Status::Ok => Ok(connection),
-            stat => Err(AccountManagerError::new(stat)
+            Ok(()) => Ok(connection),
+            Err(err) => Err(Into::<AccountManagerError>::into(err)
                 .with_cause(format_err!("Error loading existing account"))),
         }
     }
@@ -147,12 +147,12 @@ impl AccountHandlerConnection {
             .create_account(context_client_end, account_id.clone().as_mut().into()).await
         .account_manager_status(Status::IoError)?
         {
-            Status::Ok => {
+            Ok(()) => {
                 // TODO(jsankey): Longer term, local ID may need to be related to the global ID
                 // rather than just a random number.
                 Ok((connection, account_id))
             }
-            status => Err(AccountManagerError::new(status)
+            Err(err) => Err(Into::<AccountManagerError>::into(err)
                 .with_cause(format_err!("Account handler returned error"))),
         }
     }

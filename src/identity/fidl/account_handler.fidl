@@ -6,6 +6,7 @@ library fuchsia.auth.account.internal;
 
 using fuchsia.auth;
 using fuchsia.auth.account;
+using fuchsia.identity.account;
 
 /// The control channel for an AccountHandler component.
 ///
@@ -25,13 +26,10 @@ protocol AccountHandlerControl {
     /// `context` An `AccountHandlerContext` that can supply account and
     ///           authentication services and contextual state.
     /// `id` The new account's local identifier.
-    ///
-    /// Returns: `status` A `Status` indicating whether the operation was
-    ///                   successful
     CreateAccount(
         AccountHandlerContext context,
         fuchsia.auth.account.LocalAccountId id)
-        -> (fuchsia.auth.account.Status status);
+        -> () error fuchsia.identity.account.Error;
 
     /// Loads information about a Fuchsia account that was previously provisioned
     /// on the current device.
@@ -39,13 +37,10 @@ protocol AccountHandlerControl {
     /// `context` An `AccountHandlerContext` that can supply account and
     ///           authentication services and contextual state.
     /// `id` The account's local identifier.
-    ///
-    /// Returns: `status` A `Status` indicating whether the operation was
-    ///                   successful
     LoadAccount(
         AccountHandlerContext context,
         fuchsia.auth.account.LocalAccountId id)
-        -> (fuchsia.auth.account.Status status);
+        -> () error fuchsia.identity.account.Error;
 
     /// Deletes all persistent information about the Fuchsia account handled by
     /// this handler, including all credentials and global identifiers.
@@ -58,10 +53,7 @@ protocol AccountHandlerControl {
     ///         credentials fails. If false, any revocation failure will result
     ///         in an error and the account will remain. In this case, a subset
     ///         of the credentials may have been deleted.
-    ///
-    /// Returns: `status` A `Status` indicating whether the operation was
-    ///                   successful
-    RemoveAccount(bool force) -> (fuchsia.auth.account.Status status);
+    RemoveAccount(bool force) -> () error fuchsia.identity.account.Error;
 
     // TODO(jsankey): Add methods to cover adding an existing account and
     // handling an account where the disk is not yet decrypted.
@@ -75,13 +67,10 @@ protocol AccountHandlerControl {
     ///                    supplying UI contexts used for interactive
     ///                    authentication on this account
     /// `account` The server end of an `Account` channel
-    ///
-    /// Returns: `status` A `Status` indicating whether the operation was
-    ///                   successful
     GetAccount(
         fuchsia.auth.AuthenticationContextProvider auth_context_provider,
         request<fuchsia.auth.account.Account> account)
-        -> (fuchsia.auth.account.Status status);
+        -> () error fuchsia.identity.account.Error;
 
     /// Signals that the AccountHandler should tear itself down. After the
     /// receiver responds by closing its handle, the caller may terminate the
@@ -103,10 +92,7 @@ protocol AccountHandlerContext {
     /// `auth_provider_type` An OAuth identity provider matching a configuration
     ///                      set in an AuthProviderConfig.auth_provider_type
     /// `auth_provider` The server end of an `AuthProvider` channel
-    ///
-    /// Returns: `status` A `Status` indicating whether the operation was
-    ///                   successful
     GetAuthProvider(string auth_provider_type,
                     request<fuchsia.auth.AuthProvider> auth_provider)
-        -> (fuchsia.auth.account.Status status);
+        -> () error fuchsia.identity.account.Error;
 };

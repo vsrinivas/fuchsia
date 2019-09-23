@@ -228,12 +228,14 @@ impl AccountManager {
             }
         };
 
-        account_handler.proxy().get_account(auth_context_provider, account).await.unwrap_or_else(
-            |err| {
+        match account_handler.proxy().get_account(auth_context_provider, account).await {
+            Ok(Ok(())) => Status::Ok,
+            Ok(Err(err)) => Into::<AccountManagerError>::into(err).status,
+            Err(err) => {
                 warn!("Failure calling get account: {:?}", err);
                 Status::IoError
-            },
-        )
+            }
+        }
     }
 
     async fn register_account_listener(
@@ -273,8 +275,8 @@ impl AccountManager {
                 Err(err) => return err.status,
             };
         match account_handler.proxy().remove_account(force).await {
-            Ok(Status::Ok) => account_handler.terminate().await,
-            Ok(status) => return status,
+            Ok(Ok(())) => account_handler.terminate().await,
+            Ok(Err(err)) => return Into::<AccountManagerError>::into(err).status,
             Err(_) => return Status::IoError,
         };
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need
@@ -375,12 +377,7 @@ impl AccountManager {
         // Use account handler to get a channel to the account
         let (account_client_end, account_server_end) =
             create_endpoints().account_manager_status(Status::IoError)?;
-        match account_handler.proxy().get_account(auth_context_provider, account_server_end).await
-        {
-            Ok(Status::Ok) => Ok(()),
-            Ok(status) => Err(AccountManagerError::new(status)),
-            Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
-        }?;
+        account_handler.proxy().get_account(auth_context_provider, account_server_end).await??;
         let account_proxy =
             account_client_end.into_proxy().account_manager_status(Status::IoError)?;
 

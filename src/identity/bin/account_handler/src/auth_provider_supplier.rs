@@ -48,9 +48,11 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
                 .get_auth_provider(auth_provider_type, server_end)
                 .await
             {
-                Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
-                Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                    .with_cause(format_err!("AccountHandlerContext returned {:?}", stat))),
+                Ok(Ok(())) => Ok(client_end),
+                Ok(Err(status)) => {
+                    Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                        .with_cause(format_err!("AccountHandlerContext returned {:?}", status)))
+                }
                 Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
             }
         }))
@@ -94,10 +96,10 @@ mod tests {
     }
 
     /// Spawns a trivial task to respond to the first AccountHandlerContextRequest with the
-    /// supplied status, only if the first request is a get request for TEST_AUTH_PROVIDER_TYPE
+    /// supplied result, only if the first request is a get request for TEST_AUTH_PROVIDER_TYPE
     fn spawn_account_handler_context_server(
         server_end: ServerEnd<AccountHandlerContextMarker>,
-        status: fidl_fuchsia_auth_account::Status,
+        mut result: Result<(), fidl_fuchsia_identity_account::Error>,
     ) {
         fasync::spawn(async move {
             let mut request_stream = server_end.into_stream().unwrap();
@@ -109,7 +111,7 @@ mod tests {
             })) = request_stream.try_next().await
             {
                 if auth_provider_type == TEST_AUTH_PROVIDER_TYPE {
-                    responder.send(status).expect("Failed to send test response");
+                    responder.send(&mut result).expect("Failed to send test response");
                 }
             }
         });
@@ -120,7 +122,7 @@ mod tests {
         let executor = fasync::Executor::new().expect("Failed to create executor");
         let (client_end, server_end) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
 
-        spawn_account_handler_context_server(server_end, fidl_fuchsia_auth_account::Status::Ok);
+        spawn_account_handler_context_server(server_end, Ok(()));
         do_get_test(executor, client_end, None);
     }
 
@@ -131,7 +133,7 @@ mod tests {
 
         spawn_account_handler_context_server(
             server_end,
-            fidl_fuchsia_auth_account::Status::NotFound,
+            Err(fidl_fuchsia_identity_account::Error::NotFound),
         );
         do_get_test(executor, client_end, Some(Status::AuthProviderServiceUnavailable));
     }

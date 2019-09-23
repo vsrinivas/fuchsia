@@ -5,7 +5,6 @@
 use failure::Error;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker};
-use fidl_fuchsia_auth_account::Status;
 use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextRequest, AccountHandlerContextRequestStream,
 };
@@ -55,7 +54,8 @@ impl AccountHandlerContext {
                 auth_provider_type,
                 auth_provider,
                 responder,
-            } => responder.send(self.get_auth_provider(&auth_provider_type, auth_provider).await),
+            } => responder.send(
+                &mut self.get_auth_provider(&auth_provider_type, auth_provider).await)
         }
     }
 
@@ -63,13 +63,11 @@ impl AccountHandlerContext {
         &'a self,
         auth_provider_type: &'a str,
         auth_provider: ServerEnd<AuthProviderMarker>,
-    ) -> Status {
+    ) -> Result<(), fidl_fuchsia_identity_account::Error> {
         match self.auth_provider_connections.get(auth_provider_type) {
-            Some(apc) => match apc.connect(auth_provider).await {
-                Ok(()) => Status::Ok,
-                Err(_) => Status::UnknownError,
-            },
-            None => Status::NotFound,
+            Some(apc) => apc.connect(auth_provider).await
+                .map_err(|_| fidl_fuchsia_identity_account::Error::Unknown),
+            None => Err(fidl_fuchsia_identity_account::Error::NotFound),
         }
     }
 }

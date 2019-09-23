@@ -50,8 +50,30 @@ impl AccountManagerError {
     }
 }
 
+impl From<fidl::Error> for AccountManagerError {
+    fn from(error: fidl::Error) -> Self {
+        AccountManagerError::new(Status::IoError).with_cause(error)
+    }
+}
+
 impl From<Status> for AccountManagerError {
     fn from(status: Status) -> Self {
+        AccountManagerError::new(status)
+    }
+}
+
+impl From<fidl_fuchsia_identity_account::Error> for AccountManagerError {
+    fn from(error: fidl_fuchsia_identity_account::Error) -> Self {
+        let status = match error {
+            fidl_fuchsia_identity_account::Error::Unknown => Status::UnknownError,
+            fidl_fuchsia_identity_account::Error::Internal => Status::InternalError,
+            fidl_fuchsia_identity_account::Error::UnsupportedOperation => Status::InternalError,
+            fidl_fuchsia_identity_account::Error::InvalidRequest => Status::InvalidRequest,
+            fidl_fuchsia_identity_account::Error::Resource => Status::IoError,
+            fidl_fuchsia_identity_account::Error::Network => Status::NetworkError,
+            fidl_fuchsia_identity_account::Error::NotFound => Status::NotFound,
+            fidl_fuchsia_identity_account::Error::RemovalInProgress => Status::RemovalInProgress,
+        };
         AccountManagerError::new(status)
     }
 }
@@ -80,6 +102,24 @@ impl From<TokenManagerStatus> for AccountManagerError {
     }
 }
 
+// This is a utility for converting to the fuchsia.identity.account.Error
+// enum during the period that fuchsia.identity.account and
+// fuchsia.auth.account need to coexist.
+impl Into<fidl_fuchsia_identity_account::Error> for AccountManagerError {
+    fn into(self) -> fidl_fuchsia_identity_account::Error {
+        match self.status {
+            Status::Ok
+            | Status::InternalError => fidl_fuchsia_identity_account::Error::Internal,
+            Status::InvalidRequest => fidl_fuchsia_identity_account::Error::InvalidRequest,
+            Status::IoError => fidl_fuchsia_identity_account::Error::Resource,
+            Status::NetworkError => fidl_fuchsia_identity_account::Error::Network,
+            Status::NotFound => fidl_fuchsia_identity_account::Error::NotFound,
+            Status::UnknownError => fidl_fuchsia_identity_account::Error::Unknown,
+            Status::RemovalInProgress => fidl_fuchsia_identity_account::Error::RemovalInProgress,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,11 +142,37 @@ mod tests {
     }
 
     #[test]
+    fn test_from_fidl_error() {
+        let error: AccountManagerError = fidl::Error::UnexpectedSyncResponse.into();
+        assert_eq!(error.status, Status::IoError);
+        assert!(!error.fatal);
+        assert_eq!(
+            format!("{:?}", error.cause.unwrap()),
+            format!("{:?}", fidl::Error::UnexpectedSyncResponse),
+        );
+    }
+
+    #[test]
     fn test_from_status() {
         let error: AccountManagerError = TEST_STATUS.into();
         assert_eq!(error.status, TEST_STATUS);
         assert!(!error.fatal);
         assert!(error.cause.is_none());
+    }
+
+    #[test]
+    fn test_from_identity_error() {
+        let error: AccountManagerError = fidl_fuchsia_identity_account::Error::Unknown.into();
+        assert_eq!(error.status, Status::UnknownError);
+        assert!(!error.fatal);
+        assert!(error.cause.is_none());
+    }
+
+    #[test]
+    fn test_to_identity_error() {
+        let manager_error = AccountManagerError::new(Status::InternalError);
+        let error: fidl_fuchsia_identity_account::Error = manager_error.into();
+        assert_eq!(error, fidl_fuchsia_identity_account::Error::Internal);
     }
 
     #[test]
