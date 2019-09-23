@@ -8,7 +8,7 @@ writing a program that uses stash is available [here](stash.md).
 
 ## Building
 
-This project can be added to builds by including `--with //garnet/bin/stash` to
+This project can be added to builds by including `--with //src/sys/stash` to
 the `fx set` invocation.
 
 ## Running
