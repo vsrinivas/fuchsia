@@ -144,7 +144,7 @@ func (kind bodyElement) String() string {
 type body struct {
 	Type              string
 	Value             ir.Value
-	Bytes             []byte
+	Bytes             map[ir.WireFormat][]byte
 	Err               ir.ErrorCode
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
@@ -161,48 +161,58 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			encodeSuccess := ir.EncodeSuccess{
-				Name:              name,
-				Value:             body.Value,
-				Bytes:             body.Bytes,
-				BindingsAllowlist: body.BindingsAllowlist,
-				BindingsDenylist:  body.BindingsDenylist,
+			for wf, b := range body.Bytes {
+				encodeSuccess := ir.EncodeSuccess{
+					Name:              name,
+					WireFormat:        wf,
+					Value:             body.Value,
+					Bytes:             b,
+					BindingsAllowlist: body.BindingsAllowlist,
+					BindingsDenylist:  body.BindingsDenylist,
+				}
+				all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
+				decodeSuccess := ir.DecodeSuccess{
+					Name:              name,
+					WireFormat:        wf,
+					Value:             body.Value,
+					Bytes:             b,
+					BindingsAllowlist: body.BindingsAllowlist,
+					BindingsDenylist:  body.BindingsDenylist,
+				}
+				all.DecodeSuccess = append(all.DecodeSuccess, decodeSuccess)
 			}
-			all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
-			decodeSuccess := ir.DecodeSuccess{
-				Name:              name,
-				Value:             body.Value,
-				Bytes:             body.Bytes,
-				BindingsAllowlist: body.BindingsAllowlist,
-				BindingsDenylist:  body.BindingsDenylist,
-			}
-			all.DecodeSuccess = append(all.DecodeSuccess, decodeSuccess)
 		},
 	},
 	"encode_success": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
-			result := ir.EncodeSuccess{
-				Name:              name,
-				Value:             body.Value,
-				Bytes:             body.Bytes,
-				BindingsAllowlist: body.BindingsAllowlist,
+			for wf, b := range body.Bytes {
+				result := ir.EncodeSuccess{
+					Name:              name,
+					WireFormat:        wf,
+					Value:             body.Value,
+					Bytes:             b,
+					BindingsAllowlist: body.BindingsAllowlist,
+				}
+				all.EncodeSuccess = append(all.EncodeSuccess, result)
 			}
-			all.EncodeSuccess = append(all.EncodeSuccess, result)
 		},
 	},
 	"decode_success": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
-			result := ir.DecodeSuccess{
-				Name:              name,
-				Value:             body.Value,
-				Bytes:             body.Bytes,
-				BindingsAllowlist: body.BindingsAllowlist,
+			for wf, b := range body.Bytes {
+				result := ir.DecodeSuccess{
+					Name:              name,
+					WireFormat:        wf,
+					Value:             body.Value,
+					Bytes:             b,
+					BindingsAllowlist: body.BindingsAllowlist,
+				}
+				all.DecodeSuccess = append(all.DecodeSuccess, result)
 			}
-			all.DecodeSuccess = append(all.DecodeSuccess, result)
 		},
 	},
 	"encode_failure": {
@@ -211,6 +221,7 @@ var sections = map[string]sectionMetadata{
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
 				Name:              name,
+				WireFormat:        ir.FidlWireFormat,
 				Value:             body.Value,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
@@ -223,15 +234,18 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			result := ir.DecodeFailure{
-				Name:              name,
-				Type:              body.Type,
-				Bytes:             body.Bytes,
-				Err:               body.Err,
-				BindingsAllowlist: body.BindingsAllowlist,
-				BindingsDenylist:  body.BindingsDenylist,
+			for wf, b := range body.Bytes {
+				result := ir.DecodeFailure{
+					Name:              name,
+					WireFormat:        wf,
+					Type:              body.Type,
+					Bytes:             b,
+					Err:               body.Err,
+					BindingsAllowlist: body.BindingsAllowlist,
+					BindingsDenylist:  body.BindingsDenylist,
+				}
+				all.DecodeFailure = append(all.DecodeFailure, result)
 			}
-			all.DecodeFailure = append(all.DecodeFailure, result)
 		},
 	},
 }
@@ -335,7 +349,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		result.Value = val
 		kind = isValue
 	case "bytes":
-		bytes, err := p.parseBytes()
+		bytes, err := p.parseByteSection()
 		if err != nil {
 			return err
 		}
@@ -520,7 +534,49 @@ func (p *Parser) parseTextSlice() ([]string, error) {
 	}
 }
 
-func (p *Parser) parseBytes() ([]byte, error) {
+func (p *Parser) parseByteSection() (map[ir.WireFormat][]byte, error) {
+	if p.peekToken(tLsquare) {
+		if b, err := p.parseByteList(); err == nil {
+			return map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: b,
+			}, nil
+		} else {
+			return nil, err
+		}
+
+	}
+	if tok, ok := p.consumeToken(tLacco); !ok {
+		return nil, p.failExpectedToken(tLacco, tok)
+	}
+	res := map[ir.WireFormat][]byte{}
+	for !p.peekToken(tRacco) {
+		tok, ok := p.consumeToken(tText)
+		if !ok {
+			return nil, p.failExpectedToken(tText, tok)
+		}
+		if teq, ok := p.consumeToken(tEqual); !ok {
+			return nil, p.failExpectedToken(tEqual, teq)
+		}
+		b, err := p.parseByteList()
+		if err != nil {
+			return nil, err
+		}
+		wf, err := ir.ParseWireFormat(tok.value)
+		if err != nil {
+			return nil, err
+		}
+		res[wf] = b
+		if tok, ok := p.consumeToken(tComma); !ok {
+			return nil, p.failExpectedToken(tComma, tok)
+		}
+	}
+	if tok, ok := p.consumeToken(tRacco); !ok {
+		return nil, p.failExpectedToken(tRacco, tok)
+	}
+	return res, nil
+}
+
+func (p *Parser) parseByteList() ([]byte, error) {
 	if tok, ok := p.consumeToken(tLsquare); !ok {
 		return nil, p.failExpectedToken(tLsquare, tok)
 	}
@@ -614,8 +670,8 @@ func (err *parseError) Error() string {
 	return fmt.Sprintf("%s:%d:%d: %s", err.input, err.line, err.column, err.message)
 }
 
-func (p *Parser) failExpectedToken(expected tokenKind, found token) error {
-	return p.newParseError(found, "expected %s found %s", expected, found)
+func (p *Parser) failExpectedToken(want tokenKind, got token) error {
+	return p.newParseError(got, "unexpected tokenKind: want %q, got %q (value: %q)", want, got.kind, got.value)
 }
 
 func (p *Parser) newParseError(tok token, format string, a ...interface{}) error {
