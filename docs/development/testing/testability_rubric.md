@@ -109,6 +109,11 @@ receiving Testability+1.
     for introducing testability to the code, and this is explicitly documented
     by the author, then Testability reviewers may exercise discretion and take
     an IOU.
+*   **Manual tests.** Manual tests are often themselves used to test or
+    demonstrate functionality that is hard to test in an automated fashion.
+    Additions or modifications to manual tests therefore do not require
+    automated tests. However, it is strongly recommended that manual tests be
+    paired with a README.md or TESTING.md document describing how to run them.
 
 ## Temporary testability exemptions
 
