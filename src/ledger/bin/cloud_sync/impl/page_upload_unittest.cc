@@ -485,5 +485,37 @@ TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
   RunLoopUntilIdle();
 }
 
+// Verifies that if upload fails when sending the object, we don't create a new batch and call
+// GetUnsyncedCommits again.
+TEST_F(PageUploadTest, RetryOnError) {
+  storage_.NewCommit("id", "content");
+  auto id = encryption_service_.MakeObjectIdentifier(storage_.GetObjectIdentifierFactory(),
+                                                     storage::ObjectDigest("obj_digest"));
+  storage_.unsynced_objects_to_return[id] =
+      std::make_unique<storage::fake::FakePiece>(id, "obj_data");
+
+  int failed_upload_count = 30;
+  page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
+  // Fail the upload |failed_upload_count| times.
+  SetOnNewStateCallback([this, &failed_upload_count] {
+    if (states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
+      ASSERT_GE(failed_upload_count, 0);
+      failed_upload_count--;
+      if (failed_upload_count == 0) {
+        page_cloud_.object_status_to_return = cloud_provider::Status::OK;
+      }
+    }
+  });
+  page_upload_->StartOrRestartUpload();
+  RunLoopFor(kBackoffInterval * 30);
+
+  EXPECT_EQ(failed_upload_count, 0);
+  // GetUnsyncedCommits should be called twice: once when creating the batch and once just before
+  // uploading the commits.
+  EXPECT_EQ(storage_.get_unsynced_commits_calls, 2u);
+  EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
+  EXPECT_EQ(states_.back(), UploadSyncState::UPLOAD_IDLE);
+}
+
 }  // namespace
 }  // namespace cloud_sync

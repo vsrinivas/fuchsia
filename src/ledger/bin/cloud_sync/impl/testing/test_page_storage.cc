@@ -122,6 +122,7 @@ void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* watcher) {
 void TestPageStorage::GetUnsyncedCommits(
     fit::function<void(ledger::Status, std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
+  get_unsynced_commits_calls++;
   if (should_fail_get_unsynced_commits) {
     async::PostTask(dispatcher_,
                     [callback = std::move(callback)] { callback(ledger::Status::IO_ERROR, {}); });

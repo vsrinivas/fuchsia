@@ -86,6 +86,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::vector<fit::closure> delayed_add_commit_confirmations;
 
   unsigned int add_commits_from_sync_calls = 0u;
+  unsigned int get_unsynced_commits_calls = 0u;
 
   storage::PageSyncDelegate* page_sync_delegate_;
   std::set<storage::CommitId> commits_marked_as_synced;

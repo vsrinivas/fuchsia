@@ -81,11 +81,16 @@ void PageUpload::UploadUnsyncedCommits() {
 
   SetState(UPLOAD_PENDING);
 
-  // Retrieve the  of the existing unsynced commits and enqueue them for
-  // upload.
-  // TODO(ppi): either switch to a paginating API or (better?) ensure that long
-  // backlogs of local commits are squashed in storage, as otherwise the list of
-  // commits can be possibly very big.
+  // We are already uploading some commits.
+  if (batch_upload_) {
+    SetState(UPLOAD_IN_PROGRESS);
+    batch_upload_->Retry();
+    return;
+  }
+
+  // Retrieve the list of existing unsynced commits and enqueue them for upload.
+  // TODO(ppi): either switch to a paginating API or (better?) ensure that long backlogs of local
+  // commits are squashed in storage, as otherwise the list of commits can be possibly very big.
   storage_->GetUnsyncedCommits(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](ledger::Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
@@ -153,7 +158,6 @@ void PageUpload::HandleUnsyncedCommits(
             FXL_LOG(WARNING) << log_prefix_
                              << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
-            batch_upload_.reset();
             PreviousState();
             RetryWithBackoff([this] { NextState(); });
           } break;
