@@ -409,7 +409,7 @@ bitflags! {
     pub struct ConfigurationInterfaceFlags: u32 {
         const ETHERNET = 1 << 0;
         const WIFI = 1 << 1;
-        const DEFAULT = Self::ETHERNET.bits | Self::WIFI.bits;
+        const DEFAULT = Self::WIFI.bits;
     }
 }
 

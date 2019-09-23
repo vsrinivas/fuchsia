@@ -20,6 +20,33 @@ use {
 
 const ENV_NAME: &str = "settings_service_setup_test_environment";
 
+// Ensures the default value returned is WiFi.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_setup_default() {
+    let mut fs = ServiceFs::new();
+
+    let storage_factory = Box::new(InMemoryStorageFactory::create());
+
+    create_fidl_service(
+        fs.root_dir(),
+        [SettingType::Setup].iter().cloned().collect(),
+        Arc::new(RwLock::new(ServiceContext::new(None))),
+        storage_factory,
+    );
+
+    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+    fasync::spawn(fs.collect());
+
+    let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+
+    // Ensure retrieved value matches default value
+    let settings = setup_service.watch().await.expect("watch completed");
+    assert_eq!(
+        settings.enabled_configuration_interfaces,
+        Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
+    );
+}
+
 // Setup doesn't rely on any service yet. In the future this test will be
 // updated to verify restart request is made on interface change.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -32,8 +59,16 @@ async fn test_setup() {
     // Prepopulate initial value
     {
         let mut store_lock = store.lock().await;
+        // Ethernet and WiFi is written out as initial value since the default
+        // is currently WiFi only.
         assert!(store_lock
-            .write(SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::WIFI }, false)
+            .write(
+                SetupInfo {
+                    configuration_interfaces: ConfigurationInterfaceFlags::WIFI
+                        | ConfigurationInterfaceFlags::ETHERNET
+                },
+                false
+            )
             .await
             .is_ok());
     }
@@ -54,7 +89,10 @@ async fn test_setup() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.enabled_configuration_interfaces,
-        Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
+        Some(
+            fidl_fuchsia_settings::ConfigurationInterfaces::Wifi
+                | fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet
+        )
     );
 
     let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
