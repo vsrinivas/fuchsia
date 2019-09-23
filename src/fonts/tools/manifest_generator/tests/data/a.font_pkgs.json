@@ -1,0 +1,45 @@
+{
+  "version": "1",
+  "packages": [
+    {
+      "file_name": "AlphaSans-Regular.ttf",
+      "safe_name": "alphasans-regular-ttf",
+      "path_prefix": "alpha"
+    },
+    {
+      "file_name": "AlphaSans-Bold.ttf",
+      "safe_name": "alphasans-bold-ttf",
+      "path_prefix": "alpha"
+    },
+    {
+      "file_name": "AlphaSans-BoldItalic.ttf",
+      "safe_name": "alphasans-bolditalic-ttf",
+      "path_prefix": "alpha"
+    },
+    {
+      "file_name": "AlphaSans-Italic.ttf",
+      "safe_name": "alphasans-italic-ttf",
+      "path_prefix": "alpha"
+    },
+    {
+      "file_name": "BetaSans-Regular.ttf",
+      "safe_name": "betasans-regular-ttf",
+      "path_prefix": "beta"
+    },
+    {
+      "file_name": "BetaSans-Bold.ttf",
+      "safe_name": "betasans-bold-ttf",
+      "path_prefix": "beta"
+    },
+    {
+      "file_name": "BetaSans-BoldItalic.ttf",
+      "safe_name": "betasans-bolditalic-ttf",
+      "path_prefix": "beta"
+    },
+    {
+      "file_name": "BetaSans-Italic.ttf",
+      "safe_name": "betasans-italic-ttf",
+      "path_prefix": "beta"
+    }
+  ]
+}

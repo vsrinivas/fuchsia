@@ -94,9 +94,9 @@ pub struct LocalFileLocator {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct PackageLocator {
     /// URL of just the package (not including the file name)
-    pub package: PkgUrl,
+    pub url: PkgUrl,
     /// Type of package
-    pub package_set: PackageSet,
+    pub set: PackageSet,
 }
 
 /// Describes which set of dependencies a font package belongs to.

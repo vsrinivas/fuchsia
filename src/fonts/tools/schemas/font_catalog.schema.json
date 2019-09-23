@@ -1,0 +1,146 @@
+{
+  "$id": "http://fuchsia.com/src/fonts/tools/schemas/font_catalog.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "A manually written listing of font families and assets that can be used for generating a font manifest.\nRecommended extension: .font_catalog.json",
+  "type": "object",
+  "definitions": {
+    "asset": {
+      "type": "object",
+      "required": [
+        "file_name",
+        "typefaces"
+      ],
+      "properties": {
+        "file_name": {
+          "type": "string",
+          "pattern": "^[^/]+\\.[^/]+$",
+          "description": "The name of the font file",
+          "examples": [
+            "Roboto-Regular.ttf",
+            "NotoSans-CJK.ttc"
+          ]
+        },
+        "typefaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typeface"
+          },
+          "minItems": 1,
+          "description": "A list of the typefaces in this file. If there's only one typeface, `index` is optional."
+        }
+      }
+    },
+    "typeface": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "The index of the typeface within a multi-font file (e.g. TrueType Collections [.ttc])"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 500
+        },
+        "width": {
+          "type": "string",
+          "enum": [
+            "ultra-condensed",
+            "extra-condensed",
+            "condensed",
+            "semi-condensed",
+            "normal",
+            "semi-expanded",
+            "expanded",
+            "extra-expanded",
+            "ultra-expanded"
+          ]
+        },
+        "slant": {
+          "type": "string",
+          "enum": [
+            "upright",
+            "italic",
+            "oblique"
+          ],
+          "default": "upright"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "$comment": "The pattern is not very precise.",
+            "pattern": "^[A-Za-z0-9\\-]+$",
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "family": {
+      "required": [
+        "name",
+        "assets"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minItems": 1
+          }
+        },
+        "fallback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this font family serves as a fallback"
+        },
+        "generic_family": {
+          "type": "string",
+          "enum": [
+            "serif",
+            "sans-serif",
+            "cursive",
+            "fantasy",
+            "monospace",
+            "system-ui",
+            "emoji",
+            "math",
+            "fangsong"
+          ]
+        },
+        "assets" : {
+          "type": "array",
+          "description": "List of font assets in the family",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/asset"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "version",
+    "families"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "minimum": 1
+    },
+    "families": {
+      "type": "array",
+      "description": "List of font families",
+      "items": {
+        "$ref": "#/definitions/family"
+      }
+    }
+  }
+}

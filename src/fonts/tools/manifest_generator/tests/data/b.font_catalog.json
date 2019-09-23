@@ -1,0 +1,46 @@
+{
+  "version": "1",
+  "families": [
+    {
+      "name": "Beta Sans",
+      "aliases": [
+        "BetaSans",
+        "Beta",
+        "β Sans"
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "BetaSans-Regular.ttf",
+          "typefaces": [
+            {
+              "languages": [
+                "en"
+              ]
+            }
+          ]
+        },
+        {
+          "file_name": "BetaSans-Condensed.ttf",
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "width": "condensed"
+            },
+            {
+              "index": 1,
+              "languages": [
+                "ar"
+              ],
+              "width": "condensed"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

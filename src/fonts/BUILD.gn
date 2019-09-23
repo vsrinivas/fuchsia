@@ -17,6 +17,7 @@ group("tests") {
     "font_info:tests",
     "manifest:tests",
     "offset_string:tests",
+    "tools:tests",
   ]
 }
 

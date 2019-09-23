@@ -1,0 +1,227 @@
+{
+  "version": "2",
+  "families": [
+    {
+      "name": "Alpha Sans",
+      "aliases": [
+        "Alpha",
+        "AlphaSans"
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "AlphaSans-Bold.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bold-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "upright",
+              "weight": 700,
+              "width": "normal",
+              "code_points": "0,45+1,19+1,17,14,3,2,2,4,2+2,3+1"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaSans-BoldItalic.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bolditalic-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "italic",
+              "weight": 700,
+              "width": "normal",
+              "code_points": "0,45+1,19+1,7,10,14,2+1,2,2+1,3,2+2,3+1"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaSans-Italic.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-italic-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "italic",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0,45+1,19,8,10,14,2,3,2+1,3,2,2,3+1"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaSans-Regular.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-regular-ttf",
+              "set": "base"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0,45+1,19,17+1,14,4+3,4,2,2,2+3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Beta Sans",
+      "aliases": [
+        "Beta",
+        "BetaSans",
+        "β Sans"
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "BetaSans-Bold.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bold-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "upright",
+              "weight": 700,
+              "width": "normal",
+              "code_points": "0,45+1,20,17,14,3+2,6,2+1,4+1"
+            }
+          ]
+        },
+        {
+          "file_name": "BetaSans-BoldItalic.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bolditalic-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "italic",
+              "weight": 700,
+              "width": "normal",
+              "code_points": "0,45+1,20,7,10,14,2+3,3,3,2+1,4+1"
+            }
+          ]
+        },
+        {
+          "file_name": "BetaSans-Condensed.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-condensed-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "condensed",
+              "code_points": "0,45+1,20+1,16,14,3+2,8+1,4+1"
+            },
+            {
+              "index": 1,
+              "languages": [
+                "ar"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "condensed",
+              "code_points": "1,44+1,20+1,16,14,3+2,8+1,4+1"
+            }
+          ]
+        },
+        {
+          "file_name": "BetaSans-Italic.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-italic-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "italic",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0,45+1,20,7,10,14,2,2+1,3,3,2,5+1"
+            }
+          ]
+        },
+        {
+          "file_name": "BetaSans-Regular.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-regular-ttf",
+              "set": "base"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "en"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0,45+1,20,16+1,14,4+2,5,2,4+3"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

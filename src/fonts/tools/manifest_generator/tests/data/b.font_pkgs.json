@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "packages": [
+    {
+      "file_name": "BetaSans-Regular.ttf",
+      "safe_name": "betasans-regular-ttf",
+      "path_prefix": "beta"
+    },
+    {
+      "file_name": "BetaSans-Condensed.ttf",
+      "safe_name": "betasans-condensed-ttf",
+      "path_prefix": "beta"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "base": [
+    "AlphaSans-Regular.ttf",
+    "BetaSans-Regular.ttf"
+  ],
+  "universe": [
+    "AlphaSans-Bold.ttf",
+    "AlphaSans-BoldItalic.ttf",
+    "AlphaSans-Italic.ttf",
+    "BetaSans-Bold.ttf",
+    "BetaSans-BoldItalic.ttf",
+    "BetaSans-Italic.ttf",
+    "BetaSans-Condensed.ttf"
+  ]
+}
