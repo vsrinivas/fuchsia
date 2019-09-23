@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/index2.h"
-
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -12,24 +10,25 @@
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_scanner2.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 
 namespace zxdb {
 
 namespace {
 
 // Stores a name with a DieRef for later indexing.
-class NamedDieRef : public IndexNode2::DieRef {
+class NamedDieRef : public IndexNode::DieRef {
  public:
   NamedDieRef() = default;
 
   // Creates a DieRef we should index. The pointed-to string must outlive this class.
-  NamedDieRef(bool is_decl, uint32_t offset, IndexNode2::Kind k, const char* name,
+  NamedDieRef(bool is_decl, uint32_t offset, IndexNode::Kind k, const char* name,
               uint32_t decl_offset)
       : DieRef(is_decl, offset), kind_(k), name_(name), decl_offset_(decl_offset) {}
 
-  bool should_index() const { return kind_ != IndexNode2::Kind::kNone; }
+  bool should_index() const { return kind_ != IndexNode::Kind::kNone; }
 
-  IndexNode2::Kind kind() const { return kind_; }
+  IndexNode::Kind kind() const { return kind_; }
 
   // The name associated with the DIE. Could be null.
   //
@@ -46,14 +45,14 @@ class NamedDieRef : public IndexNode2::DieRef {
 
   // The indexing layer uses this to cache the node found for a given thing. This allows us to
   // bypass lookup for the common case of things that are all in the same scope.
-  IndexNode2* index_node() const { return index_node_; }
-  void set_index_node(IndexNode2* n) { index_node_ = n; }
+  IndexNode* index_node() const { return index_node_; }
+  void set_index_node(IndexNode* n) { index_node_ = n; }
 
  private:
-  IndexNode2::Kind kind_ = IndexNode2::Kind::kNone;
+  IndexNode::Kind kind_ = IndexNode::Kind::kNone;
   const char* name_ = nullptr;
   uint32_t decl_offset_ = 0;
-  IndexNode2* index_node_ = nullptr;
+  IndexNode* index_node_ = nullptr;
 };
 
 // Returns true if the given abbreviation defines a PC range.
@@ -74,11 +73,11 @@ bool AbbrevHasLocation(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   return false;
 }
 
-size_t RecursiveCountDies(const IndexNode2& node) {
+size_t RecursiveCountDies(const IndexNode& node) {
   size_t result = node.dies().size();
 
-  for (int i = 0; i < static_cast<int>(IndexNode2::Kind::kEndPhysical); i++) {
-    for (const auto& pair : node.MapForKind(static_cast<IndexNode2::Kind>(i)))
+  for (int i = 0; i < static_cast<int>(IndexNode::Kind::kEndPhysical); i++) {
+    for (const auto& pair : node.MapForKind(static_cast<IndexNode::Kind>(i)))
       result += RecursiveCountDies(pair.second);
   }
   return result;
@@ -116,22 +115,22 @@ class UnitIndexer {
   // To use, first call Scan() to populate the indexable_ array, then call Index() to add the
   // items to the given index node root. The Scan pass will additionally add any entrypoint
   // functions it finds to the main_functions vector.
-  void Scan(std::vector<IndexNode2::DieRef>* main_functions);
-  void Index(IndexNode2* root);
+  void Scan(std::vector<IndexNode::DieRef>* main_functions);
+  void Index(IndexNode* root);
 
  private:
   // Returns kNone for non-indexable items.
   //
   // The kVar case is also returned for collection members. These need to be treated as variables
   // when they have const data, but not otherwise, and this function does not decode the attributes.
-  IndexNode2::Kind GetKindForDie(const llvm::DWARFDebugInfoEntry* die) const;
+  IndexNode::Kind GetKindForDie(const llvm::DWARFDebugInfoEntry* die) const;
 
   // Computes in the name and type for a DIE entry that wasn't filled in in the first pass (see
   // class-level comment). Returns empty string if there is no name (this is important for the
   // caller, see that code for more).
   const char* GetDieName(uint32_t index);
 
-  void AddEntryToIndex(uint32_t index_me, IndexNode2* root);
+  void AddEntryToIndex(uint32_t index_me, IndexNode* root);
 
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
@@ -150,7 +149,7 @@ class UnitIndexer {
 };
 
 // The symbol storage will be filled with the indexable entries.
-void UnitIndexer::Scan(std::vector<IndexNode2::DieRef>* main_functions) {
+void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
   DwarfDieDecoder decoder(context_, unit_);
 
   // The offset of the declaration. This can be unit-relative or file-absolute. This code doesn't
@@ -180,8 +179,8 @@ void UnitIndexer::Scan(std::vector<IndexNode2::DieRef>* main_functions) {
     const llvm::DWARFDebugInfoEntry* die = scanner_.Prepare();
 
     // Check whether we should consider this before decoding since decoding is slow.
-    IndexNode2::Kind kind = GetKindForDie(die);
-    if (kind == IndexNode2::Kind::kNone)
+    IndexNode::Kind kind = GetKindForDie(die);
+    if (kind == IndexNode::Kind::kNone)
       continue;
 
     // This DIE is of the type we want to index so decode. Must reset all output vars first.
@@ -201,7 +200,7 @@ void UnitIndexer::Scan(std::vector<IndexNode2::DieRef>* main_functions) {
     else if (decl_global_offset)
       FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
 
-    if (kind == IndexNode2::Kind::kVar && die->getTag() == llvm::dwarf::DW_TAG_member &&
+    if (kind == IndexNode::Kind::kVar && die->getTag() == llvm::dwarf::DW_TAG_member &&
         !has_const_value) {
       // Don't need to index structure members that don't have const values. This needs to be
       // disambiguated because GetKindForDie doesn't have access to the attributes and we don't
@@ -225,31 +224,31 @@ void UnitIndexer::Scan(std::vector<IndexNode2::DieRef>* main_functions) {
                     name ? *name : nullptr, decl_offset);
 
     // Check for "main" function annotation.
-    if (kind == IndexNode2::Kind::kFunction && is_main_subprogram && *is_main_subprogram)
+    if (kind == IndexNode::Kind::kFunction && is_main_subprogram && *is_main_subprogram)
       main_functions->emplace_back(false, die->getOffset());
   }
 }
 
-void UnitIndexer::Index(IndexNode2* root) {
+void UnitIndexer::Index(IndexNode* root) {
   for (uint32_t i = 0; i < indexable_.size(); i++) {
     if (indexable_[i].should_index())
       AddEntryToIndex(i, root);
   }
 }
 
-IndexNode2::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die) const {
+IndexNode::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die) const {
   const llvm::DWARFAbbreviationDeclaration* abbrev = die->getAbbreviationDeclarationPtr();
   if (!abbrev)
-    return IndexNode2::Kind::kNone;  // Corrupt.
+    return IndexNode::Kind::kNone;  // Corrupt.
 
   switch (static_cast<DwarfTag>(abbrev->getTag())) {
     case DwarfTag::kSubprogram:
       if (AbbrevHasCode(abbrev))
-        return IndexNode2::Kind::kFunction;
-      return IndexNode2::Kind::kNone;  // Skip functions with no code.
+        return IndexNode::Kind::kFunction;
+      return IndexNode::Kind::kNone;  // Skip functions with no code.
 
     case DwarfTag::kNamespace:
-      return IndexNode2::Kind::kNamespace;
+      return IndexNode::Kind::kNamespace;
 
     case DwarfTag::kBaseType:
     case DwarfTag::kClassType:
@@ -260,24 +259,24 @@ IndexNode2::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die
     case DwarfTag::kSubroutineType:
     case DwarfTag::kTypedef:
     case DwarfTag::kUnionType:
-      return IndexNode2::Kind::kType;
+      return IndexNode::Kind::kType;
 
     case DwarfTag::kVariable:
       if (!scanner_.is_inside_function() && AbbrevHasLocation(abbrev)) {
         // Found variable storage outside of a function (variables inside functions are local so
         // don't get added to the global index).
         // TODO(bug 36671): index function-static variables.
-        return IndexNode2::Kind::kVar;
+        return IndexNode::Kind::kVar;
       }
-      return IndexNode2::Kind::kNone;  // Variable with no location.
+      return IndexNode::Kind::kNone;  // Variable with no location.
 
     case DwarfTag::kMember:
       // Caller needs to check this case (see declaration comment).
-      return IndexNode2::Kind::kVar;
+      return IndexNode::Kind::kVar;
 
     default:
       // Don't index anything else.
-      return IndexNode2::Kind::kNone;
+      return IndexNode::Kind::kNone;
   }
 }
 
@@ -290,7 +289,7 @@ const char* UnitIndexer::GetDieName(uint32_t index) {
   return "";
 }
 
-void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
+void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
   // The path to index always ends with the last thing being indexed (the path_ is in reverse).
   path_.clear();
   path_.push_back(&indexable_[index_me]);
@@ -334,7 +333,7 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
 
   // Start indexing from here. We may find a cached one that will prevent us from having to
   // go to the root.
-  IndexNode2* index_from = root;
+  IndexNode* index_from = root;
 
   // Collect the path from the current item (path_[0]) to its ultimate parent (path_.back()).
   while (cur != DwarfDieScanner2::kNoParent && indexable_[cur].should_index()) {
@@ -368,8 +367,8 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode2* root) {
   }
 }
 
-void RecursiveFindExact(const IndexNode2* node, const Identifier& input, size_t input_index,
-                        std::vector<IndexNode2::DieRef>* result) {
+void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t input_index,
+                        std::vector<IndexNode::DieRef>* result) {
   if (input_index == input.components().size()) {
     result->insert(result->end(), node->dies().begin(), node->dies().end());
     return;
@@ -390,7 +389,7 @@ void RecursiveFindExact(const IndexNode2* node, const Identifier& input, size_t 
 
 }  // namespace
 
-void Index2::CreateIndex(llvm::object::ObjectFile* object_file) {
+void Index::CreateIndex(llvm::object::ObjectFile* object_file) {
   std::unique_ptr<llvm::DWARFContext> context =
       llvm::DWARFContext::create(*object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
@@ -410,20 +409,20 @@ void Index2::CreateIndex(llvm::object::ObjectFile* object_file) {
   IndexFileNames();
 }
 
-void Index2::DumpFileIndex(std::ostream& out) const {
+void Index::DumpFileIndex(std::ostream& out) const {
   for (const auto& [filename, file_index_entry] : file_name_index_) {
     const auto& [filepath, compilation_units] = *file_index_entry;
     out << filename << " -> " << filepath << " -> " << compilation_units.size() << " units\n";
   }
 }
 
-std::vector<IndexNode2::DieRef> Index2::FindExact(const Identifier& input) const {
-  std::vector<IndexNode2::DieRef> result;
+std::vector<IndexNode::DieRef> Index::FindExact(const Identifier& input) const {
+  std::vector<IndexNode::DieRef> result;
   RecursiveFindExact(&root_, input, 0, &result);
   return result;
 }
 
-std::vector<std::string> Index2::FindFileMatches(std::string_view name) const {
+std::vector<std::string> Index::FindFileMatches(std::string_view name) const {
   std::string_view name_last_comp = ExtractLastFileComponent(name);
 
   std::vector<std::string> result;
@@ -443,7 +442,7 @@ std::vector<std::string> Index2::FindFileMatches(std::string_view name) const {
   return result;
 }
 
-std::vector<std::string> Index2::FindFilePrefixes(const std::string& prefix) const {
+std::vector<std::string> Index::FindFilePrefixes(const std::string& prefix) const {
   std::vector<std::string> result;
 
   auto found = file_name_index_.lower_bound(prefix);
@@ -454,17 +453,17 @@ std::vector<std::string> Index2::FindFilePrefixes(const std::string& prefix) con
   return result;
 }
 
-const std::vector<unsigned>* Index2::FindFileUnitIndices(const std::string& name) const {
+const std::vector<unsigned>* Index::FindFileUnitIndices(const std::string& name) const {
   auto found = files_.find(name);
   if (found == files_.end())
     return nullptr;
   return &found->second;
 }
 
-size_t Index2::CountSymbolsIndexed() const { return RecursiveCountDies(root_); }
+size_t Index::CountSymbolsIndexed() const { return RecursiveCountDies(root_); }
 
-void Index2::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                              unsigned unit_index) {
+void Index::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                             unsigned unit_index) {
   UnitIndexer indexer(context, unit);
   indexer.Scan(&main_functions_);
   indexer.Index(&root_);
@@ -472,8 +471,8 @@ void Index2::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit
   IndexCompileUnitSourceFiles(context, unit, unit_index);
 }
 
-void Index2::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                                         unsigned unit_index) {
+void Index::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                                        unsigned unit_index) {
   const llvm::DWARFDebugLine::LineTable* line_table = context->getLineTableForUnit(unit);
   if (!line_table)
     return;  // No line table for this unit.
@@ -509,7 +508,7 @@ void Index2::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWAR
   }
 }
 
-void Index2::IndexFileNames() {
+void Index::IndexFileNames() {
   for (FileIndex::const_iterator iter = files_.begin(); iter != files_.end(); ++iter)
     file_name_index_.insert(std::make_pair(ExtractLastFileComponent(iter->first), iter));
 }

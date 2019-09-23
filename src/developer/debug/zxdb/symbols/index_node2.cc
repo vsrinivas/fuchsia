@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/index_node2.h"
-
 #include <sstream>
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
 namespace {
 
-void DumpMap(const IndexNode2::Map& map, int indent, const char* heading, std::ostream& out) {
+void DumpMap(const IndexNode::Map& map, int indent, const char* heading, std::ostream& out) {
   if (map.empty())
     return;
 
@@ -25,11 +24,11 @@ void DumpMap(const IndexNode2::Map& map, int indent, const char* heading, std::o
 
 }  // namespace
 
-llvm::DWARFDie IndexNode2::DieRef::ToDie(llvm::DWARFContext* context) const {
+llvm::DWARFDie IndexNode::DieRef::ToDie(llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
 }
 
-IndexNode2* IndexNode2::AddChild(Kind kind, const char* name) {
+IndexNode* IndexNode::AddChild(Kind kind, const char* name) {
   FXL_DCHECK(name);
 
   // TODO(brettw) Get some kind of transparent lookup here to avoid making an intermediate
@@ -45,13 +44,13 @@ IndexNode2* IndexNode2::AddChild(Kind kind, const char* name) {
   return &found->second;
 }
 
-IndexNode2* IndexNode2::AddChild(Kind kind, const char* name, const DieRef& ref) {
+IndexNode* IndexNode::AddChild(Kind kind, const char* name, const DieRef& ref) {
   auto added = AddChild(kind, name);
   added->AddDie(ref);
   return added;
 }
 
-void IndexNode2::AddDie(const DieRef& ref) {
+void IndexNode::AddDie(const DieRef& ref) {
   switch (kind_) {
     case Kind::kNone:
     case Kind::kRoot:
@@ -79,32 +78,32 @@ void IndexNode2::AddDie(const DieRef& ref) {
   dies_.push_back(ref);
 }
 
-const IndexNode2::Map& IndexNode2::MapForKind(Kind kind) const {
+const IndexNode::Map& IndexNode::MapForKind(Kind kind) const {
   FXL_DCHECK(static_cast<int>(kind) >= 0 &&
              static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
   return children_[static_cast<int>(kind)];
 }
 
-IndexNode2::Map& IndexNode2::MapForKind(Kind kind) {
+IndexNode::Map& IndexNode::MapForKind(Kind kind) {
   FXL_DCHECK(static_cast<int>(kind) >= 0 &&
              static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
   return children_[static_cast<int>(kind)];
 }
 
-std::string IndexNode2::AsString(int indent_level) const {
+std::string IndexNode::AsString(int indent_level) const {
   std::ostringstream out;
   Dump(out, indent_level);
   return out.str();
 }
 
-void IndexNode2::Dump(std::ostream& out, int indent_level) const {
+void IndexNode::Dump(std::ostream& out, int indent_level) const {
   DumpMap(namespaces(), indent_level + 1, "Namespaces:", out);
   DumpMap(types(), indent_level + 1, "Types:", out);
   DumpMap(functions(), indent_level + 1, "Functions:", out);
   DumpMap(vars(), indent_level + 1, "Variables:", out);
 }
 
-void IndexNode2::Dump(const std::string& name, std::ostream& out, int indent_level) const {
+void IndexNode::Dump(const std::string& name, std::ostream& out, int indent_level) const {
   out << std::string(indent_level * 2, ' ');
   if (name.empty())
     out << "<<empty index string>>";

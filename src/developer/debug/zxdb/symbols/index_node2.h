@@ -18,9 +18,9 @@ class DWARFDie;
 namespace zxdb {
 
 // An in-progress replacement for IndexNode. Not ready to use yet.
-class IndexNode2 {
+class IndexNode {
  public:
-  using Map = std::map<std::string, IndexNode2>;
+  using Map = std::map<std::string, IndexNode>;
 
   // The type of an index node. There are several "physical" kinds which are associated with
   // children of each node. These physical ones count up from 0 so one can iterate over them
@@ -61,12 +61,14 @@ class IndexNode2 {
     uint32_t offset_ = 0;
   };
 
-  explicit IndexNode2(Kind kind) : kind_(kind) {}
-  ~IndexNode2() = default;
+  explicit IndexNode(Kind kind) : kind_(kind) {}
+  ~IndexNode() = default;
+
+  Kind kind() const { return kind_; }
 
   // The DieRef can be omitted when indexing namespaces as the DIEs are not stored for that case.
-  IndexNode2* AddChild(Kind kind, const char* name);
-  IndexNode2* AddChild(Kind kind, const char* name, const DieRef& ref);
+  IndexNode* AddChild(Kind kind, const char* name);
+  IndexNode* AddChild(Kind kind, const char* name, const DieRef& ref);
   void AddDie(const DieRef& ref);
 
   const Map& namespaces() const { return children_[static_cast<int>(Kind::kNamespace)]; }

@@ -11,8 +11,8 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
-#include "src/developer/debug/zxdb/symbols/index2.h"
-#include "src/developer/debug/zxdb/symbols/index_node2.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -27,7 +27,7 @@ inline bool IsNameEnd(char ch) { return isspace(ch) || ch == '<'; }
 // there are no more to add.
 //
 // In the future we may want an option to trigger whether this function is called or not.
-void AddAnonymousChildrenToStage(IndexWalker2::Stage* stage) {
+void AddAnonymousChildrenToStage(IndexWalker::Stage* stage) {
   // This implements a breadth-first search, adding all unnamed items.
   const std::string kEmpty;
 
@@ -35,7 +35,7 @@ void AddAnonymousChildrenToStage(IndexWalker2::Stage* stage) {
   while (last_pass_begin < stage->size()) {
     size_t last_pass_end = stage->size();
     for (size_t i = last_pass_begin; i < last_pass_end; i++) {
-      const IndexNode2* node = (*stage)[i];
+      const IndexNode* node = (*stage)[i];
 
       // Add unnamed items. The common case is anonymous namespaces but we might also have unnamed
       // types for anonymous enums and structs.
@@ -50,7 +50,7 @@ void AddAnonymousChildrenToStage(IndexWalker2::Stage* stage) {
 
 }  // namespace
 
-IndexWalker2::IndexWalker2(const Index2* index) {
+IndexWalker::IndexWalker(const Index* index) {
   // Prefer not to reallocate the vector-of-vectors. It is rare for C++ namespace hierarchies to
   // be more than a couple of components long, so this number should cover most cases.
   path_.reserve(8);
@@ -59,12 +59,12 @@ IndexWalker2::IndexWalker2(const Index2* index) {
   AddAnonymousChildrenToStage(&path_[0]);
 }
 
-IndexWalker2::~IndexWalker2() = default;
+IndexWalker::~IndexWalker() = default;
 
-bool IndexWalker2::WalkUp() {
+bool IndexWalker::WalkUp() {
   if (path_.size() > 1) {
     // Don't walk above the root.
-    path_.resize(path_.size() - 1);
+    path_.pop_back();
     return true;
   }
   return false;
@@ -73,7 +73,7 @@ bool IndexWalker2::WalkUp() {
 // TODO(bug 6410) When we encounter an "inline" namespace, implicitly walk into it here, or have
 // that controllable as an option. Inline namespaces produce a namespace with an implicit "using"
 // statement.
-bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
+bool IndexWalker::WalkInto(const ParsedIdentifierComponent& comp) {
   const Stage& old_stage = path_.back();
 
   const std::string& comp_name = comp.name();
@@ -82,8 +82,8 @@ bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
 
   Stage new_stage;
   for (const auto* old_node : old_stage) {
-    for (int i = 0; i < static_cast<int>(IndexNode2::Kind::kEndPhysical); i++) {
-      const IndexNode2::Map& map = old_node->MapForKind(static_cast<IndexNode2::Kind>(i));
+    for (int i = 0; i < static_cast<int>(IndexNode::Kind::kEndPhysical); i++) {
+      const IndexNode::Map& map = old_node->MapForKind(static_cast<IndexNode::Kind>(i));
 
       // This is complicated by templates which can't be string-compared for equality without
       // canonicalization. Search everything in the index with the same base (non-template-part)
@@ -124,8 +124,8 @@ bool IndexWalker2::WalkInto(const ParsedIdentifierComponent& comp) {
   return true;
 }
 
-bool IndexWalker2::WalkInto(const ParsedIdentifier& ident) {
-  IndexWalker2 sub(*this);
+bool IndexWalker::WalkInto(const ParsedIdentifier& ident) {
+  IndexWalker sub(*this);
   if (!sub.WalkIntoClosest(ident))
     return false;
 
@@ -134,7 +134,7 @@ bool IndexWalker2::WalkInto(const ParsedIdentifier& ident) {
   return true;
 }
 
-bool IndexWalker2::WalkIntoClosest(const ParsedIdentifier& ident) {
+bool IndexWalker::WalkIntoClosest(const ParsedIdentifier& ident) {
   if (ident.qualification() == IdentifierQualification::kGlobal)
     path_.resize(1);  // Only keep the root.
 
@@ -146,8 +146,8 @@ bool IndexWalker2::WalkIntoClosest(const ParsedIdentifier& ident) {
 }
 
 // static
-bool IndexWalker2::ComponentMatches(const std::string& index_string,
-                                    const ParsedIdentifierComponent& comp) {
+bool IndexWalker::ComponentMatches(const std::string& index_string,
+                                   const ParsedIdentifierComponent& comp) {
   if (!ComponentMatchesNameOnly(index_string, comp))
     return false;
   // Only bother with the expensive template comparison on demand.
@@ -155,8 +155,8 @@ bool IndexWalker2::ComponentMatches(const std::string& index_string,
 }
 
 // static
-bool IndexWalker2::ComponentMatchesNameOnly(const std::string& index_string,
-                                            const ParsedIdentifierComponent& comp) {
+bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
+                                           const ParsedIdentifierComponent& comp) {
   const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
@@ -170,8 +170,8 @@ bool IndexWalker2::ComponentMatchesNameOnly(const std::string& index_string,
 }
 
 // static
-bool IndexWalker2::ComponentMatchesTemplateOnly(const std::string& index_string,
-                                                const ParsedIdentifierComponent& comp) {
+bool IndexWalker::ComponentMatchesTemplateOnly(const std::string& index_string,
+                                               const ParsedIdentifierComponent& comp) {
   ParsedIdentifier index_ident;
   Err err = ExprParser::ParseIdentifier(index_string, &index_ident);
   if (err.has_error())
@@ -190,7 +190,7 @@ bool IndexWalker2::ComponentMatchesTemplateOnly(const std::string& index_string,
 }
 
 // static
-bool IndexWalker2::IsIndexStringBeyondName(std::string_view index_name, std::string_view name) {
+bool IndexWalker::IsIndexStringBeyondName(std::string_view index_name, std::string_view name) {
   if (index_name.size() <= name.size()) {
     // The |index_name| is too small to start with the name and have template stuff on it (which
     // requires special handling), so we can directly return the answer by string comparison.

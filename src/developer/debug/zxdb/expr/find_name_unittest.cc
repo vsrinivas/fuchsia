@@ -58,7 +58,7 @@ TEST(FindName, FindLocalVariable) {
   auto& root = module_symbols->index().root();  // Root of the index for module 1.
 
   const char kNsName[] = "ns";
-  auto ns_node = root.AddChild(kNsName);
+  auto ns_node = root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
 
   const char kNsVarName[] = "ns_value";
   TestIndexedGlobalVariable ns_value(module_symbols.get(), ns_node, kNsVarName);
@@ -344,7 +344,7 @@ TEST(FindName, FindIndexedNameInModule) {
   EXPECT_EQ(global.var.get(), found[0].variable());
 
   // Add a variable in the nested namespace with the same name.
-  auto ns_node = root.AddChild(kNsName);
+  auto ns_node = root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
   TestIndexedGlobalVariable ns(module_symbols.get(), ns_node, kVarName);
 
   // Re-search for the same name in the nested namespace, it should get the nested one first.
@@ -584,6 +584,55 @@ TEST(FindName, FindType) {
   FindName(context, find_type_defs, struct_name, &results);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(def.get(), results[0].type().get());
+}
+
+TEST(FindName, FindNamespace) {
+  ProcessSymbolsTestSetup setup;
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
+  auto& root = module_symbols->index().root();
+  constexpr uint64_t kLoadAddress = 0x1000;
+  SymbolContext symbol_context(kLoadAddress);
+  setup.InjectModule("mod", "1234", kLoadAddress, module_symbols);
+  FindNameContext context(&setup.process(), symbol_context);
+
+  const char kStd[] = "std";
+  root.AddChild(IndexNode::Kind::kNamespace, kStd);
+
+  const char kStar[] = "star";
+  auto* star_ns = root.AddChild(IndexNode::Kind::kNamespace, kStar);
+
+  // star::internal
+  const char kInternal[] = "internal";
+  star_ns->AddChild(IndexNode::Kind::kNamespace, kInternal);
+
+  FindNameOptions find_ns(FindNameOptions::kNoKinds);
+  find_ns.find_namespaces = true;
+  find_ns.max_results = 100;
+
+  // Find the "std" namespace.
+  std::vector<FoundName> results;
+  FindName(context, find_ns, ParsedIdentifier(kStd), &results);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(FoundName::kNamespace, results[0].kind());
+  EXPECT_EQ(kStd, results[0].GetName());
+
+  // Find "s..." namespaces by prefix.
+  FindNameOptions find_ns_prefix = find_ns;
+  find_ns_prefix.how = FindNameOptions::kPrefix;
+  results.clear();
+  FindName(context, find_ns_prefix, ParsedIdentifier("s"), &results);
+  ASSERT_EQ(2u, results.size());
+  // Results can be in either order.
+  EXPECT_TRUE((results[0].GetName() == kStd && results[1].GetName() == kStar) ||
+              (results[0].GetName() == kStar && results[1].GetName() == kStd));
+
+  // Find the "star::i" namespace by prefix.
+  ParsedIdentifier star_internal_prefix;
+  ASSERT_TRUE(ExprParser::ParseIdentifier("star::i", &star_internal_prefix).ok());
+  results.clear();
+  FindName(context, find_ns_prefix, star_internal_prefix, &results);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ("star::internal", results[0].GetName());
 }
 
 }  // namespace zxdb

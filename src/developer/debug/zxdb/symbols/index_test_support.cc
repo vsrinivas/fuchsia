@@ -12,18 +12,18 @@ namespace zxdb {
 
 namespace {
 
-IndexNode::RefType RefTypeForSymbol(const fxl::RefPtr<Symbol>& sym) {
+IndexNode::Kind KindForSymbol(const fxl::RefPtr<Symbol>& sym) {
   if (sym->AsType())
-    return IndexNode::RefType::kType;
+    return IndexNode::Kind::kType;
   if (sym->AsNamespace())
-    return IndexNode::RefType::kNamespace;
+    return IndexNode::Kind::kNamespace;
   if (sym->AsFunction())
-    return IndexNode::RefType::kFunction;
+    return IndexNode::Kind::kFunction;
   if (sym->AsVariable())
-    return IndexNode::RefType::kVariable;
+    return IndexNode::Kind::kVar;
 
   FXL_NOTREACHED();
-  return IndexNode::RefType::kVariable;
+  return IndexNode::Kind::kVar;
 }
 
 }  // namespace
@@ -32,10 +32,9 @@ int TestIndexedSymbol::next_die_ref = 1;
 
 TestIndexedSymbol::TestIndexedSymbol(MockModuleSymbols* mod_sym, IndexNode* index_parent,
                                      const std::string& name, fxl::RefPtr<Symbol> sym)
-    : die_ref(RefTypeForSymbol(sym), next_die_ref++),
-      index_node(index_parent->AddChild(name)),
+    : die_ref(false, next_die_ref++),
+      index_node(index_parent->AddChild(KindForSymbol(sym), name.c_str(), die_ref)),
       symbol(std::move(sym)) {
-  index_node->AddDie(die_ref);
   mod_sym->AddDieRef(die_ref, symbol);
 }
 

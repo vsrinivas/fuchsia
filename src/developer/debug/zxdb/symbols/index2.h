@@ -11,7 +11,7 @@
 #include <string_view>
 
 #include "src/developer/debug/zxdb/symbols/identifier.h"
-#include "src/developer/debug/zxdb/symbols/index_node2.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/lib/fxl/macros.h"
 
 namespace llvm {
@@ -29,10 +29,10 @@ class ObjectFile;
 
 namespace zxdb {
 
-class Index2 {
+class Index {
  public:
-  Index2() = default;
-  ~Index2() = default;
+  Index() = default;
+  ~Index() = default;
 
   // This function takes an object file rather than a context so it can create its own context, and
   // then discard the context when it's done. Since most debugging information is not needed after
@@ -48,7 +48,7 @@ class Index2 {
   // TODO(bug 36754) it would be nice if this could be deleted and all code go through
   // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
   // flexible way.
-  std::vector<IndexNode2::DieRef> FindExact(const Identifier& input) const;
+  std::vector<IndexNode::DieRef> FindExact(const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The name is matched from
   // the right side with a left boundary of either a slash or the beginning of the full path. This
@@ -69,11 +69,11 @@ class Index2 {
   const std::vector<unsigned>* FindFileUnitIndices(const std::string& name) const;
 
   // See main_functions_ below.
-  const std::vector<IndexNode2::DieRef>& main_functions() const { return main_functions_; }
-  std::vector<IndexNode2::DieRef>& main_functions() { return main_functions_; }
+  const std::vector<IndexNode::DieRef>& main_functions() const { return main_functions_; }
+  std::vector<IndexNode::DieRef>& main_functions() { return main_functions_; }
 
-  const IndexNode2& root() const { return root_; }
-  IndexNode2& root() { return root_; }
+  const IndexNode& root() const { return root_; }
+  IndexNode& root() { return root_; }
 
   size_t files_indexed() const { return file_name_index_.size(); }
 
@@ -90,7 +90,7 @@ class Index2 {
   void IndexFileNames();
 
   // Symbol index.
-  IndexNode2 root_ = IndexNode2(IndexNode2::Kind::kRoot);
+  IndexNode root_ = IndexNode(IndexNode::Kind::kRoot);
 
   // Maps full path names to compile units that reference them. This must not be mutated once the
   // file_name_index_ is built.
@@ -116,9 +116,9 @@ class Index2 {
 
   // All references to functions in this module found annotated with the DW_AT_main_subprogram
   // attribute. Normally there will be 0 (not all compiler annotate this) or 1.
-  std::vector<IndexNode2::DieRef> main_functions_;
+  std::vector<IndexNode::DieRef> main_functions_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Index2);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Index);
 };
 
 }  // namespace zxdb

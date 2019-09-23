@@ -10,11 +10,11 @@
 
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
-#include "src/developer/debug/zxdb/symbols/index_node2.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 
 namespace zxdb {
 
-class Index2;
+class Index;
 
 // Provides an interface to walk the symbol index by component. This is used to iterate over the
 // the current namespace looking for matches.
@@ -30,14 +30,14 @@ class Index2;
 // It's possible for this graph to explode but the branching factor is currently only 4, and in
 // practice it will almost always be 1 and will rarely be 2 (there are two different classes of
 // symbol with the same name). As a result, an explosion of items to iterate over is unlikely.
-class IndexWalker2 {
+class IndexWalker {
  public:
-  using Stage = std::vector<const IndexNode2*>;
+  using Stage = std::vector<const IndexNode*>;
 
   // Starts from the root scope in the index. The pointer must outlive this class.
-  explicit IndexWalker2(const Index2* index);
+  explicit IndexWalker(const Index* index);
 
-  ~IndexWalker2();
+  ~IndexWalker();
 
   // There should always be a "current" item which is at least the root of the index.
   const Stage& current() const { return path_.back(); }

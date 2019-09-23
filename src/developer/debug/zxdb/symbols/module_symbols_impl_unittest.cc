@@ -326,7 +326,7 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   auto my_function_matches = module_symbols->index_.FindExact(
       Identifier(IdentifierComponent(TestSymbolModule::kMyFunctionName)));
   ASSERT_EQ(1u, my_function_matches.size());
-  auto main_node = module_symbols->index_.root().AddChild("main");
+  auto main_node = module_symbols->index_.root().AddChild(IndexNode::Kind::kFunction, "main");
   main_node->AddDie(my_function_matches[0]);
 
   // Query for @main again. Since nothing is marked as the main function, the

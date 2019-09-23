@@ -16,7 +16,6 @@ namespace zxdb {
 class CodeBlock;
 class Collection;
 class DataMember;
-class IndexWalker;
 class FoundMember;
 class FoundName;
 class Location;

@@ -117,6 +117,111 @@ VisitResult GetNamesFromDieList(const ModuleSymbols* module_symbols, const FindN
   return VisitResult::kContinue;
 }
 
+// Finds the things matching the given prefix in the map of the index node. This map will correspond
+// to indexed symbols of a given kind (functions, types, namespaces, etc.).
+VisitResult AddPrefixesFromMap(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                               const IndexNode::Map& map, const std::string& prefix,
+                               std::vector<FoundName>* results) {
+  auto cur = map.lower_bound(prefix);
+  while (cur != map.end() && NameMatches(options, cur->first, prefix)) {
+    VisitResult vr = GetNamesFromDieList(module_symbols, options, cur->second.dies(), results);
+    if (vr != VisitResult::kContinue)
+      return vr;
+
+    ++cur;
+  }
+  return VisitResult::kContinue;
+}
+
+// Adds the matches from the given node. The walker's current position should already match the name
+// of the thing we're looking for.
+VisitResult AddMatches(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                       const IndexWalker& walker, const ParsedIdentifier& looking_for,
+                       std::vector<FoundName>* results) {
+  // Namespaces are special because they don't store any DIEs. If we're looking for a namespace
+  // need to add the current node name.
+  if (options.find_namespaces) {
+    for (const auto& current_node : walker.current()) {
+      // Got a namespace with the name.
+      if (current_node->kind() == IndexNode::Kind::kNamespace) {
+        // TODO(brettw) FoundName should take a ParsedIdentifier to avoid converting to a raw
+        // string here.
+        results->emplace_back(FoundName::kNamespace, looking_for.GetFullName());
+        if (results->size() >= options.max_results)
+          return VisitResult::kDone;
+        break;
+      }
+    }
+  }
+
+  // Check for things that have DIEs. Note that "templates" isn't included in this list because
+  // those are treated separately (they're a prefix search on a type).
+  if (options.find_types || options.find_type_defs || options.find_functions || options.find_vars) {
+    for (const auto& current_node : walker.current()) {
+      VisitResult vr = GetNamesFromDieList(module_symbols, options, current_node->dies(), results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
+  }
+
+  return VisitResult::kContinue;
+}
+
+// Given a scope, finds all things inside of it that match the prefix (the last component of
+// "looking_for") and adds them to the results.
+VisitResult AddPrefixes(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                        const IndexWalker& scope, const ParsedIdentifier& looking_for,
+                        std::vector<FoundName>* results) {
+  std::string prefix = looking_for.components().back().GetName(false);
+
+  // Check all nodes representing this scope (there could be multiple paths in the index
+  // corresponding to symbols of different kinds).
+  for (const auto& current_node : scope.current()) {
+    // Depending on the kind of thing the caller is interested in, we only need to look at
+    // certain parts of each node.
+    if (options.find_types || options.find_templates || options.find_type_defs) {
+      VisitResult vr =
+          AddPrefixesFromMap(options, module_symbols, current_node->types(), prefix, results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
+
+    if (options.find_functions) {
+      VisitResult vr =
+          AddPrefixesFromMap(options, module_symbols, current_node->functions(), prefix, results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
+
+    if (options.find_vars) {
+      VisitResult vr =
+          AddPrefixesFromMap(options, module_symbols, current_node->vars(), prefix, results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
+
+    if (options.find_namespaces) {
+      // Namespaces get special handling because DIEs are not actually stored for them, just
+      // a "namespace" IndexNode.
+      auto cur = current_node->namespaces().lower_bound(prefix);
+      while (cur != current_node->namespaces().end() && NameMatches(options, cur->first, prefix)) {
+        // Compute the full name of this namespace.
+        ParsedIdentifier full_name = looking_for.GetScope();
+        full_name.AppendComponent(ParsedIdentifierComponent(cur->first));
+
+        // TODO(brettw) FoundName should take a ParsedIdentifier to avoid converting to a raw
+        // string here.
+        results->emplace_back(FoundName::kNamespace, full_name.GetFullName());
+        if (results->size() >= options.max_results)
+          return VisitResult::kDone;
+        ++cur;
+      }
+    }
+  }
+
+  return VisitResult::kContinue;
+}
+
 VisitResult VisitPerModule(const FindNameContext& context,
                            fit::function<VisitResult(const ModuleSymbols*)> visitor) {
   if (context.module_symbols) {
@@ -150,31 +255,30 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
 
   // Walk into all but the last node of the identifier (the last one is the part that needs
   // completion).
-  IndexWalker prefix_walker(walker);
-  if (!prefix_walker.WalkInto(looking_for_scope))
+  IndexWalker scope_walker(walker);
+  if (!scope_walker.WalkInto(looking_for_scope))
     return VisitResult::kContinue;
 
   // Need to separate out prefix so we can take advantage of the template canonicalization of the
   // IndexWalker in the exact match case. This means that we can't currently do prefix matches of
   // templates that are canonicalized differently than DWARF represents them.
   if (options.how == FindNameOptions::kPrefix) {
-    std::string last_comp = looking_for.components().back().GetName(false);
-    auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
-    while (cur != end && results->size() < options.max_results &&
-           NameMatches(options, cur->first, last_comp)) {
-      VisitResult vr = GetNamesFromDieList(module_symbols, options, cur->second.dies(), results);
+    VisitResult vr = AddPrefixes(options, module_symbols, scope_walker, looking_for, results);
+    if (vr != VisitResult::kContinue)
+      return vr;
+  } else {
+    // Exact match case.
+    //
+    // TODO(brettw) in cases where we know the exact type of the thing we're looking for (e.g.
+    // "namespaces") we could optimize by adding a way for the walker to only go into that kind of
+    // child IndexNode.
+    if (scope_walker.WalkInto(looking_for.components().back())) {
+      VisitResult vr = AddMatches(options, module_symbols, scope_walker, looking_for, results);
       if (vr != VisitResult::kContinue)
         return vr;
 
-      ++cur;
-    }
-  } else {
-    // Exact match case.
-    if (prefix_walker.WalkInto(looking_for.components().back())) {
-      VisitResult vr =
-          GetNamesFromDieList(module_symbols, options, prefix_walker.current()->dies(), results);
-      if (vr != VisitResult::kContinue)
-        return vr;
+      // Undo the walk we just made so we can search for templates below using the same scope.
+      scope_walker.WalkUp();
     }
   }
 
@@ -182,26 +286,30 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
   // "foo::bar<...". In that case, do a prefix search with an appended "<" and see if there are any
   // results. Don't bother if the input already has a template.
   //
-  // Prefix matches will already have been caught above so don't handle here.
+  // General prefix matches and non-template queries (if also included) will already have been
+  // caught above so don't handle here.
   if (options.how == FindNameOptions::kExact && options.find_templates &&
       !looking_for.components().back().has_template()) {
-    // Walk into all but the last node of the identifier (the last one is
-    // potentially the template).
-    IndexWalker template_walker(walker);
-    if (!template_walker.WalkInto(looking_for_scope))
-      return VisitResult::kContinue;
+    // This is the prefix for the type we look for to find the template.
+    std::string prefix = looking_for.components().back().GetName(false);
+    prefix.push_back('<');
 
-    // Now search that node for anything that could be a template.
-    std::string last_comp = looking_for.components().back().GetName(false);
-    last_comp.push_back('<');
-    auto [cur, end] = template_walker.current()->FindPrefix(last_comp);
-    if (cur != end) {
-      // We could check every possible match with this prefix and see if there's one with a type
-      // name. But that seems unnecessary. Instead, assume that anything with a name containing a
-      // "<" is a template type name.
-      results->emplace_back(FoundName::kTemplate, looking_for.GetFullName());
-      if (results->size() >= options.max_results)
-        return VisitResult::kDone;
+    // Check for types in each node at this scope for prefix matches. If any of them match, return
+    // one. We don't need to return all of them since a template query just returns whether a
+    // template of that name exists (each specialization is a "type" instead).
+    for (const auto& current_node : scope_walker.current()) {
+      auto found = current_node->types().lower_bound(prefix);
+      // Note: need StringBeginsWith rather than NameMatches since we always want to do a prefix
+      // search rather than applying the current prefix/exact mode from the options.
+      if (found != current_node->types().end() && StringBeginsWith(found->first, prefix)) {
+        results->emplace_back(FoundName::kTemplate, looking_for.GetFullName());
+        if (results->size() >= options.max_results)
+          return VisitResult::kDone;  // Don't need to look for anything else.
+
+        // Don't need to look for more template matches but may need to continue the search
+        // for other stuff.
+        break;
+      }
     }
   }
 

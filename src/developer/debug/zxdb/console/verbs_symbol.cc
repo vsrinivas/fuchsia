@@ -735,17 +735,19 @@ bool DumpModule(const Command& cmd, const IndexNode& node, DumpModuleContext* co
     }
   }
 
-  if (!cmd.HasSwitch(kSymSearchListAll) && context->output->size() >= kSymSearchListLimit) {
+  if (!cmd.HasSwitch(kSymSearchListAll) && context->output->size() >= kSymSearchListLimit)
     return true;
-  }
 
   // Root should not indent forward.
   indent_level = root ? 0 : indent_level + 2;
-  for (const auto& [child_name, child] : node.sub()) {
-    context->names->push_back(child_name);
-    if (DumpModule(cmd, child, context, indent_level))
-      return true;
-    context->names->pop_back();
+  for (int i = 0; i < static_cast<int>(IndexNode::Kind::kEndPhysical); i++) {
+    const IndexNode::Map& map = node.MapForKind(static_cast<IndexNode::Kind>(i));
+    for (const auto& [child_name, child] : map) {
+      context->names->push_back(child_name);
+      if (DumpModule(cmd, child, context, indent_level))
+        return true;
+      context->names->pop_back();
+    }
   }
 
   return false;

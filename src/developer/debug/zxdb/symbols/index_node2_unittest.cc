@@ -9,12 +9,12 @@
 
 namespace zxdb {
 
-using DieRef = IndexNode2::DieRef;
-using Kind = IndexNode2::Kind;
+using DieRef = IndexNode::DieRef;
+using Kind = IndexNode::Kind;
 
 // Tests de-duplicating type definitions, and upgrading forward declarations to full definitions.
-TEST(IndexNode2, DeDupeType) {
-  IndexNode2 node(Kind::kType);
+TEST(IndexNode, DeDupeType) {
+  IndexNode node(Kind::kType);
 
   // Type forward declaration should get appended.
   const uint32_t kFwdDecl1Offset = 20;
@@ -41,8 +41,8 @@ TEST(IndexNode2, DeDupeType) {
   EXPECT_EQ(kType1Offset, node.dies()[0].offset());
 }
 
-TEST(IndexNode2, DeDupeNamespace) {
-  IndexNode2 root(Kind::kRoot);
+TEST(IndexNode, DeDupeNamespace) {
+  IndexNode root(Kind::kRoot);
 
   const char kName[] = "ns";
 

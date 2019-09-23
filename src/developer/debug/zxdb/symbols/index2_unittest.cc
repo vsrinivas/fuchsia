@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/index2.h"
-
 #include <inttypes.h>
 #include <time.h>
 
@@ -12,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -20,13 +19,13 @@ namespace zxdb {
 // Generates the symbol index of our simple test app. This may get updated if we change things
 // but the important thing is that when this happens to check that the new index makes sense and
 // then add it.
-TEST(Index2, IndexDump) {
+TEST(Index, IndexDump) {
   TestSymbolModule module;
 
   std::string err;
   ASSERT_TRUE(module.LoadSpecific(TestSymbolModule::GetCheckedInTestFileName(), &err)) << err;
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Symbol index.
@@ -118,12 +117,12 @@ zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_sy
   EXPECT_EQ(kExpectedFiles, files.str());
 }
 
-TEST(Index2, FindExactFunction) {
+TEST(Index, FindExactFunction) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Standalone function search.
@@ -164,12 +163,12 @@ TEST(Index2, FindExactFunction) {
   EXPECT_TRUE(result.empty());
 }
 
-TEST(Index2, FindFileMatches) {
+TEST(Index, FindFileMatches) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Simple filename-only query that succeeds.
@@ -201,12 +200,12 @@ TEST(Index2, FindFileMatches) {
   EXPECT_EQ(0u, result.size());
 }
 
-TEST(Index2, FindFilePrefixes) {
+TEST(Index, FindFilePrefixes) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Should find both files. Order not guaranteed.
@@ -218,12 +217,12 @@ TEST(Index2, FindFilePrefixes) {
 
 // Enable and substitute a path on your system to dump the index for a DWARF file.
 #if 0
-TEST(Index2, DumpIndex) {
+TEST(Index, DumpIndex) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.LoadSpecific("chrome", &err)) << err;
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
@@ -251,7 +250,7 @@ static int64_t GetTickMicroseconds() {
   return result;
 }
 
-TEST(Index2, BenchmarkIndexing) {
+TEST(Index, BenchmarkIndexing) {
   const char kFilename[] = "chrome";
   int64_t begin_us = GetTickMicroseconds();
 
@@ -261,7 +260,7 @@ TEST(Index2, BenchmarkIndexing) {
 
   int64_t load_complete_us = GetTickMicroseconds();
 
-  Index2 index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   int64_t index_complete_us = GetTickMicroseconds();
