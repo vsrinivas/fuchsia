@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <gmock/gmock.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <fbl/unique_fd.h>
+#include <gmock/gmock.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "guest_test.h"
 #include "src/virtualization/bin/vmm/device/block.h"
@@ -25,8 +26,21 @@ using testing::HasSubstr;
 
 static constexpr char kVirtioBlockUtil[] = "virtio_block_test_util";
 static constexpr uint32_t kVirtioBlockCount = 32;
-static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
-static constexpr uint32_t kVirtioTestStep = 8;
+static constexpr uint32_t kVirtioQcowBlockCount = kDefaultHeaderV2.size / kBlockSectorSize;
+
+// We test reading and writing at the first and last offsets of the block device, and an arbitrary
+// offset in between.
+static constexpr off_t kMiddleOffset = 17;
+static constexpr off_t kBlockTestOffsets[] = {0, kMiddleOffset, kVirtioBlockCount - 1};
+static constexpr off_t kQcowBlockTestOffsets[] = {0, kMiddleOffset,
+                                                     (kClusterSize / kBlockSectorSize) - 1};
+
+// Ensure that the offset we chose is less than the last offset.
+static_assert(kMiddleOffset < kVirtioBlockCount - 1, "Virtio raw test offset is too large.");
+static_assert(kMiddleOffset < (kClusterSize / kBlockSectorSize) - 1,
+              "Virtio qcow test offset is too large.");
+
+static constexpr off_t kQcowUnmappedClusterOffset = ClusterOffset(2) / kBlockSectorSize;
 
 static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> block_device(
     fuchsia::virtualization::BlockMode mode, fuchsia::virtualization::BlockFormat format, int fd) {
@@ -226,7 +240,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, Read) {
 
   uint8_t data[kBlockSectorSize];
   memset(data, 0xab, kBlockSectorSize);
-  for (off_t offset = 0; offset != kVirtioBlockCount; offset += kVirtioTestStep) {
+  for (off_t offset : kBlockTestOffsets) {
     ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
               static_cast<ssize_t>(kBlockSectorSize));
     std::string result;
@@ -250,7 +264,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, Write) {
 
   uint8_t data[kBlockSectorSize];
   memset(data, 0, kBlockSectorSize);
-  for (off_t offset = 0; offset != kVirtioBlockCount; offset += kVirtioTestStep) {
+  for (off_t offset : kBlockTestOffsets) {
     // Write the block to zero.
     ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
               static_cast<ssize_t>(kBlockSectorSize));
@@ -340,7 +354,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
 }
 
 TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
-  for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize; offset += kVirtioTestStep) {
+  for (off_t offset : kQcowBlockTestOffsets) {
     std::string result;
     EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
                             {
@@ -357,26 +371,22 @@ TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
 }
 
 TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
-  for (off_t offset = kClusterSize; offset != kClusterSize + (kClusterSize / kBlockSectorSize);
-       offset += kVirtioTestStep) {
-    std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioQcowBlockCount),
-                                "read",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0),
-                            },
-                            &result),
-              ZX_OK);
-    EXPECT_THAT(result, HasSubstr("PASS"));
-  }
+  std::string result;
+  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                          {
+                              fxl::StringPrintf("%lu", kBlockSectorSize),
+                              fxl::StringPrintf("%u", kVirtioQcowBlockCount),
+                              "read",
+                              fxl::StringPrintf("%d", static_cast<int>(kQcowUnmappedClusterOffset)),
+                              fxl::StringPrintf("%d", 0),
+                          },
+                          &result),
+            ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
 TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
-  for (off_t offset = kClusterSize; offset != kClusterSize + (kClusterSize / kBlockSectorSize);
-       offset += kVirtioTestStep) {
+  for (off_t offset : kQcowBlockTestOffsets) {
     std::string result;
     EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
                             {
@@ -384,7 +394,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
                                 fxl::StringPrintf("%u", kVirtioQcowBlockCount),
                                 "write",
                                 fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0xab),
+                                fxl::StringPrintf("%d", 0xba),
                             },
                             &result),
               ZX_OK);
@@ -401,10 +411,10 @@ TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
     int expected_read;
     switch (this->BlockMode()) {
       case fuchsia::virtualization::BlockMode::READ_ONLY:
-        expected_read = 0;
+        expected_read = 0xab;
         break;
       case fuchsia::virtualization::BlockMode::VOLATILE_WRITE:
-        expected_read = 0xab;
+        expected_read = 0xba;
         break;
       case fuchsia::virtualization::BlockMode::READ_WRITE:
         // READ_WRITE not supported for QCOW.
