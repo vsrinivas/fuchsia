@@ -36,6 +36,7 @@ class VirtualCameraDevice {
  private:
   // Device FIDL implementation
   zx_status_t GetChannel(zx_handle_t handle);
+  zx_status_t GetChannel2(zx_handle_t handle);
 
   static const fuchsia_hardware_camera_Device_ops_t CAMERA_FIDL_THUNKS;
 

@@ -12,6 +12,8 @@ driver_module("virtual_camera_driver") {
     "color_source.cc",
     "color_source.h",
     "virtual_camera.cc",
+    "virtual_camera2_control.cc",
+    "virtual_camera2_control.h",
     "virtual_camera_control.cc",
     "virtual_camera_control.h",
     "virtual_camera_device.cc",
@@ -20,6 +22,8 @@ driver_module("virtual_camera_driver") {
 
   deps = [
     "//sdk/fidl/fuchsia.camera",
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//src/lib/fxl",

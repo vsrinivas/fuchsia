@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/virtual_camera/virtual_camera_device.h"
 
+#include "src/camera/drivers/virtual_camera/virtual_camera2_control.h"
 #include "src/camera/drivers/virtual_camera/virtual_camera_control.h"
 #include "src/lib/fxl/logging.h"
 
@@ -60,7 +61,6 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
 
   if (virtual_camera_camera_control_server_ != nullptr) {
     FXL_LOG(ERROR) << "Camera Control already running";
-    // TODO(CAM-XXX): support multiple concurrent clients.
     return ZX_ERR_INTERNAL;
   }
 
@@ -77,9 +77,39 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   return ZX_ERR_INTERNAL;
 }
 
+zx_status_t VirtualCameraDevice::GetChannel2(zx_handle_t handle) {
+  if (handle == ZX_HANDLE_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // CameraStream FIDL interface
+  static std::unique_ptr<VirtualCamera2ControllerImpl> virtual_camera_camera_control_server_ =
+      nullptr;
+
+  if (virtual_camera_camera_control_server_ != nullptr) {
+    FXL_LOG(ERROR) << "Camera2 Controller already running";
+    return ZX_ERR_INTERNAL;
+  }
+
+  zx::channel channel(handle);
+  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
+
+  if (control_interface.is_valid()) {
+    virtual_camera_camera_control_server_ = std::make_unique<VirtualCamera2ControllerImpl>(
+        std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+        [] { virtual_camera_camera_control_server_.reset(); });
+
+    return ZX_OK;
+  }
+  return ZX_ERR_INTERNAL;
+}
+
 const fuchsia_hardware_camera_Device_ops_t VirtualCameraDevice::CAMERA_FIDL_THUNKS{
     .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
       return reinterpret_cast<VirtualCameraDevice*>(ctx)->GetChannel(handle);
+    },
+    .GetChannel2 = [](void* ctx, zx_handle_t handle) -> zx_status_t {
+      return reinterpret_cast<VirtualCameraDevice*>(ctx)->GetChannel2(handle);
     },
 };
 

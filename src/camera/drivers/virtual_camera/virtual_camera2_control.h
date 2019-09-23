@@ -5,7 +5,8 @@
 #ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA2_CONTROL_H_
 #define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA2_CONTROL_H_
 
-#include <fuchsia/camera/cpp/fidl.h>
+#include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -19,35 +20,22 @@
 
 namespace virtual_camera {
 
-class VirtualCameraControlImpl : public fuchsia::camera::Control {
+class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
  public:
-  VirtualCameraControlImpl(fidl::InterfaceRequest<Control> control, async_dispatcher_t* dispatcher,
-                           fit::closure on_connection_closed);
+  VirtualCamera2ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
+                               async_dispatcher_t* dispatcher, fit::closure on_connection_closed);
 
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
-  void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
+  void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame);
 
   void PostNextCaptureTask();
 
  private:
-  // Get the available format types for this device
-  void GetFormats(uint32_t index, GetFormatsCallback callback) override;
-
-  // Sent by the client to indicate desired stream characteristics.
-  // If setting the format is successful, the stream request will be honored.
-  void CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-                    fuchsia::camera::FrameRate frame_rate,
-                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-                    zx::eventpair stream_token) override;
-
-  // Get the vendor and product information about the device.
-  void GetDeviceInfo(GetDeviceInfoCallback callback) override;
-
-  class VirtualCameraStreamImpl : public fuchsia::camera::Stream {
+  class VirtualCamera2StreamImpl : public fuchsia::camera2::Stream {
    public:
-    VirtualCameraStreamImpl(VirtualCameraControlImpl& owner,
-                            fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+    VirtualCamera2StreamImpl(VirtualCamera2ControllerImpl& owner,
+                             fidl::InterfaceRequest<fuchsia::camera2::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -60,37 +48,82 @@ class VirtualCameraControlImpl : public fuchsia::camera::Control {
 
     // Sent by the driver to the client when a frame is available for
     // processing, or an error occurred.
-    void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
+    void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame);
+
+    void AcknowledgeFrameError() override {}
+    // Data operations
+    // This is used by clients to provide inputs for region of interest
+    // selection.
+    // Inputs are the x & y coordinates for the new bounding box.
+    // For streams which do not support smart framing, this would
+    // return an error.
+    void SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
+                             SetRegionOfInterestCallback callback) override {}
+
+    // Change the image format of the stream. This is called when clients want
+    // to dynamically change the resolution of the stream while the streaming is
+    // is going on.
+    void SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) override {}
+
+    // Get the image formats that this stream supports.
+    void GetImageFormats(GetImageFormatsCallback callback) override {}
 
    private:
-    VirtualCameraControlImpl& owner_;
-    fidl::Binding<Stream> binding_;
+    VirtualCamera2ControllerImpl& owner_;
+    fidl::Binding<fuchsia::camera2::Stream> binding_;
   };
 
-  std::unique_ptr<VirtualCameraStreamImpl> stream_;
-  zx::eventpair stream_token_;
-  std::unique_ptr<async::Wait> stream_token_waiter_;
+  static constexpr uint32_t kFramesOfDelay = 2;
 
-  VirtualCameraControlImpl(const VirtualCameraControlImpl&) = delete;
-  VirtualCameraControlImpl& operator=(const VirtualCameraControlImpl&) = delete;
+  // Device FIDL implementation
+
+  // Get a list of all available configurations which the camera driver supports.
+  void GetConfigs(GetConfigsCallback callback) override;
+
+  // Set a particular configuration and create the requested stream.
+  // |config_index| : Configuration index from the vector which needs to be applied.
+  // |stream_type| : Stream types (one of more of |CameraStreamTypes|)
+  // |buffer_collection| : Buffer collections for the stream.
+  // |stream| : Stream channel for the stream requested
+  // |image_format_index| : Image format index which needs to be set up upon creation.
+  // If there is already an active configuration which is different than the one
+  // which is requested to be set, then the HAL will be closing all existing streams
+  // and honor this new setup call.
+  // If the new stream requested is already part of the existing running configuration
+  // the HAL will just be creating this new stream while the other stream still exists as is.
+  void CreateStream(uint32_t config_index, uint32_t stream_type, uint32_t image_format_index,
+                    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+                    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) override;
+
+  // Enable/Disable Streaming
+  void EnableStreaming() override {}
+
+  void DisableStreaming() override {}
+
+  void GetDeviceInfo(GetDeviceInfoCallback callback) override;
+
+  std::unique_ptr<VirtualCamera2StreamImpl> stream_;
+
+  VirtualCamera2ControllerImpl(const VirtualCamera2ControllerImpl&) = delete;
+  VirtualCamera2ControllerImpl& operator=(const VirtualCamera2ControllerImpl&) = delete;
 
   // Checks which buffer can be written to,
   // writes it then signals it ready
   // sleeps until next cycle
   void ProduceFrame();
 
-  fidl::Binding<Control> binding_;
+  fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
 
-  static constexpr uint32_t kMinNumberOfBuffers = 2;
-  static constexpr uint32_t kFramesOfDelay = 2;
   ColorSource color_source_;
-  fuchsia::camera::FrameRate rate_;
+  fuchsia::camera2::FrameRate rate_;
   uint64_t frame_count_ = 0;
 
+  std::vector<fuchsia::camera2::hal::Config> configs_;
   fzl::VmoPool buffers_;
   media::TimelineFunction frame_to_timestamp_;
-  async::TaskClosureMethod<VirtualCameraControlImpl, &VirtualCameraControlImpl::ProduceFrame> task_{
-      this};
+  async::TaskClosureMethod<VirtualCamera2ControllerImpl,
+                           &VirtualCamera2ControllerImpl::ProduceFrame>
+      task_{this};
 };
 
 }  // namespace virtual_camera
