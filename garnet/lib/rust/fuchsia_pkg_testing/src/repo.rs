@@ -233,11 +233,9 @@ impl Repository {
         }))
     }
 
-    /// Returns a sorted vector of all blobs contained in this repository.
-    pub fn list_blobs(&self) -> Result<Vec<Hash>, Error> {
-        let mut blobs = self.iter_blobs()?.collect::<Result<Vec<_>, _>>()?;
-        blobs.sort_unstable();
-        Ok(blobs)
+    /// Returns a set of all blobs contained in this repository.
+    pub fn list_blobs(&self) -> Result<BTreeSet<Hash>, Error> {
+        self.iter_blobs()?.collect()
     }
 
     /// Reads the contents of requested blob from the repository.

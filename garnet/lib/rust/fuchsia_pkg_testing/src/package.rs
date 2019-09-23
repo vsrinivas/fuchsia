@@ -13,8 +13,9 @@ use {
     fuchsia_pkg::{MetaContents, MetaPackage},
     fuchsia_zircon::Status,
     futures::{join, prelude::*},
+    maplit::btreeset,
     std::{
-        collections::{BTreeMap, HashSet},
+        collections::{BTreeMap, BTreeSet, HashSet},
         fs::{self, File},
         io::{self, Write},
         path::{Path, PathBuf},
@@ -100,6 +101,23 @@ impl Package {
         }
 
         Ok(pkg.build().await?)
+    }
+
+    fn meta_contents(&self) -> Result<MetaContents, Error> {
+        let mut raw_meta_far = self.meta_far()?;
+        let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
+        let raw_meta_contents = meta_far.read_file("meta/contents")?;
+
+        Ok(MetaContents::deserialize(raw_meta_contents.as_slice())?)
+    }
+
+    /// Returns a set of all unique blobs contained in this package.
+    pub fn list_blobs(&self) -> Result<BTreeSet<Hash>, Error> {
+        let meta_contents = self.meta_contents()?;
+
+        let mut res = btreeset![self.meta_far_merkle.clone()];
+        res.extend(meta_contents.contents().iter().map(|(_, merkle)| merkle));
+        Ok(res)
     }
 
     /// Verifies that the given directory serves the contents of this package.
@@ -423,6 +441,13 @@ mod tests {
             "7b3591496961a5b8918525feb2e49e6d1439580fd805a2b4178fc7581c011a0d".parse()?
         );
         assert_eq!(pkg.meta_far_merkle, MerkleTree::from_reader(pkg.meta_far()?)?.root());
+        assert_eq!(
+            pkg.list_blobs()?,
+            btreeset![
+                "7b3591496961a5b8918525feb2e49e6d1439580fd805a2b4178fc7581c011a0d".parse()?,
+                "b5b34f6234631edc7ccaa25533e2050e5d597a7331c8974306b617a3682a3197".parse()?
+            ]
+        );
 
         Ok(())
     }

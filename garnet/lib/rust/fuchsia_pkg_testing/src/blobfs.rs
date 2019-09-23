@@ -16,7 +16,7 @@ use {
     fuchsia_zircon as zx,
     openat::Dir,
     ramdevice_client::RamdiskClient,
-    std::ffi::CString,
+    std::{collections::BTreeSet, ffi::CString},
     zx::prelude::*,
 };
 
@@ -135,9 +135,8 @@ impl TestBlobFs {
     }
 
     /// Returns a sorted list of all blobs present in this blobfs instance.
-    pub fn list_blobs(&self) -> Result<Vec<Hash>, Error> {
-        let mut blobs = self
-            .as_dir()?
+    pub fn list_blobs(&self) -> Result<BTreeSet<Hash>, Error> {
+        self.as_dir()?
             .list_dir(".")?
             .map(|entry| {
                 Ok(entry?
@@ -146,17 +145,13 @@ impl TestBlobFs {
                     .ok_or_else(|| format_err!("expected valid utf-8"))?
                     .parse()?)
             })
-            .collect::<Result<Vec<Hash>, Error>>()?;
-        blobs.sort_unstable();
-        Ok(blobs)
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use {crate::as_dir, std::io::Write};
+    use {super::*, crate::as_dir, maplit::btreeset, std::io::Write};
 
     fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, Error> {
         Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
@@ -203,7 +198,7 @@ mod tests {
         );
         assert_eq!(
             blobfs_server.list_blobs().expect("list blobs"),
-            vec!["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
+            btreeset!["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
                 .parse()
                 .unwrap()],
         );
