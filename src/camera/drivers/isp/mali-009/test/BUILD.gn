@@ -9,6 +9,7 @@ executable("mali_009_test") {
   ]
   deps = [
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
+    "//src/camera/drivers/test_utils",
     "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/system/fidl/fuchsia-camera-test:fuchsia-camera-test_c",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",

@@ -8,6 +8,10 @@
 4. Restart the target device in the netboot cable configuration
 5. Run `fx run-test camera_full_on_device_test`
 
+Note: most on-device tests require the camera to be physically enabled (i.e. the device must not be
+muted). If a test determines that the device may be muted, a warning will be displayed and the test
+will be skipped.
+
 
 ## To test camera functionality manually:
 

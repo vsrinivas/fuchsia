@@ -13,6 +13,7 @@ executable("camera_streaming_test") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/driver-integration-test",

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <button_checker.h>
 #include <fcntl.h>
 #include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/cpp/fidl.h>
@@ -26,6 +27,7 @@ class CameraStreamingTest : public gtest::RealLoopFixture {
  protected:
   CameraStreamingTest() {}
   ~CameraStreamingTest() override {}
+  virtual void SetUp() override;
   void BindIspTester(fuchsia::camera::test::IspTesterSyncPtr& ptr);
 };
 
@@ -40,6 +42,12 @@ std::string Hash(const void* data, size_t size) {
     ret[2 * i + 1] = table[md[i] & 0xF];
   }
   return ret;
+}
+
+void CameraStreamingTest::SetUp() {
+  if (!VerifyDeviceUnmuted()) {
+    GTEST_SKIP();
+  }
 }
 
 // Connect to the ISP test device.

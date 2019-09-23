@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <button_checker.h>
 #include <fcntl.h>
 #include <fuchsia/camera/test/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
@@ -57,7 +58,7 @@ zx_status_t IsBoardName(const char* requested_board_name) {
 
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class IspTest : public zxtest::Test {
-public:
+ public:
   void SetUp() override;
 
   fbl::unique_fd fd_;
@@ -93,6 +94,9 @@ int main(int argc, char** argv) {
   zx_status_t status = IsBoardName("sherlock");
   if (status == ZX_OK) {
     printf("Sherlock detected, running tests.\n");
+    if (!VerifyDeviceUnmuted()) {
+      return 0;
+    }
     return RUN_ALL_TESTS(argc, argv);
   }
   if (status == kWrongBoard) {

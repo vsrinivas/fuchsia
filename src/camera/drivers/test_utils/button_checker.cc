@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <filesystem>
+#include <iostream>
 #include <string>
 
 #include <fbl/unique_fd.h>
@@ -147,4 +148,30 @@ bool ButtonChecker::GetMuteFieldForDevice(fuchsia::hardware::input::DeviceSyncPt
   }
 
   return !found_mute_field;
+}
+
+bool VerifyDeviceUnmuted(bool consider_unknown_as_unmuted) {
+  auto state = ButtonChecker::ButtonState::UNKNOWN;
+  auto checker = ButtonChecker::Create();
+  if (checker) {
+    state = checker->GetMuteState();
+  }
+  if (state == ButtonChecker::ButtonState::UP) {
+    return true;
+  }
+  if (state == ButtonChecker::ButtonState::UNKNOWN) {
+    std::cerr << "**************************************************\n"
+                 "* WARNING: DEVICE MUTE STATE UNKNOWN. CAMERA MAY *\n"
+                 "*          NOT OPERATE AND TESTS MAY BE SKIPPED! *\n"
+                 "**************************************************\n";
+    std::cerr.flush();
+    return consider_unknown_as_unmuted;
+  }
+  FXL_DCHECK(state == ButtonChecker::ButtonState::DOWN);
+  std::cerr << "**********************************************\n"
+               "* WARNING: DEVICE IS MUTED. CAMERA WILL NOT  *\n"
+               "*          OPERATE AND TESTS MAY BE SKIPPED! *\n"
+               "**********************************************\n";
+  std::cerr.flush();
+  return false;
 }

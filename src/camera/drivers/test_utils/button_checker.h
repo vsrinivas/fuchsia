@@ -42,4 +42,9 @@ class ButtonChecker {
   std::vector<std::pair<fuchsia::hardware::input::DeviceSyncPtr, hid::ReportField>> devices_;
 };
 
+// Convenience wrapper to check the mute state of a device. Returns true if the device is confirmed
+// to be unmuted. If the device is muted or its mute state could not be determined, a warning is
+// printed to stderr.
+bool VerifyDeviceUnmuted(bool consider_unknown_as_unmuted = false);
+
 #endif  // SRC_CAMERA_DRIVERS_TEST_UTILS_BUTTON_CHECKER_H_
