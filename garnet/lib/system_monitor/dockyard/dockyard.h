@@ -108,6 +108,8 @@ enum class MessageType : int64_t {
   kConnectionRequest,
 };
 
+std::ostream& operator<<(std::ostream& os, MessageType message_type);
+
 // A message to or from the dockyard.
 struct Message {
   // The request ID normally matches a request to a response. In the case of a

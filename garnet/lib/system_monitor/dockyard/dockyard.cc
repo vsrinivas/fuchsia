@@ -65,6 +65,41 @@ SampleTimeNs CalcTimeForStride(const StreamSetsRequest& request,
 
 }  // namespace
 
+std::ostream& operator<<(std::ostream& os, MessageType message_type) {
+  switch (message_type) {
+    case MessageType::kResponseOk:
+      os << "ResponseOk";
+      break;
+    case MessageType::kRequestFailed:
+      os << "RequestFailed";
+      break;
+    case MessageType::kDisconnected:
+      os << "Disconnected";
+      break;
+    case MessageType::kVersionMismatch:
+      os << "VersionMismatch";
+      break;
+    case MessageType::kStreamSetsRequest:
+      os << "StreamSetsRequest";
+      break;
+    case MessageType::kDiscardSamplesRequest:
+      os << "DiscardSamplesRequest";
+      break;
+    case MessageType::kIgnoreSamplesRequest:
+      os << "IgnoreSamplesRequest";
+      break;
+    case MessageType::kUnignoreSamplesRequest:
+      os << "UnignoreSamplesRequest";
+      break;
+    case MessageType::kConnectionRequest:
+      os << "ConnectionRequest";
+      break;
+    default:
+      os << "<Unknown MessageType>";
+  }
+  return os;
+}
+
 uint64_t MessageRequest::next_request_id_;
 
 bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
