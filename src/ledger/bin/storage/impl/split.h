@@ -28,6 +28,7 @@ enum class IterationStatus {
 // |ObjectIdentifier| to use to reference the given content id. The piece is
 // then passed to |callback|, along with a status of |IN_PROGRESS|, except for
 // the last piece which has a status of |DONE|.
+// See split.md for information about the algorithm.
 void SplitDataSource(DataSource* source, ObjectType type,
                      fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
                      fit::function<uint64_t(uint64_t)> chunk_permutation,
