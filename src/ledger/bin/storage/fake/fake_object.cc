@@ -20,6 +20,10 @@ Status FakePiece::AppendReferences(ObjectReferencesAndPriority* references) cons
 
 ObjectIdentifier FakePiece::GetIdentifier() const { return identifier_; }
 
+std::unique_ptr<const FakePiece> FakePiece::Clone() const {
+  return std::make_unique<const FakePiece>(identifier_, content_);
+}
+
 FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
     : piece_(std::make_unique<FakePiece>(std::move(identifier), std::move(content))) {}
 

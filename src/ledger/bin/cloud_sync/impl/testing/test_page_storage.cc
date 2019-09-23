@@ -185,21 +185,19 @@ void TestPageStorage::GetSyncMetadata(fxl::StringView key,
 void TestPageStorage::GetObject(
     storage::ObjectIdentifier object_identifier, Location /*location*/,
     fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)> callback) {
-  auto& object = unsynced_objects_to_return[std::move(object_identifier)];
-  async::PostTask(dispatcher_,
-                  [object = std::move(object), callback = std::move(callback)]() mutable {
-                    callback(ledger::Status::OK, std::make_unique<FakeObject>(std::move(object)));
-                  });
+  const auto& piece = unsynced_objects_to_return[std::move(object_identifier)];
+  async::PostTask(dispatcher_, [piece = piece->Clone(), callback = std::move(callback)]() mutable {
+    callback(ledger::Status::OK, std::make_unique<FakeObject>(std::move(piece)));
+  });
 }
 
 void TestPageStorage::GetPiece(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback) {
-  auto& piece = unsynced_objects_to_return[std::move(object_identifier)];
-  async::PostTask(dispatcher_,
-                  [piece = std::move(piece), callback = std::move(callback)]() mutable {
-                    callback(ledger::Status::OK, std::move(piece));
-                  });
+  const auto& piece = unsynced_objects_to_return[std::move(object_identifier)];
+  async::PostTask(dispatcher_, [piece = piece->Clone(), callback = std::move(callback)]() mutable {
+    callback(ledger::Status::OK, std::move(piece));
+  });
 }
 
 void TestPageStorage::GetDiffForCloud(

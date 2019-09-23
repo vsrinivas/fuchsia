@@ -21,6 +21,8 @@ class FakePiece : public Piece {
   ObjectIdentifier GetIdentifier() const override;
   Status AppendReferences(ObjectReferencesAndPriority* references) const override;
 
+  std::unique_ptr<const FakePiece> Clone() const;
+
  private:
   ObjectIdentifier identifier_;
   std::string content_;
