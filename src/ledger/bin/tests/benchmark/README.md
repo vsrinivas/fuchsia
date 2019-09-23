@@ -5,6 +5,17 @@ This directory contains Ledger [trace-based benchmarks]. Each benchmark is
 implemented as a client connected to Ledger and using its API to perform one or
 more of its basic operations (creating a page, writing/deleting entries, ...).
 
+## Building benchmarks
+
+To build the benchmarks, add
+`//src/ledger/bin/tests/benchmark:ledger_benchmarks` to the list of packages
+available in your build:
+
+```sh
+fx set core.x64 --release --with //src/ledger/bin/tests/benchmark:ledger_benchmarks
+fx build ledger_benchmarks
+```
+
 ## Run benchmarks
 
 ### Using trace spec files
