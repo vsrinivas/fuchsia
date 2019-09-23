@@ -8,11 +8,15 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/socket/socket_pair.h"
+#include "src/ledger/bin/testing/ledger_memory_usage.h"
 
 namespace storage {
 namespace {
+
+using ::testing::Lt;
 
 class DataSourceTest : public gtest::TestLoopFixture {
  protected:
@@ -67,6 +71,33 @@ TEST_F(DataSourceTest, Vmo) {
   EXPECT_TRUE(fsl::VmoFromString(value, &vmo));
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));
+}
+
+TEST_F(DataSourceTest, VmoIsDestroyed) {
+  uint64_t memory_before;
+  ASSERT_TRUE(ledger::GetCurrentProcessMemoryUsage(&memory_before));
+
+  // Create 10 VMOs and let them get destructed.
+  for (int i = 0; i < 10; ++i) {
+    std::string big_value(1'000'000, 'a');
+    fsl::SizedVmo vmo;
+    EXPECT_TRUE(fsl::VmoFromString(big_value, &vmo));
+    EXPECT_TRUE(TestDataSource(big_value, DataSource::Create(std::move(vmo))));
+  }
+
+  // Make sure there are no leftover VMOs in-memory.
+  uint64_t memory_after;
+  ASSERT_TRUE(ledger::GetCurrentProcessMemoryUsage(&memory_after));
+
+#if !__has_feature(address_sanitizer)
+  // If the VMOs have been destroyed there should be no additional memory used at the end of this
+  // test.
+  EXPECT_EQ(memory_after - memory_before, 0u);
+#else
+  // ASAN increases memory usage. Observed values on the bots when running with ASAN are always
+  // below |45'641'728|.
+  EXPECT_THAT(memory_after - memory_before, Lt(46'000'000u));
+#endif
 }
 
 TEST_F(DataSourceTest, Socket) {

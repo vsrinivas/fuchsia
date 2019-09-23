@@ -4,19 +4,21 @@
 
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 
-#include <stdlib.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <stdlib.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 
 namespace ledger {
 namespace {
+
+using ::testing::Gt;
 
 int64_t LaunchTestBenchmark(async::Loop* loop) {
   auto component_context = sys::ComponentContext::Create();
@@ -25,9 +27,10 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
-  launch_info.arguments.emplace({"record",
-      "--spec-file="
-      "/pkgfs/packages/ledger_tests/0/data/memory_usage_test_benchmark.tspec"});
+  launch_info.arguments.emplace(
+      {"record",
+       "--spec-file="
+       "/pkgfs/packages/ledger_tests/0/data/memory_usage_test_benchmark.tspec"});
 
   fuchsia::sys::LauncherPtr launcher;
   component_context->svc()->Connect(launcher.NewRequest());
@@ -75,6 +78,12 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   // The test benchmark will start another Ledger instance and try to get the
   // memory usage from that one. Ensure this operation succeeds.
   EXPECT_EQ(LaunchTestBenchmark(&loop), EXIT_SUCCESS);
+}
+
+TEST(LedgerMemoryUsage, GetCurrentProcessMemoryUsage) {
+  uint64_t memory;
+  ASSERT_TRUE(GetCurrentProcessMemoryUsage(&memory));
+  EXPECT_THAT(memory, Gt(0u));
 }
 
 }  // namespace

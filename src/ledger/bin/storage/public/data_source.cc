@@ -52,6 +52,12 @@ class VmoDataChunk : public DataSource::DataChunk {
  public:
   explicit VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
 
+  ~VmoDataChunk() {
+    if (vmar_) {
+      vmar_.destroy();
+    }
+  }
+
   zx_status_t Init() {
     uintptr_t allocate_address;
     zx_status_t status = zx::vmar::root_self()->allocate(

@@ -7,14 +7,15 @@
 #include <lib/zx/job.h>
 #include <lib/zx/object.h>
 #include <lib/zx/process.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_view.h>
-#include <task-utils/walker.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <set>
 #include <string>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_view.h>
+#include <task-utils/walker.h>
 
 namespace ledger {
 namespace {
@@ -36,7 +37,7 @@ bool GetTaskName(zx::unowned<zx::process>& task, std::string* name) {
 
 // Retrieves the private bytes used by the given task. Returns true on success,
 // or false otherwise.
-bool GetMemoryUsageForTask(zx::process& task, uint64_t* memory) {
+bool GetMemoryUsageForTask(const zx::process& task, uint64_t* memory) {
   zx_info_task_stats_t info;
   zx_status_t status = task.get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
@@ -143,6 +144,11 @@ bool LedgerMemoryEstimator::Init() {
 bool LedgerMemoryEstimator::GetLedgerMemoryUsage(uint64_t* memory) {
   FXL_CHECK(ledger_task_);
   return GetMemoryUsageForTask(ledger_task_, memory);
+}
+
+bool GetCurrentProcessMemoryUsage(uint64_t* memory) {
+  zx::unowned<zx::process> self = zx::process::self();
+  return GetMemoryUsageForTask(*self, memory);
 }
 
 }  // namespace ledger
