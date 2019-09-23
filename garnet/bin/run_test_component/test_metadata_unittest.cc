@@ -4,10 +4,15 @@
 
 #include "garnet/bin/run_test_component/test_metadata.h"
 
+#include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/device/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sys/test/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
@@ -232,9 +237,18 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   "facets": {
     "fuchsia.test": {
       "system-services": [
+        "fuchsia.boot.FactoryItems",
+        "fuchsia.boot.ReadOnlyLog",
+        "fuchsia.boot.RootJob",
+        "fuchsia.boot.RootResource",
+        "fuchsia.boot.WriteOnlyLog",
+        "fuchsia.device.NameProvider",
+        "fuchsia.kernel.Counter",
         "fuchsia.net.Connectivity",
         "fuchsia.net.stack.Stack",
         "fuchsia.netstack.Netstack",
+        "fuchsia.scheduler.ProfileProvider",
+        "fuchsia.sys.test.CacheControl",
         "fuchsia.sysmem.Allocator",
         "fuchsia.ui.scenic.Scenic",
         "fuchsia.ui.policy.Presenter",
@@ -246,11 +260,16 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 7u);
+    EXPECT_EQ(tm.system_services().size(), 16u);
     EXPECT_THAT(tm.system_services(),
                 ::testing::ElementsAre(
-                    fuchsia::net::Connectivity::Name_, fuchsia::net::stack::Stack::Name_,
-                    fuchsia::netstack::Netstack::Name_, fuchsia::sysmem::Allocator::Name_,
+                    fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
+                    fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
+                    fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
+                    fuchsia::kernel::Counter::Name_, fuchsia::net::Connectivity::Name_,
+                    fuchsia::net::stack::Stack::Name_, fuchsia::netstack::Netstack::Name_,
+                    fuchsia::scheduler::ProfileProvider::Name_,
+                    fuchsia::sys::test::CacheControl::Name_, fuchsia::sysmem::Allocator::Name_,
                     fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_,
                     fuchsia::vulkan::loader::Loader::Name_));
   }

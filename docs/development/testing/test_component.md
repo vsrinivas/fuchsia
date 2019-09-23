@@ -128,6 +128,13 @@ enable this workaround you need to allow some system services:
 There are some services, such as network, that cannot be faked or mocked. However, you can connect to real system versions of these services by mentioning these services in `system-services`. Services that cannot be faked:
 
 ```text
+"fuchsia.boot.FactoryItems"
+"fuchsia.boot.ReadOnlyLog"
+"fuchsia.boot.RootJob"
+"fuchsia.boot.RootResource"
+"fuchsia.boot.WriteOnlyLog"
+"fuchsia.device.NameProvider"
+"fuchsia.kernel.Counter"
 "fuchsia.scheduler.ProfileProvider"
 "fuchsia.sys.test.CacheControl"
 "fuchsia.sysmem.Allocator"
