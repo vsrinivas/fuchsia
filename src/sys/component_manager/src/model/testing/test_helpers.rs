@@ -7,8 +7,13 @@ use {
     cm_rust::ComponentDecl,
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
-        DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+        DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
+    files_async,
+    fuchsia_zircon as zx,
+    futures::prelude::*,
+    futures::{channel::mpsc, future::BoxFuture, lock::Mutex},
     std::collections::HashSet,
     std::path::Path,
     std::sync::Arc,
@@ -83,6 +88,21 @@ pub async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
     res.expect("Unable to read file.")
 }
 
+pub async fn write_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str, contents: &'a str) {
+    let file_proxy = io_util::open_file(
+        &root_proxy,
+        &Path::new(path),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+    )
+    .expect("Failed to open file.");
+    let (s, _) = file_proxy
+        .write(&mut contents.as_bytes().to_vec().drain(..))
+        .await
+        .expect("Unable to write file.");
+    let s = zx::Status::from_raw(s);
+    assert_eq!(s, zx::Status::OK, "Write failed");
+}
+
 pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
     let node_proxy =
         io_util::open_node(&root_proxy, &Path::new(path), OPEN_RIGHT_READABLE, MODE_TYPE_SERVICE)
@@ -90,4 +110,60 @@ pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = echo_proxy.echo_string(Some("hippos")).await;
     res.expect("failed to use echo service").expect("no result from echo")
+}
+
+/// A hook that can block on Stop and notify on Destroy for a particular component instance.
+pub struct DestroyHook {
+    /// Realm for which to block `on_stop_instance`.
+    moniker: AbsoluteMoniker,
+    /// Receiver on which to wait to unblock `on_stop_instance`.
+    stop_recv: Mutex<mpsc::Receiver<()>>,
+    /// Receiver on which to wait to unblock `on_destroy_instance`.
+    destroy_send: Mutex<mpsc::Sender<()>>,
+}
+
+impl DestroyHook {
+    /// Returns `DestroyHook` and channels on which to signal on `on_stop_instance` and
+    /// be signalled for `on_destroy_instance`.
+    pub fn new(moniker: AbsoluteMoniker) -> (Arc<Self>, mpsc::Sender<()>, mpsc::Receiver<()>) {
+        let (stop_send, stop_recv) = mpsc::channel(0);
+        let (destroy_send, destroy_recv) = mpsc::channel(0);
+        (
+            Arc::new(Self {
+                moniker,
+                stop_recv: Mutex::new(stop_recv),
+                destroy_send: Mutex::new(destroy_send),
+            }),
+            stop_send,
+            destroy_recv,
+        )
+    }
+
+    async fn on_stop_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        if realm.abs_moniker == self.moniker {
+            let mut recv = self.stop_recv.lock().await;
+            recv.next().await.expect("failed to suspend stop");
+        }
+        Ok(())
+    }
+
+    async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        if realm.abs_moniker == self.moniker {
+            let mut send = self.destroy_send.lock().await;
+            send.send(()).await.expect("failed to send destroy signal");
+        }
+        Ok(())
+    }
+}
+
+impl DestroyInstanceHook for DestroyHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_destroy_instance_async(realm))
+    }
+}
+
+impl StopInstanceHook for DestroyHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_stop_instance_async(realm))
+    }
 }

@@ -51,6 +51,11 @@ pub enum ModelError {
         #[fail(cause)]
         err: ClonableError,
     },
+    #[fail(display = "storage error")]
+    StorageError {
+        #[fail(cause)]
+        err: StorageError,
+    },
     #[fail(display = "failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[fail(display = "open directory error")]
@@ -118,5 +123,11 @@ impl From<ResolverError> for ModelError {
 impl From<RunnerError> for ModelError {
     fn from(err: RunnerError) -> Self {
         ModelError::RunnerError { err }
+    }
+}
+
+impl From<StorageError> for ModelError {
+    fn from(err: StorageError) -> Self {
+        ModelError::StorageError { err }
     }
 }

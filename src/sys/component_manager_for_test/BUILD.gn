@@ -10,6 +10,7 @@ rustc_binary("bin") {
   name = "component_manager_for_test_bin"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",

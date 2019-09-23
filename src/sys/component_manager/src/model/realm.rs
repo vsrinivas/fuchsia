@@ -227,10 +227,18 @@ impl Realm {
 
     /// Destroys this component instance.
     /// REQUIRES: All children have already been destroyed.
-    // TODO: This is a stub. Need to:
+    // TODO: Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
-    // - Delete the instance's isolated storage
-    pub async fn destroy_instance(_realm: Arc<Realm>) -> Result<(), ModelError> {
+    pub async fn destroy_instance(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
+        // Clean up isolated storage.
+        let state = realm.lock_state().await;
+        let state = state.get();
+        for use_ in state.decl.uses.iter() {
+            if let UseDecl::Storage(_) = use_ {
+                route_and_delete_storage(&model, use_, realm.abs_moniker.clone()).await?;
+                break;
+            }
+        }
         Ok(())
     }
 

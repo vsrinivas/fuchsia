@@ -6,7 +6,7 @@ use {
     component_manager_lib::{
         model::{
             testing::test_helpers,
-            AbsoluteMoniker, //self,AbsoluteMoniker
+            AbsoluteMoniker,
             Hub,
         },
         startup,

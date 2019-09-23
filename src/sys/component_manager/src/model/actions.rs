@@ -319,7 +319,7 @@ async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the containing realm.
-    Realm::destroy_instance(realm).await
+    Realm::destroy_instance(model, realm).await
 }
 
 fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelError> {

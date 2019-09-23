@@ -357,7 +357,6 @@ mod tests {
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
-        futures::{channel::mpsc, lock::Mutex},
         io_util::OPEN_RIGHT_READABLE,
         std::collections::HashSet,
         std::convert::TryFrom,
@@ -618,7 +617,10 @@ mod tests {
             DestroyHook::new(vec!["system:0", "coll:a:1"].into());
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
-        hooks.append(&mut DestroyHook::hooks(destroy_hook));
+        hooks.append(&mut vec![
+            Hook::StopInstance(destroy_hook.clone()),
+            Hook::DestroyInstance(destroy_hook.clone()),
+        ]);
         let test =
             RealmServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks).await;
 
@@ -677,65 +679,6 @@ mod tests {
         destroy_recv.next().await.expect("failed to receive");
         assert!(!has_child(&test.realm, "coll:a:1").await);
         assert!(has_child(&test.realm, "coll:a:3").await);
-    }
-
-    struct DestroyHook {
-        /// Realm for which to block `on_stop_instance`.
-        moniker: AbsoluteMoniker,
-        /// Receiver on which to wait to unblock `on_stop_instance`.
-        stop_recv: Mutex<mpsc::Receiver<()>>,
-        /// Receiver on which `on_destroy_instance` is signalled.
-        destroy_send: Mutex<mpsc::Sender<()>>,
-    }
-
-    impl DestroyHook {
-        /// Returns `DestroyHook` and channels on which to signal on `on_stop_instance` and
-        /// be signalled for `on_destroy_instance`.
-        fn new(moniker: AbsoluteMoniker) -> (Arc<Self>, mpsc::Sender<()>, mpsc::Receiver<()>) {
-            let (stop_send, stop_recv) = mpsc::channel(0);
-            let (destroy_send, destroy_recv) = mpsc::channel(0);
-            (
-                Arc::new(Self {
-                    moniker,
-                    stop_recv: Mutex::new(stop_recv),
-                    destroy_send: Mutex::new(destroy_send),
-                }),
-                stop_send,
-                destroy_recv,
-            )
-        }
-
-        async fn on_stop_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-            if realm.abs_moniker == self.moniker {
-                let mut recv = self.stop_recv.lock().await;
-                recv.next().await.expect("failed to suspend stop");
-            }
-            Ok(())
-        }
-
-        async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-            if realm.abs_moniker == self.moniker {
-                let mut send = self.destroy_send.lock().await;
-                send.send(()).await.expect("failed to send destroy signal");
-            }
-            Ok(())
-        }
-
-        fn hooks(hook: Arc<DestroyHook>) -> Vec<Hook> {
-            vec![Hook::StopInstance(hook.clone()), Hook::DestroyInstance(hook.clone())]
-        }
-    }
-
-    impl DestroyInstanceHook for DestroyHook {
-        fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(self.on_destroy_instance_async(realm))
-        }
-    }
-
-    impl StopInstanceHook for DestroyHook {
-        fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(self.on_stop_instance_async(realm))
-        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

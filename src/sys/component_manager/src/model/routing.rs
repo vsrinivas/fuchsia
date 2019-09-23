@@ -10,10 +10,10 @@ use {
         StorageDirectorySource, UseDecl,
     },
     failure::format_err,
-    fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    std::{convert::TryFrom, path::PathBuf, sync::Arc},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fuchsia_zircon as zx,
+    std::{convert::TryFrom, sync::Arc},
 };
 const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
@@ -165,6 +165,8 @@ async fn open_framework_capability<'a>(
     Ok(())
 }
 
+/// Routes a `UseDecl::Storage` to the component instance providing the backing directory and
+/// opens its isolated storage with `server_chan`.
 pub async fn route_and_open_storage_capability<'a>(
     model: &'a Model,
     use_decl: &'a UseDecl,
@@ -172,6 +174,61 @@ pub async fn route_and_open_storage_capability<'a>(
     use_abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
+    let (dir_source_realm, dir_source_path, relative_moniker) =
+        route_storage_capability(model, use_decl, use_abs_moniker).await?;
+    let storage_type = match use_decl {
+        UseDecl::Storage(d) => d.type_(),
+        _ => panic!("non-storage capability"),
+    };
+    let storage_dir_proxy = open_isolated_storage(
+        &model,
+        dir_source_realm,
+        &dir_source_path,
+        storage_type,
+        &relative_moniker,
+        open_mode,
+    )
+    .await
+    .map_err(|e| ModelError::from(e))?;
+
+    // clone the final connection to connect the channel we're routing to its destination
+    storage_dir_proxy
+        .clone(FLAGS, ServerEnd::new(server_chan))
+        .map_err(|e| ModelError::capability_discovery_error(format_err!("failed clone {}", e)))?;
+    Ok(())
+}
+
+/// Routes a `UseDecl::Storage` to the component instance providing the backing directory and
+/// deletes its isolated storage.
+pub async fn route_and_delete_storage<'a>(
+    model: &'a Model,
+    use_decl: &'a UseDecl,
+    use_abs_moniker: AbsoluteMoniker,
+) -> Result<(), ModelError> {
+    let (dir_source_realm, dir_source_path, relative_moniker) =
+        route_storage_capability(model, use_decl, use_abs_moniker).await?;
+    delete_isolated_storage(
+        &model,
+        dir_source_realm,
+        &dir_source_path,
+        &relative_moniker,
+    )
+    .await
+    .map_err(|e| ModelError::from(e))?;
+    Ok(())
+}
+
+/// Assuming `use_decl` is a UseStorage declaration, returns information about the source of the
+/// storage capability, including:
+/// - Realm hosting the backing directory capability
+/// - Path to the backing directory capability
+/// - Relative moniker between the backing directory component and the consumer, which identifies
+///   the isolated storage directory.
+async fn route_storage_capability<'a>(
+    model: &'a Model,
+    use_decl: &'a UseDecl,
+    use_abs_moniker: AbsoluteMoniker,
+) -> Result<(Arc<Realm>, CapabilityPath, RelativeMoniker), ModelError> {
     // Walk the offer chain to find the storage decl
     let parent_moniker = match use_abs_moniker.parent() {
         Some(m) => m,
@@ -199,7 +256,7 @@ pub async fn route_and_open_storage_capability<'a>(
     };
 
     // Find the path and source of the directory consumed by the storage capability.
-    let (source_path, dir_source_realm) = match storage_decl.source {
+    let (dir_source_path, dir_source_realm) = match storage_decl.source {
         StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
         StorageDirectorySource::Realm => {
             let capability = RoutedCapability::Storage(storage_decl);
@@ -246,96 +303,9 @@ pub async fn route_and_open_storage_capability<'a>(
             }
         }
     };
-
-    // Bind with a local proxy, so we can create and open the relevant sub-directory for
-    // this component.
-    let (dir_proxy, local_server_end) =
-        create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    Model::bind_instance_open_outgoing(
-        &model,
-        dir_source_realm,
-        FLAGS,
-        open_mode,
-        &source_path,
-        local_server_end.into_channel(),
-    )
-    .await?;
-
-    // Open each node individually, so it can be created if it doesn't exist
     let relative_moniker =
         RelativeMoniker::from_absolute(&storage_decl_realm.abs_moniker, &use_abs_moniker);
-    let storage_type = match use_decl {
-        UseDecl::Storage(d) => d.type_(),
-        _ => panic!("non-storage capability"),
-    };
-    let sub_dir_proxy = io_util::create_sub_directories(
-        &dir_proxy,
-        &generate_storage_path(storage_type, relative_moniker),
-    )
-    .map_err(|e| {
-        ModelError::capability_discovery_error(format_err!(
-            "failed to create new directories: {}",
-            e
-        ))
-    })?;
-
-    // clone the final connection to connect the channel we're routing to its destination
-    sub_dir_proxy
-        .clone(FLAGS, ServerEnd::new(server_chan))
-        .map_err(|e| ModelError::capability_discovery_error(format_err!("failed clone {}", e)))?;
-    Ok(())
-}
-
-/// Generates the path into a directory the provided component will be afforded for storage
-///
-/// The path of the sub-directory for a component that uses a storage capability is based on:
-///
-/// - Each component instance's name as given in the `children` section of its parent's manifest,
-/// for each component instance in the path from the [`storage` declaration][storage-syntax] to the
-/// [`use` declaration][use-syntax].
-/// - The storage type.
-///
-/// These names are used as path elements, separated by elements of the name "children". The
-/// storage type is then appended to this path.
-///
-/// For example, if the following component instance tree exists, with `a` declaring storage
-/// capabilities, and then cache storage being offered down the chain to `d`:
-///
-/// ```
-///  a  <- declares storage, offers cache storage to b
-///  |
-///  b  <- offers cache storage to c
-///  |
-///  c  <- offers cache storage to d
-///  |
-///  d  <- uses cache storage as `/my_cache`
-/// ```
-///
-/// When `d` attempts to access `/my_cache` the framework creates the sub-directory
-/// `b/children/c/children/d/cache` in the directory used by `a` to declare storage capabilities.
-/// Then, the framework gives 'd' access to this new directory.
-pub fn generate_storage_path(
-    type_: fsys::StorageType,          // The type of storage being used
-    relative_moniker: RelativeMoniker, // The relative moniker from the storage decl to the usage
-) -> PathBuf {
-    assert!(
-        !relative_moniker.down_path().is_empty(),
-        "storage capability appears to have been exposed or used by its source"
-    );
-
-    let mut down_path = relative_moniker.down_path().iter();
-
-    let mut dir_path = vec![down_path.next().unwrap().as_str().to_string()];
-    while let Some(p) = down_path.next() {
-        dir_path.push("children".to_string());
-        dir_path.push(p.as_str().to_string());
-    }
-    match type_ {
-        fsys::StorageType::Data => dir_path.push("data".to_string()),
-        fsys::StorageType::Cache => dir_path.push("cache".to_string()),
-        fsys::StorageType::Meta => dir_path.push("meta".to_string()),
-    }
-    dir_path.into_iter().collect()
+    Ok((dir_source_realm, dir_source_path, relative_moniker))
 }
 
 /// Check if a used capability is a framework service, and if so return a framework `CapabilitySource`.
@@ -593,94 +563,6 @@ async fn walk_expose_chain<'a>(
                 })?;
                 return Ok(CapabilitySource::Framework(capability_decl, current_realm.clone()));
             }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, fidl_fuchsia_sys2::StorageType};
-
-    #[test]
-    fn generate_storage_path_test() {
-        for (type_, relative_moniker, expected_output) in vec![
-            (
-                StorageType::Data,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1/data",
-            ),
-            (
-                StorageType::Cache,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1/cache",
-            ),
-            (
-                StorageType::Meta,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1/meta",
-            ),
-            (
-                StorageType::Data,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2/data",
-            ),
-            (
-                StorageType::Cache,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2/cache",
-            ),
-            (
-                StorageType::Meta,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2/meta",
-            ),
-            (
-                StorageType::Data,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3/data",
-            ),
-            (
-                StorageType::Cache,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3/cache",
-            ),
-            (
-                StorageType::Meta,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3/meta",
-            ),
-        ] {
-            assert_eq!(
-                generate_storage_path(type_, relative_moniker),
-                PathBuf::from(expected_output)
-            )
         }
     }
 }

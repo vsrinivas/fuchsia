@@ -4,13 +4,16 @@
 
 use {
     crate::{
-        directory_broker, framework::RealmServiceHost, klog, model::routing::generate_storage_path,
-        model::testing::memfs::Memfs, model::testing::mocks::*, model::*, startup,
+        directory_broker,
+        framework::RealmServiceHost,
+        klog,
+        model::testing::memfs::Memfs,
+        model::testing::mocks::*,
+        model::testing::test_helpers::{self, DestroyHook},
+        model::*,
+        startup,
     },
-    cm_rust::{
-        CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-        OfferDirectorySource, OfferServiceSource, StorageDirectorySource, UseDecl, UseStorageDecl,
-    },
+    cm_rust::*,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{
@@ -26,7 +29,7 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
-    futures::TryStreamExt,
+    futures::prelude::*,
     std::{
         collections::{HashMap, HashSet},
         convert::TryInto,
@@ -49,10 +52,6 @@ pub fn default_directory_capability() -> CapabilityPath {
 }
 
 pub enum CheckUse {
-    Service {
-        path: CapabilityPath,
-        should_succeed: bool,
-    },
     LegacyService {
         path: CapabilityPath,
         should_succeed: bool,
@@ -62,6 +61,7 @@ pub enum CheckUse {
         should_succeed: bool,
     },
     Storage {
+        path: CapabilityPath,
         type_: fsys::StorageType,
         // The relative moniker from the storage declaration to the use declaration. If None, this
         // storage use is expected to fail.
@@ -187,6 +187,37 @@ impl RoutingTest {
         .await;
     }
 
+    /// Deletes a dynamic child `child_decl` in `moniker`'s `collection`, waiting for destruction
+    /// to complete.
+    pub async fn destroy_dynamic_child<'a>(
+        &'a self,
+        moniker: AbsoluteMoniker,
+        collection: &'a str,
+        name: &'a str,
+        instance: InstanceId,
+    ) {
+        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_resolved_url = Self::resolved_url(&component_name);
+        let instance_moniker = moniker.child(ChildMoniker::new(
+            name.to_string(),
+            Some(collection.to_string()),
+            instance.clone(),
+        ));
+        let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(instance_moniker.clone());
+        self.model.root_realm.hooks.install(vec![Hook::DestroyInstance(destroy_hook)]).await;
+        capability_util::call_destroy_child(
+            component_resolved_url,
+            self.namespaces.clone(),
+            collection,
+            name,
+        )
+        .await;
+        destroy_recv
+            .next()
+            .await
+            .expect(&format!("failed to receive destroy signal for {}", instance_moniker));
+    }
+
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = Self::bind_instance(&self.model, &moniker).await;
@@ -194,7 +225,6 @@ impl RoutingTest {
         Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
             .await;
         match check {
-            CheckUse::Service { .. } => panic!("service capability unsupported"),
             CheckUse::LegacyService { path, should_succeed } => {
                 capability_util::call_echo_svc_from_namespace(
                     path,
@@ -213,7 +243,7 @@ impl RoutingTest {
                 )
                 .await
             }
-            CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation } => {
+            CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation, .. } => {
                 capability_util::write_file_to_meta_storage(
                     &self.model,
                     moniker,
@@ -229,9 +259,9 @@ impl RoutingTest {
                     .await;
                 }
             }
-            CheckUse::Storage { type_, storage_relation } => {
+            CheckUse::Storage { path, type_, storage_relation } => {
                 capability_util::write_file_to_storage(
-                    "/storage".try_into().unwrap(),
+                    path,
                     component_resolved_url,
                     self.namespaces.clone(),
                     storage_relation.is_some(),
@@ -248,7 +278,6 @@ impl RoutingTest {
     /// Checks using a capability from a component's exposed directory.
     pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         match check {
-            CheckUse::Service { .. } => panic!("service capability unsupported"),
             CheckUse::LegacyService { path, should_succeed } => {
                 capability_util::call_echo_svc_from_exposed_dir(
                     path,
@@ -271,6 +300,21 @@ impl RoutingTest {
                 panic!("storage capabilities can't be exposed");
             }
         }
+    }
+
+    /// Lists the contents of a storage directory.
+    pub async fn list_directory_in_storage(
+        &self,
+        relation: RelativeMoniker,
+        relative_path: &str,
+    ) -> Vec<String> {
+        let memfs_proxy = self.memfs.clone_root_handle();
+        let mut dir_path = storage::generate_storage_path(None, &relation);
+        dir_path.push(relative_path);
+        let dir_proxy =
+            io_util::open_directory(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
+                .expect("failed to open directory");
+        test_helpers::list_directory(&dir_proxy).await
     }
 
     /// check_namespace will ensure that the paths in `namespaces` for `component_name` match the use
@@ -454,6 +498,7 @@ pub mod capability_util {
         match (meta_dir_res, should_succeed) {
             (Ok(Some(meta_dir)), true) => write_hippo_file_to_directory(&meta_dir, true).await,
             (Err(ModelError::CapabilityDiscoveryError { .. }), false) => (),
+            (Err(ModelError::StorageError { .. }), false) => (),
             (Ok(Some(_)), false) => panic!("meta dir present when usage was expected to fail"),
             (Ok(None), true) => panic!("meta dir missing when usage was expected to succeed"),
             (Ok(None), false) => panic!("meta dir missing when resolution should return an error"),
@@ -483,11 +528,8 @@ pub mod capability_util {
         memfs: &Memfs,
     ) {
         let memfs_proxy = memfs.clone_root_handle();
-
-        let mut dir_path = generate_storage_path(type_, relation);
-
+        let mut dir_path = generate_storage_path(Some(type_), &relation);
         dir_path.push("hippos");
-
         let file_proxy = io_util::open_file(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
             .expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
@@ -664,6 +706,31 @@ pub mod capability_util {
         let _ = res.expect("failed to create child");
     }
 
+    /// Call `fuchsia.sys2.Realm.DestroyChild` to destroy a dynamic child, waiting for
+    /// destruction to complete.
+    pub async fn call_destroy_child<'a>(
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        collection: &'a str,
+        name: &'a str,
+    ) {
+        let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
+        let dir_proxy =
+            get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces).await;
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &Path::new(&path.basename),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open realm service");
+        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let mut child_ref =
+            fsys::ChildRef { collection: Some(collection.to_string()), name: name.to_string() };
+        let res = realm_proxy.destroy_child(&mut child_ref).await;
+        let _ = res.expect("failed to destroy child");
+    }
+
     /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of
     /// `resolved_url`.
     pub async fn get_dir_from_namespace(
@@ -676,7 +743,11 @@ pub mod capability_util {
 
         // Find the index of our directory in the namespace, and remove the directory and path. The
         // path is removed so that the paths/dirs aren't shuffled in the namespace.
-        let index = ns.paths.iter().position(|path| path == dir_string).expect("didn't find dir");
+        let index = ns
+            .paths
+            .iter()
+            .position(|path| path == dir_string)
+            .expect(&format!("didn't find dir {}", dir_string));
         let directory = ns.directories.remove(index);
         let path = ns.paths.remove(index);
 

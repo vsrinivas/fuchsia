@@ -18,11 +18,13 @@ mod resolver;
 mod routing;
 pub mod routing_facade;
 mod runner;
+mod storage;
 pub mod testing;
 #[cfg(test)]
-pub(crate) mod tests;
+mod tests;
 
 pub use self::{
     actions::*, capability::*, dir_tree::*, error::*, exposed_dir::*, hooks::*, hub::*, model::*,
     moniker::*, namespace::*, realm::*, resolver::*, routing::*, routing_facade::*, runner::*,
+    storage::*,
 };

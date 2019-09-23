@@ -337,7 +337,7 @@ impl fmt::Display for AbsoluteMoniker {
 /// for C will be distinct.
 ///
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct RelativeMoniker {
     up_path: Vec<ChildMoniker>,
     down_path: Vec<ChildMoniker>,

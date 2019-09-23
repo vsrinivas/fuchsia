@@ -137,7 +137,13 @@ impl Model {
                 )))?;
             let path = path.to_string();
             let path = io_util::canonicalize_path(&path);
-            out_dir.open(flags, open_mode, path, server_end).expect("failed to send open message");
+            out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
+                ModelError::capability_discovery_error(format_err!(
+                    "failed to open outgoing dir for {}: {}",
+                    realm.abs_moniker,
+                    e
+                ))
+            })?;
             eager_children
         };
         self.bind_eager_children_recursive(eager_children).await?;
@@ -168,7 +174,13 @@ impl Model {
                 .root_dir
                 .open(flags, MODE_TYPE_DIRECTORY, vec![], server_end)
                 .await
-                .expect("failed to send open message");
+                .map_err(|e| {
+                    ModelError::capability_discovery_error(format_err!(
+                        "failed to open exposed dir for {}: {}",
+                        realm.abs_moniker,
+                        e
+                    ))
+                })?;
             eager_children
         };
         self.bind_eager_children_recursive(eager_children).await?;
