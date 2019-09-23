@@ -35,6 +35,9 @@ driver("optee") {
     ":keysafe_ta",
     ":secmem_ta",
     ":castauth_ta",
+    ":widevine_ta",
+    ":playready_ta",
+    ":provisioning_ta",
   ]
 }
 
@@ -62,6 +65,33 @@ firmware("castauth_ta") {
   ]
   outputs = [
     "93a424e2-5608-4413-84a8-58b16a064dce.ta",
+  ]
+}
+
+firmware("widevine_ta") {
+  sources = [
+    "$firmware_dir/optee/widevine/e043cde0-61d0-11e5-9c26-0002a5d5c51b.ta.prod",
+  ]
+  outputs = [
+    "e043cde0-61d0-11e5-9c26-0002a5d5c51b.ta",
+  ]
+}
+
+firmware("playready_ta") {
+  sources = [
+    "$firmware_dir/optee/playready/9a04f079-9840-4286-ab92-e65be0885f95.ta.prod",
+  ]
+  outputs = [
+    "9a04f079-9840-4286-ab92-e65be0885f95.ta",
+  ]
+}
+
+firmware("provisioning_ta") {
+  sources = [
+    "$firmware_dir/optee/provisioning/d83c3c4a-9e8d-4e4e-ad30-9d40e137f689.ta.prod",
+  ]
+  outputs = [
+    "d83c3c4a-9e8d-4e4e-ad30-9d40e137f689.ta",
   ]
 }
 
