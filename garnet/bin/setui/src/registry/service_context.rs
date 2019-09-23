@@ -10,7 +10,7 @@ use fuchsia_component::client::connect_to_service;
 
 use fuchsia_zircon as zx;
 
-type GenerateService = Box<dyn Fn(&str, zx::Channel) -> Result<(), Error> + Send + Sync>;
+pub type GenerateService = Box<dyn Fn(&str, zx::Channel) -> Result<(), Error> + Send + Sync>;
 
 /// A wrapper around service operations, allowing redirection to a nested
 /// environment.

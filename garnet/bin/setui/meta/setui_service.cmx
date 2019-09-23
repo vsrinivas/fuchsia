@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
+            "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.net.Connectivity",

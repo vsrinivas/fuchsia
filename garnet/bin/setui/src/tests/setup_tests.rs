@@ -10,6 +10,7 @@ use {
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
+    crate::tests::fake_services::{Action, FakeDeviceAdmin},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -73,10 +74,13 @@ async fn test_setup() {
             .is_ok());
     }
 
+    let device_admin_service = FakeDeviceAdmin::new();
+
+    // Handle reboot
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Setup].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        Arc::new(RwLock::new(ServiceContext::new(Some(device_admin_service.get_service())))),
         storage_factory,
     );
 
@@ -106,12 +110,24 @@ async fn test_setup() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
-    // Check to make sure value wrote out to store correctly.
+    // Check to make sure value wrote out to store correctly
     {
         let mut store_lock = store.lock().await;
         assert_eq!(
             store_lock.get().await.configuration_interfaces,
             ConfigurationInterfaceFlags::ETHERNET
         );
+    }
+
+    // Ensure reboot was requested by the controller
+    let actions_lock = device_admin_service.get_actions();
+    let actions = actions_lock.read();
+
+    assert_eq!(actions.len(), 1);
+
+    if let Some(action) = actions.get(0) {
+        assert_eq!(*action, Action::Reboot);
+    } else {
+        panic!("Should have an action");
     }
 }

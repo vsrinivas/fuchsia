@@ -262,6 +262,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Setup,
                 SetupController::spawn(
+                    service_context_handle.clone(),
                     unboxed_storage_factory.get_store::<switchboard::base::SetupInfo>(),
                 )
                 .unwrap(),
