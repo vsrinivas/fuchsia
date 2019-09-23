@@ -19,4 +19,8 @@ fidl("test.component.mockrunner") {
   sources = [
     "runner.fidl",
   ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+  ]
 }

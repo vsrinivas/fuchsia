@@ -10,14 +10,19 @@
 #include <unistd.h>
 
 #include <memory>
+#include <sstream>
+#include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "fuchsia/sys/cpp/fidl.h"
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
+#include "gmock/gmock.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async-loop/default.h"
 #include "lib/async-loop/loop.h"
+#include "lib/fidl/internal.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
 
@@ -290,6 +295,45 @@ TEST_F(RealmRunnerTest, KillComponentController) {
   component->Kill();
   WaitForComponentCount(0);
   RunLoopUntil([&] { return reason == TerminationReason::EXITED; });
+}
+
+std::string ConvertToString(const std::vector<fuchsia::sys::ProgramMetadata>& vec) {
+  if (vec.empty()) {
+    return "empty vector of program metadata";
+  }
+
+  std::string ret = fxl::StringPrintf("%lu records:", vec.size());
+  for (auto& metadata : vec) {
+    ret +=
+        fxl::StringPrintf("\n{key: %s, value: %s}", metadata.key.c_str(), metadata.value.c_str());
+  }
+  return ret;
+}
+
+TEST_F(RealmRunnerTest, ValidateProgramMetadata) {
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  WaitForRunnerToRegister();
+  // make sure component was launched
+  WaitForComponentCount(1);
+
+  auto components = runner_registry_.runner()->components();
+  MockComponentSyncPtr component_ptr;
+  runner_registry_.runner()->runner_ptr()->ConnectToComponent(components[0].unique_id,
+                                                              component_ptr.NewRequest());
+
+  std::vector<fuchsia::sys::ProgramMetadata> vec;
+  ASSERT_EQ(ZX_OK, component_ptr->GetProgramMetadata(&vec));
+
+  ASSERT_EQ(vec.size(), 2u) << ConvertToString(vec);
+
+  auto data = vec[0];
+  auto binary = vec[1];
+
+  EXPECT_EQ(data.key, "data");
+  EXPECT_EQ(data.value, "data/fake_component_for_runner");
+
+  EXPECT_EQ(binary.key, "binary");
+  EXPECT_EQ(binary.value, "bin/fake_component");
 }
 
 class RealmRunnerServiceTest : public RealmRunnerTest {

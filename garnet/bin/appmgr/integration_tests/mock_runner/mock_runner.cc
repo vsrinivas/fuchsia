@@ -7,10 +7,14 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/outgoing_directory.h>
+
 #include <memory>
+
+#include <src/lib/fxl/logging.h>
+
+#include "fuchsia/sys/cpp/fidl.h"
 
 namespace component {
 namespace testing {
@@ -18,10 +22,15 @@ namespace testing {
 FakeSubComponent::FakeSubComponent(
     uint64_t id, fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
     ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller, MockRunner* runner)
-    : id_(id), return_code_(0), alive_(true), binding_(this), runner_(runner) {
-  outgoing_.Serve(std::move(startup_info.launch_info.directory_request));
+    : id_(id),
+      return_code_(0),
+      alive_(true),
+      binding_(this),
+      runner_(runner),
+      startup_info_(std::move(startup_info)) {
+  outgoing_.Serve(std::move(startup_info_.launch_info.directory_request));
 
-  auto* flat = &startup_info.flat_namespace;
+  auto* flat = &startup_info_.flat_namespace;
   for (size_t i = 0; i < flat->paths.size(); ++i) {
     zx::channel dir;
     if (flat->paths.at(i) == "/svc") {
@@ -67,6 +76,15 @@ void FakeSubComponent::PublishService(::std::string service_name, PublishService
           }),
       sname);
   callback();
+}
+
+void FakeSubComponent::GetProgramMetadata(FakeSubComponent::GetProgramMetadataCallback callback) {
+  std::vector<fuchsia::sys::ProgramMetadata> vec;
+
+  for (auto metadata : *startup_info_.program_metadata) {
+    vec.push_back(std::move(metadata));
+  }
+  callback(std::move(vec));
 }
 
 MockRunner::MockRunner()

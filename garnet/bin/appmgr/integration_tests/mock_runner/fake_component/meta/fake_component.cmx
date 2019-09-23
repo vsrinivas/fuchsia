@@ -1,9 +1,12 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/fake_component"
     },
     "runner": "fuchsia-pkg://fuchsia.com/appmgr_mock_runner#meta/appmgr_mock_runner.cmx",
     "sandbox": {
-        "services": [ "fuchsia.sys.Environment", "fidl.examples.echo.Echo" ]
+        "services": [
+            "fuchsia.sys.Environment",
+            "fidl.examples.echo.Echo"
+        ]
     }
 }

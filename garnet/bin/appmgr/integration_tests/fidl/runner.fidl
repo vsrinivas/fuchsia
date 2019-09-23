@@ -4,6 +4,8 @@
 
 library test.component.mockrunner;
 
+using fuchsia.sys;
+
 struct ComponentInfo {
     uint64 unique_id;
     string url;
@@ -21,6 +23,9 @@ protocol MockComponent {
     // Publishes `service_name` and connects to |backend service directory| when
     // request comes in.
     PublishService(string service_name) -> ();
+
+    // Gets program metadata for that particular component.
+    GetProgramMetadata() -> (vector<fuchsia.sys.ProgramMetadata>:20 metadata);
 };
 
 protocol MockRunner {

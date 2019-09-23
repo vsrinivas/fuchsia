@@ -12,9 +12,11 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <unordered_map>
+
 #include <src/lib/fxl/macros.h>
 #include <test/component/mockrunner/cpp/fidl.h>
-#include <unordered_map>
 
 namespace component {
 namespace testing {
@@ -53,6 +55,8 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
 
   void PublishService(::std::string service_name, PublishServiceCallback callback) override;
 
+  void GetProgramMetadata(GetProgramMetadataCallback callback) override;
+
   void SendReturnCodeIfTerminated();
 
   void AddMockControllerBinding(::fidl::InterfaceRequest<mockrunner::MockComponent> req) {
@@ -69,6 +73,7 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   fidl::BindingSet<mockrunner::MockComponent> mock_bindings_;
   MockRunner* runner_;
   sys::OutgoingDirectory outgoing_;
+  fuchsia::sys::StartupInfo startup_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeSubComponent);
 };

@@ -18,10 +18,6 @@
 #include <lib/json/json_parser.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/process.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
-#include <trace/event.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -30,6 +26,11 @@
 
 #include <algorithm>
 #include <utility>
+
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
+#include <trace/event.h>
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
@@ -52,6 +53,7 @@ namespace {
 constexpr char kAppPath[] = "bin/app";
 constexpr char kDataPathPrefix[] = "data/";
 constexpr char kDataKey[] = "data";
+constexpr char kBinaryKey[] = "binary";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
@@ -775,6 +777,12 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     pg.key = kDataKey;
     pg.value = data_path;
     program_metadata.emplace({pg});
+    // Also add binary path
+    if (!program.IsBinaryNull()) {
+      pg.key = kBinaryKey;
+      pg.value = program.binary();
+      program_metadata->push_back(pg);
+    }
   }
 
   // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
