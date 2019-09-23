@@ -11,6 +11,7 @@ use {
     failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
     maplit::btreemap,
+    num_traits::bounds::Bounded,
     std::{
         cmp::min,
         collections::BTreeMap,
@@ -97,25 +98,18 @@ pub struct ArrayValue<T> {
 
 #[derive(Debug, PartialEq)]
 pub struct ArrayBucket<T> {
-    pub floor: BucketLimit<T>,
-    pub upper: BucketLimit<T>,
+    pub floor: T,
+    pub upper: T,
     pub count: T,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum BucketLimit<T> {
-    Min,
-    Value(T),
-    Max,
-}
-
 impl<T> ArrayBucket<T> {
-    fn new(floor: BucketLimit<T>, upper: BucketLimit<T>, count: T) -> Self {
+    fn new(floor: T, upper: T, count: T) -> Self {
         Self { floor, upper, count }
     }
 }
 
-impl<T: Add<Output = T> + AddAssign + Copy + MulAssign> ArrayValue<T> {
+impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> {
     pub fn new(values: Vec<T>, format: ArrayFormat) -> Self {
         Self { format, values }
     }
@@ -138,20 +132,12 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign> ArrayValue<T> {
         let step_size = self.values[1];
 
         let mut result = Vec::new();
-        result.push(ArrayBucket::new(BucketLimit::Min, BucketLimit::Value(floor), self.values[2]));
+        result.push(ArrayBucket::new(T::min_value(), floor, self.values[2]));
         for i in 3..self.values.len() - 1 {
-            result.push(ArrayBucket::new(
-                BucketLimit::Value(floor),
-                BucketLimit::Value(floor + step_size),
-                self.values[i],
-            ));
+            result.push(ArrayBucket::new(floor, floor + step_size, self.values[i]));
             floor += step_size;
         }
-        result.push(ArrayBucket::new(
-            BucketLimit::Value(floor),
-            BucketLimit::Max,
-            self.values[self.values.len() - 1],
-        ));
+        result.push(ArrayBucket::new(floor, T::max_value(), self.values[self.values.len() - 1]));
         Some(result)
     }
 
@@ -166,21 +152,13 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign> ArrayValue<T> {
         let step_multiplier = self.values[2];
 
         let mut result = Vec::new();
-        result.push(ArrayBucket::new(BucketLimit::Min, BucketLimit::Value(floor), self.values[3]));
+        result.push(ArrayBucket::new(T::min_value(), floor, self.values[3]));
         for i in 4..self.values.len() - 1 {
-            result.push(ArrayBucket::new(
-                BucketLimit::Value(floor),
-                BucketLimit::Value(floor + current_step),
-                self.values[i],
-            ));
+            result.push(ArrayBucket::new(floor, floor + current_step, self.values[i]));
             floor += current_step;
             current_step *= step_multiplier;
         }
-        result.push(ArrayBucket::new(
-            BucketLimit::Value(floor),
-            BucketLimit::Max,
-            self.values[self.values.len() - 1],
-        ));
+        result.push(ArrayBucket::new(floor, T::max_value(), self.values[self.values.len() - 1]));
         Some(result)
     }
 }
@@ -213,6 +191,15 @@ impl TryFrom<&Vmo> for NodeHierarchy {
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(vmo)?;
+        read(&snapshot)
+    }
+}
+
+impl TryFrom<Vec<u8>> for NodeHierarchy {
+    type Error = failure::Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        let snapshot = Snapshot::try_from(&bytes[..])?;
         read(&snapshot)
     }
 }
@@ -664,26 +651,11 @@ mod tests {
         assert_eq!(int_array.values, values);
         let buckets = int_array.buckets().unwrap();
         assert_eq!(buckets.len(), 5);
-        assert_eq!(
-            buckets[0],
-            ArrayBucket { floor: BucketLimit::Min, upper: BucketLimit::Value(1), count: 5 }
-        );
-        assert_eq!(
-            buckets[1],
-            ArrayBucket { floor: BucketLimit::Value(1), upper: BucketLimit::Value(3), count: 7 }
-        );
-        assert_eq!(
-            buckets[2],
-            ArrayBucket { floor: BucketLimit::Value(3), upper: BucketLimit::Value(5), count: 9 }
-        );
-        assert_eq!(
-            buckets[3],
-            ArrayBucket { floor: BucketLimit::Value(5), upper: BucketLimit::Value(7), count: 11 }
-        );
-        assert_eq!(
-            buckets[4],
-            ArrayBucket { floor: BucketLimit::Value(7), upper: BucketLimit::Max, count: 13 }
-        );
+        assert_eq!(buckets[0], ArrayBucket { floor: std::i64::MIN, upper: 1, count: 5 });
+        assert_eq!(buckets[1], ArrayBucket { floor: 1, upper: 3, count: 7 });
+        assert_eq!(buckets[2], ArrayBucket { floor: 3, upper: 5, count: 9 });
+        assert_eq!(buckets[3], ArrayBucket { floor: 5, upper: 7, count: 11 });
+        assert_eq!(buckets[4], ArrayBucket { floor: 7, upper: std::i64::MAX, count: 13 });
     }
 
     #[test]
@@ -693,30 +665,10 @@ mod tests {
         assert_eq!(array.values, values);
         let buckets = array.buckets().unwrap();
         assert_eq!(buckets.len(), 4);
-        assert_eq!(
-            buckets[0],
-            ArrayBucket { floor: BucketLimit::Min, upper: BucketLimit::Value(1.0), count: 7.0 }
-        );
-        assert_eq!(
-            buckets[1],
-            ArrayBucket {
-                floor: BucketLimit::Value(1.0),
-                upper: BucketLimit::Value(3.0),
-                count: 9.0
-            }
-        );
-        assert_eq!(
-            buckets[2],
-            ArrayBucket {
-                floor: BucketLimit::Value(3.0),
-                upper: BucketLimit::Value(13.0),
-                count: 11.0
-            }
-        );
-        assert_eq!(
-            buckets[3],
-            ArrayBucket { floor: BucketLimit::Value(13.0), upper: BucketLimit::Max, count: 15.0 }
-        );
+        assert_eq!(buckets[0], ArrayBucket { floor: std::f64::MIN, upper: 1.0, count: 7.0 });
+        assert_eq!(buckets[1], ArrayBucket { floor: 1.0, upper: 3.0, count: 9.0 });
+        assert_eq!(buckets[2], ArrayBucket { floor: 3.0, upper: 13.0, count: 11.0 });
+        assert_eq!(buckets[3], ArrayBucket { floor: 13.0, upper: std::f64::MAX, count: 15.0 });
     }
 
     #[test]
