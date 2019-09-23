@@ -100,6 +100,7 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.hardware.pty.Device",
                                                "fuchsia.kernel.Counter",
                                                "fuchsia.kernel.DebugBroker",
+                                               "fuchsia.kernel.Stats",
                                                "fuchsia.paver.Paver",
                                                "fuchsia.process.Launcher",
                                                "fuchsia.process.Resolver",

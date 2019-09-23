@@ -75,6 +75,11 @@
       "from": "#ptysvc",
       "to": [ { "dest": "#devcoordinator" } ],
     },
+    {
+      "legacy_service": "/svc/fuchsia.kernel.Stats",
+      "from": "realm",
+      "to": [ { "dest": "#devcoordinator" } ],
+    },
   ]
 }
 

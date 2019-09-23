@@ -4,6 +4,7 @@
 
 #include <ctype.h>
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
@@ -318,6 +319,13 @@ int main(int argc, char** argv) {
   zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
   svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
                         bootsvc::CreateRootJobService(loop.dispatcher()));
+
+  zx::resource kernel_stats_resource;
+  root_resource_handle.duplicate(ZX_RIGHT_NONE, &kernel_stats_resource);
+  bootsvc::KernelStatsImpl kernel_stats(std::move(kernel_stats_resource));
+  svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
+                        kernel_stats.CreateService(loop.dispatcher()));
+
   svcfs_svc->AddService(
       fuchsia_boot_RootResource_Name,
       bootsvc::CreateRootResourceService(loop.dispatcher(), std::move(root_resource_handle)));
@@ -342,5 +350,6 @@ int main(int argc, char** argv) {
 
   // Begin serving the bootfs fileystem and loader
   loop.Run();
+  printf("bootsvc: exiting\n");
   return 0;
 }

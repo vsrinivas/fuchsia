@@ -11,6 +11,7 @@
     { "legacy_service": "/svc/fuchsia.boot.RootResource" },
     { "legacy_service": "/svc/fuchsia.boot.WriteOnlyLog" },
     { "legacy_service": "/svc/fuchsia.hardware.pty.Device" },
+    { "legacy_service": "/svc/fuchsia.kernel.Stats" },
     { "legacy_service": "/svc/fuchsia.process.Launcher" },
   ],
 }

@@ -6,6 +6,7 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -244,6 +245,72 @@ fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatche
         auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootResource_dispatch);
         return fidl_bind(dispatcher, channel.release(), dispatch, &resource, &kRootResourceOps);
       });
+}
+
+fbl::RefPtr<fs::Service> KernelStatsImpl::CreateService(async_dispatcher_t* dispatcher) {
+  return fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) mutable {
+    return fidl::Bind(dispatcher, std::move(channel), this);
+  });
+}
+
+void KernelStatsImpl::GetMemoryStats(GetMemoryStatsCompleter::Sync completer) {
+  zx_info_kmem_stats_t mem_stats;
+  zx_status_t status = root_resource_handle_.get_info(
+      ZX_INFO_KMEM_STATS, &mem_stats, sizeof(zx_info_kmem_stats_t), nullptr, nullptr);
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  auto builder = llcpp::fuchsia::kernel::MemoryStats::Build();
+  builder.set_total_bytes(&mem_stats.total_bytes);
+  builder.set_free_bytes(&mem_stats.free_bytes);
+  builder.set_wired_bytes(&mem_stats.wired_bytes);
+  builder.set_total_heap_bytes(&mem_stats.total_heap_bytes);
+  builder.set_free_heap_bytes(&mem_stats.free_heap_bytes);
+  builder.set_vmo_bytes(&mem_stats.vmo_bytes);
+  builder.set_mmu_overhead_bytes(&mem_stats.mmu_overhead_bytes);
+  builder.set_ipc_bytes(&mem_stats.ipc_bytes);
+  builder.set_other_bytes(&mem_stats.other_bytes);
+  completer.Reply(builder.view());
+}
+
+void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
+  zx_info_cpu_stats_t cpu_stats[ZX_CPU_SET_MAX_CPUS];
+  size_t actual, available;
+  zx_status_t status = root_resource_handle_.get_info(
+      ZX_INFO_CPU_STATS, &cpu_stats, sizeof(zx_info_cpu_stats_t) * ZX_CPU_SET_MAX_CPUS, &actual,
+      &available);
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  llcpp::fuchsia::kernel::CpuStats stats;
+  stats.actual_num_cpus = actual;
+  llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
+  fbl::Vector<llcpp::fuchsia::kernel::PerCpuStats::Builder> builders;
+  stats.per_cpu_stats = fidl::VectorView(per_cpu_stats, available);
+  for (uint32_t cpu_num = 0; cpu_num < available; ++cpu_num) {
+    builders.push_back(llcpp::fuchsia::kernel::PerCpuStats::Build());
+    auto& builder = builders[cpu_num];
+    auto& cpu_stat = cpu_stats[cpu_num];
+    builder.set_cpu_number(&cpu_stat.cpu_number);
+    builder.set_flags(&cpu_stat.flags);
+    builder.set_idle_time(&cpu_stat.idle_time);
+    builder.set_reschedules(&cpu_stat.reschedules);
+    builder.set_context_switches(&cpu_stat.context_switches);
+    builder.set_irq_preempts(&cpu_stat.irq_preempts);
+    builder.set_yields(&cpu_stat.yields);
+    builder.set_ints(&cpu_stat.ints);
+    builder.set_timer_ints(&cpu_stat.timer_ints);
+    builder.set_timers(&cpu_stat.timers);
+    builder.set_page_faults(&cpu_stat.page_faults);
+    builder.set_exceptions(&cpu_stat.exceptions);
+    builder.set_syscalls(&cpu_stat.syscalls);
+    builder.set_reschedule_ipis(&cpu_stat.reschedule_ipis);
+    builder.set_generic_ipis(&cpu_stat.generic_ipis);
+    per_cpu_stats[cpu_num] = builder.view();
+  }
+  completer.Reply(stats);
 }
 
 }  // namespace bootsvc

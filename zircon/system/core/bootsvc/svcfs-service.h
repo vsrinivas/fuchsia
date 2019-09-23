@@ -12,6 +12,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
@@ -76,6 +77,25 @@ fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
                                                    zx::resource root_resource);
+
+// A service that implements a fidl protocol to vend kernel statistics.
+class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
+ public:
+  // The service requires the root resource as that is necessary today to call
+  // the appropriate zx_object_get_info syscalls. It does not require any rights
+  // on that handle though.
+  explicit KernelStatsImpl(zx::resource root_resource_handle)
+      : root_resource_handle_(std::move(root_resource_handle)) {}
+
+  // Binds the implementation to the passed in dispatcher.
+  fbl::RefPtr<fs::Service> CreateService(async_dispatcher_t* dispatcher);
+
+  void GetMemoryStats(GetMemoryStatsCompleter::Sync completer) override;
+
+  void GetCpuStats(GetCpuStatsCompleter::Sync completer) override;
+ private:
+  zx::resource root_resource_handle_;
+};
 
 }  // namespace bootsvc
 

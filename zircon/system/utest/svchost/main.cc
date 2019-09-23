@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -121,6 +122,33 @@ TEST(SvchostTest, FuchsiaRootJobPresent) {
   zx::job job;
   status = fuchsia_boot_RootJobGet(client.get(), job.reset_and_get_address());
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobGet failed");
+}
+
+TEST(SvchostTest, FuchsiaKernelStatsPresent) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+
+  fbl::String service_path =
+      fbl::String::Concat({"/svc/", llcpp::fuchsia::kernel::Stats::Name});
+  status = fdio_service_connect(service_path.c_str(), server.release());
+  ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
+
+  llcpp::fuchsia::kernel::Stats::SyncClient stats_client(std::move(client));
+  llcpp::fuchsia::kernel::Stats::ResultOf::GetMemoryStats mem_result =
+      stats_client.GetMemoryStats();
+  ASSERT_EQ(ZX_OK, mem_result.status(), "GetMemoryStats failed");
+
+  auto mem_stats = mem_result.Unwrap();
+  ASSERT_GT(mem_stats->stats.total_bytes(), 0);
+
+  llcpp::fuchsia::kernel::Stats::ResultOf::GetCpuStats cpu_result =
+      stats_client.GetCpuStats();
+  ASSERT_EQ(ZX_OK, cpu_result.status(), "GetCpuStats failed");
+
+  auto cpu_stats = cpu_result.Unwrap();
+  ASSERT_GT(cpu_stats->stats.actual_num_cpus, 0);
+  ASSERT_EQ(cpu_stats->stats.actual_num_cpus, cpu_stats->stats.per_cpu_stats.count());
 }
 
 }  // namespace

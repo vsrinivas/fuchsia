@@ -36,6 +36,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::hardware::pty::Device::Name_,
       fuchsia::kernel::Counter::Name_,
       fuchsia::kernel::DebugBroker::Name_,
+      fuchsia::kernel::Stats::Name_,
       fuchsia::paver::Paver::Name_,
       fuchsia::scheduler::ProfileProvider::Name_,
       fuchsia::virtualconsole::SessionManager::Name_,

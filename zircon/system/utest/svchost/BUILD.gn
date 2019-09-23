@@ -8,6 +8,7 @@ test("svchost") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-kernel:llcpp",
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

@@ -165,6 +165,7 @@ static constexpr const char* devcoordinator_services[] = {
     fuchsia_boot_RootJob_Name,
     fuchsia_boot_RootResource_Name,
     fuchsia_boot_WriteOnlyLog_Name,
+    fuchsia_kernel_Stats_Name,
     fuchsia_process_Launcher_Name,
     fuchsia_hardware_pty_Device_Name,
     nullptr,

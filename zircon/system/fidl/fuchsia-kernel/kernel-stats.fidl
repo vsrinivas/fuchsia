@@ -54,7 +54,7 @@ struct CpuStats {
 /// just want stats should use this service instead. If for some reason the protocol fails to
 /// retrieve stats, which will be an un-recoverable error, it will close the channel.
 [Discoverable]
-protocol KernelStats {
+protocol Stats {
     GetMemoryStats() -> (MemoryStats stats);
 
     GetCpuStats() -> (CpuStats stats);

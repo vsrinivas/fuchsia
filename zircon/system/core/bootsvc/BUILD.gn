@@ -48,6 +48,7 @@ executable("bin") {
   deps = [
     ":util",
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-kernel:llcpp",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
@@ -59,6 +60,7 @@ executable("bin") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/loader-service",
