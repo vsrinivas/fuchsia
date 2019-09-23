@@ -74,7 +74,7 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/appmgr/integration_tests/inspect:inspect_vmo_integration_tests",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell",
-    "//garnet/bin/chrealm/integration_tests:chrealm_integrationtests",
+    "//src/sys/tools/chrealm/integration_tests:chrealm_integrationtests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
     "//garnet/bin/glob:glob",
     "//garnet/bin/iquery/testing:iquery_golden_test",

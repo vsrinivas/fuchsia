@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <string>
-
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <cstdio>
+#include <string>
+
 #include "garnet/lib/chrealm/chrealm.h"
 #include "src/lib/fxl/command_line.h"
 

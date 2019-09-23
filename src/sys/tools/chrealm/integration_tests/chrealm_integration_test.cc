@@ -2,20 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/pseudo-dir.h>
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -26,6 +18,15 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
