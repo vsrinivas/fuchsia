@@ -415,6 +415,8 @@ Command::Info RecordCommand::Describe() {
        {"detach=[false]", "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"spawn=[false]", "Use fdio_spawn to run a legacy app."},
+       {"environment-name=[none]",
+        "Create a nested environment with the given name and run the app being traced under it."},
        {"return-child-result=[true]",
         "Return with the same return code as the child. "
         "Only valid when a child program is passed."},
