@@ -5,7 +5,7 @@
 pub use self::audio_controller::create_default_audio_stream;
 pub use self::audio_controller::get_gain_db;
 pub use self::audio_controller::spawn_audio_controller;
-pub use self::audio_controller::DEFAULT_STREAMS;
+pub use self::audio_controller::DEFAULT_AUDIO_INFO;
 pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
 
 mod audio_controller;
