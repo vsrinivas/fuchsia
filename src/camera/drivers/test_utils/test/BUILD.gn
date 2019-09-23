@@ -10,6 +10,7 @@ import("//build/testing/environments.gni")
 executable("test_utils_test") {
   testonly = true
   sources = [
+    "button_checker-test.cc",
     "fake-buffer-collection-test.cc",
   ]
   deps = [

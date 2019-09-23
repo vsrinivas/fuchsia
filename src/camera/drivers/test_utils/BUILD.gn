@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("test_utils") {
+group("test_utils") {
+  visibility = [ "//src/camera/*" ]
+  public_deps = [
+    ":button_checker",
+    ":fake-buffer-collection"
+  ]
+  public_configs = [
+    ":test_utils_config"
+  ]
+}
+
+config("test_utils_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "." ]
+}
+
+source_set("fake-buffer-collection") {
+  visibility = [ ":*" ]
   sources = [
     "fake-buffer-collection.cc",
   ]
@@ -14,5 +31,21 @@ source_set("test_utils") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+  ]
+}
+
+source_set("button_checker") {
+  visibility = [ ":*" ]
+  sources = [
+    "button_checker.cc"
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+  ]
+  public_deps = [
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/system/fidl/fuchsia-hardware-input",
   ]
 }

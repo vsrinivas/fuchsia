@@ -4,6 +4,7 @@
   },
   "sandbox": {
     "dev": [
+      "class/input",
       "class/isp-device-test"
     ],
     "services": [
