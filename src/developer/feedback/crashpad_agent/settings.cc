@@ -24,6 +24,10 @@ void Settings::set_upload_policy(const Settings::UploadPolicy upload_policy) {
       FX_LOGS(INFO) << "Crash report upload is in limbo";
       break;
   }
+
+  for (auto& watcher : upload_policy_watchers_) {
+    watcher(upload_policy_);
+  }
 }
 
 void Settings::set_upload_policy(const CrashServerConfig::UploadPolicy upload_policy) {
@@ -38,6 +42,11 @@ void Settings::set_upload_policy(const CrashServerConfig::UploadPolicy upload_po
       set_upload_policy(UploadPolicy::LIMBO);
       break;
   }
+}
+
+void Settings::RegisterUploadPolicyWatcher(fit::function<void(const UploadPolicy&)> watcher) {
+  watcher(upload_policy_);
+  upload_policy_watchers_.push_back(std::move(watcher));
 }
 
 std::string ToString(const Settings::UploadPolicy upload_policy) {

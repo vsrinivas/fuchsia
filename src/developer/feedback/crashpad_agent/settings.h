@@ -5,6 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_SETTINGS_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_SETTINGS_H_
 
+#include <lib/fit/function.h>
+
+#include <vector>
+
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/lib/fxl/macros.h"
 
@@ -36,8 +40,13 @@ class Settings {
   void set_upload_policy(UploadPolicy upload_policy);
   void set_upload_policy(CrashServerConfig::UploadPolicy upload_policy);
 
+  // The watcher will be immediately called with the current upload policy and then called whenever
+  // the upload policy changes.
+  void RegisterUploadPolicyWatcher(fit::function<void(const UploadPolicy&)> watcher);
+
  private:
   UploadPolicy upload_policy_ = UploadPolicy::LIMBO;
+  std::vector<fit::function<void(const UploadPolicy&)>> upload_policy_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Settings);
 };

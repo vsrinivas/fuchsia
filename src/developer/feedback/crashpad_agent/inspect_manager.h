@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -22,8 +23,11 @@ class InspectManager {
  public:
   InspectManager(inspect::Node* root_node, timekeeper::Clock* clock);
 
-  // Records the configuration file of the CrashpadAgent.
+  // Exposes the static configuration of the crash reporter.
   void ExposeConfig(const feedback::Config& config);
+
+  // Exposes the mutable settings of the crash reporter.
+  void ExposeSettings(feedback::Settings* settings);
 
   // Adds a new report under the given program.
   //
@@ -38,10 +42,13 @@ class InspectManager {
                             const std::string& server_report_id);
 
  private:
+  // Callback to update |settings_| on upload policy changes.
+  void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
+
   // Returns a non-localized human-readable timestamp of the current time according to |clock_|.
   std::string CurrentTime();
 
-  // Inspect node containing the configuration file.
+  // Inspect node containing the static configuration.
   struct Config {
     // Inspect node containing the database configuration.
     struct CrashpadDatabaseConfig {
@@ -62,6 +69,13 @@ class InspectManager {
     CrashpadDatabaseConfig crashpad_database;
     CrashServerConfig crash_server;
     inspect::UintProperty feedback_data_collection_timeout_in_milliseconds;
+  };
+
+  // Inspect node containing the mutable settings.
+  struct Settings {
+    inspect::Node node;
+
+    inspect::StringProperty upload_policy;
   };
 
   // Inspect node for a single report.
@@ -102,6 +116,7 @@ class InspectManager {
   inspect::Node* root_node_ = nullptr;
   timekeeper::Clock* clock_;
   Config config_;
+  Settings settings_;
   Reports reports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);

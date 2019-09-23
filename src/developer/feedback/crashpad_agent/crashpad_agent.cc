@@ -138,6 +138,7 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   settings_.set_upload_policy(config_.crash_server.upload_policy);
 
   inspect_manager_->ExposeConfig(config_);
+  inspect_manager_->ExposeSettings(&settings_);
 }
 
 void CrashpadAgent::OnManagedRuntimeException(std::string component_url,

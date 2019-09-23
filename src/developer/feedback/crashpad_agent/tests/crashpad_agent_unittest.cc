@@ -29,6 +29,7 @@
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 #include "src/lib/files/directory.h"
@@ -633,6 +634,9 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
                                   StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
                               })))),
                 }))),
+          NodeMatches(AllOf(NameMatches(kInspectSettingsName),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
           NodeMatches(NameMatches(kInspectReportsName)))));
 }
 

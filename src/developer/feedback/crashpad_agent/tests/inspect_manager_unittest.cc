@@ -16,6 +16,7 @@
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -44,6 +45,16 @@ constexpr char kTime1Str[] = "1970-01-01 00:00:00 GMT";
 constexpr char kTime2Str[] = "1970-01-01 07:14:52 GMT";
 constexpr char kTime3Str[] = "1970-01-04 15:33:17 GMT";
 
+constexpr CrashServerConfig::UploadPolicy kConfigDisabled =
+    CrashServerConfig::UploadPolicy::DISABLED;
+constexpr CrashServerConfig::UploadPolicy kConfigEnabled = CrashServerConfig::UploadPolicy::ENABLED;
+constexpr CrashServerConfig::UploadPolicy kConfigReadFromPrivacySettings =
+    CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+
+constexpr Settings::UploadPolicy kSettingsDisabled = Settings::UploadPolicy::DISABLED;
+constexpr Settings::UploadPolicy kSettingsEnabled = Settings::UploadPolicy::ENABLED;
+constexpr Settings::UploadPolicy kSettingsLimbo = Settings::UploadPolicy::LIMBO;
+
 class InspectManagerTest : public testing::Test {
  public:
   void SetUp() override {
@@ -69,6 +80,7 @@ class InspectManagerTest : public testing::Test {
 TEST_F(InspectManagerTest, InitialInspectTree) {
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches(kInspectConfigName)),
+                                 NodeMatches(NameMatches(kInspectSettingsName)),
                                  NodeMatches(NameMatches(kInspectReportsName)),
                              })));
 }
@@ -188,7 +200,7 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
       },
       /*crash_server=*/
       {
-          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+          /*upload_policy=*/kConfigEnabled,
           /*url=*/std::make_unique<std::string>("http://localhost:1234"),
       },
       /*feedback_data_collection_timeout=*/zx::msec(10)});
@@ -206,26 +218,24 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
                                 })))),
               NodeMatches(AllOf(NameMatches(kCrashServerKey),
                                 PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashServerUploadPolicyKey,
-                                             ToString(CrashServerConfig::UploadPolicy::ENABLED)),
+                                    StringIs(kCrashServerUploadPolicyKey, ToString(kConfigEnabled)),
                                     StringIs(kCrashServerUrlKey, "http://localhost:1234"),
                                 })))),
           }))))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crashpad_database=*/
-      {
-          /*path=*/"/foo/crashes",
-          /*max_size_in_kb=*/1234,
-      },
-      /*crash_server=*/
-      {
-          /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
-          /*url=*/nullptr,
-      },
-      /*feedback_data_collection_timeout=*/zx::msec(10)});
+  inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
+                                        {
+                                            /*path=*/"/foo/crashes",
+                                            /*max_size_in_kb=*/1234,
+                                        },
+                                        /*crash_server=*/
+                                        {
+                                            /*upload_policy=*/kConfigDisabled,
+                                            /*url=*/nullptr,
+                                        },
+                                        /*feedback_data_collection_timeout=*/zx::msec(10)});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -239,10 +249,72 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
                                     UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
                                 })))),
               NodeMatches(AllOf(NameMatches(kCrashServerKey),
-                                PropertyList(ElementsAre(StringIs(
-                                    kCrashServerUploadPolicyKey,
-                                    ToString(CrashServerConfig::UploadPolicy::DISABLED)))))),
+                                PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
+                                                                  ToString(kConfigDisabled)))))),
           }))))));
+}
+
+TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
+  inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
+                                        {
+                                            /*path=*/"/foo/crashes",
+                                            /*max_size_in_kb=*/1234,
+                                        },
+                                        /*crash_server=*/
+                                        {
+                                            /*upload_policy=*/kConfigReadFromPrivacySettings,
+                                            /*url=*/nullptr,
+                                        },
+                                        /*feedback_data_collection_timeout=*/zx::msec(10)});
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(
+              NameMatches(kInspectConfigName),
+              PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey, 10))))),
+          ChildrenMatch(UnorderedElementsAreArray({
+              NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
+                                PropertyList(UnorderedElementsAreArray({
+                                    StringIs(kCrashpadDatabasePathKey, "/foo/crashes"),
+                                    UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
+                                })))),
+              NodeMatches(AllOf(
+                  NameMatches(kCrashServerKey),
+                  PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
+                                                    ToString(kConfigReadFromPrivacySettings)))))),
+          }))))));
+}
+
+TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
+  Settings settings;
+  settings.set_upload_policy(kSettingsEnabled);
+  inspect_manager_->ExposeSettings(&settings);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(NodeMatches(AllOf(
+          NameMatches(kInspectSettingsName),
+          PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
+
+  settings.set_upload_policy(kSettingsDisabled);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(NodeMatches(AllOf(
+          NameMatches(kInspectSettingsName),
+          PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsDisabled)))))))));
+
+  settings.set_upload_policy(kSettingsLimbo);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(NodeMatches(
+          AllOf(NameMatches(kInspectSettingsName),
+                PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsLimbo)))))))));
+
+  settings.set_upload_policy(kSettingsEnabled);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(NodeMatches(AllOf(
+          NameMatches(kInspectSettingsName),
+          PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
 }
 
 }  // namespace

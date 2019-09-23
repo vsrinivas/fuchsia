@@ -36,6 +36,7 @@ void InspectManager::Report::MarkAsUploaded(const std::string& server_report_id,
 InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
     : root_node_(root_node), clock_(clock) {
   config_.node = root_node->CreateChild(kInspectConfigName);
+  settings_.node = root_node_->CreateChild(kInspectSettingsName);
   reports_.node = root_node_->CreateChild(kInspectReportsName);
 }
 
@@ -97,6 +98,17 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   config_.feedback_data_collection_timeout_in_milliseconds =
       config_.node.CreateUint(kFeedbackDataCollectionTimeoutInMillisecondsKey,
                               config.feedback_data_collection_timeout.to_msecs());
+}
+
+void InspectManager::ExposeSettings(feedback::Settings* settings) {
+  settings->RegisterUploadPolicyWatcher(
+      [this](const feedback::Settings::UploadPolicy& upload_policy) {
+        OnUploadPolicyChange(upload_policy);
+      });
+}
+
+void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy) {
+  settings_.upload_policy = settings_.node.CreateString("upload_policy", ToString(upload_policy));
 }
 
 std::string InspectManager::CurrentTime() {
