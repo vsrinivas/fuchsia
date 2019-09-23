@@ -32,15 +32,32 @@ source_set("dispatcher_checker") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("completer") {
+  sources = [
+    "completer.cc",
+    "completer.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/public",
+    "//src/ledger/lib/coroutine",
+    "//src/lib/fxl",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
   sources = [
+    "completer_unittest.cc",
     "dispatcher_checker_unittest.cc",
     "lock_unittest.cc",
   ]
 
   deps = [
+    ":completer",
     ":dispatcher_checker",
     ":lock",
     "//src/ledger/bin/testing:lib",

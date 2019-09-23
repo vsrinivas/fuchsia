@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/synchronization/completer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
@@ -68,44 +69,6 @@ class PageUsageDb {
   bool IsInitialized();
 
  private:
-  // TODO(opalle): Consider using DelayingFacade instead of Completer.
-  // A Completer allowing waiting until the target operation is completed.
-  class Completer {
-   public:
-    Completer();
-
-    ~Completer();
-
-    // Completes the operation with the given status and unblocks all pending
-    // |WaitUntilDone| calls. |Complete| can only be called once.
-    void Complete(Status status);
-
-    // Cancels the operation. All WaitUntilDone calls will return
-    // |Status::INTERRUPTED|. If |Cancel| is called, |Complete| should
-    // never be called.
-    void Cancel();
-
-    // Blocks execution until |Complete| is called, and then returns its status.
-    // If the operation is already completed, |WaitUntilDone| returns
-    // immediately with the result status.
-    Status WaitUntilDone(coroutine::CoroutineHandler* handler);
-
-    // Returns true, if the operation was completed.
-    bool IsCompleted();
-
-   private:
-    // Marks the Completer as completed with the given status and calls the
-    // pending callbacks.
-    void CallCallbacks(Status status);
-
-    bool completed_ = false;
-    Status status_;
-    // Closures invoked upon completion to unblock the waiting coroutines.
-    std::vector<fit::closure> callbacks_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
-  };
-
   // Inserts the given |key|-|value| pair in the underlying database.
   Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key, fxl::StringView value);
 
@@ -122,7 +85,7 @@ class PageUsageDb {
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization
   // has finished, before reading or updating information.
-  PageUsageDb::Completer initialization_completer_;
+  Completer initialization_completer_;
 
   // A serializer used for Put and Delete. Both these operations need to be
   // serialized to guarantee that consecutive calls to update the contents of a
