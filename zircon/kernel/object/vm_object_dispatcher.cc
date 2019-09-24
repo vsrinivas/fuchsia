@@ -86,17 +86,18 @@ void VmObjectDispatcher::on_zero_handles() {
   vmo_->SetChildObserver(nullptr);
 }
 
-zx_status_t VmObjectDispatcher::Read(user_out_ptr<void> user_data, size_t length, uint64_t offset) {
+zx_status_t VmObjectDispatcher::Read(VmAspace* current_aspace, user_out_ptr<void> user_data,
+                                     size_t length, uint64_t offset) {
   canary_.Assert();
 
-  return vmo_->ReadUser(user_data, offset, length);
+  return vmo_->ReadUser(current_aspace, user_data, offset, length);
 }
 
-zx_status_t VmObjectDispatcher::Write(user_in_ptr<const void> user_data, size_t length,
-                                      uint64_t offset) {
+zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<const void> user_data,
+                                      size_t length, uint64_t offset) {
   canary_.Assert();
 
-  return vmo_->WriteUser(user_data, offset, length);
+  return vmo_->WriteUser(current_aspace, user_data, offset, length);
 }
 
 zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {

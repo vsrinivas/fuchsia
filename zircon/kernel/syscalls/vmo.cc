@@ -78,30 +78,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data, uint64_t 
   if (status != ZX_OK)
     return status;
 
-  // Force map the range, even if it crosses multiple mappings.
-  // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
-  // things, the bug will come back.  We should fix this more properly.
-  {
-    // Check to ensure i doesn't overflow and result in an infinite loop below.
-    if (len >= (std::numeric_limits<size_t>::max() - PAGE_SIZE))
-      return ZX_ERR_OUT_OF_RANGE;
-    uint8_t byte = 0;
-    auto int_data = _data.reinterpret<uint8_t>();
-    for (size_t i = 0; i < len; i += PAGE_SIZE) {
-      status = int_data.copy_array_to_user(&byte, 1, i);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    if (len > 0) {
-      status = int_data.copy_array_to_user(&byte, 1, len - 1);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-  }
-
-  return vmo->Read(_data, len, offset);
+  return vmo->Read(up->aspace().get(), _data, len, offset);
 }
 
 // zx_status_t zx_vmo_write
@@ -117,30 +94,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data, uin
   if (status != ZX_OK)
     return status;
 
-  // Force map the range, even if it crosses multiple mappings.
-  // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
-  // things, the bug will come back.  We should fix this more properly.
-  {
-    // Check to ensure i doesn't overflow and result in an infinite loop below.
-    if (len >= (std::numeric_limits<size_t>::max() - PAGE_SIZE))
-      return ZX_ERR_OUT_OF_RANGE;
-    uint8_t byte = 0;
-    auto int_data = _data.reinterpret<const uint8_t>();
-    for (size_t i = 0; i < len; i += PAGE_SIZE) {
-      status = int_data.copy_array_from_user(&byte, 1, i);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    if (len > 0) {
-      status = int_data.copy_array_from_user(&byte, 1, len - 1);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-  }
-
-  return vmo->Write(_data, len, offset);
+  return vmo->Write(up->aspace().get(), _data, len, offset);
 }
 
 // zx_status_t zx_vmo_get_size

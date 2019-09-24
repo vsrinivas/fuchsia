@@ -2227,7 +2227,11 @@ void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
 }
 
 // perform some sort of copy in/out on a range of the object using a passed in lambda
-// for the copy routine
+// for the copy routine. The copy routine has the expected type signature of:
+// (uint64_t src_offset, uint64_t dest_offset, bool write, Guard<Mutex> *guard) -> zx_status_t
+// The passed in guard may have its CallUnlocked member used, but if it does then ZX_OK must not be
+// the return value. A return of ZX_ERR_SHOULD_WAIT implies that the attempted copy should be tried
+// again at the exact same offsets.
 template <typename T>
 zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc) {
   canary_.Assert();
@@ -2284,15 +2288,19 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
       // compute the kernel mapping of this page
       uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_physmap(pa));
 
-      // call the copy routine
-      auto err = copyfunc(page_ptr + page_offset, dest_offset, tocopy);
-      if (err < 0) {
+      // call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
+      // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
+      // As the copyfunc is allowed to drop the lock we must always go back around the loop even
+      // if we don't advance the copy location in order to re-establish the invariants.
+      auto err = copyfunc(page_ptr + page_offset, dest_offset, tocopy, &guard);
+      if (err == ZX_OK) {
+        // Advance the copy location
+        src_offset += tocopy;
+        dest_offset += tocopy;
+        len -= tocopy;
+      } else if (err != ZX_ERR_SHOULD_WAIT) {
         return err;
       }
-
-      src_offset += tocopy;
-      dest_offset += tocopy;
-      len -= tocopy;
     }
   } while (need_retry);
 
@@ -2309,7 +2317,8 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
 
   // read routine that just uses a memcpy
   uint8_t* ptr = reinterpret_cast<uint8_t*>(_ptr);
-  auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> zx_status_t {
+  auto read_routine = [ptr](const void* src, size_t offset, size_t len,
+                            Guard<fbl::Mutex>* guard) -> zx_status_t {
     memcpy(ptr + offset, src, len);
     return ZX_OK;
   };
@@ -2327,7 +2336,8 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
 
   // write routine that just uses a memcpy
   const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_ptr);
-  auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> zx_status_t {
+  auto write_routine = [ptr](void* dst, size_t offset, size_t len,
+                             Guard<fbl::Mutex>* guard) -> zx_status_t {
     memcpy(dst, ptr + offset, len);
     return ZX_OK;
   };
@@ -2393,23 +2403,49 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
   return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) {
+zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<void> ptr,
+                                    uint64_t offset, size_t len) {
   canary_.Assert();
 
   // read routine that uses copy_to_user
-  auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> zx_status_t {
-    return ptr.byte_offset(offset).copy_array_to_user(src, len);
+  auto read_routine = [ptr, &current_aspace](const void* src, size_t offset, size_t len,
+                                             Guard<fbl::Mutex>* guard) -> zx_status_t {
+    vaddr_t va;
+    uint flags;
+    zx_status_t result =
+        ptr.byte_offset(offset).copy_array_to_user_capture_faults(src, len, &va, &flags);
+    if (result != ZX_OK) {
+      guard->CallUnlocked(
+          [va, flags, &result, &current_aspace] { result = current_aspace->SoftFault(va, flags); });
+      if (result == ZX_OK) {
+        return ZX_ERR_SHOULD_WAIT;
+      }
+    }
+    return result;
   };
 
   return ReadWriteInternal(offset, len, false, read_routine);
 }
 
-zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) {
+zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const void> ptr,
+                                     uint64_t offset, size_t len) {
   canary_.Assert();
 
   // write routine that uses copy_from_user
-  auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> zx_status_t {
-    return ptr.byte_offset(offset).copy_array_from_user(dst, len);
+  auto write_routine = [ptr, &current_aspace](void* dst, size_t offset, size_t len,
+                                              Guard<fbl::Mutex>* guard) -> zx_status_t {
+    vaddr_t va;
+    uint flags;
+    zx_status_t result =
+        ptr.byte_offset(offset).copy_array_from_user_capture_faults(dst, len, &va, &flags);
+    if (result != ZX_OK) {
+      guard->CallUnlocked(
+          [va, flags, &result, &current_aspace] { result = current_aspace->SoftFault(va, flags); });
+      if (result == ZX_OK) {
+        return ZX_ERR_SHOULD_WAIT;
+      }
+    }
+    return result;
   };
 
   return ReadWriteInternal(offset, len, true, write_routine);

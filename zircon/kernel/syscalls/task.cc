@@ -440,32 +440,12 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   if (!vmo)
     return ZX_ERR_NO_MEMORY;
 
-  // Force map the range, even if it crosses multiple mappings.
-  // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
-  // things, the bug will come back.  We should fix this more properly.
-  {
-    uint8_t byte = 0;
-    auto int_data = buffer.reinterpret<uint8_t>();
-    for (size_t i = 0; i < buffer_size; i += PAGE_SIZE) {
-      status = int_data.copy_array_to_user(&byte, 1, i);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    if (buffer_size > 0) {
-      status = int_data.copy_array_to_user(&byte, 1, buffer_size - 1);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-  }
-
   uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
   // TODO(ZX-1631): While this limits reading to the mapped address space of
   // this VMO, it should be reading from multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
-  zx_status_t st = vmo->ReadUser(buffer, offset, buffer_size);
+  zx_status_t st = vmo->ReadUser(up->aspace().get(), buffer, offset, buffer_size);
 
   if (st == ZX_OK) {
     zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
@@ -514,32 +494,12 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  // Force map the range, even if it crosses multiple mappings.
-  // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
-  // things, the bug will come back.  We should fix this more properly.
-  {
-    uint8_t byte = 0;
-    auto int_data = buffer.reinterpret<const uint8_t>();
-    for (size_t i = 0; i < buffer_size; i += PAGE_SIZE) {
-      status = int_data.copy_array_from_user(&byte, 1, i);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    if (buffer_size > 0) {
-      status = int_data.copy_array_from_user(&byte, 1, buffer_size - 1);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-  }
-
   uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
   // TODO(ZX-1631): While this limits writing to the mapped address space of
   // this VMO, it should be writing to multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
-  zx_status_t st = vmo->WriteUser(buffer, offset, buffer_size);
+  zx_status_t st = vmo->WriteUser(up->aspace().get(), buffer, offset, buffer_size);
 
   if (st == ZX_OK) {
     zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));

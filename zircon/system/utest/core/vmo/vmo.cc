@@ -23,6 +23,7 @@
 #include <zircon/syscalls/object.h>
 
 #include <atomic>
+#include <thread>
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
@@ -202,6 +203,49 @@ TEST(VmoTestCase, Map) {
       EXPECT_OK(status, "unmap");
     }
   }
+}
+
+TEST(VmoTestCase, MapRead) {
+  zx::vmo vmo;
+
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &vmo));
+
+  uintptr_t vaddr;
+  // Map in the first page
+  EXPECT_OK(
+      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr));
+
+  // Read from the second page of the vmo to mapping.
+  // This should succeed and not deadlock in the kernel.
+  EXPECT_OK(vmo.read(reinterpret_cast<void *>(vaddr), PAGE_SIZE, PAGE_SIZE));
+}
+
+TEST(VmoTestCase, ParallelRead) {
+  constexpr size_t kNumPages = 1024;
+  zx::vmo vmo1, vmo2;
+
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE * kNumPages, 0, &vmo1));
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE * kNumPages, 0, &vmo2));
+
+  uintptr_t vaddr1, vaddr2;
+  // Map the bottom half of both in.
+  EXPECT_OK(zx::vmar::root_self()->map(0, vmo1, 0, PAGE_SIZE * (kNumPages / 2),
+                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr1));
+  EXPECT_OK(zx::vmar::root_self()->map(0, vmo2, 0, PAGE_SIZE * (kNumPages / 2),
+                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr2));
+
+  // Spin up a thread to read from one of the vmos, whilst we read from the other
+  auto vmo_read_closure = [&vmo1, &vaddr2] {
+    vmo1.read(reinterpret_cast<void *>(vaddr2), PAGE_SIZE * (kNumPages / 2),
+              PAGE_SIZE * (kNumPages / 2));
+  };
+  std::thread thread(vmo_read_closure);
+  // As these two threads read from one vmo into the mapping from another vmo if there are any
+  // scenarios where the kernel would try and hold both vmo locks at the same time (without
+  // attempting to resolve lock ordering) then this should trigger a deadlock to occur.
+  EXPECT_OK(vmo2.read(reinterpret_cast<void *>(vaddr1), PAGE_SIZE * (kNumPages / 2),
+                      PAGE_SIZE * (kNumPages / 2)));
+  thread.join();
 }
 
 TEST(VmoTestCase, ReadOnlyMap) {

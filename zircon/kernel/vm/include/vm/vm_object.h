@@ -31,6 +31,7 @@
 class VmMapping;
 class PageRequest;
 class VmObjectPaged;
+class VmAspace;
 
 typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
@@ -67,8 +68,8 @@ struct GlobalListTag {};
 // into an address space via VmAddressRegion::CreateVmMapping
 class VmObject : public fbl::RefCounted<VmObject>,
                  public fbl::ContainableBaseClasses<
-                          fbl::DoublyLinkedListable<VmObject*, internal::ChildListTag>,
-                          fbl::DoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
+                     fbl::DoublyLinkedListable<VmObject*, internal::ChildListTag>,
+                     fbl::DoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -126,10 +127,12 @@ class VmObject : public fbl::RefCounted<VmObject>,
   }
 
   // read/write operators against user space pointers only
-  virtual zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) {
+  virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<void> ptr, uint64_t offset,
+                               size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) {
+  virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const void> ptr,
+                                uint64_t offset, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -381,9 +384,7 @@ class VmObject : public fbl::RefCounted<VmObject>,
   DECLARE_SINGLETON_MUTEX(AllVmosLock);
   static GlobalList all_vmos_ TA_GUARDED(AllVmosLock::Get());
 
-  bool InGlobalList() {
-    return fbl::InContainer<internal::GlobalListTag>(*this);
-  }
+  bool InGlobalList() { return fbl::InContainer<internal::GlobalListTag>(*this); }
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_
