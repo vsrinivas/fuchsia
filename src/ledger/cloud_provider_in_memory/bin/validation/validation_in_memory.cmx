@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/launch_validation_tests_in_memory"
+        "binary": "test/validation_in_memory"
     },
     "sandbox": {
         "services": [

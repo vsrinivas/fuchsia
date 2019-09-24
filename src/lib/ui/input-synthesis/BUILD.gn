@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("input-synthesis") {
@@ -20,8 +20,7 @@ rustc_library("input-synthesis") {
   ]
 }
 
-package("input-synthesis-tests") {
-  testonly = true
+unittest_package("input-synthesis-tests") {
   deps = [
     ":input-synthesis_test",
   ]

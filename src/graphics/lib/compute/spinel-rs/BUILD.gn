@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("spinel-rs") {
@@ -25,8 +25,7 @@ rustc_library("spinel-rs") {
   ]
 }
 
-package("spinel-rs-tests") {
-  testonly = true
+unittest_package("spinel-rs-tests") {
   deps = [
     ":spinel-rs_test",
   ]

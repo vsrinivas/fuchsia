@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 group("bringup") {
   testonly = true
@@ -22,8 +22,10 @@ executable("running_on_bootfs_test") {
   ]
 }
 
-package("bringup_bootfs_test") {
-  testonly = true
+# Note: this test should end up in /boot, which means the cmx produced here is
+# irrelevant, however, we don't allow bare tests in packages anymore, so the
+# cmx production avoids needing a very specialized exception for this case.
+unittest_package("bringup_bootfs_test") {
   deps = [
     ":running_on_bootfs_test",
   ]

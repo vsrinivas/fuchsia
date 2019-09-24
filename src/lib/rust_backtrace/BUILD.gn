@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
@@ -16,9 +16,7 @@ rustc_library("rust_backtrace") {
   ]
 }
 
-package("rust_backtrace_tests") {
-  testonly = true
-
+unittest_package("rust_backtrace_tests") {
   deps = [
     ":rust_backtrace_test",
   ]

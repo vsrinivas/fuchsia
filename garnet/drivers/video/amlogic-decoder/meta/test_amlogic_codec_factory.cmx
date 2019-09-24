@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/test_amlogic_codec_factory"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.medicodec.CodecFactory"
+        ]
+    }
+}

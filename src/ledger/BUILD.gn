@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/ledger/bin/testing/sync_params.gni")
 
@@ -54,8 +54,8 @@ config("ledger_config") {
 }
 
 package("ledger_tests") {
-  rootjob_svc = "//build"
   testonly = true
+  rootjob_svc = "//build"
 
   deps = [
     "//src/ledger/bin:ledger_unittests",
@@ -143,7 +143,7 @@ package("ledger_tests") {
       environments = basic_envs
     },
     {
-      name = "launch_validation_tests_in_memory"
+      name = "validation_in_memory"
       environments = basic_envs
     },
     {
