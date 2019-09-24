@@ -95,6 +95,7 @@ source_set("tests") {
     "job_policy_tests.cc",
     "mbuf_tests.cc",
     "message_packet_tests.cc",
+    "socket_dispatcher_tests.cc",
     "state_tracker_tests.cc",
   ]
   deps = [
