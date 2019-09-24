@@ -1331,3 +1331,9 @@ group("fdio_spawn") {
     "//garnet/tests/fdio_spawn:fdio_spawn_tests",
   ]
 }
+group("zedmon") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/traceutil:zedmon_test($host_toolchain)",
+  ]
+}
