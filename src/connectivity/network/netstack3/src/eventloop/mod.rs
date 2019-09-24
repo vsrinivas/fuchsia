@@ -322,7 +322,9 @@ impl EventLoop {
                 }
             }
             Some(Event::FidlIcmpProviderEvent(req)) => {
-                icmp_provider::handle_request(req).await;
+                if let Err(err) = icmp_provider::handle_request(self, req) {
+                    error!("Failed to handle ICMP Provider request: {}", err);
+                }
             }
             Some(Event::FidlStackEvent(req)) => {
                 self.handle_fidl_stack_request(req).await;

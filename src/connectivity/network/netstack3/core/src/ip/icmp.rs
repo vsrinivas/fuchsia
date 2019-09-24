@@ -1521,7 +1521,7 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
 /// fails and returns an [`error::NetstackError`].
 pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
-    local_addr: SpecifiedAddr<A>,
+    local_addr: Option<SpecifiedAddr<A>>,
     remote_addr: SpecifiedAddr<A>,
     icmp_id: u16,
 ) -> Result<IcmpConnId, error::NetstackError> {
@@ -1530,12 +1530,11 @@ pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
 
 fn new_icmp_connection_inner<A: IpAddress>(
     conns: &mut ConnAddrMap<IcmpAddr<A>>,
-    local_addr: SpecifiedAddr<A>,
+    local_addr: Option<SpecifiedAddr<A>>,
     remote_addr: SpecifiedAddr<A>,
     icmp_id: u16,
 ) -> Result<IcmpConnId, error::NetstackError> {
-    // TODO(brunodalbo) ICMP connections are currently only bound to the remote
-    //  address. Sockets API v2 will improve this.
+    // TODO(fxb/36170): When Sockets v2 is released, use local_addr for binding ICMP echo sockets.
     let addr = IcmpAddr { remote_addr, icmp_id };
     if conns.get_id_by_addr(&addr).is_some() {
         return Err(error::NetstackError::Exists);
@@ -1894,9 +1893,13 @@ mod tests {
 
         let icmp_id = 13;
 
-        let conn =
-            new_icmp_connection(net.context("alice"), config.local_ip, config.remote_ip, icmp_id)
-                .unwrap();
+        let conn = new_icmp_connection(
+            net.context("alice"),
+            Some(config.local_ip),
+            config.remote_ip,
+            icmp_id,
+        )
+        .unwrap();
 
         let echo_body = vec![1, 2, 3, 4];
 
@@ -2204,7 +2207,7 @@ mod tests {
             assert_eq!(
                 new_icmp_connection_inner(
                     &mut ctx.get_mut().icmp_state.conns,
-                    DUMMY_CONFIG_V4.local_ip,
+                    Some(DUMMY_CONFIG_V4.local_ip),
                     DUMMY_CONFIG_V4.remote_ip,
                     ICMP_ID
                 )

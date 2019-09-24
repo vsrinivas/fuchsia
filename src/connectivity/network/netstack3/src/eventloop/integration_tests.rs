@@ -11,7 +11,7 @@ use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use futures::{future, Future};
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, SubnetEither};
+use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use netstack3_core::EntryDest;
@@ -241,12 +241,16 @@ impl TestSetup {
         &mut self.stacks[i]
     }
 
+    pub fn event_loop(&mut self, i: usize) -> &mut EventLoop {
+        &mut self.get(i).event_loop
+    }
+
     fn ctx(&mut self, i: usize) -> &mut Context<EventLoopInner> {
         &mut self.get(i).event_loop.ctx
     }
 
     /// Runs all stacks in `TestSetup` until the future `fut` completes.
-    async fn run_until<V>(&mut self, fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
+    pub async fn run_until<V>(&mut self, fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
         // Create senders so we can signal each event loop to stop running
         let (end_senders, stacks): (Vec<_>, Vec<_>) = self
             .stacks
@@ -431,8 +435,25 @@ impl TestSetupBuilder {
 }
 
 /// Shorthand function to create an IPv4 [`AddrSubnetEither`].
+///
+/// # Panics
+///
+/// May panic if `prefix` is longer than the number of bits in this type of IP address (32 for
+/// IPv4), or if `ip` is not a unicast address in the resulting subnet (see
+/// [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
 pub fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
     AddrSubnetEither::new(IpAddr::V4(Ipv4Addr::from(ip)), prefix).unwrap()
+}
+
+/// Shorthand function to create an IPv6 [`AddrSubnetEither`].
+///
+/// # Panics
+///
+/// May panic if `prefix` is longer than the number of bits in this type of IP address (128 for
+/// IPv6), or if `ip` is not a unicast address in the resulting subnet (see
+/// [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
+pub fn new_ipv6_addr_subnet(ip: [u8; 16], prefix: u8) -> AddrSubnetEither {
+    AddrSubnetEither::new(IpAddr::V6(Ipv6Addr::from(ip)), prefix).unwrap()
 }
 
 /// Helper struct to create stack configurations for [`TestSetupBuilder`].
@@ -541,7 +562,7 @@ async fn test_ping() {
     // create icmp connection on alice:
     let conn_id = core_icmp::new_icmp_connection::<_, Ipv4Addr>(
         t.ctx(0),
-        SpecifiedAddr::new(ALICE_IP.into()).unwrap(),
+        Some(SpecifiedAddr::new(ALICE_IP.into()).unwrap()),
         SpecifiedAddr::new(BOB_IP.into()).unwrap(),
         ICMP_ID,
     )
