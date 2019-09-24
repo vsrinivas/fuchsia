@@ -35,6 +35,7 @@ class ControllerDeviceTest : public ControllerDevice {
                          zx_status_t status) {
     ASSERT_OK(status);
     EXPECT_TRUE(configs.has_value());
+    EXPECT_GT(configs->size(), 0u);
     sync_completion_signal(&event_);
   }
 

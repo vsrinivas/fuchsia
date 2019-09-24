@@ -10,10 +10,11 @@ namespace camera {
 
 ControllerImpl::ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                                async_dispatcher_t* dispatcher, fit::closure on_connection_closed)
-    : binding_(this, std::move(control), dispatcher) {
+    : binding_(this) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
   configs_ = SherlockConfigs();
+  binding_.Bind(std::move(control), dispatcher);
 }
 
 void ControllerImpl::GetConfigs(GetConfigsCallback callback) {
