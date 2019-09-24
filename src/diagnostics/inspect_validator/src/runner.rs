@@ -4,18 +4,26 @@
 
 use {
     super::{data::Data, puppet, results, trials},
-    failure::Error,
+    failure::{bail, Error},
 };
 
-pub async fn run(
-    puppet: &mut puppet::Puppet,
-    trials: trials::TrialSet,
-    results: &mut results::Results,
-) -> Result<(), Error> {
-    let mut data = Data::new();
+pub async fn run_all_trials(server_url: &str, results: &mut results::Results) -> Result<(), Error> {
+    let trials = trials::trial_set();
     for trial in trials::TrialSet::trials().iter_mut() {
-        if let Err(e) = run_trial(puppet, &mut data, trial, trials.quirks()).await {
-            results.error(format!("Running test {}, got: {:?}", trial.name, e));
+        match puppet::Puppet::connect(server_url).await {
+            Ok(mut puppet) => {
+                let mut data = Data::new();
+                if let Err(e) = run_trial(&mut puppet, &mut data, trial, trials.quirks()).await {
+                    results.error(format!("Running trial {}, got failure: {:?}", trial.name, e));
+                }
+            }
+            Err(e) => {
+                results.error(format!(
+                    "Failed to form Puppet - error {:?} - trying puppet {}.",
+                    e, server_url
+                ));
+                bail!("Puppet-forming failure");
+            }
         }
     }
     Ok(())

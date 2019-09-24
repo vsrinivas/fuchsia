@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::validate::{self, ROOT_ID},
+    super::validate::{self, Number, ROOT_ID},
     failure::{bail, format_err, Error},
     fuchsia_inspect::{
         self,
@@ -186,6 +186,21 @@ impl Data {
             validate::Action::DeleteProperty(validate::DeleteProperty { id }) => {
                 self.delete_property(*id)
             }
+            validate::Action::SetNumber(validate::SetNumber { id, value }) => {
+                self.set_number(*id, value)
+            }
+            validate::Action::AddNumber(validate::AddNumber { id, value }) => {
+                self.add_number(*id, value)
+            }
+            validate::Action::SubtractNumber(validate::SubtractNumber { id, value }) => {
+                self.subtract_number(*id, value)
+            }
+            validate::Action::SetBytes(validate::SetBytes { id, value }) => {
+                self.set_bytes(*id, value)
+            }
+            validate::Action::SetString(validate::SetString { id, value }) => {
+                self.set_string(*id, value)
+            }
             _ => bail!("Unknown action {:?}", action),
         }
     }
@@ -254,6 +269,94 @@ impl Data {
             }
         } else {
             bail!("Tried to delete nonexistent property {}", id);
+        }
+        Ok(())
+    }
+
+    fn set_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match (&property, value) {
+                (Property { payload: Payload::Int(_), .. }, Number::IntT(value)) => {
+                    property.payload = Payload::Int(*value)
+                }
+                (Property { payload: Payload::Uint(_), .. }, Number::UintT(value)) => {
+                    property.payload = Payload::Uint(*value)
+                }
+                (Property { payload: Payload::Double(_), .. }, Number::DoubleT(value)) => {
+                    property.payload = Payload::Double(*value)
+                }
+                unexpected => bail!("Bad types {:?} trying to set number", unexpected),
+            }
+        } else {
+            bail!("Tried to set number on nonexistent property {}", id);
+        }
+        Ok(())
+    }
+
+    fn add_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match (&property, value) {
+                (Property { payload: Payload::Int(n), .. }, Number::IntT(value)) => {
+                    property.payload = Payload::Int(n + value)
+                }
+                (Property { payload: Payload::Uint(n), .. }, Number::UintT(value)) => {
+                    property.payload = Payload::Uint(n + value)
+                }
+                (Property { payload: Payload::Double(n), .. }, Number::DoubleT(value)) => {
+                    property.payload = Payload::Double(n + value)
+                }
+                unexpected => bail!("Bad types {:?} trying to add number", unexpected),
+            }
+        } else {
+            bail!("Tried to add number on nonexistent property {}", id);
+        }
+        Ok(())
+    }
+
+    fn subtract_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match (&property, value) {
+                (Property { payload: Payload::Int(n), .. }, Number::IntT(value)) => {
+                    property.payload = Payload::Int(n - value)
+                }
+                (Property { payload: Payload::Uint(n), .. }, Number::UintT(value)) => {
+                    property.payload = Payload::Uint(n - value)
+                }
+                (Property { payload: Payload::Double(n), .. }, Number::DoubleT(value)) => {
+                    property.payload = Payload::Double(n - value)
+                }
+                unexpected => bail!("Bad types {:?} trying to subtract number", unexpected),
+            }
+        } else {
+            bail!("Tried to subtract number on nonexistent property {}", id);
+        }
+        Ok(())
+    }
+
+    fn set_string(&mut self, id: u32, value: &String) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match &property {
+                Property { payload: Payload::String(_), .. } => {
+                    property.payload = Payload::String(value.to_owned())
+                }
+                unexpected => bail!("Bad type {:?} trying to set string", unexpected),
+            }
+        } else {
+            bail!("Tried to set string on nonexistent property {}", id);
+        }
+        Ok(())
+    }
+
+    fn set_bytes(&mut self, id: u32, value: &Vec<u8>) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match &property {
+                Property { payload: Payload::Bytes(_), .. } => {
+                    property.payload = Payload::Bytes(value.to_owned())
+                }
+                unexpected => bail!("Bad type {:?} trying to set bytes", unexpected),
+            }
+        } else {
+            bail!("Tried to set bytes on nonexistent property {}", id);
         }
         Ok(())
     }
@@ -681,8 +784,9 @@ mod tests {
     use {
         super::*,
         crate::{
-            create_bytes_property, create_node, create_numeric_property, create_string_property,
-            delete_node, delete_property, puppet,
+            add_number, create_bytes_property, create_node, create_numeric_property,
+            create_string_property, delete_node, delete_property, puppet, set_bytes, set_number,
+            set_string, subtract_number,
         },
         fidl_test_inspect_validate::{Number, ROOT_ID},
         fuchsia_async as fasync,
@@ -712,13 +816,13 @@ mod tests {
             info.to_string().contains("grandchild ->") && info.to_string().contains("child ->")
         );
         info.apply(
-            &create_numeric_property!(parent: ROOT_ID, id: 3, name: "int42", value: Number::IntT(42)),
+            &create_numeric_property!(parent: ROOT_ID, id: 3, name: "int-42", value: Number::IntT(-42)),
         )?;
-        assert!(info.to_string().contains("int42: Int(42)"));
+        assert!(info.to_string().contains("int-42: Int(-42)")); // Make sure it can hold negative #
         info.apply(&create_string_property!(parent: 1, id: 4, name: "stringfoo", value: "foo"))?;
         assert_eq!(
             info.to_string(),
-            " root ->\n>  int42: Int(42)\n>  child ->\
+            " root ->\n>  int-42: Int(-42)\n>  child ->\
              \n> >  stringfoo: String(\"foo\")\n> >  grandchild ->\n\n\n\n\n"
         );
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1024)))?;
@@ -730,7 +834,7 @@ mod tests {
         )?;
         assert!(info.to_string().contains("bytes: Bytes([1, 2])"));
         info.apply(&delete_property!(id: 3))?;
-        assert!(!info.to_string().contains("int42") && info.to_string().contains("stringfoo"));
+        assert!(!info.to_string().contains("int-42") && info.to_string().contains("stringfoo"));
         info.apply(&delete_property!(id: 4))?;
         assert!(!info.to_string().contains("stringfoo"));
         info.apply(&delete_property!(id: 5))?;
@@ -743,6 +847,95 @@ mod tests {
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
         assert_eq!(info.to_string(), " root ->\n\n\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_int_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
+                                     value: Number::IntT(-42)))?;
+        assert!(info.apply(&add_number!(id: 3, value: Number::IntT(3))).is_ok());
+        assert!(info.to_string().contains("value: Int(-39)"));
+        assert!(info.apply(&add_number!(id: 3, value: Number::UintT(3))).is_err());
+        assert!(info.apply(&add_number!(id: 3, value: Number::DoubleT(3.0))).is_err());
+        assert!(info.to_string().contains("value: Int(-39)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::IntT(5))).is_ok());
+        assert!(info.to_string().contains("value: Int(-44)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::UintT(5))).is_err());
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::DoubleT(5.0))).is_err());
+        assert!(info.to_string().contains("value: Int(-44)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::IntT(22))).is_ok());
+        assert!(info.to_string().contains("value: Int(22)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::UintT(23))).is_err());
+        assert!(info.apply(&set_number!(id: 3, value: Number::DoubleT(24.0))).is_err());
+        assert!(info.to_string().contains("value: Int(22)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_uint_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
+                                     value: Number::UintT(42)))?;
+        assert!(info.apply(&add_number!(id: 3, value: Number::UintT(3))).is_ok());
+        assert!(info.to_string().contains("value: Uint(45)"));
+        assert!(info.apply(&add_number!(id: 3, value: Number::IntT(3))).is_err());
+        assert!(info.apply(&add_number!(id: 3, value: Number::DoubleT(3.0))).is_err());
+        assert!(info.to_string().contains("value: Uint(45)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::UintT(5))).is_ok());
+        assert!(info.to_string().contains("value: Uint(40)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::DoubleT(5.0))).is_err());
+        assert!(info.to_string().contains("value: Uint(40)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::UintT(22))).is_ok());
+        assert!(info.to_string().contains("value: Uint(22)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::IntT(23))).is_err());
+        assert!(info.apply(&set_number!(id: 3, value: Number::DoubleT(24.0))).is_err());
+        assert!(info.to_string().contains("value: Uint(22)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_double_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
+                                     value: Number::DoubleT(42.0)))?;
+        assert!(info.apply(&add_number!(id: 3, value: Number::DoubleT(3.0))).is_ok());
+        assert!(info.to_string().contains("value: Double(45.0)"));
+        assert!(info.apply(&add_number!(id: 3, value: Number::IntT(3))).is_err());
+        assert!(info.apply(&add_number!(id: 3, value: Number::UintT(3))).is_err());
+        assert!(info.to_string().contains("value: Double(45.0)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::DoubleT(5.0))).is_ok());
+        assert!(info.to_string().contains("value: Double(40.0)"));
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::UintT(5))).is_err());
+        assert!(info.apply(&subtract_number!(id: 3, value: Number::UintT(5))).is_err());
+        assert!(info.to_string().contains("value: Double(40.0)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::DoubleT(22.0))).is_ok());
+        assert!(info.to_string().contains("value: Double(22.0)"));
+        assert!(info.apply(&set_number!(id: 3, value: Number::UintT(23))).is_err());
+        assert!(info.apply(&set_number!(id: 3, value: Number::UintT(24))).is_err());
+        assert!(info.to_string().contains("value: Double(22.0)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_vector_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_string_property!(parent: ROOT_ID, id: 3, name: "value",
+                                     value: "foo"))?;
+        assert!(info.to_string().contains("value: String(\"foo\")"));
+        assert!(info.apply(&set_string!(id: 3, value: "bar")).is_ok());
+        assert!(info.to_string().contains("value: String(\"bar\")"));
+        assert!(info.apply(&set_bytes!(id: 3, value: vec!(3u8))).is_err());
+        assert!(info.to_string().contains("value: String(\"bar\")"));
+        info.apply(&create_bytes_property!(parent: ROOT_ID, id: 4, name: "bvalue",
+                                     value: vec!(1u8, 2u8)))?;
+        assert!(info.to_string().contains("bvalue: Bytes([1, 2])"));
+        assert!(info.apply(&set_bytes!(id: 4, value: vec!(3u8, 4u8))).is_ok());
+        assert!(info.to_string().contains("bvalue: Bytes([3, 4])"));
+        assert!(info.apply(&set_string!(id: 4, value: "baz")).is_err());
+        assert!(info.to_string().contains("bvalue: Bytes([3, 4])"));
         Ok(())
     }
 

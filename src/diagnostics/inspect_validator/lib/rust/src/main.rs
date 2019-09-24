@@ -8,6 +8,7 @@
 /// that doesn't exist. Illegal commands should be (and can be) filtered
 /// within the Validator program by running the command sequence against the
 /// local ("data::Data") implementation before sending them to the puppets.
+use fuchsia_inspect::Property as UsablePropertyTrait;
 use {
     failure::{bail, format_err, Error, ResultExt},
     fidl_test_inspect_validate::*,
@@ -20,6 +21,7 @@ use {
     std::collections::HashMap,
 };
 
+#[derive(Debug)]
 enum Property {
     String(StringProperty),
     Int(IntProperty),
@@ -75,6 +77,38 @@ impl Actor {
             Action::DeleteProperty(DeleteProperty { id }) => {
                 self.properties.remove(&id);
             }
+            Action::SetNumber(SetNumber { id, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::Int(p), Number::IntT(v)) => p.set(v),
+                    (Property::Uint(p), Number::UintT(v)) => p.set(v),
+                    (Property::Double(p), Number::DoubleT(v)) => p.set(v),
+                    unexpected => bail!("Illegal types {:?} for SetNumber", unexpected),
+                };
+            }
+            Action::AddNumber(AddNumber { id, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::Int(p), Number::IntT(v)) => p.add(v),
+                    (Property::Uint(p), Number::UintT(v)) => p.add(v),
+                    (Property::Double(p), Number::DoubleT(v)) => p.add(v),
+                    unexpected => bail!("Illegal types {:?} for AddNumber", unexpected),
+                };
+            }
+            Action::SubtractNumber(SubtractNumber { id, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::Int(p), Number::IntT(v)) => p.subtract(v),
+                    (Property::Uint(p), Number::UintT(v)) => p.subtract(v),
+                    (Property::Double(p), Number::DoubleT(v)) => p.subtract(v),
+                    unexpected => bail!("Illegal types {:?} for SubtractNumber", unexpected),
+                };
+            }
+            Action::SetString(SetString { id, value }) => match self.find_property(id)? {
+                Property::String(p) => p.set(&value),
+                unexpected => bail!("Illegal property {:?} for SetString", unexpected),
+            },
+            Action::SetBytes(SetBytes { id, value }) => match self.find_property(id)? {
+                Property::Bytes(p) => p.set(&value),
+                unexpected => bail!("Illegal property {:?} for SetBytes", unexpected),
+            },
             unexpected => {
                 bail!("Unexpected action {:?}", unexpected);
             }
@@ -88,6 +122,10 @@ impl Actor {
         } else {
             self.nodes.get(&id).ok_or_else(|| format_err!("Node {} not found", id))
         }
+    }
+
+    fn find_property<'a>(&'a self, id: u32) -> Result<&'a Property, Error> {
+        self.properties.get(&id).ok_or_else(|| format_err!("Property {} not found", id))
     }
 }
 

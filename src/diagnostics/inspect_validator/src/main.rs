@@ -34,11 +34,7 @@ async fn main() -> Result<(), Error> {
     init_syslog();
     let mut results = results::Results::new();
     let args = Opt::from_args();
-    println!("Puppet URLs {:?}", args.puppet_urls);
-    if args.puppet_urls.len() == 0 {
-        bail!("At least one component URL is required.");
-    }
-    run_all_puppets(args.puppet_urls, &mut results).await?;
+    run_all_puppets(args.puppet_urls, &mut results).await;
     println!("{}", results.to_json());
     if results.failed() {
         bail!("A test failed")
@@ -47,28 +43,44 @@ async fn main() -> Result<(), Error> {
     }
 }
 
-async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) -> Result<(), Error> {
-    for url in urls {
-        launch_and_run_puppet(&url, results).await?;
+async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) {
+    if urls.len() == 0 {
+        results.error("At least one component URL is required.".to_string());
     }
-    Ok(())
+    for url in urls {
+        runner::run_all_trials(&url, results).await.ok();
+    }
 }
 
-// Coming soon: Quirks (e.g. are duplicate names replaced)
-async fn launch_and_run_puppet(
-    server_url: &str,
-    results: &mut results::Results,
-) -> Result<(), Error> {
-    let trials = trials::trial_set();
-    match puppet::Puppet::connect(server_url).await {
-        Ok(mut puppet) => match runner::run(&mut puppet, trials, results).await {
-            Err(e) => results.error(format!("Test failed: {}", e)),
-            _ => {}
-        },
-        Err(e) => results.error(format!(
-            "Failed to form Puppet - error {:?} - check logs - trying puppet {}.",
-            e, server_url
-        )),
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn url_is_required() {
+        let mut results = results::Results::new();
+        run_all_puppets(vec![], &mut results).await;
+        assert!(results.failed());
+        assert!(results.to_json().contains("At least one"));
     }
-    Ok(())
+
+    #[fasync::run_singlethreaded(test)]
+    async fn bad_url_fails() {
+        let mut results = results::Results::new();
+        run_all_puppets(vec!["a".to_owned()], &mut results).await;
+        assert!(results.failed());
+        assert!(results.to_json().contains("URL may be invalid"));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn all_are_tried() {
+        let mut results = results::Results::new();
+        run_all_puppets(vec!["a".to_owned(), "b".to_owned()], &mut results).await;
+        assert!(results.to_json().contains("trying puppet a"));
+        assert!(results.to_json().contains("trying puppet b"));
+    }
+
+    // The only way to test success is to actually start a component, and that's
+    // not suitable for unit tests. Failure on a valid URL will be caught in integration
+    // tests.
 }

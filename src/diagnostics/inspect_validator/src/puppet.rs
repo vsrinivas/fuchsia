@@ -58,6 +58,9 @@ struct Connection {
 }
 
 impl Connection {
+    // Note! In v1, the launch() and connect_to_service() functions do not return errors
+    // when given a bad URL. There's no way to detect bad URLs until we actually make a
+    // FIDL call that the server is supposed to serve, in initialize_vmo().
     async fn start_and_connect(server_url: &str) -> Result<Self, Error> {
         let launcher = fclient::launcher().context("Failed to open launcher service")?;
         let app = fclient::launch(&launcher, server_url.to_owned(), None)
@@ -74,7 +77,8 @@ impl Connection {
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
         let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
-        let out = self.fidl.initialize(params).await.context("Calling vmo init")?;
+        let out =
+            self.fidl.initialize(params).await.context("Calling vmo init - URL may be invalid")?;
         let handle: Option<zx::Handle>;
         if let (Some(out_handle), _) = out {
             handle = Some(out_handle);
@@ -123,7 +127,7 @@ pub(crate) mod tests {
     }
 
     // This is a partial implementation.
-    // All it can do is initialize, and then create nodes and int properties (which it
+    // All it can do is initialize, and then create nodes and string properties (which it
     // will hold forever); other actions will give various kinds of incorrect results.
     pub(crate) async fn local_incomplete_puppet() -> Result<Puppet, Error> {
         let (client_end, server_end) = create_proxy().unwrap();

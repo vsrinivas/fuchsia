@@ -78,6 +78,31 @@ struct DeleteProperty {
     uint32 id;
 };
 
+struct AddNumber {
+    uint32 id;
+    Number value;
+};
+
+struct SubtractNumber {
+    uint32 id;
+    Number value;
+};
+
+struct SetNumber {
+    uint32 id;
+    Number value;
+};
+
+struct SetBytes {
+    uint32 id;
+    vector<uint8> value;
+};
+
+struct SetString {
+    uint32 id;
+    string value;
+};
+
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
     CreateNode create_node;
@@ -86,6 +111,11 @@ xunion Action {
     CreateBytesProperty create_bytes_property;
     CreateStringProperty create_string_property;
     DeleteProperty delete_property;
+    SetNumber set_number;
+    SetString set_string;
+    SetBytes set_bytes;
+    AddNumber add_number;
+    SubtractNumber subtract_number;
 };
 
 [Discoverable]
