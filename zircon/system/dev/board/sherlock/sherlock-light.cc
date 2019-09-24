@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/compiler.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-#include <zircon/compiler.h>
+#include <ddk/metadata.h>
+#include <ddktl/metadata/light-sensor.h>
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
@@ -39,18 +42,32 @@ zx_status_t Sherlock::LightInit() {
       {countof(gpio_component), gpio_component},
   };
 
-  constexpr zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
+  metadata::LightSensorParams params = {};
+  // TODO(kpt): Insert the right parameters here.
+  params.lux_constant_coefficient = 0;
+  params.lux_linear_coefficient = .29f;
+  params.integration_time_ms = 615;
+  pbus_metadata_t metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data_buffer = &params,
+          .data_size = sizeof(params),
+      },
   };
 
-  auto status = DdkAddComposite("SherlockLightSensor", props, countof(props), components,
-                                countof(components), UINT32_MAX);
+  pbus_dev_t dev = {};
+  dev.name = "SherlockLightSensor";
+  dev.vid = PDEV_VID_AMS;
+  dev.pid = PDEV_PID_AMS_TCS3400;
+  dev.did = PDEV_DID_AMS_LIGHT;
+  dev.metadata_list = metadata;
+  dev.metadata_count = countof(metadata);
+  auto status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d\n", __func__, status);
     return status;
   }
+
   return ZX_OK;
 }
 

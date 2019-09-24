@@ -273,6 +273,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sherlock-buttons/hid-buttons",
       "nrf52840-radio",
       "backlight/ti-lp8556",
+      "SherlockLightSensor/tcs-3400/hid-device-000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
