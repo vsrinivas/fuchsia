@@ -74,7 +74,7 @@
 //! timers is - see the comment below on race conditions. Particularly, it's a bit tricky that the
 //! timer is not cancelled when the timer trigger message is _sent_, but when it is _received_.
 
-mod icmp_provider;
+mod icmp;
 #[cfg(test)]
 mod integration_tests;
 mod socket;
@@ -322,7 +322,7 @@ impl EventLoop {
                 }
             }
             Some(Event::FidlIcmpProviderEvent(req)) => {
-                if let Err(err) = icmp_provider::handle_request(self, req) {
+                if let Err(err) = icmp::provider::handle_request(self, req) {
                     error!("Failed to handle ICMP Provider request: {}", err);
                 }
             }

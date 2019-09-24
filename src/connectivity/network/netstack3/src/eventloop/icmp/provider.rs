@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! As the only discoverable service of fuchsia.net.icmp, the Provider service facilitates the
+//! creation of ICMP sockets.
+
 use fuchsia_zircon as zx;
 use log::{error, trace};
 use rand::RngCore;
