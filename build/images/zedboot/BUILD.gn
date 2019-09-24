@@ -8,6 +8,7 @@ import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
+import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 
@@ -156,6 +157,18 @@ zbi("zbi") {
   manifest =
       [ "config/zxcrypt=" +
         rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir) ]
+  foreach(ta_uuid, zedboot_ta_uuids) {
+    manifest += [
+      {
+        outputs = [
+          "lib/firmware/$ta_uuid$ta_dest_suffix",
+        ]
+        sources = [
+          rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
+        ]
+      },
+    ]
+  }
   if (!include_devmgr_config_in_vbmeta) {
     manifest += [
       {

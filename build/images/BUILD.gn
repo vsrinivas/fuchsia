@@ -19,6 +19,7 @@ import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
@@ -783,7 +784,21 @@ zbi("fuchsia") {
         ]
       },
     ]
+
+    foreach(ta_uuid, fuchsia_ta_uuids) {
+      manifest += [
+        {
+          outputs = [
+            "lib/firmware/$ta_uuid$ta_dest_suffix",
+          ]
+          sources = [
+            rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
+          ]
+        },
+      ]
+    }
   }
+
   cmdline = kernel_cmdline_args + board_kernel_cmdline_args
   cmdline_inputs = kernel_cmdline_files
   manifest += bootfs_extra

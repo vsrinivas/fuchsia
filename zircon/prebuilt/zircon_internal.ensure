@@ -41,25 +41,25 @@ fuchsia_internal/firmware/fx3-boot pWauzviAyLDgNPkMyKQV-p8N5kCiG5P_QeMVgRZ-pykC
 fuchsia_internal/firmware/bluetooth/mt7668 git_revision:ed8b2eb6b877e93afb8a9f9281b93a7b91df0f09
 
 # Keysafe TA Firmware
-@Subdir firmware/optee/keysafe
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/808032e0-fd9e-4e6f-8896-544735c98480/prod q_AQJ3ArG0r_pJo6YAWSUS05HNrhEOasuONlL8PKQDUC
 
 # Secmem TA Firmware
-@Subdir firmware/optee/secmem
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b/prod TjGDkTFdMYtMhUtairFSbtd_zDt48gr9aeNGOAQ30JoC
 
 # Castauth TA firmware
-@Subdir firmware/optee/castauth
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/93a424e2-5608-4413-84a8-58b16a064dce/prod 4P4YQWkljnj3BGNoAetWltw8JdNlQf9Fh7BeF6masUEC
 
 # Widevine TA Firmware
-@Subdir firmware/optee/widevine
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/e043cde0-61d0-11e5-9c26-0002a5d5c51b/prod bDcuRO2-QBXObHfn038G3r76gPaUyC1uu2dB3sXtqT0C
 
 # PlayReady TA firmware
-@Subdir firmware/optee/playready
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/9a04f079-9840-4286-ab92-e65be0885f95/prod lzj3H1WeJqyS0pcfZ5JR6MMK-nH524YBEhkPLWFOUpQC
 
 # Provisioning TA Firmware
-@Subdir firmware/optee/provisioning
+@Subdir firmware/optee/astro
 fuchsia_internal/firmware/optee/astro/d83c3c4a-9e8d-4e4e-ad30-9d40e137f689/prod fSnj7Eo1iEqqn33nRitivqYXkXDb_aPHrUWtD0DOj6kC
