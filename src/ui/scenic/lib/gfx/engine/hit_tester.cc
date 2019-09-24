@@ -68,6 +68,7 @@ Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
+  FXL_DCHECK(tag_info_ == nullptr);
   FXL_DCHECK(intersection_info_ == nullptr);
   hits_.clear();  // Reset to good state after std::move.
 
@@ -78,9 +79,11 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   // Get start intersection info with infinite bounds.
   Node::IntersectionInfo intersection_info;
   intersection_info_ = &intersection_info;
-  AccumulateHitsInner(node);
+  AccumulateHitsLocal(node);
   ray_info_ = nullptr;
   intersection_info_ = nullptr;
+
+  FXL_DCHECK(tag_info_ == nullptr);
 
   // Sort by distance, preserving traversal order in case of ties.
   std::stable_sort(hits_.begin(), hits_.end(),
@@ -91,7 +94,7 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
 void HitTester::AccumulateHitsOuter(Node* node) {
   // Take a fast path for identity transformations.
   if (node->transform().IsIdentity()) {
-    AccumulateHitsInner(node);
+    AccumulateHitsLocal(node);
     return;
   }
 
@@ -111,16 +114,39 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 
   ray_info_ = &local_ray_info;
   intersection_info_ = &local_intersection;
-  AccumulateHitsInner(node);
+  AccumulateHitsLocal(node);
   ray_info_ = outer_ray_info;
   intersection_info_ = outer_intersection;
 }
 
-void HitTester::AccumulateHitsInner(Node* node) {
+void HitTester::AccumulateHitsLocal(Node* node) {
   // Bail if hit testing is suppressed.
   if (node->hit_test_behavior() == ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)
     return;
 
+  // Session-based hit testing may encounter nodes that don't participate.
+  if (!should_participate(node)) {
+    AccumulateHitsInner(node);
+    return;
+  }
+
+  // The node is tagged by session which initiated the hit test.
+  TagInfo* outer_tag_info = tag_info_;
+  TagInfo local_tag_info{};
+
+  tag_info_ = &local_tag_info;
+  AccumulateHitsInner(node);
+  tag_info_ = outer_tag_info;
+
+  if (local_tag_info.is_hit()) {
+    hits_.emplace_back(
+        Hit{node, ray_info_->ray, ray_info_->inverse_transform, local_tag_info.distance});
+    if (outer_tag_info)
+      outer_tag_info->ReportIntersection(local_tag_info.distance);
+  }
+}
+
+void HitTester::AccumulateHitsInner(Node* node) {
   if (node->clip_to_self() && node->ClipsRay(ray_info_->ray))
     return;
 
@@ -128,9 +154,8 @@ void HitTester::AccumulateHitsInner(Node* node) {
   Node::IntersectionInfo intersection = node->GetIntersection(ray_info_->ray, *intersection_info_);
   intersection_info_ = &intersection;
 
-  if (intersection.did_hit) {
-    hits_.emplace_back(
-        Hit{node, ray_info_->ray, ray_info_->inverse_transform, intersection.distance});
+  if (intersection.did_hit && tag_info_) {
+    tag_info_->ReportIntersection(intersection.distance);
   }
 
   // Only test the descendants if the current node permits it.

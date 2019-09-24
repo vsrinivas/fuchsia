@@ -21,11 +21,29 @@ class HitTester {
   HitTester() = default;
   virtual ~HitTester() = default;
 
-  // Performs a hit test along the specified ray. Returns a list of hits
+  // Performs a hit test along the specified ray.  Returns a list of hits
   // sorted by increasing distance, then by increasing tree depth.
+  //
+  // The specific hit collection behavior depends on should_participate()
+  // behavior, implemented by each subclass.
   std::vector<Hit> HitTest(Node* node, const escher::ray4& ray);
 
- private:
+ protected:
+  // Describes a possible hit within an enclosing tag node.
+  struct TagInfo {
+    static constexpr float kNoHit = std::numeric_limits<float>::infinity();
+
+    // The distance to the intersection as defined by |Hit.distance|.
+    float distance = kNoHit;
+
+    bool is_hit() const { return distance < kNoHit; }
+
+    void ReportIntersection(float d) {
+      if (d < distance)
+        distance = d;
+    }
+  };
+
   // Describes a ray and its accumulated transform.
   struct RayInfo {
     // The ray to test in the object's coordinate system.
@@ -37,10 +55,20 @@ class HitTester {
     escher::mat4 inverse_transform;
   };
 
+  // Used to determine hit collection behavior.
+  // In a session-based hit test, nodes must have a compatible tag and session.
+  // In a global hit test, all nodes participate, regardless of tag or session.
+  virtual bool should_participate(Node* node) = 0;
+
   // Accumulates hit test results from the node, as seen by its parent.
   // Applies the node's transform to the ray stack.
   // |ray_info_| must be in the parent's local coordinate system.
   void AccumulateHitsOuter(Node* node);
+
+  // Accumulates hit test results from the node, as seen by the node itself.
+  // Applies the node's tag to the tag stack.
+  // |ray_info_| must be in the node's local coordinate system.
+  void AccumulateHitsLocal(Node* node);
 
   // Accumulates hit test results from the node's content and children.
   // |ray_info_| must be in the node's local coordinate system.
@@ -48,6 +76,11 @@ class HitTester {
 
   // The vector which accumulates hits.
   std::vector<Hit> hits_;
+
+  // The current tag information.
+  // Null if there is no enclosing tagged node.
+  // TODO(SCN-909): Refactor out.
+  TagInfo* tag_info_ = nullptr;
 
   // The current ray information.
   // Null if there is no hit test currently in progress.
@@ -57,6 +90,16 @@ class HitTester {
   // The current intersection information.
   // NULL if we haven't intersected anything yet.
   Node::IntersectionInfo* intersection_info_ = nullptr;
+};
+
+class GlobalHitTester : public HitTester {
+ public:
+  GlobalHitTester() = default;
+  virtual ~GlobalHitTester() = default;
+
+ private:
+  // A node always participates in the hit test, regardless of tag and session.
+  bool should_participate(Node* node) override { return true; }
 };
 
 }  // namespace gfx

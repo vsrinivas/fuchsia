@@ -41,6 +41,10 @@ namespace gfx {
 namespace test {
 
 // Session wrapper that references a common Engine.
+//
+// This class calls Session::TearDown directly and so avoids pulling in
+// SessionHandler and SessionManager; these make a call to TearDown that's
+// triggered by Engine::RenderFrame, and we don't need that here.
 class CustomSession {
  public:
   CustomSession(SessionId id, SessionContext session_context) {
@@ -60,53 +64,9 @@ class CustomSession {
   std::unique_ptr<Session> session_;
 };
 
-// Session wrapper that references a common Engine and sets up a basic scene.
-class CustomRootSession : public CustomSession {
- public:
-  const uint32_t kSceneId = 20000;
-
-  CustomRootSession(SessionId id, SessionContext session_context, float pixel_width,
-                    float pixel_height)
-      : CustomSession(id, session_context), compositor_global_id_(id, kCompositorId) {
-    const uint32_t kLayerStackId = 20002;
-    const uint32_t kLayerId = 20003;
-    Apply(scenic::NewCreateCompositorCmd(kCompositorId));
-    Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
-    Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
-    Apply(scenic::NewCreateLayerCmd(kLayerId));
-    Apply(scenic::NewSetSizeCmd(kLayerId, (float[2]){pixel_width, pixel_height}));
-    Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
-
-    const uint32_t kCameraId = 20005;
-    const uint32_t kRendererId = 20006;
-    Apply(scenic::NewCreateSceneCmd(kSceneId));
-    Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
-    Apply(scenic::NewCreateRendererCmd(kRendererId));
-    Apply(scenic::NewSetCameraCmd(kRendererId, kCameraId));
-    Apply(scenic::NewSetRendererCmd(kLayerId, kRendererId));
-  }
-
-  ~CustomRootSession() = default;
-
-  void GetLayerStackPtr(Engine* engine, LayerStackPtr* layer_stack_out) {
-    const CompositorWeakPtr compositor =
-        engine->scene_graph()->GetCompositor(compositor_global_id_);
-    ASSERT_TRUE(compositor);
-    *layer_stack_out = compositor->layer_stack();
-    ASSERT_TRUE(layer_stack_out);
-  }
-
- private:
-  const uint32_t kCompositorId = 20001;
-  const scenic_impl::GlobalId compositor_global_id_;
-};
-
 // Loop fixture provides dispatcher for Engine's EventTimestamper.
 using SingleSessionHitTestTest = ::gtest::TestLoopFixture;
 using MultiSessionHitTestTest = ::gtest::TestLoopFixture;
-
-// Every GFX ViewNode has id 0.
-static constexpr uint32_t kViewNodeId = 0;
 
 // This unit test checks to make sure that geometry that is a child of
 // a view is not hit by a hit-test ray if the intersection point
@@ -129,6 +89,9 @@ static constexpr uint32_t kViewNodeId = 0;
 // Where "V" represents the view boundary and "r" is the extent
 // of the rectangle.
 TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
+  constexpr float display_width = 1024;
+  constexpr float display_height = 768;
+
   sys::testing::ComponentContextProvider context_provider;
   std::unique_ptr<Engine> engine =
       std::make_unique<Engine>(context_provider.context(),
@@ -138,16 +101,34 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  const float display_width = 1024;
-  const float display_height = 768;
-  CustomRootSession sess(0, engine->session_context(), display_width, display_height);
+  CustomSession sess(0, engine->session_context());
   {
-    const uint32_t kViewId = 15;  // Hit
-    const uint32_t kViewHolderId = 30;
-    const uint32_t kShapeNodeId = 50;  // Hit
+    const uint32_t kCompositorId = 20001;
+    const uint32_t kLayerStackId = 20002;
+    const uint32_t kLayerId = 20003;
+    sess.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
+    sess.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
+    sess.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
+    sess.Apply(scenic::NewCreateLayerCmd(kLayerId));
+    sess.Apply(scenic::NewSetSizeCmd(
+        kLayerId, (float[2]){/*px-width*/ display_width, /*px-height*/ display_height}));
+    sess.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
+
+    const uint32_t kSceneId = 20004;  // Hit
+    const uint32_t kCameraId = 20005;
+    const uint32_t kRendererId = 20006;
+    sess.Apply(scenic::NewCreateSceneCmd(kSceneId));
+    sess.Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
+    sess.Apply(scenic::NewCreateRendererCmd(kRendererId));
+    sess.Apply(scenic::NewSetCameraCmd(kRendererId, kCameraId));
+    sess.Apply(scenic::NewSetRendererCmd(kLayerId, kRendererId));
+
+    const uint32_t kViewId = 15;
+    const uint32_t kViewHolderId = 30;  // Hit
+    const uint32_t kShapeNodeId = 50;   // Hit
     const uint32_t kMaterialId = 60;
-    const uint32_t kRectId = 70;
-    const uint32_t kRootNodeId = 20007;
+    const uint32_t kRectId = 70;         // Hit
+    const uint32_t kRootNodeId = 20007;  // Hit
 
     const int32_t pane_width = display_width;
     const int32_t pane_height = 0.25 * display_height;
@@ -177,137 +158,38 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
     sess.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShapeNodeId, kMaterialId));
     sess.Apply(scenic::NewSetTranslationCmd(
-        kShapeNodeId, (float[3]){0.5f * pane_width, 0.5f * display_height, 0.f}));
+        kShapeNodeId, (float[3]){0.5 * pane_width, 0.5 * display_height, 0.f}));
 
-    sess.Apply(scenic::NewAddChildCmd(sess.kSceneId, kRootNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeNodeId));
 
     // Perform two hit tests on either side of the display.
     std::vector<Hit> hits, hits2;
     {
-      LayerStackPtr layer_stack;
-      sess.GetLayerStackPtr(engine.get(), &layer_stack);
+      // Models input subsystem's access to Engine internals.
+      // For simplicity, we use the first (and only) compositor and layer stack.
+      const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
+      ASSERT_TRUE(compositor);
+      LayerStackPtr layer_stack = compositor->layer_stack();
+      ASSERT_TRUE(layer_stack);
 
       // First hit test should intersect the view's bounding box.
       escher::ray4 ray;
       ray.origin = escher::vec4(5, display_height / 2, 1.f, 1.f);
       ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
-      HitTester hit_tester;
+      GlobalHitTester hit_tester;
       hits = layer_stack->HitTest(ray, &hit_tester);
-      ASSERT_EQ(hits.size(), 2u) << "Should see a hit on the rectangle and on the view node.";
-      EXPECT_EQ(hits[0].node->id(), kViewNodeId) << "Closest hit should be the view";
-      EXPECT_EQ(hits[1].node->id(), kShapeNodeId) << "Second closest hit should be the rectangle";
+      EXPECT_EQ(hits.size(), 5u) << "Should see a single hit on the rectangle";
 
       // Second hit test should completely miss the view's bounding box.
-      HitTester hit_tester2;
+      GlobalHitTester hit_tester2;
       ray.origin = escher::vec4(display_width / 2 + 50, display_height / 2, 1.f, 1.f);
       ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
       hits2 = layer_stack->HitTest(ray, &hit_tester2);
       EXPECT_EQ(hits2.size(), 0u) << "Should see no hits since its outside the view bounds";
     }
   }
-}
-
-// Test to check that no hits can be detected in the subtree of a hit-suppressed node.
-// Sets up a scene with a hit suppressed shape node above a non-suppressed shape node and performs a
-// hit test that goes through both of them. Only the non-suppressed node should register a hit.
-//
-// Diagram:                |  Scene graph:
-//                         |
-// vvvvvvvvvvvvvvvvvvvvvv  |     View
-// v                    v  |     /  \
-// v    (rrrrrrrrrrr)   v  |    |  EntityNode(suppressed)
-// v                    v  |    |    |
-// v     rrrrrrrrrrr    v  |    |  ShapeNode(no hit)
-// v                    v  |    |
-// vvvvvvvvvvvvvvvvvvvvvv  | ShapeNode (hit)
-//
-// Where v represents a view, r represents a hittable rectangle inside that view, and (r) represents
-// a second rectangle inside a subtree topped with a hit-suppressed EntityNode.
-TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
-  sys::testing::ComponentContextProvider context_provider;
-  std::unique_ptr<Engine> engine =
-      std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
-                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
-
-  // Create our tokens for View/ViewHolder creation.
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-  // Create bounds for the views.
-  const float bbox_min[3] = {0, 0, -4};
-  const float bbox_max[3] = {10, 10, 0};
-  const float inset_min[3] = {0, 0, 0};
-  const float inset_max[3] = {0, 0, 0};
-
-  const float display_width = 1024;
-  const float display_height = 768;
-
-  const uint32_t kHittableShapeNodeId = 1007;  // Hit
-  CustomRootSession sess(1, engine->session_context(), /* px-width */ display_width,
-                         /* px-height */ display_height);
-  {
-    const uint32_t kViewHolderId = 1001;
-    sess.Apply(
-        scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
-    const uint32_t kViewId = 1002;  // Hit
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "view"));
-    // Set the bounding box on the view holder.
-    const float bbox_min[3] = {0.f, 0.f, -10.f};
-    const float bbox_max[3] = {display_width, display_height, 0.f};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
-    sess.Apply(
-        scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
-    sess.Apply(scenic::NewAddChildCmd(sess.kSceneId, kViewHolderId));
-
-    const uint32_t kRootNodeId = 1003;
-    sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    sess.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
-
-    // Create first branch
-    const uint32_t kUnhittableEntityNodeId = 1004;
-    sess.Apply(scenic::NewCreateEntityNodeCmd(kUnhittableEntityNodeId));
-    sess.Apply(scenic::NewSetHitTestBehaviorCmd(kUnhittableEntityNodeId,
-                                                fuchsia::ui::gfx::HitTestBehavior::kSuppress));
-    sess.Apply(scenic::NewAddChildCmd(kViewId, kUnhittableEntityNodeId));
-    const uint32_t kUnhittableShapeNodeId = 1005;
-    sess.Apply(scenic::NewCreateShapeNodeCmd(kUnhittableShapeNodeId));
-    sess.Apply(scenic::NewAddChildCmd(kUnhittableEntityNodeId, kUnhittableShapeNodeId));
-    // Move to middle of view.
-    sess.Apply(scenic::NewSetTranslationCmd(
-        kUnhittableShapeNodeId, (float[3]){display_width / 2.f, display_height / 2.f, -5.f}));
-    const uint32_t kShapeId1 = 1006;
-    sess.Apply(scenic::NewCreateRectangleCmd(kShapeId1, display_width, display_height));
-    sess.Apply(scenic::NewSetShapeCmd(kUnhittableShapeNodeId, kShapeId1));
-
-    // Create second branch
-    sess.Apply(scenic::NewCreateShapeNodeCmd(kHittableShapeNodeId));
-    sess.Apply(scenic::NewAddChildCmd(kViewId, kHittableShapeNodeId));
-    const uint32_t kShapeId2 = 1008;
-    sess.Apply(scenic::NewCreateRectangleCmd(kShapeId2, display_width, display_height));
-    sess.Apply(scenic::NewSetShapeCmd(kHittableShapeNodeId, kShapeId2));
-    // Move to middle of view, below UnhittableShapeNode.
-    sess.Apply(scenic::NewSetTranslationCmd(
-        kHittableShapeNodeId, (float[3]){display_width / 2.f, display_height / 2.f, -2.5f}));
-  }
-
-  std::vector<Hit> hits;
-  {
-    LayerStackPtr layer_stack;
-    sess.GetLayerStackPtr(engine.get(), &layer_stack);
-
-    escher::ray4 ray;
-    ray.origin = escher::vec4(display_width / 2.f, display_height / 2.f, 1.f, 1.f);
-    ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
-    HitTester hit_tester;
-    hits = layer_stack->HitTest(ray, &hit_tester);
-  }
-
-  ASSERT_EQ(hits.size(), 2u);
-  EXPECT_EQ(hits[0].node->id(), kViewNodeId) << "Closest hit should be the view.";
-  EXPECT_EQ(hits[1].node->id(), kHittableShapeNodeId)
-      << "Second closest hit should be the hittable rectangle.";
 }
 
 // A unit test to see what happens when a child view is bigger than its parent view,
@@ -327,6 +209,9 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
 // c                         c
 // ccccccccccccccccccccccccccc
 TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
+  constexpr float display_width = 1024;
+  constexpr float display_height = 768;
+
   sys::testing::ComponentContextProvider context_provider;
   std::unique_ptr<Engine> engine =
       std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
@@ -336,23 +221,43 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
 
-  constexpr float display_width = 1024;
-  constexpr float display_height = 768;
+  const uint32_t kSceneId = 20004;     // Hit
+  const uint32_t kRootNodeId = 20007;  // Hit
+  const uint32_t kMiddleNodeId = 37;   // Hit
+  const uint32_t kViewHolderId = 35;   // Hit
+  const uint32_t kViewHolderId2 = 36;  // Hit
 
   // Root session sets up the scene and two view holders.
-  CustomRootSession sess(0, engine->session_context(), /* px-width */ display_width,
-                         /* px-height */ display_height);
+  CustomSession sess(0, engine->session_context());
   {
+    const uint32_t kCompositorId = 20001;
+    const uint32_t kLayerStackId = 20002;
+    const uint32_t kLayerId = 20003;
+    sess.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
+    sess.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
+    sess.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
+    sess.Apply(scenic::NewCreateLayerCmd(kLayerId));
+    sess.Apply(scenic::NewSetSizeCmd(
+        kLayerId, (float[2]){/*px-width*/ display_width, /*px-height*/ display_height}));
+    sess.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
+
+    const uint32_t kCameraId = 20005;
+    const uint32_t kRendererId = 20006;
+    sess.Apply(scenic::NewCreateSceneCmd(kSceneId));
+    sess.Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
+    sess.Apply(scenic::NewCreateRendererCmd(kRendererId));
+    sess.Apply(scenic::NewSetCameraCmd(kRendererId, kCameraId));
+    sess.Apply(scenic::NewSetRendererCmd(kLayerId, kRendererId));
+
     // Create root node and middle node.
-    const uint32_t kRootNodeId = 20007;
     sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    const uint32_t kViewHolderId = 35;
+
     sess.Apply(
         scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
 
     // Add the first view holder as a child of the root node, and the second
     // view holder as a child of the first view holder.
-    sess.Apply(scenic::NewAddChildCmd(sess.kSceneId, kRootNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
 
     // Set view_holder 1's bounding box. It is a small box centered in the display.
@@ -366,15 +271,15 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   }
 
   // Sets up the parent view.
-  const uint32_t kSession1 = 1;
-  CustomSession sess1(kSession1, engine->session_context());
+  CustomSession sess1(1, engine->session_context());
   {
-    const uint32_t kViewId = 15;  // Hit
+    const uint32_t kViewId = 15;
     sess1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
-    const uint32_t kMiddleNodeId = 37;
+
     sess1.Apply(scenic::NewCreateEntityNodeCmd(kMiddleNodeId));
+
     sess1.Apply(scenic::NewAddChildCmd(kViewId, kMiddleNodeId));
-    const uint32_t kViewHolderId2 = 36;
+
     sess1.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId2, std::move(view_holder_token2),
                                                "ViewHolder2"));
 
@@ -391,13 +296,12 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   }
 
   // Setup the child view.
-  const uint32_t kShapeNodeId = 50;  // Hit
-  const uint32_t kSession2 = 2;
-  CustomSession sess2(kSession2, engine->session_context());
+  CustomSession sess2(2, engine->session_context());
   {
-    const uint32_t kViewId2 = 16;  // Hit
+    const uint32_t kViewId2 = 16;      // Hit
+    const uint32_t kShapeNodeId = 50;  // Hit
     const uint32_t kMaterialId = 60;
-    const uint32_t kRectId = 70;
+    const uint32_t kRectId = 70;  // Hit
 
     const int32_t pane_width = 25;
     const int32_t pane_height = 25;
@@ -422,21 +326,20 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   // Perform two hit tests on either side of the display.
   std::vector<Hit> hits;
   {
-    LayerStackPtr layer_stack;
-    sess.GetLayerStackPtr(engine.get(), &layer_stack);
+    // Models input subsystem's access to Engine internals.
+    // For simplicity, we use the first (and only) compositor and layer stack.
+    const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
+    ASSERT_TRUE(compositor);
+    LayerStackPtr layer_stack = compositor->layer_stack();
+    ASSERT_TRUE(layer_stack);
 
     // First hit test should intersect the view's bounding box.
     escher::ray4 ray;
     ray.origin = escher::vec4(display_width / 2, display_height / 2, 1, 1);
     ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
-    HitTester hit_tester;
+    GlobalHitTester hit_tester;
     hits = layer_stack->HitTest(ray, &hit_tester);
-    ASSERT_EQ(hits.size(), 3u) << "Should hit the parent, child, and the shape.";
-    EXPECT_EQ(hits[0].node->global_id(), GlobalId(kSession1, kViewNodeId))
-        << "Closest hit should be the parent view.";
-    EXPECT_EQ(hits[1].node->global_id(), GlobalId(kSession2, kViewNodeId))
-        << "Second closest hit should be the child view.";
-    EXPECT_EQ(hits[2].node->id(), kShapeNodeId) << "Third hit should be the shape.";
+    EXPECT_EQ(hits.size(), 8u) << "Should hit the parent, child, and the shape";
   }
 }
 
@@ -465,20 +368,43 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
 
+  const uint32_t kSceneId = 20004;
+  const uint32_t kRootNodeId = 20007;
+  const uint32_t kMiddleNodeId = 37;
+  const uint32_t kViewHolderId = 35;
+  const uint32_t kViewHolderId2 = 36;
+
   // Root session sets up the scene and two view holders.
-  CustomRootSession sess(0, engine->session_context(), /* px-width */ display_width,
-                         /* px-height */ display_height);
+  CustomSession sess(0, engine->session_context());
   {
-    // Create root node and view holder node.
-    const uint32_t kRootNodeId = 20007;
+    const uint32_t kCompositorId = 20001;
+    const uint32_t kLayerStackId = 20002;
+    const uint32_t kLayerId = 20003;
+    sess.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
+    sess.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
+    sess.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
+    sess.Apply(scenic::NewCreateLayerCmd(kLayerId));
+    sess.Apply(scenic::NewSetSizeCmd(
+        kLayerId, (float[2]){/*px-width*/ display_width, /*px-height*/ display_height}));
+    sess.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
+
+    const uint32_t kCameraId = 20005;
+    const uint32_t kRendererId = 20006;
+    sess.Apply(scenic::NewCreateSceneCmd(kSceneId));
+    sess.Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
+    sess.Apply(scenic::NewCreateRendererCmd(kRendererId));
+    sess.Apply(scenic::NewSetCameraCmd(kRendererId, kCameraId));
+    sess.Apply(scenic::NewSetRendererCmd(kLayerId, kRendererId));
+
+    // Create root node and middle node.
     sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    const uint32_t kViewHolderId = 35;
+
     sess.Apply(
         scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
 
     // Add the first view holder as a child of the root node, and the second
     // view holder as a child of the first view holder.
-    sess.Apply(scenic::NewAddChildCmd(sess.kSceneId, kRootNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
 
     // Set view_holder 1's bounding box. It takes up the left-hand side of the display.
@@ -495,10 +421,11 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   {
     const uint32_t kViewId = 15;
     sess1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
-    const uint32_t kMiddleNodeId = 37;
+
     sess1.Apply(scenic::NewCreateEntityNodeCmd(kMiddleNodeId));
+
     sess1.Apply(scenic::NewAddChildCmd(kViewId, kMiddleNodeId));
-    const uint32_t kViewHolderId2 = 36;
+
     sess1.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId2, std::move(view_holder_token2),
                                                "ViewHolder2"));
 
@@ -544,14 +471,18 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   // Perform two hit tests on either side of the display.
   std::vector<Hit> hits;
   {
-    LayerStackPtr layer_stack;
-    sess.GetLayerStackPtr(engine.get(), &layer_stack);
+    // Models input subsystem's access to Engine internals.
+    // For simplicity, we use the first (and only) compositor and layer stack.
+    const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
+    ASSERT_TRUE(compositor);
+    LayerStackPtr layer_stack = compositor->layer_stack();
+    ASSERT_TRUE(layer_stack);
 
     // First hit test should intersect the view's bounding box.
     escher::ray4 ray;
     ray.origin = escher::vec4(3.f * display_width / 4, 3.f * display_height / 4.f, 1, 1);
     ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
-    HitTester hit_tester;
+    GlobalHitTester hit_tester;
     hits = layer_stack->HitTest(ray, &hit_tester);
     EXPECT_EQ(hits.size(), 0u) << "Should not hit anything at all";
   }
@@ -577,18 +508,38 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   const float inset_max[3] = {0, 0, 0};
 
   // Root session sets up the scene and two view holders.
-  CustomRootSession s_r(0, engine->session_context(), /*px-width*/ 9, /*px-height*/ 9);
+  CustomSession s_r(0, engine->session_context());
   {
-    const uint32_t kRootNodeId = 1007;
+    const uint32_t kCompositorId = 1001;
+    const uint32_t kLayerStackId = 1002;
+    const uint32_t kLayerId = 1003;
+    s_r.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
+    s_r.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
+    s_r.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
+    s_r.Apply(scenic::NewCreateLayerCmd(kLayerId));
+    s_r.Apply(scenic::NewSetSizeCmd(kLayerId, (float[2]){/*px-width*/ 9, /*px-height*/ 9}));
+    s_r.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
+
+    const uint32_t kSceneId = 1004;  // Hit
+    const uint32_t kCameraId = 1005;
+    const uint32_t kRendererId = 1006;
+    s_r.Apply(scenic::NewCreateSceneCmd(kSceneId));
+    s_r.Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
+    s_r.Apply(scenic::NewCreateRendererCmd(kRendererId));
+    s_r.Apply(scenic::NewSetCameraCmd(kRendererId, kCameraId));
+    s_r.Apply(scenic::NewSetRendererCmd(kLayerId, kRendererId));
+
+    // TODO(SCN-885) - Adjust hit count; an EntityNode shouldn't be hit.
+    const uint32_t kRootNodeId = 1007;  // Hit
     s_r.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
 
-    const uint32_t kViewHolder1Id = 1008;
-    s_r.Apply(scenic::NewAddChildCmd(s_r.kSceneId, kRootNodeId));
+    const uint32_t kViewHolder1Id = 1008;  // Hit
+    s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     s_r.Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder_token_1),
                                              "viewholder_1"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder1Id));
 
-    const uint32_t kViewHolder2Id = 1009;
+    const uint32_t kViewHolder2Id = 1009;  // Hit
     s_r.Apply(scenic::NewCreateViewHolderCmd(kViewHolder2Id, std::move(view_holder_token_2),
                                              "viewholder_2"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder2Id));
@@ -601,46 +552,44 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
-  const uint32_t kSession1 = 1;
-  const uint32_t kChildId1 = 2003;  // Hit
-  CustomSession s_1(kSession1, engine->session_context());
+  CustomSession s_1(1, engine->session_context());
   {
     const uint32_t kViewId = 2001;  // Hit
     s_1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_1), "view_1"));
 
-    const uint32_t kRootNodeId = 2002;
+    const uint32_t kRootNodeId = 2002;  // Hit
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
     s_1.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
 
-    s_1.Apply(scenic::NewCreateShapeNodeCmd(kChildId1));
-    s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId1));
-    s_1.Apply(scenic::NewSetTranslationCmd(kChildId1, (float[3]){4.f, 4.f, /*z*/ -2.f}));
+    const uint32_t kChildId = 2003;  // Hit
+    s_1.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
+    s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
+    s_1.Apply(scenic::NewSetTranslationCmd(kChildId, (float[3]){4.f, 4.f, /*z*/ -2.f}));
 
     const uint32_t kShapeId = 2004;
     s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
                                             /*px-height*/ 9.f));
-    s_1.Apply(scenic::NewSetShapeCmd(kChildId1, kShapeId));
+    s_1.Apply(scenic::NewSetShapeCmd(kChildId, kShapeId));
   }
 
-  const uint32_t kSession2 = 2;
-  const uint32_t kChildId2 = 3003;  // Hit
-  CustomSession s_2(kSession2, engine->session_context());
+  CustomSession s_2(2, engine->session_context());
   {
     const uint32_t kViewId = 3001;  // Hit
     s_2.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_2), "view_2"));
 
-    const uint32_t kRootNodeId = 3002;
+    const uint32_t kRootNodeId = 3002;  // Hit
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
     s_2.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
 
-    s_2.Apply(scenic::NewCreateShapeNodeCmd(kChildId2));
-    s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId2));
-    s_2.Apply(scenic::NewSetTranslationCmd(kChildId2, (float[3]){4.f, 4.f, /*z*/ -3.f}));
+    const uint32_t kChildId = 3003;  // Hit
+    s_2.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
+    s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
+    s_2.Apply(scenic::NewSetTranslationCmd(kChildId, (float[3]){4.f, 4.f, /*z*/ -3.f}));
 
     const uint32_t kShapeId = 3004;
     s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
                                             /*px-height*/ 9.f));
-    s_2.Apply(scenic::NewSetShapeCmd(kChildId2, kShapeId));
+    s_2.Apply(scenic::NewSetShapeCmd(kChildId, kShapeId));
   }
 
 #if 0
@@ -649,26 +598,22 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   std::vector<Hit> hits;
   {
-    LayerStackPtr layer_stack;
-    s_r.GetLayerStackPtr(engine.get(), &layer_stack);
+    // Models input subsystem's access to Engine internals.
+    // For simplicity, we use the first (and only) compositor and layer stack.
+    const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
+    ASSERT_TRUE(compositor);
+    LayerStackPtr layer_stack = compositor->layer_stack();
+    ASSERT_TRUE(layer_stack);
 
     escher::ray4 ray;
     ray.origin = escher::vec4(4.f, 4.f, 1.f, 1.f);
     ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
-    HitTester hit_tester;
+    GlobalHitTester hit_tester;
     hits = layer_stack->HitTest(ray, &hit_tester);
   }
 
   // All that for this!
-  ASSERT_EQ(hits.size(), 4u) << "Should see four hits across three sessions.";
-  EXPECT_EQ(hits[0].node->id(), kViewNodeId) << "Closest hit should be the view of session 2.";
-  EXPECT_EQ(hits[0].node->global_id(), GlobalId(kSession2, kViewNodeId))
-      << "Closest hit should be the view of session 2.";
-  EXPECT_EQ(hits[1].node->global_id(), GlobalId(kSession1, kViewNodeId))
-      << "Closest hit should be the view of session 1.";
-  EXPECT_EQ(hits[2].node->id(), kChildId2) << "Third closest hit should be rectangle of session 2.";
-  EXPECT_EQ(hits[3].node->id(), kChildId1)
-      << "Fourth closest hit should be rectangle of session 1.";
+  EXPECT_EQ(hits.size(), 10u) << "Should see ten hits across three sessions.";
 }
 
 }  // namespace test
