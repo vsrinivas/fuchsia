@@ -4,13 +4,14 @@
 
 use cstr::cstr;
 use failure::{format_err, Error, ResultExt};
-use fidl_fuchsia_hardware_pty::{DeviceProxy, WindowSize};
+use fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize};
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{self as zx, HandleBased, Task};
 use parking_lot::Mutex;
 use std::{
     ffi::CStr,
-    fs::{File, OpenOptions},
+    fs::File,
     os::unix::io::AsRawFd,
     sync::Arc,
 };
@@ -75,7 +76,17 @@ impl Pty {
 
     /// Opens the initial server side of the pty.
     fn open_server_pty() -> Result<File, Error> {
-        let server_pty = OpenOptions::new().read(true).write(true).open("/dev/misc/ptmx")?;
+        let server_conn = connect_to_service::<DeviceMarker>()
+            .context("could not connect to pty service")?;
+        let server_chan = server_conn.into_channel()
+            .or(Err(format_err!("failed to convert pty service into channel")))?;
+
+        // Convert the server into a file descriptor.  We need to do this rather than just using
+        // the normal open interface, since otherwise fdio gets confused about the associated event
+        // object.  This confusion is caused by how we currently route the pty service through
+        // svchost.  Once that routing is gone, this bounce through should be unnecessary.
+        let server_pty = fdio::create_fd(zx::Channel::from(server_chan).into())
+            .context("failed to create FD from server PTY")?;
         fasync::net::set_nonblock(server_pty.as_raw_fd())
             .context("failed to set PTY to non-blocking")?;
         Ok(server_pty)

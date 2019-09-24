@@ -6,9 +6,6 @@
         "boot": [
             "bin"
         ],
-        "dev": [
-            "misc/ptmx"
-        ],
         "features": [
             "hub",
             "shell-commands"
@@ -19,6 +16,7 @@
         ],
         "services": [
             "fuchsia.device.manager.Administrator",
+            "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

@@ -3,20 +3,25 @@
         "binary": "test/terminal_bin_test"
     },
     "sandbox": {
-        "dev": [
-            "misc/ptmx"
-        ],
         "features": [
             "shell-commands",
             "deprecated-ambient-replace-as-executable"
         ],
         "boot": [ "bin" ],
         "services": [
+            "fuchsia.hardware.pty.Device",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.input.ImeService",
             "fuchsia.sys.Environment",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver"
         ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
     }
 }
