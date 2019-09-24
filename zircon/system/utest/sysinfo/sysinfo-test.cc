@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -35,15 +36,14 @@ TEST(SysinfoTest, GetBoardName) {
             "Failed to get channel");
 
   // Test fuchsia_sysinfo_DeviceGetBoardName().
-  char board_name[ZBI_BOARD_NAME_LEN];
+  std::array<char, ZBI_BOARD_NAME_LEN> board_name = {};
   zx_status_t status;
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name.data(),
                                                                sizeof(board_name), &actual_size);
   ASSERT_OK(fidl_status, "Failed to get board name");
   ASSERT_OK(status, "Failed to get board name");
-  ASSERT_LE(actual_size, sizeof(board_name), "GetBoardName returned too much data");
-  EXPECT_GT(strlen(board_name), 0, "board name is empty");
+  ASSERT_GT(actual_size, 0, "board name is empty");
 }
 
 TEST(SysinfoTest, GetInterruptControllerInfo) {
