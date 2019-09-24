@@ -11,7 +11,7 @@ group("diagnostics") {
 group("tests") {
   testonly = true
   deps = [
-    "archivist:archivist_tests",
+    "archivist:tests",
     "inspect_validator:tests",
     "inspect_validator/lib/rust:tests",
 
