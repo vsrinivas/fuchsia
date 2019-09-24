@@ -23,8 +23,16 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
   startup_context_->outgoing()->AddPublicService(
       settings_manager_bindings_.GetHandler(&settings_manager_));
 
-  // Register ourselves as a settings watcher.
+  // Register a11y manager as a settings watcher.
+  // TODO(17180): Remove watcher logic from this class.
   settings_manager_.Watch(settings_watcher_binding_.NewBinding());
+
+  // Register a11y manager as a settings provider.
+  settings_manager_.RegisterSettingProvider(settings_provider_ptr_.NewRequest());
+  settings_provider_ptr_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::accessibility::settings::SettingsProvider"
+                   << zx_status_get_string(status);
+  });
 
   // Connect to Root presenter service.
   pointer_event_registry_ =
@@ -46,48 +54,55 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
 
 App::~App() = default;
 
-// Temporary method to map setui's version of the settings to the soon-to-be deprecated a11y
-// settings.
-// TODO(17180): Remove this method once settings.fidl is fully deprecated.
-fuchsia::accessibility::Settings ConvertSetuiSettingsToInternalSettings(
-    const fuchsia::settings::AccessibilitySettings& systemSettings) {
-  fuchsia::accessibility::Settings internalSettings;
+void InternalSettingsCallback(fuchsia::accessibility::SettingsManagerStatus status) {
+  if (status == fuchsia::accessibility::SettingsManagerStatus::ERROR) {
+    FX_LOGS(ERROR) << "Error writing internal accessibility settings.";
+  }
+}
+
+// This currently ignores errors in the internal settings API. That API is being removed in favor of
+// smaller feature-oriented APIs.
+void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings) {
   if (systemSettings.has_screen_reader()) {
-    internalSettings.set_screen_reader_enabled(systemSettings.screen_reader());
+    settings_provider_ptr_->SetScreenReaderEnabled(systemSettings.screen_reader(),
+                                                   InternalSettingsCallback);
   }
   if (systemSettings.has_color_inversion()) {
-    internalSettings.set_color_inversion_enabled(systemSettings.color_inversion());
+    settings_provider_ptr_->SetColorInversionEnabled(systemSettings.color_inversion(),
+                                                     InternalSettingsCallback);
   }
   if (systemSettings.has_enable_magnification()) {
-    internalSettings.set_magnification_enabled(systemSettings.enable_magnification());
+    settings_provider_ptr_->SetMagnificationEnabled(systemSettings.enable_magnification(),
+                                                    InternalSettingsCallback);
   }
   if (systemSettings.has_color_correction()) {
     switch (systemSettings.color_correction()) {
       case fuchsia::settings::ColorBlindnessType::NONE:
-        internalSettings.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
+        settings_provider_ptr_->SetColorCorrection(
+            fuchsia::accessibility::ColorCorrection::DISABLED, InternalSettingsCallback);
         break;
       case fuchsia::settings::ColorBlindnessType::PROTANOMALY:
-        internalSettings.set_color_correction(
-            fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
+        settings_provider_ptr_->SetColorCorrection(
+            fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY, InternalSettingsCallback);
         break;
       case fuchsia::settings::ColorBlindnessType::DEUTERANOMALY:
-        internalSettings.set_color_correction(
-            fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY);
+        settings_provider_ptr_->SetColorCorrection(
+            fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
+            InternalSettingsCallback);
         break;
       case fuchsia::settings::ColorBlindnessType::TRITANOMALY:
-        internalSettings.set_color_correction(
-            fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY);
+        settings_provider_ptr_->SetColorCorrection(
+            fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY, InternalSettingsCallback);
         break;
     }
   }
-  return internalSettings;
 }
 
 void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result) {
   if (result.is_err()) {
     FX_LOGS(ERROR) << "Error reading setui accessibility settings.";
   } else if (result.is_response()) {
-    OnSettingsChange(ConvertSetuiSettingsToInternalSettings(result.response().settings));
+    UpdateInternalSettings(result.response().settings);
   }
   WatchSetui();
 }

@@ -8,13 +8,22 @@
 
 namespace accessibility_test {
 
-MockSetUIAccessibility::MockSetUIAccessibility(sys::testing::ComponentContextProvider* context) {
+MockSetUIAccessibility::MockSetUIAccessibility(sys::testing::ComponentContextProvider* context)
+    : first_watch_(true) {
   context->service_directory_provider()->AddService(bindings_.GetHandler(this));
 }
 
 MockSetUIAccessibility::~MockSetUIAccessibility() = default;
 
-void MockSetUIAccessibility::Watch(WatchCallback callback) { watchCallback_ = std::move(callback); }
+void MockSetUIAccessibility::Watch(WatchCallback callback) {
+  watchCallback_ = std::move(callback);
+
+  // First call to Watch should return immediately.
+  if (first_watch_) {
+    watchCallback_(fit::ok(fuchsia::settings::AccessibilitySettings()));
+    first_watch_ = false;
+  }
+}
 
 void MockSetUIAccessibility::Set(fuchsia::settings::AccessibilitySettings settings,
                                  SetCallback callback) {

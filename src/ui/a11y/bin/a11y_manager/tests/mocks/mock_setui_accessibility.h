@@ -29,6 +29,8 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
 
   WatchCallback watchCallback_;
 
+  bool first_watch_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSetUIAccessibility);
 };
 }  // namespace accessibility_test

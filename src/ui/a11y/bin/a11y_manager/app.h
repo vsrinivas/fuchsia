@@ -57,6 +57,13 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // and res resets |gesture_manager_|.
   void OnAccessibilityPointerEventListenerEnabled(bool enabled);
 
+  // Makes changes to internal settings based on new settings from SetUI. This is not particularly
+  // efficient since the existing internal API forces a new call to watchers for each changed
+  // setting.
+  // TODO(17180): This should be removed when the internal settings API is replaced with smaller
+  // configuration APIs.
+  void UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings);
+
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
@@ -72,6 +79,7 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
   fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
+  fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
 
