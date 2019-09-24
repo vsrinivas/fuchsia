@@ -668,15 +668,6 @@ int console_run_script(const char* string) { return console_run_script_etc(strin
 
 int console_run_script_locked(const char* string) { return console_run_script_etc(string, true); }
 
-console_cmd* console_get_command_handler(const char* commandstr) {
-  const cmd* command = match_command(commandstr, CMD_AVAIL_NORMAL);
-
-  if (command)
-    return command->cmd_callback;
-  else
-    return NULL;
-}
-
 static int cmd_help(int argc, const cmd_args* argv, uint32_t flags) {
   printf("command list:\n");
 
