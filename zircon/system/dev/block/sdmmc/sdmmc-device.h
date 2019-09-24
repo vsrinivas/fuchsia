@@ -19,8 +19,12 @@ class SdmmcDevice {
   SdmmcDevice(const ddk::SdmmcProtocolClient& host, const sdmmc_host_info_t& host_info)
       : host_(host), host_info_(host_info) {}
 
+  SdmmcDevice(const ddk::SdmmcProtocolClient& host) : host_(host), host_info_({}) {}
+
   SdmmcDevice(const SdmmcDevice& other)
       : host_(other.host_), host_info_(other.host_info_), rca_(other.rca_) {}
+
+  zx_status_t Init();
 
   virtual const ddk::SdmmcProtocolClient& host() const { return host_; }
   const sdmmc_host_info_t& host_info() const { return host_info_; }
@@ -75,7 +79,7 @@ class SdmmcDevice {
   inline uint32_t RcaArg() const { return rca_ << 16; }
 
   const ddk::SdmmcProtocolClient host_;
-  const sdmmc_host_info_t host_info_;
+  sdmmc_host_info_t host_info_;
   sdmmc_voltage_t signal_voltage_ = SDMMC_VOLTAGE_V330;
   uint16_t rca_ = 0;  // APP_CMD requires the initial RCA to be zero.
 };
