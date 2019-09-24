@@ -246,7 +246,10 @@ zx_status_t vim_import_image(void* ctx, image_t* image, zx_unowned_handle_t hand
       return ZX_ERR_INVALID_ARGS;
     }
     ZX_DEBUG_ASSERT(
-        !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+        collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+    ZX_DEBUG_ASSERT(
+        collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
+        fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
 
     uint32_t minimum_row_bytes;
     if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
@@ -699,7 +702,7 @@ static void display_unbind(void* ctx) {
   device_remove(display->mydevice);
 }
 
-static zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
   if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
     auto ops = static_cast<display_controller_impl_protocol_t*>(protocol);
     ops->ctx = ctx;

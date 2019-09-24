@@ -6,11 +6,6 @@
 #define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_DISPLAY_H_
 
 #include <assert.h>
-#include <ddk/debug.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/sysmem.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -21,6 +16,12 @@
 #include <zircon/pixelformat.h>
 
 #include <optional>
+
+#include <ddk/debug.h>
+#include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/display/controller.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/sysmem.h>
 
 #include "edid.h"
 #include "vim-audio.h"
@@ -137,6 +138,7 @@ typedef struct vim2_display {
 void disable_vd(vim2_display_t* display, uint32_t vd_index);
 void configure_vd(vim2_display_t* display, uint32_t vd_index);
 void flip_vd(vim2_display_t* display, uint32_t vd_index, uint32_t index);
+zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* protocol);
 
 void disable_osd(vim2_display_t* display, uint32_t osd_index);
 zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index);

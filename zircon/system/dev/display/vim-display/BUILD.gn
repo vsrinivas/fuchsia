@@ -2,6 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+common_deps = [
+  "$zx/system/banjo/ddk.protocol.amlogiccanvas",
+  "$zx/system/banjo/ddk.protocol.composite",
+  "$zx/system/banjo/ddk.protocol.display.controller",
+  "$zx/system/banjo/ddk.protocol.gpio",
+  "$zx/system/banjo/ddk.protocol.i2cimpl",
+  "$zx/system/banjo/ddk.protocol.platform.device",
+  "$zx/system/banjo/ddk.protocol.sysmem",
+  "$zx/system/dev/audio/lib/simple-audio-stream",
+  "$zx/system/dev/lib/amlogic",
+  "$zx/system/dev/lib/device-protocol-platform-device",
+  "$zx/system/dev/lib/mmio",
+  "$zx/system/fidl/fuchsia-sysmem:c",
+  "$zx/system/ulib/audio-driver-proto",
+  "$zx/system/ulib/audio-proto-utils",
+  "$zx/system/ulib/ddk",
+  "$zx/system/ulib/ddktl",
+  "$zx/system/ulib/digest",
+  "$zx/system/ulib/dispatcher-pool",
+  "$zx/system/ulib/fbl",
+  "$zx/system/ulib/fzl",
+  "$zx/system/ulib/hwreg",
+  "$zx/system/ulib/image-format",
+  "$zx/system/ulib/sync",
+  "$zx/system/ulib/zircon",
+  "$zx/system/ulib/zx",
+  "$zx/third_party/ulib/uboringssl",
+]
+
 driver("vim-display") {
   sources = [
     "edid.cc",
@@ -14,32 +43,28 @@ driver("vim-display") {
     "vim-spdif-audio-stream.cc",
     "vpp.cc",
   ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.amlogiccanvas",
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.i2cimpl",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/dev/audio/lib/simple-audio-stream",
-    "$zx/system/dev/lib/amlogic",
-    "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/audio-driver-proto",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/dispatcher-pool",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/image-format",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+  deps = common_deps
+}
+
+test("vim-display-test") {
+  sources = [
+    "edid.cc",
+    "hdmitx.cc",
+    "hdmitx_clk.cc",
+    "registers.cc",
+    "vim-audio-utils.cc",
+    "vim-audio.cc",
+    "vim-display-test.cc",
+    "vim-display.cc",
+    "vim-spdif-audio-stream.cc",
+    "vpp.cc",
+  ]
+  deps = common_deps
+  deps += [
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/zxtest",
   ]
 }

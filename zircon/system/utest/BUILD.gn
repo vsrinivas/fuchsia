@@ -62,6 +62,7 @@ if (current_cpu != "") {
       "$zx/system/dev/display/display/test",
       "$zx/system/dev/display/goldfish-display:tests",
       "$zx/system/dev/display/mt8167s-display:tests",
+      "$zx/system/dev/display/vim-display:vim-display-test",
       "$zx/system/dev/ethernet/ethernet:ethernet-unittest",
       "$zx/system/dev/gpio/aml-axg-gpio:aml-axg-gpio-test",
       "$zx/system/dev/gpio/as370-gpio:as370-gpio-test",
