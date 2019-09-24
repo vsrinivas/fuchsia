@@ -5,15 +5,15 @@
 #ifndef __CORE_TEST_OBJECT_INFO_HELPER_H__
 #define __CORE_TEST_OBJECT_INFO_HELPER_H__
 
+#include <lib/zx/process.h>
+#include <lib/zx/vmo.h>
+#include <zircon/syscalls/object.h>
+
 #include <cinttypes>
 #include <climits>
 #include <type_traits>
 
 #include <fbl/auto_call.h>
-#include <lib/zx/process.h>
-#include <lib/zx/vmo.h>
-#include <zircon/syscalls/object.h>
-
 #include <zxtest/zxtest.h>
 
 namespace object_info_test {
@@ -210,8 +210,8 @@ void CheckInvalidBufferPointerFails(zx_object_info_topic_t topic, const HandlePr
 }
 
 template <typename EntryType, typename HandleProvider>
-void CheckPartiallyUnmappedBufferIsInvalidArgs(zx_object_info_topic_t topic,
-                                               const HandleProvider& provider) {
+void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
+                                         const HandleProvider& provider, zx_status_t error_status) {
   // Create a two-page VMAR.
   zx::vmar vmar;
   uintptr_t vmar_addr;
@@ -241,9 +241,8 @@ void CheckPartiallyUnmappedBufferIsInvalidArgs(zx_object_info_topic_t topic,
 
   size_t actual;
   size_t avail;
-  EXPECT_EQ(handle.get_info(topic, entries, sizeof(EntryType) * 4, &actual, &avail),
-            // Bad user buffer should return ZX_ERR_INVALID_ARGS.
-            ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(handle.get_info(topic, entries, sizeof(EntryType) * 4, &actual, &avail),
+                error_status);
   vmar.destroy();
 }
 

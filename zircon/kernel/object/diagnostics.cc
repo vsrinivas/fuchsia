@@ -20,6 +20,7 @@
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>
+#include <vm/fault.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>
@@ -598,7 +599,7 @@ class VmMapBuilder final : public VmEnumerator {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
-  VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max) : maps_(maps), max_(max) {}
+  VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max) : maps_(maps), max_(max) { reset(); }
 
   bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) override {
     available_++;
@@ -609,7 +610,9 @@ class VmMapBuilder final : public VmEnumerator {
       entry.size = vmar->size();
       entry.depth = depth + 1;  // The root aspace is depth 0.
       entry.type = ZX_INFO_MAPS_TYPE_VMAR;
-      if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
+      if (maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
+          ZX_OK) {
+        faulted_ = true;
         return false;
       }
       nelem_++;
@@ -632,7 +635,9 @@ class VmMapBuilder final : public VmEnumerator {
       u->vmo_koid = vmo->user_id();
       u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
       u->vmo_offset = map->object_offset();
-      if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
+      if (maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
+          ZX_OK) {
+        faulted_ = true;
         return false;
       }
       nelem_++;
@@ -640,33 +645,49 @@ class VmMapBuilder final : public VmEnumerator {
     return true;
   }
 
+  zx_status_t ResolveFault(VmAspace* aspace) {
+    DEBUG_ASSERT(faulted_);
+    return aspace->SoftFault(pf_va_, pf_flags_);
+  }
+
+  void reset() {
+    // The caller must write an entry for the root VmAspace at index 0.
+    nelem_ = 1;
+    available_ = 1;
+    faulted_ = false;
+  }
+
   size_t nelem() const { return nelem_; }
   size_t available() const { return available_; }
 
  private:
-  // The caller must write an entry for the root VmAspace at index 0.
+  const user_out_ptr<zx_info_maps_t> maps_;
+  const size_t max_;
+
   size_t nelem_ = 1;
   size_t available_ = 1;
-  user_out_ptr<zx_info_maps_t> maps_;
-  size_t max_;
+  vaddr_t pf_va_ = 0;
+  uint pf_flags_ = 0;
+  bool faulted_ = false;
 };
 }  // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_maps_t> maps,
-                            size_t max, size_t* actual, size_t* available) {
-  DEBUG_ASSERT(aspace != nullptr);
+zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
+                            user_out_ptr<zx_info_maps_t> maps, size_t max, size_t* actual,
+                            size_t* available) {
+  DEBUG_ASSERT(target_aspace != nullptr);
   *actual = 0;
   *available = 0;
-  if (aspace->is_destroyed()) {
+  if (target_aspace->is_destroyed()) {
     return ZX_ERR_BAD_STATE;
   }
   if (max > 0) {
     zx_info_maps_t entry = {};
-    strlcpy(entry.name, aspace->name(), sizeof(entry.name));
-    entry.base = aspace->base();
-    entry.size = aspace->size();
+    strlcpy(entry.name, target_aspace->name(), sizeof(entry.name));
+    entry.base = target_aspace->base();
+    entry.size = target_aspace->size();
     entry.depth = 0;
     entry.type = ZX_INFO_MAPS_TYPE_ASPACE;
     if (maps.copy_array_to_user(&entry, 1, 0) != ZX_OK) {
@@ -675,10 +696,15 @@ zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_m
   }
 
   VmMapBuilder b(maps, max);
-  if (!aspace->EnumerateChildren(&b)) {
-    // VmMapBuilder only returns false
-    // when it can't copy to the user pointer.
-    return ZX_ERR_INVALID_ARGS;
+  while (!target_aspace->EnumerateChildren(&b)) {
+    // VmMapBuilder only returns false when it faulted trying to copy to the user pointer.
+    zx_status_t status = b.ResolveFault(current_aspace);
+    if (status != ZX_OK) {
+      return status;
+    }
+    // As the |target_aspace| may have changed by this point we start enumeration from the
+    // beginning.
+    b.reset();
   }
   *actual = max > 0 ? b.nelem() : 0;
   *available = b.available();
@@ -691,7 +717,9 @@ class AspaceVmoEnumerator final : public VmEnumerator {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
-  AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max) : vmos_(vmos), max_(max) {}
+  AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max) : vmos_(vmos), max_(max) {
+    reset();
+  }
 
   bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) override {
     available_++;
@@ -702,12 +730,25 @@ class AspaceVmoEnumerator final : public VmEnumerator {
       zx_info_vmo_t entry = VmoToInfoEntry(map->vmo_locked().get(),
                                            /*is_handle=*/false,
                                            /*handle_rights=*/0);
-      if (vmos_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
+      if (vmos_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
+          ZX_OK) {
+        faulted_ = true;
         return false;
       }
       nelem_++;
     }
     return true;
+  }
+
+  zx_status_t ResolveFault(VmAspace* aspace) {
+    DEBUG_ASSERT(faulted_);
+    return aspace->SoftFault(pf_va_, pf_flags_);
+  }
+
+  void reset() {
+    nelem_ = 0;
+    available_ = 0;
+    faulted_ = false;
   }
 
   size_t nelem() const { return nelem_; }
@@ -719,27 +760,36 @@ class AspaceVmoEnumerator final : public VmEnumerator {
 
   size_t nelem_ = 0;
   size_t available_ = 0;
+  vaddr_t pf_va_ = 0;
+  uint pf_flags_ = 0;
+  bool faulted_ = false;
 };
 }  // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_vmo_t> vmos,
-                            size_t max, size_t* actual, size_t* available) {
-  DEBUG_ASSERT(aspace != nullptr);
+zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
+                            user_out_ptr<zx_info_vmo_t> vmos, size_t max, size_t* actual,
+                            size_t* available) {
+  DEBUG_ASSERT(target_aspace != nullptr);
   DEBUG_ASSERT(actual != nullptr);
   DEBUG_ASSERT(available != nullptr);
   *actual = 0;
   *available = 0;
-  if (aspace->is_destroyed()) {
+  if (target_aspace->is_destroyed()) {
     return ZX_ERR_BAD_STATE;
   }
 
   AspaceVmoEnumerator ave(vmos, max);
-  if (!aspace->EnumerateChildren(&ave)) {
-    // AspaceVmoEnumerator only returns false
-    // when it can't copy to the user pointer.
-    return ZX_ERR_INVALID_ARGS;
+  while (!target_aspace->EnumerateChildren(&ave)) {
+    // AspaceVmoEnumerator only returns false when the copy to the user pointer faults.
+    zx_status_t status = ave.ResolveFault(current_aspace);
+    if (status != ZX_OK) {
+      return status;
+    }
+    // As the |target_aspace| may have changed by this point we start enumeration from the
+    // beginning.
+    ave.reset();
   }
   *actual = ave.nelem();
   *available = ave.available();

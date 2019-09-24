@@ -599,17 +599,18 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
   return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, size_t max,
+zx_status_t ProcessDispatcher::GetAspaceMaps(VmAspace* current_aspace,
+                                             user_out_ptr<zx_info_maps_t> maps, size_t max,
                                              size_t* actual, size_t* available) const {
   Guard<fbl::Mutex> guard{get_lock()};
   if (state_ == State::DEAD) {
     return ZX_ERR_BAD_STATE;
   }
-  return GetVmAspaceMaps(aspace_, maps, max, actual, available);
+  return GetVmAspaceMaps(current_aspace, aspace_, maps, max, actual, available);
 }
 
-zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max,
-                                       size_t* actual_out, size_t* available_out) {
+zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, user_out_ptr<zx_info_vmo_t> vmos,
+                                       size_t max, size_t* actual_out, size_t* available_out) {
   {
     Guard<fbl::Mutex> guard{get_lock()};
     if (state_ != State::RUNNING) {
@@ -627,7 +628,8 @@ zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t 
   size_t actual2 = 0;
   size_t available2 = 0;
   DEBUG_ASSERT(max >= actual);
-  s = GetVmAspaceVmos(aspace_, vmos.element_offset(actual), max - actual, &actual2, &available2);
+  s = GetVmAspaceVmos(current_aspace, aspace_, vmos.element_offset(actual), max - actual, &actual2,
+                      &available2);
   if (s != ZX_OK) {
     return s;
   }

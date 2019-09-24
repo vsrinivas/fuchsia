@@ -323,17 +323,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
-      if (process.get() == up) {
-        // Not safe to look at yourself: the user buffer will live
-        // inside the VmAspace we're examining, and we can't
-        // fault in the buffer's pages while the aspace lock is held.
-        return ZX_ERR_ACCESS_DENIED;
-      }
 
       auto maps = _buffer.reinterpret<zx_info_maps_t>();
       size_t count = buffer_size / sizeof(zx_info_maps_t);
       size_t avail = 0;
-      status = process->GetAspaceMaps(maps, count, &count, &avail);
+      status = process->GetAspaceMaps(up->aspace().get(), maps, count, &count, &avail);
 
       if (_actual) {
         zx_status_t status = _actual.copy_to_user(count);
@@ -352,17 +346,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
-      if (process.get() == up) {
-        // Not safe to look at yourself: the user buffer will live
-        // inside the VmAspace we're examining, and we can't
-        // fault in the buffer's pages while the aspace lock is held.
-        return ZX_ERR_ACCESS_DENIED;
-      }
 
       auto vmos = _buffer.reinterpret<zx_info_vmo_t>();
       size_t count = buffer_size / sizeof(zx_info_vmo_t);
       size_t avail = 0;
-      status = process->GetVmos(vmos, count, &count, &avail);
+      status = process->GetVmos(up->aspace().get(), vmos, count, &count, &avail);
 
       if (_actual) {
         zx_status_t status = _actual.copy_to_user(count);

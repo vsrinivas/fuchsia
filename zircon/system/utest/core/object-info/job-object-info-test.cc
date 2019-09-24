@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
-#include <fbl/vector.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -13,6 +9,10 @@
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls/object.h>
 
+#include <memory>
+#include <utility>
+
+#include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
 #include "helper.h"
@@ -217,8 +217,8 @@ TEST_F(JobGetInfoTest, InfoJobProcessesSmallBufferIsOk) {
 }
 
 TEST_F(JobGetInfoTest, InfoJobProcessesPartiallyUnmappedBufferIsInvalidArgs) {
-  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsInvalidArgs<zx_koid_t>(
-      ZX_INFO_JOB_PROCESSES, GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_koid_t>(
+      ZX_INFO_JOB_PROCESSES, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(JobGetInfoTest, InfoJobProcessesRequiresEnumerateRights) {
@@ -289,8 +289,8 @@ TEST_F(JobGetInfoTest, InfoJobChildrenSmallBufferIsOk) {
 }
 
 TEST_F(JobGetInfoTest, InfoJobChildrenPartiallyUnmappedBufferIsInvalidArgs) {
-  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsInvalidArgs<zx_koid_t>(
-      ZX_INFO_JOB_CHILDREN, GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_koid_t>(
+      ZX_INFO_JOB_CHILDREN, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(JobGetInfoTest, InfoJobChildrenRequiresEnumerateRights) {
