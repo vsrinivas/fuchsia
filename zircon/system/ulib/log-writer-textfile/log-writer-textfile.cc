@@ -89,11 +89,14 @@ void TextFileWriter::Write(const log_message* message) {
 }
 
 }  // namespace
+
+__EXPORT
 log_writer_t* log_create_textfile_writer(FILE* log_destination) {
   ZX_DEBUG_ASSERT(log_destination != nullptr);
   return new TextFileWriter(log_destination);
 }
 
+__EXPORT
 void log_destroy_textfile_writer(log_writer_t* writer) {
   delete static_cast<TextFileWriter*>(writer);
 }
