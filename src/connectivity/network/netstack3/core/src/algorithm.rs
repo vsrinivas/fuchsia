@@ -201,7 +201,8 @@ mod port_alloc {
         /// [RFC 6056 section 3.4]: https://tools.ietf.org/html/rfc6056#section-3.4
         // TODO(brunodalbo) make R: RngCore + CryptoRng when we tighten the
         // security around this algorithm.
-        pub(crate) fn update_secrets<R: RngCore>(&mut self, rng: &mut R) {
+        // TODO(rheacock): Remove _ prefix when this function is used.
+        pub(crate) fn _update_secrets<R: RngCore>(&mut self, rng: &mut R) {
             rng.fill_bytes(&mut self.secret_a[..]);
             rng.fill_bytes(&mut self.secret_b[..]);
         }
@@ -252,7 +253,7 @@ mod port_alloc {
             const EPHEMERAL_RANGE: RangeInclusive<u16> = 100..=200;
             type Id = MockId;
 
-            fn is_port_available(&self, id: &Self::Id, port: u16) -> bool {
+            fn is_port_available(&self, _id: &Self::Id, port: u16) -> bool {
                 match self.available {
                     MockAvailable::AllowEvens => (port & 1) == 0,
                     MockAvailable::DenyAll => false,
@@ -326,7 +327,7 @@ mod port_alloc {
                 let mut alloc = PortAlloc::<MockImpl>::new(&mut rng);
                 let mut port = alloc.try_alloc(&MockId(0), &mock).unwrap();
                 assert!(MockImpl::EPHEMERAL_RANGE.contains(&port));
-                for i in MockImpl::EPHEMERAL_RANGE {
+                for _ in MockImpl::EPHEMERAL_RANGE {
                     let next = alloc.try_alloc(&MockId(0), &mock).unwrap();
                     let expect = if port == *MockImpl::EPHEMERAL_RANGE.end() {
                         *MockImpl::EPHEMERAL_RANGE.start()

@@ -170,7 +170,7 @@ where
         ParseMetadata::from_inner_packet(self.header.bytes().len() + self.body.bytes().len())
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> ParseResult<Self> {
         let header = buffer
             .take_obj_front::<Header>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
@@ -239,6 +239,8 @@ where
     }
 
     /// Construct a builder with the same contents as this packet.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn builder(&self) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
         ArpPacketBuilder {
             op: self.operation(),
@@ -398,7 +400,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
 
-        let mut buf = &mut buf;
+        let buf = &mut buf;
         let packet = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
         assert_eq!(packet.sender_hardware_address(), TEST_SENDER_MAC);
         assert_eq!(packet.sender_protocol_address(), TEST_SENDER_IPV4);
@@ -481,9 +483,7 @@ mod tests {
 
         // Test that a packet which is too short is rejected.
         let buf = [0; ARP_ETHERNET_IPV4_PACKET_LEN - 1];
-        assert_err(&[0; ARP_ETHERNET_IPV4_PACKET_LEN - 1][..], ParseError::Format);
-
-        let mut buf = [0; ARP_ETHERNET_IPV4_PACKET_LEN];
+        assert_err(&buf[..], ParseError::Format);
 
         // Test that an unexpected hardware protocol type is rejected.
         let mut header = new_header();

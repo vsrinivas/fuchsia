@@ -336,6 +336,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
     // which allows the compiler's parser to output errors and point out where
     // the error originated.
     let ItemFn { attrs, vis, sig, .. } = input.original.clone();
+    // TODO(rheacock): strip `mut` keyword from arguments in the outer function
     quote!(
         #(#attrs)*
         #vis #sig {

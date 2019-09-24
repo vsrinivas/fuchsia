@@ -369,7 +369,7 @@ impl<I: Instant> DeviceLayerState<I> {
     pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
         let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
         builder.set_ndp_configs(self.default_ndp_configs.clone());
-        let mut ethernet_state = DeviceState::new(builder.build());
+        let ethernet_state = DeviceState::new(builder.build());
         let id = self.ethernet.push(ethernet_state);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
@@ -491,18 +491,6 @@ pub(crate) enum AddressConfigurationType {
 
     /// Manually configured.
     Manual,
-}
-
-impl AddressConfigurationType {
-    /// Is this address configured via SLAAC?
-    pub(crate) fn is_slaac(self) -> bool {
-        self == AddressConfigurationType::Slaac
-    }
-
-    /// Is this address configured manually?
-    pub(crate) fn is_manual(self) -> bool {
-        self == AddressConfigurationType::Manual
-    }
 }
 
 /// Data associated with an IP addressess on an interface.
@@ -721,6 +709,8 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 }
 
 /// Set the promiscuous mode flag on `device`.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -760,23 +750,6 @@ pub fn get_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
 ) -> impl 'a + Iterator<Item = AddrSubnet<A>> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnets(ctx, device.id.into()),
-    }
-}
-
-/// Get the IP addresses and associated subnets for a device, including tentative
-/// address.
-///
-/// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
-///
-/// See [`Tentative`] and [`AddrSubnet`] for more information.
-pub fn get_ip_addr_subnets_with_tentative<'a, D: EventDispatcher, A: IpAddress>(
-    ctx: &'a Context<D>,
-    device: DeviceId,
-) -> impl 'a + Iterator<Item = Tentative<AddrSubnet<A>>> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::get_ip_addr_subnets_with_tentative(ctx, device.id.into())
-        }
     }
 }
 
@@ -1186,6 +1159,8 @@ pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
 ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
 ///    time routers are explicitly solicited. Current router solicitation will continue using the
 ///    old value.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub fn set_ndp_configurations<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -1246,24 +1221,6 @@ impl<T> Tentative<T> {
         } else {
             Some(self.into_inner())
         }
-    }
-
-    /// Borrow the content which is stored inside.
-    pub(crate) fn inner(&self) -> &T {
-        &self.0
-    }
-
-    /// Similar to `Option::map`.
-    pub(crate) fn map<U, F>(self, f: F) -> Tentative<U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        Tentative(f(self.0), self.1)
-    }
-
-    /// Make the tentative value to be permanent.
-    pub(crate) fn mark_permanent(&mut self) {
-        self.1 = false
     }
 }
 

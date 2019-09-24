@@ -102,7 +102,7 @@ impl IpParseErrorAction {
 
 /// Error type for IP packet parsing.
 #[derive(Fail, Debug, PartialEq)]
-pub(crate) enum IpParseError<I: Ip> {
+pub(crate) enum IpParseError<I: IcmpIpTypes> {
     #[fail(display = "Parsing Error")]
     Parse { error: ParseError },
     /// For errors where an ICMP Parameter Problem error needs to be
@@ -122,10 +122,10 @@ pub(crate) enum IpParseError<I: Ip> {
     ParameterProblem {
         src_ip: I::Addr,
         dst_ip: I::Addr,
-        code: <I as IcmpIpTypes>::ParameterProblemCode,
-        pointer: <I as IcmpIpTypes>::ParameterProblemPointer,
+        code: I::ParameterProblemCode,
+        pointer: I::ParameterProblemPointer,
         must_send_icmp: bool,
-        header_len: usize,
+        header_len: I::HeaderLen,
         action: IpParseErrorAction,
     },
 }

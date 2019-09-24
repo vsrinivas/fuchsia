@@ -121,7 +121,9 @@ pub(crate) struct Mldv1Message {
     /// Max Response Delay, in units of milliseconds.
     pub(crate) max_response_delay: U16,
     /// Initialized to zero by the sender; ignored by receivers.
-    _reserved: U16,
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
+    reserved: U16,
     /// In a Query message, the Multicast Address field is set to zero when
     /// sending a General Query, and set to a specific IPv6 multicast address
     /// when sending a Multicast-Address-Specific Query.
@@ -189,6 +191,8 @@ pub(crate) struct Mldv1MessageBuilder<M: Mldv1MessageType> {
 impl<M: Mldv1MessageType<MaxRespDelay = ()>> Mldv1MessageBuilder<M> {
     /// Create an `Mldv1MessageBuilder` without a `max_resp_delay`
     /// for Report and Done messages.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new(group_addr: M::GroupAddr) -> Self {
         Mldv1MessageBuilder { max_resp_delay: (), group_addr }
     }
@@ -221,7 +225,7 @@ impl<M: Mldv1MessageType> InnerPacketBuilder for Mldv1MessageBuilder<M> {
         size_of::<Mldv1Message>()
     }
 
-    fn serialize(&self, mut buf: &mut [u8]) {
+    fn serialize(&self, buf: &mut [u8]) {
         self.serialize_message(buf);
     }
 }
@@ -350,7 +354,7 @@ mod tests {
         max_resp_code: u16,
         group_addr: Ipv6Addr,
     ) {
-        assert_eq!(icmp.message_body._reserved.get(), 0);
+        assert_eq!(icmp.message_body.reserved.get(), 0);
         assert_eq!(icmp.message_body.max_response_delay.get(), max_resp_code);
         assert_eq!(icmp.message_body.group_addr, group_addr);
     }

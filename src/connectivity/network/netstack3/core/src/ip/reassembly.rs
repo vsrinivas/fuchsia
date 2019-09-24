@@ -587,6 +587,9 @@ fn find_gap(
 /// Given a header buffer (`header`), body fragments (`body_fragments`), and a
 /// buffer where the packet will be reassembled into (`buffer`), reassemble and
 /// return a packet.
+// TODO(rheacock): the compiler thinks that `body_fragments` doesn't have to be
+// mutable, but it does. Thus we `allow(unused)` here.
+#[allow(unused)]
 #[specialize_ip]
 fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
     mut buffer: BV,
@@ -1226,7 +1229,7 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = 0;
-        bytes[43] = (1 << 3);
+        bytes[43] = 1 << 3;
         NetworkEndian::write_u32(&mut bytes[44..48], fragment_id as u32);
         bytes.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let payload_len = (bytes.len() - 40) as u16;

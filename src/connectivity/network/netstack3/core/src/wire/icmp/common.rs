@@ -50,6 +50,8 @@ impl IcmpDestUnreachable {
     /// Create a new ICMP Destination Unreachable message for a message with
     /// Code = Fragmentation Required (4) which requires a next hop MTU value
     /// as defined in RFC 1191 section 4.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new_for_frag_req(mtu: NonZeroU16) -> Self {
         Self { _unused: [0; 2], next_hop_mtu: U16::new(mtu.get()) }
     }

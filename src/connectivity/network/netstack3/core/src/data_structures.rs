@@ -121,11 +121,6 @@ pub(crate) mod id_map {
             }
         }
 
-        /// Return the stored value, panic if not allocated.
-        fn unwrap(self) -> T {
-            self.into_option().unwrap()
-        }
-
         /// Return a mutable reference to the freelist link, panic if allocated.
         fn freelist_link_mut(&mut self) -> &mut FreeListLink {
             match self {
@@ -865,7 +860,7 @@ pub(crate) mod id_map {
 
             // First, construct the iterator but then discard it, and test that
             // nothing has been modified.
-            map.update_retain(f);
+            let _ = map.update_retain(f);
             assert_eq!(map.data, old_map.data);
             assert_eq!(map.freelist, old_map.freelist);
 
@@ -963,7 +958,7 @@ pub(crate) mod id_map {
             assert_eq!(map.freelist, Some(FreeList::singleton(0)));
 
             match map.entry(0) {
-                Entry::Vacant(mut e) => {
+                Entry::Vacant(e) => {
                     assert_eq!(*e.key(), 0);
                     assert_eq!(*e.insert(4), 4);
                 }

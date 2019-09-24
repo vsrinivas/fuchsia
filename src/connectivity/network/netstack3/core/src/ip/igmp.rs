@@ -71,13 +71,13 @@ pub(crate) trait IgmpContext:
 pub(crate) fn receive_igmp_packet<C: IgmpContext, B: BufferMut>(
     ctx: &mut C,
     device: C::DeviceId,
-    src_ip: Ipv4Addr,
-    dst_ip: SpecifiedAddr<Ipv4Addr>,
+    _src_ip: Ipv4Addr,
+    _dst_ip: SpecifiedAddr<Ipv4Addr>,
     mut buffer: B,
 ) {
     let packet = match buffer.parse_with::<_, IgmpPacket<&[u8]>>(()) {
         Ok(packet) => packet,
-        Err(err) => {
+        Err(_) => {
             debug!("Cannot parse the incoming IGMP packet, dropping.");
             return;
         } // TODO: Do something else here?
@@ -131,7 +131,7 @@ where
     let mut rng = ctx.new_xorshift_rng();
     let group_addr = msg.group_addr();
     if !group_addr.is_specified() {
-        let mut addr_and_actions = ctx
+        let addr_and_actions = ctx
             .get_state_mut_with(device)
             .groups
             .iter_mut()
@@ -306,7 +306,7 @@ impl ProtocolSpecific for Igmpv2ProtocolSpecific {
         cfg: &Self::Config,
         actions: &mut Actions<Self>,
         max_resp_time: Duration,
-        old: Igmpv2ProtocolSpecific,
+        _old: Igmpv2ProtocolSpecific,
     ) -> Igmpv2ProtocolSpecific {
         // IGMPv2 hosts should be compatible with routers that only speak IGMPv1.
         // When an IGMPv2 host receives an IGMPv1 query (whose `MaxRespCode` is 0),
@@ -405,6 +405,8 @@ fn run_action<C: IgmpContext>(
 }
 
 impl<I: Instant> IgmpInterface<I> {
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn join_group<R: Rng>(
         &mut self,
         rng: &mut R,
@@ -414,6 +416,8 @@ impl<I: Instant> IgmpInterface<I> {
         self.groups.entry(addr).or_insert(GmpStateMachine::default()).join_group(rng, now)
     }
 
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn leave_group<D: Display + Debug + Send + Sync>(
         &mut self,
         addr: MulticastAddr<Ipv4Addr>,
@@ -426,6 +430,8 @@ impl<I: Instant> IgmpInterface<I> {
 }
 
 /// Make our host join a multicast group.
+// TODO(rheacock): remove `#[cfg(test)]` when this is used.
+#[cfg(test)]
 pub(crate) fn igmp_join_group<C: IgmpContext>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -447,6 +453,8 @@ pub(crate) fn igmp_join_group<C: IgmpContext>(
 ///
 /// If our host is not already a member of the given address, this will result
 /// in the `IgmpError::NotAMember` error.
+// TODO(rheacock): remove `#[cfg(test)]` when this is used.
+#[cfg(test)]
 pub(crate) fn igmp_leave_group<C: IgmpContext>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -537,7 +545,7 @@ mod tests {
             GROUP_ADDR,
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
+        let buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
@@ -550,13 +558,13 @@ mod tests {
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
+        let buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_report<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR);
-        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
+        let buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
@@ -576,7 +584,8 @@ mod tests {
             &mut ctx,
             dev_id,
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
-        );
+        )
+        .unwrap();
         (ctx, dev_id)
     }
 

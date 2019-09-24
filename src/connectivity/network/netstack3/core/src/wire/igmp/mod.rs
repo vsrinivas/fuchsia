@@ -114,7 +114,7 @@ impl IgmpMaxRespCode for () {
         0
     }
 
-    fn from_code(code: u8) {}
+    fn from_code(_code: u8) {}
 }
 
 /// A marker trait for implementers of [`MessageType`]. Only [`MessageType`]s
@@ -132,6 +132,8 @@ pub(crate) struct IgmpPacketBuilder<B, M: MessageType<B>> {
 
 impl<B, M: MessageType<B, MaxRespTime = ()>> IgmpPacketBuilder<B, M> {
     /// Construct a new `IgmpPacketBuilder`.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new(msg_header: M::FixedHeader) -> IgmpPacketBuilder<B, M> {
         IgmpPacketBuilder { max_resp_time: (), message_header: msg_header, _marker: PhantomData }
     }
@@ -229,10 +231,6 @@ impl HeaderPrefix {
     fn set_msg_type<T: Into<u8>>(&mut self, msg_type: T) {
         self.msg_type = msg_type.into();
     }
-
-    fn set_max_resp_code<T: Into<u8>>(&mut self, max_rsp_time: T) {
-        self.max_resp_code = max_rsp_time.into();
-    }
 }
 
 /// An IGMP message.
@@ -248,6 +246,8 @@ pub(crate) struct IgmpMessage<B, M: MessageType<B>> {
 
 impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
     /// Construct a builder with the same contents as this packet.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn builder(&self) -> IgmpPacketBuilder<B, M> {
         IgmpPacketBuilder::new_with_resp_time(self.header.clone(), self.max_response_time())
     }
@@ -294,7 +294,7 @@ impl<B: ByteSlice, M: MessageType<B>> ParsablePacket<B, ()> for IgmpMessage<B, M
         ParseMetadata::from_packet(header_len, M::body_bytes(&self.body).len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> Result<Self, ParseError> {
         let prefix = buffer
             .take_obj_front::<HeaderPrefix>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header prefix"))?;
@@ -374,8 +374,8 @@ mod tests {
         src_ip: Ipv4Addr,
         dst_ip: Ipv4Addr,
     ) -> Vec<u8> {
-        let mut ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
-        let mut with_options = Ipv4PacketBuilderWithOptions::new(
+        let ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
+        let with_options = Ipv4PacketBuilderWithOptions::new(
             ipv4,
             &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],
         )

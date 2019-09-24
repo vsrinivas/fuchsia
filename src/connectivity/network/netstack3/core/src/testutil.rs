@@ -303,8 +303,8 @@ pub(crate) struct TcpSegmentMetadata {
     pub(crate) dst_port: u16,
     pub(crate) seq_num: u32,
     pub(crate) ack_num: Option<u32>,
-    pub(crate) flags: u16,
-    pub(crate) psh: bool,
+    pub(crate) _flags: u16,
+    pub(crate) _psh: bool,
     pub(crate) rst: bool,
     pub(crate) syn: bool,
     pub(crate) fin: bool,
@@ -508,14 +508,14 @@ pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
 >(
-    mut buf: &[u8],
+    buf: &[u8],
     f: F,
 ) -> IpParseResult<I, (Mac, Mac, I::Addr, I::Addr, M, C)>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
 {
-    let (mut body, src_mac, dst_mac, src_ip, dst_ip, proto) =
+    let (body, src_mac, dst_mac, src_ip, dst_ip, proto) =
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
     if proto != I::IP_PROTO {
         debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
@@ -704,20 +704,6 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Add a route to the forwarding table.
-    pub(crate) fn add_route<A: IpAddress>(
-        &mut self,
-        subnet: Subnet<A>,
-        next_hop: SpecifiedAddr<A>,
-    ) {
-        self.routes.push((subnet.into(), SpecifiedAddr::new(next_hop.get().into()).unwrap()));
-    }
-
-    /// Add a device route to the forwarding table.
-    pub(crate) fn add_device_route<A: IpAddress>(&mut self, subnet: Subnet<A>, device: usize) {
-        self.device_routes.push((subnet.into(), device));
-    }
-
     /// Build a `Context` from the present configuration with a default dispatcher,
     /// and stack state set to disable NDP's Duplicate Address Detection by default.
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
@@ -757,11 +743,11 @@ impl DummyEventDispatcherBuilder {
             match ip_subnet {
                 Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
                     let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub);
+                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
                 }
                 Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
                     let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub);
+                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
                 }
                 None => {}
                 _ => unreachable!(),
@@ -783,17 +769,21 @@ impl DummyEventDispatcherBuilder {
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
             match subnet {
-                SubnetEither::V4(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
-                SubnetEither::V6(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
+                SubnetEither::V4(subnet) => {
+                    crate::ip::add_device_route(&mut ctx, subnet, device).unwrap()
+                }
+                SubnetEither::V6(subnet) => {
+                    crate::ip::add_device_route(&mut ctx, subnet, device).unwrap()
+                }
             };
         }
         for (subnet, next_hop) in routes {
             match (subnet, next_hop.into()) {
                 (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
-                    crate::ip::add_route(&mut ctx, subnet, next_hop)
+                    crate::ip::add_route(&mut ctx, subnet, next_hop).unwrap()
                 }
                 (SubnetEither::V6(subnet), IpAddr::V6(next_hop)) => {
-                    crate::ip::add_route(&mut ctx, subnet, next_hop)
+                    crate::ip::add_route(&mut ctx, subnet, next_hop).unwrap()
                 }
                 _ => unreachable!(),
             };
@@ -941,23 +931,6 @@ impl DummyEventDispatcher {
         self.timer_events.iter().map(|t| (&t.0, &t.1))
     }
 
-    /// Forwards all the frames kept in the `self` to another context.
-    ///
-    /// This function  drains all the events in `self` and moves the data to
-    /// another context. `mapper` is used to map a `DeviceId` from the current
-    /// context to a `DeviceId` in `other`.
-    pub(crate) fn forward_frames<D: EventDispatcher, F>(
-        &mut self,
-        other: &mut Context<D>,
-        mapper: F,
-    ) where
-        F: Fn(DeviceId) -> DeviceId,
-    {
-        for (device_id, mut data) in self.frames_sent.drain(..) {
-            crate::receive_frame(other, mapper(device_id), Buf::new(data.to_vec(), ..));
-        }
-    }
-
     /// Takes all the received icmp replies for a given `conn`.
     pub(crate) fn take_icmp_replies(&mut self, conn: IcmpConnId) -> Vec<(u16, Vec<u8>)> {
         self.icmp_replies.remove(&conn).unwrap_or_else(Vec::default)
@@ -1091,11 +1064,6 @@ impl StepResult {
         Self::new(Duration::from_millis(0), 0, 0)
     }
 
-    /// Returns the time jump in the last step.
-    pub(crate) fn time_delta(&self) -> Duration {
-        self.time_delta
-    }
-
     /// Returns `true` if the last step did not perform any operations.
     pub(crate) fn is_idle(&self) -> bool {
         return self.timers_fired == 0 && self.frames_sent == 0;
@@ -1153,7 +1121,7 @@ where
         // We can't guarantee that all contexts are safely running their timers
         // together if we receive a context with any timers already set.
         assert!(
-            !ret.contexts.iter().any(|(n, ctx)| { !ctx.dispatcher.timer_events.is_empty() }),
+            !ret.contexts.iter().any(|(_n, ctx)| { !ctx.dispatcher.timer_events.is_empty() }),
             "can't start network with contexts that already have timers set"
         );
 
@@ -1240,7 +1208,7 @@ where
         }
 
         // dispatch all pending timers.
-        for (n, ctx) in self.contexts.iter_mut() {
+        for (_n, ctx) in self.contexts.iter_mut() {
             // We have to collect the timers before dispatching them, to avoid
             // an infinite loop in case handle_timeout schedules another timer
             // for the same or older DummyInstant.
@@ -1284,7 +1252,7 @@ where
             .collect();
 
         for (n, frames) in all_frames.into_iter() {
-            for (device_id, mut frame) in frames.into_iter() {
+            for (device_id, frame) in frames.into_iter() {
                 for (dst_context, dst_device, latency) in (self.mapper)(&n, device_id) {
                     self.pending_frames.push(PendingFrame::new(
                         self.current_time + latency.unwrap_or(Duration::from_millis(0)),
@@ -1307,12 +1275,12 @@ where
         let next_timer = self
             .contexts
             .iter()
-            .filter_map(|(n, ctx)| match ctx.dispatcher.timer_events.peek() {
+            .filter_map(|(_n, ctx)| match ctx.dispatcher.timer_events.peek() {
                 Some(tmr) => Some(tmr.0),
                 None => None,
             })
             .min();
-        /// get the instant for the next packet
+        // get the instant for the next packet
         let next_packet_due = self.pending_frames.peek().map(|t| t.0);
 
         // Return the earliest of them both, and protect against returning a
@@ -1416,7 +1384,7 @@ where
     let bob = DummyEventDispatcherBuilder::from_config(cfg.swap()).build();
     let alice = DummyEventDispatcherBuilder::from_config(cfg).build();
     let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
-    DummyNetwork::<N, _>::new(contexts, move |net, device_id| {
+    DummyNetwork::<N, _>::new(contexts, move |net, _device_id| {
         if *net == a {
             vec![(b.clone(), DeviceId::new_ethernet(0), latency)]
         } else {
@@ -1550,7 +1518,8 @@ mod tests {
                     ),
                 )
             },
-        );
+        )
+        .unwrap();
 
         // send from alice to bob
         assert_eq!(net.step().frames_sent(), 1);
@@ -1696,7 +1665,8 @@ mod tests {
                     ),
                 )
             },
-        );
+        )
+        .unwrap();
 
         net.context("alice")
             .dispatcher
@@ -1770,7 +1740,8 @@ mod tests {
                 crate::ip::IpProto::Udp,
                 Buf::new(vec![1, 2, 3, 4], ..),
                 None,
-            );
+            )
+            .unwrap();
         }
 
         let device = DeviceId::new_ethernet(0);
@@ -1800,7 +1771,7 @@ mod tests {
         let contexts =
             vec![(a.clone(), alice.build()), (b.clone(), bob.build()), (c.clone(), calvin.build())]
                 .into_iter();
-        let mut net = DummyNetwork::new(contexts, move |net, device_id| {
+        let mut net = DummyNetwork::new(contexts, move |net, _| {
             let ret = match *net {
                 "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
                 "bob" => vec![(a.clone(), device, None)],

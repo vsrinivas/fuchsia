@@ -87,7 +87,7 @@ impl Default for TransportLayerState {
 pub(crate) enum TransportLayerTimerId {}
 
 /// Handle a timer event firing in the transport layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLayerTimerId) {
+pub(crate) fn handle_timeout<D: EventDispatcher>(_ctx: &mut Context<D>, id: TransportLayerTimerId) {
     match id {}
 }
 
@@ -123,14 +123,6 @@ impl<A: Eq + Hash> ListenerAddrMap<A> {
 
     fn get_by_listener(&self, listener: usize) -> Option<&Vec<A>> {
         self.listener_to_addrs.get(listener)
-    }
-
-    fn remove_by_listener(&mut self, listener: usize) -> Option<Vec<A>> {
-        let addrs = self.listener_to_addrs.remove(listener)?;
-        for addr in &addrs {
-            self.addr_to_listener.remove(addr).unwrap();
-        }
-        Some(addrs)
     }
 }
 
@@ -178,12 +170,6 @@ impl<A: Eq + Hash, C> ConnAddrMap<A, C>
 where
     for<'a> &'a C: Into<A>,
 {
-    pub(crate) fn remove_by_id(&mut self, id: usize) -> Option<C> {
-        let conn = self.id_to_conn.remove(id)?;
-        self.addr_to_id.remove(&(&conn).into()).unwrap();
-        Some(conn)
-    }
-
     /// Update the elements of the map in-place, retaining only the elements for
     /// which `f` returns true.
     ///
@@ -194,6 +180,8 @@ where
     /// WARNING: The mutation will only occur when the returned iterator is
     /// executed. Simply calling `update_retain` and then discarding the return
     /// value will do nothing!
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn update_retain<'a, F: 'a + Fn(&mut C) -> bool>(
         &'a mut self,
         f: F,

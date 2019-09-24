@@ -17,6 +17,7 @@ use net_types::ip::{Ip, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
+#[cfg(test)]
 use rand::Rng;
 use rand_xorshift::XorShiftRng;
 use zerocopy::ByteSlice;
@@ -94,8 +95,8 @@ impl<C: MldContext> MldHandler for C {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         device: Self::DeviceId,
-        src_ip: Ipv6Addr,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
+        _src_ip: Ipv6Addr,
+        _dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
     ) {
         if let Err(e) = match packet {
@@ -218,7 +219,7 @@ impl ProtocolSpecific for MldProtocolSpecific {
     }
 
     fn do_query_received_specific(
-        cfg: &Self::Config,
+        _cfg: &Self::Config,
         actions: &mut Actions<Self>,
         max_resp_time: Duration,
         old: Self,
@@ -245,6 +246,8 @@ impl<I: Instant> Default for MldInterface<I> {
 }
 
 impl<I: Instant> MldInterface<I> {
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     fn join_group<R: Rng>(
         &mut self,
         rng: &mut R,
@@ -254,6 +257,8 @@ impl<I: Instant> MldInterface<I> {
         self.groups.entry(addr).or_insert(MldGroupState::default()).join_group(rng, now)
     }
 
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     fn leave_group(
         &mut self,
         addr: MulticastAddr<Ipv6Addr>,
@@ -276,6 +281,8 @@ impl<I: Instant> MldInterface<I> {
 }
 
 /// Make our host join a multicast group.
+// TODO(rheacock): remove `#[cfg(test)]` when this is used.
+#[cfg(test)]
 pub(crate) fn mld_join_group<C: MldContext>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -297,6 +304,8 @@ pub(crate) fn mld_join_group<C: MldContext>(
 ///
 /// If our host is not already a member of the given address, this will result
 /// in the `IgmpError::NotAMember` error.
+// TODO(rheacock): remove `#[cfg(test)]` when this is used.
+#[cfg(test)]
 pub(crate) fn mld_leave_group<C: MldContext>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -412,7 +421,8 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
 
 pub(crate) fn handle_timeout<C: MldContext>(ctx: &mut C, timer: MldReportDelay<C::DeviceId>) {
     let MldReportDelay { device, group_addr } = timer;
-    send_mld_packet::<_, &[u8], _>(
+    // TODO(rheacock): Handle the case where this returns an error.
+    let _ = send_mld_packet::<_, &[u8], _>(
         ctx,
         device,
         group_addr,
@@ -516,7 +526,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(MY_IP.get(), 128).unwrap());
+        let _ = add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(MY_IP.get(), 128).unwrap());
         (ctx, dev_id)
     }
 
@@ -566,7 +576,7 @@ mod tests {
         receive_mld_query(&mut ctx, dev_id, Duration::from_secs(10));
         assert!(testutil::trigger_next_timer(&mut ctx));
 
-        let frame = &ctx.dispatcher.frames_sent().get(0).unwrap().1;
+        let _frame = &ctx.dispatcher.frames_sent().get(0).unwrap().1;
 
         // we should get two MLD reports, one for the unsolicited one for the host
         // to turn into Delay Member state and the other one for the timer being fired.
@@ -740,7 +750,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        add_ip_addr_subnet(
+        let _ = add_ip_addr_subnet(
             &mut ctx,
             dev_id,
             AddrSubnet::new(

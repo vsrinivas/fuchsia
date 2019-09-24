@@ -8,9 +8,10 @@ use net_types::ip::Ipv4Addr;
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
+#[cfg(test)]
+use super::parse_v3_possible_floating_point;
 use super::{
-    make_v3_possible_floating_point, parse_v3_possible_floating_point, peek_message_type,
-    IgmpMessage, IgmpNonEmptyBody, IgmpResponseTimeV2, IgmpResponseTimeV3,
+    peek_message_type, IgmpMessage, IgmpNonEmptyBody, IgmpResponseTimeV2, IgmpResponseTimeV3,
 };
 use crate::error::ParseError;
 use crate::wire::igmp::MessageType;
@@ -42,8 +43,8 @@ macro_rules! declare_no_body {
         type VariableBody = ();
 
         fn parse_body<BV: BufferView<B>>(
-            header: &Self::FixedHeader,
-            mut bytes: BV,
+            _header: &Self::FixedHeader,
+            bytes: BV,
         ) -> Result<Self::VariableBody, ParseError>
         where
             B: ByteSlice,
@@ -55,7 +56,7 @@ macro_rules! declare_no_body {
             }
         }
 
-        fn body_bytes(body: &Self::VariableBody) -> &[u8]
+        fn body_bytes(_body: &Self::VariableBody) -> &[u8]
         where
             B: ByteSlice,
         {
@@ -106,26 +107,28 @@ pub(crate) struct MembershipQueryData {
 }
 
 impl MembershipQueryData {
+    // TODO(rheacock): Remove `allow(dead_code)` when these are used outside of
+    // tests or other dead code.
+    #[allow(dead_code)]
     const S_FLAG: u8 = (1 << 3);
+    #[allow(dead_code)]
     const QRV_MSK: u8 = 0x07;
 
     /// The default querier robustness variable, as defined in
     /// [RFC 3376 section 8.1].
     ///
     /// [RFC 3376 section 8.1]: https://tools.ietf.org/html/rfc3376#section-8.1
-    pub(crate) const DEFAULT_QRV: u8 = 2;
+    pub(crate) const _DEFAULT_QRV: u8 = 2;
     /// The default Query Interval, as defined in [RFC 3376 section 8.2].
     ///
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
+    // TODO(rheacock): remove `#[allow(dead_code)]` when this is used.
+    #[allow(dead_code)]
     pub(crate) const DEFAULT_QUERY_INTERVAL: std::time::Duration =
         std::time::Duration::from_secs(1250);
 
     pub(crate) fn number_of_sources(self) -> u16 {
         self.number_of_sources.get()
-    }
-
-    pub(crate) fn set_number_of_sources(&mut self, val: u16) {
-        self.number_of_sources = U16::new(val);
     }
 
     /// Gets value of `S Flag`.
@@ -135,16 +138,10 @@ impl MembershipQueryData {
     /// however, suppress the querier election or the normal "host-side"
     /// processing of a Query that a router may be required to perform as a
     /// consequence of itself being a group member.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn suppress_router_side_processing(self) -> bool {
         (self.sqrv & Self::S_FLAG) != 0
-    }
-
-    pub(crate) fn set_suppress_router_side_processing(&mut self, val: bool) {
-        if val {
-            self.sqrv |= Self::S_FLAG;
-        } else {
-            self.sqrv &= !(Self::S_FLAG);
-        }
     }
 
     /// Gets querier robustness variable (QRV).
@@ -160,12 +157,10 @@ impl MembershipQueryData {
     /// configured value.
     ///
     /// [RFC 3376 section 8.1]: https://tools.ietf.org/html/rfc3376#section-8.1
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     fn querier_robustness_variable(self) -> u8 {
         self.sqrv & Self::QRV_MSK
-    }
-
-    pub(crate) fn set_querier_robustness_variable(&mut self, val: u8) {
-        self.sqrv |= (val & Self::QRV_MSK);
     }
 
     /// Gets the querier's query interval (QQI).
@@ -178,20 +173,12 @@ impl MembershipQueryData {
     /// `DEFAULT_QUERY_INTERVAL`.
     ///
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn querier_query_interval(self) -> std::time::Duration {
         // qqic is represented in a packed floating point format and interpreted
         // as units of seconds.
         std::time::Duration::from_secs(parse_v3_possible_floating_point(self.qqic).into())
-    }
-
-    /// Sets the querier's query interval to given `itv`.
-    ///
-    /// # Panics
-    /// panics if the given interval is not representable by the underlying
-    /// floating point code mechanics, i.e., value in seconds of informed
-    /// `itv` is > *31744*
-    pub(crate) fn set_querier_query_interval(&mut self, itv: std::time::Duration) {
-        self.qqic = make_v3_possible_floating_point(itv.as_secs() as u32).unwrap()
     }
 }
 
@@ -252,16 +239,12 @@ impl MembershipReportV3Data {
     pub(crate) fn number_of_group_records(self) -> u16 {
         self.number_of_group_records.get()
     }
-
-    pub(crate) fn set_number_of_group_records(&mut self, val: u16) {
-        self.number_of_group_records = U16::new(val);
-    }
 }
 
-/// Group Record Types as defined in [RFC 3376 section 4.2.12]
-///
-/// [RFC 3376 section 4.2.12]: https://tools.ietf.org/html/rfc3376#section-4.2.12
 create_net_enum! {
+    /// Group Record Types as defined in [RFC 3376 section 4.2.12]
+    ///
+    /// [RFC 3376 section 4.2.12]: https://tools.ietf.org/html/rfc3376#section-4.2.12
     pub(crate) IgmpGroupRecordType,
     ModeIsInclude: MODE_IS_INCLUDE = 0x01,
     ModeIsExclude: MODE_IS_EXCLUDE = 0x02,
@@ -293,16 +276,10 @@ impl GroupRecordHeader {
         self.number_of_sources.get()
     }
 
-    pub(crate) fn set_number_of_sources(&mut self, val: u16) {
-        self.number_of_sources = U16::new(val);
-    }
-
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn record_type(self) -> Option<IgmpGroupRecordType> {
         IgmpGroupRecordType::from_u8(self.record_type)
-    }
-
-    pub(crate) fn set_record_type(&mut self, val: IgmpGroupRecordType) {
-        self.record_type = val.into();
     }
 }
 
@@ -321,6 +298,10 @@ impl GroupRecordHeader {
 /// information in Auxiliary Data, if any, is discarded.
 ///
 /// [RFC 3376 section 4.2.10]: https://tools.ietf.org/html/rfc3376#section-4.2.10
+// TODO(rheacock): Remove `allow(dead_code)` when this is used outside of tests.
+// We can't just mark `header` and `sources` as `cfg(test)` because then the
+// input parameter is unused...
+#[allow(dead_code)]
 pub(crate) struct GroupRecord<B> {
     header: LayoutVerified<B, GroupRecordHeader>,
     sources: LayoutVerified<B, [Ipv4Addr]>,
@@ -350,7 +331,7 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
 
     fn parse_body<BV: BufferView<B>>(
         header: &Self::FixedHeader,
-        mut bytes: BV,
+        bytes: BV,
     ) -> Result<Self::VariableBody, ParseError>
     where
         B: ByteSlice,
@@ -483,7 +464,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
         }
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: ()) -> Result<Self, ParseError> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $( ($code:ident, $long:tt) => $type:ty, $variant:ident )*) => {
                 match peek_message_type($buffer.as_ref())? {
@@ -558,7 +539,7 @@ mod tests {
         M: MessageType<B> + Debug,
         F: FnOnce(&IgmpMessage<B, M>),
     >(
-        mut req: BV,
+        req: BV,
         check: F,
     ) where
         M::VariableBody: IgmpNonEmptyBody,
@@ -693,7 +674,7 @@ mod tests {
 
     #[test]
     fn test_unknown_type() {
-        let mut buff = &mut igmp_invalid_buffers::UNKNOWN_TYPE;
+        let buff = &mut igmp_invalid_buffers::UNKNOWN_TYPE;
         let packet = buff.parse_with::<_, IgmpPacket<_>>(());
         // we don't use expect_err here because IgmpPacket does not implement
         // std::fmt::Debug
@@ -705,7 +686,7 @@ mod tests {
         for buff in ALL_BUFFERS.iter_mut() {
             let orig_req = &buff[..];
             let packet = buff.parse_with::<_, IgmpPacket<_>>(()).unwrap();
-            let msg_type = match (packet) {
+            let msg_type = match packet {
                 IgmpPacket::MembershipQueryV2(p) => p.prefix.msg_type,
                 IgmpPacket::MembershipQueryV3(p) => p.prefix.msg_type,
                 IgmpPacket::MembershipReportV1(p) => p.prefix.msg_type,

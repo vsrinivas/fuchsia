@@ -102,6 +102,11 @@ pub(crate) trait IcmpIpTypes: Ip {
     ///
     /// For `Ipv4`, this is `u8`, and for `Ipv6` this is `u32`.
     type ParameterProblemPointer: PartialEq + Send + Sync + Debug;
+
+    /// The type of an ICMP parameter header length.
+    ///
+    /// For `Ipv4`, this is `usize`, and for `Ipv6` this is `()`.
+    type HeaderLen: PartialEq + Send + Sync + Debug;
 }
 
 // A default implementation for any I: Ip. This is to convince the Rust compiler
@@ -112,16 +117,19 @@ pub(crate) trait IcmpIpTypes: Ip {
 impl<I: Ip> IcmpIpTypes for I {
     default type ParameterProblemCode = Never;
     default type ParameterProblemPointer = Never;
+    default type HeaderLen = Never;
 }
 
 impl IcmpIpTypes for Ipv4 {
     type ParameterProblemCode = Icmpv4ParameterProblemCode;
     type ParameterProblemPointer = u8;
+    type HeaderLen = usize;
 }
 
 impl IcmpIpTypes for Ipv6 {
     type ParameterProblemCode = Icmpv6ParameterProblemCode;
     type ParameterProblemPointer = u32;
+    type HeaderLen = ();
 }
 
 /// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
@@ -163,7 +171,9 @@ impl IcmpIpExt for Ipv6 {
 
     const IP_PROTO: IpProto = IpProto::Icmpv6;
 
-    fn header_len(bytes: &[u8]) -> usize {
+    // TODO: Re-implement this in terms of partial parsing, and then get rid of
+    // the `header_len` method.
+    fn header_len(_bytes: &[u8]) -> usize {
         // NOTE: We panic here rather than doing log_unimplemented! because
         // there's no sane default value for this function. If it's called, it
         // doesn't make sense for the program to continue executing; if we did,
@@ -276,7 +286,7 @@ impl<B, O: for<'a> OptionsImpl<'a>> MessageBody<B> for Options<B, O> {
     where
         B: ByteSlice,
     {
-        Self::parse(bytes).map_err(|e| debug_err!(ParseError::Format, "unable to parse options"))
+        Self::parse(bytes).map_err(|_e| debug_err!(ParseError::Format, "unable to parse options"))
     }
 
     fn len(&self) -> usize
@@ -461,7 +471,7 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
         ParseMetadata::from_packet(self.header.bytes().len(), self.message_body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IcmpParseArgs<I::Addr>) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: IcmpParseArgs<I::Addr>) -> ParseResult<Self> {
         IcmpPacketRaw::parse(buffer, ()).and_then(|p| IcmpPacket::try_from_raw_with(p, args))
     }
 }
@@ -487,6 +497,8 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     }
 
     /// Construct a builder with the same contents as this packet.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn builder(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketBuilder<I, B, M> {
         IcmpPacketBuilder { src_ip, dst_ip, code: self.code(), msg: *self.message() }
     }
@@ -549,10 +561,14 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
     /// the body of that packet as is contained in this message. For IPv4, this
     /// is guaranteed to be 8 bytes. For IPv6, there are no guarantees about the
     /// length.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn original_packet_body(&self) -> &[u8] {
         self.message_body.body::<I>()
     }
 
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn original_packet(&self) -> &OriginalPacket<B> {
         &self.message_body
     }
@@ -577,6 +593,8 @@ impl<B: ByteSlice, M: IcmpMessage<Ipv6, B, Body = OriginalPacket<B>>> IcmpPacket
     ///
     /// `f` will be invoked on the result of calling `Ipv6PacketRaw::parse` on
     /// the original packet.
+    // TODO(rheacock): remove `#[allow(dead_code)]` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn with_original_packet<O, F: FnOnce(Result<Ipv6PacketRaw<&[u8]>, &[u8]>) -> O>(
         &self,
         f: F,
@@ -588,6 +606,8 @@ impl<B: ByteSlice, M: IcmpMessage<Ipv6, B, Body = OriginalPacket<B>>> IcmpPacket
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> IcmpPacket<I, B, M> {
     /// Get the pared list of NDP options from the ICMP message.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn ndp_options(&self) -> &ndp::Options<B> {
         &self.message_body
     }

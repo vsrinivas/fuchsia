@@ -119,9 +119,9 @@ pub fn make_v3_possible_floating_point(val: u32) -> Option<u8> {
         // value is < 128, unwrapping here is safe:
         Some(val.try_into().unwrap())
     } else {
-        let msb = ((32 - val.leading_zeros()) - 1);
-        let exp = (msb - 4);
-        let mant = ((val >> (exp)) & 0x0F);
+        let msb = (32 - val.leading_zeros()) - 1;
+        let exp = msb - 4;
+        let mant = (val >> (exp)) & 0x0F;
         // unwrap guaranteed by the structure of the built int:
         Some((0x80 | ((exp - 3) << 4) | mant).try_into().unwrap())
     }
@@ -150,11 +150,9 @@ impl From<IgmpResponseTimeV3> for Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::new_rng;
 
     #[test]
     pub fn parse_and_serialize_code_v2() {
-        let mut rng = new_rng(123456789);
         for code in 0..=255 {
             let response = IgmpResponseTimeV2::from_code(code);
             assert_eq!(response.as_code(), code);
@@ -172,11 +170,10 @@ mod tests {
 
     #[test]
     pub fn parse_and_serialize_code_v3() {
-        let r = Duration::from(IgmpResponseTimeV3::from_code((0x80 | (0x00 << 4) | 0x01)));
+        let r = Duration::from(IgmpResponseTimeV3::from_code(0x80 | (0x00 << 4) | 0x01));
         assert_eq!(r.as_millis(), 13600);
         let t = IgmpResponseTimeV3::try_from(Duration::from_millis((128 + 8) * 100)).unwrap();
         assert_eq!(t.as_code(), (0x80 | (0x00 << 4) | 0x01));
-        let mut rng = new_rng(123456789);
         for code in 0..=255 {
             let response = IgmpResponseTimeV3::from_code(code);
             assert_eq!(response.as_code(), code);

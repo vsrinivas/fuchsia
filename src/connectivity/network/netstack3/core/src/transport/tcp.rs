@@ -54,22 +54,4 @@ mod types {
         left_edge: U32,
         right_edge: U32,
     }
-
-    impl TcpSackBlock {
-        pub(crate) fn left_edge(self) -> u32 {
-            self.left_edge.get()
-        }
-
-        pub(crate) fn right_edge(self) -> u32 {
-            self.right_edge.get()
-        }
-
-        pub(crate) fn set_left_edge(&mut self, left_edge: u32) {
-            self.left_edge = U32::new(left_edge);
-        }
-
-        pub(crate) fn set_right_edge(&mut self, right_edge: u32) {
-            self.right_edge = U32::new(right_edge);
-        }
-    }
 }

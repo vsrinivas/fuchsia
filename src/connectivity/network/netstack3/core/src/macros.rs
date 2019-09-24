@@ -195,6 +195,7 @@ macro_rules! impl_timer_context {
         fn cancel_timers_with<F: FnMut(&$inner_timer_id) -> bool>(&mut self, mut f: F) {
             self.cancel_timers_with(|id| match id {
                 $pat => f($bound_variable),
+                #[allow(unreachable_patterns)]
                 _ => false,
             })
         }

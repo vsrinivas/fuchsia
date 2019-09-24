@@ -48,7 +48,7 @@ impl TransportLayerEventDispatcher for BenchmarkEventDispatcher {}
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: DeviceId,
+        _device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
         black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
@@ -61,13 +61,13 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
 }
 
 impl Icmpv4EventDispatcher for BenchmarkEventDispatcher {
-    fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
+    fn receive_icmpv4_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv4ErrorCode) {
         unimplemented!()
     }
 }
 
 impl<B: BufferMut> IcmpEventDispatcher<B> for BenchmarkEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
+    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId, _seq_num: u16, _data: B) {
         unimplemented!()
     }
 }
@@ -81,23 +81,23 @@ impl EventDispatcher for BenchmarkEventDispatcher {
         unimplemented!()
     }
 
-    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Self::Instant> {
+    fn schedule_timeout(&mut self, _duration: Duration, _id: TimerId) -> Option<Self::Instant> {
         unimplemented!()
     }
 
-    fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Self::Instant> {
+    fn schedule_timeout_instant(&mut self, _time: Instant, _id: TimerId) -> Option<Self::Instant> {
         unimplemented!()
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant> {
+    fn cancel_timeout(&mut self, _id: TimerId) -> Option<Self::Instant> {
         None
     }
 
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, _f: F) {
         unimplemented!()
     }
 
-    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
+    fn scheduled_instant(&self, _id: TimerId) -> Option<Self::Instant> {
         unimplemented!()
     }
 
@@ -136,7 +136,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             >= ETHERNET_HDR_LEN_NO_TAG
                 + std::cmp::max(ETHERNET_MIN_BODY_LEN_NO_TAG, IPV4_MIN_HDR_LEN)
     );
-    let mut body = vec![0; frame_size - (ETHERNET_HDR_LEN_NO_TAG + IPV4_MIN_HDR_LEN)];
+    let body = vec![0; frame_size - (ETHERNET_HDR_LEN_NO_TAG + IPV4_MIN_HDR_LEN)];
     let mut buf = body
         .into_serializer()
         .encapsulate(Ipv4PacketBuilder::new(
@@ -156,7 +156,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         .unwrap();
 
     let device = DeviceId::new_ethernet(0);
-    let mut buf = buf.as_mut();
+    let buf = buf.as_mut();
     let range = 0..buf.len();
 
     #[cfg(debug_assertions)]

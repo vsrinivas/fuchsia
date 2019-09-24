@@ -7,12 +7,12 @@
 /// Create a `repr(u8)` enum with a `from_u8(u8) -> Option<Self>` constructor
 /// that implements `Into<u8>`.
 macro_rules! create_net_enum {
-    ($vis:vis $t:ident, $($val:ident: $const:ident = $value:expr,)*) => {
-      create_net_enum!($vis $t, $($val: $const = $value),*);
+    ($(#[$attr:meta])* $vis:vis $t:ident, $($val:ident: $const:ident = $value:expr,)*) => {
+      create_net_enum!($(#[$attr])* $vis $t, $($val: $const = $value),*);
     };
 
-    ($vis:vis $t:ident, $($val:ident: $const:ident = $value:expr),*) => {
-        #[allow(missing_docs)]
+    ($(#[$attr:meta])* $vis:vis $t:ident, $($val:ident: $const:ident = $value:expr),*) => {
+        $(#[$attr])*
         #[derive(Debug, PartialEq, Copy, Clone)]
         #[repr(u8)]
         $vis enum $t {

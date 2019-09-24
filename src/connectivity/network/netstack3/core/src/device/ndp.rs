@@ -1204,6 +1204,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     //
 
     /// Set the number of Neighbor Solicitation messages to send when performing DAD.
+    #[cfg(test)]
     pub(crate) fn set_dad_transmits(&mut self, v: Option<NonZeroU8>) {
         self.configs.set_dup_addr_detect_transmits(v);
     }
@@ -1686,13 +1687,13 @@ enum NeighborEntryState {
     /// after a traffic lull would initiate probes even though
     /// the subsequent three-way handshake would provide a
     /// reachability confirmation almost immediately.
-    Delay,
+    _Delay,
 
     /// A reachability confirmation is actively sought by
     /// retransmitting Neighbor Solicitations every
     /// RetransTimer milliseconds until a reachability
     /// confirmation is received.
-    Probe,
+    _Probe,
 }
 
 struct NeighborTable<H> {
@@ -2100,7 +2101,8 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
     if !src_ip.is_specified() {
         // Must not include the source link layer address if the source address
         // is unspecified as per RFC 4861 section 4.1.
-        send_ndp_packet::<_, _, &[u8], _>(
+        // TODO(rheacock): Do something if this returns an error?
+        let _ = send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2110,7 +2112,8 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
         );
     } else {
         let src_ll = ctx.get_link_layer_addr(device_id);
-        send_ndp_packet::<_, _, &[u8], _>(
+        // TODO(rheacock): Do something if this returns an error?
+        let _ = send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2209,7 +2212,8 @@ fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     let retrans_timer = ndp_state.retrans_timer;
 
     let src_ll = ctx.get_link_layer_addr(device_id);
-    send_ndp_packet::<_, _, &[u8], _>(
+    // TODO(rheacock): Do something if this returns an error?
+    let _ = send_ndp_packet::<_, _, &[u8], _>(
         ctx,
         device_id,
         Ipv6::UNSPECIFIED_ADDRESS,
@@ -2239,7 +2243,8 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
         assert!(src_ip.is_valid_unicast());
         let src_ll = ctx.get_link_layer_addr(device_id);
         let dst_ip = lookup_addr.to_solicited_node_address().get();
-        send_ndp_packet::<_, _, &[u8], _>(
+        // TODO(rheacock): Do something if this returns an error?
+        let _ = send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2278,7 +2283,8 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // solicitation to be sent.
     let src_ll = ctx.get_link_layer_addr(device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
-    send_ndp_packet::<_, _, &[u8], _>(
+    // TODO(rheacock): Do something if this returns an error?
+    let _ = send_ndp_packet::<_, _, &[u8], _>(
         ctx,
         device_id,
         device_addr,
@@ -2435,8 +2441,7 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
         src_ip: Ipv6Addr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
-    ) {
-    }
+    );
 }
 
 fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
@@ -2454,7 +2459,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
     ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6Addr,
-    dst_ip: SpecifiedAddr<Ipv6Addr>,
+    _dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: Icmpv6Packet<B>,
 ) where
     B: ByteSlice,
@@ -3275,7 +3280,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             if let Some(address) = target_ll {
                 let address = Some(address);
 
-                is_same = (neighbor_state.link_address == address);
+                is_same = neighbor_state.link_address == address;
 
                 if !is_same && message.override_flag() {
                     neighbor_state.link_address = address;
@@ -3318,7 +3323,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 }
             }
         }
-        Icmpv6Packet::Redirect(p) => log_unimplemented!((), "NDP Redirect not implemented"),
+        Icmpv6Packet::Redirect(_) => log_unimplemented!((), "NDP Redirect not implemented"),
         _ => unreachable!("Invalid ICMP packet passed to NDP"),
     }
 }
@@ -3608,7 +3613,7 @@ mod tests {
 
     /// Validate a simple Router Advertisement message (using default NDP configurations).
     fn validate_simple_ra(buf: &[u8], lifetime: u16) {
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 buf,
                 |p| {
@@ -4034,7 +4039,7 @@ mod tests {
 
         let mut net = DummyNetwork::new(
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
-            |ctx, dev| {
+            |ctx, _| {
                 if *ctx == "local" {
                     vec![("remote", device_id, None)]
                 } else {
@@ -4074,7 +4079,8 @@ mod tests {
             IpProto::Icmpv6,
             body,
             None,
-        );
+        )
+        .unwrap();
         // this should've triggered a neighbor solicitation to come out of local
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         // and a timer should've been started.
@@ -4166,7 +4172,8 @@ mod tests {
         let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the IP addresses, see `EthernetLinkDevice::get_ipv6_addr`
-        add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap());
+        add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
+            .unwrap();
 
         lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip().get());
 
@@ -4191,11 +4198,9 @@ mod tests {
         // so they will both give up using that address.
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
-        let addr =
-            AddrSubnet::<_, SpecifiedAddr<_>>::new(mac.to_ipv6_link_local().get(), 128).unwrap();
         let multicast_addr = mac.to_ipv6_link_local().get().to_solicited_node_address();
-        let mut local = DummyEventDispatcherBuilder::default();
-        let mut remote = DummyEventDispatcherBuilder::default();
+        let local = DummyEventDispatcherBuilder::default();
+        let remote = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(0);
 
         let mut stack_builder = StackStateBuilder::default();
@@ -4213,7 +4218,7 @@ mod tests {
                 ("remote", remote.build_with(stack_builder, DummyEventDispatcher::default())),
             ]
             .into_iter(),
-            |ctx, dev| {
+            |ctx, _| {
                 if *ctx == "local" {
                     vec![("remote", device_id, None)]
                 } else {
@@ -4272,7 +4277,7 @@ mod tests {
                 ("remote", remote.build::<DummyEventDispatcher>()),
             ]
             .into_iter(),
-            |ctx, dev| {
+            |ctx, _| {
                 if *ctx == "local" {
                     vec![("remote", device_id, None)]
                 } else {
@@ -4378,7 +4383,7 @@ mod tests {
         .set_dad_transmits(NonZeroU8::new(3));
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        for i in 0..3 {
+        for _ in 0..3 {
             assert!(testutil::trigger_next_timer(&mut ctx));
         }
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
@@ -4403,7 +4408,7 @@ mod tests {
         let device_id = DeviceId::new_ethernet(0);
         let mut net = DummyNetwork::new(
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
-            |ctx, dev| {
+            |ctx, _| {
                 if *ctx == "local" {
                     vec![("remote", device_id, None)]
                 } else {
@@ -4503,8 +4508,6 @@ mod tests {
 
     #[test]
     fn test_dad_cancel_when_ip_removed() {
-        let mut stack_builder = StackStateBuilder::default();
-
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
@@ -4890,7 +4893,6 @@ mod tests {
         let base = Duration::from_millis(34);
         let min_reachable = base / 2;
         let max_reachable = min_reachable * 3;
-        let reachable_time = ndp_state.reachable_time;
         assert_eq!(ndp_state.base_reachable_time, base);
         assert!(
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
@@ -4931,7 +4933,6 @@ mod tests {
         let base = Duration::from_millis(40);
         let min_reachable = base / 2;
         let max_reachable = min_reachable * 3;
-        let reachable_time = ndp_state.reachable_time;
         assert_eq!(ndp_state.base_reachable_time, base);
         assert!(
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
@@ -5370,7 +5371,7 @@ mod tests {
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (src_mac, _, src_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |_| {},
@@ -5382,7 +5383,7 @@ mod tests {
         let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (src_mac, _, src_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[1].1,
                 |_| {},
@@ -5402,7 +5403,7 @@ mod tests {
         let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (src_mac, _, src_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[2].1,
                 |p| {
@@ -5458,7 +5459,7 @@ mod tests {
 
         // Each packet would be the same.
         for f in ctx.dispatcher().frames_sent() {
-            let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            let (src_mac, _, src_ip, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                     &f.1,
                     |_| {},
@@ -5510,7 +5511,7 @@ mod tests {
 
         // Should have sent a router solicitation and still have the timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (_, _dst_mac, _, _, _, _) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |_| {},
@@ -5563,12 +5564,11 @@ mod tests {
 
         // Should have sent a frame and have a router solicitation timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
-            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[0].1,
-                |_| {},
-            )
-            .unwrap();
+        parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+            &ctx.dispatcher().frames_sent()[0].1,
+            |_| {},
+        )
+        .unwrap();
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
 
         // Enable routing on the device.
@@ -5592,12 +5592,11 @@ mod tests {
 
         // Should have sent a router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
-            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[1].1,
-                |_| {},
-            )
-            .unwrap();
+        parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+            &ctx.dispatcher().frames_sent()[1].1,
+            |_| {},
+        )
+        .unwrap();
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
     }
 
@@ -5725,7 +5724,6 @@ mod tests {
         // Attempting to send a router advertisement when a device is not a router should result in
         // a panic.
         //
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
@@ -5760,7 +5758,6 @@ mod tests {
         // Attempting to send a router advertisement when a device does not yet have a link-local
         // address should panic.
         //
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(None);
@@ -5798,7 +5795,6 @@ mod tests {
         // result in a panic.
         //
 
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
@@ -5827,7 +5823,6 @@ mod tests {
         // link-local address.
         //
 
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(None);
@@ -5884,7 +5879,6 @@ mod tests {
         // NDP router configurations (`NdpRouterConfigurations`).
         //
 
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
@@ -5912,7 +5906,7 @@ mod tests {
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |p| {
@@ -5930,7 +5924,7 @@ mod tests {
         assert_eq!(message, RouterAdvertisement::new(64, false, false, 1800, 0, 0));
 
         // Set new values for a new router advertisement.
-        let mut router_configs =
+        let router_configs =
             &mut StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
                 device.id().into(),
@@ -5966,7 +5960,7 @@ mod tests {
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 &ctx.dispatcher().frames_sent()[1].1,
                 |p| {
@@ -6393,7 +6387,6 @@ mod tests {
 
         // Skip time by 1s (less than `MIN_DELAY_BETWEEN_RAS`).
         run_for(&mut ctx, MIN_DELAY_BETWEEN_RAS - Duration::from_secs(1));
-        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
@@ -6580,16 +6573,16 @@ mod tests {
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
-        let mut host = DummyEventDispatcherBuilder::default()
+        let host = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv6_builder().forward(true);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut router = DummyEventDispatcherBuilder::default()
+        let router = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
         let mut net =
-            DummyNetwork::new(vec![("host", host), ("router", router)].into_iter(), |ctx, dev| {
+            DummyNetwork::new(vec![("host", host), ("router", router)].into_iter(), |ctx, _dev| {
                 if *ctx == "host" {
                     vec![("router", device, None)]
                 } else {
@@ -7043,10 +7036,8 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&src_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
 
         //
         // Receive a new RA with new prefix (autonomous).
@@ -7068,11 +7059,7 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
-        let ndp_state =
-            StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
-                &mut ctx,
-                device.id().into(),
-            );
+
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -7341,7 +7328,6 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = Ipv6Addr::new(expected_addr);
@@ -7417,7 +7403,6 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
         let mut manual_addr_sub = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         manual_addr_sub[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let manual_addr_sub = Ipv6Addr::new(manual_addr_sub);
@@ -7492,8 +7477,7 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
-        let mut manual_addr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let manual_addr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let manual_addr = Ipv6Addr::new(manual_addr);
         let manual_addr_sub = AddrSubnet::new(manual_addr, prefix_length).unwrap();
         let mut slaac_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -7572,7 +7556,6 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
 
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
@@ -7626,7 +7609,6 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = Ipv6Addr::new(expected_addr);
@@ -7848,9 +7830,6 @@ mod tests {
         //
         // Should get a new IP and set prefered lifetime to 1s.
         //
-
-        let valid_lifetime = 60;
-        let preferred_lifetime = 30;
 
         // Make sure deprecate and invalidation timers are set.
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 30, 60, 60);

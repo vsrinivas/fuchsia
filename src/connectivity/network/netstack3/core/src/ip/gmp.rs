@@ -487,14 +487,6 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
         self.update(MemberState::report_timer_expired)
     }
 
-    pub(crate) fn get_config_mut(&mut self) -> &mut P::Config {
-        match self.inner.as_mut().unwrap() {
-            MemberState::NonMember(s) => &mut s.cfg,
-            MemberState::Delaying(s) => &mut s.cfg,
-            MemberState::Idle(s) => &mut s.cfg,
-        }
-    }
-
     /// Update the state with no argument.
     pub(crate) fn update<F: FnOnce(MemberState<I, P>) -> (MemberState<I, P>, Actions<P>)>(
         &mut self,
@@ -559,7 +551,7 @@ mod test {
         /// Whether to send leave group message if our flag is not set.
         type Config = bool;
 
-        fn cfg_unsolicited_report_interval(cfg: &Self::Config) -> Duration {
+        fn cfg_unsolicited_report_interval(_cfg: &Self::Config) -> Duration {
             DEFAULT_UNSOLICITED_REPORT_INTERVAL
         }
 
@@ -572,12 +564,22 @@ mod test {
         }
 
         fn do_query_received_specific(
-            cfg: &Self::Config,
-            actions: &mut Actions<Self>,
-            max_resp_time: Duration,
+            _cfg: &Self::Config,
+            _actions: &mut Actions<Self>,
+            _max_resp_time: Duration,
             old: Self,
         ) -> Self {
             old
+        }
+    }
+
+    impl<P: ProtocolSpecific> GmpStateMachine<Instant, P> {
+        pub(crate) fn get_config_mut(&mut self) -> &mut P::Config {
+            match self.inner.as_mut().unwrap() {
+                MemberState::NonMember(s) => &mut s.cfg,
+                MemberState::Delaying(s) => &mut s.cfg,
+                MemberState::Idle(s) => &mut s.cfg,
+            }
         }
     }
 

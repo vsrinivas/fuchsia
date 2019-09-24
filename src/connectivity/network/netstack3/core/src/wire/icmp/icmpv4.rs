@@ -71,10 +71,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
         }
     }
 
-    fn parse<BV: BufferView<B>>(
-        mut buffer: BV,
-        args: IcmpParseArgs<Ipv4Addr>,
-    ) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: IcmpParseArgs<Ipv4Addr>) -> ParseResult<Self> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
                 match peek_message_type($buffer.as_ref())? {
@@ -165,13 +162,6 @@ pub(crate) struct Icmpv4Redirect {
     gateway: Ipv4Addr,
 }
 
-impl Icmpv4Redirect {
-    /// Constructs a new `Icmpv4Redirect`.
-    pub(crate) fn new(gateway: Ipv4Addr) -> Icmpv4Redirect {
-        Icmpv4Redirect { gateway }
-    }
-}
-
 impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalPacket<B>);
 
 create_net_enum! {
@@ -210,6 +200,8 @@ impl Icmpv4TimestampRequest {
     /// `new` constructs a new `Icmpv4TimestampRequest` with the given
     /// parameters, and sets the Receive Timestamp and Transmit Timestamp values
     /// to zero.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new(origin_timestamp: u32, id: u16, seq: u16) -> Icmpv4TimestampRequest {
         Icmpv4TimestampRequest(Timestamp {
             id_seq: IdAndSeq::new(id, seq),

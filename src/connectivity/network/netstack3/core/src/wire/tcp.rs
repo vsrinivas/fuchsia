@@ -18,6 +18,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
+#[cfg(test)]
 use crate::transport::tcp::TcpOption;
 use crate::wire::records::options::{Options, OptionsRaw};
 use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
@@ -29,8 +30,6 @@ const HDR_PREFIX_LEN: usize = 20;
 const CHECKSUM_OFFSET: usize = 16;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
-#[cfg(test)]
-pub(crate) const TCP_MAX_HDR_LEN: usize = 60;
 
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -50,6 +49,8 @@ impl HeaderPrefix {
         (self.data_offset_reserved_flags.get() >> 12) as u8
     }
 
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     fn set_data_offset(&mut self, offset: u8) {
         debug_assert!(offset <= 15);
         let v = self.data_offset_reserved_flags.get();
@@ -80,6 +81,8 @@ pub(crate) struct TcpParseArgs<A: IpAddress> {
 
 impl<A: IpAddress> TcpParseArgs<A> {
     /// Construct a new `TcpParseArgs`.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
         TcpParseArgs { src_ip, dst_ip }
     }
@@ -93,7 +96,7 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: TcpParseArgs<A>) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: TcpParseArgs<A>) -> ParseResult<Self> {
         TcpSegmentRaw::<B>::parse(buffer, ()).and_then(|u| TcpSegment::try_from_raw_with(u, args))
     }
 }
@@ -149,11 +152,15 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
 
 impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = TcpOption> {
         self.options.iter()
     }
 
     /// The segment body.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
@@ -178,6 +185,7 @@ impl<B: ByteSlice> TcpSegment<B> {
     /// The acknowledgement number.
     ///
     /// If the ACK flag is not set, `ack_num` returns `None`.
+    #[cfg(test)]
     pub(crate) fn ack_num(&self) -> Option<u32> {
         if self.get_flag(ACK_MASK) {
             Some(self.hdr_prefix.ack.get())
@@ -211,17 +219,21 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     // The length of the header prefix and options.
-    fn header_len(&self) -> usize {
+    pub(crate) fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
     // The length of the segment as calculated from the header prefix, options,
     // and body.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn total_segment_len(&self) -> usize {
         self.header_len() + self.body.len()
     }
 
     /// Construct a builder with the same contents as this packet.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         let mut s = TcpSegmentBuilder {
             src_ip,
@@ -290,7 +302,7 @@ where
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
         let (hdr_prefix, options) = if let Some(pfx) = buffer.take_obj_front::<HeaderPrefix>() {
@@ -346,6 +358,8 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
     /// Construct a new `TcpSegmentBuilder`.
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn new(
         src_ip: A,
         dst_ip: A,
@@ -439,6 +453,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
     }
 }
 
+#[cfg(test)]
 const ACK_MASK: u16 = 0b10000;
 const RST_MASK: u16 = 0b00100;
 const SYN_MASK: u16 = 0b00010;
@@ -762,7 +777,7 @@ mod tests {
 
     #[test]
     fn test_partial_parse() {
-        /// Parse options partially:
+        // Parse options partially:
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.set_data_offset(8);
         let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
@@ -779,9 +794,9 @@ mod tests {
         )
         .is_err());
 
-        /// Parse header partially:
-        let mut hdr_prefix = new_hdr_prefix();
-        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        // Parse header partially:
+        let hdr_prefix = new_hdr_prefix();
+        let bytes = hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[0..10];
         let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
         let partial = packet.hdr_prefix.as_ref().unwrap_incomplete();
@@ -797,14 +812,14 @@ mod tests {
         )
         .is_err());
 
-        let mut hdr_prefix = new_hdr_prefix();
-        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
-        /// If we don't even have enough header bytes, we should fail partial
-        /// parsing:
+        let hdr_prefix = new_hdr_prefix();
+        let bytes = hdr_prefix_to_bytes(hdr_prefix);
+        // If we don't even have enough header bytes, we should fail partial
+        // parsing:
         let mut buf = &bytes[0..3];
         assert!(buf.parse::<TcpSegmentRaw<_>>().is_err());
-        /// If we don't even have exactly 4 header bytes, we should succeed
-        /// partial parsing:
+        // If we don't even have exactly 4 header bytes, we should succeed
+        // partial parsing:
         let mut buf = &bytes[0..4];
         assert!(buf.parse::<TcpSegmentRaw<_>>().is_ok());
     }
@@ -818,7 +833,7 @@ mod tests {
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap().0;
 
         b.iter(|| {
-            let mut buf = bytes;
+            let buf = bytes;
             black_box(
                 black_box(buf)
                     .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(

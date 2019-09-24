@@ -150,7 +150,8 @@ impl EthernetDeviceStateBuilder {
     }
 
     /// Enable/disable IP packet routing.
-    pub(crate) fn set_route<I: Ip>(&mut self, v: bool) {
+    // TODO(rheacock): Remove the underscore prefix when this is used.
+    pub(crate) fn _set_route<I: Ip>(&mut self, v: bool) {
         // We implement this method by using an inner function that gets specialized because when
         // `specialize_ip_macro` generates the IP specific code, it doesn't properly handle a type's
         // member functions. Instead lets say we have the following code:
@@ -342,7 +343,7 @@ impl<I: Instant> EthernetDeviceState<I> {
         local_addr: IpAddr,
     ) -> Option<impl Iterator<Item = Buf<Vec<u8>>>> {
         match self.pending_frames.remove(&local_addr) {
-            Some(mut buff) => Some(buff.into_iter()),
+            Some(buff) => Some(buff.into_iter()),
             None => None,
         }
     }
@@ -559,7 +560,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
         return;
     };
 
-    let (src, dst) = (frame.src_mac(), frame.dst_mac());
+    let (_, dst) = (frame.src_mac(), frame.dst_mac());
 
     if !ctx.get_state_with(device_id).should_deliver(&dst) {
         trace!("ethernet::receive_frame: destination mac {:?} not for device {:?}", dst, device_id);
@@ -1183,6 +1184,8 @@ pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
 /// any future conflicting gratuitous ARPs to be ignored.
+// TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
+// called by a pub fn in the device mod.
 #[cfg(test)]
 pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
@@ -1198,6 +1201,7 @@ pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
 /// This method only gets called when testing to force set a neighbor's
 /// link address so that lookups succeed immediately, without doing
 /// address resolution.
+// TODO(rheacock): remove when this is called from non-test code
 #[cfg(test)]
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
@@ -1270,7 +1274,7 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
         mac_resolution_failed(self, device_id, IpAddr::V4(proto_addr));
     }
 
-    fn address_resolution_expired(&mut self, device_id: Self::DeviceId, proto_addr: Ipv4Addr) {
+    fn address_resolution_expired(&mut self, _device_id: Self::DeviceId, _proto_addr: Ipv4Addr) {
         log_unimplemented!((), "ArpContext::address_resolution_expired");
     }
 }
@@ -1612,7 +1616,7 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
     //  For ARP, we don't have such a clear statement on the RFC, it would make
     //  sense to do the same thing though.
     let state = ctx.get_state_mut_with(device_id);
-    if let Some(pending) = state.take_pending_frames(address) {
+    if let Some(_) = state.take_pending_frames(address) {
         log_unimplemented!((), "ethernet mac resolution failed not implemented");
     }
 }
@@ -1647,7 +1651,7 @@ mod tests {
         fn test(size: usize, expect_frames_sent: usize) {
             let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
                 .build::<DummyEventDispatcher>();
-            send_ip_frame(
+            let _ = send_ip_frame(
                 &mut ctx,
                 0.into(),
                 DUMMY_CONFIG_V4.remote_ip,
@@ -1754,7 +1758,8 @@ mod tests {
         }
 
         // Will panic if we do not initialize.
-        crate::device::send_ip_frame(&mut ctx, device, config.remote_ip, Buf::new(bytes, ..));
+        let _ =
+            crate::device::send_ip_frame(&mut ctx, device, config.remote_ip, Buf::new(bytes, ..));
     }
 
     #[ip_test]

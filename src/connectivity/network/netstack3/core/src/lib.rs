@@ -8,12 +8,7 @@
 // stabilized.
 #![allow(stable_features)]
 #![feature(specialization)]
-#![deny(missing_docs)]
-#![deny(unreachable_patterns)]
-// TODO(joshlf): Remove this once all of the elements in the crate are actually
-// used.
-#![allow(unused)]
-#![deny(unused_imports)]
+#![deny(missing_docs, unreachable_patterns, unused_imports)]
 // This is a hack until we migrate to a different benchmarking framework. To run
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
@@ -263,7 +258,7 @@ enum TimerIdInner {
     /// A timer event in the device layer.
     DeviceLayer(DeviceLayerTimerId),
     /// A timer event in the transport layer.
-    TransportLayer(TransportLayerTimerId),
+    _TransportLayer(TransportLayerTimerId),
     /// A timer event in the IP layer.
     IpLayer(IpLayerTimerId),
     /// A no-op timer event (used for tests)
@@ -287,7 +282,7 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
         TimerId(TimerIdInner::DeviceLayer(x)) => {
             device::handle_timeout(ctx, x);
         }
-        TimerId(TimerIdInner::TransportLayer(x)) => {
+        TimerId(TimerIdInner::_TransportLayer(x)) => {
             transport::handle_timeout(ctx, x);
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
@@ -494,7 +489,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
-) -> Result<(), error::NetstackError> {
+) -> error::Result<()> {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
         crate::device::add_ip_addr_subnet(ctx, device, addr_sub)
@@ -507,7 +502,7 @@ pub fn del_ip_addr<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
-) -> Result<(), error::NetstackError> {
+) -> error::Result<()> {
     map_addr_version!(
         addr: IpAddr;
         crate::device::del_ip_addr(ctx, device, &addr)
@@ -544,7 +539,7 @@ pub fn add_route<D: EventDispatcher>(
 pub fn del_device_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
     subnet: SubnetEither,
-) -> Result<(), error::NetstackError> {
+) -> error::Result<()> {
     map_addr_version!(subnet: SubnetEither; crate::ip::del_device_route(ctx, subnet))
         .map_err(From::from)
 }

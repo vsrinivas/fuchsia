@@ -195,18 +195,18 @@ pub trait BufferUdpContext<I: Ip, B: BufferMut>:
     UdpContext<I> + BufferTransportIpContext<I, B>
 {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, conn: UdpConnId, body: &[u8]) {
+    fn receive_udp_from_conn(&mut self, _conn: UdpConnId, _body: &[u8]) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
     /// Receive a UDP packet for a listener.
     fn receive_udp_from_listen(
         &mut self,
-        listener: UdpListenerId,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        src_port: Option<NonZeroU16>,
-        body: &[u8],
+        _listener: UdpListenerId,
+        _src_ip: I::Addr,
+        _dst_ip: I::Addr,
+        _src_port: Option<NonZeroU16>,
+        _body: &[u8],
     ) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_listen: not implemented");
     }
@@ -262,18 +262,18 @@ impl<I: Ip, B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<I, B> for Con
 /// See the `EventDispatcher` trait in the crate root for more details.
 pub trait UdpEventDispatcher {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, conn: UdpConnId, body: &[u8]) {
+    fn receive_udp_from_conn(&mut self, _conn: UdpConnId, _body: &[u8]) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
     /// Receive a UDP packet for a listener.
     fn receive_udp_from_listen<A: IpAddress>(
         &mut self,
-        listener: UdpListenerId,
-        src_ip: A,
-        dst_ip: A,
-        src_port: Option<NonZeroU16>,
-        body: &[u8],
+        _listener: UdpListenerId,
+        _src_ip: A,
+        _dst_ip: A,
+        _src_port: Option<NonZeroU16>,
+        _body: &[u8],
     ) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_listen: not implemented");
     }
@@ -359,6 +359,8 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 /// # Panics
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId,
@@ -371,7 +373,8 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
         .get_conn_by_id(conn.0)
         .expect("transport::udp::send_udp_conn: no such conn");
 
-    ctx.send_frame(
+    // TODO(rheacock): Handle an error result here.
+    let _ = ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
             local_addr.into_addr(),
@@ -393,6 +396,8 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
     listener: UdpListenerId,
@@ -427,7 +432,8 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
         panic!("Listener not found");
     });
 
-    ctx.send_frame(
+    // TODO(rheacock): Handle an error result here.
+    let _ = ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
             local_addr.into_addr(),
@@ -508,12 +514,14 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     addrs: Vec<SpecifiedAddr<A>>,
     port: NonZeroU16,
 ) -> UdpListenerId {
-    let mut state = ctx.get_state_mut();
+    let state = ctx.get_state_mut();
     if addrs.is_empty() {
         if state.conn_state.wildcard_listeners.get_by_addr(&port).is_some() {
             // TODO(joshlf): Return error
@@ -597,7 +605,7 @@ mod tests {
 
         fn local_address_for_remote(
             &self,
-            remote: SpecifiedAddr<<I as Ip>::Addr>,
+            _remote: SpecifiedAddr<<I as Ip>::Addr>,
         ) -> Option<SpecifiedAddr<<I as Ip>::Addr>> {
             Some(local_addr::<I>())
         }

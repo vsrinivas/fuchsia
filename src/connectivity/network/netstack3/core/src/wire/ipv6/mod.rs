@@ -40,7 +40,7 @@ pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
 pub(crate) const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
 
 // Offset to the Next Header field within the fixed IPv6 header
-const NEXT_HEADER_OFFSET: usize = 6;
+const NEXT_HEADER_OFFSET: u8 = 6;
 
 // The maximum length for Hop-by-Hop Options. The stored byte's maximum
 // representable value is `std::u8::MAX` and it means the header has
@@ -72,7 +72,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
         Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
             pointer,
             must_send_icmp,
-            header_len,
+            header_len: _,
         } => {
             let (pointer, action) = match pointer.checked_add(IPV6_FIXED_HDR_LEN as u32) {
                 // Pointer calculation overflowed so set action to discard the packet and
@@ -91,14 +91,14 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                 code: Icmpv6ParameterProblemCode::ErroneousHeaderField,
                 pointer,
                 must_send_icmp,
-                header_len: IPV6_FIXED_HDR_LEN + header_len,
+                header_len: (),
                 action,
             }
         }
         Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
-            header_len,
+            header_len: _,
         } => {
             let (pointer, action) = match pointer.checked_add(IPV6_FIXED_HDR_LEN as u32) {
                 None => (0, IpParseErrorAction::DiscardPacket),
@@ -111,14 +111,14 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                 code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                 pointer,
                 must_send_icmp,
-                header_len: IPV6_FIXED_HDR_LEN + header_len,
+                header_len: (),
                 action,
             }
         }
         Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
-            header_len,
+            header_len: _,
             action,
         } => {
             let (pointer, action) = match pointer.checked_add(IPV6_FIXED_HDR_LEN as u32) {
@@ -147,7 +147,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                 code: Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
                 pointer,
                 must_send_icmp,
-                header_len: IPV6_FIXED_HDR_LEN + header_len,
+                header_len: (),
                 action,
             }
         }
@@ -212,7 +212,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv6, Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: ()) -> IpParseResult<Ipv6, Self> {
         Ipv6PacketRaw::parse(buffer, args).and_then(|r| Ipv6Packet::try_from_raw(r))
     }
 }
@@ -220,7 +220,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
 impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
     type Error = IpParseError<Ipv6>;
 
-    fn try_from_raw_with(raw: Ipv6PacketRaw<B>, args: ()) -> Result<Self, Self::Error> {
+    fn try_from_raw_with(raw: Ipv6PacketRaw<B>, _args: ()) -> Result<Self, Self::Error> {
         let fixed_hdr = raw.fixed_hdr;
 
         // Make sure that the fixed header has a valid next header before
@@ -231,9 +231,9 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
                     src_ip: fixed_hdr.src_ip,
                     dst_ip: fixed_hdr.dst_ip,
                     code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                    pointer: NEXT_HEADER_OFFSET as u32,
+                    pointer: u32::from(NEXT_HEADER_OFFSET),
                     must_send_icmp: false,
-                    header_len: IPV6_FIXED_HDR_LEN,
+                    header_len: (),
                     action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
                 }),
                 "Unrecognized next header value"
@@ -437,7 +437,6 @@ impl<B: ByteSlice> Ipv6Packet<B> {
                         // The next header value is located in the first byte of the
                         // extension header.
                         Ipv6ExtensionHeaderData::HopByHopOptions { .. }
-                        | Ipv6ExtensionHeaderData::Routing { .. }
                         | Ipv6ExtensionHeaderData::DestinationOptions { .. } => {
                             bytes[IPV6_FIXED_HDR_LEN+ext_hdr_start] = next_ext_hdr.next_header;
                         }
@@ -460,10 +459,6 @@ impl<B: ByteSlice> Ipv6Packet<B> {
 
     fn header_len(&self) -> usize {
         self.fixed_hdr.bytes().len() + self.extension_hdrs.bytes().len()
-    }
-
-    fn payload_len(&self) -> usize {
-        self.body.len()
     }
 
     /// Construct a builder with the same contents as this packet.
@@ -537,7 +532,7 @@ pub(crate) struct Ipv6PacketRaw<B> {
 impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
     type Error = IpParseError<Ipv6>;
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, Self::Error> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> Result<Self, Self::Error> {
         let fixed_hdr = buffer
             .take_obj_front::<FixedHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
@@ -630,6 +625,8 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ds` panics if `ds` is greater than 2^6 - 1.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn ds(&mut self, ds: u8) {
         assert!(ds <= 1 << 6, "invalid DS: {}", ds);
         self.ds = ds;
@@ -640,6 +637,8 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 0b11, "invalid ECN: {}", ecn);
         self.ecn = ecn
@@ -650,6 +649,8 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `flowlabel` panics if `flowlabel` is greater than 2^20 - 1.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn flowlabel(&mut self, flowlabel: u32) {
         assert!(flowlabel <= 1 << 20, "invalid flowlabel: {:x}", flowlabel);
         self.flowlabel = flowlabel;
@@ -1032,9 +1033,9 @@ mod tests {
                 src_ip: DEFAULT_SRC_IP,
                 dst_ip: DEFAULT_DST_IP,
                 code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                pointer: NEXT_HEADER_OFFSET as u32,
+                pointer: u32::from(NEXT_HEADER_OFFSET),
                 must_send_icmp: false,
-                header_len: IPV6_FIXED_HDR_LEN,
+                header_len: (),
                 action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
@@ -1048,9 +1049,9 @@ mod tests {
                 src_ip: DEFAULT_SRC_IP,
                 dst_ip: DEFAULT_DST_IP,
                 code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                pointer: NEXT_HEADER_OFFSET as u32,
+                pointer: u32::from(NEXT_HEADER_OFFSET),
                 must_send_icmp: false,
-                header_len: IPV6_FIXED_HDR_LEN,
+                header_len: (),
                 action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
@@ -1096,7 +1097,7 @@ mod tests {
                 code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                 pointer: IPV6_FIXED_HDR_LEN as u32,
                 must_send_icmp: false,
-                header_len: IPV6_FIXED_HDR_LEN,
+                header_len: (),
                 action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
@@ -1135,7 +1136,7 @@ mod tests {
                 code: Icmpv6ParameterProblemCode::ErroneousHeaderField,
                 pointer: (IPV6_FIXED_HDR_LEN as u32) + 2,
                 must_send_icmp: true,
-                header_len: IPV6_FIXED_HDR_LEN,
+                header_len: (),
                 action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );

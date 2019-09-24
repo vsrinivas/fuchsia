@@ -298,6 +298,10 @@ pub(crate) trait CounterContext {
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
 impl<D: EventDispatcher> CounterContext for Context<D> {
+    // TODO(rheacock): This is tricky because it's used in test only macro
+    // code so the compiler thinks `key` is unused. Remove this when this is
+    // no longer a problem.
+    #[allow(unused)]
     fn increment_counter(&mut self, key: &'static str) {
         increment_counter!(self, key);
     }
@@ -612,6 +616,10 @@ pub(crate) mod testutil {
     }
 
     impl<T: AsMut<DummyCounterContext>> CounterContext for T {
+        // TODO(rheacock): This is tricky because it's used in test only macro
+        // code so the compiler thinks `key` is unused. Remove this when this is
+        // no longer a problem.
+        #[allow(unused)]
         fn increment_counter(&mut self, key: &'static str) {
             self.as_mut().increment_counter(key);
         }
@@ -837,16 +845,6 @@ pub(crate) mod testutil {
             Self::new(Duration::from_millis(0), 0, 0)
         }
 
-        /// Returns the time jump in the last step.
-        pub(crate) fn time_delta(&self) -> Duration {
-            self.time_delta
-        }
-
-        /// Returns `true` if the last step did not perform any operations.
-        pub(crate) fn is_idle(&self) -> bool {
-            return self.timers_fired == 0 && self.frames_sent == 0;
-        }
-
         /// Returns the number of frames dispatched to their destinations in the
         /// last step.
         pub(crate) fn frames_sent(&self) -> usize {
@@ -899,7 +897,7 @@ pub(crate) mod testutil {
             // We can't guarantee that all contexts are safely running their timers
             // together if we receive a context with any timers already set.
             assert!(
-                !ret.contexts.iter().any(|(n, ctx)| { !ctx.timers.timers.is_empty() }),
+                !ret.contexts.iter().any(|(_, ctx)| { !ctx.timers.timers.is_empty() }),
                 "can't start network with contexts that already have timers set"
             );
 
@@ -983,7 +981,7 @@ pub(crate) mod testutil {
                     break;
                 }
                 // We can unwrap because we just peeked.
-                let mut frame = self.pending_frames.pop().unwrap().1;
+                let frame = self.pending_frames.pop().unwrap().1;
                 FH::handle_frame(
                     self.context(frame.dst_context),
                     frame.dst_device,
@@ -994,7 +992,7 @@ pub(crate) mod testutil {
             }
 
             // Dispatch all pending timers.
-            for (n, ctx) in self.contexts.iter_mut() {
+            for (_, ctx) in self.contexts.iter_mut() {
                 // We have to collect the timers before dispatching them, to
                 // avoid an infinite loop in case handle_timer schedules another
                 // timer for the same or older DummyInstant.
@@ -1038,7 +1036,7 @@ pub(crate) mod testutil {
                 .collect();
 
             for (src_context, frames) in all_frames.into_iter() {
-                for (send_meta, mut frame) in frames.into_iter() {
+                for (send_meta, frame) in frames.into_iter() {
                     let (dst_context, dst_device, recv_meta, latency) = self.links.map_link(
                         src_context,
                         self.contexts.get(&src_context).unwrap().get_ref(),
@@ -1062,12 +1060,12 @@ pub(crate) mod testutil {
             let next_timer = self
                 .contexts
                 .iter()
-                .filter_map(|(n, ctx)| match ctx.timers.timers.peek() {
+                .filter_map(|(_, ctx)| match ctx.timers.timers.peek() {
                     Some(tmr) => Some(tmr.0),
                     None => None,
                 })
                 .min();
-            /// get the instant for the next packet
+            // get the instant for the next packet
             let next_packet_due = self.pending_frames.peek().map(|t| t.0);
 
             // Return the earliest of them both, and protect against returning a

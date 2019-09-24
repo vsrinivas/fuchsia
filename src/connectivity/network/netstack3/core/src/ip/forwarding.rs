@@ -88,11 +88,6 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.installed.iter().any(|e| e == entry)
     }
 
-    /// Get the current active route to a subnet, if one exists.
-    fn get_active_to(&self, subnet: &Subnet<I::Addr>) -> Option<&ActiveEntry<I::Addr, D>> {
-        self.active.iter().find(|e| e.subnet == *subnet)
-    }
-
     /// Adds `entry` to the forwarding table if it does not already exist.
     fn add_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), ExistsError> {
         if self.contains_entry(&entry) {
@@ -161,6 +156,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
     /// Delete the route to a subnet that goes through a next hop node, returning `Err` if no
     /// route was found to be deleted.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn del_next_hop_route(
         &mut self,
         subnet: Subnet<I::Addr>,
@@ -172,6 +169,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
     /// Delete the route to a subnet that is considerd on-link for a device, returning `Err` if no
     /// route was found to be deleted.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn del_device_route(
         &mut self,
         subnet: Subnet<I::Addr>,
@@ -252,12 +251,6 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
             Some(ActiveEntryDest::Remote { dest }) => Some(dest.clone()),
             None => None,
         }
-    }
-
-    /// Get an iterator over the active forwarding entries ([`Entry`]) this `ForwardingTable`
-    /// knows about.
-    fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr, D>> {
-        self.active.iter()
     }
 
     /// Get an iterator over all of the forwarding entries ([`Entry`]) this `ForwardingTable`
@@ -351,7 +344,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         observed: &mut Vec<bool>,
     ) -> Option<Destination<I::Addr, D>> {
         // Get all potential routes we could take to reach `address`.
-        let q = self.installed.iter().enumerate().filter(|(i, e)| e.subnet.contains(&address));
+        let q = self.installed.iter().enumerate().filter(|(_, e)| e.subnet.contains(&address));
 
         // The best route to reach `address` so far.
         //
@@ -466,6 +459,12 @@ mod tests {
             for e in self.iter_installed() {
                 trace!("    {} -> {:?} ", e.subnet, e.dest);
             }
+        }
+
+        /// Get an iterator over the active forwarding entries ([`Entry`]) this `ForwardingTable`
+        /// knows about.
+        fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr, D>> {
+            self.active.iter()
         }
     }
 
@@ -615,7 +614,7 @@ mod tests {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
-        let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
+        let (_, sub1) = next_hop_addr_sub::<I>(1, 24);
         let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
         let (addr3, sub3) = next_hop_addr_sub::<I>(3, 24);
         let (addr4, sub4) = next_hop_addr_sub::<I>(4, 24);
@@ -780,7 +779,7 @@ mod tests {
         let device1 = DeviceId::new_ethernet(1);
         let (addr1, sub1_s24) = next_hop_addr_sub::<I>(1, 24);
         let (addr2, sub2_s24) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, sub3_s24) = next_hop_addr_sub::<I>(3, 24);
+        let (addr3, _) = next_hop_addr_sub::<I>(3, 24);
         let (addr4, sub4_s24) = next_hop_addr_sub::<I>(4, 24);
         let (addr5, sub5_s24) = next_hop_addr_sub::<I>(5, 24);
 
@@ -930,7 +929,7 @@ mod tests {
         let (addr10, sub10_s25) = next_hop_addr_sub::<I>(10, 25);
         let (addr12, sub12_s26) = next_hop_addr_sub::<I>(12, 26);
         let (addr14, sub14_s25) = next_hop_addr_sub::<I>(14, 25);
-        let (addr15, sub15_s24) = next_hop_addr_sub::<I>(15, 24);
+        let (addr15, _) = next_hop_addr_sub::<I>(15, 24);
 
         // In the following comments, we will used a modified form of prefix notation.
         // Normally to identify the prefix of an address, we do ADDRESS/PREFIX (e.g.
@@ -1262,7 +1261,7 @@ mod tests {
         let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
         let (addr3, sub3) = next_hop_addr_sub::<I>(3, 24);
         let (addr4, sub4) = next_hop_addr_sub::<I>(4, 24);
-        let (addr5, sub5) = next_hop_addr_sub::<I>(5, 24);
+        let (addr5, _) = next_hop_addr_sub::<I>(5, 24);
 
         // Add the following routes:
         //  sub1 -> addr2
@@ -1364,8 +1363,8 @@ mod tests {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
-        let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, sub3) = next_hop_addr_sub::<I>(3, 24);
+        let (addr2, _) = next_hop_addr_sub::<I>(2, 24);
+        let (addr3, _) = next_hop_addr_sub::<I>(3, 24);
 
         // Add the following routes:
         //  sub1 -> device0

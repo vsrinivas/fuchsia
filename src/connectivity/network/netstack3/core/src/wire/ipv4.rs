@@ -179,7 +179,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
         Ipv4PacketRaw::<B>::parse(buffer, args).and_then(|u| Ipv4Packet::try_from_raw(u))
     }
 }
@@ -242,6 +242,8 @@ fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> [u8; 2] {
 
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Iterate over the IPv4 header options.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
         self.options.iter()
     }
@@ -280,12 +282,6 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE].copy_from_slice(&[0; 4][..]);
 
         bytes
-    }
-
-    // The size of the packet as calculated from the header prefix, options, and
-    // body. This is not the same as the total length field in the header.
-    fn total_packet_len(&self) -> usize {
-        self.header_len() + self.body.len()
     }
 
     /// Construct a builder with the same contents as this packet.
@@ -383,7 +379,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4PacketRaw<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> IpParseResult<Ipv4, Self> {
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
@@ -525,6 +521,8 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `dscp` panics if `dscp` is greater than 2^6 - 1.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn dscp(&mut self, dscp: u8) {
         assert!(dscp <= 1 << 6, "invalid DCSP: {}", dscp);
         self.dscp = dscp;
@@ -535,17 +533,23 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 3, "invalid ECN: {}", ecn);
         self.ecn = ecn;
     }
 
     /// Set the identification.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn id(&mut self, id: u16) {
         self.id = id;
     }
 
     /// Set the Don't Fragment (DF) flag.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn df_flag(&mut self, df: bool) {
         if df {
             self.flags |= 1 << DF_FLAG_OFFSET;
@@ -555,6 +559,8 @@ impl Ipv4PacketBuilder {
     }
 
     /// Set the More Fragments (MF) flag.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn mf_flag(&mut self, mf: bool) {
         if mf {
             self.flags |= 1 << MF_FLAG_OFFSET;
@@ -568,6 +574,8 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `fragment_offset` panics if `fragment_offset` is greater than 2^13 - 1.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn fragment_offset(&mut self, fragment_offset: u16) {
         assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
@@ -967,7 +975,7 @@ mod tests {
 
     #[test]
     fn test_copy_header_bytes_for_fragment() {
-        let mut hdr_prefix = new_hdr_prefix();
+        let hdr_prefix = new_hdr_prefix();
         let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[..];
         let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
@@ -996,7 +1004,7 @@ mod tests {
         // Try something with the header plus incomplete options:
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (4 << 4) | 10;
-        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        let bytes = hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[..];
         let packet = buf.parse::<Ipv4PacketRaw<_>>().unwrap();
         assert_eq!(packet.hdr_prefix.bytes(), bytes);

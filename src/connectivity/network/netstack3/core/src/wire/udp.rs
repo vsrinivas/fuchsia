@@ -24,7 +24,6 @@ use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_s
 use crate::wire::{FromRaw, MaybeParsed, U16};
 
 pub(crate) const HEADER_BYTES: usize = 8;
-const LENGTH_OFFSET: usize = 4;
 const CHECKSUM_OFFSET: usize = 6;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 
@@ -120,7 +119,7 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacke
         ParseMetadata::from_packet(self.header.bytes().len(), self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
         UdpPacketRaw::<B>::parse(buffer, IpVersionMarker::<A::Version>::default())
             .and_then(|u| UdpPacket::try_from_raw_with(u, args))
     }
@@ -154,22 +153,15 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// On IPv6, it is guaranteed that `checksummed` will return true because
     /// IPv6 requires a checksum, and so any UDP packet missing one will fail
     /// validation in `parse`.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn checksummed(&self) -> bool {
         self.header.checksum != U16::ZERO
     }
 
-    // The length of the header.
-    fn header_len(&self) -> usize {
-        self.header.bytes().len()
-    }
-
-    // The length of the packet as calculated from the header and body. This is
-    // not the same as the length field in the header.
-    fn total_packet_len(&self) -> usize {
-        self.header_len() + self.body.len()
-    }
-
     /// Construct a builder with the same contents as this packet.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
     }
@@ -225,7 +217,7 @@ where
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IpVersionMarker<I>) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: IpVersionMarker<I>) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let header = if let Some(header) = buffer.take_obj_front::<Header>() {
@@ -490,7 +482,7 @@ mod tests {
         // length of 0 is allowed in IPv6 if the body is long enough
         let mut buf = vec![0_u8, 0, 1, 2, 0, 0, 0xBF, 0x12];
         buf.extend((0..std::u16::MAX).into_iter().map(|p| p as u8));
-        let mut bv = &mut &buf[..];
+        let bv = &mut &buf[..];
         let packet = bv
             .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(TEST_SRC_IPV6, TEST_DST_IPV6))
             .unwrap();
@@ -622,7 +614,7 @@ mod tests {
         let ser = (&[0; (1 << 16) - HEADER_BYTES][..]).into_serializer().encapsulate(
             UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap()),
         );
-        ser.serialize_vec_outer();
+        let _ = ser.serialize_vec_outer();
     }
 
     #[test]
@@ -693,7 +685,7 @@ mod tests {
         // justify len being 0.
         let mut buf = vec![0, 0, 1, 2, 0, 0, 0, 0, 10, 20];
         buf.extend((0..std::u16::MAX).into_iter().map(|x| x as u8));
-        let mut bv = &mut &buf[..];
+        let bv = &mut &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv6>::default()).unwrap();
         let header = packet.header.as_ref().unwrap();
@@ -758,7 +750,7 @@ mod tests {
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap().0;
 
         b.iter(|| {
-            let mut buf = bytes;
+            let buf = bytes;
             black_box(
                 black_box(buf)
                     .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(

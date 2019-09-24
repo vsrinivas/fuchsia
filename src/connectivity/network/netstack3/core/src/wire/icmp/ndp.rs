@@ -100,14 +100,6 @@ impl RouterAdvertisement {
     pub(crate) fn retransmit_timer(&self) -> u32 {
         self.retransmit_timer.get()
     }
-
-    pub(crate) fn managed_flag(&self) -> bool {
-        ((self.configuration_mo & Self::MANAGED_FLAG) != 0)
-    }
-
-    pub(crate) fn other_configuration_flag(&self) -> bool {
-        ((self.configuration_mo & Self::OTHER_CONFIGURATION_FLAG) != 0)
-    }
 }
 
 /// An NDP Neighbor Solicitation.
@@ -293,6 +285,8 @@ pub(crate) mod options {
 
     impl PrefixInformation {
         /// Create a new `PrefixInformation`.
+        // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+        #[cfg(test)]
         pub(crate) fn new(
             prefix_length: u8,
             on_link_flag: bool,
@@ -444,8 +438,8 @@ pub(crate) mod options {
                 NdpOption::SourceLinkLayerAddress(data)
                 | NdpOption::TargetLinkLayerAddress(data)
                 | NdpOption::RedirectedHeader { original_packet: data } => data.len(),
-                NdpOption::MTU(mtu) => MTU_OPTION_LEN,
-                NdpOption::PrefixInformation(pfx_info) => PREFIX_INFORMATION_OPTION_LEN,
+                NdpOption::MTU(_) => MTU_OPTION_LEN,
+                NdpOption::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LEN,
             }
         }
 
@@ -541,7 +535,7 @@ mod tests {
         let mut buf = &SOLICITATION_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
-        let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
+        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborSolicitation>>(IcmpParseArgs::new(
                 src_ip, dst_ip,
@@ -580,7 +574,7 @@ mod tests {
         let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
-        let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
+        let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisement>>(IcmpParseArgs::new(
                 src_ip, dst_ip,

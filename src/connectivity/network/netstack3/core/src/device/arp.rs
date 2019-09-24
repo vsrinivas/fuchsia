@@ -266,7 +266,7 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 /// `DummyTimerContextExt` trait and with the `DummyNetwork` type.
 struct ArpHandler<D: ArpDevice, P> {
     _marker: PhantomData<(D, P)>,
-    never: Never,
+    _never: Never,
 }
 
 impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<C, ArpTimerId<D, P, C::DeviceId>>
@@ -294,7 +294,8 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<C, ArpTimerId<D, 
                 //   may be desirable to have table aging and/or timers".
                 if let Some(sender_protocol_addr) = ctx.get_protocol_addr(id.device_id) {
                     let self_hw_addr = ctx.get_hardware_addr(id.device_id);
-                    ctx.send_frame(
+                    // TODO(joshlf): Do something if send_frame returns an error?
+                    let _ = ctx.send_frame(
                         ArpFrameMetadata { device_id: id.device_id, dst_addr: D::HType::BROADCAST },
                         ArpPacketBuilder::new(
                             ArpOp::Request,
@@ -336,7 +337,7 @@ pub(super) fn receive_arp_packet<
 >(
     ctx: &mut C,
     device_id: C::DeviceId,
-    mut buffer: B,
+    buffer: B,
 ) {
     ArpHandler::handle_frame(ctx, device_id, (), buffer)
 }
@@ -468,7 +469,8 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         if addressed_to_me && packet.operation() == ArpOp::Request {
             let self_hw_addr = ctx.get_hardware_addr(device_id);
             ctx.increment_counter("arp::rx_request");
-            ctx.send_frame(
+            // TODO(joshlf): Do something if send_frame returns an error?
+            let _ = ctx.send_frame(
                 ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
                 ArpPacketBuilder::new(
                     ArpOp::Response,
@@ -487,6 +489,8 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 ///
 /// This will cause any conflicting dynamic entry to be removed, and any future
 /// conflicting gratuitous ARPs to be ignored.
+// TODO(rheacock): remove `cfg(test)` when this is used.
+#[cfg(test)]
 pub(super) fn insert_static<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     device_id: C::DeviceId,
@@ -532,7 +536,7 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 pub(super) fn lookup<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    local_addr: D::HType,
+    _local_addr: D::HType,
     lookup_addr: P,
 ) -> Option<D::HType> {
     let result = ctx.get_state_with(device_id).table.lookup(lookup_addr).cloned();
@@ -569,7 +573,7 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     if let Some(sender_protocol_addr) = ctx.get_protocol_addr(device_id) {
         let self_hw_addr = ctx.get_hardware_addr(device_id);
         // TODO(joshlf): Do something if send_frame returns an error?
-        ctx.send_frame(
+        let _ = ctx.send_frame(
             ArpFrameMetadata { device_id, dst_addr: D::HType::BROADCAST },
             ArpPacketBuilder::new(
                 ArpOp::Request,
@@ -627,7 +631,7 @@ struct ArpTable<P: Hash + Eq, H> {
 #[derive(Debug, Eq, PartialEq)] // for testing
 enum ArpValue<H> {
     // invariant: no timers exist for this entry
-    Static { hardware_addr: H },
+    _Static { hardware_addr: H },
     // invariant: a single entry expiration timer exists for this entry
     Dynamic { hardware_addr: H },
     // invariant: a single request retry timer exists for this entry
@@ -635,9 +639,11 @@ enum ArpValue<H> {
 }
 
 impl<P: Hash + Eq, H> ArpTable<P, H> {
+    // TODO(rheacock): remove `cfg(test)` when this is used
+    #[cfg(test)]
     fn insert_static(&mut self, net: P, hw: H) {
         // a static entry overrides everything, so just insert it.
-        self.table.insert(net, ArpValue::Static { hardware_addr: hw });
+        self.table.insert(net, ArpValue::_Static { hardware_addr: hw });
     }
 
     /// This function tries to insert a dynamic entry into the ArpTable, the
@@ -653,7 +659,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
             Entry::Occupied(ref mut entry) => {
                 let old_val = entry.get_mut();
                 match old_val {
-                    ArpValue::Static { .. } => {
+                    ArpValue::_Static { .. } => {
                         error!("Conflicting ARP entries: please check your manual configuration and hosts in your local network");
                         return false;
                     }
@@ -685,7 +691,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
 
     fn lookup(&self, addr: P) -> Option<&H> {
         match self.table.get(&addr) {
-            Some(ArpValue::Static { hardware_addr })
+            Some(ArpValue::_Static { hardware_addr })
             | Some(ArpValue::Dynamic { hardware_addr }) => Some(hardware_addr),
             _ => None,
         }
@@ -765,7 +771,7 @@ mod tests {
             self.get_mut().addr_resolution_failed.push(proto_addr);
         }
 
-        fn address_resolution_expired(&mut self, device_id: Self::DeviceId, proto_addr: Ipv4Addr) {
+        fn address_resolution_expired(&mut self, _device_id: Self::DeviceId, proto_addr: Ipv4Addr) {
             self.get_mut().addr_resolution_expired.push(proto_addr);
         }
     }
@@ -788,7 +794,7 @@ mod tests {
         sender_mac: Mac,
         target_mac: Mac,
     ) {
-        let mut buf = ArpPacketBuilder::new(op, sender_mac, sender_ipv4, target_mac, target_ipv4)
+        let buf = ArpPacketBuilder::new(op, sender_mac, sender_ipv4, target_mac, target_ipv4)
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
@@ -976,7 +982,7 @@ mod tests {
 
             fn address_resolution_expired(
                 &mut self,
-                device_id: Self::DeviceId,
+                _device_id: Self::DeviceId,
                 proto_addr: Ipv4Addr,
             ) {
                 self.get_mut().addr_resolution_expired.push(proto_addr);
@@ -1326,7 +1332,6 @@ mod tests {
     fn test_arp_table_static_override_waiting() {
         let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
-        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.set_waiting(ip, 4);
         assert_eq!(table.lookup(ip), None);
@@ -1338,7 +1343,6 @@ mod tests {
     fn test_arp_table_dynamic_override_waiting() {
         let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
-        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.set_waiting(ip, 4);
         assert_eq!(table.lookup(ip), None);

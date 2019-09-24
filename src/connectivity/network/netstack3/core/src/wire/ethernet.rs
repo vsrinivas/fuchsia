@@ -18,16 +18,8 @@ use crate::wire::{U16, U32};
 
 // used in PacketBuilder impl
 pub(crate) const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
-#[cfg(test)]
-pub(crate) const ETHERNET_HDR_LEN_WITH_TAG: usize = 18;
-#[cfg(test)]
-pub(crate) const ETHERNET_MIN_FRAME_LEN: usize = 60;
 // used in PacketBuilder impl
 pub(crate) const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
-#[cfg(test)]
-pub(crate) const ETHERNET_MIN_BODY_LEN_WITH_TAG: usize = 42;
-#[cfg(test)]
-pub(crate) const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
 #[cfg(test)]
 pub(crate) const ETHERNET_DST_MAC_BYTE_OFFSET: usize = 0;
 #[cfg(test)]
@@ -68,7 +60,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer
 
         let hdr_prefix = buffer
@@ -115,6 +107,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
 
 impl<B: ByteSlice> EthernetFrame<B> {
     /// The frame body.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
@@ -155,11 +149,15 @@ impl<B: ByteSlice> EthernetFrame<B> {
     // Total frame length including header prefix, tag, EtherType, and body.
     // This is not the same as the length as optionally encoded in the
     // EtherType.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn total_frame_len(&self) -> usize {
         self.header_len() + self.body.len()
     }
 
     /// Construct a builder with the same contents as this frame.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn builder(&self) -> EthernetFrameBuilder {
         EthernetFrameBuilder {
             src_mac: self.src_mac(),
@@ -238,6 +236,8 @@ mod tests {
 
     const DEFAULT_DST_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const DEFAULT_SRC_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+    const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
+    const ETHERNET_MIN_FRAME_LEN: usize = 60;
 
     // Return a buffer for testing parsing with values 0..60 except for the
     // EtherType field, which is EtherType::Arp. Also return the contents

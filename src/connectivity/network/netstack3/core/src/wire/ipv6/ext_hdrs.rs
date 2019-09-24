@@ -40,7 +40,6 @@ impl<'a> Ipv6ExtensionHeader<'a> {
 #[derive(Debug)]
 pub(crate) enum Ipv6ExtensionHeaderData<'a> {
     HopByHopOptions { options: Records<&'a [u8], HopByHopOptionsImpl> },
-    Routing { routing_data: RoutingData<'a> },
     Fragment { fragment_data: FragmentData<'a> },
     DestinationOptions { options: Records<&'a [u8], DestinationOptionsImpl> },
 }
@@ -221,7 +220,6 @@ impl Ipv6ExtensionHeaderImpl {
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
         let routing_data =
             data.take_front(2).ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
-        let routing_type = routing_data[0];
         let segments_left = routing_data[1];
 
         // Currently we do not support any routing type.
@@ -360,7 +358,7 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
             Ipv6ExtHdrType::Fragment => Self::parse_fragment(data, context),
             Ipv6ExtHdrType::DestinationOptions => Self::parse_destination_options(data, context),
 
-            _ | Ipv6ExtHdrType::Other(_) => {
+            Ipv6ExtHdrType::Other(_) | _ => {
                 if is_valid_next_header_upper_layer(expected_hdr) {
                     // Stop parsing extension headers when we find a Next Header value
                     // for a higher level protocol.
@@ -475,7 +473,7 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for HopByHopOptionDataImpl {
     fn parse_option(
         kind: u8,
         data: &'a [u8],
-        context: &mut Self::Context,
+        _context: &mut Self::Context,
         allow_unrecognized: bool,
     ) -> ExtensionHeaderOptionDataParseResult<Self::OptionData> {
         match kind {
@@ -582,17 +580,17 @@ pub(crate) struct RoutingData<'a> {
 }
 
 impl<'a> RoutingData<'a> {
-    pub(crate) fn routing_type(&self) -> u8 {
+    pub(crate) fn _routing_type(&self) -> u8 {
         debug_assert!(self.bytes.len() >= 2);
         self.bytes[0]
     }
 
-    pub(crate) fn segments_left(&self) -> u8 {
+    pub(crate) fn _segments_left(&self) -> u8 {
         debug_assert!(self.bytes.len() >= 2);
         self.bytes[1]
     }
 
-    pub(crate) fn type_specific_data(&self) -> &RoutingTypeSpecificData<'a> {
+    pub(crate) fn _type_specific_data(&self) -> &RoutingTypeSpecificData<'a> {
         &self.type_specific_data
     }
 }
@@ -600,7 +598,7 @@ impl<'a> RoutingData<'a> {
 /// Routing Type specific data.
 #[derive(Debug)]
 pub(crate) enum RoutingTypeSpecificData<'a> {
-    Other(&'a u8),
+    _Other(&'a u8),
 }
 
 //
@@ -643,7 +641,8 @@ impl<'a> FragmentData<'a> {
 //
 // Destination Options
 //
-
+// TODO(rheacock): remove `#[cfg(test)]` when this is used.
+#[cfg(test)]
 type DestinationOption<'a> = ExtensionHeaderOption<DestinationOptionData<'a>>;
 type DestinationOptionsImpl = ExtensionHeaderOptionImpl<DestinationOptionDataImpl>;
 
@@ -667,7 +666,7 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for DestinationOptionDataImpl {
     fn parse_option(
         kind: u8,
         data: &'a [u8],
-        context: &mut Self::Context,
+        _context: &mut Self::Context,
         allow_unrecognized: bool,
     ) -> ExtensionHeaderOptionDataParseResult<Self::OptionData> {
         if allow_unrecognized {
@@ -1010,12 +1009,9 @@ pub(super) fn is_valid_next_header(next_header: u8, for_fixed_header: bool) -> b
 /// we intentionally are not allowing ICMP(v4) since we are working on IPv6 packets.
 pub(super) fn is_valid_next_header_upper_layer(next_header: u8) -> bool {
     match IpProto::from(next_header) {
-        IpProto::Igmp
-        | IpProto::Tcp
-        | IpProto::Tcp
-        | IpProto::Udp
-        | IpProto::Icmpv6
-        | IpProto::NoNextHeader => true,
+        IpProto::Igmp | IpProto::Tcp | IpProto::Udp | IpProto::Icmpv6 | IpProto::NoNextHeader => {
+            true
+        }
         _ => false,
     }
 }
@@ -2145,7 +2141,7 @@ mod tests {
                 );
             let mut buf = [0u8; 16];
             ser.serialize_records(&mut buf[0..16]);
-            let base = ((i + 1) & !1);
+            let base = (i + 1) & !1;
             // we want to make sure that our RouterAlert is aligned at 2-byte boundary.
             assert_eq!(&buf[base..base + 4], &[5, 2, 0, 0]);
         }

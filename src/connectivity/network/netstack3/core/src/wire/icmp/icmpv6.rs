@@ -97,10 +97,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
         }
     }
 
-    fn parse<BV: BufferView<B>>(
-        mut buffer: BV,
-        args: IcmpParseArgs<Ipv6Addr>,
-    ) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(buffer: BV, args: IcmpParseArgs<Ipv6Addr>) -> ParseResult<Self> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
                 match peek_message_type($buffer.as_ref())? {
@@ -231,6 +228,8 @@ impl Icmpv6ParameterProblem {
         Icmpv6ParameterProblem { pointer: U32::new(pointer) }
     }
 
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn pointer(self) -> u32 {
         self.pointer.get()
     }

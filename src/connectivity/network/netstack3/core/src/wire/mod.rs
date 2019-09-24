@@ -174,6 +174,7 @@ pub(crate) fn compute_transport_checksum_serialize<A: IpAddress>(
 /// Compute the checksum used by TCP and UDP.
 ///
 /// Same as [`compute_transport_checksum_parts`] but with a single part.
+#[cfg(test)]
 pub(crate) fn compute_transport_checksum<A: IpAddress>(
     src_ip: A,
     dst_ip: A,
@@ -228,6 +229,7 @@ impl<T> MaybeParsed<T, T> {
     /// Returns [`MaybeParsed::Complete`] with `n` bytes if `buff` contains at
     /// least `n` bytes. Otherwise returns [`MaybeParsed::Incomplete`] greedily
     /// taking all the remaining bytes from `buff`
+    #[cfg(test)]
     pub(crate) fn take_from_buffer<BV: BufferView<T>>(buff: &mut BV, n: usize) -> Self
     where
         T: ByteSlice,
@@ -331,6 +333,7 @@ impl<C, I> MaybeParsed<C, I> {
     }
 
     /// Returns `true` if `self` is [`MaybeParsed::Incomplete`].
+    #[cfg(test)]
     pub(crate) fn is_incomplete(&self) -> bool {
         match self {
             MaybeParsed::Incomplete { .. } => true,
@@ -428,7 +431,10 @@ mod tests {
 
     #[test]
     fn test_maybe_parsed_map() {
-        assert_eq!(MaybeParsed::<&str, ()>::Complete("hello").map(|x| 2).unwrap(), 2);
+        assert_eq!(
+            MaybeParsed::<&str, ()>::Complete("hello").map(|x| format!("{} you", x)).unwrap(),
+            "hello you".to_string()
+        );
         assert_eq!(
             MaybeParsed::<(), &str>::Incomplete("hello")
                 .map(|_| panic!("map shouldn't be called"))

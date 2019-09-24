@@ -39,14 +39,6 @@ pub(crate) struct RecordsRaw<B, R: RecordsImplLayout> {
     context: R::Context,
 }
 
-impl<B, R: RecordsImplLayout> RecordsRaw<B, R> {
-    /// Creates a new `RecordsRaw` with the data in `bytes` and a
-    /// `context`.
-    pub(crate) fn new_with_context(bytes: B, context: R::Context) -> Self {
-        Self { bytes, context }
-    }
-}
-
 impl<B, R> RecordsRaw<B, R>
 where
     R: RecordsImplLayout<Context = ()>,
@@ -90,7 +82,7 @@ where
         bytes: &mut BV,
         context: &mut R::Context,
     ) -> MaybeParsed<Self, (B, R::Error)> {
-        let mut c = context.clone();
+        let c = context.clone();
         let mut b = LongLivedBuff::new(bytes.as_ref());
         let r = loop {
             match R::parse_raw_with_context(&mut b, context) {
@@ -121,6 +113,8 @@ where
     ///
     /// Equivalent to calling [`RecordsRaw::parse_raw_with_context`] with
     /// `context = ()`.
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     pub(crate) fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)>
     where
         R: RecordsImplLayout<Context = ()>,
@@ -138,19 +132,6 @@ where
 
     fn deref(&self) -> &[u8] {
         self.bytes.deref()
-    }
-}
-
-impl<B, R> RecordsRaw<B, R>
-where
-    B: ByteSlice,
-    R: RecordsImplLayout,
-{
-    /// Get the underlying bytes.
-    ///
-    /// `bytes` returns a reference to the byte slice backing this `RecordsRaw`.
-    pub(crate) fn bytes(&self) -> &[u8] {
-        &self.bytes
     }
 }
 
@@ -594,7 +575,7 @@ where
         // would just result in a runtime panic.
         // - B could return different bytes each time
         // - R::parse could be non-deterministic
-        let mut c = context.clone();
+        let c = context.clone();
         let mut b = LongLivedBuff::new(bytes.deref());
         while next::<_, R>(&mut b, context)?.is_some() {}
         Ok(Records { bytes, context: c })
@@ -605,8 +586,10 @@ where
     /// See `parse_bv_with_mut_context` for details on `bytes`, `context`, and
     /// return value. `parse_bv_with_context` just calls `parse_bv_with_mut_context`
     /// with a mutable reference to the `context` (which is owned).
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn parse_bv_with_context<BV: BufferView<B>>(
-        mut bytes: &mut BV,
+        bytes: &mut BV,
         mut context: R::Context,
     ) -> Result<Records<B, R>, R::Error> {
         Self::parse_bv_with_mut_context(bytes, &mut context)
@@ -624,11 +607,13 @@ where
     /// parse records, leaving the rest in the `BufferView` object. That is, when
     /// `parse_bv_with_mut_context` returns, the `BufferView` object provided will be
     /// x bytes smaller, where x is the number of bytes required to parse the records.
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn parse_bv_with_mut_context<BV: BufferView<B>>(
-        mut bytes: &mut BV,
+        bytes: &mut BV,
         context: &mut R::Context,
     ) -> Result<Records<B, R>, R::Error> {
-        let mut c = context.clone();
+        let c = context.clone();
         let mut b = LongLivedBuff::new(bytes.as_ref());
         while next::<_, R>(&mut b, context)?.is_some() {}
 
@@ -793,7 +778,6 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
 
     fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
-            let split = self.0.len() - n;
             let (rest, suffix) = std::mem::replace(&mut self.0, &[]).split_at(n);
             std::mem::replace(&mut self.0, rest);
             Some(suffix)
@@ -859,7 +843,7 @@ mod test {
 
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-            context: &mut Self::Context,
+            _context: &mut Self::Context,
         ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             parse_dummy_rec(data)
         }
@@ -1089,7 +1073,6 @@ mod test {
 
     #[test]
     fn all_records_parsing() {
-        let test = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]);
         let parsed = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
         assert_eq!(parsed.iter().count(), 4);
         for rec in parsed.iter() {
@@ -1308,7 +1291,7 @@ pub(crate) mod options {
 
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-            context: &mut Self::Context,
+            _context: &mut Self::Context,
         ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             next::<_, O>(data)
         }
@@ -1337,7 +1320,7 @@ pub(crate) mod options {
             // data not having enough space is a contract violation, so we
             // panic in that case.
             data[0] = O::get_option_kind(record);
-            let length = (Self::record_length(record) / O::OPTION_LEN_MULTIPLIER);
+            let length = Self::record_length(record) / O::OPTION_LEN_MULTIPLIER;
             // option length not fitting in u8 is a contract violation. Without
             // debug assertions on, this will cause the packet to be malformed.
             debug_assert!(length <= std::u8::MAX.into());
@@ -1715,7 +1698,7 @@ pub(crate) mod options {
                 assert_eq!(kind as usize, idx);
                 assert_eq!(data.len(), ((idx + 1) * 8) - 2);
                 let mut bytes = Vec::new();
-                for i in (2..((idx + 1) * 8)) {
+                for i in 2..((idx + 1) * 8) {
                     bytes.push(i as u8);
                 }
                 assert_eq!(data, bytes);

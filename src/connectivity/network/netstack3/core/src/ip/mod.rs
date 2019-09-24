@@ -72,6 +72,8 @@ const IPV6_ALL_ROUTERS: Ipv6Addr =
 /// `IpPacketFromArgs` is used as the metadata for the [`FrameContext`] bound
 /// required by [`BufferTransportIpContext`]. It allows sending an IP packet
 /// from a particular source address.
+// TODO(rheacock): remove `allow(dead_code)` when this is used.
+#[allow(dead_code)]
 pub struct IpPacketFromArgs<A: IpAddress> {
     pub(crate) src_ip: SpecifiedAddr<A>,
     pub(crate) dst_ip: SpecifiedAddr<A>,
@@ -506,6 +508,9 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Con
         self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
     }
 
+    // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable, but it does. Thus
+    // we `allow(unused)` here.
+    #[allow(unused)]
     fn cancel_timers_with<F: FnMut(&FragmentCacheKey<A>) -> bool>(&mut self, f: F) {
         #[specialize_ip_address]
         fn cancel_timers_with_inner<
@@ -547,7 +552,7 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
         self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
     }
 
-    fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, f: F) {
+    fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, _f: F) {
         self.dispatcher_mut()
             .cancel_timeouts_with(|id| id == &IpLayerTimerId::new_pmtu_timeout_timer_id::<I>());
     }
@@ -617,7 +622,6 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 frame_dst,
                 src_ip,
                 dst_ip,
-                proto,
                 buffer,
                 meta.header_len(),
             );
@@ -686,7 +690,6 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 frame_dst,
                 src_ip,
                 dst_ip,
-                proto,
                 buffer,
                 meta.header_len(),
             );
@@ -777,8 +780,10 @@ macro_rules! process_fragment {
                             Some(meta),
                         );
                     }
-                    // TODO(ghanan): Handle reassembly errors.
+                    // TODO(ghanan): Handle reassembly errors, remove
+                    // `allow(unreachable_patterns)` when complete.
                     _ => return,
+                    #[allow(unreachable_patterns)]
                     Err(e) => {
                         trace!("receive_ip_packet: fragmented, failed to reassemble: {:?}", e);
                     }
@@ -939,7 +944,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             trace!("receive_ipv4_packet: forwarding");
 
             packet.set_ttl(ttl - 1);
-            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+            drop_packet_and_undo_parse!(packet, buffer);
             if crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer).is_err() {
                 debug!("failed to forward IPv4 packet: MTU exceeded");
             }
@@ -1003,7 +1008,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
             code,
             pointer,
             must_send_icmp,
-            header_len,
+            header_len: _,
             action,
         }) if action.should_send_icmp(&dst_ip) && must_send_icmp => {
             send_icmpv6_parameter_problem(
@@ -1015,7 +1020,6 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 code,
                 Icmpv6ParameterProblem::new(pointer),
                 buffer,
-                header_len,
                 action.should_send_icmp_to_multicast(),
             );
             return;
@@ -1092,7 +1096,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
 
         // Handle extension headers first.
         match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
-            Ipv6PacketAction::Discard => {
+            Ipv6PacketAction::_Discard => {
                 trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
             }
             Ipv6PacketAction::Continue => {
@@ -1153,7 +1157,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
 
             // Handle extension headers first.
             match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
-                Ipv6PacketAction::Discard => {
+                Ipv6PacketAction::_Discard => {
                     trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
                     return;
                 }
@@ -1364,7 +1368,7 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 ///
 /// `is_local_addr` returns whether `addr` is the address associated with one of
 /// our local interfaces.
-pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &Context<D>, addr: A) -> bool {
+pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(_ctx: &Context<D>, _addr: A) -> bool {
     log_unimplemented!(false, "ip::is_local_addr: not implemented")
 }
 
@@ -1396,7 +1400,7 @@ pub(crate) fn send_ipv4_packet<
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
-        let mut buffer =
+        let buffer =
             get_body(Ipv4::LOOPBACK_ADDRESS).serialize_vec_outer().map_err(|(_, ser)| ser)?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
@@ -1495,7 +1499,7 @@ pub(crate) fn send_ipv6_packet<
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
-        let mut buffer =
+        let buffer =
             get_body(Ipv6::LOOPBACK_ADDRESS).serialize_vec_outer().map_err(|(_, ser)| ser)?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
@@ -1841,9 +1845,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> IcmpContext<Ipv6, B> for Context<D> {
 /// message if it returns false.
 fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-    device: DeviceId,
+    _device: DeviceId,
     src_ip: SpecifiedAddr<A>,
-    dst_ip: A,
+    _dst_ip: A,
 ) -> Option<(DeviceId, SpecifiedAddr<A>, SpecifiedAddr<A>)> {
     // TODO(joshlf): Come up with rules for when to send ICMP error messages.
     // E.g., should we send a response over a different device than the device
@@ -1957,7 +1961,7 @@ mod tests {
         let device_frames = ctx.dispatcher.frames_sent().clone();
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
-        let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
+        let _frame = buffer.parse::<EthernetFrame<_>>().unwrap();
         let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
         let (src_ip, dst_ip, proto, _) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
@@ -2072,7 +2076,7 @@ mod tests {
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
-        let mut buffer =
+        let buffer =
             Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
         receive_ipv4_packet(ctx, device, FrameDestination::Unicast, buffer);
     }
@@ -2107,7 +2111,7 @@ mod tests {
         bytes.extend(fragment_offset * 8..fragment_offset * 8 + 8);
         let payload_len = (bytes.len() - 40) as u16;
         NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
-        let mut buffer = Buf::new(bytes, ..);
+        let buffer = Buf::new(bytes, ..);
         receive_ipv6_packet(ctx, device, FrameDestination::Unicast, buffer);
     }
 
@@ -2139,7 +2143,7 @@ mod tests {
         bytes[7] = 64;
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
-        let mut buf = Buf::new(bytes, ..);
+        let buf = Buf::new(bytes, ..);
 
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
 
@@ -2186,7 +2190,7 @@ mod tests {
         bytes[7] = 64;
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
-        let mut buf = Buf::new(bytes, ..);
+        let buf = Buf::new(bytes, ..);
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
@@ -2216,7 +2220,7 @@ mod tests {
         // action = skip & continue.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::SkipAndContinue,
             false,
@@ -2231,7 +2235,7 @@ mod tests {
         // action = discard.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::DiscardPacket,
             false,
@@ -2246,7 +2250,7 @@ mod tests {
         // where dest addr is a unicast addr.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::DiscardPacketSendICMP,
             false,
@@ -2268,7 +2272,7 @@ mod tests {
         // where dest addr is a multicast addr.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::DiscardPacketSendICMP,
             true,
@@ -2290,7 +2294,7 @@ mod tests {
         // where dest addr is a unicast addr.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
             false,
@@ -2312,7 +2316,7 @@ mod tests {
         // but dest addr is a multicast addr.
         //
 
-        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+        let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
             ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
             true,
@@ -2490,7 +2494,7 @@ mod tests {
         set_routing_enabled::<_, I>(&mut alice, device, true);
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
-        let mut net = DummyNetwork::new(contexts, move |net, device_id| {
+        let mut net = DummyNetwork::new(contexts, move |net, _device_id| {
             if *net == a {
                 vec![(b.clone(), device, None)]
             } else {
@@ -2571,7 +2575,7 @@ mod tests {
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).
         // Note, the final packet will be larger because of IP header data.
         let mut rng = new_rng(70812476915813);
-        let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
+        let body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
 
         // Ip packet from some node destined to a remote on this network, arriving locally.
         let mut ipv6_packet_buf = Buf::new(body.clone(), ..)
@@ -2589,7 +2593,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Received packet should be a Packet Too Big ICMP error message.
-        let mut buf = &ctx.dispatcher.frames_sent()[0].1[..];
+        let buf = &ctx.dispatcher.frames_sent()[0].1[..];
         // The original packet's TTL gets decremented so we decrement here
         // to validate the rest of the icmp message body.
         let ipv6_packet_buf_mut: &mut [u8] = ipv6_packet_buf.as_mut();
@@ -2933,7 +2937,7 @@ mod tests {
         let ip_builder =
             Ipv6PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmp);
 
-        let mut buf = Buf::new(Vec::new(), ..)
+        let buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
             .encapsulate(ip_builder)
             .serialize_vec_outer()
@@ -2971,7 +2975,7 @@ mod tests {
         let ip_builder =
             Ipv4PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmpv6);
 
-        let mut buf = Buf::new(Vec::new(), ..)
+        let buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
             .encapsulate(ip_builder)
             .serialize_vec_outer()
@@ -2984,7 +2988,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_dest_unreachable"), 1);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let buf = &ctx.dispatcher.frames_sent()[0].1[..];
-        let (_, _, _, _, msg, code) =
+        let (_, _, _, _, _, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
                 buf,
                 |_| {},
@@ -3012,7 +3016,6 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
-        let frame_dst = FrameDestination::Unicast;
         let multi_addr = get_multicast_addr::<I::Addr>();
         let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
         let buf = Buf::new(vec![0; 10], ..)
@@ -3053,7 +3056,7 @@ mod tests {
     fn test_lookup_table_address<I: Ip>() {
         let cfg = get_dummy_config::<I::Addr>();
         let ip_address = I::LOOPBACK_ADDRESS;
-        let mut ctx =
+        let ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
         lookup_route(&ctx, ip_address);
     }
@@ -3096,7 +3099,8 @@ mod tests {
 
         // Set the new IP (this should trigger DAD).
         let ip = config.local_ip.get();
-        crate::device::add_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(ip, 128).unwrap());
+        crate::device::add_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(ip, 128).unwrap())
+            .unwrap();
 
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))

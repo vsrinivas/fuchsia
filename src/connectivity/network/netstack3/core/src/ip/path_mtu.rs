@@ -128,11 +128,11 @@ pub(crate) trait PmtuHandler<I: Ip> {
 
 impl<I: Ip, C: PmtuContext<I>> PmtuHandler<I> for C {
     fn update_pmtu_if_less(&mut self, src_ip: I::Addr, dst_ip: I::Addr, new_mtu: u32) {
-        update_pmtu_if_less(self, src_ip, dst_ip, new_mtu);
+        let _ = update_pmtu_if_less(self, src_ip, dst_ip, new_mtu);
     }
 
     fn update_pmtu_next_lower(&mut self, src_ip: I::Addr, dst_ip: I::Addr, from: u32) {
-        update_pmtu_next_lower(self, src_ip, dst_ip, from);
+        let _ = update_pmtu_next_lower(self, src_ip, dst_ip, from);
     }
 }
 
@@ -270,6 +270,8 @@ impl<I: Ip, Instant: Clone> IpLayerPathMtuCache<I, Instant> {
     /// `Some(x)` where `x` is the PMTU's last updated `Instant` in time.
     ///
     /// [`Instant`]: crate::Instant
+    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
+    #[cfg(test)]
     pub(crate) fn get_last_updated(&self, src_ip: I::Addr, dst_ip: I::Addr) -> Option<Instant> {
         self.cache.get(&PathMtuCacheKey::new(src_ip, dst_ip)).map(|x| x.last_updated.clone())
     }
@@ -350,7 +352,7 @@ pub(crate) fn handle_pmtu_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
     // This will be ok because the next time we try to send a packet to some
     // node, we will update the PMTU with the first known potential PMTU (the
     // first link's (connected to the node attempting PMTU discovery)) PMTU.
-    cache.cache.retain(|k, v| {
+    cache.cache.retain(|_k, v| {
         // We know the call to `duration_since` will not panic because all the
         // entries in the cache should have been updated before this timer/PMTU
         // maintenance task was run. Therefore, `curr_time` will be greater than
@@ -405,12 +407,18 @@ fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
 pub(crate) mod testutil {
     use super::*;
 
+    // TODO(rheacock): remove `#[allow(dead_code)]` when the impl_pmtu_handler
+    // macro is used.
+    #[allow(dead_code)]
     pub(crate) struct UpdatePmtuIfLessArgs<A: IpAddress> {
         pub(crate) src_ip: A,
         pub(crate) dst_ip: A,
         pub(crate) new_mtu: u32,
     }
 
+    // TODO(rheacock): remove `#[allow(dead_code)]` when the impl_pmtu_handler
+    // macro is used.
+    #[allow(dead_code)]
     pub(crate) struct UpdatePmtuNextLowerArgs<A: IpAddress> {
         pub(crate) src_ip: A,
         pub(crate) dst_ip: A,
