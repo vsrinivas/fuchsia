@@ -27,4 +27,22 @@ llvm::DWARFDie MockLineTable::GetSubroutineForRow(const llvm::DWARFDebugLine::Ro
   return llvm::DWARFDie();
 }
 
+// static
+LineTable::Row MockLineTable::MakeStatementRow(uint64_t address, uint16_t file, uint32_t line) {
+  llvm::DWARFDebugLine::Row result;
+  result.Address = address;
+  result.Line = line;
+  result.Column = 0;
+  result.File = file;
+  result.Discriminator = 0;
+  result.Isa = 0;
+  result.IsStmt = 1;
+  result.BasicBlock = 0;
+  result.EndSequence = 0;
+  result.PrologueEnd = 0;
+  result.EpilogueBegin = 0;
+
+  return result;
+}
+
 }  // namespace zxdb

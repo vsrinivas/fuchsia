@@ -11,6 +11,8 @@ namespace zxdb {
 
 class MockLineTable : public LineTable {
  public:
+  // Note: The file name table uses a 0-based index, while the "File" member of the row table is
+  // 1-based.
   using FileNameVector = std::vector<std::string>;
   using RowVector = std::vector<llvm::DWARFDebugLine::Row>;
 
@@ -22,6 +24,13 @@ class MockLineTable : public LineTable {
   const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
   std::optional<std::string> GetFileNameByIndex(uint64_t file_id) const override;
   llvm::DWARFDie GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const override;
+
+  // Helper to construct a line table row.
+  //
+  // Note that the |file| is a 1-based number (subtract 1 to index into file_names_).
+  //
+  // All flags will be set to 0 except is_statement which will be true.
+  static Row MakeStatementRow(uint64_t address, uint16_t file, uint32_t line);
 
  private:
   FileNameVector file_names_;

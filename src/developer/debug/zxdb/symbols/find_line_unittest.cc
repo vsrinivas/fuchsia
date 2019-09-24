@@ -9,42 +9,21 @@
 
 namespace zxdb {
 
-namespace {
-
-llvm::DWARFDebugLine::Row MakeStatementRow(uint64_t address, uint16_t file, uint32_t line) {
-  llvm::DWARFDebugLine::Row result;
-  result.Address = address;
-  result.Line = line;
-  result.Column = 0;
-  result.File = file;
-  result.Discriminator = 0;
-  result.Isa = 0;
-  result.IsStmt = 1;
-  result.BasicBlock = 0;
-  result.EndSequence = 0;
-  result.PrologueEnd = 0;
-  result.EpilogueBegin = 0;
-
-  return result;
-}
-
-}  // namespace
-
 TEST(FindLine, GetAllLineTableMatchesInUnit) {
   MockLineTable::FileNameVector files;
   files.push_back("file1.cc");  // Name for file ID #1.
   files.push_back("file2.cc");  // Name for file ID #2.
 
   MockLineTable::RowVector rows;
-  rows.push_back(MakeStatementRow(0x1000, 1, 1));  // File #1, line 1.
-  rows.push_back(MakeStatementRow(0x1001, 1, 2));
-  rows.push_back(MakeStatementRow(0x1002, 2, 1));  // File #2, line 1.
-  rows.push_back(MakeStatementRow(0x1003, 1, 1));  // Dupe for File 1, line 1.
-  rows.push_back(MakeStatementRow(0x1004, 1, 90));
-  rows.push_back(MakeStatementRow(0x1005, 1, 100));
-  rows.push_back(MakeStatementRow(0x1006, 1, 95));
-  rows.push_back(MakeStatementRow(0x1007, 1, 100));
-  rows.push_back(MakeStatementRow(0x1008, 1, 98));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1000, 1, 1));  // File #1, line 1.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1001, 1, 2));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1002, 2, 1));  // File #2, line 1.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1003, 1, 1));  // Dupe for File 1, line 1.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1004, 1, 90));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1005, 1, 100));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1006, 1, 95));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1007, 1, 100));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1008, 1, 98));
 
   MockLineTable table(files, rows);
 
@@ -54,8 +33,7 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   EXPECT_EQ(LineMatch(0x1000, 1, 0), out[0]);
   EXPECT_EQ(LineMatch(0x1003, 1, 0), out[1]);
 
-  // Searching for line 99 should catch both the 90->100 and the 95->100
-  // transitions.
+  // Searching for line 99 should catch both the 90->100 and the 95->100 transitions.
   out = GetAllLineTableMatchesInUnit(table, "file1.cc", 99);
   ASSERT_EQ(2u, out.size());
   EXPECT_EQ(LineMatch(0x1005, 100, 0), out[0]);
@@ -66,17 +44,17 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   EXPECT_TRUE(out.empty());
 }
 
-// Out-of-order lines. In this case there was some later code moved before
-// the line being searched for, even though the transition of addresses
-// goes in the opposite direction (high to low), we should find the line.
+// Out-of-order lines. In this case there was some later code moved before the line being searched
+// for, even though the transition of addresses goes in the opposite direction (high to low), we
+// should find the line.
 TEST(FindLine, GetAllLineTableMatchesInUnit_Reverse) {
   MockLineTable::FileNameVector files = {"file1.cc"};
 
   MockLineTable::RowVector rows;
-  rows.push_back(MakeStatementRow(0x1000, 1, 105));  // Later code moved before.
-  rows.push_back(MakeStatementRow(0x1001, 1, 101));  // Best match.
-  rows.push_back(MakeStatementRow(0x1002, 1, 91));   //
-  rows.push_back(MakeStatementRow(0x1003, 1, 103));  // Less-good match.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1000, 1, 105));  // Later code moved before.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1001, 1, 101));  // Best match.
+  rows.push_back(MockLineTable::MakeStatementRow(0x1002, 1, 91));   //
+  rows.push_back(MockLineTable::MakeStatementRow(0x1003, 1, 103));  // Less-good match.
 
   MockLineTable table(files, rows);
 
@@ -96,8 +74,7 @@ TEST(FindLine, GetBestLineMatches) {
   ASSERT_EQ(1u, out.size());
   EXPECT_EQ(LineMatch(0x1001, 7, 0), out[0]);
 
-  // When the smallest match has dupes, all should be returned assuming
-  // the functions are different.
+  // When the smallest match has dupes, all should be returned assuming the functions are different.
   out = GetBestLineMatches({LineMatch(0x1000, 10, 0), LineMatch(0x1001, 20, 1),
                             LineMatch(0x1002, 10, 2), LineMatch(0x1003, 30, 3)});
   ASSERT_EQ(2u, out.size());
