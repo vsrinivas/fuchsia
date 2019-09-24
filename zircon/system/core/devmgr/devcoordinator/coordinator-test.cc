@@ -797,7 +797,11 @@ class MultipleDeviceTestCase : public zxtest::Test {
  public:
   ~MultipleDeviceTestCase() override = default;
 
-  async::Loop* loop() { return &loop_; }
+  async::Loop* coordinator_loop() { return &coordinator_loop_; }
+  bool coordinator_loop_thread_running() { return coordinator_loop_thread_running_; }
+  void set_coordinator_loop_thread_running(bool value) {
+    coordinator_loop_thread_running_ = value;
+  }
   devmgr::Coordinator* coordinator() { return &coordinator_; }
 
   devmgr::Devhost* devhost() { return &devhost_; }
@@ -832,10 +836,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
     // Set up the sys device proxy, inside of the devhost
     ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_));
-    loop_.RunUntilIdle();
+    coordinator_loop_.RunUntilIdle();
     ASSERT_NO_FATAL_FAILURES(
         CheckCreateDeviceReceived(devhost_remote_, kSystemDriverPath, &sys_proxy_remote_));
-    loop_.RunUntilIdle();
+    coordinator_loop_.RunUntilIdle();
 
     // Create a child of the sys_device (an equivalent of the platform bus)
     {
@@ -847,19 +851,25 @@ class MultipleDeviceTestCase : public zxtest::Test {
           0 /* props_count */, "platform-bus", 0, nullptr /* driver_path */, nullptr /* args */,
           false /* invisible */, zx::channel() /* client_remote */, &platform_bus_.device);
       ASSERT_OK(status);
-      loop_.RunUntilIdle();
+      coordinator_loop_.RunUntilIdle();
     }
   }
 
   void TearDown() override {
-    loop_.RunUntilIdle();
+    if (!coordinator_loop_thread_running_) {
+      coordinator_loop_.RunUntilIdle();
+    }
     // Remove the devices in the opposite order that we added them
     while (!devices_.is_empty()) {
       devices_.pop_back();
-      loop_.RunUntilIdle();
+      if (!coordinator_loop_thread_running_) {
+        coordinator_loop_.RunUntilIdle();
+      }
     }
     platform_bus_.device.reset();
-    loop_.RunUntilIdle();
+    if (!coordinator_loop_thread_running_) {
+      coordinator_loop_.RunUntilIdle();
+    }
 
     devhost_.devices().clear();
   }
@@ -881,9 +891,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   // These should be listed after devhost/sys_proxy as it needs to be
   // destroyed before them.
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  bool coordinator_loop_thread_running_ = false;
   devmgr::BootArgs boot_args_;
-  devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher(), &boot_args_)};
+  devmgr::Coordinator coordinator_{DefaultConfig(coordinator_loop_.dispatcher(), &boot_args_)};
 
   // A list of all devices that were added during this test, and their
   // channels.  These exist to keep them alive until the test is over.
@@ -903,7 +914,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
       zx::channel() /* client_remote */, &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
-  loop_.RunUntilIdle();
+  coordinator_loop_.RunUntilIdle();
 
   devices_.push_back(std::move(state));
   *index = devices_.size() - 1;
@@ -914,7 +925,7 @@ void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
   ASSERT_OK(coordinator_.RemoveDevice(state.device, false));
   state.device.reset();
   state.remote.reset();
-  loop_.RunUntilIdle();
+  coordinator_loop_.RunUntilIdle();
 }
 
 bool MultipleDeviceTestCase::DeviceHasPendingMessages(const zx::channel& remote) {
@@ -944,8 +955,9 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
     ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
 
     suspend_cb(flags);
-    loop()->RunUntilIdle();
-
+    if (!coordinator_loop_thread_running()) {
+      coordinator_loop()->RunUntilIdle();
+    }
     int thread_status;
     ASSERT_EQ(thrd_join(fshost_thrd, &thread_status), thrd_success);
     ASSERT_TRUE(thread_status);
@@ -955,7 +967,9 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
         coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0), nullptr));
   } else {
     suspend_cb(flags);
-    loop()->RunUntilIdle();
+    if (!coordinator_loop_thread_running()) {
+      coordinator_loop()->RunUntilIdle();
+    }
 
     // Make sure that vfs_exit() didn't happen.
     ASSERT_EQ(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT | FSHOST_SIGNAL_EXIT_DONE,
@@ -1120,7 +1134,7 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
     ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(device(desc.index)->device,
                                                                          unbind_target_device));
   }
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   while (num_to_unbind > 0) {
     bool made_progress = false;
@@ -1159,7 +1173,7 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
     }
     // Make sure we're not stuck waiting
     ASSERT_TRUE(made_progress);
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
   }
 
   // Now check that we receive the removals in the expected order, leaf first.
@@ -1193,7 +1207,7 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
 
     // Make sure we're not stuck waiting
     ASSERT_TRUE(made_progress);
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
   }
 
   for (size_t i = 0; i < num_devices; i++) {
@@ -1206,20 +1220,20 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
 TEST_F(UnbindTestCase, UnbindSysDevice) {
   // Since the sys device is immortal, only its children will be unbound.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
 
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_remote()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_remote()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
   ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
@@ -1232,20 +1246,20 @@ TEST_F(UnbindTestCase, UnbindWhileRemovingProxy) {
 
   // Since the sys device is immortal, only its children will be unbound.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
 
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_remote()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_remote()));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
   ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
@@ -1259,15 +1273,15 @@ TEST_F(UnbindTestCase, NumRemovals) {
   auto* child_device = device(child_index);
 
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Make sure the coordinator device does not detect the devhost's channel closing,
   // otherwise it will try to remove an already dead device and we will get a log error.
   child_device->remote.reset();
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(child_device->device->num_removal_attempts(), 1);
 }
@@ -1279,7 +1293,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
 
   auto* parent_device = device(parent_index);
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the request until we add the device.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(parent_device->remote));
@@ -1294,11 +1308,11 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
                                   nullptr /* driver_path */, nullptr /* args */,
                                   false /* invisible */, zx::channel() /* client_remote */, &child);
   ASSERT_NOT_OK(status);
-  loop_.RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Complete the original parent unbind.
   ASSERT_NO_FATAL_FAILURES(SendRemoveReply(parent_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 }
 
 TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
@@ -1317,13 +1331,13 @@ TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
   // Schedule concurrent removals.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 }
 
 TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
@@ -1339,12 +1353,12 @@ TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
     ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(idx_map[i])->device));
   }
 
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   for (size_t i = 0; i < num_devices; i++) {
     ASSERT_NO_FATAL_FAILURES(
         CheckRemoveReceivedAndReply(device(idx_map[num_devices - i - 1])->remote));
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
   }
 }
 
@@ -1362,14 +1376,14 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
   auto* child_device = device(child_index);
 
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the unbind request.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->remote));
 
   // Close the parent device's channel to trigger a forced removal of the parent and child.
   parent_device->remote = zx::channel();
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
   ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
@@ -1395,17 +1409,17 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
   auto* child_device = device(child_index);
 
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(child_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the remove request.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(child_device->remote));
 
   // Close the parent device's channel to trigger a forced removal of the parent and child.
   parent_device->remote = zx::channel();
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
   ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
@@ -1442,23 +1456,23 @@ TEST_F(UnbindTestCase, RemoveParentWhileRemovingChild) {
   // the unbind task will complete immediately. The remove task will be waiting
   // on the grandchild's remove to complete.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Start removing the parent.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(grandchild_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(grandchild_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 }
 
 class SuspendTestCase : public MultipleDeviceTestCase {
@@ -1549,7 +1563,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
 
     // Make sure we're not stuck waiting
     ASSERT_TRUE(made_progress);
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
   }
 
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
@@ -1578,7 +1592,7 @@ void SuspendTestCase::StateTest(zx_status_t suspend_status,
   ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kSuspending);
 
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(index)->remote, suspend_status));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);
 }
@@ -1609,7 +1623,7 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
                 &child_index));
 
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // The child should be unbound first.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(child_index)->remote));
@@ -1618,13 +1632,13 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
 
   ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(child_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(child_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // The suspend task should complete but not send a suspend message.
   ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->remote));
@@ -1648,32 +1662,32 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   // Don't reply to the suspend yet.
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(child_index)->remote, flags));
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Check that the child device has not yet started unbinding.
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->remote));
 
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->remote, ZX_OK));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // The parent should have started suspending. Don't reply yet.
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(parent_index)->remote, flags));
 
   // Finish unbinding the child.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(device(child_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(child_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Finish suspending the parent.
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(parent_index)->remote, ZX_OK));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
 
   // The parent should now be removed.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 }
 
 void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
@@ -1686,7 +1700,7 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
     // Check that the components got bound
     fbl::String driver = coordinator()->component_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the component driver would send
     char name[32];
@@ -1945,7 +1959,7 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
   ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
                                                   fbl::count_of(device_indexes),
                                                   component_device2_indexes, &composite2_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   {
     auto device1 = device(device_indexes[1])->device;
@@ -1967,7 +1981,7 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
   }
   // Remove device 0 and its children (component and composite devices).
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(device_indexes[0])->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   zx::channel& device_remote = device(device_indexes[0])->remote;
   zx::channel& component1_remote = device(component_device1_indexes[0])->remote;
@@ -1984,12 +1998,12 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
 
   ASSERT_NO_FATAL_FAILURES(SendUnbindReply(component1_remote));
   ASSERT_NO_FATAL_FAILURES(SendUnbindReply(component2_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // The composites should start unbinding since the components finished unbinding.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite1_remote));
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite2_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // We are still waiting for the composites to be removed.
   ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
@@ -1999,14 +2013,14 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
   // Finish removing the composites.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite1_remote));
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite2_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
 
   // Finish removing the components.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(component1_remote));
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(component2_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device_remote));
 
@@ -2018,7 +2032,7 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
     // Wait for the components to get bound
     fbl::String driver = coordinator()->component_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the component driver would send
     ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "composite-dev1-comp-device-0", 0,
@@ -2029,7 +2043,7 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
     // Wait for the components to get bound
     fbl::String driver = coordinator()->component_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the component driver would send
     ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "composite-dev2-comp-device-0", 0,
@@ -2066,7 +2080,7 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
   ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
                                                   fbl::count_of(device_indexes),
                                                   component_device_indexes, &composite_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   {
     auto device1 = device(device_indexes[1])->device;
@@ -2081,7 +2095,7 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
   }
   // Remove device 0 and its children (component and composite devices).
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(device_indexes[0])->device));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   zx::channel& device_remote = device(device_indexes[0])->remote;
   zx::channel& component_remote = device(component_device_indexes[0])->remote;
@@ -2092,13 +2106,13 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
 
   // Check the component and composite are unbound.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(component_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
   ASSERT_FALSE(DeviceHasPendingMessages(component_remote));
 
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Still waiting for the composite to be removed.
   ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
@@ -2106,16 +2120,16 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
 
   // Finish removing the composite.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
 
   // Finish removing the component.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(component_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device_remote));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURES(
@@ -2125,7 +2139,7 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
     // Wait for the components to get bound
     fbl::String driver = coordinator()->component_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-    loop()->RunUntilIdle();
+    coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the component driver would send
     ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "component-device-0", 0, driver,
@@ -2174,7 +2188,7 @@ TEST_F(CompositeTestCase, SuspendOrder) {
   }
   // The composite should have been the first to get one
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(composite_remote, suspend_flags, ZX_OK));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Next, all of the internal component devices should have them, but none of the devices
   // themselves
@@ -2185,18 +2199,18 @@ TEST_F(CompositeTestCase, SuspendOrder) {
   for (auto idx : component_device_indexes) {
     ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(idx)->remote, suspend_flags, ZX_OK));
   }
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Next, the devices should get them
   ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
   for (auto idx : device_indexes) {
     ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(idx)->remote, suspend_flags, ZX_OK));
   }
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 
   // Finally, the platform bus driver, which is the parent of all of the devices
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), suspend_flags, ZX_OK));
-  loop()->RunUntilIdle();
+  coordinator_loop()->RunUntilIdle();
 }
 
 // Make sure we receive devfs notifications when composite devices appear
@@ -2280,22 +2294,26 @@ TEST_F(CompositeTestCase, Topology) {
 }
 
 // Disable the test as it is flaking fxb/34842
-/*TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
-  ASSERT_OK(loop()->StartThread("DevCoordTestLoop"));
+TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
 
   async::Wait suspend_task_pbus(
       platform_bus_remote().get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(platform_bus_remote(), DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
-  ASSERT_OK(suspend_task_pbus.Begin(loop()->dispatcher()));
+  ASSERT_OK(suspend_task_pbus.Begin(devhost_loop.dispatcher()));
 
   async::Wait suspend_task_sys(
       sys_proxy_remote_.get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(sys_proxy_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
-  ASSERT_OK(suspend_task_sys.Begin(loop()->dispatcher()));
+  ASSERT_OK(suspend_task_sys.Begin(devhost_loop.dispatcher()));
 
   zx::channel services, services_remote;
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
@@ -2319,7 +2337,7 @@ TEST_F(CompositeTestCase, Topology) {
   ASSERT_TRUE(callback_executed);
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_FALSE(suspend_task_sys.is_pending());
-}*/
+}
 
 }  // namespace
 
