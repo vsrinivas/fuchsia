@@ -12,6 +12,10 @@ MemoryAllocator::~MemoryAllocator() {
   }
 }
 
+void MemoryAllocator::set_ready() { ZX_PANIC("not implemented"); }
+
+bool MemoryAllocator::is_ready() { return true; }
+
 void MemoryAllocator::AddDestroyCallback(intptr_t key, fit::callback<void()> callback) {
   ZX_DEBUG_ASSERT(destroy_callbacks_.find(key) == destroy_callbacks_.end());
   destroy_callbacks_[key] = std::move(callback);

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
+#include "contiguous_pooled_memory_allocator.h"
+
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/vmar.h>
-#include <zxtest/zxtest.h>
 
 #include <vector>
 
-#include "contiguous_pooled_memory_allocator.h"
+#include <ddk/platform-defs.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -30,22 +31,24 @@ class FakeOwner : public MemoryAllocator::Owner {
 
 class ContiguousPooledSystem : public zxtest::Test {
  public:
-  ContiguousPooledSystem()
-    : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount, true) {
+  ContiguousPooledSystem() : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
+      true,  // is_cpu_accessible
+      false) {  // is_ready
     // nothing else to do here
   }
 
  protected:
-   static constexpr uint32_t kVmoSize = 4096;
-   static constexpr uint32_t kVmoCount = 1024;
-   static constexpr char kVmoName[] = "test-pool";
+  static constexpr uint32_t kVmoSize = 4096;
+  static constexpr uint32_t kVmoCount = 1024;
+  static constexpr char kVmoName[] = "test-pool";
 
-   FakeOwner fake_owner_;
-   ContiguousPooledMemoryAllocator allocator_;
+  FakeOwner fake_owner_;
+  ContiguousPooledMemoryAllocator allocator_;
 };
 
 TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
   EXPECT_OK(allocator_.Init());
+  allocator_.set_ready();
 
   char name[ZX_MAX_NAME_LEN] = {};
   EXPECT_OK(allocator_.GetPoolVmoForTest().get_property(ZX_PROP_NAME, name, sizeof(name)));
@@ -59,6 +62,7 @@ TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
 
 TEST_F(ContiguousPooledSystem, Full) {
   EXPECT_OK(allocator_.Init());
+  allocator_.set_ready();
 
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
@@ -90,6 +94,7 @@ TEST_F(ContiguousPooledSystem, Full) {
 
 TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
   EXPECT_OK(allocator_.Init());
+  allocator_.set_ready();
 
   zx_paddr_t base;
   size_t size;
@@ -101,6 +106,7 @@ TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
 TEST_F(ContiguousPooledSystem, InitPhysical) {
   // Using fake-bti and the FakeOwner above, it won't be a real physical VMO anyway.
   EXPECT_OK(allocator_.InitPhysical(FAKE_BTI_PHYS_ADDR));
+  allocator_.set_ready();
 
   zx_paddr_t base;
   size_t size;
@@ -109,6 +115,16 @@ TEST_F(ContiguousPooledSystem, InitPhysical) {
   EXPECT_EQ(size, kVmoSize * kVmoCount);
 
   zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+}
+
+TEST_F(ContiguousPooledSystem, SetReady) {
+  EXPECT_OK(allocator_.Init());
+  EXPECT_FALSE(allocator_.is_ready());
+  zx::vmo vmo;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, allocator_.Allocate(kVmoSize, &vmo));
+  allocator_.set_ready();
+  EXPECT_TRUE(allocator_.is_ready());
   EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
 }
 

@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_
+
+#include <lib/zx/bti.h>
+#include <zircon/limits.h>
 
 #include <fbl/vector.h>
-#include <lib/zx/bti.h>
 #include <region-alloc/region-alloc.h>
-#include <zircon/limits.h>
 
 #include "allocator.h"
 
 class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
-  ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
-                                           uint64_t size, bool is_cpu_accessible);
+  ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name, uint64_t size,
+                                  bool is_cpu_accessible, bool is_ready);
 
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
@@ -36,6 +38,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
     return ZX_OK;
   }
 
+  void set_ready() override;
+  bool is_ready() override;
+
   const zx::vmo& GetPoolVmoForTest() { return contiguous_vmo_; }
 
  private:
@@ -50,4 +55,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};
+  bool is_ready_{};
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_

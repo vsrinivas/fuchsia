@@ -244,8 +244,10 @@ zx_status_t Device::Bind() {
   }
 
   if (contiguous_memory_size) {
+    constexpr bool kIsCpuAccessible = true;
+    constexpr bool kIsReady = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemContiguousPool", contiguous_memory_size, true);
+        this, "SysmemContiguousPool", contiguous_memory_size, kIsCpuAccessible, kIsReady);
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -257,8 +259,10 @@ zx_status_t Device::Bind() {
 
   // TODO: Separate protected memory allocator into separate driver or library
   if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
+    constexpr bool kIsCpuAccessible = false;
+    constexpr bool kIsReady = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemAmlogicProtectedPool", protected_memory_size, false);
+        this, "SysmemAmlogicProtectedPool", protected_memory_size, kIsCpuAccessible, kIsReady);
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
     status = amlogic_allocator->Init(16);
@@ -358,6 +362,9 @@ zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
     return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, 0u,
                                                                       0u);
   }
+
+  // TODO(dustingreen): In a later change we'll fix this being marked ready too soon.
+  protected_allocator_->set_ready();
 
   uint64_t base;
   uint64_t size;

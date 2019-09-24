@@ -9,19 +9,21 @@
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_device,
                                                                  const char* allocation_name,
                                                                  uint64_t size,
-                                                                 bool is_cpu_accessible)
+                                                                 bool is_cpu_accessible,
+                                                                 bool is_ready)
     : parent_device_(parent_device),
       allocation_name_(allocation_name),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
       size_(size),
-      is_cpu_accessible_(is_cpu_accessible) {}
+      is_cpu_accessible_(is_cpu_accessible),
+      is_ready_(is_ready) {}
 
 zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2,
                                                   &local_contiguous_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Could allocate contiguous memory, status %d allocation_name_: %s\n", status,
+    DRIVER_ERROR("Could not allocate contiguous memory, status %d allocation_name_: %s", status,
                  allocation_name_);
     return status;
   }
@@ -33,7 +35,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitPhysical(zx_paddr_t paddr) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = parent_device_->CreatePhysicalVmo(paddr, size_, &local_contiguous_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed to create physical VMO: %d allocation_name_: %s\n", status,
+    DRIVER_ERROR("Failed to create physical VMO: %d allocation_name_: %s", status,
                  allocation_name_);
     return status;
   }
@@ -45,7 +47,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
   zx_status_t status =
       local_contiguous_vmo.set_property(ZX_PROP_NAME, allocation_name_, strlen(allocation_name_));
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d\n", status);
+    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
     return status;
   }
 
@@ -94,12 +96,12 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
       // can't rely on local_contiguous_vmo being a physical VMO.
       if (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PAGED) {
         DRIVER_ERROR(
-            "Ignoring failure to set_cache_policy() on contig VMO - see ZX-4807 - status: %d\n",
+            "Ignoring failure to set_cache_policy() on contig VMO - see ZX-4807 - status: %d",
             status);
         status = ZX_OK;
         goto keepGoing;
       }
-      DRIVER_ERROR("Failed to set_cache_policy(): %d\n", status);
+      DRIVER_ERROR("Failed to set_cache_policy(): %d", status);
       return status;
     }
   }
@@ -113,7 +115,7 @@ keepGoing:;
   status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
                                      local_contiguous_vmo, 0, size_, &addrs, 1, &pmt);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Could not pin memory, status %d\n", status);
+    DRIVER_ERROR("Could not pin memory, status %d", status);
     return status;
   }
 
@@ -126,6 +128,10 @@ keepGoing:;
 }
 
 zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
+  if (!is_ready_) {
+    DRIVER_ERROR("not yet ready - allocation_name_: %s", allocation_name_);
+    return ZX_ERR_BAD_STATE;
+  }
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
 
@@ -134,7 +140,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
   // The "region" param is an out ref.
   zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region);
   if (status != ZX_OK) {
-    DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d\n", size, status);
+    DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d", size, status);
     DumpPoolStats();
     return status;
   }
@@ -142,7 +148,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
   // The result_parent_vmo created here is a VMO window to a sub-region of contiguous_vmo_.
   status = contiguous_vmo_.create_child(ZX_VMO_CHILD_SLICE, region->base, size, &result_parent_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.create_child(ZX_VMO_CHILD_SLICE, ...): %d\n", status);
+    DRIVER_ERROR("Failed vmo.create_child(ZX_VMO_CHILD_SLICE, ...): %d", status);
     return status;
   }
 
@@ -151,7 +157,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
   const char* kSysmemContig = "sysmem-contig";
   status = result_parent_vmo.set_property(ZX_PROP_NAME, kSysmemContig, strlen(kSysmemContig));
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d\n", status);
+    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
     return status;
   }
 
@@ -173,6 +179,10 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   // ~parent_vmo
 }
 
+void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
+
+bool ContiguousPooledMemoryAllocator::is_ready() { return is_ready_; }
+
 void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   uint64_t unused_size = 0;
   uint64_t max_free_size = 0;
@@ -185,7 +195,7 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
 
   DRIVER_ERROR(
       "%s unused total: %ld bytes, max free size %ld bytes "
-      "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu\n",
+      "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu",
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
 }
