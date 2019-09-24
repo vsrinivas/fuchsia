@@ -33,7 +33,7 @@ static constexpr uint32_t kVirtioQcowBlockCount = kDefaultHeaderV2.size / kBlock
 static constexpr off_t kMiddleOffset = 17;
 static constexpr off_t kBlockTestOffsets[] = {0, kMiddleOffset, kVirtioBlockCount - 1};
 static constexpr off_t kQcowBlockTestOffsets[] = {0, kMiddleOffset,
-                                                     (kClusterSize / kBlockSectorSize) - 1};
+                                                  (kClusterSize / kBlockSectorSize) - 1};
 
 // Ensure that the offset we chose is less than the last offset.
 static_assert(kMiddleOffset < kVirtioBlockCount - 1, "Virtio raw test offset is too large.");
@@ -41,22 +41,6 @@ static_assert(kMiddleOffset < (kClusterSize / kBlockSectorSize) - 1,
               "Virtio qcow test offset is too large.");
 
 static constexpr off_t kQcowUnmappedClusterOffset = ClusterOffset(2) / kBlockSectorSize;
-
-static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> block_device(
-    fuchsia::virtualization::BlockMode mode, fuchsia::virtualization::BlockFormat format, int fd) {
-  zx_handle_t handle;
-  zx_status_t status = fdio_get_service_handle(fd, &handle);
-  FXL_CHECK(status == ZX_OK) << "Failed to get temporary file handle";
-
-  std::vector<fuchsia::virtualization::BlockDevice> block_devices;
-  block_devices.push_back({
-      "test_device",
-      mode,
-      format,
-      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)).Bind(),
-  });
-  return block_devices;
-}
 
 static zx_status_t write_raw_file(int fd) {
   int ret = ftruncate(fd, kVirtioBlockCount * kBlockSectorSize);
@@ -127,8 +111,111 @@ static zx_status_t write_qcow_file(int fd) {
   return ZX_OK;
 }
 
-template <fuchsia::virtualization::BlockMode Mode, fuchsia::virtualization::BlockFormat Format>
-class VirtioBlockZirconGuest : public ZirconEnclosedGuest {
+struct TestDevice {
+  std::string id;
+  fuchsia::virtualization::BlockFormat format;
+  fuchsia::virtualization::BlockMode mode;
+  uint8_t pci_bus;
+  uint8_t pci_device;
+  std::string file_path = "/tmp/guest-test.XXXXXX";
+};
+
+static zx_status_t create_test_device(TestDevice* test_device,
+                                      fuchsia::virtualization::BlockDevice* block_device) {
+  fbl::unique_fd fd(mkstemp(test_device->file_path.data()));
+  if (!fd) {
+    FXL_LOG(ERROR) << "Failed to create temporary file";
+    return ZX_ERR_IO;
+  }
+
+  zx_status_t status = ZX_ERR_BAD_STATE;
+  if (test_device->format == fuchsia::virtualization::BlockFormat::RAW) {
+    status = write_raw_file(fd.get());
+  } else if (test_device->format == fuchsia::virtualization::BlockFormat::QCOW) {
+    status = write_qcow_file(fd.get());
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel channel;
+  status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  block_device->id = test_device->id;
+  block_device->format = test_device->format;
+  block_device->mode = test_device->mode;
+  block_device->file = fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)).Bind();
+
+  return ZX_OK;
+}
+
+class VirtioBlockTestGuest {
+ public:
+  zx_status_t CreateBlockDevices(uint8_t device_count,
+                                 fuchsia::virtualization::LaunchInfo* launch_info) {
+    zx_status_t status;
+
+    test_devices_.push_back({
+        .id = "raw_read_write",
+        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .mode = fuchsia::virtualization::BlockMode::READ_WRITE,
+        .pci_bus = 0,
+        .pci_device = device_count++,
+    });
+    test_devices_.push_back({
+        .id = "raw_read_only",
+        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+        .pci_bus = 0,
+        .pci_device = device_count++,
+    });
+    test_devices_.push_back({
+        .id = "raw_volatile_write",
+        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
+        .pci_bus = 0,
+        .pci_device = device_count++,
+    });
+    test_devices_.push_back({
+        .id = "qcow_read_only",
+        .format = fuchsia::virtualization::BlockFormat::QCOW,
+        .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+        .pci_bus = 0,
+        .pci_device = device_count++,
+    });
+    test_devices_.push_back({
+        .id = "qcow_volatile_write",
+        .format = fuchsia::virtualization::BlockFormat::QCOW,
+        .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
+        .pci_bus = 0,
+        .pci_device = device_count++,
+    });
+
+    std::vector<fuchsia::virtualization::BlockDevice> block_devices;
+    for (auto& test_device : test_devices_) {
+      fuchsia::virtualization::BlockDevice block_device;
+      status = create_test_device(&test_device, &block_device);
+      if (status != ZX_OK) {
+        return status;
+      }
+      block_devices.push_back(std::move(block_device));
+    }
+
+    launch_info->block_devices = std::move(block_devices);
+
+    return ZX_OK;
+  }
+
+  const std::vector<TestDevice>& TestDevices() const { return test_devices_; }
+
+ private:
+  std::vector<TestDevice> test_devices_;
+};
+
+class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTestGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
@@ -136,34 +223,21 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest {
       return status;
     }
 
-    fbl::unique_fd fd(mkstemp(file_path_.data()));
-    if (!fd) {
-      FXL_LOG(ERROR) << "Failed to create temporary file";
-      return ZX_ERR_IO;
-    }
+    // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
+    // slot assignment.
+    launch_info->args->push_back("--virtio-balloon=false");
+    launch_info->args->push_back("--virtio-gpu=false");
+    launch_info->args->push_back("--virtio-magma=false");
+    launch_info->args->push_back("--virtio-net=false");
+    launch_info->args->push_back("--virtio-rng=false");
+    launch_info->args->push_back("--virtio-vsock=false");
 
-    status = ZX_ERR_BAD_STATE;
-    if (Format == fuchsia::virtualization::BlockFormat::RAW) {
-      status = write_raw_file(fd.get());
-    } else if (Format == fuchsia::virtualization::BlockFormat::QCOW) {
-      status = write_qcow_file(fd.get());
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    launch_info->block_devices = block_device(Mode, Format, fd.release());
-    return ZX_OK;
+    // Device count starts at 2: root device, block-0, then the test devices.
+    return CreateBlockDevices(/*device_count=*/2, launch_info);
   }
-
-  fuchsia::virtualization::BlockMode BlockMode() const { return Mode; }
-  const std::string& FilePath() const { return file_path_; }
-
-  std::string file_path_ = "/tmp/guest-test.XXXXXX";
 };
 
-template <fuchsia::virtualization::BlockMode Mode, fuchsia::virtualization::BlockFormat Format>
-class VirtioBlockDebianGuest : public DebianEnclosedGuest {
+class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTestGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
@@ -171,86 +245,56 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest {
       return status;
     }
 
-    fbl::unique_fd fd(mkstemp(file_path_.data()));
-    if (!fd) {
-      FXL_LOG(ERROR) << "Failed to create temporary file";
-      return ZX_ERR_IO;
-    }
+    // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
+    // slot assignment.
+    launch_info->args->push_back("--virtio-balloon=false");
+    launch_info->args->push_back("--virtio-gpu=false");
+    launch_info->args->push_back("--virtio-magma=false");
+    launch_info->args->push_back("--virtio-net=false");
+    launch_info->args->push_back("--virtio-rng=false");
+    launch_info->args->push_back("--virtio-vsock=false");
 
-    status = ZX_ERR_BAD_STATE;
-    if (Format == fuchsia::virtualization::BlockFormat::RAW) {
-      status = write_raw_file(fd.get());
-    } else if (Format == fuchsia::virtualization::BlockFormat::QCOW) {
-      status = write_qcow_file(fd.get());
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    launch_info->block_devices = block_device(Mode, Format, fd.release());
-    return ZX_OK;
+    // Device count starts at 4: root device, block-0, block-1, block-2, then the test devices.
+    return CreateBlockDevices(/*device_count=*/4, launch_info);
   }
-
-  fuchsia::virtualization::BlockMode BlockMode() const { return Mode; }
-  const std::string& FilePath() const { return file_path_; }
-
-  std::string file_path_ = "/tmp/guest-test.XXXXXX";
 };
 
 template <class T>
 class VirtioBlockGuestTest : public GuestTest<T> {
  public:
-  const std::string& FilePath() const { return this->GetEnclosedGuest()->FilePath(); }
-  fuchsia::virtualization::BlockMode BlockMode() const {
-    return this->GetEnclosedGuest()->BlockMode();
+  const std::vector<TestDevice>& TestDevices() const {
+    return this->GetEnclosedGuest()->TestDevices();
   }
 };
 
-template <class T>
-using RawVirtioBlockGuestTest = VirtioBlockGuestTest<T>;
+// The Debian tests are temporarily disabled until the test utilities roll.
+using GuestTypes = ::testing::Types<VirtioBlockZirconGuest /*, VirtioBlockDebianGuest*/>;
+TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
 
-using RawGuestTypes =
-    ::testing::Types<VirtioBlockZirconGuest<fuchsia::virtualization::BlockMode::READ_ONLY,
-                                            fuchsia::virtualization::BlockFormat::RAW>,
-                     VirtioBlockZirconGuest<fuchsia::virtualization::BlockMode::READ_WRITE,
-                                            fuchsia::virtualization::BlockFormat::RAW>,
-                     VirtioBlockZirconGuest<fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-                                            fuchsia::virtualization::BlockFormat::RAW>,
-                     VirtioBlockDebianGuest<fuchsia::virtualization::BlockMode::READ_ONLY,
-                                            fuchsia::virtualization::BlockFormat::RAW>,
-                     VirtioBlockDebianGuest<fuchsia::virtualization::BlockMode::READ_WRITE,
-                                            fuchsia::virtualization::BlockFormat::RAW>,
-                     VirtioBlockDebianGuest<fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-                                            fuchsia::virtualization::BlockFormat::RAW>>;
-TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
+TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
+  for (const auto& device : this->TestDevices()) {
+    FXL_LOG(INFO) << "Device: " << device.id;
+    size_t expected_size = 0;
+    switch (device.format) {
+      case fuchsia::virtualization::BlockFormat::RAW:
+        expected_size = kVirtioBlockCount;
+        break;
+      case fuchsia::virtualization::BlockFormat::QCOW:
+        expected_size = kVirtioQcowBlockCount;
+        break;
+      default:
+        break;
+    }
+    ASSERT_GT(expected_size, 0u);
 
-TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
-  std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                          {fxl::StringPrintf("%lu", kBlockSectorSize),
-                           fxl::StringPrintf("%u", kVirtioBlockCount), "check"},
-                          &result),
-            ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-}
-
-TYPED_TEST(RawVirtioBlockGuestTest, Read) {
-  fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
-  ASSERT_TRUE(fd);
-
-  uint8_t data[kBlockSectorSize];
-  memset(data, 0xab, kBlockSectorSize);
-  for (off_t offset : kBlockTestOffsets) {
-    ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
-              static_cast<ssize_t>(kBlockSectorSize));
     std::string result;
     EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
                             {
                                 fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioBlockCount),
-                                "read",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0xab),
+                                fxl::StringPrintf("%u", device.pci_bus),
+                                fxl::StringPrintf("%u", device.pci_device),
+                                "check",
+                                fxl::StringPrintf("%d", static_cast<int>(expected_size)),
                             },
                             &result),
               ZX_OK);
@@ -258,180 +302,223 @@ TYPED_TEST(RawVirtioBlockGuestTest, Read) {
   }
 }
 
-TYPED_TEST(RawVirtioBlockGuestTest, Write) {
-  fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
-  ASSERT_TRUE(fd);
+TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
+  for (const auto& device : this->TestDevices()) {
+    if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
+      continue;
+    }
+    FXL_LOG(INFO) << "Device: " << device.id;
 
-  uint8_t data[kBlockSectorSize];
-  memset(data, 0, kBlockSectorSize);
-  for (off_t offset : kBlockTestOffsets) {
-    // Write the block to zero.
-    ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
-              static_cast<ssize_t>(kBlockSectorSize));
+    fbl::unique_fd fd(open(device.file_path.c_str(), O_RDWR));
+    ASSERT_TRUE(fd);
 
-    // Tell the guest to write bytes to the block.
-    std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioBlockCount),
-                                "write",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0xab),
-                            },
-                            &result),
-              ZX_OK);
-
-    // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
-    // the rest of the system when the device is read only.
-    if (this->GetGuestKernel() == GuestKernel::LINUX &&
-        this->BlockMode() == fuchsia::virtualization::BlockMode::READ_ONLY) {
-      EXPECT_THAT(result, HasSubstr("PermissionDenied"));
-    } else {
+    uint8_t data[kBlockSectorSize];
+    memset(data, 0xab, kBlockSectorSize);
+    for (off_t offset : kBlockTestOffsets) {
+      ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
+                static_cast<ssize_t>(kBlockSectorSize));
+      std::string result;
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "read",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", 0xab),
+                              },
+                              &result),
+                ZX_OK);
       EXPECT_THAT(result, HasSubstr("PASS"));
     }
+  }
+}
 
-    int expected_guest_read, expected_host_read;
-    switch (this->BlockMode()) {
-      case fuchsia::virtualization::BlockMode::READ_ONLY:
-        expected_guest_read = 0;
-        expected_host_read = 0;
-        break;
-      case fuchsia::virtualization::BlockMode::READ_WRITE:
-        expected_guest_read = 0xab;
-        expected_host_read = 0xab;
-        break;
-      case fuchsia::virtualization::BlockMode::VOLATILE_WRITE:
-        expected_guest_read = 0xab;
-        expected_host_read = 0;
-        break;
+TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
+  for (const auto& device : this->TestDevices()) {
+    if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
+      continue;
     }
+    FXL_LOG(INFO) << "Device: " << device.id;
 
-    // Check the value when read from the guest.
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioBlockCount),
-                                "read",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", expected_guest_read),
-                            },
-                            &result),
-              ZX_OK);
-    EXPECT_THAT(result, HasSubstr("PASS"));
+    fbl::unique_fd fd(open(device.file_path.c_str(), O_RDWR));
+    ASSERT_TRUE(fd);
 
-    // Check the value when read from the host file.
-    ASSERT_EQ(pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
-              static_cast<ssize_t>(kBlockSectorSize));
-    for (off_t i = 0; i != kBlockSectorSize; ++i) {
-      EXPECT_EQ(data[i], expected_host_read);
+    uint8_t data[kBlockSectorSize];
+    memset(data, 0, kBlockSectorSize);
+    for (off_t offset : kBlockTestOffsets) {
+      // Write the block to zero.
+      ASSERT_EQ(pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
+                static_cast<ssize_t>(kBlockSectorSize));
+
+      // Tell the guest to write bytes to the block.
+      std::string result;
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "write",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", 0xab),
+                              },
+                              &result),
+                ZX_OK);
+
+      // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+      // the rest of the system when the device is read only.
+      if (this->GetGuestKernel() == GuestKernel::LINUX &&
+          device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
+        EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+      } else {
+        EXPECT_THAT(result, HasSubstr("PASS"));
+      }
+
+      int expected_guest_read, expected_host_read;
+      switch (device.mode) {
+        case fuchsia::virtualization::BlockMode::READ_ONLY:
+          expected_guest_read = 0;
+          expected_host_read = 0;
+          break;
+        case fuchsia::virtualization::BlockMode::READ_WRITE:
+          expected_guest_read = 0xab;
+          expected_host_read = 0xab;
+          break;
+        case fuchsia::virtualization::BlockMode::VOLATILE_WRITE:
+          expected_guest_read = 0xab;
+          expected_host_read = 0;
+          break;
+      }
+
+      // Check the value when read from the guest.
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "read",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", expected_guest_read),
+                              },
+                              &result),
+                ZX_OK);
+      EXPECT_THAT(result, HasSubstr("PASS"));
+
+      // Check the value when read from the host file.
+      ASSERT_EQ(pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
+                static_cast<ssize_t>(kBlockSectorSize));
+      for (off_t i = 0; i != kBlockSectorSize; ++i) {
+        EXPECT_EQ(data[i], expected_host_read);
+      }
     }
   }
 }
 
-template <class T>
-using QcowVirtioBlockGuestTest = VirtioBlockGuestTest<T>;
+TYPED_TEST(VirtioBlockGuestTest, ReadMappedCluster) {
+  for (const auto& device : this->TestDevices()) {
+    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+      continue;
+    }
+    FXL_LOG(INFO) << "Device: " << device.id;
 
-using QcowGuestTypes =
-    ::testing::Types<VirtioBlockZirconGuest<fuchsia::virtualization::BlockMode::READ_ONLY,
-                                            fuchsia::virtualization::BlockFormat::QCOW>,
-                     VirtioBlockZirconGuest<fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-                                            fuchsia::virtualization::BlockFormat::QCOW>,
-                     VirtioBlockDebianGuest<fuchsia::virtualization::BlockMode::READ_ONLY,
-                                            fuchsia::virtualization::BlockFormat::QCOW>,
-                     VirtioBlockDebianGuest<fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-                                            fuchsia::virtualization::BlockFormat::QCOW>>;
-TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
-
-TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
-  std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                          {fxl::StringPrintf("%lu", kBlockSectorSize),
-                           fxl::StringPrintf("%u", kVirtioQcowBlockCount), "check"},
-                          &result),
-            ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-}
-
-TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
-  for (off_t offset : kQcowBlockTestOffsets) {
-    std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioQcowBlockCount),
-                                "read",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0xab),
-                            },
-                            &result),
-              ZX_OK);
-    EXPECT_THAT(result, HasSubstr("PASS"));
-  }
-}
-
-TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
-  std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                          {
-                              fxl::StringPrintf("%lu", kBlockSectorSize),
-                              fxl::StringPrintf("%u", kVirtioQcowBlockCount),
-                              "read",
-                              fxl::StringPrintf("%d", static_cast<int>(kQcowUnmappedClusterOffset)),
-                              fxl::StringPrintf("%d", 0),
-                          },
-                          &result),
-            ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-}
-
-TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
-  for (off_t offset : kQcowBlockTestOffsets) {
-    std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioQcowBlockCount),
-                                "write",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", 0xba),
-                            },
-                            &result),
-              ZX_OK);
-
-    // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
-    // the rest of the system when the device is read only.
-    if (this->GetGuestKernel() == GuestKernel::LINUX &&
-        this->BlockMode() == fuchsia::virtualization::BlockMode::READ_ONLY) {
-      EXPECT_THAT(result, HasSubstr("PermissionDenied"));
-    } else {
+    for (off_t offset : kQcowBlockTestOffsets) {
+      std::string result;
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "read",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", 0xab),
+                              },
+                              &result),
+                ZX_OK);
       EXPECT_THAT(result, HasSubstr("PASS"));
     }
+  }
+}
 
-    int expected_read;
-    switch (this->BlockMode()) {
-      case fuchsia::virtualization::BlockMode::READ_ONLY:
-        expected_read = 0xab;
-        break;
-      case fuchsia::virtualization::BlockMode::VOLATILE_WRITE:
-        expected_read = 0xba;
-        break;
-      case fuchsia::virtualization::BlockMode::READ_WRITE:
-        // READ_WRITE not supported for QCOW.
-        expected_read = -1;
-        break;
+TYPED_TEST(VirtioBlockGuestTest, ReadUnmappedCluster) {
+  for (const auto& device : this->TestDevices()) {
+    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+      continue;
     }
+    FXL_LOG(INFO) << "Device: " << device.id;
 
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                            {
-                                fxl::StringPrintf("%lu", kBlockSectorSize),
-                                fxl::StringPrintf("%u", kVirtioQcowBlockCount),
-                                "read",
-                                fxl::StringPrintf("%d", static_cast<int>(offset)),
-                                fxl::StringPrintf("%d", expected_read),
-                            },
-                            &result),
-              ZX_OK);
+    std::string result;
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", device.pci_bus),
+                          fxl::StringPrintf("%u", device.pci_device),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(kQcowUnmappedClusterOffset)),
+                          fxl::StringPrintf("%d", 0),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
+  }
+}
+
+TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
+  for (const auto& device : this->TestDevices()) {
+    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+      continue;
+    }
+    FXL_LOG(INFO) << "Device: " << device.id;
+
+    for (off_t offset : kQcowBlockTestOffsets) {
+      std::string result;
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "write",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", 0xba),
+                              },
+                              &result),
+                ZX_OK);
+
+      // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
+      // the rest of the system when the device is read only.
+      if (this->GetGuestKernel() == GuestKernel::LINUX &&
+          device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
+        EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+      } else {
+        EXPECT_THAT(result, HasSubstr("PASS"));
+      }
+
+      int expected_read;
+      switch (device.mode) {
+        case fuchsia::virtualization::BlockMode::READ_ONLY:
+          expected_read = 0xab;
+          break;
+        case fuchsia::virtualization::BlockMode::VOLATILE_WRITE:
+          expected_read = 0xba;
+          break;
+        case fuchsia::virtualization::BlockMode::READ_WRITE:
+          // READ_WRITE not supported for QCOW.
+          expected_read = -1;
+          break;
+      }
+
+      EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                              {
+                                  fxl::StringPrintf("%lu", kBlockSectorSize),
+                                  fxl::StringPrintf("%u", device.pci_bus),
+                                  fxl::StringPrintf("%u", device.pci_device),
+                                  "read",
+                                  fxl::StringPrintf("%d", static_cast<int>(offset)),
+                                  fxl::StringPrintf("%d", expected_read),
+                              },
+                              &result),
+                ZX_OK);
+      EXPECT_THAT(result, HasSubstr("PASS"));
+    }
   }
 }

@@ -15,6 +15,7 @@ rustc_binary("virtio_block_test_util") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block-rustc",
   ]
 }
