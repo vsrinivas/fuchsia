@@ -5,7 +5,6 @@
 #include "sdio-controller-device.h"
 
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,7 +13,6 @@
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/sdmmc.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <hw/sdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
@@ -79,20 +77,20 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
 
   zx_status_t st = SdioReset();
 
-  if ((st = sdmmc().SdmmcGoIdle()) != ZX_OK) {
+  if ((st = sdmmc_.SdmmcGoIdle()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
     return st;
   }
 
   uint32_t ocr;
-  if ((st = sdmmc().SdioSendOpCond(0, &ocr)) != ZX_OK) {
+  if ((st = sdmmc_.SdioSendOpCond(0, &ocr)) != ZX_OK) {
     zxlogf(TRACE, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
     return st;
   }
   // Select voltage 3.3 V. Also request for 1.8V. Section 3.2 SDIO spec
   if (ocr & SDIO_SEND_OP_COND_IO_OCR_33V) {
     uint32_t new_ocr = SDIO_SEND_OP_COND_IO_OCR_33V | SDIO_SEND_OP_COND_CMD_S18R;
-    if ((st = sdmmc().SdioSendOpCond(new_ocr, &ocr)) != ZX_OK) {
+    if ((st = sdmmc_.SdioSendOpCond(new_ocr, &ocr)) != ZX_OK) {
       zxlogf(ERROR, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
       return st;
     }
@@ -102,15 +100,15 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     zxlogf(ERROR, "sdmmc_probe_sdio: Combo card not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  sdmmc().SetCurrentVoltage(SDMMC_VOLTAGE_V180);
+  sdmmc_.SetCurrentVoltage(SDMMC_VOLTAGE_V180);
   hw_info_.num_funcs =
       GetBits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK, SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
-  if ((st = sdmmc().SdSendRelativeAddr(nullptr)) != ZX_OK) {
+  if ((st = sdmmc_.SdSendRelativeAddr(nullptr)) != ZX_OK) {
     zxlogf(ERROR, "sdmcc_probe_sdio: SD_SEND_RELATIVE_ADDR failed, retcode = %d\n", st);
     return st;
   }
 
-  if ((st = sdmmc().MmcSelectCard()) != ZX_OK) {
+  if ((st = sdmmc_.MmcSelectCard()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc_probe_sdio: MMC_SELECT_CARD failed, retcode = %d\n", st);
     return st;
   }
@@ -127,7 +125,7 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
   }
 
   if (ocr & SDIO_SEND_OP_COND_RESP_S18A) {
-    if ((st = sdmmc().SdSwitchUhsVoltage(ocr)) != ZX_OK) {
+    if ((st = sdmmc_.SdSwitchUhsVoltage(ocr)) != ZX_OK) {
       zxlogf(INFO, "Failed to switch voltage to 1.8V\n");
       return st;
     }
@@ -256,8 +254,7 @@ zx_status_t SdioControllerDevice::SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info) 
   for (size_t i = 0; i < hw_info_.num_funcs; i++) {
     memcpy(&out_hw_info->funcs_hw_info[i], &funcs_[i].hw_info, sizeof(sdio_func_hw_info_t));
   }
-  out_hw_info->host_max_transfer_size =
-      static_cast<uint32_t>(sdmmc().host_info().max_transfer_size);
+  out_hw_info->host_max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);
   return ZX_OK;
 }
 
@@ -495,8 +492,8 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   }
 
   const uint64_t max_host_transfer_size =
-      fbl::max(1ul, use_dma ? sdmmc().host_info().max_transfer_size
-                            : sdmmc().host_info().max_transfer_size_non_dma);
+      fbl::max(1ul, use_dma ? sdmmc_.host_info().max_transfer_size
+                            : sdmmc_.host_info().max_transfer_size_non_dma);
   const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
 
   if (max_host_transfer_size < func_blk_size && max_host_transfer_size < data_size) {
@@ -507,7 +504,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
 
   const uint32_t max_host_blocks = static_cast<uint32_t>(max_host_transfer_size / func_blk_size);
 
-  bool dma_supported = sdmmc().UseDma();
+  bool dma_supported = sdmmc_.UseDma();
   uint8_t* buf = use_dma ? nullptr : reinterpret_cast<uint8_t*>(txn->virt_buffer);
   zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
   uint64_t buf_offset = txn->buf_offset;
@@ -537,8 +534,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
       num_blocks =
           fbl::min(fbl::min(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
     }
-    st =
-        sdmmc().SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, num_blocks,
+    st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo, buf_offset + data_processed);
     if (st != ZX_OK) {
       zxlogf(ERROR, "sdio_rw_data: Error %sing data.func: %d status: %d\n",
@@ -554,9 +550,9 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
 
   if (data_processed < data_size) {
     // process remaining data.
-    st = sdmmc().SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, 1,
-                                  data_size - data_processed, use_dma, buf, dma_vmo,
-                                  buf_offset + data_processed);
+    st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, 1,
+                                 data_size - data_processed, use_dma, buf, dma_vmo,
+                                 buf_offset + data_processed);
   }
 
   return st;
@@ -576,7 +572,7 @@ zx_status_t SdioControllerDevice::SdioDoRwByteLocked(bool write, uint8_t fn_idx,
 
   out_read_byte = write ? nullptr : out_read_byte;
   write_byte = write ? write_byte : 0;
-  return sdmmc().SdioIoRwDirect(write, fn_idx, addr, write_byte, out_read_byte);
+  return sdmmc_.SdioIoRwDirect(write, fn_idx, addr, write_byte, out_read_byte);
 }
 
 zx_status_t SdioControllerDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
@@ -600,7 +596,7 @@ zx_status_t SdioControllerDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrup
     return st;
   }
 
-  return sdmmc().host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
+  return sdmmc_.host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
 }
 
 void SdioControllerDevice::InBandInterruptCallback() { sync_completion_signal(&irq_signal_); }
@@ -845,7 +841,7 @@ zx_status_t SdioControllerDevice::ParseFuncExtTuple(uint8_t fn_idx, const SdioFu
     func->hw_info.max_blk_size =
         SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
     func->hw_info.max_blk_size = static_cast<uint32_t>(
-        fbl::min<uint64_t>(sdmmc().host_info().max_transfer_size, func->hw_info.max_blk_size));
+        fbl::min<uint64_t>(sdmmc_.host_info().max_transfer_size, func->hw_info.max_blk_size));
     uint8_t speed_val = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
                                   SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_LOC);
     uint8_t speed_unit = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,
@@ -926,7 +922,7 @@ zx_status_t SdioControllerDevice::InitFunc(uint8_t fn_idx) {
 
 zx_status_t SdioControllerDevice::SwitchFreq(uint32_t new_freq) {
   zx_status_t st;
-  if ((st = sdmmc().host().SetBusFreq(new_freq)) != ZX_OK) {
+  if ((st = sdmmc_.host().SetBusFreq(new_freq)) != ZX_OK) {
     zxlogf(ERROR, "sdio: Error while switching host bus frequency, retcode = %d\n", st);
     return st;
   }
@@ -958,7 +954,7 @@ zx_status_t SdioControllerDevice::TrySwitchHs() {
     return st;
   }
   // Switch the host timing
-  if ((st = sdmmc().host().SetTiming(SDMMC_TIMING_HS)) != ZX_OK) {
+  if ((st = sdmmc_.host().SetTiming(SDMMC_TIMING_HS)) != ZX_OK) {
     zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
     return st;
   }
@@ -1024,7 +1020,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
     return st;
   }
   // Switch the host timing
-  if ((st = sdmmc().host().SetTiming(timing)) != ZX_OK) {
+  if ((st = sdmmc_.host().SetTiming(timing)) != ZX_OK) {
     zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
     return st;
   }
@@ -1035,7 +1031,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
   }
 
   if ((hw_caps & SDIO_CARD_UHS_SDR104) || (hw_caps & SDIO_CARD_UHS_SDR50)) {
-    st = sdmmc().host().PerformTuning(SD_SEND_TUNING_BLOCK);
+    st = sdmmc_.host().PerformTuning(SD_SEND_TUNING_BLOCK);
     if (st != ZX_OK) {
       zxlogf(ERROR, "mmc: tuning failed %d\n", st);
       return st;
@@ -1063,7 +1059,7 @@ zx_status_t SdioControllerDevice::Enable4BitBus() {
     zxlogf(ERROR, "sdio: Error while switching the bus width\n");
     return st;
   }
-  if ((st = sdmmc().host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
+  if ((st = sdmmc_.host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
     zxlogf(ERROR, "sdio: failed to switch the host bus width to %d, retcode = %d\n",
            SDMMC_BUS_WIDTH_FOUR, st);
     return ZX_ERR_INTERNAL;

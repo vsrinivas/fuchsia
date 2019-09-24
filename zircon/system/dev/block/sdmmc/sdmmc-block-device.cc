@@ -206,7 +206,7 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     req->virt_size = length;
   }
 
-  st = sdmmc_.SdmmcRequest(req);
+  st = sdmmc_.host().Request(req);
   if (st != ZX_OK) {
     zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
   } else {

@@ -45,6 +45,37 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       Write(req->arg * kBlockSize, fbl::Span<const uint8_t>(virt_buffer, req_size));
       break;
     }
+    case SDIO_IO_RW_DIRECT: {
+      const uint32_t address =
+          (req->arg & SDIO_IO_RW_DIRECT_REG_ADDR_MASK) >> SDIO_IO_RW_DIRECT_REG_ADDR_LOC;
+      const uint8_t function =
+          (req->arg & SDIO_IO_RW_DIRECT_FN_IDX_MASK) >> SDIO_IO_RW_DIRECT_FN_IDX_LOC;
+      if (req->arg & SDIO_IO_RW_DIRECT_RW_FLAG) {
+        Write(address,
+              std::vector{static_cast<uint8_t>(req->arg & SDIO_IO_RW_DIRECT_WRITE_BYTE_MASK)},
+              function);
+      } else {
+        req->response[0] = Read(address, 1, function)[0];
+      }
+      break;
+    }
+    case SDIO_IO_RW_DIRECT_EXTENDED: {
+      const uint32_t address =
+          (req->arg & SDIO_IO_RW_EXTD_REG_ADDR_MASK) >> SDIO_IO_RW_EXTD_REG_ADDR_LOC;
+      const uint8_t function =
+          (req->arg & SDIO_IO_RW_EXTD_FN_IDX_MASK) >> SDIO_IO_RW_EXTD_FN_IDX_LOC;
+      const uint32_t block_mode = req->arg & SDIO_IO_RW_EXTD_BLOCK_MODE;
+      const uint32_t blocks = req->arg & SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK;
+      const std::vector<uint8_t> block_size_reg = Read(0x10 | (function << 8), 2, 0);
+      const uint32_t block_size = block_size_reg[0] | (block_size_reg[1] << 8);
+      const uint32_t transfer_size =
+          block_mode ? (block_size * blocks) : (blocks == 0 ? 512 : blocks);
+      if (req->arg & SDIO_IO_RW_DIRECT_RW_FLAG) {
+        Write(address, fbl::Span<const uint8_t>(virt_buffer, transfer_size), function);
+      } else {
+        memcpy(virt_buffer, Read(address, transfer_size, function).data(), transfer_size);
+      }
+    }
     default:
       break;
   }
@@ -54,6 +85,12 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
   }
 
   req->status = ZX_OK;
+  return ZX_OK;
+}
+
+zx_status_t FakeSdmmcDevice::SdmmcRegisterInBandInterrupt(
+    const in_band_interrupt_protocol_t* interrupt_cb) {
+  interrupt_cb_ = *interrupt_cb;
   return ZX_OK;
 }
 
@@ -95,5 +132,7 @@ void FakeSdmmcDevice::Write(size_t address, fbl::Span<const uint8_t> data, uint8
     data_ptr += write_size;
   }
 }
+
+void FakeSdmmcDevice::TriggerInBandInterrupt() { interrupt_cb_.ops->callback(interrupt_cb_.ctx); }
 
 }  // namespace sdmmc

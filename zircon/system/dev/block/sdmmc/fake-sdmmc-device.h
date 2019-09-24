@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <map>
 #include <vector>
 
@@ -53,13 +54,16 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   zx_status_t SdmmcPerformTuning(uint32_t cmd_idx) { return perform_tuning_status_; }
 
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
-
-  zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
   std::vector<uint8_t> Read(size_t address, size_t size, uint8_t func = 0);
   void Write(size_t address, fbl::Span<const uint8_t> data, uint8_t func = 0);
+  template <typename T>
+  void Write(size_t address, const T& data, uint8_t func = 0) {
+    Write(address, fbl::Span<const uint8_t>(data.data(), data.size() * sizeof(data[0])), func);
+  }
+
+  void TriggerInBandInterrupt();
 
   void set_command_callback(Command command, CommandCallback callback) {
     command_callbacks_[command] = callback;
@@ -74,9 +78,10 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
  private:
   const sdmmc_protocol_t proto_;
   sdmmc_host_info_t host_info_;
-  std::map<size_t, std::unique_ptr<uint8_t[]>> sectors_[SDIO_MAX_FUNCS];
+  std::array<std::map<size_t, std::unique_ptr<uint8_t[]>>, SDIO_MAX_FUNCS> sectors_;
   std::map<Command, uint32_t> command_counts_;
   std::map<Command, CommandCallback> command_callbacks_;
+  in_band_interrupt_protocol_t interrupt_cb_ = {};
   zx_status_t set_signal_voltage_status_ = ZX_OK;
   zx_status_t set_bus_width_status_ = ZX_OK;
   zx_status_t set_bus_freq_status_ = ZX_OK;
