@@ -61,11 +61,13 @@ void log_write_message_helper(log_level_t level, size_t num_tags, const char** t
 
 }  // namespace
 
+__EXPORT
 bool log_level_is_enabled(log_level_t level) {
   log_config_t* cfg = g_log_config_ptr.get();
   return cfg && level >= cfg->min_level;
 }
 
+__EXPORT
 void log_set_min_level(log_level_t level) {
   log_config_t* cfg = g_log_config_ptr.get();
   if (cfg) {
@@ -73,8 +75,10 @@ void log_set_min_level(log_level_t level) {
   }
 }
 
+__EXPORT
 log_config_t* log_get_config(void) { return g_log_config_ptr.get(); }
 
+__EXPORT
 void log_initialize(log_level_t min_level, log_writer_t* log_writer, const size_t num_tags,
                     const char** tags) {
   if (g_log_config_ptr.get() != nullptr) {
@@ -93,8 +97,10 @@ void log_initialize(log_level_t min_level, log_writer_t* log_writer, const size_
   g_log_config_ptr = std::unique_ptr<log_config_t>(config);
 }
 
+__EXPORT
 void log_shutdown(void) { g_log_config_ptr = std::unique_ptr<log_config_t>(nullptr); }
 
+__EXPORT
 void log_write_message_printf(log_level_t level, size_t num_tags, const char** tags_ptr,
                               const char* format_string, ...) {
   char message[LOG_MAX_MESSAGE_SIZE];
@@ -109,6 +115,7 @@ void log_write_message_printf(log_level_t level, size_t num_tags, const char** t
   log_write_message_helper(level, num_tags, tags_ptr, message, msg_len);
 }
 
+__EXPORT
 void log_write_message(log_level_t level, size_t num_tags, const char** tags_ptr,
                        const char* message) {
   size_t message_len = strlen(message);

@@ -15,8 +15,4 @@ library("log") {
     "$zx/system/ulib/fdio",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
-
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
