@@ -12,10 +12,10 @@ readonly JIRI_BIN_COMMANDS=(cipd jiri)
 
 function commands {
   local dirs=()
-  dirs+=("${fuchsia_dir}"/tools/devshell{,/contrib})
+  dirs+=("${fuchsia_dir}"/host-tools/devshell{,/contrib})
   local -r build_dir="$(get_build_dir)"
   if [[ -n "${build_dir}" ]]; then
-    dirs+=("${build_dir}/tools")
+    dirs+=("${build_dir}/host-tools")
   fi
 
   (
@@ -47,7 +47,7 @@ function find_command {
 
   local -r build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
-    local command_path="${build_dir}/tools/${cmd}"
+    local command_path="${build_dir}/host-tools/${cmd}"
     if [[ -x "${command_path}" ]]; then
       echo "${command_path}"
       return 0

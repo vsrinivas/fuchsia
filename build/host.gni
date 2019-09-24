@@ -10,7 +10,7 @@ declare_args() {
   # things that are generally useful for testing or debugging or
   # whatnot outside of the GN build itself.  These are only installed
   # by an explicit install_host_tools() rule (see //build/host.gni).
-  host_tools_dir = "$root_build_dir/tools"
+  host_tools_dir = "$root_build_dir/host-tools"
 }
 
 # This declares that a host tool (a target built in host_toolchain)

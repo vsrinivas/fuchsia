@@ -27,7 +27,7 @@ foreach(command,
     args = [
       command,
       rebase_path(zircon_root_build_dir, root_build_dir),
-      rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
+      rebase_path("$root_build_dir/host_x64/fidlgen_llcpp", root_build_dir),
       rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_${command}.stamp",
                   root_build_dir),
       rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_${command}.d",
