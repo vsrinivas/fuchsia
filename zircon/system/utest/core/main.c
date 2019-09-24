@@ -40,6 +40,7 @@ static void log_write(const void* data, size_t len) {
 
 static zx_handle_t root_resource;
 
+__EXPORT
 void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
   for (unsigned n = 0; n < count; n++) {
     if (info[n] == PA_HND(PA_RESOURCE, 0)) {
@@ -63,8 +64,10 @@ void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[
   }
 }
 
+__EXPORT
 zx_handle_t get_root_resource(void) { return root_resource; }
 
+__EXPORT
 ssize_t write(int fd, const void* data, size_t count) {
   if ((fd == 1) || (fd == 2)) {
     log_write(data, count);
@@ -72,8 +75,10 @@ ssize_t write(int fd, const void* data, size_t count) {
   return count;
 }
 
+__EXPORT
 ssize_t readv(int fd, const struct iovec* iov, int num) { return 0; }
 
+__EXPORT
 ssize_t writev(int fd, const struct iovec* iov, int num) {
   ssize_t count = 0;
   ssize_t r;
@@ -94,11 +99,13 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
   return count;
 }
 
+__EXPORT
 off_t lseek(int fd, off_t offset, int whence) {
   errno = ENOSYS;
   return -1;
 }
 
+__EXPORT
 int isatty(int fd) { return 1; }
 
 // TODO(mcgrathr): When unittest is gone, the zxtest library main will work
