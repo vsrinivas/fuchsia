@@ -46,8 +46,13 @@ pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;
 
 /// Extra slots for a linear histogram: 2 parameter slots (floor, step size) and
 /// 2 overflow slots.
-pub const LINEAR_HISTOGRAM_EXTRA_SLOTS: u8 = 4;
+pub const LINEAR_HISTOGRAM_EXTRA_SLOTS: usize = 4;
 
 /// Extra slots for an exponential histogram: 3 parameter slots (floor, initial
 /// step and step multiplier) and 2 overflow slots.
-pub const EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS: u8 = 5;
+pub const EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS: usize = 5;
+
+/// Maximum number of array entries that can be held by a 2K block. Each entry is 8 bytes.
+/// Then subtract 1 for the header and 1 for the slot used by the array-format payload:
+/// (type, display format, count)
+pub const ARRAY_MAX_SLOTS: usize = 1 << 8 - 2;

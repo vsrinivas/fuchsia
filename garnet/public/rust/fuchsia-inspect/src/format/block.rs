@@ -220,9 +220,12 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Gets the number of slots in an ARRAY_VALUE block.
-    pub fn array_slots(&self) -> Result<u8, Error> {
+    pub fn array_slots(&self) -> Result<usize, Error> {
         self.check_type(BlockType::ArrayValue)?;
-        Ok(self.read_payload().array_slots_count())
+        self.read_payload()
+            .array_slots_count()
+            .to_usize()
+            .ok_or(format_err!("failed to convert to usize"))
     }
 
     /// Gets the type of each slot in an ARRAY_VALUE block.
@@ -490,7 +493,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Converts a block to an *_ARRAY_VALUE block
     pub fn become_array_value(
         &self,
-        slots: u8,
+        slots: usize,
         format: ArrayFormat,
         entry_type: BlockType,
         name_index: u32,
@@ -499,11 +502,14 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         if !entry_type.is_numeric_value() {
             bail!("Invalid entry type");
         }
+        if slots > constants::ARRAY_MAX_SLOTS {
+            bail!("{} exceeds the maxium number of slots: 255", slots);
+        }
         self.write_value_header(BlockType::ArrayValue, name_index, parent_index)?;
         let mut payload = Payload(0);
         payload.set_array_entry_type(entry_type.to_u8().unwrap());
         payload.set_array_flags(format.to_u8().unwrap());
-        payload.set_array_slots_count(slots);
+        payload.set_array_slots_count(slots.to_u8().unwrap());
         self.write_payload(payload);
         Ok(())
     }
@@ -1287,6 +1293,15 @@ mod tests {
             },
             &BTreeSet::from_iter(vec![BlockType::Reserved]),
         );
+    }
+
+    #[test]
+    fn array_max_value() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 4];
+        let block = Block::new_free(&container[..], 0, 2, 0).unwrap();
+        assert!(block
+            .become_array_value(257, ArrayFormat::Default, BlockType::IntValue, 1, 2)
+            .is_err());
     }
 
     fn get_header(container: &[u8]) -> Block<&[u8]> {

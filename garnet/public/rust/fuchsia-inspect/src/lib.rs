@@ -248,12 +248,12 @@ macro_rules! create_array_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             #[must_use]
-            pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: u8)
+            pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: usize)
                 -> [<$name_cap ArrayProperty>] {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
             }
 
-            fn [<create_ $name _array_internal>](&self, name: impl AsRef<str>, slots: u8, format: ArrayFormat)
+            fn [<create_ $name _array_internal>](&self, name: impl AsRef<str>, slots: usize, format: ArrayFormat)
                 -> [<$name_cap ArrayProperty>] {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state
@@ -273,7 +273,7 @@ macro_rules! create_array_property_fn {
 pub struct LinearHistogramParams<T> {
     pub floor: T,
     pub step_size: T,
-    pub buckets: u8,
+    pub buckets: usize,
 }
 
 /// Utility for generating functions to create a linear histogram property.
@@ -306,7 +306,7 @@ pub struct ExponentialHistogramParams<T> {
     pub floor: T,
     pub initial_step: T,
     pub step_multiplier: T,
-    pub buckets: u8,
+    pub buckets: usize,
 }
 
 /// Utility for generating functions to create an exponential histogram property.
@@ -684,7 +684,7 @@ macro_rules! linear_histogram_property {
             pub struct [<$name_cap LinearHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
                 floor: $type,
-                slots: u8,
+                slots: usize,
                 step_size: $type,
             }
 
@@ -719,7 +719,7 @@ macro_rules! exponential_histogram_property {
                 floor: $type,
                 initial_step: $type,
                 step_multiplier: $type,
-                slots: u8,
+                slots: usize,
             }
 
             impl [<$name_cap ExponentialHistogramProperty>] {

@@ -388,7 +388,7 @@ impl<'a> ScanResult<'a> {
     fn parse_array_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
-        let array_slots = block.array_slots()? as usize;
+        let array_slots = block.array_slots()?;
         if utils::array_capacity(block.order()) < array_slots {
             bail!("Tried to read more slots than available");
         }

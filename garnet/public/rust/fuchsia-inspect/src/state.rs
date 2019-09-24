@@ -99,7 +99,7 @@ macro_rules! array_fns {
             pub fn [<create_ $name _array>](
                 &mut self,
                 name: &str,
-                slots: u8,
+                slots: usize,
                 array_format: ArrayFormat,
                 parent_index: u32,
             ) -> Result<Block<Arc<Mapping>>, Error> {
