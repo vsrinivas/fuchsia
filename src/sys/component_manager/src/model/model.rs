@@ -121,20 +121,19 @@ impl Model {
         let eager_children = {
             let eager_children = self.bind_single_instance(realm.clone()).await?;
             let server_end = ServerEnd::new(server_chan);
-            let state = realm.lock_state().await;
-            let state = state.get();
-            let out_dir = &state
-                .execution()
-                .ok_or(ModelError::capability_discovery_error(format_err!(
+            let execution = realm.lock_execution().await;
+            if !execution.runtime.is_set() {
+                return Err(ModelError::capability_discovery_error(format_err!(
                     "component hosting capability isn't running: {}",
                     realm.abs_moniker
-                )))?
-                .outgoing_dir
-                .as_ref()
-                .ok_or(ModelError::capability_discovery_error(format_err!(
+                )));
+            }
+            let out_dir = &execution.runtime.get().outgoing_dir.as_ref().ok_or(
+                ModelError::capability_discovery_error(format_err!(
                     "component hosting capability is non-executable: {}",
                     realm.abs_moniker
-                )))?;
+                )),
+            )?;
             let path = path.to_string();
             let path = io_util::canonicalize_path(&path);
             out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
@@ -160,15 +159,14 @@ impl Model {
         let eager_children = {
             let eager_children = self.bind_single_instance(realm.clone()).await?;
             let server_end = ServerEnd::new(server_chan);
-            let state = realm.lock_state().await;
-            let state = state.get();
-            let exposed_dir = &state
-                .execution()
-                .ok_or(ModelError::capability_discovery_error(format_err!(
+            let execution = realm.lock_execution().await;
+            if !execution.runtime.is_set() {
+                return Err(ModelError::capability_discovery_error(format_err!(
                     "component hosting capability isn't running: {}",
                     realm.abs_moniker
-                )))?
-                .exposed_dir;
+                )));
+            }
+            let exposed_dir = &execution.runtime.get().exposed_dir;
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
             exposed_dir
                 .root_dir
@@ -261,58 +259,60 @@ impl Model {
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
         // The realm's lock needs to be held during `Runner::start` until the `Execution` is set in
         // case there are concurrent calls to `bind_inner`.
-        //
-        // TODO: Restructure `RealmState` so it's not all held under a single lock. For example, we
-        // should be able to take a lock on `Execution` independent of the component declaration.
-        let mut state = realm.lock_state().await;
-        if !state.is_resolved() {
-            state.set(RealmState::new(&*realm, component.decl).await?);
-        }
-        let state = state.get_mut();
-        if state.is_shut_down() {
-            return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
-        }
-        if state.execution().is_some() {
-            // TODO: Add binding to the execution once we track bindings.
-            return Ok(vec![]);
-        }
-        let decl = state.decl().clone();
-        let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
-        let execution = if decl.program.is_some() {
-            let (outgoing_dir_client, outgoing_dir_server) =
-                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-            let (runtime_dir_client, runtime_dir_server) =
-                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-            let mut namespace = IncomingNamespace::new(component.package)?;
-            let ns = namespace.populate(self.clone(), &realm.abs_moniker, &decl).await?;
-            let execution = Execution::start_from(
-                component.resolved_url,
-                Some(namespace),
-                Some(DirectoryProxy::from_channel(
-                    fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-                )),
-                Some(DirectoryProxy::from_channel(
-                    fasync::Channel::from_channel(runtime_dir_client).unwrap(),
-                )),
-                exposed_dir,
-            )?;
-            let start_info = fsys::ComponentStartInfo {
-                resolved_url: Some(execution.resolved_url.clone()),
-                program: data::clone_option_dictionary(&decl.program),
-                ns: Some(ns),
-                outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-                runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
-            };
-            realm.default_runner.start(start_info).await?;
-            execution
-        } else {
-            // Although this component has no runtime environment, it is still possible to bind
-            // to it, which may trigger bindings to its children. For consistency, we still
-            // consider the component to be "executing" in this case.
-            Execution::start_from(component.resolved_url, None, None, None, exposed_dir)?
+        let decl = {
+            let mut state = realm.lock_state().await;
+            if !state.is_set() {
+                state.set(RealmState::new(&*realm, component.decl).await?);
+            }
+            state.get().decl().clone()
         };
-        state.set_execution(execution);
+        {
+            let mut execution = realm.lock_execution().await;
+            if execution.is_shut_down() {
+                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+            }
+            if execution.runtime.is_set() {
+                // TODO: Add binding to the execution once we track bindings.
+                return Ok(vec![]);
+            }
+            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
+            execution.runtime.set(if decl.program.is_some() {
+                let (outgoing_dir_client, outgoing_dir_server) =
+                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+                let (runtime_dir_client, runtime_dir_server) =
+                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+                let mut namespace = IncomingNamespace::new(component.package)?;
+                let ns = namespace.populate(self.clone(), &realm.abs_moniker, &decl).await?;
+                let runtime = Runtime::start_from(
+                    component.resolved_url,
+                    Some(namespace),
+                    Some(DirectoryProxy::from_channel(
+                        fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+                    )),
+                    Some(DirectoryProxy::from_channel(
+                        fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+                    )),
+                    exposed_dir,
+                )?;
+                let start_info = fsys::ComponentStartInfo {
+                    resolved_url: Some(runtime.resolved_url.clone()),
+                    program: data::clone_option_dictionary(&decl.program),
+                    ns: Some(ns),
+                    outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+                    runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
+                };
+                realm.default_runner.start(start_info).await?;
+                runtime
+            } else {
+                // Although this component has no runtime environment, it is still possible to bind
+                // to it, which may trigger bindings to its children. For consistency, we still
+                // consider the component to be "executing" in this case.
+                Runtime::start_from(component.resolved_url, None, None, None, exposed_dir)?
+            });
+        };
+        let state = realm.lock_state().await;
         let eager_child_realms: Vec<_> = state
+            .get()
             .live_child_realms()
             .filter_map(|(_, r)| match r.startup {
                 fsys::StartupMode::Eager => Some(r.clone()),

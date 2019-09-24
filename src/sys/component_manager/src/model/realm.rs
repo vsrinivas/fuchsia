@@ -36,7 +36,9 @@ pub struct Realm {
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The component's mutable state.
-    state: Mutex<RealmStateHolder>,
+    state: Mutex<Holder<RealmState>>,
+    /// The component's execution state.
+    execution: Mutex<ExecutionState>,
     /// The hooks scoped to this realm.
     pub hooks: Hooks,
 }
@@ -55,25 +57,31 @@ impl Realm {
             component_url,
             // Started by main().
             startup: fsys::StartupMode::Lazy,
-            state: Mutex::new(RealmStateHolder::new()),
+            state: Mutex::new(Holder::<RealmState>::new()),
+            execution: Mutex::new(ExecutionState::new()),
             hooks: Hooks::new(None),
         }
     }
 
     /// Locks and returns the realm's mutable state.
-    pub fn lock_state(&self) -> MutexLockFuture<RealmStateHolder> {
+    pub fn lock_state(&self) -> MutexLockFuture<Holder<RealmState>> {
         self.state.lock()
+    }
+
+    /// Locks and returns the realm's execution state.
+    pub fn lock_execution(&self) -> MutexLockFuture<ExecutionState> {
+        self.execution.lock()
     }
 
     /// Resolves and populates the component declaration of this realm's Instance, if not already
     /// populated.
     pub async fn resolve_decl(&self) -> Result<(), ModelError> {
         // Call `resolve()` outside of lock.
-        let is_resolved = { self.lock_state().await.is_resolved() };
+        let is_resolved = { self.lock_state().await.is_set() };
         if !is_resolved {
             let component = self.resolver_registry.resolve(&self.component_url).await?;
             let mut state = self.lock_state().await;
-            if !state.is_resolved() {
+            if !state.is_set() {
                 state.set(RealmState::new(self, component.decl).await?);
             }
         }
@@ -213,15 +221,25 @@ impl Realm {
     ) -> Result<(), ModelError> {
         // When the realm is stopped, any child instances in transient collections must be
         // destroyed.
-        let nf = {
-            let mut state = realm.lock_state().await;
-            let state = state.get_mut();
-            state.execution = None;
-            state.shut_down |= shut_down;
-            Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
+        let (nf, was_running) = {
+            let was_running = {
+                let mut execution = realm.lock_execution().await;
+                let was_running = execution.runtime.is_set();
+                execution.runtime.clear();
+                execution.shut_down |= shut_down;
+                was_running
+            };
+            let nf = {
+                let mut state = realm.lock_state().await;
+                let state = state.get_mut();
+                Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
+            };
+            (nf, was_running)
         };
         nf.await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-        realm.hooks.on_stop_instance(realm.clone()).await?;
+        if was_running {
+            realm.hooks.on_stop_instance(realm.clone()).await?;
+        }
         Ok(())
     }
 
@@ -276,10 +294,30 @@ impl Realm {
     }
 }
 
+/// The execution state of a component.
+pub struct ExecutionState {
+    /// True if the component instance has shut down. This means that the component is stopped
+    /// and cannot be restarted.
+    shut_down: bool,
+    /// Runtime support for the component. From component manager's point of view, the component
+    /// instance is running iff this field is set.
+    pub runtime: Holder<Runtime>,
+}
+
+impl ExecutionState {
+    /// Creates a new ExecutionState.
+    pub fn new() -> Self {
+        Self { shut_down: false, runtime: Holder::<Runtime>::new() }
+    }
+
+    /// Returns whether the realm has shut down.
+    pub fn is_shut_down(&self) -> bool {
+        self.shut_down
+    }
+}
+
 /// The mutable state of a component.
 pub struct RealmState {
-    /// Execution state for the component instance or `None` if not running.
-    execution: Option<Execution>,
     /// The component's validated declaration.
     decl: ComponentDecl,
     /// Realms of all child instances, indexed by instanced moniker.
@@ -288,11 +326,10 @@ pub struct RealmState {
     live_child_realms: HashMap<PartialMoniker, (InstanceId, Arc<Realm>)>,
     /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir`
     /// getter.
+    // TODO: Store this under a separate Mutex?
     meta_dir: Option<Arc<DirectoryProxy>>,
-    /// True if the component instance has shut down. This means that the component is stopped
-    /// and cannot be restarted.
-    shut_down: bool,
     /// Actions on the realm that must eventually be completed.
+    // TODO: Store this under a separate Mutex?
     actions: ActionSet,
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
@@ -309,32 +346,15 @@ impl RealmState {
             .try_into()
             .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
         let mut state = Self {
-            execution: None,
             child_realms: HashMap::new(),
             live_child_realms: HashMap::new(),
             decl: decl.clone(),
             meta_dir: None,
-            shut_down: false,
             actions: ActionSet::new(),
             next_dynamic_instance_id: 1,
         };
         state.add_static_child_realms(realm, &decl).await;
         Ok(state)
-    }
-
-    /// Returns a reference to the instance's execution.
-    pub fn execution(&self) -> Option<&Execution> {
-        self.execution.as_ref()
-    }
-
-    /// Sets the `Execution`.
-    pub fn set_execution(&mut self, e: Execution) {
-        self.execution = Some(e);
-    }
-
-    /// Returns whether the realm has shut down.
-    pub fn is_shut_down(&self) -> bool {
-        self.shut_down
     }
 
     /// Returns a reference to the list of live child realms.
@@ -429,7 +449,8 @@ impl RealmState {
                 abs_moniker: abs_moniker,
                 component_url: child.url.clone(),
                 startup: child.startup,
-                state: Mutex::new(RealmStateHolder::new()),
+                state: Mutex::new(Holder::<RealmState>::new()),
+                execution: Mutex::new(ExecutionState::new()),
                 hooks: Hooks::new(Some(&realm.hooks)),
             });
             self.child_realms.insert(child_moniker, child_realm.clone());
@@ -471,39 +492,44 @@ impl RealmState {
     }
 }
 
-/// Holds a `RealmState` which may not be resolved.
-pub struct RealmStateHolder {
-    inner: Option<RealmState>,
+/// Holds a variable which may not be set. Offers slightly more convenient syntax for getting a
+/// reference than `Option`.
+pub struct Holder<T> {
+    inner: Option<T>,
 }
 
-impl RealmStateHolder {
+impl<T> Holder<T> {
     pub fn new() -> Self {
         Self { inner: None }
     }
 
-    pub fn get(&self) -> &RealmState {
-        self.inner.as_ref().expect("component instance was not resolved")
+    pub fn get(&self) -> &T {
+        self.inner.as_ref().expect("value was not set")
     }
 
-    pub fn get_mut(&mut self) -> &mut RealmState {
-        self.inner.as_mut().expect("component instance was not resolved")
+    pub fn get_mut(&mut self) -> &mut T {
+        self.inner.as_mut().expect("value was not set")
     }
 
-    pub fn set(&mut self, state: RealmState) {
+    pub fn set(&mut self, val: T) {
         if self.inner.is_some() {
-            panic!("Attempted to set RealmState twice");
+            panic!("Attempted to set value twice");
         }
-        self.inner = Some(state);
+        self.inner = Some(val);
     }
 
-    pub fn is_resolved(&self) -> bool {
+    pub fn is_set(&self) -> bool {
         self.inner.is_some()
+    }
+
+    pub fn clear(&mut self) {
+        self.inner = None
     }
 }
 
 /// The execution state for a component instance that has started running.
 // TODO: Hold the component instance's controller.
-pub struct Execution {
+pub struct Runtime {
     /// The resolved component URL returned by the resolver.
     pub resolved_url: String,
     /// Holder for objects related to the component's incoming namespace.
@@ -516,7 +542,7 @@ pub struct Execution {
     pub exposed_dir: ExposedDir,
 }
 
-impl Execution {
+impl Runtime {
     pub fn start_from(
         resolved_url: Option<String>,
         namespace: Option<IncomingNamespace>,
@@ -528,6 +554,6 @@ impl Execution {
             return Err(ModelError::ComponentInvalid);
         }
         let url = resolved_url.unwrap();
-        Ok(Execution { resolved_url: url, namespace, outgoing_dir, runtime_dir, exposed_dir })
+        Ok(Runtime { resolved_url: url, namespace, outgoing_dir, runtime_dir, exposed_dir })
     }
 }

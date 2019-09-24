@@ -192,15 +192,13 @@ impl RealmServiceHostInner {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fsys::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| {
-            match e {
-                ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
-                ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
-                ModelError::Unsupported { .. } => fsys::Error::Unsupported,
-                e => {
-                    error!("add_dynamic_child() failed: {}", e);
-                    fsys::Error::Internal
-                }
+        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
+            ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
+            ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
+            ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+            e => {
+                error!("add_dynamic_child() failed: {}", e);
+                fsys::Error::Internal
             }
         })?;
         Ok(())
@@ -624,14 +622,21 @@ mod tests {
         let test =
             RealmServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks).await;
 
-        // Create children "a" and "b" in collection.
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test.realm_proxy.create_child(&mut collection_ref, child_decl("a")).await;
-        let _ = res.expect("failed to create child a").expect("failed to create child a");
-
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test.realm_proxy.create_child(&mut collection_ref, child_decl("b")).await;
-        let _ = res.expect("failed to create child b").expect("failed to create child b");
+        // Create children "a" and "b" in collection, and bind to them.
+        for name in &["a", "b"] {
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let res = test.realm_proxy.create_child(&mut collection_ref, child_decl(name)).await;
+            let _ = res
+                .unwrap_or_else(|_| panic!("failed to create child {}", name))
+                .unwrap_or_else(|_| panic!("failed to create child {}", name));
+            let mut child_ref =
+                fsys::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
+            let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let res = test.realm_proxy.bind_child(&mut child_ref, server_end).await;
+            let _ = res
+                .unwrap_or_else(|_| panic!("failed to bind to child {}", name))
+                .unwrap_or_else(|_| panic!("failed to bind to child {}", name));
+        }
 
         let child_realm = get_live_child(&test.realm, "coll:a").await;
         let instance_id = get_instance_id(&test.realm, "coll:a").await;

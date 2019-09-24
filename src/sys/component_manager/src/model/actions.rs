@@ -216,16 +216,10 @@ impl RealmState {
     }
 
     async fn handle_shutdown(&mut self, model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
-        if self.is_shut_down() && self.execution().is_none() {
-            // I was shutdown, which implies my dependents have already been shut down. Nothing
-            // to do.
-            self.finish_action(&Action::Shutdown, Ok(())).await;
-        } else {
-            fasync::spawn(async move {
-                let res = do_shutdown(model, realm.clone()).await;
-                finish_action(realm, &Action::Shutdown, res).await;
-            });
-        }
+        fasync::spawn(async move {
+            let res = do_shutdown(model, realm.clone()).await;
+            finish_action(realm, &Action::Shutdown, res).await;
+        });
         Ok(())
     }
 
@@ -584,10 +578,13 @@ mod tests {
         let realm_container = test.look_up(vec!["container:0"].into()).await;
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        let realm_c = test.look_up(vec!["container:0", "c:0"].into()).await;
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
+        test.model.bind_instance(realm_c.clone()).await.expect("could not bind to coll:b");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
         assert!(has_child(&realm_container, "coll:a:1").await);
         assert!(has_child(&realm_container, "coll:b:2").await);
 
@@ -635,7 +632,6 @@ mod tests {
             ];
             assert_eq!(next, expected);
 
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["container:0"].into()),]);
         }
     }
 
@@ -679,8 +675,8 @@ mod tests {
         assert!(is_shut_down(&realm_a).await);
         assert!(is_shut_down(&realm_b).await);
 
-        // Now "a" is shut down. Shutting it down again should short-circuit, so there is a
-        // duplicate `Shutdown` for "a" but not for "b".
+        // Now "a" is shut down. There should be no events though because the component was
+        // never started.
         execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
@@ -696,13 +692,7 @@ mod tests {
                     _ => None,
                 })
                 .collect();
-            assert_eq!(
-                events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into()),
-                ]
-            );
+            assert_eq!(events, Vec::<Lifecycle>::new());
         }
     }
 
@@ -1148,8 +1138,6 @@ mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into()),
                     Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
                     Lifecycle::Destroy(vec!["a:0"].into()),
                 ]
@@ -1476,20 +1464,21 @@ mod tests {
     }
 
     async fn is_executing(realm: &Realm) -> bool {
-        let state = realm.lock_state().await;
-        state.get().execution().is_some()
+        realm.lock_execution().await.runtime.is_set()
     }
 
     async fn is_shut_down(realm: &Realm) -> bool {
-        let state = realm.lock_state().await;
-        let state = state.get();
-        state.execution().is_none() && state.is_shut_down()
+        let execution = realm.lock_execution().await;
+        !execution.runtime.is_set() && execution.is_shut_down()
     }
 
     async fn is_destroyed(realm: &Realm) -> bool {
         let state = realm.lock_state().await;
         let state = state.get();
-        state.execution().is_none() && state.is_shut_down() && state.all_child_realms().is_empty()
+        let execution = realm.lock_execution().await;
+        !execution.runtime.is_set()
+            && execution.is_shut_down()
+            && state.all_child_realms().is_empty()
     }
 
     fn is_pending(p: Poll<Result<(), ModelError>>) -> bool {
