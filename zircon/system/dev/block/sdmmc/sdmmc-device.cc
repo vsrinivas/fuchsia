@@ -30,6 +30,8 @@ constexpr void UpdateBits(uint32_t* x, uint32_t mask, uint32_t loc, uint32_t val
 
 namespace sdmmc {
 
+zx_status_t SdmmcDevice::Init() { return host_.HostInfo(&host_info_); }
+
 zx_status_t SdmmcDevice::SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries,
                                             uint32_t wait_time) const {
   zx_status_t st;

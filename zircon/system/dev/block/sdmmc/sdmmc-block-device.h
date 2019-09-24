@@ -29,17 +29,11 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
                          public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
                          public fbl::RefCounted<SdmmcBlockDevice> {
  public:
-  using BlockOperation = block::BorrowedOperation<>;
-
-  static constexpr size_t BlockOpSize() {
-    return BlockOperation::OperationSize(sizeof(block_op_t));
-  }
-
   SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
       : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
     block_info_.max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);
   }
-  virtual ~SdmmcBlockDevice() { txn_list_.CompleteAll(ZX_ERR_INTERNAL); }
+  ~SdmmcBlockDevice() { txn_list_.CompleteAll(ZX_ERR_INTERNAL); }
 
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                             fbl::RefPtr<SdmmcBlockDevice>* out_dev);
@@ -58,22 +52,18 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
 
   // Visible for testing.
+  zx_status_t Init() { return sdmmc_.Init(); }
   zx_status_t StartWorkerThread();
   void StopWorkerThread();
 
-  virtual void DoTxn(BlockOperation* txn);
-
- protected:
-  virtual SdmmcDevice& sdmmc() { return sdmmc_; }
-
-  virtual void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
-
-  virtual zx_status_t WaitForTran();
-
-  block_info_t block_info_;
-
  private:
+  using BlockOperation = block::BorrowedOperation<>;
+
+  void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
+  void DoTxn(BlockOperation* txn);
   int WorkerThread();
+
+  zx_status_t WaitForTran();
 
   zx_status_t MmcDoSwitch(uint8_t index, uint8_t value);
   zx_status_t MmcSetBusWidth(sdmmc_bus_width_t bus_width, uint8_t mmc_ext_csd_bus_width);
@@ -112,6 +102,8 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   thrd_t worker_thread_ = 0;
 
   std::atomic<bool> dead_ = false;
+
+  block_info_t block_info_;
 
   bool is_sd_ = false;
 };
