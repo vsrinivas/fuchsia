@@ -26,11 +26,11 @@ zx_handle_t run_process(zx_handle_t job, int argc, const char* const* argv) {
   size_t actions_count = sizeof(actions) / sizeof(actions[0]);
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t status = fdio_spawn_etc(
-      job,
-      FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC |
-          FDIO_SPAWN_CLONE_NAMESPACE | FDIO_SPAWN_CLONE_ENVIRON,
-      argv[0], argv, NULL, actions_count, actions, &process, err_msg);
+  zx_status_t status =
+      fdio_spawn_etc(job,
+                     FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE |
+                         FDIO_SPAWN_CLONE_ENVIRON,
+                     argv[0], argv, NULL, actions_count, actions, &process, err_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "spawn failed: %s: %d\n", err_msg, status);
     return ZX_HANDLE_INVALID;
