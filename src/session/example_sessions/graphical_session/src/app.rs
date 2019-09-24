@@ -15,7 +15,7 @@ use {
 
 use crate::view;
 
-/// An `App` represents an instance of the Whale session.
+/// An `App` represents an instance of the Graphical session.
 ///
 /// To start the session, create a new `App` instance and then
 /// call `app.run().await`.

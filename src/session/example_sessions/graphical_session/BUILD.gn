@@ -5,11 +5,11 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("whale_session_bin") {
-  name = "whale_session"
+rustc_binary("graphical_session_bin") {
+  name = "graphical_session"
   edition = "2018"
 
-  visibility = [ "//src/session/whale_session/*" ]
+  visibility = [ "//src/session/example_sessions/graphical_session/*" ]
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -26,15 +26,15 @@ rustc_binary("whale_session_bin") {
   ]
 }
 
-package("whale_session") {
+package("graphical_session") {
   deps = [
-    ":whale_session_bin",
+    ":graphical_session_bin",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/whale_session.cml")
-      dest = "whale_session.cm"
+      path = rebase_path("meta/graphical_session.cml")
+      dest = "graphical_session.cm"
     },
   ]
 
@@ -47,7 +47,7 @@ package("whale_session") {
 
   binaries = [
     {
-      name = "whale_session"
+      name = "graphical_session"
     },
   ]
 }

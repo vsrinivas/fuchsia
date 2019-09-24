@@ -8,10 +8,10 @@ group("session_framework") {
   deps = [
     "//garnet/bin/ui:scenic",
     "//src/session/component_manager:component_manager_sfw",
+    "//src/session/example_sessions/graphical_session",
     "//src/session/session_manager",
     "//src/session/session_manager:session_manager_tests",
     "//src/session/session_manager_integration_tests",
-    "//src/session/whale_session",
     "//src/sys/component_manager_for_test",
     "//src/testing/runner",
     "//src/ui/bin/ime:ime_service",

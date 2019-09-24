@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/whale_session"
+        "binary": "bin/graphical_session"
     },
     "use": [
         {
