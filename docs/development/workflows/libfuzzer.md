@@ -23,8 +23,9 @@
   * To replay a crash.
     `$ fx fuzz repro <fuzzer> [crash]`
 1. File bug using the following labels:
-  * `found-by-libfuzzer`
-  * `SecTriageMe`
+  * `found-by-fuzzing`
+  * `Sec-TriageMe`
+  * `libfuzzer`
 
 [TOC]
 
@@ -342,8 +343,8 @@ A: File them, then fix them!
 
 Note: The bug tracker is currently only open to Googlers.
 
-When filing bugs, __please__ use both the custom `found-by-libfuzzer` label, as well as the custom
-`Sec-TriageMe` label.  This will help the security team see where fuzzers are being used and stay
+When filing bugs, __please__ use the following custom labels: `found-by-fuzzing`, `libfuzzer`
+and `Sec-TriageMe`. This will help the security team see where fuzzers are being used and stay
 aware of any critical issues they are finding.
 
 As with other potential security issues, bugs should be filed __in the component of the code under
