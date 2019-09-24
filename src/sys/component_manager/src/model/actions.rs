@@ -230,9 +230,16 @@ impl RealmState {
         action: Action,
         moniker: ChildMoniker,
     ) -> Result<(), ModelError> {
-        if let Some(child_realm) = self.all_child_realms().get(&moniker) {
-            // Child exists (live or deleting), schedule work.
-            let child_realm = child_realm.clone();
+        let child_realm = {
+            self.all_child_realms().get(&moniker).map(|r| r.clone())
+        };
+        if let Some(child_realm) = child_realm {
+            // Child exists (live or deleting).
+
+            // Transactional so that the child is marked deleted as soon as `handle_action`
+            // returns.
+            self.mark_child_realm_deleting(&moniker.to_partial());
+
             fasync::spawn(async move {
                 let res = do_delete_child(model, realm.clone(), child_realm, moniker).await;
                 finish_action(realm, &action, res).await;
@@ -278,10 +285,6 @@ async fn do_delete_child(
     child_realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
-    {
-        let mut state = realm.lock_state().await;
-        state.get_mut().mark_child_realm_deleting(&moniker.to_partial());
-    }
     execute_action(model.clone(), child_realm.clone(), Action::Destroy).await?;
     {
         let mut state = realm.lock_state().await;
