@@ -132,11 +132,7 @@ func (idx *StaticIndex) Get(p pkg.Package) (string, bool) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
-	s, ok := idx.updates[p]
-	if ok {
-		return s, ok
-	}
-	s, ok = idx.roots[p]
+	s, ok := idx.roots[p]
 	return s, ok
 }
 

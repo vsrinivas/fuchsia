@@ -47,6 +47,11 @@ func TestStatic(t *testing.T) {
 		t.Error("static.HasName(`b`) = true, want false")
 	}
 
+	// attempt to set package "a" to the merkleroot all-a's, which must not be visible to the loop below.
+	if err := si.Set(pkg.Package{"a", "0"}, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); err != nil {
+		t.Fatal(err)
+	}
+
 	getPackageCases := []struct {
 		name, version string
 		result        string
@@ -65,4 +70,9 @@ func TestStatic(t *testing.T) {
 		t.Errorf("static.ListVersions(`a`) = %v, want %v", got, want)
 	}
 
+	// check that the setpackage to all "a"'s above is still in the update's set,
+	// so will be preserved by GC
+	if _, got := si.GetRoot("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); got != true {
+		t.Errorf("prior index set not observable")
+	}
 }
