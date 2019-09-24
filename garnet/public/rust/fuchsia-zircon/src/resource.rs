@@ -7,6 +7,7 @@
 use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
+use bitflags::bitflags;
 use fuchsia_zircon_sys::{self as sys, ZX_MAX_NAME_LEN};
 
 /// An object representing a Zircon resource.
@@ -31,6 +32,26 @@ unsafe impl ObjectQuery for ResourceInfo {
     type InfoTy = ResourceInfo;
 }
 
+bitflags! {
+    #[repr(transparent)]
+    pub struct ResourceKind: sys::zx_rsrc_kind_t {
+       const MMIO       = sys::ZX_RSRC_KIND_MMIO;
+       const IRQ        = sys::ZX_RSRC_KIND_IRQ;
+       const IOPORT     = sys::ZX_RSRC_KIND_IOPORT;
+       const HYPERVISOR = sys::ZX_RSRC_KIND_HYPERVISOR;
+       const ROOT       = sys::ZX_RSRC_KIND_ROOT;
+       const VMEX       = sys::ZX_RSRC_KIND_VMEX;
+       const SMC        = sys::ZX_RSRC_KIND_SMC;
+    }
+}
+
+bitflags! {
+    #[repr(transparent)]
+    pub struct ResourceFlag: sys::zx_rsrc_flags_t {
+       const EXCLUSIVE = sys::ZX_RSRC_FLAG_EXCLUSIVE;
+    }
+}
+
 impl Resource {
     /// Create a child resource object.
     ///
@@ -39,7 +60,8 @@ impl Resource {
     /// syscall
     pub fn create_child(
         &self,
-        options: u32,
+        kind: ResourceKind,
+        flags: Option<ResourceFlag>,
         base: u64,
         size: usize,
         name: &[u8],
@@ -47,10 +69,16 @@ impl Resource {
         let mut resource_out = 0;
         let name_ptr = name.as_ptr();
         let name_len = name.len();
+        let flag_bits: u32 = match flags {
+            Some(flag) => flag.bits(),
+            None => 0,
+        };
+        let option_bits: u32 = kind.bits() | flag_bits;
+
         let status = unsafe {
             sys::zx_resource_create(
                 self.raw_handle(),
-                options,
+                option_bits,
                 base,
                 size,
                 name_ptr,
@@ -80,7 +108,7 @@ mod tests {
     fn create_child() {
         let invalid_resource = Resource::from(Handle::invalid());
         assert_eq!(
-            invalid_resource.create_child(sys::ZX_RSRC_KIND_VMEX, 0, 0, b"vmex"),
+            invalid_resource.create_child(ResourceKind::VMEX, None, 0, 0, b"vmex"),
             Err(Status::BAD_HANDLE)
         );
     }

@@ -23,7 +23,7 @@ impl VmexService {
 
         while let Some(fsec::VmexRequest::Get { responder }) = stream.try_next().await? {
             let vmex_handle =
-                root_resource.create_child(zx::sys::ZX_RSRC_KIND_VMEX, 0, 0, b"vmex")?;
+                root_resource.create_child(zx::ResourceKind::VMEX, None, 0, 0, b"vmex")?;
             let restricted_vmex_handle = vmex_handle.replace_handle(
                 zx::Rights::TRANSFER | zx::Rights::DUPLICATE | zx::Rights::INSPECT,
             )?;

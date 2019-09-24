@@ -19,6 +19,7 @@ pub type zx_object_info_topic_t = u32;
 pub type zx_off_t = u64;
 pub type zx_paddr_t = usize;
 pub type zx_rights_t = u32;
+pub type zx_rsrc_flags_t = u32;
 pub type zx_rsrc_kind_t = u32;
 pub type zx_signals_t = u32;
 pub type zx_ssize_t = isize;
@@ -378,7 +379,7 @@ pub const ZX_TASK_RETCODE_VDSO_KILL: i64 = -1027;
 pub const ZX_TASK_RETCODE_EXCEPTION_KILL: i64 = -1028;
 
 // Resource flags.
-pub const ZX_RSRC_FLAG_EXCLUSIVE: u32 = 0x00010000;
+pub const ZX_RSRC_FLAG_EXCLUSIVE: zx_rsrc_flags_t = 0x00010000;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
