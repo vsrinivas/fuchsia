@@ -98,6 +98,7 @@ static zx_status_t wait_for_device_impl(int dir_fd, char* path, const zx::time& 
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t wait_for_device_at(int dirfd, const char* path, zx_duration_t timeout) {
   if (!path || timeout == 0) {
     fprintf(stderr, "invalid args: path='%s', timeout=%" PRIu64 "\n", path, timeout);
@@ -261,6 +262,7 @@ struct ramdisk_client {
 
 // TODO(aarongreen): This is more generic than just fs-management, or even block devices.  Move this
 // (and its tests) out of ramdisk and to somewhere else?
+__EXPORT
 zx_status_t wait_for_device(const char* path, zx_duration_t timeout) {
   return wait_for_device_at(/*dirfd=*/-1, path, timeout);
 }
@@ -328,15 +330,18 @@ static zx_status_t ramdisk_create_with_guid_internal(int dev_root_fd, uint64_t b
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t ramdisk_create_at(int dev_root_fd, uint64_t blk_size, uint64_t blk_count,
                               ramdisk_client** out) {
   return ramdisk_create_with_guid_internal(dev_root_fd, blk_size, blk_count, nullptr, out);
 }
 
+__EXPORT
 zx_status_t ramdisk_create(uint64_t blk_size, uint64_t blk_count, ramdisk_client** out) {
   return ramdisk_create_at(/*dev_root_fd=*/-1, blk_size, blk_count, out);
 }
 
+__EXPORT
 zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      const uint8_t* type_guid, size_t guid_len,
                                      ramdisk_client** out) {
@@ -344,6 +349,7 @@ zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      out);
 }
 
+__EXPORT
 zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size, uint64_t blk_count,
                                         const uint8_t* type_guid, size_t guid_len,
                                         ramdisk_client** out) {
@@ -353,10 +359,12 @@ zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size, uint
   return ramdisk_create_with_guid_internal(dev_root_fd, blk_size, blk_count, type_guid, out);
 }
 
+__EXPORT
 zx_status_t ramdisk_create_from_vmo(zx_handle_t raw_vmo, ramdisk_client** out) {
   return ramdisk_create_at_from_vmo(/*dev_root_fd=*/-1, raw_vmo, out);
 }
 
+__EXPORT
 zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t raw_vmo, ramdisk_client** out) {
   zx::vmo vmo(raw_vmo);
   zx::channel ramctl;
@@ -387,10 +395,13 @@ zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t raw_vmo, ram
   return ZX_OK;
 }
 
+__EXPORT
 int ramdisk_get_block_fd(const ramdisk_client_t* client) { return client->block_fd().get(); }
 
+__EXPORT
 const char* ramdisk_get_path(const ramdisk_client_t* client) { return client->path().c_str(); }
 
+__EXPORT
 zx_status_t ramdisk_sleep_after(const ramdisk_client* client, uint64_t block_count) {
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskSleepAfter(
@@ -401,6 +412,7 @@ zx_status_t ramdisk_sleep_after(const ramdisk_client* client, uint64_t block_cou
   return status;
 }
 
+__EXPORT
 zx_status_t ramdisk_wake(const ramdisk_client* client) {
   zx_status_t status;
   zx_status_t io_status =
@@ -411,6 +423,7 @@ zx_status_t ramdisk_wake(const ramdisk_client* client) {
   return status;
 }
 
+__EXPORT
 zx_status_t ramdisk_grow(const ramdisk_client* client, uint64_t required_size) {
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskGrow(client->ramdisk_interface().get(),
@@ -421,6 +434,7 @@ zx_status_t ramdisk_grow(const ramdisk_client* client, uint64_t required_size) {
   return status;
 }
 
+__EXPORT
 zx_status_t ramdisk_set_flags(const ramdisk_client* client, uint32_t flags) {
   zx_status_t status;
   zx_status_t io_status =
@@ -431,6 +445,7 @@ zx_status_t ramdisk_set_flags(const ramdisk_client* client, uint32_t flags) {
   return status;
 }
 
+__EXPORT
 zx_status_t ramdisk_get_block_counts(const ramdisk_client* client,
                                      ramdisk_block_write_counts_t* out_counts) {
   static_assert(
@@ -447,8 +462,10 @@ zx_status_t ramdisk_get_block_counts(const ramdisk_client* client,
   return status;
 }
 
+__EXPORT
 zx_status_t ramdisk_rebind(ramdisk_client_t* client) { return client->Rebind(); }
 
+__EXPORT
 zx_status_t ramdisk_destroy(ramdisk_client* client) {
   zx_status_t status = client->Destroy();
   delete client;

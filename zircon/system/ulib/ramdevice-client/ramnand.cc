@@ -23,6 +23,7 @@
 
 namespace ramdevice_client {
 
+__EXPORT
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.driver_search_paths.push_back("/boot/driver");
@@ -49,6 +50,7 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
   fbl::unique_fd control(open(kBasePath, O_RDWR));
@@ -82,6 +84,7 @@ zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
                             const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
@@ -122,6 +125,7 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* config,
                                     std::optional<RamNand>* out) {
   fbl::RefPtr<RamNandCtl> ctl;
@@ -132,6 +136,7 @@ zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* con
   return Create(std::move(ctl), config, out);
 }
 
+__EXPORT
 RamNand::~RamNand() {
   if (unbind && fd_) {
     zx::channel dev;
