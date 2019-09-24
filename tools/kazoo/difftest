@@ -31,6 +31,7 @@ out/default/host_x64/exe.unstripped/kazoo \
   --kernel-header=/tmp/kernel-header.h \
   --kernel-wrappers=/tmp/kernel-wrappers.inc \
   --ktrace=/tmp/ktrace.inc \
+  --rust=/tmp/definitions.rs \
   --syscall-numbers=/tmp/syscall-numbers.h \
   --user-header=/tmp/definitions.h \
   --vdso-header=/tmp/vdso-definitions.h \
@@ -68,6 +69,10 @@ compare "kernel-wrappers" \
 compare "ktrace" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/lib/ktrace/zircon/syscall-ktrace-info.inc" \
         "/tmp/ktrace.inc"
+
+compare "rust" \
+        "out/default.zircon/user.vdso-x64-clang.shlib/gen/zircon/syscalls/definitions.rs" \
+        "/tmp/definitions.rs"
 
 compare "syscall-numbers" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/zx-syscall-numbers.h" \

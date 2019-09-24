@@ -20,6 +20,7 @@ struct CommandLineOptions {
   std::optional<std::string> kernel_header;
   std::optional<std::string> kernel_wrappers;
   std::optional<std::string> ktrace;
+  std::optional<std::string> rust;
   std::optional<std::string> syscall_numbers;
   std::optional<std::string> user_header;
   std::optional<std::string> vdso_header;
@@ -54,6 +55,9 @@ constexpr const char kKernelWrappersHelp[] = R"(  --kernel-wrappers=FILENAME
 constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
     The output name for the .inc file used for kernel tracing.)";
 
+constexpr const char kRustHelp[] = R"(  --rust=FILENAME
+    The output name for the .rs file used for Rust syscall definitions.)";
+
 constexpr const char kSyscallNumbersHelp[] = R"(  --syscall-numbers=FILENAME
     The output name for the .h file used for syscall numbers.)";
 
@@ -82,6 +86,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
   parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
+  parser.AddSwitch("rust", 0, kRustHelp, &CommandLineOptions::rust);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
   parser.AddSwitch("user-header", 0, kUserHeaderHelp, &CommandLineOptions::user_header);
   parser.AddSwitch("vdso-header", 0, kVdsoHeaderHelp, &CommandLineOptions::vdso_header);
@@ -136,6 +141,7 @@ int main(int argc, const char* argv[]) {
       {&options.kernel_header, KernelHeaderOutput},
       {&options.kernel_wrappers, KernelWrappersOutput},
       {&options.ktrace, KtraceOutput},
+      {&options.rust, RustOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
       {&options.user_header, UserHeaderOutput},
       {&options.vdso_header, VdsoHeaderOutput},
