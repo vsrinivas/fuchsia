@@ -20,7 +20,7 @@ const JOIN_SCAN_EVENTS_LIMIT: usize = 10;
 pub struct SmeTree {
     /// Inspection node to log recent state transitions, or cases where an event would that would
     /// normally cause a state transition doesn't due to an error.
-    pub states: Mutex<BoundedListNode>,
+    pub state_events: Mutex<BoundedListNode>,
     /// Inspection node to log EAPOL frames processed by supplicant and its output.
     pub rsn_events: Mutex<BoundedListNode>,
     /// Inspection node to log recent join scan results.
@@ -29,12 +29,13 @@ pub struct SmeTree {
 
 impl SmeTree {
     pub fn new(node: &Node) -> Self {
-        let states = BoundedListNode::new(node.create_child("states"), STATE_EVENTS_LIMIT);
+        let state_events =
+            BoundedListNode::new(node.create_child("state_events"), STATE_EVENTS_LIMIT);
         let rsn_events = BoundedListNode::new(node.create_child("rsn_events"), RSN_EVENTS_LIMIT);
         let join_scan_events =
             BoundedListNode::new(node.create_child("join_scan_events"), JOIN_SCAN_EVENTS_LIMIT);
         Self {
-            states: Mutex::new(states),
+            state_events: Mutex::new(state_events),
             rsn_events: Mutex::new(rsn_events),
             join_scan_events: Mutex::new(join_scan_events),
         }

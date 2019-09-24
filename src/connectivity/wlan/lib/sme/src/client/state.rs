@@ -421,7 +421,7 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            inspect_log!(context.inspect.states.lock(), {
+            inspect_log!(context.inspect.state_events.lock(), {
                 from: start_state,
                 to: new_state.state_name(),
                 ctx?: state_change_msg,
@@ -541,7 +541,7 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            inspect_log!(context.inspect.states.lock(), {
+            inspect_log!(context.inspect.state_events.lock(), {
                 from: start_state,
                 to: new_state.state_name(),
                 ctx?: state_change_msg,
@@ -571,12 +571,16 @@ impl State {
         context.info.report_join_started(context.att_id);
 
         let msg = connect_cmd_inspect_summary(&cmd);
-        inspect_log!(context.inspect.states.lock(), from: start_state, to: JOINING_STATE, ctx: msg);
+        inspect_log!(context.inspect.state_events.lock(), {
+            from: start_state,
+            to: JOINING_STATE,
+            ctx: msg,
+        });
         State::Joining { cfg, cmd }
     }
 
     pub fn disconnect(self, context: &mut Context) -> Self {
-        inspect_log!(context.inspect.states.lock(), {
+        inspect_log!(context.inspect.state_events.lock(), {
             from: self.state_name(),
             to: IDLE_STATE,
             ctx: "disconnect command",
