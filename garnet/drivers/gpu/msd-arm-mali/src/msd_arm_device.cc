@@ -834,6 +834,10 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     DASSERT(!IsInProtectedMode());
   }
 
+  auto connection = atom->connection().lock();
+  // Should be kept alive because an address space is assigned.
+  DASSERT(connection);
+
   // Ensure the client's writes/cache flushes to the job chain are complete
   // before scheduling. Unlikely to be an issue since several thread and
   // process hops already happened.
@@ -867,7 +871,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
   uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
   TRACE_VTHREAD_DURATION_BEGIN("magma", MsdArmAtom::AtomRunningString(atom->slot()),
                                MsdArmAtom::AtomRunningString(atom->slot()), atom->slot_id(),
-                               current_ticks);
+                               current_ticks, "client_id", connection->client_id());
   TRACE_VTHREAD_FLOW_STEP("magma", "atom", MsdArmAtom::AtomRunningString(atom->slot()),
                           atom->slot_id(), atom->trace_nonce(), current_ticks);
 }
