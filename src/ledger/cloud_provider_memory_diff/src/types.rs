@@ -181,7 +181,7 @@ impl From<Diff> for cloud::Diff {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct DiffEntry {
     pub entry_id: Vec<u8>,
     pub data: Vec<u8>,
