@@ -13,8 +13,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
+
+#include <unittest/unittest.h>
 
 static bool GoldfishPipeTest() {
   BEGIN_TEST;
@@ -203,6 +204,16 @@ static bool GoldfishControlTest() {
             ZX_OK);
   EXPECT_EQ(status2, ZX_OK);
   EXPECT_NE(id, 0);
+
+  zx::vmo vmo_copy3;
+  EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
+
+  status2 = ZX_OK;
+  EXPECT_EQ(fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer(
+                channel.get(), vmo_copy3.release(), 64, 64,
+                fuchsia_hardware_goldfish_control_FormatType_BGRA, &status2),
+            ZX_OK);
+  EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
 
   END_TEST;
 }

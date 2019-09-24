@@ -4,12 +4,6 @@
 
 #include "control-device.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,6 +14,13 @@
 #include <zircon/syscalls.h>
 
 #include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/trace/event.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 
 namespace goldfish {
 namespace {
@@ -321,8 +322,8 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
   }
 
   if (it->second) {
-    zxlogf(ERROR, "%s: color buffer already exists\n", kTag);
-    return ZX_ERR_INVALID_ARGS;
+    return fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer_reply(txn,
+                                                                           ZX_ERR_ALREADY_EXISTS);
   }
 
   uint32_t id;
