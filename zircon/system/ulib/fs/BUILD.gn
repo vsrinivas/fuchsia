@@ -80,7 +80,6 @@ library("fs") {
       # <fs/connection.h> has #include <lib/async/cpp/wait.h>.
       "$zx/system/ulib/async:async-cpp",
     ]
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps += [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",
@@ -143,7 +142,6 @@ if (is_fuchsia) {
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:trace-driver.headers",
     ]
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps = [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",

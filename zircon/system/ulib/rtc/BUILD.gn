@@ -8,7 +8,6 @@ library("rtc") {
   sources = [
     "librtc.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",

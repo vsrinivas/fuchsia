@@ -24,6 +24,10 @@ source_set("ldso") {
     assert(ldsvc_config != "" && ldsvc_config != ".")
     defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("dlstart") {

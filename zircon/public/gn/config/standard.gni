@@ -76,8 +76,7 @@ standard_configs = [
   "$zx/public/gn/config:no_threadsafe_statics",
   "$zx/public/gn/config:thread_safety_annotations",
   "$zx/public/gn/config:warn-implicit-fallthrough",
-
-  # TODO(ZX-1895): "$zx/public/gn/config:symbol_visibility_hidden",
+  "$zx/public/gn/config:visibility_hidden",
 
   {
     # Additional configs apply only to code built into shared libraries.
@@ -131,10 +130,7 @@ standard_environments = [
           "driver",
           "test_driver",
         ]
-        add = [
-          "$zx/public/gn/config:visibility_hidden",
-          "$zx/public/gn/config:static-libc++",
-        ]
+        add = [ "$zx/public/gn/config:static-libc++" ]
       },
     ]
     implicit_deps = [

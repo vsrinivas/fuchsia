@@ -34,7 +34,6 @@ library("fidl_base") {
     "validating.cc",
     "walker.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
   ]
@@ -48,7 +47,6 @@ library("fidl") {
     "epitaph.c",
     "handle_closing.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":fidl_base",
     "$zx/system/ulib/zircon",
@@ -71,7 +69,6 @@ library("fidl-llcpp") {
   sources = [
     "llcpp_transaction.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     ":headers",
 

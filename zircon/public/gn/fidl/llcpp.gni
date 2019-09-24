@@ -73,8 +73,6 @@ template("fidl_llcpp_library") {
         "gen/llcpp/fidl.cc",
       ]
 
-      configs += [ "$zx/public/gn/config:visibility_hidden" ]
-
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_fidl_llcpp_library.config.$library_target" ]
 

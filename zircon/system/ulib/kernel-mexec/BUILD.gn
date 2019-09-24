@@ -8,7 +8,6 @@ library("kernel-mexec") {
   sources = [
     "kernel-mexec.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-kernel:c",

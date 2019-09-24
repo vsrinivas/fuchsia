@@ -13,7 +13,6 @@ library("svc") {
   sources = [
     "outgoing.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/fdio",

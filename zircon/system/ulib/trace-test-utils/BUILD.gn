@@ -21,7 +21,6 @@ library("trace-test-utils") {
     "read_records.cc",
     "squelch.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <trace-test-utils/fixture.h> needs these
     "$zx/system/ulib/async-loop:headers",

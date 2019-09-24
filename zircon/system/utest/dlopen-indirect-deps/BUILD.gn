@@ -25,6 +25,10 @@ library("dlopen-indirect-deps-test-module") {
   deps = [
     ":dlopen-indirect-deps-test-liba",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 library("dlopen-indirect-deps-test-liba") {
@@ -37,6 +41,10 @@ library("dlopen-indirect-deps-test-liba") {
   deps = [
     ":dlopen-indirect-deps-test-libb",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 library("dlopen-indirect-deps-test-libb") {
@@ -46,4 +54,8 @@ library("dlopen-indirect-deps-test-libb") {
   sources = [
     "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

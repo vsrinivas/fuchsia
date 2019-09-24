@@ -15,7 +15,6 @@ library("async-loop") {
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",
@@ -30,7 +29,6 @@ library("async-loop-cpp") {
   sources = [
     "loop_wrapper.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":async-loop",
     "$zx/system/ulib/async",
@@ -53,7 +51,6 @@ library("async-loop-default") {
   sources = [
     "default.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async:async-default",
   ]

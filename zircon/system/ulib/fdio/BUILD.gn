@@ -41,7 +41,6 @@ library("fdio") {
     "watcher.cc",
     "zxio.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-io:llcpp",

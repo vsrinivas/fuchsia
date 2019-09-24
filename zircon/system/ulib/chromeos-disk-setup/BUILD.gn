@@ -8,7 +8,6 @@ library("chromeos-disk-setup") {
   sources = [
     "chromeos-disk-setup.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
   ]

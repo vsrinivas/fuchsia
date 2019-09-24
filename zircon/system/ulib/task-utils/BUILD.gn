@@ -14,7 +14,6 @@ library("task-utils") {
     "get.c",
     "walker.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",

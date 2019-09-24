@@ -20,7 +20,6 @@ library("fs-test-utils") {
     "fixture.cc",
     "perftest.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <fs-test-utils/fixture.h> has #include <ramdevice-client/ramdisk.h>.
     "$zx/system/ulib/ramdevice-client:headers",

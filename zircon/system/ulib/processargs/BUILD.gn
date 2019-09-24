@@ -14,8 +14,6 @@ library("processargs") {
   ]
 
   configs += [
-    "$zx_build/public/gn/config:visibility_hidden",
-
     # This code is used in early startup, where safe-stack is not ready yet.
     "$zx_build/public/gn/config:no_sanitizers",
   ]

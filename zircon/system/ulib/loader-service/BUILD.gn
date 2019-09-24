@@ -10,7 +10,6 @@ library("loader-service") {
   sources = [
     "loader-service.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop",

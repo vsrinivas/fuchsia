@@ -58,5 +58,4 @@ library("runtests-utils") {
   } else {
     sources += [ "posix-run-test.cc" ]
   }
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

@@ -19,7 +19,6 @@ library("sync") {
     "condition.cc",
     "mutex.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",

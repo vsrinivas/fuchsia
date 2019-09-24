@@ -66,7 +66,6 @@ library("minfs") {
       "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
     ]
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps += [
       "$zx/system/fidl/fuchsia-device:c",
       "$zx/system/fidl/fuchsia-io:c",

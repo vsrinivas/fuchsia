@@ -37,6 +37,10 @@ source_set("compiler") {
       "memset.c",
     ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("stdmem") {
@@ -66,6 +70,10 @@ source_set("stdmem") {
       sources += [ "memmove.c" ]
     }
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("extmem") {
@@ -82,6 +90,10 @@ source_set("extmem") {
   } else {
     sources += [ "mempcpy.c" ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("minimal_str") {
@@ -101,6 +113,10 @@ source_set("minimal_str") {
       "strncmp.c",
     ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("stdstr") {
@@ -137,6 +153,10 @@ source_set("stdstr") {
       "strcpy.c",
     ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("extstr") {
@@ -169,6 +189,10 @@ source_set("extstr") {
       "strnlen.c",
     ]
   }
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("bsd") {
@@ -183,6 +207,10 @@ source_set("bsd") {
     "rindex.c",
     "swab.c",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("wcs") {
@@ -212,6 +240,10 @@ source_set("wcs") {
     "wcstok.c",
     "wcswcs.c",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 source_set("wmem") {
@@ -225,4 +257,8 @@ source_set("wmem") {
     "wmemmove.c",
     "wmemset.c",
   ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

@@ -51,7 +51,6 @@ library("sysconfig-sync-client-c") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 test("sysconfig-sync-client-test") {

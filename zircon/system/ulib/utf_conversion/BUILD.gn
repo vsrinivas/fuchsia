@@ -9,7 +9,6 @@ import("$zx_build/public/gn/library_shim.gni")
   sources = [
     "utf_conversion.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
   ]

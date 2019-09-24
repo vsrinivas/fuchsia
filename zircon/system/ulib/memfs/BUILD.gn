@@ -18,7 +18,6 @@ library("memfs-cpp") {
     "memfs.cc",
     "vmo.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async",
@@ -51,7 +50,6 @@ library("memfs") {
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
     "$zx/system/ulib/sync:headers",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":memfs-cpp",
     "$zx/system/ulib/fbl",

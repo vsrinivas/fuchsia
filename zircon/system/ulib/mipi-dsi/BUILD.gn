@@ -8,7 +8,6 @@ library("mipi-dsi") {
   sources = [
     "mipi-dsi.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dsiimpl",
   ]

@@ -31,7 +31,6 @@ library("inspect") {
     "vmo/state.cc",
     "vmo/types.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 
   public_deps = [
     "$zx/system/ulib/fit:headers",
@@ -55,6 +54,4 @@ library("inspect-common") {
   sources = [
     "common.cc",
   ]
-
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

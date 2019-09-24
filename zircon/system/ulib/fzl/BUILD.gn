@@ -28,7 +28,6 @@ library("fzl") {
     "vmo-mapper.cc",
     "vmo-pool.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zx",

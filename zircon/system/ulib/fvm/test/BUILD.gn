@@ -59,5 +59,4 @@ library("devices") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

@@ -8,7 +8,6 @@ library("zxs") {
   sdk = "static"
   sdk_headers = [ "lib/zxs/protocol.h" ]
   sources = []
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <lib/zxs/protocol.h> has #include <zircon/compiler.h>.
     "$zx/system/ulib/zircon",

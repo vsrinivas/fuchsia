@@ -19,7 +19,6 @@ library("block-client") {
     "$zx/system/fidl/fuchsia-hardware-block:c.headers",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
@@ -40,7 +39,6 @@ library("fake-device") {
   sources = [
     "fake-device.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     ":block-client",
     "$zx/system/ulib/fbl",

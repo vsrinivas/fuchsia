@@ -8,7 +8,6 @@ template("trace_library") {
   library(target_name) {
     forward_variables_from(invoker, "*")
 
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 
     sdk_headers = [
       "lib/trace/internal/event_args.h",

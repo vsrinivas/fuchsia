@@ -5,7 +5,6 @@
 import("$zx_build/public/gn/source_set_shim.gni")
 
 source_set("shared") {
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   visibility = [ "$zx/system/core/devmgr/*" ]
   sources = [
     "fdio.cc",
@@ -22,7 +21,6 @@ source_set("shared") {
 }
 
 source_set("env") {
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   visibility = [ "$zx/system/core/devmgr/*" ]
   sources = [
     "env.cc",

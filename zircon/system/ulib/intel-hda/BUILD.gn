@@ -12,7 +12,6 @@ library("intel-hda") {
     "utils/status.cc",
     "utils/utils.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "$zx/system/banjo/ddk.protocol.intelhda.codec",

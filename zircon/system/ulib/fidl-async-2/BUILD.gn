@@ -6,7 +6,6 @@ import("$zx_build/public/gn/library_shim.gni")
 
 library("fidl-async-2") {
   sources = []
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

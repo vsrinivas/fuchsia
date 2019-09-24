@@ -27,8 +27,6 @@ library("uboringssl") {
       "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
     ]
   } else {
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
-
     if (is_fuchsia) {
       deps = [
         "$zx/system/ulib/zircon",

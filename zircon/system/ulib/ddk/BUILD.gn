@@ -59,7 +59,6 @@ library("ddk") {
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
     #"$zx/system/ulib/trace:headers",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

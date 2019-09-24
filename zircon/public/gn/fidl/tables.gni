@@ -49,8 +49,6 @@ template("fidl_tables") {
                                "testonly",
                              ])
 
-      configs += [ "$zx/public/gn/config:visibility_hidden" ]
-
       # Depend on the fidlc generation step and compile what it produces.
       deps = invoker.fidlc_deps
       sources = invoker.fidlc_outputs

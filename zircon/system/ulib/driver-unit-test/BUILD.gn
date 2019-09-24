@@ -14,7 +14,6 @@ library("driver-unit-test") {
     "logger.cc",
     "utils.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-driver-test:c",
     "$zx/system/ulib/ddk",

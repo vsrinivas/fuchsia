@@ -45,5 +45,4 @@ library("fvm") {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
     deps += [ "$zx/system/ulib/zircon:headers" ]
   }
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

@@ -31,7 +31,6 @@ library("zxio") {
     # <lib/zxio/inception.h> has #include <fuchsia/posix/socket/llcpp/fidl.h>.
     "$zx/system/fidl/fuchsia-posix-socket:llcpp.headers",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-posix-socket:llcpp",

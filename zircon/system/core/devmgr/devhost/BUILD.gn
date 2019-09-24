@@ -63,7 +63,6 @@ source_set("common") {
 
   configs += [
     "$zx_build/public/gn/config:static-libc++",
-    "$zx_build/public/gn/config:visibility_hidden",
   ]
 }
 

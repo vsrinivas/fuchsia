@@ -9,7 +9,6 @@ library("logger") {
     "logger.cc",
     "provider.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/ulib/fbl",

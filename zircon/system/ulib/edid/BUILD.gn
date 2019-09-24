@@ -10,7 +10,6 @@ library("edid") {
     "eisa_vid_lut.cc",
     "timings.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

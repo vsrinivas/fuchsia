@@ -10,7 +10,6 @@ library("id_allocator") {
   sources = [
     "id_allocator.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <id_allocator/id_allocator.h> has #include <bitmap/bitmap.h>.
     "$zx/system/ulib/bitmap:headers",

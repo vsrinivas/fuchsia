@@ -52,7 +52,6 @@ library("fbl") {
     "alloc_checker.cc",
   ]
   if (!is_kernel) {
-    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     sources += [
       "string.cc",
       "string_buffer.cc",

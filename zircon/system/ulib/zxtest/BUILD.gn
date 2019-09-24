@@ -34,7 +34,6 @@ library("zxtest") {
     "test.cc",
     "zxtest-main.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
     "$zx/system/ulib/fbl:headers",

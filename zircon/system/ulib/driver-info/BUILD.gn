@@ -8,7 +8,6 @@ library("driver-info") {
   sources = [
     "driver-info.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 executable("driverinfo") {

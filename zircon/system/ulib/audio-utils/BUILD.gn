@@ -17,7 +17,6 @@ library("audio-utils") {
     "audio-input.cc",
     "audio-output.cc",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-audio:c",
     "$zx/system/ulib/fbl",

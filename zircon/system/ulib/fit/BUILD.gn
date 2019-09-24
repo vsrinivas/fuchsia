@@ -35,7 +35,6 @@ library("fit") {
   ]
   host = true
   static = true
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_configs = [ "$zx_build/public/gn/config:no_maybe_uninitialized" ]
   sources = [
     "barrier.cc",

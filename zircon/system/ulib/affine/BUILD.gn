@@ -21,6 +21,4 @@ library("affine") {
     "ratio.cc",
     "transform.cc",
   ]
-
-  configs += [ "$zx_build/public/gn/config:visibility_hidden"]
 }

@@ -17,7 +17,6 @@ library("lz4") {
     "$lz4_lib/lz4hc.c",
     "$lz4_lib/xxhash.c",
   ]
-  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   defines = [
     "XXH_NAMESPACE=LZ4_",
 
