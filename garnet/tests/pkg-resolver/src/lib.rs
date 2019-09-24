@@ -54,6 +54,12 @@ impl PkgFs for TestPkgFs {
     }
 }
 
+struct Apps {
+    _amber: App,
+    _pkg_cache: App,
+    _pkg_resolver: App,
+}
+
 struct Proxies {
     resolver_admin: PackageResolverAdminProxy,
     resolver: PackageResolverProxy,
@@ -61,11 +67,9 @@ struct Proxies {
 }
 
 struct TestEnv<P = TestPkgFs> {
-    _amber: App,
-    _pkg_cache: App,
-    _pkg_resolver: App,
     pkgfs: P,
     env: NestedEnvironment,
+    apps: Apps,
     proxies: Proxies,
 }
 
@@ -73,9 +77,15 @@ impl TestEnv<TestPkgFs> {
     fn new() -> Self {
         Self::new_with_pkg_fs(TestPkgFs::start(None).expect("pkgfs to start"))
     }
-}
 
-impl TestEnv<TestPkgFs> {
+    async fn stop(self) {
+        // Tear down the environment in reverse order, ending with the storage.
+        drop(self.proxies);
+        drop(self.apps);
+        drop(self.env);
+        self.pkgfs.stop().await.expect("pkgfs to stop gracefully");
+    }
+
     fn add_file_with_merkle_to_blobfs(&self, mut file: File, merkle: &Hash) {
         let mut blob = self
             .pkgfs
@@ -202,11 +212,9 @@ impl<P: PkgFs> TestEnv<P> {
             .expect("connect to repository manager");
 
         Self {
-            _amber: amber,
-            _pkg_cache: pkg_cache,
-            _pkg_resolver: pkg_resolver,
             env,
             pkgfs,
+            apps: Apps { _amber: amber, _pkg_cache: pkg_cache, _pkg_resolver: pkg_resolver },
             proxies: Proxies {
                 resolver: resolver_proxy,
                 resolver_admin: resolver_admin_proxy,
@@ -294,6 +302,8 @@ async fn test_package_resolution() -> Result<(), Error> {
     // All blobs in the repository should now be present in blobfs.
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
+    env.stop().await;
+
     Ok(())
 }
 
@@ -337,6 +347,8 @@ async fn verify_separate_blobs_url(download_blob: bool) -> Result<(), Error> {
     std::fs::rename(repo_root.join("blobsbolb"), repo_root.join("blobs"))?;
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
+    env.stop().await;
+
     Ok(())
 }
 
@@ -374,6 +386,8 @@ async fn verify_download_blob_resolve_with_altered_env(
 
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    env.stop().await;
 
     Ok(())
 }
@@ -443,6 +457,8 @@ async fn test_download_blob_experiment_identity_hyper() -> Result<(), Error> {
 
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
+    env.stop().await;
+
     Ok(())
 }
 
@@ -481,6 +497,8 @@ async fn test_download_blob_experiment_uses_cached_package() -> Result<(), Error
     let package_dir =
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
+
+    env.stop().await;
 
     Ok(())
 }
@@ -904,6 +922,7 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
 
     assert_matches!(res, Err(Status::IO));
     assert_eq!(failing_file_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+
     Ok(())
 }
 

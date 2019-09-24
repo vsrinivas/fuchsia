@@ -326,7 +326,7 @@ impl Repository {
     /// Serves the repository over HTTP.
     pub async fn serve<'a>(
         &'a self,
-        launcher: &'a LauncherProxy,
+        launcher: &'_ LauncherProxy,
     ) -> Result<ServedRepository<'a>, Error> {
         let indir = tempfile::tempdir().context("create /in")?;
         let port = {
