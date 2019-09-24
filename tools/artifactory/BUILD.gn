@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("artifactory_main") {
+  name = "go.fuchsia.dev/fuchsia/tools/artifactory/cmd"
+  source_dir = "cmd"
+  deps = [
+    "//third_party/golibs:cloud.google.com/go/storage",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/lib/color",
+    "//tools/lib/logger",
+  ]
+}
+
+go_binary("artifactory") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/artifactory/cmd"
+
+  deps = [
+    ":artifactory_main",
+  ]
+}
+
+go_test("artifactory_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory/cmd" ]
+  deps = [
+    ":artifactory_main",
+  ]
+}

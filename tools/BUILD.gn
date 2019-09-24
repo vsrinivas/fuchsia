@@ -35,6 +35,7 @@ group("infratools") {
   public_deps = []
   foreach(toolchain, toolchains) {
     public_deps += [
+      "//tools/artifactory($toolchain)",
       "//tools/botanist($toolchain)",
       "//tools/build:tools($toolchain)",
       "//tools/debug:tools($toolchain)",
@@ -49,6 +50,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//tools/artifactory:artifactory_tests($host_toolchain)",
     "//tools/bindc:tests",
     "//tools/blackout:tests",
     "//tools/botanist:tests($host_toolchain)",
