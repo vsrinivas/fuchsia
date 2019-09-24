@@ -11,7 +11,7 @@ mod exposed_dir;
 pub mod hooks;
 pub mod hub;
 mod model;
-mod moniker;
+pub mod moniker;
 mod namespace;
 mod realm;
 mod resolver;

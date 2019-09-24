@@ -1,11 +1,4 @@
 {
-    "program": {
-        "binary": "bin/storage_realm",
-    },
-    "use": [
-        { "legacy_service": "/svc/fuchsia.logger.LogSink" },
-        { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-    ],
     "storage": [
         {
             "name": "mystorage",
@@ -19,6 +12,7 @@
             "from": "#mystorage",
             "to": [
                 { "dest": "#storage_user" },
+                { "dest": "#coll" },
             ],
         },
         {
@@ -26,6 +20,7 @@
             "from": "realm",
             "to": [
                 { "dest": "#storage_user" },
+                { "dest": "#coll" },
                 { "dest": "#memfs" },
             ]
         },
@@ -38,6 +33,12 @@
         {
             "name": "storage_user",
             "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
+        },
+    ],
+    "collections": [
+        {
+            "name": "coll",
+            "durability": "transient",
         },
     ],
 }

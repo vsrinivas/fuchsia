@@ -1,0 +1,29 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/storage_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.logger.LogSink"
+        ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    }
+}

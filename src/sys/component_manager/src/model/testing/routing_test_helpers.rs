@@ -309,12 +309,18 @@ impl RoutingTest {
         relative_path: &str,
     ) -> Vec<String> {
         let memfs_proxy = self.memfs.clone_root_handle();
-        let mut dir_path = storage::generate_storage_path(None, &relation);
-        dir_path.push(relative_path);
-        let dir_proxy =
-            io_util::open_directory(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
-                .expect("failed to open directory");
-        test_helpers::list_directory(&dir_proxy).await
+        let mut dir_path = capability_util::generate_storage_path(None, &relation);
+        if !relative_path.is_empty() {
+            dir_path.push(relative_path);
+        }
+        if !dir_path.parent().is_none() {
+            let dir_proxy =
+                io_util::open_directory(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
+                    .expect("failed to open directory");
+            test_helpers::list_directory(&dir_proxy).await
+        } else {
+            test_helpers::list_directory(&memfs_proxy).await
+        }
     }
 
     /// check_namespace will ensure that the paths in `namespaces` for `component_name` match the use
@@ -451,7 +457,7 @@ impl RoutingTest {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use super::*;
-    use cm_rust::NativeIntoFidl;
+    use {cm_rust::NativeIntoFidl, std::path::PathBuf};
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
     /// should contain the string "hippo".
@@ -784,6 +790,30 @@ pub mod capability_util {
             .open(flags, open_mode, path.split(), server_end)
             .await
             .expect("failed to open exposed dir");
+    }
+
+    // This function should reproduce the logic of `crate::storage::generate_storage_path`
+    pub fn generate_storage_path(
+        type_: Option<fsys::StorageType>,
+        relative_moniker: &RelativeMoniker,
+    ) -> PathBuf {
+        assert!(relative_moniker.up_path().is_empty());
+        let mut down_path = relative_moniker.down_path().iter();
+        let mut dir_path = vec![];
+        if let Some(p) = down_path.next() {
+            dir_path.push(p.as_str().to_string());
+        }
+        while let Some(p) = down_path.next() {
+            dir_path.push("children".to_string());
+            dir_path.push(p.as_str().to_string());
+        }
+        match type_ {
+            Some(fsys::StorageType::Data) => dir_path.push("data".to_string()),
+            Some(fsys::StorageType::Cache) => dir_path.push("cache".to_string()),
+            Some(fsys::StorageType::Meta) => dir_path.push("meta".to_string()),
+            None => {}
+        }
+        dir_path.into_iter().collect()
     }
 }
 

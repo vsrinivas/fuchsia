@@ -161,14 +161,18 @@ pub async fn delete_isolated_storage(
         .ok_or(StorageError::invalid_storage_path(relative_moniker.clone()))?
         .to_str()
         .ok_or(StorageError::InvalidUtf8)?;
-    let dir = io_util::open_directory(&root_dir, dir_path, FLAGS).map_err(|e| {
-        StorageError::open(
-            dir_source_realm.abs_moniker.clone(),
-            dir_source_path.clone(),
-            relative_moniker.clone(),
-            e,
-        )
-    })?;
+    let dir = if dir_path.parent().is_none() {
+        root_dir
+    } else {
+        io_util::open_directory(&root_dir, dir_path, FLAGS).map_err(|e| {
+            StorageError::open(
+                dir_source_realm.abs_moniker.clone(),
+                dir_source_path.clone(),
+                relative_moniker.clone(),
+                e,
+            )
+        })?
+    };
 
     // TODO(36377): This function is subject to races. If another process has a handle to the
     // isolated storage directory, it can add files while this function is running. That could
@@ -214,8 +218,7 @@ pub async fn delete_isolated_storage(
 /// When `d` attempts to access `/my_cache` the framework creates the sub-directory
 /// `b:0/children/c:0/children/d:0/cache` in the directory used by `a` to declare storage
 /// capabilities.  Then, the framework gives 'd' access to this new directory.
-// TODO: this is only externally used by tests, make it private?
-pub fn generate_storage_path(
+fn generate_storage_path(
     type_: Option<fsys::StorageType>,
     relative_moniker: &RelativeMoniker,
 ) -> PathBuf {

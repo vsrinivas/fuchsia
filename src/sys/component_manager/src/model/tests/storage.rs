@@ -392,13 +392,144 @@ async fn storage_from_parent_dir_from_sibling() {
 ///      \
 ///      [c]
 ///
+/// a: offers directory to b at path /minfs
+/// b: has storage decl with name "mystorage" with a source of realm at path /data
+/// b: offers storage to collection from "mystorage"
+/// [c]: uses storage as /storage
+/// [c]: destroyed and storage goes away
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_in_collection_from_parent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Self_,
+                    source_path: "/data".try_into().unwrap(),
+                    target_path: "/minfs".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    source: UseSource::Framework,
+                    source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                })],
+                offers: vec![
+                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Collection("coll".to_string()),
+                    })),
+                    OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Collection("coll".to_string()),
+                    })),
+                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Collection("coll".to_string()),
+                    })),
+                ],
+                storage: vec![StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "/minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Realm,
+                }],
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_dynamic_child(
+        vec!["b:0"].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+        },
+    )
+    .await;
+
+    // Use storage and confirm its existence.
+    test.check_use(
+        vec!["b:0", "coll:c:1"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            type_: fsys::StorageType::Data,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "coll:c:1"].into(),
+        CheckUse::Storage {
+            path: "/cache".try_into().unwrap(),
+            type_: fsys::StorageType::Cache,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "coll:c:1"].into(),
+        CheckUse::Storage {
+            path: "/unused".try_into().unwrap(),
+            type_: fsys::StorageType::Meta,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+        },
+    )
+    .await;
+    // "foo" is here since it's automatically created by the test.
+    assert_eq!(
+        test.list_directory_in_storage(RelativeMoniker::new(vec![], vec![]), "").await,
+        vec!["coll:c:1".to_string(), "foo".to_string()],
+    );
+    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c", 1).await;
+
+    // Confirm storage no longer exists.
+    assert_eq!(
+        test.list_directory_in_storage(RelativeMoniker::new(vec![], vec![]), "").await,
+        vec!["foo".to_string()],
+    );
+}
+
+///   a
+///    \
+///     b
+///      \
+///      [c]
+///
 /// a: has storage decl with name "mystorage" with a source of self at path /data
 /// a: offers storage to b from "mystorage"
 /// b: offers storage to collection from "mystorage"
 /// [c]: uses storage as /storage
 /// [c]: destroyed and storage goes away
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_from_collection() {
+async fn use_in_collection_from_grandparent() {
     let components = vec![
         (
             "a",
