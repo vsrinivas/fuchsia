@@ -379,7 +379,7 @@ you can retrieve older versions of the corpus relating to a specific version of 
 A: Yes! by fetching the corpus, and then performing a normal corpus update:
 
 1. Fetch from a directory rather than CIPD:
-* `fx fuzz fetch [package]/[fuzzer] /path/to/third/party/corpus`
+* `fx fuzz fetch --no-cipd --staging /path/to/third/party/corpus [package]/[fuzzer]`
 1. Upload the corpus to [CIPD].
 * `fx fuzz merge [package]/[fuzzer]`
 
