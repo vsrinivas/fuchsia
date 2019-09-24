@@ -1,0 +1,120 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("components") {
+  testonly = true
+  deps = [
+    ":components_binary_test",
+    ":components_binary_tests",
+    ":echo1",
+    ":echo2",
+    ":getenv",
+  ]
+}
+
+executable("echo1") {
+  output_name = "components_test_echo1"
+
+  sources = [
+    "echo.cc",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+executable("echo2") {
+  output_name = "components_test_echo2"
+
+  sources = [
+    "echo.cc",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+executable("getenv") {
+  output_name = "components_test_getenv"
+
+  sources = [
+    "getenv.cc",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+executable("components_binary_test") {
+  testonly = true
+
+  sources = [
+    "components_binary_test.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("components_binary_tests") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":components_binary_test",
+    ":echo1",
+    ":echo2",
+    ":getenv",
+  ]
+
+  binaries = [
+    {
+      name = "components_test_echo1"
+      dest = "echo1"
+    },
+    {
+      name = "components_test_echo2"
+      dest = "echo2"
+    },
+    {
+      name = "components_test_getenv"
+      dest = "getenv"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/echo1.cmx")
+      dest = "echo1.cmx"
+    },
+    {
+      path = rebase_path("meta/echo2.cmx")
+      dest = "echo2.cmx"
+    },
+    {
+      path = rebase_path("meta/getenv1.cmx")
+      dest = "getenv1.cmx"
+    },
+    {
+      path = rebase_path("meta/getenv2.cmx")
+      dest = "getenv2.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "components_binary_test"
+      environments = basic_envs
+    },
+  ]
+}

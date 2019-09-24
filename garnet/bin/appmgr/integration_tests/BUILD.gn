@@ -1,113 +1,11 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-group("integration_tests") {
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests:appmgr_integration_tests.
+group("appmgr_integration_tests") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests:appmgr_integration_tests",
+  ]
   testonly = true
-  deps = [
-    ":appmgr_integration_tests",
-    ":hub_tests",
-    ":realm_tests",
-    "components",
-    "fidl",
-    "inspect",
-    "mock_runner",
-    "sandbox",
-    "util",
-  ]
-}
-
-executable("realm_tests") {
-  testonly = true
-
-  output_name = "appmgr_realm_integration_tests"
-
-  sources = [
-    "mock_runner_registry.cc",
-    "mock_runner_registry.h",
-    "realm_integration_test.cc",
-    "realm_runner_integration_test.cc",
-  ]
-
-  deps = [
-    "fidl:test.component.mockrunner",
-    "mock_runner:appmgr_mock_runner",
-    "util:data_file_reader_writer",
-    "util:data_file_reader_writer_util",
-    "//garnet//examples/fidl/services:echo",
-    "//garnet/bin/appmgr:lib",
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-executable("hub_tests") {
-  testonly = true
-
-  output_name = "appmgr_hub_integration_tests"
-
-  sources = [
-    "hub_integration_test.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/sysmgr:lib",
-    "//garnet/public/lib/inspect_deprecated/query",
-    "//garnet/public/lib/inspect_deprecated/testing",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//zircon/public/lib/async-cpp",
-  ]
-}
-
-test_package("appmgr_integration_tests") {
-  deprecated_shell = "//build"
-
-  deps = [
-    ":hub_tests",
-    ":realm_tests",
-    "//garnet/bin/appmgr/integration_tests/inspect:bin-vmo",
-  ]
-
-  binaries = [
-    {
-      name = "inspect_vmo_test_app"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("inspect/meta/inspect_vmo_test_app.cmx")
-      dest = "appmgr_integration_tests_inspect_test_app.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "appmgr_realm_integration_tests"
-      environments = basic_envs
-    },
-    {
-      name = "appmgr_hub_integration_tests"
-      environments = basic_envs
-    },
-  ]
 }

@@ -1,53 +1,27 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
-import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
-
-group("hub") {
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/features/hub:no_hub.
+group("no_hub") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/features/hub:no_hub",
+  ]
   testonly = true
-  deps = [
-    ":has_hub",
-    ":has_hub_deprecated_shell",
-    ":no_hub",
-  ]
 }
 
-sandbox_test_package("has_hub") {
-  sources = [
-    "has_hub.cc",
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub.
+group("has_hub") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub",
   ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
+  testonly = true
 }
 
-sandbox_test_package("has_hub_deprecated_shell") {
-  deprecated_shell = "//build"
-
-  sources = [
-    "has_hub.cc",
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell.
+group("has_hub_deprecated_shell") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell",
   ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
-}
-
-sandbox_test_package("no_hub") {
-  sources = [
-    "no_hub.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
+  testonly = true
 }

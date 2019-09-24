@@ -81,7 +81,7 @@ Want to test your Inspect integration? Include
 in your unit test for a full set of matchers. See [this example][vmo-example] of how it is used.
 
 [testing-header]: /sdk/lib/inspect/testing
-[vmo-example]: /garnet/bin/appmgr/integration_tests/inspect/test-vmo.cc
+[vmo-example]: /src/sys/appmgr/integration_tests/inspect/test-vmo.cc
 
 Read on to learn how Inspect is meant to be used in C++.
 

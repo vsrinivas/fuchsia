@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+group("services") {
+  testonly = true
+  deps = [
+    ":multiple_components",
+    ":no_services",
+    ":some_services",
+  ]
+}
+
+sandbox_test_package("some_services") {
+  sources = [
+    "some_services.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+    "//third_party/googletest:gmock",
+    "//zircon/system/fidl/fuchsia-debugdata",
+    "//zircon/system/fidl/fuchsia-process",
+  ]
+  environments = basic_envs
+}
+
+sandbox_test_package("no_services") {
+  sources = [
+    "no_services.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+    "//third_party/googletest:gmock",
+    "//zircon/system/fidl/fuchsia-debugdata",
+  ]
+  environments = basic_envs
+}
+
+sandbox_test_package("multiple_components") {
+  sources = [
+    "multiple_components.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+    "//third_party/googletest:gmock",
+  ]
+  environments = basic_envs
+}

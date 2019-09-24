@@ -1,40 +1,19 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
-import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
-
-group("shell") {
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell.
+group("has_deprecated_shell") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell",
+  ]
   testonly = true
-  deps = [
-    ":has_deprecated_shell",
-    ":no_shell",
-  ]
 }
 
-sandbox_test_package("has_deprecated_shell") {
-  deprecated_shell = "//build"
-
-  sources = [
-    "has_shell.cc",
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/features/shell:no_shell.
+group("no_shell") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/features/shell:no_shell",
   ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
-}
-
-sandbox_test_package("no_shell") {
-  sources = [
-    "no_shell.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
+  testonly = true
 }

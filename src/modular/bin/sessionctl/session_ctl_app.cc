@@ -87,7 +87,7 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
 
   if (command_line.HasOption(kStoryNameFlagString)) {
     command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-    // regex from garnet/bin/appmgr/realm.cc:168
+    // regex from src/sys/appmgr/realm.cc:168
     std::regex story_name_regex("[0-9a-zA-Z\\.\\-_:#]+");
     std::smatch story_name_match;
     if (!std::regex_search(story_name, story_name_match, story_name_regex)) {

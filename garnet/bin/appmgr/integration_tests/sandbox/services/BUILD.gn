@@ -1,60 +1,27 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
-import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
-
-group("services") {
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/services:multiple_components.
+group("multiple_components") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/services:multiple_components",
+  ]
   testonly = true
-  deps = [
-    ":multiple_components",
-    ":no_services",
-    ":some_services",
-  ]
 }
 
-sandbox_test_package("some_services") {
-  sources = [
-    "some_services.cc",
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/services:some_services.
+group("some_services") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/services:some_services",
   ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//sdk/fidl/fuchsia.sys",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-debugdata",
-    "//zircon/system/fidl/fuchsia-process",
-  ]
-  environments = basic_envs
+  testonly = true
 }
 
-sandbox_test_package("no_services") {
-  sources = [
-    "no_services.cc",
+# Do not use this target directly, instead depend on //src/sys/appmgr/integration_tests/sandbox/services:no_services.
+group("no_services") {
+  public_deps = [
+    "//src/sys/appmgr/integration_tests/sandbox/services:no_services",
   ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-debugdata",
-  ]
-  environments = basic_envs
-}
-
-sandbox_test_package("multiple_components") {
-  sources = [
-    "multiple_components.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-  ]
-  environments = basic_envs
+  testonly = true
 }

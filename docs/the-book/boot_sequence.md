@@ -5,7 +5,7 @@ This document describes the boot sequence for Fuchsia from the time the Zircon
 layer hands control over to the Garnet layer.  This document is a work in
 progress that will need to be extended as we bring up more of the system.
 
-# Layer 1: [appmgr](/garnet/bin/appmgr)
+# Layer 1: [appmgr](/src/sys/appmgr)
 
 `appmgr`'s job is to host the environment tree and help create
 processes in these environments.  Processes created by `appmgr`

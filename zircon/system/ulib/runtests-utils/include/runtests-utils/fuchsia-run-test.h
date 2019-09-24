@@ -29,7 +29,7 @@ constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 // fuchsia-pkg://fuchsia.com/my_tests#meta/test_binary.cmx
 //
 // Code which uses this url:
-// https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/appmgr/root_loader.cc
+// https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/appmgr/root_loader.cc
 //
 void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_out,
                            fbl::String* cmx_file_path_out);

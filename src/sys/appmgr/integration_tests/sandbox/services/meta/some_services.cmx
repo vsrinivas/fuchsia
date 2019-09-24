@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/some_services"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

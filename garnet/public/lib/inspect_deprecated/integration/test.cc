@@ -6,6 +6,6 @@ namespace {
 
 // TODO(crjohns): Fill in this file with a test for the API and VMO
 // implementations. For a current example of integration tests, please see:
-// //garnet/bin/appmgr/integration_tests/inspect/
+// //src/sys/appmgr/integration_tests/inspect/
 
 }  // namespace
