@@ -26,8 +26,9 @@ type statCounterInspectImpl struct {
 }
 
 func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
-	var properties []inspect.Property
-	var metrics []inspect.Metric
+	object := inspect.Object{
+		Name: v.name,
+	}
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		switch field := typ.Field(i); field.Type.Kind() {
@@ -37,17 +38,13 @@ func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 				if err != nil {
 					return inspect.Object{}, err
 				}
-				if p := obj.Properties; p != nil {
-					properties = append(properties, *p...)
-				}
-				if m := obj.Metrics; m != nil {
-					metrics = append(metrics, *m...)
-				}
+				object.Properties = append(object.Properties, obj.Properties...)
+				object.Metrics = append(object.Metrics, obj.Metrics...)
 			}
 		case reflect.Ptr:
 			var value inspect.MetricValue
 			value.SetUintValue(v.Field(i).Interface().(*tcpip.StatCounter).Value())
-			metrics = append(metrics, inspect.Metric{
+			object.Metrics = append(object.Metrics, inspect.Metric{
 				Key:   field.Name,
 				Value: value,
 			})
@@ -55,14 +52,10 @@ func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 			panic(fmt.Sprintf("unexpected field %+v", field))
 		}
 	}
-	return inspect.Object{
-		Name:       v.name,
-		Properties: &properties,
-		Metrics:    &metrics,
-	}, nil
+	return object, nil
 }
 
-func (v *statCounterInspectImpl) ListChildren() (*[]string, error) {
+func (v *statCounterInspectImpl) ListChildren() ([]string, error) {
 	var childNames []string
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
@@ -74,7 +67,7 @@ func (v *statCounterInspectImpl) ListChildren() (*[]string, error) {
 				if err != nil {
 					return nil, err
 				}
-				childNames = append(childNames, *names...)
+				childNames = append(childNames, names...)
 			} else {
 				childNames = append(childNames, field.Name)
 			}
@@ -82,7 +75,7 @@ func (v *statCounterInspectImpl) ListChildren() (*[]string, error) {
 			panic(fmt.Sprintf("unexpected field %+v", field))
 		}
 	}
-	return &childNames, nil
+	return childNames, nil
 }
 
 func (v *statCounterInspectImpl) OpenChild(childName string, childChannel inspect.InspectInterfaceRequest) (bool, error) {

@@ -197,10 +197,10 @@ TEST(Object, ReadData) {
   object->ReadData([&obj](fuchsia::inspect::Object val) { obj = std::move(val); });
 
   EXPECT_THAT(obj.name, ::testing::Eq("test"));
-  EXPECT_THAT(*obj.properties, UnorderedElementsAre(StringPropertyIs("property", "value")));
-  EXPECT_THAT(*obj.metrics, UnorderedElementsAre(IntMetricIs("int metric", -10),
-                                                 UIntMetricIs("uint metric", 0xFF),
-                                                 DoubleMetricIs("double metric", 0.25)));
+  EXPECT_THAT(obj.properties, UnorderedElementsAre(StringPropertyIs("property", "value")));
+  EXPECT_THAT(obj.metrics, UnorderedElementsAre(IntMetricIs("int metric", -10),
+                                                UIntMetricIs("uint metric", 0xFF),
+                                                DoubleMetricIs("double metric", 0.25)));
 }
 
 component::Object::StringOutputVector ListChildren(std::shared_ptr<Object> object) {
@@ -231,8 +231,7 @@ TEST(Object, ChildrenCallback) {
   object->SetChild(Object::Make("concrete2"));
 
   children_list = ListChildren(object);
-  EXPECT_THAT(*children_list,
-              UnorderedElementsAre("concrete1", "concrete2"));
+  EXPECT_THAT(*children_list, UnorderedElementsAre("concrete1", "concrete2"));
 
   // Set the callback and ensure it is merged with the concrete objects.
   object->SetChildrenCallback([](component::Object::ObjectVector* out) {
@@ -242,9 +241,7 @@ TEST(Object, ChildrenCallback) {
   });
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list,
-              UnorderedElementsAre("concrete1", "concrete2",
-                                   "dynamic1", "dynamic2",
-                                   "dynamic3"));
+              UnorderedElementsAre("concrete1", "concrete2", "dynamic1", "dynamic2", "dynamic3"));
 }
 
 }  // namespace

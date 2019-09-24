@@ -37,8 +37,8 @@ TEST(InspectFidl, EmptyObject) {
 
   auto output = obj.object();
   EXPECT_STREQ("", output.name.c_str());
-  EXPECT_FALSE(output.properties.has_value());
-  EXPECT_FALSE(output.metrics.has_value());
+  EXPECT_THAT(output.properties, UnorderedElementsAre());
+  EXPECT_THAT(output.metrics, UnorderedElementsAre());
   EXPECT_FALSE(obj.children().has_value());
 }
 
@@ -47,8 +47,8 @@ TEST(InspectFidl, Object) {
 
   auto output = obj.object();
   EXPECT_STREQ("test", output.name.c_str());
-  EXPECT_EQ(0u, output.properties->size());
-  EXPECT_EQ(0u, output.metrics->size());
+  EXPECT_EQ(0u, output.properties.size());
+  EXPECT_EQ(0u, output.metrics.size());
 }
 
 class ValueWrapper {
@@ -87,7 +87,7 @@ TEST(InspectFidl, ChildChaining) {
     ValueWrapper v(root.CreateChild("child"), 100);
     EXPECT_THAT(*root.children(), UnorderedElementsAre("child"));
     auto obj = v.object().object();
-    EXPECT_THAT((*obj.metrics)[0].key, ::testing::Eq("value"));
+    EXPECT_THAT(obj.metrics[0].key, ::testing::Eq("value"));
   }
   // Check that the child is removed when it goes out of scope.
   EXPECT_THAT(*root.children(), IsEmpty());
@@ -262,7 +262,7 @@ TEST(InspectFidl, PropertyCallbacks) {
   }
   // Check that the callback is removed and destroyed (defer called) when it
   // goes out of scope.
-  EXPECT_THAT(*root.object().properties, IsEmpty());
+  EXPECT_THAT(root.object().properties, IsEmpty());
   EXPECT_TRUE(defer_called1);
   EXPECT_TRUE(defer_called2);
 }

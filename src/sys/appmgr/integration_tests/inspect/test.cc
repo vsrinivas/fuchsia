@@ -92,9 +92,9 @@ TEST_F(InspectTest, InspectTopLevel) {
   fuchsia::inspect::InspectSyncPtr inspect;
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
 
-  fidl::VectorPtr<std::string> children;
+  std::vector<std::string> children;
   inspect->ListChildren(&children);
-  EXPECT_THAT(*children, UnorderedElementsAre("table-t1", "table-t2", "lazy_child"));
+  EXPECT_THAT(children, UnorderedElementsAre("table-t1", "table-t2", "lazy_child"));
 }
 
 MATCHER_P2(StringProperty, name, value, "") {
@@ -119,26 +119,26 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   ASSERT_TRUE(Traverse(&inspect, "table-t1"));
 
-  fidl::VectorPtr<std::string> children;
+  std::vector<std::string> children;
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
-  EXPECT_THAT(*children, UnorderedElementsAre("item-0x0", "item-0x1"));
+  EXPECT_THAT(children, UnorderedElementsAre("item-0x0", "item-0x1"));
 
   fuchsia::inspect::Object obj;
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
   EXPECT_EQ("table-t1", obj.name);
-  EXPECT_THAT(*obj.properties,
+  EXPECT_THAT(obj.properties,
               UnorderedElementsAre(StringProperty("version", "1.0"),
                                    VectorProperty("frame", ByteVector({0x10, 0x00, 0x10})),
                                    VectorProperty("\x10\x10", ByteVector({0x00, 0x00, 0x00}))));
-  EXPECT_THAT(*obj.metrics,
+  EXPECT_THAT(obj.metrics,
               UnorderedElementsAre(UIntMetric("item_size", 32), IntMetric("\x10", -10)));
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   ASSERT_TRUE(Traverse(&inspect, "table-t2"));
 
-  children->clear();
+  children.clear();
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
-  EXPECT_THAT(*children, UnorderedElementsAre("item-0x2", "table-subtable"));
+  EXPECT_THAT(children, UnorderedElementsAre("item-0x2", "table-subtable"));
 
   obj = fuchsia::inspect::Object();
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
@@ -150,10 +150,10 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_TRUE(ok);
   child_request->ReadData(&subtable);
   EXPECT_EQ(subtable.name, "table-subtable");
-  children->clear();
+  children.clear();
   ASSERT_EQ(ZX_OK, child_request->ListChildren(&children));
-  EXPECT_THAT(*children, UnorderedElementsAre("item-0x3"));
-  EXPECT_THAT(*subtable.metrics,
+  EXPECT_THAT(children, UnorderedElementsAre("item-0x3"));
+  EXPECT_THAT(subtable.metrics,
               UnorderedElementsAre(UIntMetric("item_size", 16), IntMetric("\x10", -10)));
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
@@ -163,7 +163,7 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_TRUE(open_ok);
   obj = fuchsia::inspect::Object();
   lazy_child->ReadData(&obj);
-  EXPECT_THAT(*obj.properties, UnorderedElementsAre(StringProperty("version", "1")));
+  EXPECT_THAT(obj.properties, UnorderedElementsAre(StringProperty("version", "1")));
 }
 
 }  // namespace

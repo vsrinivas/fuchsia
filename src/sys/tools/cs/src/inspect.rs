@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fidl_fuchsia_inspect::{Metric, Property};
+use fidl_fuchsia_inspect::Object;
 use fuchsia_zircon as zx;
 use std::path::Path;
 
 pub struct InspectObject {
-    pub name: String,
-    pub metrics: Vec<Metric>,
-    pub properties: Vec<Property>,
+    pub inspect_object: Object,
     pub child_inspect_objects: Vec<InspectObject>,
 }
 
@@ -20,41 +18,23 @@ impl InspectObject {
         client_channel: zx::Channel,
     ) -> Result<InspectObject, Error> {
         let mut inspect = fidl_fuchsia_inspect::InspectSynchronousProxy::new(client_channel);
-        let obj = inspect.read_data(zx::Time::INFINITE)?;
+        let inspect_object = inspect.read_data(zx::Time::INFINITE)?;
 
-        let mut inspect_metrics = Vec::new();
-        if let Some(metrics) = obj.metrics {
-            for metric in metrics {
-                inspect_metrics.push(metric);
+        let children = inspect.list_children(zx::Time::INFINITE)?;
+        let mut child_inspect_objects = Vec::with_capacity(children.len());
+        for child in &children {
+            if exclude_objects.contains(&child) {
+                continue;
             }
+            let (client, service) = zx::Channel::create()?;
+            inspect.open_child(
+                child,
+                fidl::endpoints::ServerEnd::new(service),
+                zx::Time::INFINITE,
+            )?;
+            child_inspect_objects.push(InspectObject::create(exclude_objects, client)?);
         }
-        let mut inspect_properties = Vec::new();
-        if let Some(properties) = obj.properties {
-            for property in properties {
-                inspect_properties.push(property);
-            }
-        }
-        let mut child_inspect_objects = Vec::new();
-        if let Some(children) = inspect.list_children(zx::Time::INFINITE)? {
-            for child in &children {
-                if exclude_objects.contains(&child) {
-                    continue;
-                }
-                let (client, service) = zx::Channel::create()?;
-                inspect.open_child(
-                    child,
-                    fidl::endpoints::ServerEnd::new(service),
-                    zx::Time::INFINITE,
-                )?;
-                child_inspect_objects.push(InspectObject::create(exclude_objects, client)?);
-            }
-        }
-        Ok(InspectObject {
-            name: obj.name,
-            metrics: inspect_metrics,
-            properties: inspect_properties,
-            child_inspect_objects: child_inspect_objects,
-        })
+        Ok(InspectObject { inspect_object, child_inspect_objects })
     }
 }
 

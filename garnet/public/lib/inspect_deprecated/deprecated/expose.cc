@@ -165,7 +165,7 @@ void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan, fit::deferred_call
 
 void Object::ReadData(ReadDataCallback callback) { callback(ToFidl()); }
 
-fidl::VectorPtr<std::string> Object::ListUnmanagedChildNames() {
+std::vector<std::string> Object::ListUnmanagedChildNames() {
   std::vector<std::string> child_names;
   // Lock the local child vector. No need to lock children since we are only
   // reading their constant name.
@@ -384,13 +384,11 @@ fuchsia::inspect::Object Object::ToFidl() {
   std::lock_guard lock(mutex_);
   fuchsia::inspect::Object ret;
   ret.name = name_.data();
-  ret.properties.emplace();
   for (const auto& it : properties_) {
-    ret.properties->push_back(it.second.ToFidl(it.first));
+    ret.properties.push_back(it.second.ToFidl(it.first));
   }
-  ret.metrics.emplace();
   for (const auto& it : metrics_) {
-    ret.metrics->push_back(it.second.ToFidl(it.first));
+    ret.metrics.push_back(it.second.ToFidl(it.first));
   }
   return ret;
 }

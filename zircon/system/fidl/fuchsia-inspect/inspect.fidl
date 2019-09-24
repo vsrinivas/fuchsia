@@ -31,8 +31,8 @@ struct Metric {
 // An `Object` has a name and 0 or more properties and metrics.
 struct Object {
     string name;
-    vector<Property>? properties;
-    vector<Metric>? metrics;
+    vector<Property> properties;
+    vector<Metric> metrics;
 };
 
 // The `Inspect` interface provides a point for Components to expose
@@ -40,7 +40,7 @@ struct Object {
 [Discoverable]
 protocol Inspect {
     ReadData() -> (Object object);
-    ListChildren() -> (vector<string>? children_names);
+    ListChildren() -> (vector<string> children_names);
     // Open a child of this Object by name.
     // The name should match what is returned by ListChildren.
     OpenChild(string child_name, request<Inspect> child_channel) -> (bool success);

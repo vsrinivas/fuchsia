@@ -153,8 +153,8 @@ fn visit_system_objects(component_path: &Path, exclude_objects: &Vec<String>) ->
 
 fn visit_inspect_object(depth: usize, inspect_object: &InspectObject) {
     let indent = " ".repeat(depth);
-    println!("{}{}", indent, inspect_object.name);
-    for metric in &inspect_object.metrics {
+    println!("{}{}", indent, inspect_object.inspect_object.name);
+    for metric in &inspect_object.inspect_object.metrics {
         println!(
             "{} {}: {}",
             indent,
@@ -166,7 +166,7 @@ fn visit_inspect_object(depth: usize, inspect_object: &InspectObject) {
             },
         );
     }
-    for property in &inspect_object.properties {
+    for property in &inspect_object.inspect_object.properties {
         println!(
             "{} {}: {}",
             indent,

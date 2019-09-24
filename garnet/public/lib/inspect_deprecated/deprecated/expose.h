@@ -364,7 +364,7 @@ class Object : public fuchsia::inspect::Inspect {
 
   std::shared_ptr<Object> GetUnmanagedChild(std::string name);
 
-  fidl::VectorPtr<std::string> ListUnmanagedChildNames();
+  std::vector<std::string> ListUnmanagedChildNames();
 
   // The name of this object.
   std::string name_;
