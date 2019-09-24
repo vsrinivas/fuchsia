@@ -8,7 +8,7 @@ current state of the v1 component topology as run under
 
 ## Building
 
-This project can be added to builds by including `--with //garnet/bin/cs` to the
+This project can be added to builds by including `--with //src/sys/tools/cs` to the
 `fx set` invocation.
 
 ## Running
