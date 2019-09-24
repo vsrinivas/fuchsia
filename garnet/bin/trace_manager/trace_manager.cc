@@ -104,7 +104,11 @@ void TraceManager::StartTracing(controller::TraceOptions options, zx::socket out
       std::move(output), std::move(categories), default_buffer_size_megabytes,
       provider_buffering_mode, std::move(provider_specs), [this]() { session_ = nullptr; });
 
-  session_->QueueTraceInfo();
+  // The trace header is written now to ensure it appears first, and to avoid
+  // timing issues if the trace is terminated early (and the session being
+  // deleted).
+  session_->WriteTraceInfo();
+
   for (auto& bundle : providers_) {
     session_->AddProvider(&bundle);
   }

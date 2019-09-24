@@ -215,13 +215,11 @@ void TraceSession::FinishSessionDueToTimeout() {
   }
 }
 
-void TraceSession::QueueTraceInfo() {
-  async::PostTask(async_get_default_dispatcher(), [this]() {
-    auto status = WriteMagicNumberRecord();
-    if (status != TransferStatus::kComplete) {
-      FXL_LOG(ERROR) << "Failed to write magic number record: " << status;
-    }
-  });
+void TraceSession::WriteTraceInfo() {
+  auto status = WriteMagicNumberRecord();
+  if (status != TransferStatus::kComplete) {
+    FXL_LOG(ERROR) << "Failed to write magic number record: " << status;
+  }
 }
 
 TransferStatus TraceSession::WriteMagicNumberRecord() {

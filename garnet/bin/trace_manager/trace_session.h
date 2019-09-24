@@ -52,8 +52,11 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // the start request, or after |timeout| has elapsed.
   void WaitForProvidersToStart(fit::closure callback, zx::duration timeout);
 
-  // Asynchronously writes all applicable trace info records.
-  void QueueTraceInfo();
+  // Writes all applicable trace info records.
+  // These records are like a pre-amble to the trace, in particular they
+  // provide a record at the start of the trace that when written to a file
+  // can be used to identify the file as a Fuchsia Trace File.
+  void WriteTraceInfo();
 
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
