@@ -220,7 +220,8 @@ int main(int argc, char** argv) {
   config.boot_args = &boot_args;
   config.require_system = require_system;
   config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
-  config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
+  // Turn it on by default. See fxb/34577
+  config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", true);
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
 

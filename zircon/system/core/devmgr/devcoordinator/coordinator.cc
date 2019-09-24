@@ -43,6 +43,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <libzbi/zbi-cpp.h>
+#include <inspector/inspector.h>
 
 #include "../shared/env.h"
 #include "../shared/fdio.h"
@@ -88,7 +89,7 @@ void vfs_exit(const zx::event& fshost_event) {
 }
 
 void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
-  log(INFO, "devcoordinator: suspend fallback with flags 0x%08x\n", flags);
+  log(ERROR, "devcoordinator: suspend fallback with flags 0x%08x\n", flags);
   if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
     zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
@@ -1185,9 +1186,9 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
 }
 
 static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 0) {
-  const char* status = "";
+  const char* task_status = "";
   if (task.is_completed()) {
-    status = zx_status_get_string(task.status());
+    task_status = zx_status_get_string(task.status());
   } else {
     bool dependence = false;
     for (const auto* dependency : task.Dependencies()) {
@@ -1196,13 +1197,29 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
         break;
       }
     }
-    status = dependence ? "<dependence>" : "<suspending>";
+    task_status = dependence ? "<dependence>" : "Stuck <suspending>";
   }
   log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(), task.device().name().data(),
-      status);
+      task_status);
+  if (!strcmp(task_status, "Stuck <suspending>")) {
+    zx_koid_t pid = task.device().host()->koid();
+    if (!pid) {
+      return;
+    }
+    zx::unowned_process process = task.device().host()->proc();
+    char process_name[ZX_MAX_NAME_LEN];
+    zx_status_t status = process->get_property(ZX_PROP_NAME, process_name,
+                                                sizeof(process_name));
+    if (status != ZX_OK) {
+      strlcpy(process_name, "unknown", sizeof(process_name));
+    }
+    printf("Backtrace of threads of process %lu:%s\n", pid, process_name);
+    inspector_print_debug_info_for_all_threads(stdout, process->get());
+  }
   for (const auto* dependency : task.Dependencies()) {
     dump_suspend_task_dependencies(*reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
   }
+  fflush(stdout);
 }
 
 void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback) {
@@ -1251,19 +1268,21 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
 
   auto status = async::PostDelayedTask(
       dispatcher(),
-      [this] {
+      [this, callback] {
         if (!InSuspend()) {
           return;  // Suspend failed to complete.
         }
         auto& ctx = suspend_context();
-        log(ERROR, "devcoordinator: suspend time out\n");
+        log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
         log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
         dump_suspend_task_dependencies(ctx.task());
         if (suspend_fallback()) {
           ::suspend_fallback(root_resource(), ctx.sflags());
+          // Unless in test env, we should not reach here.
+          callback(ZX_ERR_TIMED_OUT);
         }
       },
-      zx::sec(10));
+      zx::sec(30));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }
