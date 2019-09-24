@@ -21,6 +21,7 @@ static struct Global {
   }
 } global;
 
+__EXPORT
 bool check_dso_ctor() {
   BEGIN_HELPER;
   EXPECT_TRUE(dso_ctor_ran, "DSO global constuctor didn't run!");
@@ -30,6 +31,7 @@ bool check_dso_ctor() {
 static bool dso_tlocal_ctor_ran, dso_tlocal_dtor_ran;
 static thread_local ThreadLocal<&dso_tlocal_ctor_ran, &dso_tlocal_dtor_ran> dso_tlocal;
 
+__EXPORT
 bool check_dso_tlocal_in_thread() {
   BEGIN_HELPER;
   EXPECT_TRUE(decltype(dso_tlocal)::check_before_reference());
@@ -38,6 +40,7 @@ bool check_dso_tlocal_in_thread() {
   END_HELPER;
 }
 
+__EXPORT
 bool check_dso_tlocal_after_join() {
   BEGIN_HELPER;
   EXPECT_TRUE(decltype(dso_tlocal)::check_after_join());
