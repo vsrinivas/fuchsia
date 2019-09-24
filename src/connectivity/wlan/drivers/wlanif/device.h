@@ -5,13 +5,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 
-#include <mutex>
-
-#include <ddk/driver.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
+
+#include <mutex>
+
+#include <ddk/driver.h>
 #include <wlan/protocol/if-impl.h>
 
 namespace wlanif {
@@ -22,11 +23,6 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   ~Device();
 
   zx_status_t Bind();
-
-  // WLANIF zx_protocol_device_t
-  void Unbind();
-  void Release();
-  zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // ETHERNET_IMPL zx_protocol_device_t
   void EthUnbind();
@@ -96,21 +92,16 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t Connect(zx::channel request);
 
  private:
-  // Stops the message loop from accepting incoming FIDL requests and removes the given device.
-  void StopMessageLoop(zx_device_t* dev);
-  zx_status_t AddWlanDevice();
-  zx_status_t AddEthDevice(zx_device* parent);
+  zx_status_t AddEthDevice();
+  void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
+  void SetEthernetStatusUnlocked(bool online);
 
   std::mutex lock_;
 
   zx_device_t* parent_ = nullptr;
-  zx_device_t* zxdev_ = nullptr;   // WLANIF
   zx_device_t* ethdev_ = nullptr;  // ETHERNET_IMPL
 
   wlanif_impl_protocol_t wlanif_impl_;
-
-  void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
-  void SetEthernetStatusUnlocked(bool online);
 
   bool protected_bss_ __TA_GUARDED(lock_) = false;
 

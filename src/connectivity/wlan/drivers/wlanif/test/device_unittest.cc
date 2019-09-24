@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fidl/cpp/decoder.h>
+#include <lib/fidl/cpp/message.h>
+
 #include <functional>
+#include <memory>
 #include <optional>
 #include <tuple>
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fidl/cpp/decoder.h>
-#include <lib/fidl/cpp/message.h>
 #include <src/connectivity/wlan/drivers/wlanif/device.h>
 #include <wlan/mlme/dispatcher.h>
 
@@ -30,33 +33,20 @@ std::pair<zx::channel, zx::channel> make_channel() {
   return {std::move(local), std::move(remote)};
 }
 
-// Reads a fidl_msg_t from a channel.
-struct FidlMessage {
-  static std::optional<FidlMessage> read_from_channel(zx::channel* endpoint) {
-    FidlMessage msg = {};
-    auto status =
-        endpoint->read(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, msg.handles, sizeof(msg.bytes),
-                       sizeof(msg.handles), &msg.actual_bytes, &msg.actual_handles);
-    if (status != ZX_OK) {
-      return {std::nullopt};
+bool timeout_after(zx_duration_t duration, const std::function<bool()>& predicate) {
+  while (!predicate()) {
+    zx_duration_t sleep = ZX_MSEC(100);
+    zx_nanosleep(zx_deadline_after(sleep));
+    if (duration <= 0) {
+      return false;
     }
-    return {std::move(msg)};
+    duration -= sleep;
+    if (!timeout_after(duration, predicate)) {
+      return false;
+    }
   }
-
-  fidl_msg_t get() {
-    return {.bytes = bytes,
-            .handles = handles,
-            .num_bytes = actual_bytes,
-            .num_handles = actual_handles};
-  }
-
-  fbl::Span<uint8_t> data() { return {bytes, actual_bytes}; }
-
-  FIDL_ALIGNDECL uint8_t bytes[256];
-  zx_handle_t handles[256];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-};
+  return true;
+}
 
 // Verify that receiving an ethernet SetParam for multicast promiscuous mode results in a call to
 // wlanif_impl->set_muilticast_promisc.
@@ -105,59 +95,78 @@ TEST(MulticastPromiscMode, Unimplemented) {
   EXPECT_EQ(multicast_promisc_enabled, false);
 }
 
-TEST(Sme, ConnectSuccess) {
-  wlanif_impl_protocol_ops_t proto_ops = {};
-  wlanif_impl_protocol_t proto = {.ops = &proto_ops};
-  wlanif::Device device(nullptr, proto);
+struct SmeChannelTestContext {
+  SmeChannelTestContext() {
+    auto [new_sme, new_mlme] = make_channel();
+    mlme = std::move(new_mlme);
+    sme = std::move(new_sme);
+  }
 
-  // Set-up test environment.
-  auto [sme, mlme] = make_channel();
-  auto [local, remote] = make_channel();
-  auto status = fuchsia_wlan_mlme_ConnectorConnect(local.get(), mlme.release());
+  zx::channel mlme = {};
+  zx::channel sme = {};
+  std::optional<wlanif_scan_req_t> scan_req = {};
+};
+
+TEST(SmeChannel, Bound) {
+#define DEV(c) static_cast<SmeChannelTestContext*>(c)
+  wlanif_impl_protocol_ops_t proto_ops = {
+      // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
+      .start = [](void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                  void* cookie) -> zx_status_t {
+        *out_sme_channel = DEV(ctx)->sme.release();
+        return ZX_OK;
+      },
+      .query = [](void* ctx, wlanif_query_info_t* info) {},
+
+      // Capture incoming scan request.
+      .start_scan =
+          [](void* ctx, wlanif_scan_req_t* req) {
+            DEV(ctx)->scan_req = {{
+                .bss_type = req->bss_type,
+                .scan_type = req->scan_type,
+            }};
+          },
+      .join_req = [](void* ctx, wlanif_join_req_t* req) {},
+      .auth_req = [](void* ctx, wlanif_auth_req_t* req) {},
+      .auth_resp = [](void* ctx, wlanif_auth_resp_t* req) {},
+      .deauth_req = [](void* ctx, wlanif_deauth_req_t* req) {},
+      .assoc_req = [](void* ctx, wlanif_assoc_req_t* req) {},
+      .assoc_resp = [](void* ctx, wlanif_assoc_resp_t* req) {},
+      .disassoc_req = [](void* ctx, wlanif_disassoc_req_t* req) {},
+      .reset_req = [](void* ctx, wlanif_reset_req_t* req) {},
+      .start_req = [](void* ctx, wlanif_start_req_t* req) {},
+      .stop_req = [](void* ctx, wlanif_stop_req_t* req) {},
+      .set_keys_req = [](void* ctx, wlanif_set_keys_req_t* req) {},
+      .del_keys_req = [](void* ctx, wlanif_del_keys_req_t* req) {},
+      .eapol_req = [](void* ctx, wlanif_eapol_req_t* req) {},
+  };
+  SmeChannelTestContext ctx;
+  wlanif_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+
+  fake_ddk::Bind ddk;
+  // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
+  auto parent = reinterpret_cast<zx_device_t*>(&ctx);
+  auto device = wlanif::Device{parent, proto};
+  auto status = device.Bind();
   ASSERT_EQ(status, ZX_OK);
 
-  // Read the connect request from the channel.
-  auto msg = FidlMessage::read_from_channel(&remote);
-  ASSERT_TRUE(msg.has_value());
+  // Send scan request to device.
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  mlme_proxy.StartScan(wlan_mlme::ScanRequest{
+      .bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE,
+      .scan_type = wlan_mlme::ScanTypes::PASSIVE,
+  });
 
-  // Hand the connect message to the device.
-  auto fidl_msg = msg->get();
-  status = device.Message(&fidl_msg, nullptr);
-  ASSERT_EQ(status, ZX_OK);
+  // Wait for scan message to propagate through the system.
+  ASSERT_TRUE(timeout_after(ZX_SEC(5), [&]() { return ctx.scan_req.has_value(); }));
 
-  // Simulate an event from the vendor driver.
-  auto eapol_conf_event =
-      wlanif_eapol_confirm_t{.result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE};
-  device.EapolConf(&eapol_conf_event);
+  // Verify scan request.
+  ASSERT_TRUE(ctx.scan_req.has_value());
+  ASSERT_EQ(ctx.scan_req->bss_type, WLAN_BSS_TYPE_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
-  // SME should have received a message from MLME. Read it.
-  msg = FidlMessage::read_from_channel(&sme);
-  ASSERT_TRUE(msg.has_value());
-
-  // Verify received message is correct.
-  auto hdr = wlan::FromBytes<fidl_message_header_t>(msg->data());
-  ASSERT_NE(hdr, nullptr);
-  auto ordinal = hdr->ordinal;
-  ASSERT_TRUE(ordinal == fuchsia_wlan_mlme_MLMEEapolConfOrdinal ||
-              ordinal == fuchsia_wlan_mlme_MLMEEapolConfGenOrdinal);
-
-  auto eapol_conf = wlan::MlmeMsg<wlan_mlme::EapolConfirm>::Decode(msg->data(), ordinal);
-  ASSERT_TRUE(eapol_conf.has_value());
-  EXPECT_EQ(eapol_conf->body()->result_code, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
-}
-
-TEST(Sme, ConnectAlreadyBound) {
-  wlanif_impl_protocol_ops_t proto_ops = {};
-  wlanif_impl_protocol_t proto = {.ops = &proto_ops};
-  wlanif::Device device(nullptr, proto);
-
-  // Perform initial connect request.
-  auto [sme, mlme] = make_channel();
-  auto status = device.Connect(std::move(mlme));
-  ASSERT_EQ(status, ZX_OK);
-
-  // Send another request.
-  auto [new_sme, new_mlme] = make_channel();
-  status = device.Connect(std::move(new_mlme));
-  ASSERT_EQ(status, ZX_ERR_ALREADY_BOUND);
+  device.EthUnbind();
 }

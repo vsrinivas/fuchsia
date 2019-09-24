@@ -4,14 +4,14 @@
 
 #include "device.h"
 
+#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <net/ethernet.h>
+#include <zircon/status.h>
 
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <lib/async/cpp/task.h>
 #include <wlan/common/logging.h>
-#include <zircon/status.h>
 
 #include "convert.h"
 #include "driver.h"
@@ -30,17 +30,11 @@ Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
   debugfn();
 }
 
-Device::~Device() { debugfn(); }
+Device::~Device() {
+  debugfn();
+}
 
 #define DEV(c) static_cast<Device*>(c)
-static zx_protocol_device_t wlanif_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
-    .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message = [](void* ctx, fidl_msg_t* msg,
-                  fidl_txn_t* txn) { return DEV(ctx)->Message(msg, txn); },
-};
-
 static zx_protocol_device_t eth_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->EthUnbind(); },
@@ -97,26 +91,16 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
       return DEV(ctx)->EthStart(ifc);
     },
-    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
-                   ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-      return DEV(ctx)->EthQueueTx(options, netbuf, completion_cb, cookie);
-    },
+    .queue_tx =
+        [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+           ethernet_impl_queue_tx_callback completion_cb,
+           void* cookie) { return DEV(ctx)->EthQueueTx(options, netbuf, completion_cb, cookie); },
     .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthSetParam(param, value, data, data_size); },
 };
 #undef DEV
 
-zx_status_t Device::AddWlanDevice() {
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "wlanif";
-  args.ctx = this;
-  args.ops = &wlanif_device_ops;
-  args.proto_id = ZX_PROTOCOL_WLANIF;
-  return device_add(parent_, &args, &zxdev_);
-}
-
-zx_status_t Device::AddEthDevice(zx_device* parent) {
+zx_status_t Device::AddEthDevice() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "wlan-ethernet";
@@ -124,7 +108,7 @@ zx_status_t Device::AddEthDevice(zx_device* parent) {
   args.ops = &eth_device_ops;
   args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
   args.proto_ops = &ethernet_impl_ops;
-  return device_add(parent, &args, &ethdev_);
+  return device_add(parent_, &args, &ethdev_);
 }
 
 #define VERIFY_PROTO_OP(fn)                                           \
@@ -165,6 +149,7 @@ zx_status_t Device::Bind() {
   zx_handle_t sme_channel = ZX_HANDLE_INVALID;
   zx_status_t status =
       wlanif_impl_.ops->start(wlanif_impl_.ctx, &wlanif_impl_ifc_ops, &sme_channel, this);
+  ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
     errorf("wlanif: call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
     return status;
@@ -179,29 +164,16 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
-    ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
-    status = AddEthDevice(parent_);
-    if (status != ZX_OK) {
-      errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
-    } else {
-      std::lock_guard<std::mutex> lock(lock_);
-      status = binding_.Bind(zx::channel(sme_channel), loop_.dispatcher());
-      if (status != ZX_OK) {
-        errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
-        device_remove(ethdev_);
-      }
-    }
+  ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
+  status = AddEthDevice();
+
+  if (status != ZX_OK) {
+    errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
   } else {
-    status = AddWlanDevice();
-    if (status == ZX_OK) {
-      status = AddEthDevice(zxdev_);
-      if (status != ZX_OK) {
-        // TODO(hahnr): WLAN device should be removed if adding ethernet device failed.
-        errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
-      }
-    } else {
-      errorf("wlanif: could not add wlanif device: %s\n", zx_status_get_string(status));
+    status = Connect(zx::channel(sme_channel));
+    if (status != ZX_OK) {
+      errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
+      device_remove(ethdev_);
     }
   }
 
@@ -212,7 +184,8 @@ zx_status_t Device::Bind() {
 }
 #undef VERIFY_PROTO_OP
 
-void Device::StopMessageLoop(zx_device_t* dev) {
+void Device::EthUnbind() {
+  debugfn();
   // Stop accepting new FIDL requests.
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_.is_bound()) {
@@ -221,47 +194,12 @@ void Device::StopMessageLoop(zx_device_t* dev) {
 
   // Ensure that all FIDL messages have been processed before removing the device
   auto dispatcher = loop_.dispatcher();
-  ::async::PostTask(dispatcher, [dev] { device_remove(dev); });
-}
-
-void Device::EthUnbind() {
-  debugfn();
-
-  // Do proper clean-up if |zxdev_| wasn't added. Otherwise, simply remove |ethdev_|.
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
-    StopMessageLoop(ethdev_);
-  } else {
-    device_remove(ethdev_);
-  }
+  ::async::PostTask(dispatcher, [this] { device_remove(ethdev_); });
 }
 
 void Device::EthRelease() {
   debugfn();
-  // Free memory if |zxdev_| wasn't added, otherwise, |zxdev_|'s `Release()` will
-  // take care of that.
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
-    delete this;
-  }
-}
-
-void Device::Unbind() {
-  debugfn();
-  StopMessageLoop(zxdev_);
-}
-
-void Device::Release() {
-  debugfn();
   delete this;
-}
-
-zx_status_t Device::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
-  auto connect = [](void* ctx, zx_handle_t request) {
-    return static_cast<Device*>(ctx)->Connect(zx::channel(request));
-  };
-  static const fuchsia_wlan_mlme_Connector_ops_t ops = {
-      .Connect = connect,
-  };
-  return fuchsia_wlan_mlme_Connector_dispatch(this, txn, msg, &ops);
 }
 
 zx_status_t Device::Connect(zx::channel request) {
