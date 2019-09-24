@@ -4,9 +4,8 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
-
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -26,10 +25,13 @@
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <lib/zx/vmar.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+
 #include <zxtest/zxtest.h>
 
 template <typename Handle>
@@ -201,8 +203,13 @@ TEST(TraitsTestCase, FifoTraits) {
 }
 
 TEST(TraitsTestCase, DebugLogTraits) {
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
+  ASSERT_OK(fdio_service_connect(kWriteOnlyLogPath, remote.release()));
   zx::debuglog debuglog;
-  ASSERT_OK(zx::debuglog::create(zx::resource(), 0u, &debuglog));
+  ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local.get(), debuglog.reset_and_get_address()));
+
   ASSERT_NO_FATAL_FAILURES(Duplicating(debuglog));
   ASSERT_NO_FATAL_FAILURES(UserSignaling(debuglog));
   ASSERT_NO_FATAL_FAILURES(Waiting(debuglog));

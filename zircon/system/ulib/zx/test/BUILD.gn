@@ -16,6 +16,7 @@ test("zx") {
     "zx-test.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
