@@ -9,7 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-extern "C" __NO_RETURN __PRINTFLIKE(1, 2) void __zx_panic(const char* format, ...) {
+extern "C" __EXPORT __NO_RETURN __PRINTFLIKE(1, 2) void __zx_panic(const char* format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
