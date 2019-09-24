@@ -48,7 +48,7 @@ impl TimeProperty {
 fn format_time(timestamp: zx::Time) -> String {
     let seconds = timestamp.into_nanos() / 1000_000_000;
     let millis = (timestamp.into_nanos() % 1000_000_000) / 1000_000;
-    format!("{}.{}", seconds, millis)
+    format!("{}.{:03}", seconds, millis)
 }
 
 #[cfg(test)]
@@ -63,6 +63,8 @@ mod tests {
         let time_property =
             inspector.root().create_time_at("time", zx::Time::from_nanos(123_456700000));
         assert_inspect_tree!(inspector, root: { time: "123.456" });
+        time_property.set_at(zx::Time::from_nanos(333_005000000));
+        assert_inspect_tree!(inspector, root: { time: "333.005" });
         time_property.set_at(zx::Time::from_nanos(333_444000000));
         assert_inspect_tree!(inspector, root: { time: "333.444" });
     }
