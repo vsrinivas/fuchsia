@@ -12,7 +12,7 @@ pub_decodable_enum!(
     }
 );
 
-#[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
+#[derive(Debug)]
 /// AVRCP 1.6.1 section 6.4 Capabilities PDUs - GetCapabilities
 pub struct GetCapabilitiesCommand {
     capability_id: GetCapabilitiesCapabilityId,
@@ -87,10 +87,12 @@ impl GetCapabilitiesResponse {
         }
     }
 
+    #[allow(dead_code)]
     pub fn capability_id(&self) -> GetCapabilitiesCapabilityId {
         self.capability_id
     }
 
+    #[allow(dead_code)]
     pub fn has_bt_sig_company(&self) -> bool {
         assert_eq!(self.capability_id, GetCapabilitiesCapabilityId::CompanyId);
 
@@ -340,5 +342,4 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap().capability_id(), GetCapabilitiesCapabilityId::EventsId);
     }
-
 }
