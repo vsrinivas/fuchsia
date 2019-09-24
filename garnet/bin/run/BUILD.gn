@@ -1,44 +1,10 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
-executable("bin") {
-  output_name = "run"
-
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/sys/component_index/fidl:index",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-package("run") {
-  deps = [
-    ":bin",
-  ]
-
-  meta = [
-    {
-      dest = "run.cmx"
-      path = rebase_path(dest)
-    },
-  ]
-
-  binaries = [
-    {
-      shell = true
-      name = "run"
-    },
+# Do not use this target directly, instead depend on //src/sys/tools/run:run.
+group("run") {
+  public_deps = [
+    "//src/sys/tools/run:run",
   ]
 }

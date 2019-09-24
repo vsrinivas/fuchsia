@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
-#include <src/lib/files/file.h>
 #include <stdlib.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <src/lib/files/file.h>
 
 #include "gtest/gtest.h"
 

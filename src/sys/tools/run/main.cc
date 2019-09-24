@@ -11,13 +11,14 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <src/lib/fxl/strings/string_printf.h>
 
 using fuchsia::sys::TerminationReason;
 using fuchsia::sys::index::ComponentIndex_FuzzySearch_Response;

@@ -1,0 +1,106 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":exiter_bin",
+    ":run_return_value_test",
+    ":run_test_exiter",
+    ":run_tests",
+  ]
+}
+
+# Test `run` with a stubbed launcher implementation
+executable("bin") {
+  testonly = true
+  output_name = "run_tests"
+
+  sources = [
+    "run_tests.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+  ]
+}
+
+# Test `run` from the platform's perspective, using a real launcher
+executable("run_return_value_test") {
+  testonly = true
+
+  output_name = "run_return_value_test"
+
+  sources = [
+    "run_return_value_test.cc",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+# Helper program for tests
+executable("exiter_bin") {
+  output_name = "run_test_exiter"
+
+  sources = [
+    "exiter.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# Helper program for tests
+package("run_test_exiter") {
+  meta = [
+    {
+      path = "meta/run_test_exiter.cmx"
+      dest = "run_test_exiter.cmx"
+    },
+  ]
+
+  deps = [
+    ":exiter_bin",
+  ]
+
+  binary = "run_test_exiter"
+}
+
+test_package("run_tests") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":bin",
+    ":run_return_value_test",
+  ]
+
+  tests = [
+    {
+      name = "run_return_value_test"
+      environments = basic_envs
+    },
+    {
+      name = "run_tests"
+      environments = basic_envs
+    },
+  ]
+}
