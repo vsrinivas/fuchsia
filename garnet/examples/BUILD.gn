@@ -8,7 +8,6 @@ group("examples") {
   deps = [
     "benchmark",
     "components",
-    "escher",
 
     # TODO: Add more.
   ]
