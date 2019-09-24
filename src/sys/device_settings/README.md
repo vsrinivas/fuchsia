@@ -9,7 +9,7 @@ new clients should favor stash over `device_settings`.
 ## Building
 
 This project can be added to builds by including `--with
-//garnet/bin/device_settings` to the `fx set` invocation.
+//src/sys/device_settings` to the `fx set` invocation.
 
 ## Running
 
