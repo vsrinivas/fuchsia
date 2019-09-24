@@ -37,6 +37,8 @@ class FoundMember {
 
   ~FoundMember();
 
+  bool is_null() const { return !data_member_; }
+
   const DataMember* data_member() const { return data_member_.get(); }
   fxl::RefPtr<DataMember> data_member_ref() const { return data_member_; }
 

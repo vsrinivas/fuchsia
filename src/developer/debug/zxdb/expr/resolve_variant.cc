@@ -17,22 +17,21 @@ namespace zxdb {
 
 Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                    const VariantPart* variant_part, fxl::RefPtr<Variant>* result) {
-  // Resolve the discriminant value. It is effectively a member of the
-  // enclosing structure.
+  // Resolve the discriminant value. It is effectively a member of the enclosing structure.
   const DataMember* discr_member = variant_part->discriminant().Get()->AsDataMember();
   if (!discr_member)
     return Err("Missing discriminant for variant.");
 
   // Variants don't have static variant members.
-  ErrOrValue discr_value = ResolveNonstaticMember(context, value, discr_member);
+  ErrOrValue discr_value = ResolveNonstaticMember(context, value, FoundMember(discr_member));
   if (discr_value.has_error())
     return discr_value.err();
 
   // Expect the discriminant value to resolve to a <= 64-bit number.
   //
-  // NOTE: there is some trickery with signed/unsigned values as described in
-  // the Variant.discr_value() getter. If we need to support signed
-  // discriminants this block will have to be updated.
+  // NOTE: there is some trickery with signed/unsigned values as described in the
+  // Variant.discr_value() getter. If we need to support signed discriminants this block will have
+  // to be updated.
   uint64_t discr = 0;
   if (Err err = discr_value.value().PromoteTo64(&discr); err.has_error())
     return err;

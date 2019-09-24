@@ -291,7 +291,8 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
     // In the error case, still append a child so that the child can have the error associated with
     // it. Note that Rust enums are never static so we can use the synchronous variant.
     node->children().push_back(std::make_unique<FormatNode>(
-        member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
+        member->GetAssignedName(),
+        ResolveNonstaticMember(eval_context, node->value(), FoundMember(member))));
   }
 
   // Name for the whole node.
@@ -317,7 +318,7 @@ void FormatRustTuple(FormatNode* node, const Collection* coll, FormatNode::Descr
     // In the error case, still append a child so that the child can have the error associated
     // with it.
     node->children().push_back(std::make_unique<FormatNode>(
-        name, ResolveNonstaticMember(eval_context, node->value(), member)));
+        name, ResolveNonstaticMember(eval_context, node->value(), FoundMember(member))));
   }
 
   // When we have a use for the short description, this should be set to: "(<0>, <1>, ...)"
@@ -394,7 +395,8 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
       continue;
 
     node->children().push_back(std::make_unique<FormatNode>(
-        member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
+        member->GetAssignedName(),
+        ResolveNonstaticMember(eval_context, node->value(), FoundMember(member))));
   }
 
   node->set_description_kind(FormatNode::kCollection);

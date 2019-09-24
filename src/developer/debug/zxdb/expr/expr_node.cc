@@ -331,44 +331,45 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
 
 void MemberAccessExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
-  left_->EvalFollowReferences(context, [context, is_arrow, member = member_,
-                                        cb = std::move(cb)](ErrOrValue base) mutable {
-    if (base.has_error())
-      return cb(base);
+  left_->EvalFollowReferences(
+      context, [context, is_arrow, member = member_, cb = std::move(cb)](ErrOrValue base) mutable {
+        if (base.has_error())
+          return cb(base);
 
-    auto base_value = base.value();
+        auto base_value = base.value();
 
-    if (!is_arrow) {  // "." operator.
-      fxl::RefPtr<Type> concrete_base = base_value.GetConcreteType(context.get());
+        if (!is_arrow) {  // "." operator.
+          fxl::RefPtr<Type> concrete_base = base_value.GetConcreteType(context.get());
 
-      if (!concrete_base || concrete_base->tag() != DwarfTag::kPointerType ||
-          concrete_base->GetLanguage() != DwarfLang::kRust ||
-          concrete_base->GetAssignedName().substr(0, 1) != "&") {
-        return ResolveMember(context, base_value, member, std::move(cb));
-      }
-    }
+          if (!concrete_base || concrete_base->tag() != DwarfTag::kPointerType ||
+              concrete_base->GetLanguage() != DwarfLang::kRust ||
+              concrete_base->GetAssignedName().substr(0, 1) != "&") {
+            return ResolveMember(context, base_value, member, std::move(cb));
+          }
+        }
 
-    // Everything else should be a -> operator, or a . operator being used on a Rust reference.
+        // Everything else should be a -> operator, or a . operator being used on a Rust reference.
 
-    if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.value().type())) {
-      if (auto derefer = pretty->GetDereferencer()) {
-        // The pretty type supplies dereference function. This turns foo->bar into deref(foo).bar.
-        return derefer(context, base_value,
-                       [context, member, cb = std::move(cb)](ErrOrValue non_ptr_base) mutable {
-                         if (non_ptr_base.has_error())
-                           return cb(non_ptr_base);
-                         ResolveMember(context, non_ptr_base.value(), member, std::move(cb));
-                       });
-      }
-    }
-
-    // Normal collection resolution.
-    ResolveMemberByPointer(context, base.value(), member,
-                           [cb = std::move(cb)](ErrOrValue result, fxl::RefPtr<Symbol>) mutable {
-                             // Discard resolved symbol, we only need the value.
-                             cb(std::move(result));
+        if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.value().type())) {
+          if (auto derefer = pretty->GetDereferencer()) {
+            // The pretty type supplies dereference function. This turns foo->bar into
+            // deref(foo).bar.
+            return derefer(context, base_value,
+                           [context, member, cb = std::move(cb)](ErrOrValue non_ptr_base) mutable {
+                             if (non_ptr_base.has_error())
+                               return cb(non_ptr_base);
+                             ResolveMember(context, non_ptr_base.value(), member, std::move(cb));
                            });
-  });
+          }
+        }
+
+        // Normal collection resolution.
+        ResolveMemberByPointer(context, base.value(), member,
+                               [cb = std::move(cb)](ErrOrValue result, const FoundMember&) mutable {
+                                 // Discard resolved symbol, we only need the value.
+                                 cb(std::move(result));
+                               });
+      });
 }
 
 void MemberAccessExprNode::Print(std::ostream& out, int indent) const {

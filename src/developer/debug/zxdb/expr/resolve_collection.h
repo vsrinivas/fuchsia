@@ -20,40 +20,33 @@
 namespace zxdb {
 
 class CodeBlock;
-class DataMember;
 class EvalContext;
 class ExprValue;
+class FoundMember;
 class InheritedFrom;
 
-// Resolves a DataMember given a collection (class/struct/union) and either a record for a variable
+// Resolves a member given a collection (class/struct/union) and either a record for a variable
 // within that collection (in this case the data member must be on the class itself, not on a base
 // class), or a name of a member.
-//
-// The variant that takes a DataMember only handles direct members on the current class, not
-// derived classes that may have an offset.
-// TODO(brettw) this variant should take a FoundMember instead.
 //
 // These will be synchronous in most cases, but resolving static members may require requesting the
 // memory from the target which will force an asynchronous result.
 //
-// The DataMember may be null. If so, calls the callback with an error (this is so callers don't
-// have to type check the inputs).
+// The FoundMember may have no data member in it. If so, calls the callback with an error (this is
+// so callers don't have to type check the inputs).
 void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
-                   const DataMember* member, EvalCallback cb);
+                   const FoundMember& member, EvalCallback cb);
 void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                    const ParsedIdentifier& identifier, EvalCallback cb);
 
 // Synchronous versions of ResolveMember for cases where the value is known not to be an extern
 // (static) member. This is generally used when hardcoding support for known structures.
 //
-// The variant that takes a DataMember only handles direct members on the current class, not
-// derived classes that may have an offset.
-//
 // The variant that takes an initializer list will interpret the strings as identifiers, parse
 // them, and resolve a nested series of members using those strings. For example, if the input
 // is {"a", "b"} this will resolve "base.a.b". This is used for hardcoding some printers.
 ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
-                                  const DataMember* member);
+                                  const FoundMember& member);
 ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                                   const ParsedIdentifier& identifier);
 ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
@@ -65,10 +58,10 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
                             const FoundMember& found_member, EvalCallback cb);
 
 // Same as previous version but takes the name of the member to find. The callback also provides the
-// DataMember corresponding to what the name matched.
+// FoundMember corresponding to what the name matched.
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
-                            fit::callback<void(ErrOrValue, fxl::RefPtr<DataMember>)> cb);
+                            fit::callback<void(ErrOrValue, const FoundMember&)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value of the base class and
 // puts it in *out.

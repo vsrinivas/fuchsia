@@ -195,10 +195,10 @@ void DoResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& b
 }  // namespace
 
 void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
-                   const DataMember* member, EvalCallback cb) {
-  if (!member)
+                   const FoundMember& member, EvalCallback cb) {
+  if (member.is_null())
     return cb(GetErrorForInvalidMemberOf(base));
-  DoResolveMember(context, base, FoundMember(member, member->member_location()), std::move(cb));
+  DoResolveMember(context, base, member, std::move(cb));
 }
 
 void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
@@ -210,10 +210,10 @@ void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& bas
 }
 
 ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
-                                  const DataMember* member) {
-  if (!member)
+                                  const FoundMember& member) {
+  if (member.is_null())
     return GetErrorForInvalidMemberOf(base);
-  return DoResolveNonstaticMember(context, base, FoundMember(member, member->member_location()));
+  return DoResolveNonstaticMember(context, base, member);
 }
 
 ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
@@ -253,19 +253,19 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
-                            fit::callback<void(ErrOrValue, fxl::RefPtr<DataMember>)> cb) {
+                            fit::callback<void(ErrOrValue, const FoundMember&)> cb) {
   fxl::RefPtr<Collection> coll;
   if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
-    return cb(err, nullptr);
+    return cb(err, FoundMember());
 
   ErrOr<FoundMember> found = FindMemberWithErr(coll.get(), identifier);
   if (found.has_error())
-    return cb(found.err(), nullptr);
+    return cb(found.err(), FoundMember());
 
-  DoResolveMemberByPointer(
-      context, base_ptr, coll.get(), found.value(),
-      [cb = std::move(cb), member_ref = RefPtrTo(found.value().data_member())](
-          ErrOrValue value) mutable { cb(std::move(value), std::move(member_ref)); });
+  DoResolveMemberByPointer(context, base_ptr, coll.get(), found.value(),
+                           [cb = std::move(cb), found = found.value()](ErrOrValue value) mutable {
+                             cb(std::move(value), found);
+                           });
 }
 
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
