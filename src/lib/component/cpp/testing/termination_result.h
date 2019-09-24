@@ -5,8 +5,8 @@
 // !!! DEPRECATED !!!
 // New usages should reference sdk/lib/sys/cpp/...
 
-#ifndef LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
-#define LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
+#ifndef SRC_LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
+#define SRC_LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
 
 namespace component {
 namespace testing {
@@ -20,4 +20,4 @@ struct TerminationResult {
 }  // namespace testing
 }  // namespace component
 
-#endif  // LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
+#endif  // SRC_LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_

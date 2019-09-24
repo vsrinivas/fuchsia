@@ -1,0 +1,112 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "connect.h",
+    "outgoing.cc",
+    "outgoing.h",
+    "startup_context.cc",
+    "startup_context.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_deps = [
+    ":deprecated_service_provider",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-inspect",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+
+  # This library is deprecated.
+  #
+  # Use //sdk/lib/sys/cpp instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//garnet/bin/ui/benchmarks/transparency_benchmark:bin",
+    "//garnet/bin/ui/gltf_export:gltf_export",
+    "//garnet/bin/ui/present_view:present_view",
+    "//garnet/bin/ui/root_presenter:accessibility",
+    "//garnet/bin/ui/root_presenter:factory_reset_manager",
+    "//garnet/bin/ui/root_presenter:lib",
+    "//garnet/bin/ui/screencap:screencap",
+    "//garnet/bin/ui/set_renderer_params_HACK:set_renderer_params",
+    "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
+    "//garnet/public/lib/component/cpp:cpp",
+    "//garnet/public/lib/test_runner/cpp:cpp",
+    "//garnet/public/lib/ui/base_view/cpp:cpp",
+    "//src/camera/camera_manager:lib",
+    "//src/camera/simple_camera/simple_camera_lib:simple_camera_lib",
+    "//src/camera/simple_camera/simple_camera_server:lib",
+    "//src/lib/component/cpp:environment_services",
+    "//src/modular/bin/sessionmgr/agent_runner:agent_runner",
+    "//src/modular/bin/sessionmgr:sessionmgr_impl_unittest",
+    "//src/modular/bin/sessionmgr:sessionmgr_lib",
+    "//src/virtualization/bin/guest_manager:lib",
+    "//src/virtualization/bin/guest_runner:lib",
+    "//src/virtualization/bin/vmm:lib",
+
+    # TODO(34711): make the below more specific or delete it entirely
+    "//vendor/*",
+  ]
+}
+
+source_set("deprecated_service_provider") {
+  sources = [
+    "service_provider_impl.cc",
+    "service_provider_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+
+  # This library is deprecated.
+  #
+  # Use a directory(sys::ServiceDirectory) instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//src/ledger/bin/p2p_provider/impl",
+    "//garnet/public/lib/component/cpp:deprecated_service_provider",
+    ":cpp",
+  ]
+}
+
+source_set("environment_services") {
+  sources = [
+    "environment_services_helper.cc",
+    "environment_services_helper.h",
+  ]
+
+  public_deps = [
+    ":cpp",
+  ]
+
+  # This library is deprecated.
+  #
+  # Use //sdk/lib/sys/cpp instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//garnet/bin/appmgr:*",
+    "//src/connectivity/wlan/drivers/wlan:*",
+
+    "testing",
+  ]
+}

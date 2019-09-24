@@ -4,10 +4,10 @@
 
 #include "lib/component/cpp/testing/test_util.h"
 
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 
 namespace component {
 namespace testing {

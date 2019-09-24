@@ -1,26 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// !!! DEPRECATED !!!
-// New usages should reference sdk/lib/sys/cpp/...
 
 #ifndef LIB_COMPONENT_CPP_TESTING_TEST_UTIL_H_
 #define LIB_COMPONENT_CPP_TESTING_TEST_UTIL_H_
 
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-#include <fuchsia/sys/cpp/fidl.h>
+// Do not use this header directly, instead use src/lib/component/cpp/testing/test_util.h.
 
-// TODO(anmittal): Move to some public library so that everyone can use these
-// functions.
-
-namespace component {
-namespace testing {
-
-zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
-
-}  // namespace testing
-}  // namespace component
+#include "src/lib/component/cpp/testing/test_util.h"
 
 #endif  // LIB_COMPONENT_CPP_TESTING_TEST_UTIL_H_

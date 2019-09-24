@@ -7,7 +7,7 @@ This document explains how to use the golang syslog library.
 
 ```
 deps = [
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//src/lib/syslog/go/src/syslog",
 ]
 ```

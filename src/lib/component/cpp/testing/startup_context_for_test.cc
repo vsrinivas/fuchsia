@@ -5,9 +5,9 @@
 #include "lib/component/cpp/testing/startup_context_for_test.h"
 
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
 namespace component {
 namespace testing {
