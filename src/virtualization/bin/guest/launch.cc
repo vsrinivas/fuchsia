@@ -30,6 +30,6 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
   // Setup serial console.
   SerialConsole console(loop);
   guest->GetSerial([&console](zx::socket socket) { console.Start(std::move(socket)); });
-
+  guest.set_error_handler([&loop](...) { loop->Quit(); });
   loop->Run();
 }
