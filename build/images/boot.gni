@@ -147,7 +147,7 @@ template("esp") {
                              "visibility",
                            ])
 
-    tool = "//garnet/go/src/make-efi"
+    tool = "//tools/make-efi"
     mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
 
     outputs = [

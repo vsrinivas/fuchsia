@@ -60,7 +60,6 @@ group("all") {
     "//garnet/packages/tools:fidlmerge",
     "//garnet/packages/tools:iperf",
     "//garnet/packages/tools:magma",
-    "//garnet/packages/tools:make-efi",
     "//garnet/packages/tools:mediasession",
     "//garnet/packages/tools:netstack",
     "//garnet/packages/tools:runmany",
@@ -71,13 +70,6 @@ group("all") {
     "//garnet/packages/tools:whereiscl",
     "//src/connectivity/wlan:tools",
     "//src/sys/locate",
-  ]
-}
-
-group("make-efi") {
-  testonly = true
-  public_deps = [
-    "//garnet/go/src/make-efi:host",
   ]
 }
 

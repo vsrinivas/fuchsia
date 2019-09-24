@@ -13,6 +13,7 @@ group("tools") {
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
     "//tools/net:tools($host_toolchain)",
+    "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
   ]
 }
