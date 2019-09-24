@@ -4,9 +4,9 @@
 
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
-#include <utility>
-
 #include <lib/async/cpp/task.h>
+
+#include <utility>
 
 #include "lib/callback/cancellable_helper.h"
 #include "lib/fidl/cpp/optional.h"

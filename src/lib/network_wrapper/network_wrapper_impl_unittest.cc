@@ -4,14 +4,14 @@
 
 #include "lib/network_wrapper/network_wrapper_impl.h"
 
-#include <memory>
-#include <utility>
-#include <vector>
-
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/socket.h>
+
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/testing/test_backoff.h"
@@ -19,8 +19,8 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fit/defer.h"
 #include "lib/fsl/socket/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/fxl/macros.h"
 
 namespace network_wrapper {
 namespace {
