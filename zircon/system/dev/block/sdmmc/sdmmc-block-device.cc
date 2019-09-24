@@ -187,7 +187,7 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
   fzl::VmoMapper mapper;
 
   zx_status_t st = ZX_OK;
-  if (sdmmc_.UseDma()) {
+  if (sdmmc().UseDma()) {
     req->use_dma = true;
     req->virt_buffer = nullptr;
     req->pmt = ZX_HANDLE_INVALID;
@@ -206,12 +206,12 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     req->virt_size = length;
   }
 
-  st = sdmmc_.SdmmcRequest(req);
+  st = sdmmc().SdmmcRequest(req);
   if (st != ZX_OK) {
     zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
   } else {
-    if ((req->blockcount > 1) && !(sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
-      st = sdmmc_.SdmmcStopTransmission();
+    if ((req->blockcount > 1) && !(sdmmc().host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
+      st = sdmmc().SdmmcStopTransmission();
       if (st != ZX_OK) {
         zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", st);
       }
@@ -226,7 +226,7 @@ zx_off_t SdmmcBlockDevice::DdkGetSize() { return block_info_.block_count * block
 
 void SdmmcBlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
   memcpy(info_out, &block_info_, sizeof(*info_out));
-  *block_op_size_out = BlockOperation::OperationSize(sizeof(block_op_t));
+  *block_op_size_out = BlockOpSize();
 }
 
 void SdmmcBlockDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
@@ -288,7 +288,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
   size_t attempt = 0;
   for (; attempt <= kTranMaxAttempts; attempt++) {
     uint32_t response;
-    zx_status_t st = sdmmc_.SdmmcSendStatus(&response);
+    zx_status_t st = sdmmc().SdmmcSendStatus(&response);
     if (st != ZX_OK) {
       zxlogf(SPEW, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d\n", st);
       return st;
@@ -296,7 +296,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
 
     current_state = MMC_STATUS_CURRENT_STATE(response);
     if (current_state == MMC_STATUS_CURRENT_STATE_RECV) {
-      st = sdmmc_.SdmmcStopTransmission();
+      st = sdmmc().SdmmcStopTransmission();
       continue;
     } else if (current_state == MMC_STATUS_CURRENT_STATE_TRAN) {
       break;

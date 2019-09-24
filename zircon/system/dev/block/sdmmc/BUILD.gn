@@ -42,8 +42,6 @@ driver("sdmmc") {
 test("sdmmc-test") {
   output_name = "sdmmc-test"
   sources = [
-    "fake-sdmmc-device.cc",
-    "mmc.cc",
     "sdio-controller-device-test.cc",
     "sdio-controller-device.cc",
     "sdio-function-device.cc",

@@ -51,8 +51,8 @@ zx_status_t SdmmcRootDevice::Init() {
 }
 
 int SdmmcRootDevice::WorkerThread() {
-  SdmmcDevice sdmmc(host_);
-  zx_status_t st = sdmmc.Init();
+  sdmmc_host_info_t host_info;
+  zx_status_t st = host_.HostInfo(&host_info);
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: failed to get host info\n");
     if (!dead_) {
@@ -60,6 +60,8 @@ int SdmmcRootDevice::WorkerThread() {
     }
     return thrd_error;
   }
+
+  SdmmcDevice sdmmc(host_, host_info);
 
   zxlogf(TRACE, "sdmmc: host caps dma %d 8-bit bus %d max_transfer_size %" PRIu64 "\n",
          sdmmc.UseDma() ? 1 : 0, (sdmmc.host_info().caps & SDMMC_HOST_CAP_BUS_WIDTH_8) ? 1 : 0,
