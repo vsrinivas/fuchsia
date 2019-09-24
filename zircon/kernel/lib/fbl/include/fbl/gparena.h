@@ -223,7 +223,7 @@ class GPArena {
   fbl::RefPtr<VmMapping> mapping_;
 
   uintptr_t start_ = 0;
-  // top_ is the address of the last allocated object from the arena.
+  // top_ is the address of the next object to be allocated from the arena.
   ktl::atomic<uintptr_t> top_ = 0;
   // start_ .. committed_ represents the committed and mapped portion of the arena.
   ktl::atomic<uintptr_t> committed_ = 0;
