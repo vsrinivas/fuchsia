@@ -106,12 +106,7 @@ class PmmNode {
 
   fbl::DoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
 
-  // page queues
   list_node free_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_list_);
-  list_node inactive_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(inactive_list_);
-  list_node active_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(active_list_);
-  list_node modified_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(modified_list_);
-  list_node wired_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(wired_list_);
 
   // List of pending requests.
   list_node_t request_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(request_list_);
