@@ -29,6 +29,10 @@ void spin(uint32_t usecs) {
     ;
 }
 
+void abort(void) {
+  panic("abort!");
+}
+
 void _panic(void* caller, void* frame, const char* fmt, ...) {
   platform_panic_start();
 
