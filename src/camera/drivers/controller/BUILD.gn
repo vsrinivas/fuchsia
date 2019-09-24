@@ -23,10 +23,10 @@ source_set("controller-source") {
     "controller-protocol.cc",
   ]
   deps = [
-    "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

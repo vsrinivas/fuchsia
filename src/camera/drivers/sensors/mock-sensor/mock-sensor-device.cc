@@ -17,12 +17,10 @@ zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
   }
   zx_status_t status = device->DdkAdd("mock-sensor");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d\n",
-           status);
+    zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d\n", status);
     return status;
   }
-  zxlogf(ERROR, "mock-sensor-device: Successfully added mock sensor: %d\n",
-         status);
+  zxlogf(ERROR, "mock-sensor-device: Successfully added mock sensor: %d\n", status);
   // Device is held by DevMgr.
   __UNUSED auto* dev = device.release();
   return ZX_OK;
@@ -30,9 +28,7 @@ zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
 
 void MockSensorDevice::DdkUnbind() {}
 
-void MockSensorDevice::DdkRelease() {
-  delete this;
-}
+void MockSensorDevice::DdkRelease() { delete this; }
 
 zx_status_t MockSensorDevice::CameraSensorInit() {
   if (is_initialized_) {
@@ -42,9 +38,7 @@ zx_status_t MockSensorDevice::CameraSensorInit() {
   return ZX_OK;
 }
 
-void MockSensorDevice::CameraSensorDeInit() {
-  is_initialized_ = false;
-}
+void MockSensorDevice::CameraSensorDeInit() { is_initialized_ = false; }
 
 zx_status_t MockSensorDevice::CameraSensorSetMode(uint8_t mode) {
   if (mode >= supported_modes_.size()) {
@@ -80,8 +74,7 @@ int32_t MockSensorDevice::CameraSensorSetDigitalGain(int32_t gain) {
   return digital_gain_;
 }
 
-zx_status_t MockSensorDevice::CameraSensorSetIntegrationTime(
-    int32_t integration_time) {
+zx_status_t MockSensorDevice::CameraSensorSetIntegrationTime(int32_t integration_time) {
   integration_time_ = integration_time;
   return ZX_OK;
 }
@@ -90,9 +83,9 @@ zx_status_t MockSensorDevice::CameraSensorGetInfo(camera_sensor_info_t* out_info
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MockSensorDevice::CameraSensorGetSupportedModes(
-    camera_sensor_mode_t* out_modes_list, size_t modes_count,
-    size_t* out_modes_actual) {
+zx_status_t MockSensorDevice::CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
+                                                            size_t modes_count,
+                                                            size_t* out_modes_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -120,4 +113,4 @@ ZIRCON_DRIVER_BEGIN(mock-sensor, camera::driver_ops, "mock-sensor", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VCAMERA_TEST),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CAMERA_SENSOR)
 ZIRCON_DRIVER_END(mock-sensor)
-// clang-format on
+    // clang-format on

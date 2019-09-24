@@ -1,16 +1,16 @@
 {
-  "program": {
-    "binary": "test/mali_009_test"
-  },
-  "sandbox": {
-    "dev": [
-      "misc/sysinfo",
-      "class/input",
-      "class/isp-device-test"
-    ],
-    "services": [
-      "fuchsia.sys.Launcher",
-      "fuchsia.camera.test.IspTester"
-    ]
-  }
+    "program": {
+        "binary": "test/mali_009_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/sysinfo",
+            "class/input",
+            "class/isp-device-test"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.camera.test.IspTester"
+        ]
+    }
 }

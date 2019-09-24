@@ -96,8 +96,8 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensorSetIntegrationTime(int32_t int_time);
   zx_status_t CameraSensorUpdate();
   zx_status_t CameraSensorGetInfo(camera_sensor_info_t* out_info);
-  zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list, size_t modes_count,
-                                            size_t* out_modes_actual);
+  zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
+                                            size_t modes_count, size_t* out_modes_actual);
 
  private:
   friend class Imx227DeviceTester;

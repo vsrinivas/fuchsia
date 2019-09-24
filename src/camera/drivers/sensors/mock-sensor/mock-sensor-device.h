@@ -7,12 +7,11 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <vector>
+
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/camerasensor.h>
-
-#include <vector>
-
 
 namespace camera {
 
@@ -30,9 +29,8 @@ class MockSensorDevice;
 
 using DeviceType = ddk::Device<MockSensorDevice, ddk::Unbindable>;
 
-class MockSensorDevice
-    : public DeviceType,
-      public ddk::CameraSensorProtocol<MockSensorDevice, ddk::base_protocol> {
+class MockSensorDevice : public DeviceType,
+                         public ddk::CameraSensorProtocol<MockSensorDevice, ddk::base_protocol> {
  public:
   explicit MockSensorDevice() : DeviceType(fake_ddk::kFakeParent) {}
 
@@ -99,8 +97,7 @@ class MockSensorDevice
   //    |modes_count|:
   //    |out_modes_actual|:
   zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
-                                            size_t modes_count,
-                                            size_t* out_modes_actual);
+                                            size_t modes_count, size_t* out_modes_actual);
 
   // Helper methods for test.
 

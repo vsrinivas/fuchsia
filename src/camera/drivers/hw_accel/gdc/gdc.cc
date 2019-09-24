@@ -241,7 +241,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.frame_status = FRAME_STATUS_OK;
     info.buffer_id = task->GetOutputBufferIndex();
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    info.metadata.image_format_index = 0; // unused.
+    info.metadata.image_format_index = 0;  // unused.
     task->callback()->frame_ready(task->callback()->ctx, &info);
   }
 }

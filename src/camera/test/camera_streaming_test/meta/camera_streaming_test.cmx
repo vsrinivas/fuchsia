@@ -1,16 +1,16 @@
 {
-  "program": {
-    "binary": "test/camera_streaming_test"
-  },
-  "sandbox": {
-    "dev": [
-      "class/input",
-      "class/isp-device-test"
-    ],
-    "services": [
-      "fuchsia.sys.Environment",
-      "fuchsia.sys.Launcher",
-      "fuchsia.camera.test.IspTester"
-    ]
-  }
+    "program": {
+        "binary": "test/camera_streaming_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input",
+            "class/isp-device-test"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.camera.test.IspTester"
+        ]
+    }
 }

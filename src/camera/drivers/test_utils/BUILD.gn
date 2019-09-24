@@ -6,11 +6,9 @@ group("test_utils") {
   visibility = [ "//src/camera/*" ]
   public_deps = [
     ":button_checker",
-    ":fake-buffer-collection"
+    ":fake-buffer-collection",
   ]
-  public_configs = [
-    ":test_utils_config"
-  ]
+  public_configs = [ ":test_utils_config" ]
 }
 
 config("test_utils_config") {
@@ -37,7 +35,7 @@ source_set("fake-buffer-collection") {
 source_set("button_checker") {
   visibility = [ ":*" ]
   sources = [
-    "button_checker.cc"
+    "button_checker.cc",
   ]
   deps = [
     "//src/lib/fxl",

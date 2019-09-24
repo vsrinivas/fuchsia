@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDCTASK_H_
-#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDCTASK_H_
+#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
+#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
 
 #include "../task/task.h"
 
@@ -34,4 +34,4 @@ class GdcTask : public generictask::GenericTask {
 };
 }  // namespace gdc
 
-#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDCTASK_H_
+#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_

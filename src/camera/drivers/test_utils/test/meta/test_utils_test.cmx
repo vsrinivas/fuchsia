@@ -1,13 +1,13 @@
 {
-  "program": {
-    "binary": "test/test_utils_test"
-  },
-  "sandbox": {
-    "dev": [
-      "class/input"
-    ],
-    "services": [
-      "fuchsia.hardware.input"
-    ]
-  }
+    "program": {
+        "binary": "test/test_utils_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "services": [
+            "fuchsia.hardware.input"
+        ]
+    }
 }

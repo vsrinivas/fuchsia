@@ -231,7 +231,7 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     zxlogf(ERROR, "aml-mipi driver failed to get added\n");
     return status;
   }
-    zxlogf(INFO, "aml-mipi driver added\n");
+  zxlogf(INFO, "aml-mipi driver added\n");
 
   // mipi_device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto ptr = mipi_device.release();

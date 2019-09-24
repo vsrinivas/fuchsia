@@ -1,4 +1,3 @@
-#include <ddk/platform-defs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -7,6 +6,8 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/device/vfs.h>
+
+#include <ddk/platform-defs.h>
 
 namespace {
 
@@ -49,8 +50,8 @@ void MockSensorIntegrationTest::SetUp() {
 TEST_F(MockSensorIntegrationTest, SimpleTest) {
   zx::channel c1, c2;
   zx::channel::create(0, &c1, &c2);
-  zx_status_t status = fdio_service_connect_at(
-      devfs_dir_.channel().get(), "class/camera-sensor/0", c1.release());
+  zx_status_t status =
+      fdio_service_connect_at(devfs_dir_.channel().get(), "class/camera-sensor/0", c1.release());
   ASSERT_EQ(ZX_OK, status);
 }
 

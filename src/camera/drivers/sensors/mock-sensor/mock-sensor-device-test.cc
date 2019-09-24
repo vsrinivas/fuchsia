@@ -32,13 +32,11 @@ class MockSensorDeviceTest : public zxtest::Test {
  public:
   void SetUp() override;
 
-protected:
+ protected:
   std::unique_ptr<MockSensorDevice> sensor_;
 };
 
-void MockSensorDeviceTest::SetUp() {
-  sensor_ = std::make_unique<MockSensorDevice>();
-}
+void MockSensorDeviceTest::SetUp() { sensor_ = std::make_unique<MockSensorDevice>(); }
 
 TEST_F(MockSensorDeviceTest, InitSuccess) {
   ASSERT_FALSE(sensor_->IsInitialized());
@@ -55,9 +53,7 @@ TEST_F(MockSensorDeviceTest, InitError) {
   ASSERT_NOT_OK(sensor_->CameraSensorInit());
 }
 
-TEST_F(MockSensorDeviceTest, SetModeError) {
-  ASSERT_NOT_OK(sensor_->CameraSensorSetMode(4));
-}
+TEST_F(MockSensorDeviceTest, SetModeError) { ASSERT_NOT_OK(sensor_->CameraSensorSetMode(4)); }
 
 TEST_F(MockSensorDeviceTest, SetMode) {
   constexpr uint8_t kModeIdx = 1;

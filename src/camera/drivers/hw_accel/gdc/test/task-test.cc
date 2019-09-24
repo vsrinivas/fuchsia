@@ -70,7 +70,7 @@ class TaskTest : public zxtest::Test {
     zx::port port;
     EXPECT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
-    callback_.frame_ready = [](void* ctx, const frame_available_info *info) {
+    callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->buffer_id);
     };
     callback_.ctx = this;

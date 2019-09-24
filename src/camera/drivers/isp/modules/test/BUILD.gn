@@ -15,8 +15,6 @@ executable("modules_bin") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fbl",
@@ -26,5 +24,7 @@ executable("modules_bin") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 }
