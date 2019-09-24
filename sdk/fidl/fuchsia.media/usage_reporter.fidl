@@ -1,0 +1,50 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//TODO(36191): Move to fuchsia.media.audio
+
+library fuchsia.media;
+
+/// A state of audio usages in which no policy actions are taken on any streams with the usage.
+table UsageStateUnadjusted {
+};
+
+/// A state of audio usages in which a policy decision has been made to temporarily
+/// lower the volume of all streams with this usage.
+table UsageStateDucked {
+};
+
+/// A state of audio usages in which a policy decision has been made to temporarily
+/// mute the volume of all streams with this usage.
+table UsageStateMuted {
+};
+
+/// The state of audio policy enforcement on a stream or set of streams.
+xunion UsageState {
+    UsageStateUnadjusted unadjusted;
+    UsageStateDucked ducked;
+    UsageStateMuted muted;
+};
+
+/// A protocol for listening to changes to the policy state of an audio usage.
+///
+/// User actions, such as lowering the volume or muting a stream, are not reflected in this
+/// API.
+protocol UsageWatcher {
+    /// Called on first connection and whenever the watched usage changes. The provided
+    /// usage will always be the bound usage; it is provided so that an implementation of
+    /// this protocol may be bound to more than one usage.
+    ///
+    /// Clients must respond to acknowledge the event. Clients that do not acknowledge their
+    /// events will eventually be disconnected.
+    OnStateChanged(Usage usage, UsageState state) -> ();
+};
+
+/// A protocol for setting up watchers of audio usages.
+[Discoverable]
+protocol UsageReporter {
+    Watch(
+        Usage usage,
+        UsageWatcher usage_watcher);
+};

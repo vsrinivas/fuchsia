@@ -9,5 +9,6 @@
   "fidl/fuchsia.media/stream_common.fidl": "94f8089f2e58955d82560b6ef74247c3",
   "fidl/fuchsia.media/stream_processor.fidl": "682c5f3d6adbe80210dea42c927f8834",
   "fidl/fuchsia.media/stream_type.fidl": "51b26d41607bec6c23b7335de736c756",
-  "fidl/fuchsia.media/timeline_function.fidl": "10e9c5225e1b4596150724cf45d2a8a4"
+  "fidl/fuchsia.media/timeline_function.fidl": "10e9c5225e1b4596150724cf45d2a8a4",
+  "fidl/fuchsia.media/usage_reporter.fidl": "a6edde0921f0adb903a4c37f9aa2b13a"
 }

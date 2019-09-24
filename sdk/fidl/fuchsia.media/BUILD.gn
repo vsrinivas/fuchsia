@@ -27,6 +27,7 @@ fidl("fuchsia.media") {
     "stream_processor.fidl",
     "stream_type.fidl",
     "timeline_function.fidl",
+    "usage_reporter.fidl",
   ]
 
   public_deps = [
