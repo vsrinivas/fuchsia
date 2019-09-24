@@ -24,7 +24,6 @@ use {
         prelude::*,
     },
     hyper::{Body, Request, StatusCode},
-    rand::{thread_rng, Rng},
     serde_derive::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
@@ -330,7 +329,14 @@ impl Repository {
         launcher: &'a LauncherProxy,
     ) -> Result<ServedRepository<'a>, Error> {
         let indir = tempfile::tempdir().context("create /in")?;
-        let port = thread_rng().gen_range(1025, 65535);
+        let port = {
+            // "pm serve" can choose a port to listen on, but then this test has no way to discover
+            // what port it chose. This approach of choosing a port and then launching "pm serve"
+            // using that port can race with something else on the system binding to that port.
+            // This issue will no longer exist when the Rust implementation of "pm serve" exists.
+            let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+            listener.local_addr()?.port()
+        };
         println!("using port={}", port);
 
         let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
