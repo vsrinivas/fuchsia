@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/zxio.h>
 
@@ -15,8 +17,12 @@ TEST(DebugLogTest, TheadSafety) {
   // be responsible for catching bugs.
   constexpr size_t kNumThreads = 256;
 
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
+  ASSERT_OK(fdio_service_connect(kWriteOnlyLogPath, remote.release()));
   zx::debuglog handle;
-  ASSERT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0, &handle));
+  ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local.get(), handle.reset_and_get_address()));
 
   auto storage = std::make_unique<zxio_storage_t>();
   ASSERT_EQ(ZX_OK, zxio_debuglog_init(storage.get(), std::move(handle)));
