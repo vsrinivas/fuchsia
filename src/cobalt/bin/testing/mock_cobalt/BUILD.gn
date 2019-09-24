@@ -1,0 +1,56 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "mock_cobalt"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+  ]
+}
+
+package("mock_cobalt") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "mock_cobalt"
+
+  meta = [
+    {
+      path = rebase_path("meta/mock_cobalt.cmx")
+      dest = "mock_cobalt.cmx"
+    },
+  ]
+}
+
+test_package("tests") {
+  package_name = "mock-cobalt-tests"
+
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "mock_cobalt_bin_test"
+      dest = "mock-cobalt-unittests"
+      environments = basic_envs
+    },
+  ]
+}

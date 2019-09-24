@@ -9,6 +9,7 @@ group("testing") {
   deps = [
     ":fake_clock_lib",
     ":fake_logger_lib",
+    "mock_cobalt",
   ]
 }
 
