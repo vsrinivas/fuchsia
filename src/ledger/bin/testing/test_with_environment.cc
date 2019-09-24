@@ -48,7 +48,6 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   }
 
  private:
-  std::unique_ptr<sys::ComponentContext> component_context_;
   coroutine::CoroutineHandler* delegate_;
   fit::closure quit_callback_;
   bool need_to_continue_ = false;
