@@ -9,8 +9,8 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
-            "fuchsia.tracing.controller.Controller"
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher"
         ],
         "system": [
             "bin"

@@ -6,10 +6,10 @@
 #include <lib/zx/process.h>
 
 #include <gtest/gtest.h>
-#include <src/developer/tracing/lib/test_utils/spawn_and_wait.h>
 #include <trace-reader/file_reader.h>
 
 #include "garnet/lib/perfmon/controller.h"
+#include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -37,10 +37,10 @@ TEST(CpuperfProvider, IntegrationTest) {
   std::vector<std::string> argv{kTracePath,     "record",
                                 "--binary",     kDurationArg,
                                 kCategoriesArg, std::string("--output-file=") + kOutputFile};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
+  ASSERT_EQ(tracing::test::SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
-  int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
+  int64_t return_code;
+  ASSERT_TRUE(tracing::test::WaitAndGetReturnCode(argv[0], child, &return_code));
   EXPECT_EQ(return_code, 0);
 
   size_t record_count = 0;

@@ -4,8 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/trace/tests/run_test.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
+#include "garnet/bin/trace/tests/run_test.h"
+#include "src/developer/tracing/lib/test_utils/run_program.h"
 
 namespace tracing {
 namespace test {

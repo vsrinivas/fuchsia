@@ -10,8 +10,8 @@
 #include <zircon/syscalls.h>
 
 #include <gtest/gtest.h>
-#include <src/developer/tracing/lib/test_utils/spawn_and_wait.h>
 
+#include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -44,10 +44,10 @@ TEST(Insntrace, DISABLED_TraceProgram) {
 
   zx::process child;
   std::vector<std::string> argv{kInsntracePath, kInsntracePath, "--help"};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
+  ASSERT_EQ(tracing::test::SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
-  int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
+  int64_t return_code;
+  ASSERT_TRUE(tracing::test::WaitAndGetReturnCode(argv[0], child, &return_code));
   EXPECT_EQ(return_code, 0);
 
   // There's not much more we can do at this point, beyond verifying the

@@ -32,18 +32,6 @@ constexpr char kSpawnedTestPackagePath[] = "/test-pkg";
 // This is useful when wanting the trace program to write output to our /tmp directory.
 constexpr char kSpawnedTestTmpPath[] = "/test-tmp";
 
-void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
-
-// If |arg_handle| is not ZX_HANDLE_INVALID, then it is passed to the
-// process with id PA_USER0.
-zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
-                         zx_handle_t arg_handle, zx::process* out_process);
-
-// Wait for |process| to exit.
-// |program_name| is for logging purposes.
-bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
-                          int64_t* out_return_code);
-
 // Run the trace program, but do not wait for it to exit.
 // |args| is the list of arguments to pass. It is not called |argv| as it does not include argv[0].
 // Wait for trace to exit with |WaitAndGetReturnCode()|.
