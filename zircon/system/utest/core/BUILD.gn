@@ -63,9 +63,17 @@ group("core") {
   deps = [
     ":core-tests",  # Together.
   ]
+
   foreach(test, core_tests) {
     deps += [ ":$test" ]  # And alone.
   }
+
+  # If we are building for x64, make sure to run a version of the core tests
+  # which forces use of the HPET in addition to using the default TSC
+  if (current_cpu == "x64") {
+    deps += [ ":core-tests-hpet" ]
+  }
+
 }
 
 # Build each test as a standalone binary meant to be run by runtests.
@@ -117,4 +125,30 @@ zbi_test("core-tests") {
   # build API metadata to find the ZBI file.
   output_dir = root_build_dir
   output_name = "core-tests-$current_cpu"
+}
+
+# If we are building for x64, make sure to run the core tests on a system which
+# has been  configured to force selection of HPET as the timing source instead
+# of choosing TSC if possible.
+if (current_cpu == "x64") {
+  # Make that into a bootable ZBI with just the kernel.
+  zbi_test("core-tests-hpet") {
+    args = [ "userboot=test/core/standalone-test",
+             "kernel.wallclock=hpet",
+           ]
+    deps = [
+      ":standalone",
+      "$zx/kernel",
+    ]
+    assert_no_deps = [
+      "$zx/system/core/*",
+      "$zx/system/dev/*",
+    ]
+
+    # TODO(mcgrathr): The zircon.py recipe depends on this exact file name.
+    # Remove this and let it use the defaults when infra is only using the
+    # build API metadata to find the ZBI file.
+    output_dir = root_build_dir
+    output_name = "core-tests-hpet-$current_cpu"
+  }
 }
