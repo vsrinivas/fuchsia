@@ -21,7 +21,11 @@ group("tools") {
     "//src/chromium",
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/dart",
-    "//src/flutter",
+    # We don't include the AOT flutter tools due to ABI stability.
+    # SDK customers should download the AOT tools directly from
+    # the flutter respository or use JIT instead.
+    "//src/flutter:flutter_jit",
+    "//src/flutter:flutter_jit_product",
     "//src/fonts",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
