@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -23,12 +19,18 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <zircon/limits.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
-#include <zxtest/zxtest.h>
+#include <zircon/types.h>
 
 #include <utility>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -83,6 +85,31 @@ TEST(ZxTestCase, HandleReplace) {
   // The original shoould be invalid and the replacement should be valid.
   ASSERT_EQ(validate_handle(raw_event), ZX_ERR_BAD_HANDLE);
   ASSERT_OK(validate_handle(rep.get()));
+}
+
+TEST(ZxTestCase, GetInfo) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(1, 0u, &vmo));
+
+  // zx::vmo is just an easy object to create; this is really a test of zx::object_base.
+  const zx::object_base& object = vmo;
+  zx_info_handle_count_t info;
+  EXPECT_OK(object.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(info.handle_count, 1);
+}
+
+TEST(ZxTestCase, SetGetProperty) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(1, 0u, &vmo));
+
+  // zx::vmo is just an easy object to create; this is really a test of zx::object_base.
+  const char name[] = "a great maximum length vmo name";
+  const zx::object_base& object = vmo;
+  EXPECT_OK(object.set_property(ZX_PROP_NAME, name, sizeof(name)));
+
+  char read_name[ZX_MAX_NAME_LEN];
+  EXPECT_OK(object.get_property(ZX_PROP_NAME, read_name, sizeof(read_name)));
+  EXPECT_STR_EQ(name, read_name);
 }
 
 TEST(ZxTestCase, Event) {

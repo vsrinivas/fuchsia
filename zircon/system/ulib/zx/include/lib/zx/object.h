@@ -5,10 +5,10 @@
 #ifndef LIB_ZX_OBJECT_H_
 #define LIB_ZX_OBJECT_H_
 
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 #include <lib/zx/object_traits.h>
 #include <lib/zx/time.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 namespace zx {
 
@@ -48,6 +48,19 @@ class object_base {
     zx_handle_t result = value_;
     value_ = ZX_HANDLE_INVALID;
     return result;
+  }
+
+  zx_status_t get_info(uint32_t topic, void* buffer, size_t buffer_size, size_t* actual_count,
+                       size_t* avail_count) const {
+    return zx_object_get_info(get(), topic, buffer, buffer_size, actual_count, avail_count);
+  }
+
+  zx_status_t get_property(uint32_t property, void* value, size_t size) const {
+    return zx_object_get_property(get(), property, value, size);
+  }
+
+  zx_status_t set_property(uint32_t property, const void* value, size_t size) const {
+    return zx_object_set_property(get(), property, value, size);
   }
 
  protected:
@@ -142,11 +155,6 @@ class object : public object_base {
     return zx_object_signal_peer(get(), clear_mask, set_mask);
   }
 
-  zx_status_t get_info(uint32_t topic, void* buffer, size_t buffer_size, size_t* actual_count,
-                       size_t* avail_count) const {
-    return zx_object_get_info(get(), topic, buffer, buffer_size, actual_count, avail_count);
-  }
-
   zx_status_t get_child(uint64_t koid, zx_rights_t rights, object<void>* result) const {
     // Allow for |result| and |this| being the same container, though that
     // can only happen for |T=void|, due to strict aliasing.
@@ -154,14 +162,6 @@ class object : public object_base {
     zx_status_t status = zx_object_get_child(value_, koid, rights, h.reset_and_get_address());
     result->reset(h.release());
     return status;
-  }
-
-  zx_status_t get_property(uint32_t property, void* value, size_t size) const {
-    return zx_object_get_property(get(), property, value, size);
-  }
-
-  zx_status_t set_property(uint32_t property, const void* value, size_t size) const {
-    return zx_object_set_property(get(), property, value, size);
   }
 
   zx_status_t set_profile(const object<profile>& profile, uint32_t options) const {
