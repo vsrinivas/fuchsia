@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/zircon_benchmarks"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable",
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

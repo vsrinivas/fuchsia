@@ -18,10 +18,8 @@ There are two ways to run zircon_benchmarks:
   statistics.  This uses the test runner provided by Zircon's perftest
   library.
 
-  For this, run
-  `/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks -p
-  --out=output.json`.  The result data will be written to
-  `output.json` using our [perf test result schema].
+  For this, run `zircon_benchmarks -p --out=output.json`. The result data
+  will be written to `output.json` using our [perf test result schema].
 
   See Zircon's perftest library for details of the other command line
   options.
@@ -32,6 +30,6 @@ There are two ways to run zircon_benchmarks:
   performance information.
 
   For this, run
-  `/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks`.
+  `run-test-component fuchsia-pkg://fuchsia.com/zircon_benchmarks#meta/zircon_benchmarks.cmx`.
 
 [perf test result schema]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/results_schema.md

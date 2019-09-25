@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 executable("bin") {
@@ -74,21 +74,28 @@ fidl("fidl_interface") {
   ]
 }
 
-package("zircon_benchmarks") {
-  testonly = true
+test_package("zircon_benchmarks") {
+  deprecated_shell = "//build"
 
   deps = [
     ":bin",
     ":fdio_spawn_helper",
   ]
 
+  binaries = [
+    {
+      name = "fdio_spawn_helper"
+      shell = true
+    },
+    {
+      name = "zircon_benchmarks"
+      shell = true
+    },
+  ]
+
   tests = [
     {
       name = "zircon_benchmarks"
-      environments = basic_envs
-    },
-    {
-      name = "fdio_spawn_helper"
       environments = basic_envs
     },
   ]

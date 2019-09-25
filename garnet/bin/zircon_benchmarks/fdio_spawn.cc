@@ -13,7 +13,10 @@
 namespace {
 
 // See fdio_spawn_helper.cc.
-constexpr const char* kPath = "/pkgfs/packages/zircon_benchmarks/0/test/fdio_spawn_helper";
+// Note: while being both a "shell binary" and a "test component", this
+// execution path results in benchmarking shell binary resolution as well as
+// fdio_spawn.
+constexpr const char* kPath = "/bin/fdio_spawn_helper";
 constexpr const char* const kArgv[]{kPath, nullptr};
 
 // Benchmark |fdio_spawn| by spawning a process that simply exits.

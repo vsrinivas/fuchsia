@@ -36,7 +36,6 @@ group("deprecated_bare_tests_allowlist") {
   visibility = [
     "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_test",
     "//topaz/runtime/dart/utils:run_vmservice_object_tests",
-    "//garnet/bin/zircon_benchmarks:zircon_benchmarks",
   ]
 }
 
@@ -74,6 +73,7 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace/tests:trace_tests",
+    "//garnet/bin/zircon_benchmarks:zircon_benchmarks",
     "//garnet/public/lib/inspect_deprecated/integration:libinspect_integration_tests",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
