@@ -23,6 +23,8 @@ class ControllerDeviceTest : public ControllerDevice {
     loop_.StartThread("camera-controller-loop", &loop_thread_);
   }
 
+  ~ControllerDeviceTest() { loop_.Shutdown(); }
+
   zx::channel& local() { return local_; }
   zx::channel& remote() { return remote_; }
   fake_ddk::Bind& ddk() { return ddk_; }
@@ -58,9 +60,9 @@ class ControllerDeviceTest : public ControllerDevice {
   zx::channel local_, remote_;
   fbl::unique_ptr<ControllerDevice> controller_;
   thrd_t loop_thread_;
-  async::Loop loop_;
   sync_completion_t event_;
   fuchsia::camera2::hal::ControllerPtr controller_protocol_;
+  async::Loop loop_;
 };
 
 TEST(ControllerDeviceTest, DdkLifecycle) {
