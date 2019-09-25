@@ -18,7 +18,7 @@ struct Entry {
 // This library loads a compressed ZBI Image from "input"
 // decompresses it and enable parsing files in its payload.
 // Only ZBI_TYPE_STORAGE_BOOTFS type payloads are supported currently.
-class ZbiBootfsParser {
+class __EXPORT ZbiBootfsParser {
  public:
   virtual ~ZbiBootfsParser() {}
 

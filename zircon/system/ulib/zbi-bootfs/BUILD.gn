@@ -28,10 +28,6 @@ library("zbi-bootfs") {
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
   ]
-
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 group("test") {
