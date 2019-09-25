@@ -21,7 +21,7 @@ namespace media::audio::test {
 std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
                                    uint32_t src_channels, uint32_t src_frame_rate,
                                    uint32_t dest_channels, uint32_t dest_frame_rate,
-                                   Mixer::Resampler resampler = Mixer::Resampler::Default);
+                                   Mixer::Resampler resampler);
 
 // OutputProducers convert frames from accumulation format to dest format.
 std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,

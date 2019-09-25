@@ -25,7 +25,7 @@ TEST(DataFormats, PointSampler_8) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 32000, 1, 16000,
                                  Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 4, 48000, 4, 48000,
-                                 Resampler::LinearInterpolation));
+                                 Resampler::SampleAndHold));
 }
 
 // Create PointSampler objects for incoming buffers of type int16
@@ -33,13 +33,13 @@ TEST(DataFormats, PointSampler_16) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000,
                                  Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 2, 11025,
-                                 Resampler::Default));
+                                 Resampler::SampleAndHold));
 }
 
 // Create PointSampler objects for incoming buffers of type int24-in-32
 TEST(DataFormats, PointSampler_24) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
-                                 8000, Resampler::LinearInterpolation));
+                                 8000, Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 8000, 4,
                                  8000, Resampler::SampleAndHold));
 }
@@ -47,9 +47,9 @@ TEST(DataFormats, PointSampler_24) {
 // Create PointSampler objects for incoming buffers of type float
 TEST(DataFormats, PointSampler_Float) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 16000,
-                                 Resampler::Default));
+                                 Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 16000,
-                                 Resampler::LinearInterpolation));
+                                 Resampler::SampleAndHold));
 }
 
 // If the source sample rate is NOT an integer-multiple of the destination rate
@@ -60,15 +60,16 @@ TEST(DataFormats, PointSampler_Float) {
 TEST(DataFormats, LinearSampler_8) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 22050, 2, 44100,
                                  Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr,
-            SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000,
+                                 Resampler::LinearInterpolation));
 }
 
 // Create LinearSampler objects for incoming buffers of type int16
 TEST(DataFormats, LinearSampler_16) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 44100, 1, 48000,
-                                 Resampler::Default));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100));
+                                 Resampler::LinearInterpolation));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100,
+                                 Resampler::LinearInterpolation));
 }
 
 // Create LinearSampler objects for incoming buffers of type int24-in-32
@@ -81,8 +82,10 @@ TEST(DataFormats, LinearSampler_24) {
 
 // Create LinearSampler objects for incoming buffers of type float
 TEST(DataFormats, LinearSampler_Float) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 44100));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 44100));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
+                                 Resampler::LinearInterpolation));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 44100,
+                                 Resampler::LinearInterpolation));
 }
 
 //
@@ -240,6 +243,7 @@ TEST(PassThru, StereoToMono_Cancel) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBufferToVal(accum, 0.0f, fbl::count_of(accum)));
 
+  // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                       Resampler::LinearInterpolation);
@@ -363,6 +367,7 @@ TEST(PassThru, MonoToQuad) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
+  // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 4, 48000,
                       Resampler::SampleAndHold);
@@ -388,6 +393,7 @@ TEST(PassThru, StereoToQuad) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
+  // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 48000, 4, 48000,
                       Resampler::LinearInterpolation);
