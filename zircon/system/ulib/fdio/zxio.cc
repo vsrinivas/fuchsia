@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -11,7 +12,9 @@
 #include <poll.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
+#include <zircon/rights.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "private.h"
 
@@ -456,28 +459,60 @@ static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
 }
 
 static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
-  zxio_vmofile_t* file = fdio_get_zxio_vmofile(io);
-
   if (out_vmo == NULL) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (flags & fio::VMO_FLAG_PRIVATE) {
-    // Why don't we consider file->start in this branch? It seems like we want to clone
-    // file->vmo.length bytes from file->start in the VMO rather than from the start of the VMO.
-    return file->vmo.vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, file->vmo.size, out_vmo);
-  } else {
-    size_t vmo_length;
-    if (file->start != 0 || file->vmo.vmo.get_size(&vmo_length) != ZX_OK ||
-        file->vmo.size != vmo_length) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-    rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-    rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-    rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-    return file->vmo.vmo.duplicate(rights, out_vmo);
+  // fdio can't support Vmofiles with a non-zero start/offset, because it returns just a VMO with no
+  // other data - like a starting offset - to the user. (Technically we could support any page
+  // aligned offset, but that's currently unneeded.)
+  zxio_vmofile_t* file = fdio_get_zxio_vmofile(io);
+  if (file->start != 0) {
+    return ZX_ERR_NOT_FOUND;
   }
+
+  // Ensure that we return a VMO handle with only the rights requested by the client. For Vmofiles,
+  // the server side does not ever see the VMO_FLAG_* options from the client because the VMO is
+  // returned in NodeInfo/Vmofile rather than from a File.GetBuffer call.
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
+  rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+  rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+
+  if (flags & fio::VMO_FLAG_PRIVATE) {
+    // Allow SET_PROPERTY only if creating a private child VMO so that the user can set ZX_PROP_NAME
+    // (or similar).
+    rights |= ZX_RIGHT_SET_PROPERTY;
+
+    uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
+    if (flags & fio::VMO_FLAG_EXEC) {
+      // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it, and
+      // we can't arbitrary add EXECUTE here on the client side. Adding CHILD_NO_WRITE still
+      // creates a snapshot and a new VMO object, which e.g. can have a unique ZX_PROP_NAME value,
+      // but the returned handle lacks WRITE and maintains EXECUTE.
+      if (flags & fio::VMO_FLAG_WRITE) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      options |= ZX_VMO_CHILD_NO_WRITE;
+    }
+
+    zx::vmo child_vmo;
+    zx_status_t status =
+        file->vmo.vmo.create_child(options, file->start, file->vmo.size, &child_vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // COPY_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return a handle with that
+    // right unless requested using VMO_FLAG_WRITE.
+    // TODO(fxb/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for Vmofiles is a bit weird and
+    // inconsistent. See bug for more info.
+    return child_vmo.replace(rights, out_vmo);
+  }
+
+  // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another handle to the
+  // Vmofile's VMO with appropriately scoped rights.
+  return file->vmo.vmo.duplicate(rights, out_vmo);
 }
 
 static fdio_ops_t fdio_zxio_vmofile_ops = {

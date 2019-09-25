@@ -12,6 +12,8 @@
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <zircon/limits.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/object.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -27,8 +29,8 @@
 // header is fraught.  The implementation in fdio just declares and exports the
 // symbol inline, so I think it's reasonable for this test to declare it itself
 // and depend on it the same way musl does.
-extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options,
-                                  int flags, int fd, off_t fd_off, uintptr_t* out);
+extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int flags,
+                                  int fd, off_t fd_off, uintptr_t* out);
 
 namespace {
 
@@ -54,11 +56,11 @@ zx_status_t FileDescribe(void* ctx, fidl_txn_t* txn) {
   memset(&info, 0, sizeof(info));
   if (context->is_vmofile) {
     zx::vmo vmo;
-    zx_status_t status = context->vmo.duplicate(
-        ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHTS_PROPERTY, &vmo);
+    zx_status_t status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
     if (status != ZX_OK) {
       return status;
     }
+
     info.tag = fuchsia_io_NodeInfoTag_vmofile;
     info.vmofile.vmo = vmo.release();
     info.vmofile.offset = 0;
@@ -150,12 +152,31 @@ zx_status_t FileGetBuffer(void* ctx, uint32_t flags, fidl_txn_t* txn) {
   memset(&buffer, 0, sizeof(buffer));
   buffer.size = context->content_size;
 
+  // TODO(fxb/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
+  // mimics what most filesystems do.
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
+  rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+  rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+
   zx_status_t status = ZX_OK;
   zx::vmo result;
   if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
-    status = context->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &result);
+    uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
+    if (flags & fuchsia_io_VMO_FLAG_EXEC) {
+      // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it, but
+      // NO_WRITE changes this behavior so that the new handle doesn't have WRITE and preserves
+      // EXECUTE.
+      options |= ZX_VMO_CHILD_NO_WRITE;
+    }
+    status = context->vmo.create_child(options, 0, ZX_PAGE_SIZE, &result);
+    if (status != ZX_OK) {
+      return fuchsia_io_FileGetBuffer_reply(txn, status, nullptr);
+    }
+
+    status = result.replace(rights, &result);
   } else {
-    status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &result);
+    status = context->vmo.duplicate(rights, &result);
   }
   if (status != ZX_OK) {
     return fuchsia_io_FileGetBuffer_reply(txn, status, nullptr);
@@ -186,11 +207,16 @@ constexpr fuchsia_io_File_ops_t kFileOps = [] {
   return ops;
 }();
 
-zx_koid_t get_koid(zx_handle_t handle) {
+zx_koid_t get_koid(const zx::object_base& handle) {
   zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+}
+
+zx_rights_t get_rights(const zx::object_base& handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.rights : ZX_RIGHT_NONE;
 }
 
 bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
@@ -206,6 +232,15 @@ bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
   return strncmp(string, buffer, length) == 0;
 }
 
+void create_context_vmo(size_t size, zx::vmo* out_vmo) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(size, 0, &vmo));
+  // TODO(fxb/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
+  // mimics what most filesystems do.
+  ASSERT_OK(vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY, &vmo));
+  ASSERT_OK(vmo.replace_as_executable(zx::handle(), out_vmo));
+}
+
 TEST(GetVMOTest, Remote) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
@@ -218,7 +253,7 @@ TEST(GetVMOTest, Remote) {
   context.is_vmofile = false;
   context.content_size = 43;
   context.supports_get_buffer = true;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl_bind(dispatcher, server.release(),
@@ -229,37 +264,50 @@ TEST(GetVMOTest, Remote) {
   ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
 
+  // TODO(fxb/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
+  // mimics what most filesystems do.
+  zx_rights_t expected_rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ;
+
   zx::vmo received;
-  ASSERT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
-  ASSERT_EQ(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXACT, context.last_flags);
+  EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
+  EXPECT_EQ(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+  EXPECT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXACT, context.last_flags);
   context.last_flags = 0;
 
-  ASSERT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+  // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
+  // rights should also include SET_PROPERTY.
+  expected_rights |= ZX_RIGHT_SET_PROPERTY;
+
+  EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+  EXPECT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
-  ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+  EXPECT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
-  ASSERT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC | fuchsia_io_VMO_FLAG_PRIVATE,
+  EXPECT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
+  EXPECT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC | fuchsia_io_VMO_FLAG_PRIVATE,
             context.last_flags);
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
   context.supports_get_buffer = false;
   context.supports_read_at = true;
-  ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+  EXPECT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 }
 
@@ -275,7 +323,7 @@ TEST(GetVMOTest, VMOFile) {
   context.content_size = 43;
   context.is_vmofile = true;
   context.supports_seek = true;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl_bind(dispatcher, server.release(),
@@ -287,49 +335,32 @@ TEST(GetVMOTest, VMOFile) {
   fbl::unique_fd fd(raw_fd);
   context.supports_seek = false;
 
-  zx::vmo received;
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
-
-  ASSERT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
-
-  ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
-
-  ASSERT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
-  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
-  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
-}
-
-TEST(GetVMOTest, VMOFilePage) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread("fake-filesystem"));
-  async_dispatcher_t* dispatcher = loop.dispatcher();
-
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  Context context = {};
-  context.content_size = ZX_PAGE_SIZE;
-  context.is_vmofile = true;
-  context.supports_seek = true;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
-  ASSERT_OK(context.vmo.write("abcd", 0, 4));
-
-  ASSERT_OK(fidl_bind(dispatcher, server.release(),
-                      reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_File_dispatch), &context,
-                      &kFileOps));
-
-  int raw_fd = -1;
-  ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
-  fbl::unique_fd fd(raw_fd);
-  context.supports_seek = false;
+  zx_rights_t expected_rights =
+      ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ;
 
   zx::vmo received;
-  ASSERT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
-  ASSERT_EQ(get_koid(context.vmo.get()), get_koid(received.get()));
+  EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
+  EXPECT_EQ(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
+  // rights should also include SET_PROPERTY.
+  expected_rights |= ZX_RIGHT_SET_PROPERTY;
+
+  EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  EXPECT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
 }
 
 TEST(MmapFileTest, FilterExec) {
@@ -346,7 +377,7 @@ TEST(MmapFileTest, FilterExec) {
   context.is_vmofile = false;
   context.content_size = 43;
   context.supports_get_buffer = true;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl_bind(dispatcher, server.release(),
