@@ -25,6 +25,9 @@ namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
 
+constexpr uint64_t kBlockSize = 512;
+constexpr uint64_t kBlockCount = 1 << 20;
+
 FsHostMetrics MakeMetrics(cobalt_client::InMemoryLogger** logger) {
   std::unique_ptr<cobalt_client::InMemoryLogger> logger_ptr =
       std::make_unique<cobalt_client::InMemoryLogger>();
@@ -65,10 +68,29 @@ class BlockDeviceHarness : public zxtest::Test {
   }
 
   void TearDown() override {
+    if (ramdisk_) {
+      ASSERT_OK(ramdisk_destroy(ramdisk_));
+    }
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     fdio_ns_unbind(ns, "/fs");
   }
+
+  void CreateRamdisk(bool use_guid = false) {
+    if (use_guid) {
+      const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
+                                            sizeof(data_guid), &ramdisk_));
+    } else {
+      ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_));
+
+    }
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk_), &fd_));
+    ASSERT_TRUE(fd_);
+  }
+
+  fbl::unique_fd GetRamdiskFd() { return std::move(fd_); }
 
   std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
 
@@ -76,11 +98,13 @@ class BlockDeviceHarness : public zxtest::Test {
 
  protected:
   cobalt_client::InMemoryLogger* logger_ = nullptr;
+  ramdisk_client_t* ramdisk_ = nullptr;
 
  private:
   zx::event event_;
   std::unique_ptr<FsManager> manager_;
   IsolatedDevmgr devmgr_;
+  fbl::unique_fd fd_;
 };
 
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
@@ -89,7 +113,7 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
   bool check_filesystems = false;
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
   fbl::unique_fd fd;
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   EXPECT_EQ(device.Netbooting(), netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
@@ -116,17 +140,9 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd),
-      ZX_OK);
-  ASSERT_TRUE(fd);
+  ASSERT_NO_FAILURES(CreateRamdisk());
 
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   EXPECT_EQ(device.Netbooting(), netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
@@ -146,9 +162,6 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_NOT_SUPPORTED);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_NOT_SUPPORTED);
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
@@ -158,19 +171,11 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk with an empty GUID.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd),
-      ZX_OK);
-  ASSERT_TRUE(fd);
+  ASSERT_NO_FAILURES(CreateRamdisk());
 
   // We started with an empty block device, but let's lie and say it
   // should have been a minfs device.
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   EXPECT_OK(device.FormatFilesystem());
@@ -178,9 +183,6 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
   // Unlike earlier, where we received "ERR_NOT_SUPPORTED", we get "ERR_WRONG_TYPE"
   // because the ramdisk doesn't have a data GUID.
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_WRONG_TYPE);
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
@@ -191,28 +193,15 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk with a data GUID.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
-                                        sizeof(data_guid), &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd),
-      ZX_OK);
-  ASSERT_TRUE(fd);
+  ASSERT_NO_FAILURES(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   EXPECT_OK(device.FormatFilesystem());
 
   EXPECT_OK(device.MountFilesystem());
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_ALREADY_BOUND);
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsReformat) {
@@ -223,20 +212,9 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk with a data GUID.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
-                                        sizeof(data_guid), &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd),
-      ZX_OK);
+  ASSERT_NO_FAILURES(CreateRamdisk(true));
 
-  ASSERT_TRUE(fd);
-
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
 
@@ -249,9 +227,6 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
   EXPECT_OK(device.FormatFilesystem());
   EXPECT_OK(device.CheckFilesystem());
   EXPECT_OK(device.MountFilesystem());
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 TEST_F(BlockDeviceHarness, TestBlobfs) {
@@ -262,19 +237,9 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk with a data GUID.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  const uint8_t data_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
-                                        sizeof(data_guid), &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd),
-      ZX_OK);
-  ASSERT_TRUE(fd);
+  ASSERT_NO_FAILURES(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_BLOBFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_BLOBFS);
 
@@ -287,9 +252,6 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
   EXPECT_NOT_OK(device.FormatFilesystem());
   EXPECT_OK(device.CheckFilesystem());
   EXPECT_NOT_OK(device.MountFilesystem());
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
@@ -300,26 +262,16 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
   // Initialize Ramdisk with a data GUID.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  ramdisk_client_t* ramdisk;
-  const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
-                                        sizeof(data_guid), &ramdisk));
-  fbl::unique_fd fd;
-  ASSERT_OK(
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd));
+  ASSERT_NO_FAILURES(CreateRamdisk(true));
 
-  ASSERT_TRUE(fd);
-
-  BlockDevice device(&mounter, std::move(fd));
+  BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   // Format minfs.
   EXPECT_OK(device.FormatFilesystem());
 
   // Corrupt minfs.
-  int ramdisk_fd = ramdisk_get_block_fd(ramdisk);
+  int ramdisk_fd = ramdisk_get_block_fd(ramdisk_);
   uint64_t buffer_size = minfs::kMinfsBlockSize * 8;
   std::unique_ptr<uint8_t[]> zeroed_buffer(new uint8_t[buffer_size]);
   memset(zeroed_buffer.get(), 0, buffer_size);
@@ -332,9 +284,6 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
       fs_metrics::Event::kDataCorruption);
   ASSERT_NE(logger_->counters().find(metric_id), logger_->counters().end());
   ASSERT_EQ(logger_->counters().at(metric_id), 1);
-
-  mounter.~FilesystemMounter();
-  ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
 // TODO: Add tests for Zxcrypt binding.
