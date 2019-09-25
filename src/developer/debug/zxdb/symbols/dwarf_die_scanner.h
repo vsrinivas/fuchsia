@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
 
 #include <stdint.h>
 
@@ -101,4 +101,4 @@ class DwarfDieScanner2 {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER2_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_

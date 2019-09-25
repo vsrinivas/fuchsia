@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/index_node2.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 
 #include "gtest/gtest.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"

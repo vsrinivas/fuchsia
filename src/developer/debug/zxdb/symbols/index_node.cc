@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/index_node.h"
+
 #include <sstream>
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {

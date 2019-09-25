@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/dwarf_die_scanner2.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_die_scanner.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"

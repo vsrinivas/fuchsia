@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/index.h"
+
 #include <inttypes.h>
 #include <time.h>
 
@@ -10,7 +12,6 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/lib/fxl/strings/split_string.h"
 
