@@ -35,7 +35,7 @@ class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
                           public fuchsia::media::audio::GainControl,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>>,
-                          public StreamGain {
+                          public StreamVolume {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
@@ -182,11 +182,10 @@ class AudioCapturerImpl : public AudioObject,
   // AudioObject overrides.
   void OnLinkAdded() override;
 
-  // StreamGain interface.
-  float GetStreamGain() const final;
+  // StreamVolume interface.
   bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
-  void RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) final;
+  void RealizeVolume(VolumeCommand volume_command) final;
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

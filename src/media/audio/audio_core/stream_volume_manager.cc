@@ -20,40 +20,38 @@ void StreamVolumeManager::SetUsageGainAdjustment(fuchsia::media::Usage usage, fl
   UpdateStreamsWithUsage(std::move(usage));
 }
 
-void StreamVolumeManager::NotifyStreamChanged(StreamGain* stream_gain) {
-  UpdateStream(stream_gain, std::nullopt);
+void StreamVolumeManager::NotifyStreamChanged(StreamVolume* stream_volume) {
+  UpdateStream(stream_volume, std::nullopt);
 }
 
-void StreamVolumeManager::NotifyStreamChanged(StreamGain* stream_gain, Ramp ramp) {
-  UpdateStream(stream_gain, ramp);
+void StreamVolumeManager::NotifyStreamChanged(StreamVolume* stream_volume, Ramp ramp) {
+  UpdateStream(stream_volume, ramp);
 }
 
-void StreamVolumeManager::AddStream(StreamGain* stream_gain) { stream_gains_.insert(stream_gain); }
-void StreamVolumeManager::RemoveStream(StreamGain* stream_gain) {
-  stream_gains_.erase(stream_gain);
+void StreamVolumeManager::AddStream(StreamVolume* stream_volume) {
+  stream_volumes_.insert(stream_volume);
+}
+void StreamVolumeManager::RemoveStream(StreamVolume* stream_volume) {
+  stream_volumes_.erase(stream_volume);
 }
 
 void StreamVolumeManager::UpdateStreamsWithUsage(fuchsia::media::Usage usage) {
-  for (auto& stream : stream_gains_) {
+  for (auto& stream : stream_volumes_) {
     if (fidl::Equals(stream->GetStreamUsage(), usage)) {
       UpdateStream(stream, std::nullopt);
     }
   }
 }
 
-void StreamVolumeManager::UpdateStream(StreamGain* stream, std::optional<Ramp> ramp) {
-  if (stream->GetStreamMute()) {
-    stream->RealizeAdjustedGain(fuchsia::media::audio::MUTED_GAIN_DB, ramp);
-    return;
-  }
-
-  const auto stream_gain = stream->GetStreamGain();
+void StreamVolumeManager::UpdateStream(StreamVolume* stream, std::optional<Ramp> ramp) {
   const auto usage = stream->GetStreamUsage();
+  const auto usage_gain = usage_gain_settings_.GetUsageGain(fidl::Clone(usage));
+  const auto usage_volume = usage_volume_settings_.GetUsageVolume(std::move(usage));
 
-  const auto usage_gain = usage_gain_settings_.GetUsageGain(std::move(usage));
-  const auto adjusted_gain = Gain::CombineGains(stream_gain, usage_gain);
+  const auto gain_adjustment =
+      stream->GetStreamMute() ? fuchsia::media::audio::MUTED_GAIN_DB : usage_gain;
 
-  stream->RealizeAdjustedGain(adjusted_gain, ramp);
+  stream->RealizeVolume(VolumeCommand{usage_volume, gain_adjustment, ramp});
 }
 
 }  // namespace media::audio

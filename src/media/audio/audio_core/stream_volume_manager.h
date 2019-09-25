@@ -21,16 +21,24 @@ struct Ramp {
   fuchsia::media::audio::RampType ramp_type;
 };
 
+// A command to realize a volume on all a stream's links.
+struct VolumeCommand {
+  // Volume in the range [0.0, 1.0].
+  float volume;
+  // A gain adjustment to be applied after volume is converted to gain for the link.
+  float gain_db_adjustment;
+  // A ramp with which to apply the change in volume.
+  std::optional<Ramp> ramp;
+};
+
 // An interface for persisting and realizing stream volumes.
-// TODO(35392): Change to StreamVolume, keep volume here.
-class StreamGain {
+class StreamVolume {
  public:
-  virtual float GetStreamGain() const = 0;
   virtual fuchsia::media::Usage GetStreamUsage() const = 0;
   virtual bool GetStreamMute() const = 0;
 
-  // Propagate an adjusted gain value to all the stream's links.
-  virtual void RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) = 0;
+  // Propagate a volume to all the stream's links.
+  virtual void RealizeVolume(VolumeCommand volume_command) = 0;
 };
 
 // Manages the volume of streams, accounting for their usages.
@@ -52,18 +60,19 @@ class StreamVolumeManager {
 
   // Prompts the volume manager to recompute the stream's adjusted gain and send a realization
   // request.
-  void NotifyStreamChanged(StreamGain* stream_gain);
-  void NotifyStreamChanged(StreamGain* stream_gain, Ramp ramp);
+  void NotifyStreamChanged(StreamVolume* stream_volume);
+  void NotifyStreamChanged(StreamVolume* stream_volume, Ramp ramp);
 
-  void AddStream(StreamGain* stream_gain);
-  void RemoveStream(StreamGain* stream_gain);
+  void AddStream(StreamVolume* stream_volume);
+  void RemoveStream(StreamVolume* stream_volume);
 
  private:
   void UpdateStreamsWithUsage(fuchsia::media::Usage usage);
-  void UpdateStream(StreamGain* stream, std::optional<Ramp> ramp);
+  void UpdateStream(StreamVolume* stream, std::optional<Ramp> ramp);
 
-  std::unordered_set<StreamGain*> stream_gains_;
+  std::unordered_set<StreamVolume*> stream_volumes_;
   UsageGainSettings usage_gain_settings_;
+  UsageVolumeSettings usage_volume_settings_;
 };
 
 }  // namespace media::audio

@@ -108,8 +108,6 @@ void AudioCapturerImpl::ReportStop() { admin_.UpdateCapturerState(usage_, false,
 
 void AudioCapturerImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
 
-float AudioCapturerImpl::GetStreamGain() const { return stream_gain_db_.load(); }
-
 bool AudioCapturerImpl::GetStreamMute() const { return mute_; }
 
 fuchsia::media::Usage AudioCapturerImpl::GetStreamUsage() const {
@@ -118,15 +116,26 @@ fuchsia::media::Usage AudioCapturerImpl::GetStreamUsage() const {
   return usage;
 }
 
-void AudioCapturerImpl::RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) {
-  if (ramp.has_value()) {
+void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
+  if (volume_command.ramp.has_value()) {
     FXL_LOG(WARNING)
         << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
   }
 
-  ForEachSourceLink([gain_db](auto& link) {
+  ForEachSourceLink([stream_gain_db = stream_gain_db_.load(), &volume_command](auto& link) {
     // Gain objects contain multiple stages. In capture, device gain is
     // the "source" stage and stream gain is the "dest" stage.
+    float gain_db;
+    const auto& volume_curve = link.volume_curve();
+    if (volume_curve.has_value()) {
+      gain_db = volume_curve->VolumeToDb(volume_command.volume);
+    } else {
+      gain_db = VolumeCurve::Default().VolumeToDb(volume_command.volume);
+    }
+
+    gain_db = Gain::CombineGains(gain_db, stream_gain_db);
+    gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
+
     link.bookkeeping()->gain.SetDestGain(gain_db);
   });
 }

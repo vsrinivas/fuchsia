@@ -33,7 +33,7 @@ class AudioRendererImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
                           public fuchsia::media::AudioRenderer,
                           public fuchsia::media::audio::GainControl,
-                          public StreamGain {
+                          public StreamVolume {
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -156,11 +156,10 @@ class AudioRendererImpl : public AudioObject,
   // AudioObject overrides.
   void OnLinkAdded() override;
 
-  // StreamGain interface.
-  float GetStreamGain() const final;
+  // StreamVolume interface.
   bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
-  void RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) final;
+  void RealizeVolume(VolumeCommand volume_command) final;
 
   async_dispatcher_t* dispatcher_;
   AudioDeviceManager& device_manager_;

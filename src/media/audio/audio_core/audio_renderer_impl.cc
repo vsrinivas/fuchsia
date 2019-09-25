@@ -898,7 +898,6 @@ void AudioRendererImpl::PauseNoReply() {
 
 void AudioRendererImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
 
-float AudioRendererImpl::GetStreamGain() const { return stream_gain_db_; }
 bool AudioRendererImpl::GetStreamMute() const { return mute_; }
 
 fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
@@ -907,12 +906,25 @@ fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
   return usage;
 }
 
-void AudioRendererImpl::RealizeAdjustedGain(float gain_db, std::optional<Ramp> ramp) {
+void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
   // Set this gain with every link (except the link to throttle output)
-  ForEachDestLink([gain_db, throttle_ptr = throttle_output_link_.get(), &ramp](auto& link) {
+  ForEachDestLink([stream_gain_db = stream_gain_db_, throttle_ptr = throttle_output_link_.get(),
+                   &volume_command](auto& link) {
     if (&link != throttle_ptr) {
-      if (ramp.has_value()) {
-        link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, ramp->duration_ns, ramp->ramp_type);
+      float gain_db;
+      const auto& volume_curve = link.volume_curve();
+      if (volume_curve.has_value()) {
+        gain_db = volume_curve->VolumeToDb(volume_command.volume);
+      } else {
+        gain_db = VolumeCurve::Default().VolumeToDb(volume_command.volume);
+      }
+
+      gain_db = Gain::CombineGains(gain_db, stream_gain_db);
+      gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
+
+      if (volume_command.ramp.has_value()) {
+        link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration_ns,
+                                                       volume_command.ramp->ramp_type);
       } else {
         link.bookkeeping()->gain.SetSourceGain(gain_db);
       }
