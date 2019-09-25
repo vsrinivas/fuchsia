@@ -69,14 +69,29 @@ impl Inspector {
         }
     }
 
-    /// To be used by tests only. Tries to return a ZX handle suitable for passing through FIDL.
-    pub fn vmo_handle_for_test(&self) -> Option<zx::Handle> {
+    /// Returns a duplicate of the underlying VMO for this inspector.
+    ///
+    /// The duplicated VMO will be read-only, and is suitable to send to clients over FIDL.
+    pub fn duplicate_vmo(&self) -> Option<zx::Vmo> {
         self.vmo
             .as_ref()
-            .map(|bar| {
-                bar.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)
-                    .ok()
-                    .map(|v| v.into_handle())
+            .map(|vmo| {
+                vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP).ok()
+            })
+            .unwrap_or(None)
+    }
+
+    /// Returns a copy of the bytes stored in the VMO for this inspector.
+    ///
+    /// The output will be truncated to only those bytes that are needed to accurately read the
+    /// stored data.
+    pub fn copy_vmo_data(&self) -> Option<Vec<u8>> {
+        self.root_node
+            .inner
+            .as_ref()
+            .map(|inner| {
+                let state = inner.state.lock();
+                Some(state.heap.bytes())
             })
             .unwrap_or(None)
     }
@@ -773,6 +788,31 @@ mod tests {
             test_object.vmo.as_ref().unwrap().get_size().unwrap(),
             constants::DEFAULT_VMO_SIZE_BYTES as u64
         );
+    }
+
+    #[test]
+    fn inspector_duplicate_vmo() {
+        let test_object = Inspector::new();
+        assert_eq!(
+            test_object.vmo.as_ref().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
+        assert_eq!(
+            test_object.duplicate_vmo().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
+    }
+
+    #[test]
+    fn inspector_copy_data() {
+        let test_object = Inspector::new();
+
+        assert_eq!(
+            test_object.vmo.as_ref().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
+        // The copy will be a single page, since that is all that is used.
+        assert_eq!(test_object.copy_vmo_data().unwrap().len(), 4096);
     }
 
     #[test]

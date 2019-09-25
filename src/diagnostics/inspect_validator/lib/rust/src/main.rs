@@ -16,6 +16,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::*,
     fuchsia_syslog as syslog,
+    fuchsia_zircon::HandleBased,
     futures::prelude::*,
     log::*,
     std::collections::HashMap,
@@ -139,7 +140,7 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                     None => Inspector::new(),
                 };
                 responder
-                    .send(inspector.vmo_handle_for_test(), TestResult::Ok)
+                    .send(inspector.duplicate_vmo().map(|v| v.into_handle()), TestResult::Ok)
                     .context("responding to initialize")?;
                 actor_maybe = Some(Actor {
                     inspector,

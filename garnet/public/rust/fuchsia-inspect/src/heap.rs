@@ -93,8 +93,7 @@ impl Heap {
         Ok(block)
     }
 
-    /// The bytes in this heap.
-    #[cfg(test)]
+    /// Returns a copy of the bytes stored in this Heap.
     pub(in crate) fn bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; self.current_size_bytes];
         self.mapping.read(&mut result[..]);

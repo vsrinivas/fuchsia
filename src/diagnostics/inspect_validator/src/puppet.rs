@@ -104,6 +104,7 @@ pub(crate) mod tests {
         fidl_test_inspect_validate::*,
         fuchsia_async as fasync,
         fuchsia_inspect::{Inspector, IntProperty, Node},
+        fuchsia_zircon::HandleBased,
         futures::prelude::*,
         log::*,
         std::collections::HashMap,
@@ -152,7 +153,10 @@ pub(crate) mod tests {
                                 None => Inspector::new(),
                             };
                             responder
-                                .send(inspector.vmo_handle_for_test(), TestResult::Ok)
+                                .send(
+                                    inspector.duplicate_vmo().map(|v| v.into_handle()),
+                                    TestResult::Ok,
+                                )
                                 .context("responding to initialize")?;
                             inspector_maybe = Some(inspector);
                         }
