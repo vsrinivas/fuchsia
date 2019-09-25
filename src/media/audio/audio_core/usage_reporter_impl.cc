@@ -6,6 +6,10 @@
 
 namespace media::audio {
 
+fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> UsageReporterImpl::GetHandler() {
+  return bindings_.GetHandler(this);
+}
+
 void UsageReporterImpl::Watch(
     fuchsia::media::Usage usage,
     fidl::InterfaceHandle<fuchsia::media::UsageWatcher> usage_state_watcher) {

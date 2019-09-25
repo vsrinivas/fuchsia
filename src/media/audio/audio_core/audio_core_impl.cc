@@ -46,7 +46,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
       device_settings_persistence_(threading_model),
       device_manager_(threading_model, effects_loader_.get(), &device_settings_persistence_, *this),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
-      audio_admin_(this, threading_model->FidlDomain().dispatcher()),
+      audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
@@ -103,6 +103,9 @@ void AudioCoreImpl::PublishServices() {
       [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
         device_manager_.AddDeviceEnumeratorClient(std::move(request));
       });
+
+  component_context_->outgoing()->AddPublicService<fuchsia::media::UsageReporter>(
+      usage_reporter_.GetHandler());
 }
 
 void AudioCoreImpl::Shutdown() {

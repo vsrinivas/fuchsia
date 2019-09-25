@@ -129,6 +129,49 @@ void SystemGainMuteTest::ExpectGainCallback(float gain_db, bool mute) {
 }
 
 //
+// UsageReporterTest
+//
+class UsageReporterTest : public HermeticAudioCoreTest {
+ protected:
+  class FakeUsageWatcher : public fuchsia::media::UsageWatcher {
+   public:
+    explicit FakeUsageWatcher(fit::closure completer)
+        : completer_(std::move(completer)), binding_(this) {}
+
+    fidl::InterfaceHandle<fuchsia::media::UsageWatcher> Bind() { return binding_.NewBinding(); }
+
+   private:
+    void OnStateChanged(fuchsia::media::Usage _usage, fuchsia::media::UsageState _usage_state,
+                        OnStateChangedCallback callback) override {
+      callback();
+      completer_();
+    }
+
+    fit::closure completer_;
+    fidl::Binding<fuchsia::media::UsageWatcher> binding_;
+  };
+};
+
+//
+// Test that the user is connected to the usage reporter.
+//
+TEST_F(UsageReporterTest, ConnectToUsageReporter) {
+  fit::closure completer = CompletionCallback([] {});
+
+  fuchsia::media::UsageReporterPtr audio_core;
+  environment()->ConnectToService(audio_core.NewRequest());
+  audio_core.set_error_handler(ErrorHandler());
+
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
+
+  FakeUsageWatcher watcher(std::move(completer));
+  audio_core->Watch(std::move(usage), watcher.Bind());
+
+  ExpectCallback();
+}
+
+//
 // Audio validation
 // Tests of the asynchronous Audio interface.
 //

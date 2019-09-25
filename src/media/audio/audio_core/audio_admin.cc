@@ -29,25 +29,17 @@ fuchsia::media::Usage Usage(fuchsia::media::AudioCaptureUsage u) {
   return usage;
 }
 
-// TODO(36448): Remove when AudioCore passes in UsageWatcher implementation.
-class NoOpPolicyActionReporter : public AudioAdmin::PolicyActionReporter {
- public:
-  void ReportPolicyAction(fuchsia::media::Usage usage,
-                          fuchsia::media::Behavior policy_action) override {}
-};
-
-NoOpPolicyActionReporter kNoOpPolicyActionReporter;
-
 }  // namespace
 
-AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher)
+AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher,
+                       PolicyActionReporter* policy_action_reporter)
     : AudioAdmin(
           BehaviorGain{
               .none_gain_db = 0.0f,
               .duck_gain_db = -14.0f,
               .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
           },
-          gain_adjustment, &kNoOpPolicyActionReporter, fidl_dispatcher) {}
+          gain_adjustment, policy_action_reporter, fidl_dispatcher) {}
 
 AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
                        PolicyActionReporter* policy_action_reporter,

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_USAGE_REPORTER_IMPL_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 
 #include <vector>
 
@@ -15,6 +16,9 @@ namespace media::audio {
 
 class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
                           public fuchsia::media::UsageReporter {
+ public:
+  fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> GetHandler();
+
  private:
   struct WatcherSet {
     std::vector<fidl::InterfacePtr<fuchsia::media::UsageWatcher>> watchers;
@@ -29,6 +33,7 @@ class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
 
   WatcherSet& watcher_set(const fuchsia::media::Usage& usage);
 
+  fidl::BindingSet<fuchsia::media::UsageReporter, UsageReporterImpl*> bindings_;
   std::array<WatcherSet, fuchsia::media::RENDER_USAGE_COUNT> render_usage_watchers_;
   std::array<WatcherSet, fuchsia::media::CAPTURE_USAGE_COUNT> capture_usage_watchers_;
 };

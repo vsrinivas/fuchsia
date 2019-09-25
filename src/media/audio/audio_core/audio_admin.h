@@ -54,7 +54,8 @@ class AudioAdmin {
              PolicyActionReporter* policy_action_reporter, async_dispatcher_t* fidl_dispatcher);
 
   // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
-  AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher);
+  AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher,
+             PolicyActionReporter* policy_action_reporter);
 
   // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,

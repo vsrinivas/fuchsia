@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/usage_reporter_impl.h"
 
 namespace media::audio {
 
@@ -107,6 +108,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   // Router for volume changes.
   StreamVolumeManager volume_manager_;
+
+  UsageReporterImpl usage_reporter_;
 
   // Audio usage manager
   AudioAdmin audio_admin_;
