@@ -9,10 +9,11 @@ mod runner; // coordinates testing operations
 mod trials;
 
 use {
+    argh::FromArgs,
     failure::{bail, Error},
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
-    structopt::StructOpt,
+    std::str::FromStr,
 };
 
 fn init_syslog() {
@@ -20,22 +21,64 @@ fn init_syslog() {
     debug!("Driver did init logger");
 }
 
-#[derive(StructOpt, Debug)]
 /// Validate Inspect VMO formats written by 'puppet' programs controlled by
 /// this Validator program and exercising Inspect library implementations.
+//#[derive(StructOpt, Debug)]
+#[derive(Debug, FromArgs)]
 struct Opt {
-    /// Required (positional) arg(s): The URL(s) of the puppet(s).
-    #[structopt()]
+    /// report results in a pretty human-readable format. Without this flag,
+    /// results will be printed as JSON.
+    #[argh(option, long = "output", default = "OutputType::Json")]
+    output: OutputType,
+
+    /// required arg(s): The URL(s) of the puppet(s).
+    #[argh(option, long = "url")]
     puppet_urls: Vec<String>,
+
+    /// quiet has no effect.
+    #[argh(switch, long = "quiet")]
+    quiet: bool,
+
+    #[argh(switch, long = "verbose")]
+    /// verbose has no effect.
+    verbose: bool,
+
+    #[argh(switch, long = "version", short = 'v')]
+    /// version prints the version information and exits.
+    version: bool,
+}
+
+#[derive(Debug)]
+enum OutputType {
+    Text,
+    Json,
+}
+
+impl FromStr for OutputType {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<OutputType, Error> {
+        Ok(match s {
+            "text" => OutputType::Text,
+            "json" => OutputType::Json,
+            _ => bail!("Output type must be 'text' or 'json'"),
+        })
+    }
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     init_syslog();
     let mut results = results::Results::new();
-    let args = Opt::from_args();
-    run_all_puppets(args.puppet_urls, &mut results).await;
-    println!("{}", results.to_json());
+    let Opt { output, puppet_urls, version, .. } = argh::from_env();
+    if version {
+        println!("Inspect Validator version 0.8. See README.md for more information.");
+        return Ok(());
+    }
+    run_all_puppets(puppet_urls, &mut results).await;
+    match output {
+        OutputType::Text => results.print_pretty_text(),
+        OutputType::Json => println!("{}", results.to_json()),
+    }
     if results.failed() {
         bail!("A test failed")
     } else {
@@ -48,7 +91,7 @@ async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) {
         results.error("At least one component URL is required.".to_string());
     }
     for url in urls {
-        runner::run_all_trials(&url, results).await.ok();
+        runner::run_all_trials(&url, results).await;
     }
 }
 
@@ -69,15 +112,15 @@ mod tests {
         let mut results = results::Results::new();
         run_all_puppets(vec!["a".to_owned()], &mut results).await;
         assert!(results.failed());
-        assert!(results.to_json().contains("URL may be invalid"));
+        assert!(results.to_json().contains("URL may be invalid"), results.to_json());
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn all_are_tried() {
+    async fn all_urls_are_tried() {
         let mut results = results::Results::new();
         run_all_puppets(vec!["a".to_owned(), "b".to_owned()], &mut results).await;
-        assert!(results.to_json().contains("trying puppet a"));
-        assert!(results.to_json().contains("trying puppet b"));
+        assert!(results.to_json().contains("invalid: a"));
+        assert!(results.to_json().contains("invalid: b"));
     }
 
     // The only way to test success is to actually start a component, and that's

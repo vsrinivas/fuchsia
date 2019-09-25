@@ -19,7 +19,7 @@ enum TestResult {
     /// The function call completed without error.
     OK = 0;
     /// The Inspect library doesn't implement a requested feature.
-    NOT_IMPLEMENTED = 1;
+    UNIMPLEMENTED = 1;
     /// The Inspect library reported a failure executing the function.
     FAILED = 2;
     /// The driver and/or puppet-wrapper was in an illegal state.

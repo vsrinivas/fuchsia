@@ -14,19 +14,6 @@ pub struct Trial {
     pub steps: Vec<Step>,
 }
 
-/// Language- or library-specific quirks needed for proper prediction
-/// of the VMO contents.
-pub struct Quirks {
-    /// In some languages (such as C++) creating two things with the same
-    /// name creates two entries in the VMO. In others (such as Dart) the
-    /// second entry will replace the first.
-    replace_same_name: bool,
-}
-
-pub struct TrialSet {
-    quirks: Quirks,
-}
-
 impl Step {
     /* Ignore for now - will be in a future CL
     pub fn run_metrics(
@@ -41,33 +28,8 @@ impl Step {
     }*/
 }
 
-impl TrialSet {
-    /// Call this if the second create with the same name replaces the first entry.
-    /// Don't call this if creating two of the same name makes two entries.
-    #[allow(dead_code)]
-    pub fn replace_same_name(&mut self) {
-        self.quirks.replace_same_name = true;
-    }
-
-    pub fn trials() -> Vec<Trial> {
-        vec![simple_ops_trial(), basic_trial()]
-    }
-
-    pub fn quirks(&self) -> &Quirks {
-        &self.quirks
-    }
-}
-
-impl Quirks {
-    #[allow(dead_code)]
-    pub fn does_same_name_replace(&self) -> bool {
-        self.replace_same_name
-    }
-
-    #[allow(dead_code)]
-    pub fn new() -> Quirks {
-        Quirks { replace_same_name: false }
-    }
+pub fn real_trials() -> Vec<Trial> {
+    vec![simple_ops_trial(), basic_trial()]
 }
 
 #[macro_export]
@@ -220,6 +182,11 @@ fn simple_ops_trial() -> Trial {
     }
 }
 
-pub fn trial_set() -> TrialSet {
-    TrialSet { quirks: Quirks { replace_same_name: false } }
+#[cfg(test)]
+pub(crate) mod tests {
+    use {super::*, fidl_test_inspect_validate::*};
+
+    pub fn trial_with_action(name: &str, action: Action) -> Trial {
+        Trial { name: name.into(), steps: vec![Step { actions: vec![action] }] }
+    }
 }

@@ -3,56 +3,86 @@
 // found in the LICENSE file.
 
 use {
-    super::{data::Data, puppet, results, trials},
+    super::{data::Data, puppet, results, trials, validate},
     failure::{bail, Error},
 };
 
-pub async fn run_all_trials(server_url: &str, results: &mut results::Results) -> Result<(), Error> {
-    let trials = trials::trial_set();
-    for trial in trials::TrialSet::trials().iter_mut() {
-        match puppet::Puppet::connect(server_url).await {
+pub async fn run_all_trials(url: &str, results: &mut results::Results) {
+    let url_split: Vec<&str> = url.split("/").collect();
+    let cmx_name = url_split[url_split.len() - 1];
+    let name_split: Vec<&str> = cmx_name.split(".").collect();
+    let name = name_split[0];
+    let mut trial_set = trials::real_trials();
+    for trial in trial_set.iter_mut() {
+        match puppet::Puppet::connect(url).await {
             Ok(mut puppet) => {
                 let mut data = Data::new();
-                if let Err(e) = run_trial(&mut puppet, &mut data, trial, trials.quirks()).await {
+                if let Err(e) = run_trial(&mut puppet, &mut data, name, trial, results).await {
                     results.error(format!("Running trial {}, got failure: {:?}", trial.name, e));
                 }
             }
             Err(e) => {
                 results.error(format!(
-                    "Failed to form Puppet - error {:?} - trying puppet {}.",
-                    e, server_url
+                    "Failed to form Puppet - error {:?} - URL may be invalid: {}.",
+                    e, url
                 ));
-                bail!("Puppet-forming failure");
             }
         }
     }
-    Ok(())
 }
 
 async fn run_trial(
     puppet: &mut puppet::Puppet,
     data: &mut Data,
+    puppet_name: &str,
     trial: &mut trials::Trial,
-    _quirks: &trials::Quirks,
+    results: &mut results::Results,
 ) -> Result<(), Error> {
-    try_compare(data, puppet, &trial.name, -1, -1)?;
+    try_compare(data, puppet, &trial.name, -1, None, -1)?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         for (action_number, action) in step.actions.iter_mut().enumerate() {
             if let Err(e) = data.apply(action) {
-                println!(
+                bail!(
                     "Local-apply error in trial {}, step {}, action {}: {:?} ",
-                    trial.name, step_index, action_number, e
+                    trial.name,
+                    step_index,
+                    action_number,
+                    e
                 );
-                return Err(e);
             }
-            if let Err(e) = puppet.apply(action).await {
-                println!(
-                    "Puppet-apply error in trial {}, step {}, action {}: {:?} ",
-                    trial.name, step_index, action_number, e
-                );
-                return Err(e);
+            match puppet.apply(action).await {
+                Err(e) => {
+                    bail!(
+                        "Puppet-apply error in trial {}, step {}, action {}: {:?} ",
+                        trial.name,
+                        step_index,
+                        action_number,
+                        e
+                    );
+                }
+                Ok(validate::TestResult::Ok) => {}
+                Ok(validate::TestResult::Unimplemented) => {
+                    results.unimplemented(puppet_name, action);
+                    return Ok(());
+                }
+                Ok(bad_result) => {
+                    bail!(
+                        "In trial {}, puppet {} reported action {:?} was {:?}",
+                        trial.name,
+                        puppet_name,
+                        action,
+                        bad_result
+                    );
+                }
             }
-            try_compare(data, puppet, &trial.name, step_index as i32, action_number as i32)?;
+            try_compare(
+                data,
+                puppet,
+                &trial.name,
+                step_index as i32,
+                Some(action),
+                action_number as i32,
+            )?;
         }
     }
     Ok(())
@@ -63,25 +93,65 @@ fn try_compare(
     puppet: &puppet::Puppet,
     trial_name: &str,
     step_index: i32,
+    action: Option<&validate::Action>,
     action_number: i32,
 ) -> Result<(), Error> {
     match puppet.read_data() {
         Err(e) => {
-            println!(
-                "Puppet-read error in trial {}, step {}, action {}: {:?} ",
-                trial_name, step_index, action_number, e
+            bail!(
+                "Puppet-read error in trial {}, step {}, action {} {:?}: {:?} ",
+                trial_name,
+                step_index,
+                action_number,
+                action,
+                e
             );
-            return Err(e);
         }
         Ok(puppet_data) => {
             if let Err(e) = data.compare(&puppet_data) {
-                println!(
-                    "Compare error in trial {}, step {}, action {}: {:?} ",
-                    trial_name, step_index, action_number, e
+                bail!(
+                    "Compare error in trial {}, step {}, action {} {:?}: {:?} ",
+                    trial_name,
+                    step_index,
+                    action_number,
+                    action,
+                    e
                 );
-                return Err(e);
             }
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, crate::trials::tests::trial_with_action, crate::*, fidl_test_inspect_validate::*,
+        fuchsia_async as fasync,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn unimplemented_works() -> Result<(), Error> {
+        let mut int_maker = trial_with_action(
+            "foo",
+            create_numeric_property!(
+            parent: ROOT_ID, id: 1, name: "int", value: Number::IntT(0)),
+        );
+        let mut uint_maker = trial_with_action(
+            "foo",
+            create_numeric_property!(
+            parent: ROOT_ID, id: 2, name: "uint", value: Number::UintT(0)),
+        );
+        let mut results = results::Results::new();
+        let mut puppet = puppet::tests::local_incomplete_puppet().await?;
+        let mut data = Data::new();
+        // results contains a list of the _un_implemented actions. local_incomplete_puppet()
+        // implements Int creation, but not Uint. So results should not include Int but should
+        // include Uint.
+        run_trial(&mut puppet, &mut data, "int", &mut int_maker, &mut results).await?;
+        run_trial(&mut puppet, &mut data, "uint", &mut uint_maker, &mut results).await?;
+        assert!(!results.to_json().contains("int: CreateProperty(Int)"));
+        assert!(results.to_json().contains("uint: CreateProperty(Uint)"));
+        Ok(())
+    }
 }

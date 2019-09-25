@@ -1,6 +1,6 @@
 # Inspect Validator
 
-Reviewed on: 2019-09-15
+Reviewed on: 2019-09-24
 
 Inspect Validator exercises libraries that write Inspect VMOs and evaluates
 the resulting VMOs for correctness and memory efficiency.
@@ -16,10 +16,14 @@ For example:
 fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagnostics/inspect_validator:tests
 ```
 
+The Rust puppet is `--with //src/diagnostics/inspect_validator/lib/rust:tests`.
+
 ## Running
 
 Inspect Validator will be run as part of CQ/CI. To run manually, see "Testing".
 
+Invoke with at least one "--url fuchsia-pkg://...." argument.
+Also valid: "--output text" or "--output json" (defaults to json).
 
 ## Testing
 To run unit tests:
@@ -43,7 +47,7 @@ fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#m
 To manually run one or more puppets by specifying their URLs (in this case, the Rust puppet):
 ```
 --with //src/diagnostics/inspect_validator
-fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator#meta/validator.cmx -- fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/inspect_validator_test_rust.cmx
+fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator#meta/validator.cmx --url fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/inspect_validator_rust_puppet.cmx
 ```
 
 ## Source layout

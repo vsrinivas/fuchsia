@@ -20,14 +20,11 @@ pub struct Puppet {
 }
 
 impl Puppet {
-    pub async fn apply(&mut self, action: &mut validate::Action) -> Result<(), Error> {
-        let response = self.connection.fidl.act(action).await;
-        match response {
-            Ok(validate::TestResult::Ok) => Ok(()),
-            bad => {
-                bail!("Bad result {:?} from action {:?}", bad, action);
-            }
-        }
+    pub async fn apply(
+        &mut self,
+        action: &mut validate::Action,
+    ) -> Result<validate::TestResult, Error> {
+        Ok(self.connection.fidl.act(action).await?)
     }
 
     pub async fn connect(server_url: &str) -> Result<Self, Error> {
@@ -77,8 +74,7 @@ impl Connection {
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
         let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
-        let out =
-            self.fidl.initialize(params).await.context("Calling vmo init - URL may be invalid")?;
+        let out = self.fidl.initialize(params).await?;
         let handle: Option<zx::Handle>;
         if let (Some(out_handle), _) = out {
             handle = Some(out_handle);
@@ -128,8 +124,9 @@ pub(crate) mod tests {
     }
 
     // This is a partial implementation.
-    // All it can do is initialize, and then create nodes and string properties (which it
-    // will hold forever); other actions will give various kinds of incorrect results.
+    // All it can do is initialize, and then create nodes and int properties (which it
+    // will hold forever). Trying to create a uint property will return Unimplemented.
+    // Other actions will give various kinds of incorrect results.
     pub(crate) async fn local_incomplete_puppet() -> Result<Puppet, Error> {
         let (client_end, server_end) = create_proxy().unwrap();
         spawn_local_puppet(server_end).await;
@@ -189,6 +186,13 @@ pub(crate) mod tests {
                                 });
                                 responder.send(TestResult::Ok)?;
                             }
+                            Action::CreateNumericProperty(CreateNumericProperty {
+                                value: Number::UintT(_),
+                                ..
+                            }) => {
+                                responder.send(TestResult::Unimplemented)?;
+                            }
+
                             _ => responder.send(TestResult::Illegal)?,
                         },
                     }
