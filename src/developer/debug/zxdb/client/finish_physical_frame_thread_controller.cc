@@ -62,7 +62,7 @@ FinishPhysicalFrameThreadController::StopOp FinishPhysicalFrameThreadController:
 
 void FinishPhysicalFrameThreadController::InitWithThread(Thread* thread,
                                                          fit::callback<void(const Err&)> cb) {
-  set_thread(thread);
+  SetThread(thread);
 
   Stack& stack = thread->GetStack();
 
@@ -76,13 +76,13 @@ void FinishPhysicalFrameThreadController::InitWithThread(Thread* thread,
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
 
-#ifdef DEBUG_THREAD_CONTROLLERS
-  auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
-  if (function)
-    Log("Finishing %s", function->GetFullName().c_str());
-  else
-    Log("Finshing unsymbolized function");
-#endif
+  if (enable_debug_logging()) {
+    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+    if (function)
+      Log("Finishing %s", function->GetFullName().c_str());
+    else
+      Log("Finshing unsymbolized function");
+  }
 
   InitWithFingerprint(stack.GetFrameFingerprint(frame_to_finish_));
   cb(Err());

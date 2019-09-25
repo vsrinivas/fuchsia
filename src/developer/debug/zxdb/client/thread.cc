@@ -10,16 +10,22 @@
 
 namespace zxdb {
 
-// Schema Definition -----------------------------------------------------------
+// Schema Definition -------------------------------------------------------------------------------
 
-namespace {
+const char* ClientSettings::Thread::kDebugStepping = "debug-stepping";
+const char* ClientSettings::Thread::kDebugSteppingDescription =
+    R"(  Enable very verbose debug logging for thread stepping.
+
+  This is used by developers working on the debugger's internal thread
+  controllers.)";
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
+  schema->AddBool(ClientSettings::Thread::kDebugStepping,
+                  ClientSettings::Thread::kDebugSteppingDescription, false);
+
   return schema;
 }
-
-}  // namespace
 
 // Thread Implementation -------------------------------------------------------
 

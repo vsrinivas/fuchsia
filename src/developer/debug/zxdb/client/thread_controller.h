@@ -22,13 +22,6 @@ class Frame;
 class Location;
 class Thread;
 
-// Uncomment to enable detailed thread controller logging.
-//
-// TODO(brettw) when we have a settings system, make this run-time enableable
-// for easier debugging when people encounter problems in the field.
-//
-// #define DEBUG_THREAD_CONTROLLERS
-
 // Abstract base class that provides the policy decisions for various types of
 // thread stepping.
 class ThreadController {
@@ -109,7 +102,7 @@ class ThreadController {
   // by the thread (possibly indirectly) so the pointer will remain valid for
   // the rest of the lifetime of the controller.
   //
-  // The implementation should call set_thread() with the thread.
+  // The implementation should call SetThread() with the thread.
   //
   // When the implementation is ready, it will issue the given callback to
   // run the thread. The callback can be issued reentrantly from inside this
@@ -148,25 +141,16 @@ class ThreadController {
   virtual StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
                               const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
 
-#if defined(DEBUG_THREAD_CONTROLLERS)
   // Writes the log message prefixed with the thread controller type. Callers
   // should pass constant strings through here so the Log function takes
   // almost no time if it's disabled: in the future we may want to make this
   // run-time enable-able
   void Log(const char* format, ...) const;
 
-  // Logs the raw string (no controller name prefix).
-  static void LogRaw(const char* format, ...);
-
   // Returns the given frame's function name or a placeholder string if
   // unavailable. Does nothing if logging is disabled (computing this is
   // non-trivial).
   static std::string FrameFunctionNameForLog(const Frame* frame);
-#else
-  void Log(const char* format, ...) const {}
-  static void LogRaw(const char* format, ...) {}
-  static std::string FrameFunctionNameForLog(const Frame* frame) { return std::string(); }
-#endif
 
  protected:
   // How the frame argument to SetInlineFrameIfAmbiguous() is interpreted.
@@ -182,7 +166,7 @@ class ThreadController {
   };
 
   Thread* thread() { return thread_; }
-  void set_thread(Thread* thread) { thread_ = thread; }
+  void SetThread(Thread* thread);
 
   // Returns the name of this thread controller. This will be visible in logs.
   // This should be something simple and short like "Step" or "Step Over".
@@ -215,8 +199,15 @@ class ThreadController {
   // This function will likely cause |this| to be deleted.
   void NotifyControllerDone();
 
+  // Returns true if this controller has debug logging enabled. This is only valid after the thread
+  // has been set.
+  bool enable_debug_logging() const { return enable_debug_logging_; }
+
  private:
   Thread* thread_ = nullptr;
+
+  // Initialized from the setting when the thread is known.
+  bool enable_debug_logging_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ThreadController);
 };

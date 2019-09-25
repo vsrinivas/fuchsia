@@ -29,7 +29,7 @@ StepOverThreadController::StepOverThreadController(AddressRanges range)
 StepOverThreadController::~StepOverThreadController() = default;
 
 void StepOverThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
-  set_thread(thread);
+  SetThread(thread);
 
   if (thread->GetStack().empty()) {
     cb(Err("Can't step, no frames."));

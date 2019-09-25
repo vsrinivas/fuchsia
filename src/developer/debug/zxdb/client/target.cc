@@ -39,9 +39,13 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
+
   schema->AddBool(ClientSettings::Target::kStoreBacktraces, kStoreBacktracesDescription, false);
   schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
                   {});
+
+  schema->AddBool(ClientSettings::Thread::kDebugStepping,
+                  ClientSettings::Thread::kDebugSteppingDescription, false);
 
   return schema;
 }

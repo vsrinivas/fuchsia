@@ -91,7 +91,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
 }
 
 void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
-  set_thread(thread);
+  SetThread(thread);
 
   if (finish_physical_controller_) {
     // Simple case where only a physical frame is being finished. The physical
@@ -108,11 +108,11 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
 
-#ifdef DEBUG_THREAD_CONTROLLERS
-  auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
-  if (function)
-    Log("Finishing inline %s", function->GetFullName().c_str());
-#endif
+  if (enable_debug_logging()) {
+    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+    if (function)
+      Log("Finishing inline %s", function->GetFullName().c_str());
+  }
 
   from_inline_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish_);
 

@@ -7,6 +7,7 @@
 #include <stdarg.h>
 
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 
@@ -16,8 +17,11 @@ ThreadController::ThreadController() = default;
 
 ThreadController::~ThreadController() = default;
 
-#if defined(DEBUG_THREAD_CONTROLLERS)
 void ThreadController::Log(const char* format, ...) const {
+  FXL_DCHECK(thread_);  // If uninitialized, the log setting hasn't been read yet.
+  if (!enable_debug_logging_)
+    return;
+
   va_list ap;
   va_start(ap, format);
 
@@ -28,15 +32,6 @@ void ThreadController::Log(const char* format, ...) const {
   // raw mode.
   printf("\r\n");
 
-  va_end(ap);
-}
-
-// static
-void ThreadController::LogRaw(const char* format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  vprintf(format, ap);
-  printf("\r\n");
   va_end(ap);
 }
 
@@ -54,7 +49,11 @@ std::string ThreadController::FrameFunctionNameForLog(const Frame* frame) {
 
   return func->GetFullName();
 }
-#endif
+
+void ThreadController::SetThread(Thread* thread) {
+  thread_ = thread;
+  enable_debug_logging_ = thread_->settings().GetBool(ClientSettings::Thread::kDebugStepping);
+}
 
 void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
                                                  FrameFingerprint fingerprint) {

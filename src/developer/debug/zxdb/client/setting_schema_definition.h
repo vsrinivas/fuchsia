@@ -41,7 +41,10 @@ struct ClientSettings {
     static const char* kBuildDirsDescription;  // Help for kBuildDirs.
   };
 
-  struct Thread {};
+  struct Thread {
+    static const char* kDebugStepping;
+    static const char* kDebugSteppingDescription;
+  };
 };
 
 // Schemas need to be initialized together because some schemas can add settings to other schemas.

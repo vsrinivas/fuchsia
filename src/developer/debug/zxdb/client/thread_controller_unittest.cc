@@ -24,7 +24,7 @@ class DummyThreadController : public ThreadController {
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override {
-    set_thread(thread);
+    SetThread(thread);
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::StepInstruction(); }

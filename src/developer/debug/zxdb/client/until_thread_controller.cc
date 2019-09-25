@@ -33,7 +33,7 @@ UntilThreadController::~UntilThreadController() {
 }
 
 void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
-  set_thread(thread);
+  SetThread(thread);
 
   BreakpointSettings settings;
   settings.scope = BreakpointSettings::Scope::kThread;

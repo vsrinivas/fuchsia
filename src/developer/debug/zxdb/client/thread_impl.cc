@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -242,11 +243,11 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
 
 void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
                              const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-#if defined(DEBUG_THREAD_CONTROLLERS)
-  ThreadController::LogRaw("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s",
-                           debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
-                           ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
-#endif
+  if (settings().GetBool(ClientSettings::Thread::kDebugStepping)) {
+    printf("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s\r\n",
+           debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
+           ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
+  }
 
   // When any controller says "stop" it takes precendence and the thread will
   // stop no matter what any other controllers say.
