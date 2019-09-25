@@ -163,11 +163,17 @@ static void mac_unbind(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
   zx_status_t status;
 
+  if (!mvmvif->zxdev) {
+    return;
+  }
+
   status = device_remove(mvmvif->zxdev);
   if (status != ZX_OK) {
     IWL_ERR(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
             zx_status_get_string(status));
+    return;
   }
+  mvmvif->zxdev = NULL;
 }
 
 static void mac_release(void* ctx) {
@@ -235,11 +241,12 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   zx_status_t ret = ZX_OK;
 
   if (!req) {
+    IWL_ERR(mvm, "req is not given\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (req->sme_channel == ZX_HANDLE_INVALID) {
-    IWL_ERR(mvm, "the given sme channel is invalid.\n");
+    IWL_ERR(mvm, "the given sme channel is invalid\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -248,7 +255,25 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if (!out_iface_id) {
+    IWL_ERR(mvm, "out_iface_id pointer is not given\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   mtx_lock(&mvm->mutex);
+
+  // Find the first empty mvmvif slot.
+  uint16_t id;
+  for (id = 0; id < MAX_NUM_MVMVIF; id++) {
+    if (!mvm->mvmvif[id]) {
+      break;
+    }
+  }
+  if (id >= MAX_NUM_MVMVIF) {
+    IWL_ERR(mvm, "cannot find an empty slot for new MAC interface\n");
+    ret = ZX_ERR_NO_RESOURCES;
+    goto unlock;
+  }
 
   // Allocate a MAC context. This will be initialized once iwl_mvm_mac_add_interface() is called.
   struct iwl_mvm_vif* mvmvif = calloc(1, sizeof(struct iwl_mvm_vif));
@@ -272,6 +297,9 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   if (ret == ZX_OK) {
     mvmvif->mac_role = req->role;
     mvmvif->sme_channel = req->sme_channel;
+    mvm->mvmvif[id] = mvmvif;
+    mvm->vif_count++;
+    *out_iface_id = id;
   }
 
 unlock:
@@ -280,9 +308,53 @@ unlock:
   return ret;
 }
 
+// This function is working with a PHY context ('ctx') to delete a MAC interface.
+// The 'id' is the value assigned by phy_create_iface().
 static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
-  IWL_ERR(ctx, "%s() needs porting ...\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_trans* iwl_trans = ctx;
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  zx_status_t ret = ZX_OK;
+
+  if (!mvm) {
+    IWL_ERR(mvm, "cannot obtain MVM from ctx=%p while destroying interface (%d)\n", ctx, id);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  mtx_lock(&mvm->mutex);
+
+  if (id >= MAX_NUM_MVMVIF) {
+    IWL_ERR(mvm, "the interface id (%d) is invalid\n", id);
+    ret = ZX_ERR_INVALID_ARGS;
+    goto unlock;
+  }
+
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[id];
+  if (!mvmvif) {
+    IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
+    ret = ZX_ERR_NOT_FOUND;
+    goto unlock;
+  }
+
+  // Only remove the device if it has been added and not removed yet.
+  if (mvmvif->zxdev) {
+    ret = device_remove(mvmvif->zxdev);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot remove the zxdev of interface (%d): %s\n", id,
+              zx_status_get_string(ret));
+      goto unlock;
+    }
+  }
+
+  // Unlink the 'mvmvif' from the 'mvm' and remove the zxdev. The memory of 'mvmvif' will be freed
+  // in mac_release().
+  mvmvif->zxdev = NULL;
+  mvm->vif_count--;
+  mvm->mvmvif[id] = NULL;
+
+unlock:
+  mtx_unlock(&mvm->mutex);
+
+  return ret;
 }
 
 static zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {

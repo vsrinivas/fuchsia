@@ -31,7 +31,8 @@ class WlanDeviceTest : public SingleApTest {
   ~WlanDeviceTest() {}
 
  protected:
-  struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
+  static constexpr zx_handle_t sme_channel_ = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
+  struct iwl_mvm_vif mvmvif_sta_;                        // The mvm_vif settings for station role.
 };
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
@@ -65,7 +66,7 @@ TEST_F(WlanDeviceTest, MacStartSmeChannel) {
   zx_handle_t sme_channel;
 
   // The normal case. A channel will be transferred to MLME.
-  constexpr zx_handle_t from_devmgr = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID.
+  constexpr zx_handle_t from_devmgr = sme_channel_;
   mvmvif_sta_.sme_channel = from_devmgr;
   ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel, nullptr), ZX_OK);
   ASSERT_EQ(sme_channel, from_devmgr);                    // The channel handle is returned.
@@ -73,6 +74,29 @@ TEST_F(WlanDeviceTest, MacStartSmeChannel) {
 
   // Since the driver no longer owns the handle, the start should fail.
   ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel, nullptr), ZX_ERR_ALREADY_BOUND);
+}
+
+TEST_F(WlanDeviceTest, MacUnbind) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+
+  // Create an interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+
+  // To verify the internal state of MVM driver.
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
+
+  // Then unbind it
+  device_mac_ops.unbind(mvmvif);
+  // unbind() doesn't have return value. Expect it is not crashed.
+
+  // Do again and expect not crashed
+  device_mac_ops.unbind(mvmvif);
 }
 
 TEST_F(WlanDeviceTest, MacRelease) {
@@ -103,6 +127,116 @@ TEST_F(WlanDeviceTest, PhyQuery) {
   wlanphy_impl_info_t info;
   ASSERT_EQ(wlanphy_ops.query(nullptr, &info), ZX_OK);
   ASSERT_EQ(info.wlan_info.mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+}
+
+TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+
+  // Test input null pointers
+  ASSERT_EQ(wlanphy_ops.create_iface(nullptr, &req, &iface_id), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, nullptr, &iface_id), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanphy_ops.destroy_iface(nullptr, 0), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, MAX_NUM_MVMVIF), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_ERR_NOT_FOUND);  // hasn't been added yet.
+
+  // To verify the internal state of MVM driver.
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+
+  // Add interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 1);
+
+  // Remove interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->vif_count, 0);
+}
+
+TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);  // To verify the internal state of MVM driver
+
+  // Add 1st interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 1);
+
+  // Add 2nd interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 1);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 2);
+
+  // Add 3rd interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 2);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 3);
+
+  // Remove the 2nd interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[1], nullptr);
+  ASSERT_EQ(mvm->vif_count, 2);
+
+  // Add a new interface and it should be the 2nd one.
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 1);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 3);
+
+  // Add 4th interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 3);  // the first interface should have id 0.
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->vif_count, 4);
+
+  // Add 5th interface and it should fail
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_ERR_NO_RESOURCES);
+  ASSERT_EQ(mvm->vif_count, 4);
+
+  // Remove the 2nd interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[1], nullptr);
+  ASSERT_EQ(mvm->vif_count, 3);
+
+  // Remove the 3rd interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 2), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[2], nullptr);
+  ASSERT_EQ(mvm->vif_count, 2);
+
+  // Remove the 4th interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 3), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[3], nullptr);
+  ASSERT_EQ(mvm->vif_count, 1);
+
+  // Remove the 1st interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[0], nullptr);
+  ASSERT_EQ(mvm->vif_count, 0);
+
+  // Remove the 1st interface again and it should fail.
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(mvm->vif_count, 0);
 }
 
 }  // namespace

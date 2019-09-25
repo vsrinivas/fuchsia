@@ -103,6 +103,9 @@ using std::atomic_int;
 /* offchannel queue towards mac80211 */
 #define IWL_MVM_OFFCHANNEL_QUEUE 0
 
+/* the maximum number of MAC interfaces in a MVM firmware */
+#define MAX_NUM_MVMVIF 4
+
 extern const struct ieee80211_ops iwl_mvm_hw_ops;
 
 /**
@@ -1009,7 +1012,9 @@ struct iwl_mvm {
   mtx_t refs_lock;
   uint8_t refs[IWL_MVM_REF_COUNT];
 
+  // Number of iwl_mvm_vif (MAC interface) created under this MVM.
   uint8_t vif_count;
+  struct iwl_mvm_vif* mvmvif[MAX_NUM_MVMVIF];
 
   /* -1 for always, 0 for never, >0 for that many times */
   int8_t fw_restart;
