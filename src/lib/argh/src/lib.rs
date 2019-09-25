@@ -383,7 +383,9 @@ pub fn parse_option(
     match &mut output_table[pos] {
         CmdOption::Flag(b) => b.set_flag(),
         CmdOption::Value(pvs) => {
-            let value = remaining_args[0];
+            let value = remaining_args.get(0).ok_or_else(|| {
+                ["No value provided for option '", arg, "'."].concat()
+            })?;
             *remaining_args = &remaining_args[1..];
             pvs.fill_slot(value).map_err(|s| {
                 ["Error parsing argument '", arg, "' with value '", value, "': ", &s].concat()

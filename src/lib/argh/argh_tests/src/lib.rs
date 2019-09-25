@@ -183,6 +183,22 @@ fn default_function() {
     assert_eq!(cmd.msg, MSG);
 }
 
+#[test]
+fn missing_option_value() {
+    #[derive(FromArgs, Debug)]
+    /// Short description
+    struct Cmd {
+        #[argh(option)]
+        /// fooey
+        msg: String,
+    }
+
+    let e = Cmd::from_args(&["cmdname"], &["--msg"])
+        .expect_err("Parsing missing option value should fail");
+    assert_eq!(e.output, "No value provided for option \'--msg\'.");
+    assert!(e.status.is_err());
+}
+
 fn assert_help_string<T: FromArgs>(help_str: &str) {
     match T::from_args(&["test_arg_0"], &["--help"]) {
         Ok(_) => panic!("help was parsed as args"),
