@@ -5686,13 +5686,20 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
         ZX_ASSERT(0);
     }
 
-    // If the key has been set, ignore the request. See WLAN-855.
+    // From our experiments, the firmware actually accepts the different key types for same index.
+    // For example, both PTK and GTK can have index 0 in the firmware.
+    // So the check below is to ensure that we don't add a duplicate pair of (peer, idx, type).
+    //
+    // However, we still warn it for the case of duplicate key index with same type.
+    //
+    // See more context in WLAN-855 and WLAN-1004.
     mtx_lock(&ar->data_lock);
-    if (key_config->key_idx < peer->num_wlan_cfg &&
-        peer->wlan_cfg[key_config->key_idx].key_idx == key_config->key_idx) {
-        ath10k_warn("key idx %d has been created. ignore it.\n", key_config->key_idx);
-        mtx_unlock(&ar->data_lock);
-        goto exit;
+    if (key_config->key_idx < peer->num_wlan_cfg &&  // not a new index
+        peer->wlan_cfg[key_config->key_idx].key_idx == key_config->key_idx &&
+        peer->wlan_cfg[key_config->key_idx].key_type == key_config->key_type) {
+        ath10k_warn("%s key idx %d is in use. overwrite it with new key.\n",
+                    key_config->key_type == WLAN_KEY_TYPE_PAIRWISE ? "PTK" : "GTK",
+                    key_config->key_idx);
     }
     mtx_unlock(&ar->data_lock);
 
