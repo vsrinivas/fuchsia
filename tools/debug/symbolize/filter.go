@@ -95,10 +95,6 @@ func (m *missingObjError) Error() string {
 	return fmt.Sprintf("could not find file for module %s with build ID %s: %v", m.name, m.buildid, m.err)
 }
 
-type Repository interface {
-	GetBuildObject(buildID string) (string, error)
-}
-
 // Filter represents the state needed to process a log.
 type Filter struct {
 	// handles for llvm-symbolizer
@@ -140,7 +136,8 @@ func (s *Filter) findInfoForAddress(vaddr uint64) (addressInfo, error) {
 		out := &missingObjError{mod.Name, mod.Build, err}
 		return info, out
 	}
-	result := <-s.symbolizer.FindSrcLoc(modPath, mod.Build, modRelAddr)
+	defer modPath.Close()
+	result := <-s.symbolizer.FindSrcLoc(modPath.String(), mod.Build, modRelAddr)
 	if result.Err != nil {
 		return info, fmt.Errorf("in module %s with build ID %s: %v", mod.Name, mod.Build, result.Err)
 	}

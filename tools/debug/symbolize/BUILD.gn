@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 go_library("symbolize_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
   deps = [
+    "//third_party/golibs:cloud.google.com/go/storage",
     "//tools/debug/elflib",
     "//tools/lib/cache",
     "//tools/lib/logger",

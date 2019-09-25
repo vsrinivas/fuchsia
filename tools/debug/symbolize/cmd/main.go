@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -28,7 +30,14 @@ func (a *argList) Set(value string) error {
 	return nil
 }
 
+const (
+	symbolCacheSize   uint64        = 100
+	cloudFetchTimeout time.Duration = time.Duration(5) * time.Second
+)
+
 var (
+	symbolServers   argList
+	symbolCache     string
 	buildIDDirPaths argList
 	colors          color.EnableColor
 	jsonOutput      string
@@ -43,6 +52,8 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.InfoLevel
 
+	flag.Var(&symbolServers, "symbol-server", "name of a GCS bucket that contains debug binaries indexed by build ID")
+	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
 	flag.Var(&idsPaths, "ids", "path to ids.txt")
@@ -104,6 +115,25 @@ func main() {
 	}
 	for _, idsPath := range idsPaths {
 		repo.AddRepo(symbolize.NewIDsTxtRepo(idsPath, idsRel))
+	}
+	var filecache *cache.FileCache
+	if len(symbolServers) > 0 {
+		if symbolCache == "" {
+			log.Fatalf("-symbol-cache must be set if a symbol server is used")
+		}
+		var err error
+		if filecache, err = cache.GetFileCache(symbolCache, symbolCacheSize); err != nil {
+			log.Fatalf("%v\n", err)
+		}
+	}
+	for _, symbolServer := range symbolServers {
+		cloudRepo, err := symbolize.NewCloudRepo(ctx, symbolServer, filecache)
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		// Set a 5 second timeout to ensure we never wait too long.
+		cloudRepo.SetTimeout(cloudFetchTimeout)
+		repo.AddRepo(cloudRepo)
 	}
 	demuxer := symbolize.NewDemuxer(&repo, symbolizer)
 	tap := symbolize.NewTriggerTap()

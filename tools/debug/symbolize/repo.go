@@ -5,13 +5,104 @@
 package symbolize
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
+
+	"cloud.google.com/go/storage"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 )
+
+// FileCloser holds a reference to a file and prevents it from being deleted
+// until after Close() is called. The filename can be retrieved via String()
+type FileCloser interface {
+	String() string
+	Close() error
+}
+
+// Repository represents a collection of debug binaries referable to by
+// filepath and indexed by their build ID.
+type Repository interface {
+	// GetBuildObject takes a build ID and returns the corresponding file
+	// reference via a FileCloser.
+	GetBuildObject(buildID string) (FileCloser, error)
+}
+
+type dummyFileCloser string
+
+func (d dummyFileCloser) String() string {
+	return string(d)
+}
+
+func (d dummyFileCloser) Close() error {
+	return nil
+}
+
+type buildIDKey string
+
+func (b buildIDKey) Hash() string {
+	return string(b)
+}
+
+// CloudRepo represents a repository stored in a GCS bucket.
+type CloudRepo struct {
+	client  *storage.Client
+	bucket  *storage.BucketHandle
+	cache   *cache.FileCache
+	timeout *time.Duration
+}
+
+// NewCloudRepo creates a CloudRepo using bucketName. The connection to the bucket
+// will be ended when ctx is canceled. No timeout on GetBuildObject is set until
+// SetTimeout is called.
+func NewCloudRepo(ctx context.Context, bucketName string, cache *cache.FileCache) (*CloudRepo, error) {
+	var out CloudRepo
+	var err error
+	if out.client, err = storage.NewClient(ctx); err != nil {
+		return nil, err
+	}
+	out.bucket = out.client.Bucket(bucketName)
+	out.cache = cache
+	return &out, nil
+}
+
+// SetTimeout sets the maximum duration that GetBuildObject will wait before
+// canceling the download from GCS.
+func (c *CloudRepo) SetTimeout(t time.Duration) {
+	c.timeout = &t
+}
+
+// GetBuildObject checks the cache for the debug object. If available it uses that.
+// Otherwise it downloads the object, adds it to the cache, and returns the local
+// reference.
+func (c *CloudRepo) GetBuildObject(buildID string) (FileCloser, error) {
+	out, err := c.cache.Get(buildIDKey(buildID))
+	if err == nil {
+		return out, nil
+	}
+	obj := c.bucket.Object(buildID + ".debug")
+	ctx := context.Background()
+	if c.timeout != nil {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, *c.timeout)
+		defer cancel()
+	}
+	r, err := obj.NewReader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out, err = c.cache.Add(buildIDKey(buildID), r)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 // idsSource is a BinaryFileSource parsed from ids.txt
 type IDsTxtRepo struct {
@@ -73,20 +164,20 @@ func (i *IDsTxtRepo) updateCache() error {
 	return nil
 }
 
-func (i *IDsTxtRepo) GetBuildObject(buildID string) (string, error) {
+func (i *IDsTxtRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if file, ok := i.readFromCache(buildID); ok && file.Verify() != nil {
-		return file.Filepath, nil
+		return dummyFileCloser(file.Filepath), nil
 	}
 	if err := i.updateCache(); err != nil {
-		return "", err
+		return nil, err
 	}
 	if file, ok := i.readFromCache(buildID); ok {
 		if err := file.Verify(); err != nil {
-			return "", err
+			return nil, err
 		}
-		return file.Filepath, nil
+		return dummyFileCloser(file.Filepath), nil
 	}
-	return "", fmt.Errorf("could not find file for %s", buildID)
+	return nil, fmt.Errorf("could not find file for %s", buildID)
 }
 
 type CompositeRepo struct {
@@ -99,7 +190,7 @@ func (c *CompositeRepo) AddRepo(repo Repository) {
 	c.repos = append(c.repos, repo)
 }
 
-func (c *CompositeRepo) GetBuildObject(buildID string) (string, error) {
+func (c *CompositeRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	for _, repo := range c.repos {
 		file, err := repo.GetBuildObject(buildID)
 		if err != nil {
@@ -107,21 +198,21 @@ func (c *CompositeRepo) GetBuildObject(buildID string) (string, error) {
 		}
 		return file, nil
 	}
-	return "", fmt.Errorf("could not find file for %s", buildID)
+	return nil, fmt.Errorf("could not find file for %s", buildID)
 }
 
 type NewBuildIDRepo string
 
-func (b NewBuildIDRepo) GetBuildObject(buildID string) (string, error) {
+func (b NewBuildIDRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if len(buildID) < 4 {
-		return "", fmt.Errorf("build ID must be the hex representation of at least 2 bytes")
+		return nil, errors.New("build ID must be the hex representation of at least 2 bytes")
 	}
 	bin := elflib.BinaryFileRef{
 		Filepath: filepath.Join(string(b), buildID[:2], buildID[2:]) + ".debug",
 		BuildID:  buildID,
 	}
 	if err := bin.Verify(); err != nil {
-		return "", err
+		return nil, err
 	}
-	return bin.Filepath, nil
+	return dummyFileCloser(bin.Filepath), nil
 }

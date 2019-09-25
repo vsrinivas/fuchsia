@@ -32,14 +32,14 @@ func getTestdataPath(filename string) string {
 	return path.Join(outDir, "testdata", "symbolize", filename)
 }
 
-func (m mockSource) GetBuildObject(buildID string) (string, error) {
+func (m mockSource) GetBuildObject(buildID string) (FileCloser, error) {
 	for _, file := range testBinaries {
 		if file.BuildID == buildID {
 			if err := file.Verify(); err != nil {
-				return "", err
+				return nil, err
 			}
-			return file.Filepath, nil
+			return dummyFileCloser(file.Filepath), nil
 		}
 	}
-	return "", fmt.Errorf("could not find file associated with %s", buildID)
+	return nil, fmt.Errorf("could not find file associated with %s", buildID)
 }
