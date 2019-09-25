@@ -11,3 +11,6 @@ struct BufferCollectionInfo {
 
 struct ImageFormat {
 };
+
+struct ImageFormat_2 {
+};
