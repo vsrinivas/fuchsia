@@ -10,13 +10,15 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 #include "src/ledger/bin/testing/data_generator.h"
@@ -115,9 +117,9 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
 }
 
 void DeleteEntryBenchmark::Run() {
-  Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-                "delete_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
+                            "", "delete_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+                            &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

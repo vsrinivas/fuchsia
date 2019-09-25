@@ -17,6 +17,7 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -159,7 +160,8 @@ void PutBenchmark::Run() {
                         : kRefsOnFlag)
                 << (update_ ? fxl::Concatenate({" --", kUpdateFlag}) : "");
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+                            "", "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

@@ -10,6 +10,7 @@
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 
 namespace ledger {
@@ -26,7 +27,8 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, &close_repository);
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
+      &close_repository);
 
   // No need to |Sync| as |GetLedger| handles it.
   EXPECT_EQ(status, Status::OK);
@@ -49,7 +51,8 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, &close_repository);
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
+      &close_repository);
 
   ASSERT_EQ(status, Status::OK);
 

@@ -20,6 +20,7 @@
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
@@ -88,7 +89,9 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
     launch_info.directory_request = child_services.NewRequest();
-    launch_info.arguments.emplace({"--disable_reporting"});
+    launch_info.arguments->push_back("--disable_reporting");
+    ledger::AppendGarbageCollectionPolicyFlags(ledger::kTestingGarbageCollectionPolicy,
+                                               &launch_info);
     for (auto& additional_arg : additional_args) {
       launch_info.arguments->push_back(additional_arg);
     }

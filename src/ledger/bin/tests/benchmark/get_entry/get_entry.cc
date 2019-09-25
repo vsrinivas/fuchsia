@@ -9,13 +9,15 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -113,9 +115,9 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
 }
 
 void GetEntryBenchmark::Run() {
-  Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-                "get_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
+                            "", "get_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+                            &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
@@ -154,24 +156,23 @@ void GetEntryBenchmark::GetSnapshot() {
 }
 
 void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
-  snapshot_->GetKeys({}, std::move(token),
-                     [this](auto keys, auto next_token) {
-                       if (!next_token) {
-                         TRACE_ASYNC_END("benchmark", "get_keys", 0);
-                       }
-                       for (size_t i = 0; i < keys.size(); i++) {
-                         keys_.push_back(std::move(keys[i]));
-                       }
-                       if (next_token) {
-                         GetKeys(std::move(next_token));
-                         return;
-                       }
-                       if (get_inline_) {
-                         GetNextEntryInline(0);
-                       } else {
-                         GetNextEntry(0);
-                       }
-                     });
+  snapshot_->GetKeys({}, std::move(token), [this](auto keys, auto next_token) {
+    if (!next_token) {
+      TRACE_ASYNC_END("benchmark", "get_keys", 0);
+    }
+    for (size_t i = 0; i < keys.size(); i++) {
+      keys_.push_back(std::move(keys[i]));
+    }
+    if (next_token) {
+      GetKeys(std::move(next_token));
+      return;
+    }
+    if (get_inline_) {
+      GetNextEntryInline(0);
+    } else {
+      GetNextEntry(0);
+    }
+  });
 }
 
 void GetEntryBenchmark::GetNextEntry(size_t i) {

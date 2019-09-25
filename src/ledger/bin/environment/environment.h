@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "peridot/lib/rng/random.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace ledger {
@@ -28,7 +29,7 @@ class Environment {
               sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
-              std::unique_ptr<rng::Random> random);
+              std::unique_ptr<rng::Random> random, storage::GarbageCollectionPolicy gc_policy);
   Environment(Environment&& other) noexcept;
   ~Environment();
 
@@ -53,6 +54,8 @@ class Environment {
 
   rng::Random* random() const { return random_.get(); }
 
+  storage::GarbageCollectionPolicy gc_policy() const { return gc_policy_; }
+
  private:
   bool disable_statistics_;
 
@@ -69,6 +72,7 @@ class Environment {
   BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
+  storage::GarbageCollectionPolicy gc_policy_;
 };
 
 // Builder for the environment.
@@ -95,6 +99,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetBackoffFactory(Environment::BackoffFactory backoff_factory);
   EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
   EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
+  EnvironmentBuilder& SetGcPolicy(storage::GarbageCollectionPolicy gc_policy);
 
   Environment Build();
 
@@ -108,6 +113,7 @@ class EnvironmentBuilder {
   Environment::BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
+  storage::GarbageCollectionPolicy gc_policy_ = storage::GarbageCollectionPolicy::NEVER;
 };
 
 }  // namespace ledger

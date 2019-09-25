@@ -22,6 +22,7 @@
 #include "peridot/lib/rng/test_random.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
@@ -74,6 +75,7 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
       })
       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))
+      .SetGcPolicy(kTestingGarbageCollectionPolicy)
       .Build();
 }
 

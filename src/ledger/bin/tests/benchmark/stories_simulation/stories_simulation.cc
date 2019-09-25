@@ -20,6 +20,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -240,9 +241,9 @@ StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
 }
 
 void StoriesBenchmark::Run() {
-  Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-                "stories_simulation", DetachedPath(tmp_fs_.root_fd()), QuitLoopClosure(), &ledger_);
+  Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
+                            "", "stories_simulation", DetachedPath(tmp_fs_.root_fd()),
+                            QuitLoopClosure(), &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

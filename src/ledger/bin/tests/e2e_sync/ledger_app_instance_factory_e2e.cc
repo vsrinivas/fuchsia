@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
@@ -72,8 +73,9 @@ void LedgerAppInstanceImpl::Init(
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
-  launch_info.arguments.emplace(
-      {"--disable_reporting", "--disable_p2p_sync", "--firebase_api_key=" + sync_params_.api_key});
+  *launch_info.arguments = {"--disable_reporting", "--disable_p2p_sync",
+                            "--firebase_api_key=" + sync_params_.api_key};
+  ledger::AppendGarbageCollectionPolicyFlags(kTestingGarbageCollectionPolicy, &launch_info);
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());

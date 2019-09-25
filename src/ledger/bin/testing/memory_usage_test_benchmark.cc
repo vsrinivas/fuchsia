@@ -8,12 +8,13 @@
 #include <stdlib.h>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 
-// An test application meant to be executed as a benchmark. It will complete
+// A test application meant to be executed as a benchmark. It will complete
 // successfully if LedgerMemoryEstimator successfully gets Ledger's memory
 // usage.
 
@@ -24,7 +25,8 @@ int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControll
   ledger::LedgerPtr benchmark_ledger;
   ledger::Status status = ledger::GetLedger(
       context, controller->NewRequest(), nullptr, "", "benchmark_ledger",
-      ledger::DetachedPath(root_fd), [] {}, &benchmark_ledger);
+      ledger::DetachedPath(root_fd), [] {}, &benchmark_ledger,
+      ledger::kTestingGarbageCollectionPolicy);
   if (status != ledger::Status::OK) {
     FXL_LOG(INFO) << "GetLedger failed with status " << fidl::ToUnderlying(status);
     return EXIT_FAILURE;

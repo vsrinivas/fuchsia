@@ -10,14 +10,16 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 #include <vector>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 #include "src/ledger/bin/testing/data_generator.h"
@@ -196,9 +198,8 @@ void BacklogBenchmark::ConnectWriter() {
 
   Status status = GetLedger(
       component_context_.get(), writer_controller_.NewRequest(), nullptr, "", "backlog",
-      DetachedPath(std::move(writer_path)),
-
-      []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_);
+      DetachedPath(std::move(writer_path)), []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_,
+      kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
     return;
   }
@@ -253,7 +254,8 @@ void BacklogBenchmark::ConnectUploader() {
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_uploader.NewRequest());
   Status status = GetLedger(component_context_.get(), uploader_controller_.NewRequest(),
                             std::move(cloud_provider_uploader), user_id_.user_id(), "backlog",
-                            DetachedPath(std::move(uploader_path)), QuitLoopClosure(), &uploader_);
+                            DetachedPath(std::move(uploader_path)), QuitLoopClosure(), &uploader_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
     return;
   }
@@ -292,7 +294,8 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_reader.NewRequest());
   Status status = GetLedger(component_context_.get(), reader_controller_.NewRequest(),
                             std::move(cloud_provider_reader), user_id_.user_id(), "backlog",
-                            DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
+                            DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
     return;
   }
@@ -320,8 +323,7 @@ void BacklogBenchmark::WaitForReaderDownload() {
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
-  reader_page_->GetSnapshot(reader_snapshot_.NewRequest(), {},
-                            nullptr);
+  reader_page_->GetSnapshot(reader_snapshot_.NewRequest(), {}, nullptr);
   TRACE_ASYNC_BEGIN("benchmark", "get_all_entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }
@@ -344,15 +346,13 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token, size_t entri
   TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
-        {}, std::move(token),
-        [this, entries_left](auto entries, auto next_token) mutable {
+        {}, std::move(token), [this, entries_left](auto entries, auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(entries_left - entries.size(), std::move(next_token));
         });
   } else {
     reader_snapshot_->GetEntriesInline(
-        {}, std::move(token),
-        [this, entries_left](auto entries, auto next_token) mutable {
+        {}, std::move(token), [this, entries_left](auto entries, auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(entries_left - entries.size(), std::move(next_token));
         });

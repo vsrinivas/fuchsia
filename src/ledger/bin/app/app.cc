@@ -12,14 +12,16 @@
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace-provider/provider.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
 
 #include <memory>
 #include <utility>
 
+#include <trace-provider/provider.h>
+
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -27,6 +29,7 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -43,6 +46,7 @@ constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 struct AppParams {
   bool disable_statistics = false;
   bool disable_p2p_sync = false;
+  storage::GarbageCollectionPolicy gc_policy = kDefaultGarbageCollectionPolicy;
   std::string firebase_api_key = "";
 };
 
@@ -107,6 +111,7 @@ class App : public ledger_internal::LedgerController {
                                           .SetAsync(loop_.dispatcher())
                                           .SetIOAsync(io_loop_.dispatcher())
                                           .SetStartupContext(component_context_.get())
+                                          .SetGcPolicy(app_params_.gc_policy)
                                           .Build());
     std::unique_ptr<p2p_sync::UserCommunicatorFactoryImpl> user_communicator_factory;
     if (!app_params_.disable_p2p_sync) {
@@ -161,6 +166,7 @@ int Main(int argc, const char** argv) {
   AppParams app_params;
   app_params.disable_statistics = command_line.HasOption(kNoStatisticsReportingFlag);
   app_params.disable_p2p_sync = command_line.HasOption(kNoPeerToPeerSync);
+  app_params.gc_policy = GarbageCollectionPolicyFromFlags(command_line);
   if (command_line.HasOption(kFirebaseApiKeyFlag)) {
     if (!command_line.GetOptionValue(kFirebaseApiKeyFlag, &app_params.firebase_api_key)) {
       FXL_LOG(ERROR) << "Unable to retrieve the firebase api key.";

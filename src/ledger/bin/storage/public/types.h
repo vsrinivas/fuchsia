@@ -222,11 +222,22 @@ enum class JournalContainsClearOperation { NO, YES };
 using Status = ledger::Status;
 
 enum class CommitPruningPolicy {
-  // Commits are never prunied.
+  // Commits are never pruned.
   NEVER,
   // Commits are pruned as soon as possible, based on the local state only. Do not use this policy
   // if the device is synchronizing with other devices.
   LOCAL_IMMEDIATE,
+};
+
+enum class GarbageCollectionPolicy {
+  // Local objects are never collected.
+  NEVER,
+  // Local objects are collected as soon as their in-memory reference count reaches zero.
+  // This triggers many disk reads to check on-disk references every time an object is dropped, and
+  // does not scan the database to collect unused objects.
+  // Do not use this policy if you care about performance; mostly useful to find garbage-collection
+  // bugs in tests.
+  EAGER_LIVE_REFERENCES,
 };
 
 // A clock entry, for a single device.

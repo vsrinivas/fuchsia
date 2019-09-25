@@ -8,6 +8,7 @@
 #include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 
 namespace ledger {
 
@@ -63,6 +64,7 @@ TestWithEnvironment::TestWithEnvironment()
                        .SetStartupContext(component_context_provider_.context())
                        .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
                        .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
+                       .SetGcPolicy(kTestingGarbageCollectionPolicy)
                        .Build()) {}
 
 ::testing::AssertionResult TestWithEnvironment::RunInCoroutine(

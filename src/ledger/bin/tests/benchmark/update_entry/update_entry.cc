@@ -9,13 +9,15 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -112,9 +114,9 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
 
 void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_ << " --transaction-size=" << transaction_size_;
-  Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-                "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
+                            "", "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
+                            &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

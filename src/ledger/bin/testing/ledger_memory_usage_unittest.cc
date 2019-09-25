@@ -13,6 +13,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 
 namespace ledger {
@@ -70,9 +71,10 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   // Start a first Ledger instance.
   LedgerPtr top_level_ledger;
   fit::function<void()> error_handler = [] { ADD_FAILURE(); };
-  Status status = GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
-                            "top_level_ledger", DetachedPath(tmp_dir.root_fd()),
-                            std::move(error_handler), &top_level_ledger);
+  Status status =
+      GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
+                "top_level_ledger", DetachedPath(tmp_dir.root_fd()), std::move(error_handler),
+                &top_level_ledger, kTestingGarbageCollectionPolicy);
   ASSERT_EQ(status, Status::OK);
 
   // The test benchmark will start another Ledger instance and try to get the

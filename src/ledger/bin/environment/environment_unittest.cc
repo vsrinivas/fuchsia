@@ -9,6 +9,7 @@
 #include <lib/timekeeper/test_clock.h>
 
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 namespace {
@@ -53,6 +54,17 @@ TEST_F(EnvironmentTest, InitializationRandom) {
                         .Build();
 
   EXPECT_EQ(env.random(), random_ptr);
+}
+
+TEST_F(EnvironmentTest, InitializationGcPolicy) {
+  Environment env = EnvironmentBuilder()
+                        .SetStartupContext(component_context_provider_.context())
+                        .SetAsync(dispatcher())
+                        .SetIOAsync(dispatcher())
+                        .SetGcPolicy(storage::GarbageCollectionPolicy::EAGER_LIVE_REFERENCES)
+                        .Build();
+
+  EXPECT_EQ(env.gc_policy(), storage::GarbageCollectionPolicy::EAGER_LIVE_REFERENCES);
 }
 
 }  // namespace

@@ -10,13 +10,15 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -161,7 +163,8 @@ void SyncBenchmark::Run() {
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_alpha.NewRequest());
   Status status = GetLedger(component_context_.get(), alpha_controller_.NewRequest(),
                             std::move(cloud_provider_alpha), user_id_.user_id(), "sync",
-                            DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
+                            DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
     return;
   };
@@ -169,9 +172,10 @@ void SyncBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_beta;
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_beta.NewRequest());
 
-  status = GetLedger(component_context_.get(), beta_controller_.NewRequest(),
-                     std::move(cloud_provider_beta), user_id_.user_id(), "sync",
-                     DetachedPath(beta_path), QuitLoopClosure(), &beta_);
+  status =
+      GetLedger(component_context_.get(), beta_controller_.NewRequest(),
+                std::move(cloud_provider_beta), user_id_.user_id(), "sync", DetachedPath(beta_path),
+                QuitLoopClosure(), &beta_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
     return;
   }
@@ -185,8 +189,7 @@ void SyncBenchmark::Run() {
         page_id_ = id;
         beta_->GetPage(fidl::MakeOptional(id), beta_page_.NewRequest());
         PageSnapshotPtr snapshot;
-        beta_page_->GetSnapshot(snapshot.NewRequest(), {},
-                                page_watcher_binding_.NewBinding());
+        beta_page_->GetSnapshot(snapshot.NewRequest(), {}, page_watcher_binding_.NewBinding());
         beta_page_->Sync([this] { RunSingleChange(0); });
       });
 }

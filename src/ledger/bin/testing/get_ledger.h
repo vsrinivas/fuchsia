@@ -17,6 +17,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 
@@ -31,6 +32,7 @@ Status GetLedger(sys::ComponentContext* context,
                  cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
                  std::string ledger_name, const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger,
+                 storage::GarbageCollectionPolicy gc_policy,
                  fit::function<void(fit::closure)>* close_repository = nullptr);
 
 // Kills the remote ledger process controlled by |controller|.

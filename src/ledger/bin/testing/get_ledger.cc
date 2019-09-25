@@ -18,8 +18,10 @@
 #include <utility>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 
@@ -44,6 +46,7 @@ Status GetLedger(sys::ComponentContext* context,
                  cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
                  std::string ledger_name, const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger,
+                 storage::GarbageCollectionPolicy gc_policy,
                  fit::function<void(fit::closure)>* close_repository) {
   fbl::unique_fd dir(
       openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
@@ -59,7 +62,9 @@ Status GetLedger(sys::ComponentContext* context,
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
-  launch_info.arguments.emplace({"--disable_reporting"});
+  AppendGarbageCollectionPolicyFlags(gc_policy, &launch_info);
+  launch_info.arguments->push_back("--disable_reporting");
+  launch_info.arguments->push_back("--verbose=" + std::to_string(fxl::GetVlogVerbosity()));
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), std::move(controller_request));

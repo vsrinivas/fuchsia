@@ -9,6 +9,7 @@
 
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/rng/system_random.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/lib/fxl/macros.h"
 
@@ -19,7 +20,8 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
                          sys::ComponentContext* component_context,
                          std::unique_ptr<coroutine::CoroutineService> coroutine_service,
                          BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
-                         std::unique_ptr<rng::Random> random)
+                         std::unique_ptr<rng::Random> random,
+                         storage::GarbageCollectionPolicy gc_policy)
     : disable_statistics_(disable_statistics),
       dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
@@ -28,7 +30,8 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
       clock_(std::move(clock)),
-      random_(std::move(random)) {
+      random_(std::move(random)),
+      gc_policy_(gc_policy) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(io_dispatcher_);
   FXL_DCHECK(component_context_);
@@ -50,6 +53,7 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   backoff_factory_ = std::move(other.backoff_factory_);
   clock_ = std::move(other.clock_);
   random_ = std::move(other.random_);
+  gc_policy_ = other.gc_policy_;
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(io_dispatcher_);
   FXL_DCHECK(component_context_);
@@ -117,6 +121,11 @@ EnvironmentBuilder& EnvironmentBuilder::SetRandom(std::unique_ptr<rng::Random> r
   return *this;
 }
 
+EnvironmentBuilder& EnvironmentBuilder::SetGcPolicy(storage::GarbageCollectionPolicy gc_policy) {
+  gc_policy_ = gc_policy;
+  return *this;
+}
+
 Environment EnvironmentBuilder::Build() {
   if (!coroutine_service_) {
     coroutine_service_ = std::make_unique<coroutine::CoroutineServiceImpl>();
@@ -134,7 +143,7 @@ Environment EnvironmentBuilder::Build() {
   }
   return Environment(disable_statistics_, dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
                      component_context_, std::move(coroutine_service_), std::move(backoff_factory_),
-                     std::move(clock_), std::move(random_));
+                     std::move(clock_), std::move(random_), gc_policy_);
 }
 
 }  // namespace ledger

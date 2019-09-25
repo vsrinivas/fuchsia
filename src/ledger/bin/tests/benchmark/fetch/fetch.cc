@@ -10,14 +10,16 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 #include <vector>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -157,7 +159,8 @@ void FetchBenchmark::Run() {
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_writer.NewRequest());
   Status status = GetLedger(component_context_.get(), writer_controller_.NewRequest(),
                             std::move(cloud_provider_writer), user_id_.user_id(), "fetch",
-                            DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_);
+                            DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
     return;
   }
@@ -213,7 +216,8 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_reader.NewRequest());
   Status status = GetLedger(component_context_.get(), reader_controller_.NewRequest(),
                             std::move(cloud_provider_reader), user_id_.user_id(), "fetch",
-                            DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
+                            DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
     return;
   }

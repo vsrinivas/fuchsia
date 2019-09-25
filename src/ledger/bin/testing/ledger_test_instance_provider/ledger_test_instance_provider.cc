@@ -15,6 +15,7 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace {
@@ -34,7 +35,11 @@ int main(int argc, char const *argv[]) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kLedgerBinaryPath;
   launch_info.directory_request = services.NewRequest();
-  launch_info.arguments.emplace({"--disable_reporting"});
+  launch_info.arguments->push_back("--disable_reporting");
+  // This instance exists to allow tests built outside of peridot (ie. clients of ledger) to get
+  // access to a Ledger instance backed by memfs. We want this instance to use the default garbage
+  // collection policy because we are testing the clients, not Ledger itself.
+  ledger::AppendGarbageCollectionPolicyFlags(ledger::kDefaultGarbageCollectionPolicy, &launch_info);
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());

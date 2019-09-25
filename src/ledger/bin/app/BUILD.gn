@@ -15,6 +15,7 @@ executable("app") {
 
   deps = [
     ":constants",
+    ":flags",
     ":lib",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/fsl",
@@ -180,6 +181,21 @@ source_set("constants") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("flags") {
+  sources = [
+    "flags.cc",
+    "flags.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/ledger/bin/storage/public",
+    "//src/lib/fxl",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
 source_set("serialization_version") {
   sources = [
     "serialization_version.h",
@@ -203,6 +219,7 @@ source_set("unittests") {
     "delaying_facade_unittest.cc",
     "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",
+    "flags_unittest.cc",
     "heads_children_manager_unittest.cc",
     "inspected_commit_unittest.cc",
     "ledger_manager_unittest.cc",
@@ -226,6 +243,7 @@ source_set("unittests") {
 
   deps = [
     ":constants",
+    ":flags",
     ":lib",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",

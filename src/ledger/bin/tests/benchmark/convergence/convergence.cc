@@ -9,15 +9,17 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 #include <set>
 #include <vector>
 
+#include <trace/event.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -153,10 +155,10 @@ void ConvergenceBenchmark::Run() {
     cloud_provider::CloudProviderPtr cloud_provider;
     cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider.NewRequest());
 
-    Status status =
-        GetLedger(component_context_.get(), device_context->controller.NewRequest(),
-                  std::move(cloud_provider), user_id_.user_id(), "convergence",
-                  DetachedPath(synced_dir_path), QuitLoopClosure(), &device_context->ledger);
+    Status status = GetLedger(component_context_.get(), device_context->controller.NewRequest(),
+                              std::move(cloud_provider), user_id_.user_id(), "convergence",
+                              DetachedPath(synced_dir_path), QuitLoopClosure(),
+                              &device_context->ledger, kDefaultGarbageCollectionPolicy);
     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
       return;
     }
@@ -164,8 +166,7 @@ void ConvergenceBenchmark::Run() {
                                     device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
-    device_context->page_connection->GetSnapshot(snapshot.NewRequest(),
-                                                 {},
+    device_context->page_connection->GetSnapshot(snapshot.NewRequest(), {},
                                                  device_context->page_watcher->NewBinding());
     device_context->page_connection->Sync(waiter->NewCallback());
   }
