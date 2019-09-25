@@ -48,6 +48,14 @@ if (current_toolchain == default_toolchain) {
       # Clang needs -mcmodel=kernel to tell it to use the right safe-stack
       # ABI for the kernel.
       cflags = [ "-mcmodel=kernel" ]
+
+      # TODO(34451): We have runtime support in the kernel for safe-stack
+      # but not shadow-call-stack.  The compiler's default might be one or
+      # the other, since userland supports both.
+      cflags += [
+        "-fsanitize=safe-stack",
+        "-fno-sanitize=shadow-call-stack",
+      ]
     }
 
     defines = [
