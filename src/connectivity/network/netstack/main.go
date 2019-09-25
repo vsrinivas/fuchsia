@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -232,8 +233,13 @@ func Main() {
 
 	go pprofListen()
 
-	for i := 1; i < runtime.NumCPU(); i++ {
-		go fidl.Serve()
+	var wg sync.WaitGroup
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go func() {
+			fidl.Serve()
+			wg.Done()
+		}()
 	}
-	fidl.Serve()
+	wg.Wait()
 }
