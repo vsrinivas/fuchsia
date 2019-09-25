@@ -392,7 +392,8 @@ template("zbi") {
           path = rebase_path(output_file, root_build_dir)
           type = "zbi"
           cpu = cpu
-          compressed = !defined(invoker.compress) || invoker.compress
+          compressed = !defined(invoker.compress) ||
+                       (invoker.compress != false && invoker.compress != "none")
           if (defined(testonly) && testonly) {
             testonly = true
           }
