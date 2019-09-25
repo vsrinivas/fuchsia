@@ -10,7 +10,6 @@ group("misc") {
     "goldfish-address-space",
     "goldfish-control",
     "ktrace",
-    "pty",
     "sysinfo",
     "test",
   ]
