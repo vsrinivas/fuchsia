@@ -20,12 +20,12 @@ group("all") {
     "//peridot/packages/prod:all",
     "//peridot/packages/prod:ledger",
     "//peridot/packages/prod:modular",
-    "//peridot/packages/testing:all",
     "//peridot/packages/tests:all",
     "//peridot/tests/benchmarks:fuchsia_benchmarks",
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/ledger/cloud_provider_in_memory/bin",
     "//src/ledger/cloud_provider_memory_diff",
+    "//src/modular/bin/modular_test_harness",
     "//src/modular/bin/voila",
   ]
 }
