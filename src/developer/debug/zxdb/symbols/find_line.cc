@@ -5,7 +5,9 @@
 #include "src/developer/debug/zxdb/symbols/find_line.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/line_table.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -130,6 +132,65 @@ std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches)
   for (const auto& [die, match_index] : die_to_match_index)
     result.push_back(matches[match_index]);
   return result;
+}
+
+size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* function) {
+  const AddressRanges& code_ranges = function->code_ranges();
+  if (code_ranges.empty())
+    return 0;
+  uint64_t code_range_begin = code_ranges.front().begin();
+
+  // The function and line table are all defined in terms of relative addresses.
+  SymbolContext rel_context = SymbolContext::ForRelativeAddresses();
+
+  std::optional<size_t> found_first_row =
+      line_table.GetFirstRowIndexForAddress(rel_context, code_range_begin);
+  if (!found_first_row)
+    return 0;
+  size_t first_row = *found_first_row;
+
+  const auto& rows = line_table.GetRows();
+  FXL_DCHECK(!rows.empty());  // Shound't have an empty table if we found the row above.
+
+  // Give up after this many line table entries. If prologue_end isn't found by then, assume there's
+  // no specifically marked prologue. Normally it will be the 2nd entry.
+  constexpr size_t kMaxSearchCount = 4;
+
+  // Search for a line in the function with |prologue_end| explicitly marked.
+  size_t prologue_end_index = first_row;
+  bool found_marked_end = false;
+  for (size_t i = 0; i < kMaxSearchCount && first_row + i < rows.size(); i++) {
+    if (!code_ranges.InRange(rows[first_row + i].Address))
+      break;  // Outside the function.
+
+    if (rows[first_row + i].PrologueEnd) {
+      // Found match.
+      prologue_end_index = first_row + i;
+      found_marked_end = true;
+      break;
+    }
+  }
+
+  if (!found_marked_end) {
+    // GCC doesn't seem to generate prologue_end annotations in many cases. There, the first line
+    // table entry row is interpreted as the prologue so the end is the following one.
+    if (prologue_end_index < rows.size() - 1)
+      prologue_end_index++;
+  }
+
+  // There can be compiler-generated code immediately following the prologue annotated by "line 0".
+  // Count this as prologue also.
+  while (prologue_end_index < rows.size() && rows[prologue_end_index].Line == 0)
+    prologue_end_index++;
+
+  // Sanity check: None of those previous operations should have left us outside of the function's
+  // code or outside of a known instruction (there's an end_sequence marker). If it did, this line
+  // table looks different than we expect and we don't report a prologue.
+  if (!code_ranges.InRange(rows[prologue_end_index].Address) ||
+      rows[prologue_end_index].EndSequence)
+    return 0;
+
+  return rows[prologue_end_index].Address - code_range_begin;
 }
 
 }  // namespace zxdb

@@ -16,6 +16,7 @@ class DWARFUnit;
 
 namespace zxdb {
 
+class Function;
 class LineTable;
 class Location;
 struct ResolveOptions;
@@ -59,6 +60,18 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
 // multiple line table entries (sometimes disjoint, sometimes not), and when
 // asking for a line we want the one with the lowest address.
 std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches);
+
+// Computes the size in bytes of the given function's prologue. The line table corresponding to
+// that address should be passed.
+//
+// A function prologue is the boilerplate at the beginning that sets up the stack frame. Generally
+// one will want to skip over this automatically because the local variables and function parameters
+// won't be readable from inside the prologue. On ARM since a call sets the link register rather
+// than modifying the stack, the stack pointer won't always be consistent either.
+//
+// The size is measured from the function's code_ranges().begin(). If a prologue is not found, this
+// returns 0.
+size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* function);
 
 }  // namespace zxdb
 

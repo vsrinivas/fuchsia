@@ -29,6 +29,13 @@ llvm::DWARFDie MockLineTable::GetSubroutineForRow(const llvm::DWARFDebugLine::Ro
 
 // static
 LineTable::Row MockLineTable::MakeStatementRow(uint64_t address, uint16_t file, uint32_t line) {
+  llvm::DWARFDebugLine::Row result = MakeNonStatementRow(address, file, line);
+  result.IsStmt = 1;
+  return result;
+}
+
+// static
+LineTable::Row MockLineTable::MakeNonStatementRow(uint64_t address, uint16_t file, uint32_t line) {
   llvm::DWARFDebugLine::Row result;
   result.Address = address;
   result.Line = line;
@@ -36,12 +43,26 @@ LineTable::Row MockLineTable::MakeStatementRow(uint64_t address, uint16_t file, 
   result.File = file;
   result.Discriminator = 0;
   result.Isa = 0;
-  result.IsStmt = 1;
+  result.IsStmt = 0;
   result.BasicBlock = 0;
   result.EndSequence = 0;
   result.PrologueEnd = 0;
   result.EpilogueBegin = 0;
 
+  return result;
+}
+
+// static
+LineTable::Row MockLineTable::MakePrologueEndRow(uint64_t address, uint16_t file, uint32_t line) {
+  llvm::DWARFDebugLine::Row result = MakeStatementRow(address, file, line);
+  result.PrologueEnd = 1;
+  return result;
+}
+
+// static
+LineTable::Row MockLineTable::MakeEndSequenceRow(uint64_t address, uint16_t file, uint32_t line) {
+  llvm::DWARFDebugLine::Row result = MakeStatementRow(address, file, line);
+  result.EndSequence = 1;
   return result;
 }
 

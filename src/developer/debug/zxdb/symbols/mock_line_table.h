@@ -29,8 +29,14 @@ class MockLineTable : public LineTable {
   //
   // Note that the |file| is a 1-based number (subtract 1 to index into file_names_).
   //
-  // All flags will be set to 0 except is_statement which will be true.
+  // All flags will be set to 0 except:
+  //   - is_statement by MakeStatementRow(), MakePrologueEndRow() and MakeEndSequenceRow().
+  //   - prologue_end by MakePrologueEndRow().
+  //   - end_sequence by MakeEndSequenceRow().
   static Row MakeStatementRow(uint64_t address, uint16_t file, uint32_t line);
+  static Row MakeNonStatementRow(uint64_t address, uint16_t file, uint32_t line);
+  static Row MakePrologueEndRow(uint64_t address, uint16_t file, uint32_t line);
+  static Row MakeEndSequenceRow(uint64_t address, uint16_t file, uint32_t line);
 
  private:
   FileNameVector file_names_;
