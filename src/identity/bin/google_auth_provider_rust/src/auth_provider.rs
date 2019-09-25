@@ -186,10 +186,15 @@ where
     async fn get_app_id_token(
         &self,
         credential: String,
-        audience: Option<String>,
+        mut audience: Option<String>,
     ) -> AuthProviderResult<AuthToken> {
-        // TODO(satsukiu): add a sanity check to disallow empty audience strings
-        // once callers stop passing empty string
+        // TODO(fxb/37188): This allows clients to pass Some(empty string) instead
+        // of None to use the default client.  Once existing clients that do this
+        // are changed, this should be explicitly disallowed by a sanity check.
+        if audience.as_ref().map(String::is_empty) == Some(true) {
+            audience.take();
+        }
+
         if credential.is_empty() {
             return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
         }
@@ -838,6 +843,23 @@ mod tests {
                 expires_in: 3600,
             })
         );
+
+        // Accept empty string audience as if it is default audience.  See fxb/37188
+        let http_result = "{\"id_token\": \"test-id-token\", \"expires_in\": 3600}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let (status, result_token) = auth_provider.get_app_id_token("cred", Some("")).await?;
+
+        assert_eq!(status, AuthProviderStatus::Ok);
+        assert_eq!(
+            result_token.unwrap(),
+            Box::new(AuthToken {
+                token_type: TokenType::IdToken,
+                token: "test-id-token".to_string(),
+                expires_in: 3600,
+            })
+        );
+
         Ok(())
     }
 
