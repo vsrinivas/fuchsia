@@ -33,7 +33,7 @@ copy("fidldoc_copy_config") {
     "src/fidldoc.config.json",
   ]
   outputs = [
-    "${root_out_dir}/fidldoc.config.json",
+    "${root_build_dir}/tools/fidldoc.config.json",
   ]
 }
 
