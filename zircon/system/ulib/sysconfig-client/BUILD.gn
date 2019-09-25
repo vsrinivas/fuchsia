@@ -18,7 +18,7 @@ group("sysconfig-client") {
 
 library("sysconfig-sync-client") {
   sdk = "source"
-  sdk_headers = ["include/lib/sysconfig/sync-client.h"]
+  sdk_headers = [ "include/lib/sysconfig/sync-client.h" ]
 
   sources = [
     "sync-client.cc",
@@ -40,8 +40,9 @@ library("sysconfig-sync-client") {
 }
 
 library("sysconfig-sync-client-c") {
-  sdk = "source"
-  sdk_headers = ["include/lib/sysconfig/sync-client-c.h"]
+  shared = true
+  sdk = "shared"
+  sdk_headers = [ "include/lib/sysconfig/sync-client-c.h" ]
 
   sources = [
     "sync-client-c.cc",
@@ -51,6 +52,11 @@ library("sysconfig-sync-client-c") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+
+  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
+  # have default visibility.
+  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 test("sysconfig-sync-client-test") {
@@ -67,4 +73,3 @@ test("sysconfig-sync-client-test") {
     "$zx/system/ulib/zxtest",
   ]
 }
-

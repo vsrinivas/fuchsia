@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/sysconfig_client_lib_test"
+    }
+}
