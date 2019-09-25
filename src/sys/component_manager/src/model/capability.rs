@@ -2,10 +2,12 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeLegacyServiceDecl, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
-        OfferTarget, StorageDecl, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
+        ExposeLegacyServiceDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
+        OfferLegacyServiceDecl, OfferServiceDecl, OfferTarget, StorageDecl, UseDecl,
+        UseDirectoryDecl, UseLegacyServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
+    std::collections::HashSet,
 };
 
 /// A capability being routed, which is represented by one of `use`, `offer`, or `expose`,
@@ -74,6 +76,29 @@ impl RoutedCapability {
             }
             _ => false,
         })
+    }
+
+    /// Returns the set of `ExposeServiceDecl`s that expose the service capability, if they exist.
+    pub fn find_expose_service_sources<'a>(
+        &self,
+        decl: &'a ComponentDecl,
+    ) -> Vec<&'a ExposeServiceDecl> {
+        let paths: HashSet<_> = match self {
+            RoutedCapability::Offer(OfferDecl::Service(parent_offer)) => {
+                parent_offer.sources.iter().map(|s| &s.source_path).collect()
+            }
+            RoutedCapability::Expose(ExposeDecl::Service(parent_expose)) => {
+                parent_expose.sources.iter().map(|s| &s.source_path).collect()
+            }
+            _ => panic!("Expected an offer or expose of a service capability, found: {:?}", self),
+        };
+        decl.exposes
+            .iter()
+            .filter_map(|expose| match expose {
+                ExposeDecl::Service(expose) if paths.contains(&expose.target_path) => Some(expose),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Returns the `OfferDecl` that offers the capability in `child_offer` to `child_name`, if it
@@ -152,6 +177,59 @@ impl RoutedCapability {
         })
     }
 
+    /// Returns the set of `OfferServiceDecl`s that offer the service capability, if they exist.
+    pub fn find_offer_service_sources<'a>(
+        &self,
+        decl: &'a ComponentDecl,
+        child_moniker: &ChildMoniker,
+    ) -> Vec<&'a OfferServiceDecl> {
+        let paths: HashSet<_> = match self {
+            RoutedCapability::Use(UseDecl::Service(child_use)) => {
+                vec![&child_use.source_path].into_iter().collect()
+            }
+            RoutedCapability::Offer(OfferDecl::Service(child_offer)) => {
+                child_offer.sources.iter().map(|s| &s.source_path).collect()
+            }
+            _ => panic!("Expected a use or offer of a service capability, found: {:?}", self),
+        };
+        decl.offers
+            .iter()
+            .filter_map(|offer| match offer {
+                OfferDecl::Service(offer)
+                    if Self::is_offer_service_match(
+                        child_moniker,
+                        &paths,
+                        &offer.target,
+                        &offer.target_path,
+                    ) =>
+                {
+                    Some(offer)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn is_offer_service_match(
+        child_moniker: &ChildMoniker,
+        paths: &HashSet<&CapabilityPath>,
+        target: &OfferTarget,
+        target_path: &CapabilityPath,
+    ) -> bool {
+        match target {
+            OfferTarget::Child(target_child_name) => match child_moniker.collection() {
+                Some(_) => false,
+                None => target_child_name == child_moniker.name() && paths.contains(target_path),
+            },
+            OfferTarget::Collection(target_collection_name) => match child_moniker.collection() {
+                Some(collection) => {
+                    target_collection_name == collection && paths.contains(target_path)
+                }
+                None => false,
+            },
+        }
+    }
+
     fn is_offer_legacy_service_or_directory_match(
         child_moniker: &ChildMoniker,
         path: &CapabilityPath,
@@ -186,5 +264,201 @@ impl RoutedCapability {
                 target_collection_name == collection,
             _ => false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        cm_rust::{
+            ExposeSource, ExposeTarget, OfferServiceSource, ServiceSource, StorageDirectorySource,
+        },
+    };
+
+    #[test]
+    fn find_expose_service_sources() {
+        let capability = RoutedCapability::Expose(ExposeDecl::Service(ExposeServiceDecl {
+            sources: vec![
+                ServiceSource {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "net".to_string(),
+                    },
+                },
+                ServiceSource {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "log".to_string(),
+                    },
+                },
+                ServiceSource {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "unmatched-source".to_string(),
+                    },
+                },
+            ],
+            target: ExposeTarget::Realm,
+            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+        }));
+        let net_service = ExposeServiceDecl {
+            sources: vec![],
+            target: ExposeTarget::Realm,
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "net".to_string(),
+            },
+        };
+        let log_service = ExposeServiceDecl {
+            sources: vec![],
+            target: ExposeTarget::Realm,
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "log".to_string(),
+            },
+        };
+        let unmatched_service = ExposeServiceDecl {
+            sources: vec![],
+            target: ExposeTarget::Realm,
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "unmatched-target".to_string(),
+            },
+        };
+        let decl = ComponentDecl {
+            program: None,
+            uses: vec![],
+            exposes: vec![
+                ExposeDecl::Service(net_service.clone()),
+                ExposeDecl::Service(log_service.clone()),
+                ExposeDecl::Service(unmatched_service.clone()),
+            ],
+            offers: vec![],
+            children: vec![],
+            collections: vec![],
+            storage: vec![],
+            facets: None,
+        };
+        let sources = capability.find_expose_service_sources(&decl);
+        assert_eq!(sources, vec![&net_service, &log_service])
+    }
+
+    #[test]
+    #[should_panic]
+    fn find_expose_service_sources_with_unexpected_capability() {
+        let capability = RoutedCapability::Storage(StorageDecl {
+            name: "".to_string(),
+            source: StorageDirectorySource::Realm,
+            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+        });
+        let decl = ComponentDecl {
+            program: None,
+            uses: vec![],
+            exposes: vec![],
+            offers: vec![],
+            children: vec![],
+            collections: vec![],
+            storage: vec![],
+            facets: None,
+        };
+        capability.find_expose_service_sources(&decl);
+    }
+
+    #[test]
+    fn find_offer_service_sources() {
+        let capability = RoutedCapability::Offer(OfferDecl::Service(OfferServiceDecl {
+            sources: vec![
+                ServiceSource {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "net".to_string(),
+                    },
+                },
+                ServiceSource {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "log".to_string(),
+                    },
+                },
+                ServiceSource {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "unmatched-source".to_string(),
+                    },
+                },
+            ],
+            target: OfferTarget::Child("".to_string()),
+            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+        }));
+        let net_service = OfferServiceDecl {
+            sources: vec![],
+            target: OfferTarget::Child("child".to_string()),
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "net".to_string(),
+            },
+        };
+        let log_service = OfferServiceDecl {
+            sources: vec![],
+            target: OfferTarget::Child("child".to_string()),
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "log".to_string(),
+            },
+        };
+        let unmatched_service = OfferServiceDecl {
+            sources: vec![],
+            target: OfferTarget::Child("child".to_string()),
+            target_path: CapabilityPath {
+                dirname: "/svc".to_string(),
+                basename: "unmatched-target".to_string(),
+            },
+        };
+        let decl = ComponentDecl {
+            program: None,
+            uses: vec![],
+            exposes: vec![],
+            offers: vec![
+                OfferDecl::Service(net_service.clone()),
+                OfferDecl::Service(log_service.clone()),
+                OfferDecl::Service(unmatched_service.clone()),
+            ],
+            children: vec![],
+            collections: vec![],
+            storage: vec![],
+            facets: None,
+        };
+        let moniker = ChildMoniker::new("child".to_string(), None, 0);
+        let sources = capability.find_offer_service_sources(&decl, &moniker);
+        assert_eq!(sources, vec![&net_service, &log_service])
+    }
+
+    #[test]
+    #[should_panic]
+    fn find_offer_service_sources_with_unexpected_capability() {
+        let capability = RoutedCapability::Storage(StorageDecl {
+            name: "".to_string(),
+            source: StorageDirectorySource::Realm,
+            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+        });
+        let decl = ComponentDecl {
+            program: None,
+            uses: vec![],
+            exposes: vec![],
+            offers: vec![],
+            children: vec![],
+            collections: vec![],
+            storage: vec![],
+            facets: None,
+        };
+        let moniker = ChildMoniker::new("".to_string(), None, 0);
+        capability.find_offer_service_sources(&decl, &moniker);
     }
 }
