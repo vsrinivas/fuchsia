@@ -55,8 +55,6 @@ DockyardHost::DockyardHost() : is_connected_(false) {
   dockyard_.SetDockyardPathsHandler(std::bind(&DockyardHost::OnPaths, this,
                                               std::placeholders::_1,
                                               std::placeholders::_2));
-  dockyard_.SetStreamSetsHandler(
-      std::bind(&DockyardHost::OnStreamSets, this, std::placeholders::_1));
 }
 
 void DockyardHost::StartCollectingFrom(const std::string& device_name) {
@@ -64,7 +62,7 @@ void DockyardHost::StartCollectingFrom(const std::string& device_name) {
   request.SetDeviceName(device_name);
   bool started = dockyard_.StartCollectingFrom(
       std::move(request),
-      [this, device_name](const dockyard::ConnectionRequest& request,
+      [this, device_name](const dockyard::ConnectionRequest& /*request*/,
                           const dockyard::ConnectionResponse& response) {
         if (!response.Ok()) {
           GT_LOG(FATAL) << "StartCollectingFrom failed";
@@ -98,7 +96,11 @@ DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
   query->request.dockyard_ids.insert(query->request.dockyard_ids.begin(),
                                      path_ids.begin(), path_ids.end());
   // Issue the request for the data.
-  dockyard_.GetStreamSets(&iter.first->second->request);
+  dockyard_.GetStreamSets(std::move(iter.first->second->request),
+                          [this](const dockyard::StreamSetsRequest& request,
+                                 const dockyard::StreamSetsResponse& response) {
+                            OnStreamSets(response);
+                          });
 
   return std::optional<std::future<std::unique_ptr<AsyncQuery>>>{
       iter.first->second->promise.get_future()};

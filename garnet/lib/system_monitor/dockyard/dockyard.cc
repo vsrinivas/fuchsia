@@ -199,8 +199,7 @@ Dockyard::Dockyard()
     : device_time_delta_ns_(0ULL),
       latest_sample_time_ns_(0ULL),
       on_connection_handler_(nullptr),
-      on_paths_handler_(nullptr),
-      on_stream_sets_handler_(nullptr) {}
+      on_paths_handler_(nullptr) {}
 
 Dockyard::~Dockyard() { StopCollectingFromDevice(); }
 
@@ -274,9 +273,10 @@ void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
   sample_stream_low_high_[dockyard_id] = std::make_pair(lowest, highest);
 }
 
-void Dockyard::DiscardSamples(DiscardSamplesRequest* request) {
+void Dockyard::DiscardSamples(DiscardSamplesRequest&& request,
+                              OnDiscardSamplesCallback callback) {
   std::lock_guard<std::mutex> guard(mutex_);
-  pending_discard_requests_.emplace_back(request);
+  pending_discard_requests_owned_.emplace_back(request, std::move(callback));
 }
 
 DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
@@ -352,8 +352,8 @@ void Dockyard::ResetHarvesterData() {
   latest_sample_time_ns_ = 0;
 
   // Maybe send error responses.
-  pending_get_requests_.clear();
-  pending_discard_requests_.clear();
+  pending_get_requests_owned_.clear();
+  pending_discard_requests_owned_.clear();
 
   ignore_streams_.clear();
   ignore_dockyard_ids_.clear();
@@ -372,12 +372,13 @@ void Dockyard::ResetHarvesterData() {
   }
 }
 
-void Dockyard::GetStreamSets(StreamSetsRequest* request) {
+void Dockyard::GetStreamSets(StreamSetsRequest&& request,
+                             OnStreamSetsCallback callback) {
   std::lock_guard<std::mutex> guard(mutex_);
-  pending_get_requests_.push_back(request);
+  pending_get_requests_owned_.emplace_back(request, std::move(callback));
 }
 
-void Dockyard::IgnoreSamples(const IgnoreSamplesRequest& request,
+void Dockyard::IgnoreSamples(IgnoreSamplesRequest&& request,
                              IgnoreSamplesCallback callback) {
   std::lock_guard<std::mutex> guard(mutex_);
   pending_ignore_samples_owned_.emplace_back(request, std::move(callback));
@@ -471,20 +472,6 @@ OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
   assert(!server_thread_.joinable());
   auto old_handler = on_paths_handler_;
   on_paths_handler_ = callback;
-  return old_handler;
-}
-
-OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
-    OnStreamSetsCallback callback) {
-  auto old_handler = on_stream_sets_handler_;
-  on_stream_sets_handler_ = callback;
-  return old_handler;
-}
-
-OnDiscardSamplesCallback Dockyard::SetDiscardSamplesHandler(
-    OnDiscardSamplesCallback callback) {
-  auto old_handler = on_discard_samples_handler_;
-  on_discard_samples_handler_ = callback;
   return old_handler;
 }
 
@@ -913,35 +900,31 @@ void Dockyard::ComputeLowestHighestForRequest(
 }
 
 void Dockyard::ProcessRequests() {
-  if (on_stream_sets_handler_ != nullptr) {
+  {
     StreamSetsResponse response;
-    for (const auto& request : pending_get_requests_) {
-      ProcessSingleRequest(*request, &response);
-      on_stream_sets_handler_(response);
+    for (const auto& [request, callback] : pending_get_requests_owned_) {
+      ProcessSingleRequest(request, &response);
+      callback(request, response);
     }
-  } else {
-    GT_LOG(ERROR) << "Please register a stream sets handler!";
+    pending_get_requests_owned_.clear();
   }
-  pending_get_requests_.clear();
 
   {
     IgnoreSamplesResponse response;
-    for (const auto& request : pending_ignore_samples_owned_) {
-      ProcessIgnoreSamples(request.first, &response);
-      request.second(response);
+    for (const auto& [request, callback] : pending_ignore_samples_owned_) {
+      ProcessIgnoreSamples(request, &response);
+      callback(request, response);
     }
     pending_ignore_samples_owned_.clear();
   }
 
   {
     DiscardSamplesResponse response;
-    for (const auto& request : pending_discard_requests_) {
-      ProcessDiscardSamples(*request, &response);
-      if (on_discard_samples_handler_) {
-        on_discard_samples_handler_(response);
-      }
+    for (const auto& [request, callback] : pending_discard_requests_owned_) {
+      ProcessDiscardSamples(request, &response);
+      callback(request, response);
     }
-    pending_discard_requests_.clear();
+    pending_discard_requests_owned_.clear();
   }
 }
 

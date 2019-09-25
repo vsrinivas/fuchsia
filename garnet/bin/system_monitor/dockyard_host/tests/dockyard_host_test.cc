@@ -8,7 +8,7 @@
 
 class SystemMonitorDockyardHostTest : public ::testing::Test {
  public:
-  void SetUp() {}
+  void SetUp() override {}
 
   dockyard::OnConnectionCallback GetConnectionHandler() const {
     return dockyard_host.dockyard_.on_connection_handler_;
@@ -18,10 +18,6 @@ class SystemMonitorDockyardHostTest : public ::testing::Test {
     return dockyard_host.dockyard_.on_paths_handler_;
   }
 
-  dockyard::OnStreamSetsCallback GetStreamSetsHandler() const {
-    return dockyard_host.dockyard_.on_stream_sets_handler_;
-  }
-
   DockyardHost dockyard_host;
 };
 
@@ -29,7 +25,6 @@ namespace {
 
 TEST_F(SystemMonitorDockyardHostTest, ProcessRequests) {
   EXPECT_TRUE(GetPathsHandler());
-  EXPECT_TRUE(GetStreamSetsHandler());
   dockyard_host.StartCollectingFrom("apple.banana.carrot.dog");
   dockyard_host.Dockyard().ProcessRequests();
   // TODO(57): Add checks to see that requests were processed.

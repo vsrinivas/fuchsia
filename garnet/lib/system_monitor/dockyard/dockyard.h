@@ -197,14 +197,6 @@ struct ConnectionResponse : public MessageResponse {
 // To delete/remove samples from a sample stream, create a DiscardSamplesRequest
 // for the desired time range (by default it will remove all samples for the
 // stream) and pass the struct to Dockyard::DiscardSamples().
-//
-// Do not delete or reuse the DiscardSamplesRequest until a corresponding
-// callback is made to your previously set OnDiscardSamplesCallback handler is
-// called.
-//
-// Note: Set an |OnDiscardSamplesCallback| with |SetDiscardSamplesHandler()|
-//       before using the request to be sure of getting the message that the
-//       request is complete.
 struct DiscardSamplesRequest : public MessageRequest {
   DiscardSamplesRequest()
       : MessageRequest(MessageType::kDiscardSamplesRequest) {}
@@ -387,7 +379,8 @@ using DockyardPathToIdMap = std::map<std::string, DockyardId>;
 
 // Called when a request to ignore samples is complete.
 using IgnoreSamplesCallback =
-    std::function<void(const IgnoreSamplesResponse& message)>;
+    std::function<void(const IgnoreSamplesRequest& request,
+                       const IgnoreSamplesResponse& response)>;
 
 // Called when a connection is made between the Dockyard and Harvester on a
 // Fuchsia device.
@@ -406,14 +399,13 @@ using OnPathsCallback = std::function<void(
 
 // Called after (and in response to) a request is sent to |GetStreamSets()|.
 // Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
-using OnStreamSetsCallback =
-    std::function<void(const StreamSetsResponse& response)>;
+using OnStreamSetsCallback = std::function<void(
+    const StreamSetsRequest& request, const StreamSetsResponse& response)>;
 
 // Called after (and in response to) a request is sent to |DiscardSamples()|.
-// Use SetDiscardSamplesHandler() to install a OnDiscardSamplesCallback
-// callback.
 using OnDiscardSamplesCallback =
-    std::function<void(const DiscardSamplesResponse& response)>;
+    std::function<void(const DiscardSamplesRequest& request,
+                       const DiscardSamplesResponse& response)>;
 
 class Dockyard {
  public:
@@ -450,9 +442,8 @@ class Dockyard {
 
   // Discard the stream data. The path/ID lookup will remain intact after the
   // discard (i.e. MatchPaths() will still find the paths).
-  //
-  // Do not free or reuse |request| until response callback is called.
-  void DiscardSamples(DiscardSamplesRequest* request);
+  void DiscardSamples(DiscardSamplesRequest&& request,
+                      OnDiscardSamplesCallback callback);
 
   // Set the difference in clocks between the host machine and the Fuchsia
   // device, in nanoseconds.
@@ -491,17 +482,13 @@ class Dockyard {
   // samples for that time range, virtual samples will be generated based on
   // available samples.
   //
-  // The results will be supplied in a call to the |callback| previously set
-  // with SetStreamSetsHandler(). The |response| parameter on that callback will
-  // have the same context ID that is returned from this call to
-  // GetStreamSets() (i.e. that's how to match a response to a request).
-  //
-  // Do not free or reuse |request| until response callback is called.
-  void GetStreamSets(StreamSetsRequest* request);
+  // The results will be supplied in a call to the |callback|.
+  void GetStreamSets(StreamSetsRequest&& request,
+                     OnStreamSetsCallback callback);
 
   // Ignore subsequent samples per |request|. Note that existing (prior) samples
   // are not removed/discarded. To remove samples see: DiscardSamples().
-  void IgnoreSamples(const IgnoreSamplesRequest& request,
+  void IgnoreSamples(IgnoreSamplesRequest&& request,
                      IgnoreSamplesCallback callback);
 
   // Called by server when a connection is made.
@@ -525,23 +512,6 @@ class Dockyard {
   //
   // Returns prior callback or nullptr.
   OnPathsCallback SetDockyardPathsHandler(OnPathsCallback callback);
-
-  // Sets the function called when sample stream data arrives in response to a
-  // call to GetStreamSets(). So, first set a handler with
-  // SetStreamSetsHandler(), then make as many GetStreamSets() calls as
-  // desired. Pass nullptr as |callback| to stop receiving calls.
-  //
-  // Returns prior callback or nullptr.
-  OnStreamSetsCallback SetStreamSetsHandler(OnStreamSetsCallback callback);
-
-  // Sets the function called when sample stream data arrives in response to a
-  // call to DiscardSamples(). So, first set a handler with
-  // SetDiscardSamplesHandler(), then make as many DiscardSamples() calls as
-  // desired. Pass nullptr as |callback| to stop receiving calls.
-  //
-  // Returns prior callback or nullptr.
-  OnDiscardSamplesCallback SetDiscardSamplesHandler(
-      OnDiscardSamplesCallback callback);
 
   // Generate responses and call handlers for sample requests. Not intended for
   // use by the GUI.
@@ -578,12 +548,11 @@ class Dockyard {
   ConnectionRequest on_connection_request_;
   OnConnectionCallback on_connection_handler_;
   OnPathsCallback on_paths_handler_;
-  OnStreamSetsCallback on_stream_sets_handler_;
-  OnDiscardSamplesCallback on_discard_samples_handler_;
 
-  std::vector<StreamSetsRequest*> pending_get_requests_;
-  std::vector<DiscardSamplesRequest*> pending_discard_requests_;
-
+  std::vector<std::pair<DiscardSamplesRequest, OnDiscardSamplesCallback>>
+      pending_discard_requests_owned_;
+  std::vector<std::pair<StreamSetsRequest, OnStreamSetsCallback>>
+      pending_get_requests_owned_;
   std::vector<std::pair<IgnoreSamplesRequest, IgnoreSamplesCallback>>
       pending_ignore_samples_owned_;
 

@@ -16,19 +16,9 @@ class SystemMonitorDockyardTest : public ::testing::Test {
  public:
   void SetUp() {
     // Initialize to distinct values for testing.
-    name_call_count_ = 0;
-    sets_call_count_ = 0;
-    discard_call_count_ = 0;
     EXPECT_EQ(nullptr, dockyard_.SetDockyardPathsHandler(std::bind(
                            &SystemMonitorDockyardTest::TestPathsCallback, this,
                            std::placeholders::_1, std::placeholders::_2)));
-    EXPECT_EQ(nullptr, dockyard_.SetStreamSetsHandler(std::bind(
-                           &SystemMonitorDockyardTest::TestStreamSetsCallback,
-                           this, std::placeholders::_1)));
-    EXPECT_EQ(nullptr,
-              dockyard_.SetDiscardSamplesHandler(std::bind(
-                  &SystemMonitorDockyardTest::TestDiscardSamplesCallback, this,
-                  std::placeholders::_1)));
     // Add some samples.
     dockyard_.AddSamples(dockyard_.GetDockyardId("cpu0"),
                          {{10ULL, 8ULL}, {200ULL, 10ULL}, {300ULL, 20ULL}});
@@ -73,44 +63,18 @@ class SystemMonitorDockyardTest : public ::testing::Test {
     return !!dockyard_.grpc_server_ && dockyard_.server_thread_.joinable();
   }
 
+  // TODO(fxb/37317): add further tests for paths.
   void TestPathsCallback(const std::vector<PathInfo>& add,
-                         const std::vector<uint32_t>& remove) {
-    ++name_call_count_;
-  }
+                         const std::vector<uint32_t>& remove) {}
 
-  void TestDiscardSamplesCallback(const DiscardSamplesResponse& response) {
-    ++discard_call_count_;
-    discard_response_ = response;
-  }
-
-  void TestStreamSetsCallback(const StreamSetsResponse& response) {
-    ++sets_call_count_;
-    response_ = response;
-  }
-
-  int32_t name_call_count_;
-  int32_t sets_call_count_;
-  int32_t discard_call_count_;
   Dockyard dockyard_;
-  DiscardSamplesResponse discard_response_;
-  StreamSetsResponse response_;
 };
 
 namespace {
 
-TEST_F(SystemMonitorDockyardTest, NameCallback) {
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(0, sets_call_count_);
-  dockyard_.ProcessRequests();
-}
-
 TEST_F(SystemMonitorDockyardTest, SetsCallback) {
   // No pending requests.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(0, sets_call_count_);
 }
 
 TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
@@ -135,25 +99,24 @@ TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(0ULL, response.lowest_value);
+        EXPECT_EQ(dockyard::SLOPE_LIMIT, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(500000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][1]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][2]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][3]);
+        EXPECT_EQ(225000ULL, response.data_sets[0][4]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][5]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-
-  EXPECT_EQ(0ULL, response_.lowest_value);
-  EXPECT_EQ(dockyard::SLOPE_LIMIT, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(500000ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][1]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][2]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][3]);
-  EXPECT_EQ(225000ULL, response_.data_sets[0][4]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][5]);
 }
 
 TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
@@ -166,39 +129,38 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu3"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(0ULL, response.lowest_value);
+        EXPECT_EQ(1000000ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(20600000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(200000ULL, response.data_sets[0][1]);
+        EXPECT_EQ(600000ULL, response.data_sets[0][2]);
+        EXPECT_EQ(1000000ULL, response.data_sets[0][3]);
+        EXPECT_EQ(0ULL, response.data_sets[0][4]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][5]);
+        EXPECT_EQ(1000000ULL, response.data_sets[0][6]);
+        EXPECT_EQ(1000000ULL, response.data_sets[0][7]);
+        EXPECT_EQ(600000ULL, response.data_sets[0][8]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+        EXPECT_EQ(200000ULL, response.data_sets[0][10]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][11]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][12]);
+        EXPECT_EQ(0ULL, response.data_sets[0][13]);
+        EXPECT_EQ(200000ULL, response.data_sets[0][14]);
+        EXPECT_EQ(400000ULL, response.data_sets[0][15]);
+        EXPECT_EQ(600000ULL, response.data_sets[0][16]);
+        EXPECT_EQ(800000ULL, response.data_sets[0][17]);
+        EXPECT_EQ(1000000ULL, response.data_sets[0][18]);
+        EXPECT_EQ(200000ULL, response.data_sets[0][19]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-
-  EXPECT_EQ(0ULL, response_.lowest_value);
-  EXPECT_EQ(1000000ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(20600000ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(200000ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(600000ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(1000000ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(0ULL, response_.data_sets[0][4]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][5]);
-  EXPECT_EQ(1000000ULL, response_.data_sets[0][6]);
-  EXPECT_EQ(1000000ULL, response_.data_sets[0][7]);
-  EXPECT_EQ(600000ULL, response_.data_sets[0][8]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
-  EXPECT_EQ(200000ULL, response_.data_sets[0][10]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][11]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][12]);
-  EXPECT_EQ(0ULL, response_.data_sets[0][13]);
-  EXPECT_EQ(200000ULL, response_.data_sets[0][14]);
-  EXPECT_EQ(400000ULL, response_.data_sets[0][15]);
-  EXPECT_EQ(600000ULL, response_.data_sets[0][16]);
-  EXPECT_EQ(800000ULL, response_.data_sets[0][17]);
-  EXPECT_EQ(1000000ULL, response_.data_sets[0][18]);
-  EXPECT_EQ(200000ULL, response_.data_sets[0][19]);
 }
 
 TEST_F(SystemMonitorDockyardTest, SlopeCpu3Average) {
@@ -211,26 +173,25 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Average) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu3"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(0ULL, response.lowest_value);
+        EXPECT_EQ(1000000ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(7428571ULL, response.data_sets[0][0]);
+        EXPECT_EQ(571428ULL, response.data_sets[0][1]);
+        EXPECT_EQ(1000000ULL, response.data_sets[0][2]);
+        EXPECT_EQ(428571ULL, response.data_sets[0][3]);
+        EXPECT_EQ(0ULL, response.data_sets[0][4]);
+        EXPECT_EQ(285714ULL, response.data_sets[0][5]);
+        EXPECT_EQ(642857ULL, response.data_sets[0][6]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-
-  EXPECT_EQ(0ULL, response_.lowest_value);
-  EXPECT_EQ(1000000ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(7428571ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(571428ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(1000000ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(428571ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(0ULL, response_.data_sets[0][4]);
-  EXPECT_EQ(285714ULL, response_.data_sets[0][5]);
-  EXPECT_EQ(642857ULL, response_.data_sets[0][6]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawPastEndResponse) {
@@ -242,28 +203,28 @@ TEST_F(SystemMonitorDockyardTest, RawPastEndResponse) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(8ULL, response.lowest_value);
+        EXPECT_EQ(20ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(8ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][1]);
+        EXPECT_EQ(10ULL, response.data_sets[0][2]);
+        EXPECT_EQ(20ULL, response.data_sets[0][3]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][4]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][5]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][6]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][7]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][8]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(8ULL, response_.lowest_value);
-  EXPECT_EQ(20ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(8ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][1]);
-  EXPECT_EQ(10ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(20ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][4]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][5]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][6]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][7]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][8]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawSparseResponse) {
@@ -274,28 +235,28 @@ TEST_F(SystemMonitorDockyardTest, RawSparseResponse) {
   request.sample_count = 10;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request),
+      [](const StreamSetsRequest& request, const StreamSetsResponse& response) {
+        EXPECT_EQ(8ULL, response.lowest_value);
+        EXPECT_EQ(20ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(10UL, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(8ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][1]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][2]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][3]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][4]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][5]);
+        EXPECT_EQ(10ULL, response.data_sets[0][6]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][7]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][8]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(8ULL, response_.lowest_value);
-  EXPECT_EQ(20ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(10UL, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(8ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][1]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][2]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][3]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][4]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][5]);
-  EXPECT_EQ(10ULL, response_.data_sets[0][6]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][7]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][8]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu1) {
@@ -307,28 +268,28 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu1) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(27ULL, response.data_sets[0][0]);
+        EXPECT_EQ(10ULL, response.data_sets[0][1]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][2]);
+        EXPECT_EQ(100ULL, response.data_sets[0][3]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][4]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][5]);
+        EXPECT_EQ(80ULL, response.data_sets[0][6]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][7]);
+        EXPECT_EQ(100ULL, response.data_sets[0][8]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(27ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(10ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][2]);
-  EXPECT_EQ(100ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][4]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][5]);
-  EXPECT_EQ(80ULL, response_.data_sets[0][6]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][7]);
-  EXPECT_EQ(100ULL, response_.data_sets[0][8]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu2) {
@@ -340,23 +301,23 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu2) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(15ULL, response.data_sets[0][0]);
+        EXPECT_EQ(78ULL, response.data_sets[0][1]);
+        EXPECT_EQ(38ULL, response.data_sets[0][2]);
+        EXPECT_EQ(8ULL, response.data_sets[0][3]);
+        EXPECT_EQ(18ULL, response.data_sets[0][4]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(15ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(78ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(38ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(8ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(18ULL, response_.data_sets[0][4]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawDataSetsCpus012) {
@@ -370,29 +331,29 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpus012) {
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(3UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[1].size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[2].size());
+        // Check the samples themselves.
+        // CPU 0.
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][1]);
+        // CPU 1.
+        EXPECT_EQ(10ULL, response.data_sets[1][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[1][1]);
+        // CPU 2.
+        EXPECT_EQ(46ULL, response.data_sets[2][0]);
+        EXPECT_EQ(17ULL, response.data_sets[2][1]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(3UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[1].size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[2].size());
-  // Check the samples themselves.
-  // CPU 0.
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][1]);
-  // CPU 1.
-  EXPECT_EQ(10ULL, response_.data_sets[1][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[1][1]);
-  // CPU 2.
-  EXPECT_EQ(46ULL, response_.data_sets[2][0]);
-  EXPECT_EQ(17ULL, response_.data_sets[2][1]);
 }
 
 TEST_F(SystemMonitorDockyardTest, HighDataSetsCpus12) {
@@ -405,24 +366,24 @@ TEST_F(SystemMonitorDockyardTest, HighDataSetsCpus12) {
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(2UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        // CPU 1.
+        EXPECT_EQ(50ULL, response.data_sets[0][0]);
+        EXPECT_EQ(10ULL, response.data_sets[0][1]);
+        // CPU 2.
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[1][0]);
+        EXPECT_EQ(100ULL, response.data_sets[1][1]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(2UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  // CPU 1.
-  EXPECT_EQ(50ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(10ULL, response_.data_sets[0][1]);
-  // CPU 2.
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[1][0]);
-  EXPECT_EQ(100ULL, response_.data_sets[1][1]);
 }
 
 TEST_F(SystemMonitorDockyardTest, LowDataSetsCpus12) {
@@ -435,24 +396,24 @@ TEST_F(SystemMonitorDockyardTest, LowDataSetsCpus12) {
   request.render_style = StreamSetsRequest::LOWEST_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(2UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        // CPU 1.
+        EXPECT_EQ(4ULL, response.data_sets[0][0]);
+        EXPECT_EQ(10ULL, response.data_sets[0][1]);
+        // CPU 2.
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[1][0]);
+        EXPECT_EQ(3ULL, response.data_sets[1][1]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(2UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  // CPU 1.
-  EXPECT_EQ(4ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(10ULL, response_.data_sets[0][1]);
-  // CPU 2.
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[1][0]);
-  EXPECT_EQ(3ULL, response_.data_sets[1][1]);
 }
 
 TEST_F(SystemMonitorDockyardTest, NormalizedDataSetsCpu2) {
@@ -465,23 +426,23 @@ TEST_F(SystemMonitorDockyardTest, NormalizedDataSetsCpu2) {
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.flags = StreamSetsRequest::NORMALIZE;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(123711ULL, response.data_sets[0][0]);
+        EXPECT_EQ(773195ULL, response.data_sets[0][1]);
+        EXPECT_EQ(360824ULL, response.data_sets[0][2]);
+        EXPECT_EQ(51546ULL, response.data_sets[0][3]);
+        EXPECT_EQ(154639ULL, response.data_sets[0][4]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(123711ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(773195ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(360824ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(51546ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(154639ULL, response_.data_sets[0][4]);
 }
 
 TEST_F(SystemMonitorDockyardTest, SmoothDataSetsCpu2) {
@@ -493,23 +454,23 @@ TEST_F(SystemMonitorDockyardTest, SmoothDataSetsCpu2) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::WIDE_SMOOTHING;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(47ULL, response.data_sets[0][0]);
+        EXPECT_EQ(44ULL, response.data_sets[0][1]);
+        EXPECT_EQ(42ULL, response.data_sets[0][2]);
+        EXPECT_EQ(20ULL, response.data_sets[0][3]);
+        EXPECT_EQ(13ULL, response.data_sets[0][4]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(47ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(44ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(42ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(20ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(13ULL, response_.data_sets[0][4]);
 }
 
 TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
@@ -521,23 +482,23 @@ TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::SCULPTING;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(3ULL, response.data_sets[0][0]);
+        EXPECT_EQ(100ULL, response.data_sets[0][1]);
+        EXPECT_EQ(30ULL, response.data_sets[0][2]);
+        EXPECT_EQ(5ULL, response.data_sets[0][3]);
+        EXPECT_EQ(3ULL, response.data_sets[0][4]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(3ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(100ULL, response_.data_sets[0][1]);
-  EXPECT_EQ(30ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(5ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(3ULL, response_.data_sets[0][4]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RandomSamples) {
@@ -561,23 +522,23 @@ TEST_F(SystemMonitorDockyardTest, RandomSamples) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(10ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(55ULL, response.data_sets[0][0]);
+        EXPECT_EQ(99ULL, response.data_sets[0][9]);
+        EXPECT_EQ(29ULL, response.data_sets[0][19]);
+        EXPECT_EQ(29ULL, response.data_sets[0][29]);
+        EXPECT_EQ(99ULL, response.data_sets[0][39]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(10ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(55ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(99ULL, response_.data_sets[0][9]);
-  EXPECT_EQ(29ULL, response_.data_sets[0][19]);
-  EXPECT_EQ(29ULL, response_.data_sets[0][29]);
-  EXPECT_EQ(99ULL, response_.data_sets[0][39]);
 }
 
 TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
@@ -601,22 +562,25 @@ TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
   request.sample_count = 6;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("data"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request),
+      [](const StreamSetsRequest& request, const StreamSetsResponse& response) {
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(request.sample_count, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(500000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(500000ULL, response.data_sets[0][1]);
+        // The Dockyard will return a level slope rather than a negative slope.
+        // The result on the next line would be a negative value if negative
+        // slopes were reported.
+        EXPECT_EQ(0ULL, response.data_sets[0][2]);
+        EXPECT_EQ(500000ULL, response.data_sets[0][3]);
+        EXPECT_EQ(100000ULL, response.data_sets[0][4]);
+        EXPECT_EQ(900000ULL, response.data_sets[0][5]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(request.sample_count, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(500000ULL, response_.data_sets[0][0]);
-  EXPECT_EQ(500000ULL, response_.data_sets[0][1]);
-  // The Dockyard will return a level slope rather than a negative slope. The
-  // result on the next line would be a negative value if negative slopes were
-  // reported.
-  EXPECT_EQ(0ULL, response_.data_sets[0][2]);
-  EXPECT_EQ(500000ULL, response_.data_sets[0][3]);
-  EXPECT_EQ(100000ULL, response_.data_sets[0][4]);
-  EXPECT_EQ(900000ULL, response_.data_sets[0][5]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RecentDataSetsCpus12) {
@@ -629,23 +593,23 @@ TEST_F(SystemMonitorDockyardTest, RecentDataSetsCpus12) {
   request.render_style = StreamSetsRequest::RECENT;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        EXPECT_EQ(3ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(2UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[1].size());
+        // Check the samples themselves.
+        // CPU 1.
+        EXPECT_EQ(50ULL, response.data_sets[0][0]);
+        // CPU 2.
+        EXPECT_EQ(50ULL, response.data_sets[1][0]);
+      });
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(0, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(3ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(2UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[1].size());
-  // Check the samples themselves.
-  // CPU 1.
-  EXPECT_EQ(50ULL, response_.data_sets[0][0]);
-  // CPU 2.
-  EXPECT_EQ(50ULL, response_.data_sets[1][0]);
 }
 
 TEST_F(SystemMonitorDockyardTest, DockyardStringToId) {
@@ -814,8 +778,9 @@ TEST_F(SystemMonitorDockyardTest, IgnoreSamples) {
   ignore.prefix = "fake0:";
   ignore.suffix = ":iTest";
   dockyard_.IgnoreSamples(
-      ignore, [ignore](const dockyard::IgnoreSamplesResponse& response) {
-        EXPECT_EQ(ignore.RequestId(), response.RequestId());
+      std::move(ignore), [](const dockyard::IgnoreSamplesRequest& request,
+                            const dockyard::IgnoreSamplesResponse& response) {
+        EXPECT_EQ(request.RequestId(), response.RequestId());
       });
   dockyard_.ProcessRequests();
 
@@ -842,29 +807,32 @@ TEST_F(SystemMonitorDockyardTest, IgnoreSamples) {
   request.sample_count = 12;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0:345:iTest"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request),
+      [](const StreamSetsRequest& request, const StreamSetsResponse& response) {
+        // Check results.
+        EXPECT_EQ(request.RequestId(), response.RequestId());
+        EXPECT_EQ(10ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        // Check the samples themselves. The samples that arrived prior to the
+        // request to ignore some samples will still be there. Samples that
+        // arrived (i.e. were generated) after the request to ignore them are
+        // ignored.
+        EXPECT_EQ(41u, response.data_sets[0][0]);
+        EXPECT_EQ(58u, response.data_sets[0][1]);
+        EXPECT_EQ(72u, response.data_sets[0][2]);
+        EXPECT_EQ(83u, response.data_sets[0][3]);
+        EXPECT_EQ(94u, response.data_sets[0][4]);
+        EXPECT_EQ(99u, response.data_sets[0][5]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][6]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][7]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][8]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][10]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][11]);
+      });
   dockyard_.ProcessRequests();
-
-  // Check results.
-  EXPECT_EQ(request.RequestId(), response_.RequestId());
-  EXPECT_EQ(10ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  // Check the samples themselves. The samples that arrived prior to the
-  // request to ignore some samples will still be there. Samples that arrived
-  // (i.e. were generated) after the request to ignore them are ignored.
-  EXPECT_EQ(41u, response_.data_sets[0][0]);
-  EXPECT_EQ(58u, response_.data_sets[0][1]);
-  EXPECT_EQ(72u, response_.data_sets[0][2]);
-  EXPECT_EQ(83u, response_.data_sets[0][3]);
-  EXPECT_EQ(94u, response_.data_sets[0][4]);
-  EXPECT_EQ(99u, response_.data_sets[0][5]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][6]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][7]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][8]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][10]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][11]);
 }
 
 TEST_F(SystemMonitorDockyardTest, Discard) {
@@ -886,12 +854,12 @@ TEST_F(SystemMonitorDockyardTest, Discard) {
   discard.start_time_ns = 0;
   discard.end_time_ns = 300;
   discard.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
-  EXPECT_EQ(0, discard_call_count_);
-  dockyard_.DiscardSamples(&discard);
+  dockyard_.DiscardSamples(
+      std::move(discard), [](const DiscardSamplesRequest& request,
+                             const DiscardSamplesResponse& response) {
+        EXPECT_EQ(request.RequestId(), response.RequestId());
+      });
   dockyard_.ProcessRequests();
-
-  EXPECT_EQ(1, discard_call_count_);
-  EXPECT_EQ(discard.RequestId(), discard_response_.RequestId());
 
   // Add pending request.
   StreamSetsRequest request;
@@ -900,24 +868,23 @@ TEST_F(SystemMonitorDockyardTest, Discard) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::RECENT;
   request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
-  dockyard_.GetStreamSets(&request);
+  dockyard_.GetStreamSets(
+      std::move(request), [SAMPLE_COUNT](const StreamSetsRequest& request,
+                                         const StreamSetsResponse& response) {
+        // Check results.
+        EXPECT_EQ(request.RequestId(), response.RequestId());
+        EXPECT_EQ(10ULL, response.lowest_value);
+        EXPECT_EQ(100ULL, response.highest_value);
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
+        // Check the samples themselves.
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][9]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][19]);
+        EXPECT_EQ(29ULL, response.data_sets[0][29]);
+        EXPECT_EQ(99ULL, response.data_sets[0][39]);
+      });
   dockyard_.ProcessRequests();
-
-  // Check results.
-  EXPECT_EQ(request.RequestId(), response_.RequestId());
-  EXPECT_EQ(1, discard_call_count_);
-  EXPECT_EQ(0, name_call_count_);
-  EXPECT_EQ(1, sets_call_count_);
-  EXPECT_EQ(10ULL, response_.lowest_value);
-  EXPECT_EQ(100ULL, response_.highest_value);
-  ASSERT_EQ(1UL, response_.data_sets.size());
-  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
-  // Check the samples themselves.
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][0]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
-  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][19]);
-  EXPECT_EQ(29ULL, response_.data_sets[0][29]);
-  EXPECT_EQ(99ULL, response_.data_sets[0][39]);
 }
 
 TEST_F(SystemMonitorDockyardTest, MessageTypes) {

@@ -56,8 +56,8 @@ void Dockyard::ResetHarvesterData() {
   latest_sample_time_ns_ = 0;
 
   // Maybe send error responses.
-  pending_get_requests_.clear();
-  pending_discard_requests_.clear();
+  pending_get_requests_owned_.clear();
+  pending_discard_requests_owned_.clear();
 
   sample_streams_.clear();
   sample_stream_low_high_.clear();
@@ -72,7 +72,8 @@ void Dockyard::ResetHarvesterData() {
   }
 }
 
-void Dockyard::GetStreamSets(StreamSetsRequest* request) {}
+void Dockyard::GetStreamSets(StreamSetsRequest&& request,
+                             OnStreamSetsCallback callback) {}
 
 void Dockyard::OnConnection(MessageType message_type,
                             uint32_t harvester_version) {}
@@ -86,12 +87,6 @@ void Dockyard::StopCollectingFromDevice() {}
 
 OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
   on_paths_handler_ = callback;
-  return nullptr;
-}
-
-OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
-    OnStreamSetsCallback callback) {
-  on_stream_sets_handler_ = callback;
   return nullptr;
 }
 
