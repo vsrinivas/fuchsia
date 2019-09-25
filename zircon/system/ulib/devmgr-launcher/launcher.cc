@@ -30,6 +30,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
 
 namespace devmgr_launcher {
 
+__EXPORT
 zx_status_t Launch(Args args, zx::channel svc_client, zx::job* devmgr_job, zx::channel* devfs_root,
                    zx::channel* outgoing_services_root) {
   // Create containing job (and copy to send to devmgr)
