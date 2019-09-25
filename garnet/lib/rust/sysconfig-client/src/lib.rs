@@ -19,6 +19,8 @@ mod sys_mock;
 #[cfg(test)]
 use sys_mock::*;
 
+pub mod channel;
+
 struct SysconfigSyncClient(*mut sysconfig_sync_client_t);
 
 impl SysconfigSyncClient {
@@ -124,7 +126,7 @@ mod tests {
         unsafe {
             assert_eq!((*client.0).devfs_root, fd);
             let data = vec![7; 4096];
-            (*client.0).vmo_data = data.clone();
+            sys_mock::set_data(data.clone());
             assert_eq!(
                 data,
                 client
@@ -148,7 +150,7 @@ mod tests {
             assert_eq!((*client.0).vmo_offset, 0);
 
             data.resize((*client.0).partition_size as usize, 0);
-            assert_eq!((*client.0).vmo_data, data);
+            assert_eq!(sys_mock::get_data(), data);
         }
     }
 }

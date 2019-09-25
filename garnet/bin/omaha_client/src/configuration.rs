@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::channel::read_channel;
 use failure::{Error, ResultExt};
+use log::info;
 use omaha_client::{
     common::{App, AppSet, UserCounting, Version},
     configuration::{Config, Updater},
@@ -17,10 +17,10 @@ pub fn get_app_set(version: &str) -> Result<AppSet, Error> {
     let version = version
         .parse::<Version>()
         .context(format!("Unable to parse '{}' as Omaha version format", version))?;
+    let channel_config = sysconfig_client::channel::read_channel_config();
+    info!("Channel configuration in sysconfig: {:?}", channel_config);
     let cohort = Cohort {
-        hint: read_channel("/misc/ota/target_channel.json")
-            .or(read_channel("/misc/ota/current_channel.json"))
-            .ok(),
+        hint: channel_config.map(|config| config.channel_name().to_string()).ok(),
         ..Cohort::default()
     };
     // Fuchsia only has a single app.

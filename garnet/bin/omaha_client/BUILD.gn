@@ -18,6 +18,7 @@ rustc_binary("bin") {
   deps = [
     ":mos_metrics_registry_rustlib",
     "//garnet/lib/rust/omaha_client",
+    "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -42,6 +43,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:timebomb",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
+
+  non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
 }
 
 package("omaha_client") {

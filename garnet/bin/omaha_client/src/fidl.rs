@@ -23,6 +23,15 @@ use omaha_client::{
 };
 use std::cell::RefCell;
 use std::rc::Rc;
+use sysconfig_client::channel::OtaUpdateChannelConfig;
+
+#[cfg(not(test))]
+use sysconfig_client::channel::write_channel_config;
+
+#[cfg(test)]
+fn write_channel_config(_config: &OtaUpdateChannelConfig) -> Result<(), Error> {
+    Ok(())
+}
 
 pub struct FidlServer<PE, HR, IN, TM, MR, ST>
 where
@@ -198,6 +207,9 @@ where
             ChannelControlRequest::SetTarget { channel, responder } => {
                 info!("Received SetTarget request with {}", channel);
                 // TODO: Verify that channel is valid.
+                // TODO: Write tuf_config_name.
+                let config = OtaUpdateChannelConfig::new(&channel, "")?;
+                write_channel_config(&config)?;
                 let mut storage = server.storage_ref.lock().await;
                 server.app_set.set_target_channel(Some(channel)).await;
                 server.app_set.persist(&mut *storage).await;

@@ -3,6 +3,10 @@
         "binary": "bin/omaha_client_service"
     },
     "sandbox": {
+        "dev": [
+            "class/skip-block",
+            "misc/sysinfo"
+        ],
         "features": [
             "build-info",
             "config-data",
