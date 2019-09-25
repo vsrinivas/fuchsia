@@ -36,7 +36,7 @@ pub struct Realm {
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The component's mutable state.
-    state: Mutex<Holder<RealmState>>,
+    state: Mutex<Option<RealmState>>,
     /// The component's execution state.
     execution: Mutex<ExecutionState>,
     /// The hooks scoped to this realm.
@@ -57,14 +57,14 @@ impl Realm {
             component_url,
             // Started by main().
             startup: fsys::StartupMode::Lazy,
-            state: Mutex::new(Holder::<RealmState>::new()),
+            state: Mutex::new(None),
             execution: Mutex::new(ExecutionState::new()),
             hooks: Hooks::new(None),
         }
     }
 
     /// Locks and returns the realm's mutable state.
-    pub fn lock_state(&self) -> MutexLockFuture<Holder<RealmState>> {
+    pub fn lock_state(&self) -> MutexLockFuture<Option<RealmState>> {
         self.state.lock()
     }
 
@@ -77,12 +77,12 @@ impl Realm {
     /// populated.
     pub async fn resolve_decl(&self) -> Result<(), ModelError> {
         // Call `resolve()` outside of lock.
-        let is_resolved = { self.lock_state().await.is_set() };
+        let is_resolved = { self.lock_state().await.is_some() };
         if !is_resolved {
             let component = self.resolver_registry.resolve(&self.component_url).await?;
             let mut state = self.lock_state().await;
-            if !state.is_set() {
-                state.set(RealmState::new(self, component.decl).await?);
+            if state.is_none() {
+                *state = Some(RealmState::new(self, component.decl).await?);
             }
         }
         Ok(())
@@ -97,7 +97,7 @@ impl Realm {
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         let meta_use = {
             let state = self.lock_state().await;
-            let state = state.get();
+            let state = state.as_ref().expect("resolve_meta_dir: not resolved");
             if state.meta_dir.is_some() {
                 return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
             }
@@ -127,7 +127,7 @@ impl Realm {
             fasync::Channel::from_channel(meta_client_chan).unwrap(),
         ));
         let mut state = self.lock_state().await;
-        let state = state.get_mut();
+        let state = state.as_mut().expect("resolve_meta_dir: not resolved");
         state.set_meta_dir(meta_dir.clone());
         Ok(Some(meta_dir))
     }
@@ -148,7 +148,7 @@ impl Realm {
         self.resolve_decl().await?;
         let child_realm = {
             let mut state = self.lock_state().await;
-            let state = state.get_mut();
+            let state = state.as_mut().expect("add_dynamic_child: not resolved");
             let collection_decl = state
                 .decl()
                 .find_collection(&collection_name)
@@ -186,7 +186,7 @@ impl Realm {
         realm.resolve_decl().await?;
         let child_realm = {
             let mut state = realm.lock_state().await;
-            let state = state.get_mut();
+            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
             let model = model.clone();
             if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
                 let (instance, child_realm) = tup;
@@ -224,14 +224,14 @@ impl Realm {
         let (nf, was_running) = {
             let was_running = {
                 let mut execution = realm.lock_execution().await;
-                let was_running = execution.runtime.is_set();
-                execution.runtime.clear();
+                let was_running = execution.runtime.is_some();
+                execution.runtime = None;
                 execution.shut_down |= shut_down;
                 was_running
             };
             let nf = {
                 let mut state = realm.lock_state().await;
-                let state = state.get_mut();
+                let state = state.as_mut().expect("stop_instance: not resolved");
                 Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
             };
             (nf, was_running)
@@ -250,7 +250,7 @@ impl Realm {
     pub async fn destroy_instance(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
         // Clean up isolated storage.
         let state = realm.lock_state().await;
-        let state = state.get();
+        let state = state.as_ref().expect("destroy_instance: not resolved");
         for use_ in state.decl.uses.iter() {
             if let UseDecl::Storage(_) = use_ {
                 route_and_delete_storage(&model, use_, realm.abs_moniker.clone()).await?;
@@ -301,13 +301,13 @@ pub struct ExecutionState {
     shut_down: bool,
     /// Runtime support for the component. From component manager's point of view, the component
     /// instance is running iff this field is set.
-    pub runtime: Holder<Runtime>,
+    pub runtime: Option<Runtime>,
 }
 
 impl ExecutionState {
     /// Creates a new ExecutionState.
     pub fn new() -> Self {
-        Self { shut_down: false, runtime: Holder::<Runtime>::new() }
+        Self { shut_down: false, runtime: None }
     }
 
     /// Returns whether the realm has shut down.
@@ -449,7 +449,7 @@ impl RealmState {
                 abs_moniker: abs_moniker,
                 component_url: child.url.clone(),
                 startup: child.startup,
-                state: Mutex::new(Holder::<RealmState>::new()),
+                state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),
                 hooks: Hooks::new(Some(&realm.hooks)),
             });
@@ -489,41 +489,6 @@ impl RealmState {
     /// Finish an action on this realm, which will cause its notifications to be completed.
     pub async fn finish_action<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
         self.actions.finish(action, res).await;
-    }
-}
-
-/// Holds a variable which may not be set. Offers slightly more convenient syntax for getting a
-/// reference than `Option`.
-pub struct Holder<T> {
-    inner: Option<T>,
-}
-
-impl<T> Holder<T> {
-    pub fn new() -> Self {
-        Self { inner: None }
-    }
-
-    pub fn get(&self) -> &T {
-        self.inner.as_ref().expect("value was not set")
-    }
-
-    pub fn get_mut(&mut self) -> &mut T {
-        self.inner.as_mut().expect("value was not set")
-    }
-
-    pub fn set(&mut self, val: T) {
-        if self.inner.is_some() {
-            panic!("Attempted to set value twice");
-        }
-        self.inner = Some(val);
-    }
-
-    pub fn is_set(&self) -> bool {
-        self.inner.is_some()
-    }
-
-    pub fn clear(&mut self) {
-        self.inner = None
     }
 }
 

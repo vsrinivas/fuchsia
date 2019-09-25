@@ -207,14 +207,9 @@ pub async fn route_and_delete_storage<'a>(
 ) -> Result<(), ModelError> {
     let (dir_source_realm, dir_source_path, relative_moniker) =
         route_storage_capability(model, use_decl, use_abs_moniker).await?;
-    delete_isolated_storage(
-        &model,
-        dir_source_realm,
-        &dir_source_path,
-        &relative_moniker,
-    )
-    .await
-    .map_err(|e| ModelError::from(e))?;
+    delete_isolated_storage(&model, dir_source_realm, &dir_source_path, &relative_moniker)
+        .await
+        .map_err(|e| ModelError::from(e))?;
     Ok(())
 }
 
@@ -278,7 +273,8 @@ async fn route_storage_capability<'a>(
             let mut pos = {
                 let partial = PartialMoniker::new(name.to_string(), None);
                 let realm_state = storage_decl_realm.lock_state().await;
-                let realm_state = realm_state.get();
+                let realm_state =
+                    realm_state.as_ref().expect("route_storage_capability: not resolved");
                 let moniker = Some(
                     realm_state
                         .extend_moniker_with(&storage_decl_realm.abs_moniker, &partial)
@@ -406,7 +402,7 @@ async fn walk_offer_chain<'a>(
         }
         let current_realm = model.look_up_realm(&pos.moniker()).await?;
         let realm_state = current_realm.lock_state().await;
-        let realm_state = realm_state.get();
+        let realm_state = realm_state.as_ref().expect("walk_offer_chain: not resolved");
         // This `get()` is safe because `look_up_realm` populates this field
         let decl = realm_state.decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
@@ -507,7 +503,7 @@ async fn walk_expose_chain<'a>(
     loop {
         let current_realm = model.look_up_realm(&pos.moniker()).await?;
         let realm_state = current_realm.lock_state().await;
-        let realm_state = realm_state.get();
+        let realm_state = realm_state.as_ref().expect("walk_expose_chain: not resolved");
         // This `get()` is safe because look_up_realm populates this field.
         let first_expose = first_expose.take();
         let expose = first_expose

@@ -200,7 +200,7 @@ impl WorkScheduler {
 
     async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
         let realm_state = realm.lock_state().await;
-        let realm_state = realm_state.get();
+        let realm_state = realm_state.as_ref().expect("check_for_worker: not resolved");
         let decl = realm_state.decl();
         decl.exposes
             .iter()

@@ -373,8 +373,7 @@ impl HubInner {
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
             let execution = realm.lock_execution().await;
-            if execution.runtime.is_set() {
-                let runtime = execution.runtime.get();
+            if let Some(runtime) = execution.runtime.as_ref() {
                 let (execution_controller, mut execution_controlled) =
                     directory::controlled::controlled(directory::simple::empty());
 

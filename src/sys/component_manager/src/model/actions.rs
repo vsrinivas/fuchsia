@@ -176,14 +176,14 @@ pub async fn register_action(
     // `RealmState::register_action()` assumes component is resolved.
     realm.resolve_decl().await?;
     let mut state = realm.lock_state().await;
-    let state = state.get_mut();
+    let state = state.as_mut().expect("register_action: not resolved");
     state.register_action(model, realm.clone(), action).await
 }
 
 /// Finish an action on a realm.
 pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
     let mut state = realm.lock_state().await;
-    let state = state.get_mut();
+    let state = state.as_mut().expect("finish_action: not resolved");
     state.finish_action(action, res).await
 }
 
@@ -230,9 +230,7 @@ impl RealmState {
         action: Action,
         moniker: ChildMoniker,
     ) -> Result<(), ModelError> {
-        let child_realm = {
-            self.all_child_realms().get(&moniker).map(|r| r.clone())
-        };
+        let child_realm = { self.all_child_realms().get(&moniker).map(|r| r.clone()) };
         if let Some(child_realm) = child_realm {
             // Child exists (live or deleting).
 
@@ -263,7 +261,12 @@ impl RealmState {
 async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     let child_realms = {
         let state = realm.lock_state().await;
-        let res: Vec<_> = state.get().live_child_realms().map(|(_, r)| r.clone()).collect();
+        let res: Vec<_> = state
+            .as_ref()
+            .expect("do_shutdown: not resolved")
+            .live_child_realms()
+            .map(|(_, r)| r.clone())
+            .collect();
         res
     };
     // Stop children before stopping the parent.
@@ -288,7 +291,7 @@ async fn do_delete_child(
     execute_action(model.clone(), child_realm.clone(), Action::Destroy).await?;
     {
         let mut state = realm.lock_state().await;
-        state.get_mut().remove_child_realm(&moniker);
+        state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
     }
     child_realm.hooks.on_destroy_instance(child_realm.clone()).await?;
     Ok(())
@@ -302,7 +305,7 @@ async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     // "deleting", destroying them all, and finishing the action.
     let child_realms = {
         let state = realm.lock_state().await;
-        let state = state.get();
+        let state = state.as_ref().expect("do_destroy: not resolved");
         state.all_child_realms().clone()
     };
     let mut futures = vec![];
@@ -634,7 +637,6 @@ mod tests {
                 Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
             ];
             assert_eq!(next, expected);
-
         }
     }
 
@@ -1242,7 +1244,7 @@ mod tests {
             // Expect only "x" as child of root.
             let state = realm_root.lock_state().await;
             let children: Vec<_> =
-                state.get().all_child_realms().keys().map(|m| m.clone()).collect();
+                state.as_ref().unwrap().all_child_realms().keys().map(|m| m.clone()).collect();
             assert_eq!(children, vec!["x:0".into()]);
         }
         {
@@ -1467,19 +1469,19 @@ mod tests {
     }
 
     async fn is_executing(realm: &Realm) -> bool {
-        realm.lock_execution().await.runtime.is_set()
+        realm.lock_execution().await.runtime.is_some()
     }
 
     async fn is_shut_down(realm: &Realm) -> bool {
         let execution = realm.lock_execution().await;
-        !execution.runtime.is_set() && execution.is_shut_down()
+        execution.runtime.is_none() && execution.is_shut_down()
     }
 
     async fn is_destroyed(realm: &Realm) -> bool {
         let state = realm.lock_state().await;
-        let state = state.get();
+        let state = state.as_ref().unwrap();
         let execution = realm.lock_execution().await;
-        !execution.runtime.is_set()
+        execution.runtime.is_none()
             && execution.is_shut_down()
             && state.all_child_realms().is_empty()
     }

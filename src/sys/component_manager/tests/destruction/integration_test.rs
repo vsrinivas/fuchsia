@@ -50,7 +50,8 @@ async fn destruction() -> Result<(), Error> {
         .root_realm
         .lock_state()
         .await
-        .get()
+        .as_ref()
+        .expect("not resolved")
         .all_child_realms()
         .keys()
         .map(|m| m.clone())

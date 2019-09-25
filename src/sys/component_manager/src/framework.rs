@@ -223,7 +223,7 @@ impl RealmServiceHostInner {
         })?;
         let child_realm = {
             let realm_state = realm.lock_state().await;
-            let realm_state = realm_state.get();
+            let realm_state = realm_state.as_ref().expect("bind_child: not resolved");
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
@@ -278,7 +278,7 @@ impl RealmServiceHostInner {
             fsys::Error::Internal
         })?;
         let state = realm.lock_state().await;
-        let state = state.get();
+        let state = state.as_ref().expect("list_children: not resolved");
         let decl = state.decl();
         let _ = decl
             .find_collection(&collection.name)

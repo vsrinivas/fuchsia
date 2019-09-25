@@ -781,7 +781,7 @@ pub mod capability_util {
             .expect(&format!("realm not found {}", abs_moniker));
         model.bind_instance(realm.clone()).await.expect("failed to bind instance");
         let execution = realm.lock_execution().await;
-        let runtime = execution.runtime.get();
+        let runtime = execution.runtime.as_ref().expect("not resolved");
         let flags = OPEN_RIGHT_READABLE;
         runtime
             .exposed_dir
