@@ -13,6 +13,9 @@ dart_library("settings") {
     "src/brightness.dart",
     "src/cpu.dart",
     "src/memory.dart",
+    "src/network.dart",
+    "src/processes.dart",
+    "src/volume.dart",
   ]
 
   deps = [

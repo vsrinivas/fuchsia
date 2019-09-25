@@ -56,6 +56,7 @@ class _CpuModel {
 
   double _cpu;
   StreamSubscription _cpuSubscription;
+  double mock = 0;
 
   _CpuModel({this.onChange}) {
     _listen();
@@ -73,11 +74,9 @@ class _CpuModel {
 
   void _listen() async {
     _cpuSubscription = Stream.periodic(_checkCpuDuration).listen((_) async {
-      final mockData = Random().nextDouble();
-      if (mockData != _cpu) {
-        _cpu = mockData;
-        onChange?.call();
-      }
+      mock += .15;
+      _cpu = sin(mock).abs();
+      onChange?.call();
     });
   }
 }
