@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/by_addr_tests"
+    }
+}

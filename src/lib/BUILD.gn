@@ -28,6 +28,7 @@ group("tests") {
 
   deps = [
     "argh/argh_tests",
+    "by_addr:tests",
     "cobalt:tests",
     "containers/cpp:tests",
     "cstr:tests",

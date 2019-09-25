@@ -4,35 +4,11 @@
 
 use {
     crate::{framework::FrameworkCapability, model::*},
+    by_addr::ByAddr,
     cm_rust::FrameworkCapabilityDecl,
     futures::{future::BoxFuture, lock::Mutex},
     std::sync::Arc,
 };
-
-// ByAddr allows two Arcs to be compared by address instead of using its contained
-// type's comparator.
-#[derive(Debug)]
-pub struct ByAddr<T: ?Sized>(Arc<T>);
-
-impl<T: ?Sized> ByAddr<T> {
-    fn new(value: Arc<T>) -> Self {
-        Self(value)
-    }
-}
-
-impl<T: ?Sized> Clone for ByAddr<T> {
-    fn clone(&self) -> Self {
-        ByAddr::new(self.0.clone())
-    }
-}
-
-impl<T: ?Sized> PartialEq<ByAddr<T>> for ByAddr<T> {
-    fn eq(&self, other: &ByAddr<T>) -> bool {
-        self.0.as_ref() as *const T == other.0.as_ref() as *const T
-    }
-}
-
-impl<T: ?Sized> Eq for ByAddr<T> {}
 
 pub trait AddDynamicChildHook {
     // Called when a dynamic instance is added with `realm`.
