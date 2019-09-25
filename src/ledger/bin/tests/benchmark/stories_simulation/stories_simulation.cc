@@ -10,11 +10,12 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <list>
 #include <memory>
+
+#include <trace/event.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -308,12 +309,12 @@ void StoriesBenchmark::RunSingle(int i) {
     EditStory(i, story_id, std::move(callback));
   });
 
-  page_data_generator_.PutEntry(&root_page_, std::move(story_name), std::move(story_data),
+  page_data_generator_.PutEntry(&root_page_, story_name, std::move(story_data),
                                 PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
                                 CheckStatusOKCallback());
 
   // Yes, the content of the story is read 3 more times.
-  for (int i = 0; i < 3; i++) {
+  for (int j = 0; j < 3; j++) {
     ReadFromPage(&root_page_, story_name, waiter->NewCallback());
   }
   root_page_->Sync(waiter->NewCallback());

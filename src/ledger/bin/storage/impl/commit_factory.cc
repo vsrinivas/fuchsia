@@ -277,7 +277,11 @@ void CommitFactory::AddCommitDependencies(CommitIdView commit_id,
                                           std::vector<ObjectIdentifier> root_identifiers) {
   auto [it, created] =
       live_root_identifiers_.try_emplace(commit_id.ToString(), std::move(root_identifiers));
-  FXL_DCHECK(created || root_identifiers == live_root_identifiers_[commit_id.ToString()]);
+  // TODO(https://bugs.llvm.org/show_bug.cgi?id=43440): Remove lint suppression after clang-tidy
+  // understands that post-|try_emplace| use of |root_identifiers| is legitimate if no emplacement
+  // occurred.
+  FXL_DCHECK(created ||
+             root_identifiers == live_root_identifiers_[commit_id.ToString()]);  // NOLINT
 }
 
 void CommitFactory::RemoveCommitDependencies(CommitIdView commit_id) {

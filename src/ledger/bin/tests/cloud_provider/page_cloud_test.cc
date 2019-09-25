@@ -474,6 +474,7 @@ TEST_F(PageCloudTest, Diff_GetMultipleDiff) {
   entries.push_back(std::move(commit));
 
   // Add a second commit deleting the entry inserted in the last commit.
+  diff = Diff{};
   diff.mutable_base_state()->set_at_commit(convert::ToArray("id0"));
   diff.mutable_changes()->push_back(std::move(DiffEntry()
                                                   .set_entry_id(convert::ToArray("entryA"))
@@ -613,6 +614,7 @@ TEST_F(PageCloudTest, Diff_GetDiffIntermediateCommit) {
   entries.push_back(std::move(commit));
 
   // Add a second commit deleting the entry inserted in the last commit.
+  diff = Diff{};
   diff.mutable_base_state()->set_at_commit(convert::ToArray("id0"));
   diff.mutable_changes()->push_back(std::move(DiffEntry()
                                                   .set_entry_id(convert::ToArray("entryA"))

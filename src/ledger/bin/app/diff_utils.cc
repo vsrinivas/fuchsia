@@ -139,10 +139,11 @@ void ComputePageChange(
 
     Entry entry;
     entry.key = convert::ToArray(change.entry.key);
-    entry.priority =
-        change.entry.priority == storage::KeyPriority::EAGER ? Priority::EAGER : Priority::LAZY;
+    Priority priority{change.entry.priority == storage::KeyPriority::EAGER ? Priority::EAGER
+                                                                           : Priority::LAZY};
+    entry.priority = priority;
     context->page_change->changed_entries.push_back(std::move(entry));
-    GetOptionalValueFromReference(storage, change.entry.object_identifier, entry.priority,
+    GetOptionalValueFromReference(storage, change.entry.object_identifier, priority,
                                   waiter->NewCallback());
     return true;
   };

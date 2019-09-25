@@ -8,11 +8,12 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <iostream>
 #include <memory>
 #include <set>
+
+#include <trace/event.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -220,7 +221,7 @@ void PutBenchmark::InitializeKeys(fit::function<void(std::vector<std::vector<uin
     return;
   }
   page_data_generator_.Populate(
-      &page_, std::move(keys_cloned), value_size_, keys_cloned.size(), reference_strategy_,
+      &page_, std::move(keys_cloned), value_size_, entry_count_, reference_strategy_,
       Priority::EAGER,
       [this, keys = std::move(keys), on_done = std::move(on_done)](Status status) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "PageDataGenerator::Populate")) {
@@ -232,8 +233,7 @@ void PutBenchmark::InitializeKeys(fit::function<void(std::vector<std::vector<uin
 
 void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
   PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), {},
-                     page_watcher_binding_.NewBinding());
+  page_->GetSnapshot(snapshot.NewRequest(), {}, page_watcher_binding_.NewBinding());
   page_->Sync([this, keys = std::move(keys)]() mutable { RunSingle(0, std::move(keys)); });
 }
 
