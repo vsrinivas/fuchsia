@@ -35,14 +35,28 @@ class Cipd(object):
         self._pkg = 'fuchsia/test_data/fuzzing/' + str(fuzzer)
         self._rev = host.snapshot()
 
-    def _cipd(self, cmd, cwd=None):
-        """Runs a CIPD command and returns its output. Sub-classed in tests."""
+    def _cipd(self, cmd, cwd=None, quiet=False):
+        """Runs a CIPD command and returns its output. Sub-classed in tests.
+        If `quiet` is True, the stderr of the subprocess will be swallowed."""
         host = self.corpus.fuzzer.device.host
-        return host.create_process([self._bin] + cmd, cwd=cwd).check_output()
+        p = host.create_process([self._bin] + cmd, cwd=cwd)
+        if quiet:
+            p.stderr = Host.DEVNULL
+        return p.check_output()
 
     def instances(self):
         """Returns the versioned instances of a fuzzing corpus package."""
         return self._cipd(['instances', self._pkg])
+
+    def _pkg_has_corpus(self):
+        try:
+            # We use `cipd instances` instead of `cipd ls` here because `ls`
+            # seems to work only for package prefixes
+            self._cipd(['instances', '-limit', '1', self._pkg], quiet=True)
+        except subprocess.CalledProcessError:
+            return False
+
+        return True
 
     def install(self, label):
         """ Downloads and unpacks a CIPD package for a Fuchsia fuzzer corpus.
@@ -53,6 +67,9 @@ class Cipd(object):
         Attributes:
           label: A CIPD version or tag
         """
+        if not self._pkg_has_corpus():
+            return False
+
         if ':' in label:
             try:
                 output = self._cipd(['search', self._pkg, '-tag', label])
