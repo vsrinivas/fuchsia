@@ -17,6 +17,27 @@
 //     mvm/mac80211.c
 //
 // Note that the |*ctx| in this file is actually |*iwl_trans| passed when device_add() is called.
+//
+// - sme_channel
+//
+// The below steps briefly describe how the 'sme_channel' is used and transferred. In short,
+// the goal is going to let SME and MLME to have a channel to communicate.
+//
+// + After the devmgr (the device manager in wlanstack) detects a PHY device, the devmgr first
+//   creates a SME instance in order to handle the MAC operation later. Then the devmgr establishes
+//   a channel and passes one end of the channel to the SME instance.
+//
+// + The devmgr requests the PHY device to create a MAC interface. In the request, the other end
+//   of channel is passed.
+//
+// + The driver's phy_create_iface() gets called, and saves the 'sme_channel' handle in the new
+//   created MAC context.
+//
+// + Once the MAC device is added, its mac_start() will be called. Then it will transfer the
+//   'sme_channel' handle back to the MLME.
+//
+// + Now, both sides of channel (SME and MLME) can talk now.
+//
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
@@ -42,6 +63,7 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
   memset(info, 0, sizeof(*info));
 
   info->ifc_info.mac_role = mvmvif->mac_role;
+  info->ifc_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
 
   IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
   return ZX_OK;  // Temporarily returns OK to make the interface list-able.
@@ -49,10 +71,25 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
 
 static zx_status_t mac_start(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
                              void* cookie) {
-  // Initialize the output result.
-  if (!ctx || !ifc) {
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  if (!ctx || !ifc || !out_sme_channel) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // Clear the output result first.
+  *out_sme_channel = ZX_HANDLE_INVALID;
+
+  // The SME channel assigned in phy_create_iface() is gone.
+  if (mvmvif->sme_channel == ZX_HANDLE_INVALID) {
+    IWL_ERR(mvmvif, "Invalid SME channel. The interface might have been bound already.\n");
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  // Transfer the handle to MLME. Also invalid the copy we hold to indicate that this interface has
+  // been bound.
+  *out_sme_channel = mvmvif->sme_channel;
+  mvmvif->sme_channel = ZX_HANDLE_INVALID;
 
   IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
   return ZX_OK;  // Temporarily returns OK to make the interface list-able.
@@ -135,10 +172,17 @@ static void mac_unbind(void* ctx) {
 
 static void mac_release(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
+
+  // Close the SME channel if it is NOT transferred to MLME yet.
+  if (mvmvif->sme_channel != ZX_HANDLE_INVALID) {
+    zx_handle_close(mvmvif->sme_channel);
+    mvmvif->sme_channel = ZX_HANDLE_INVALID;
+  }
+
   free(mvmvif);
 }
 
-static zx_protocol_device_t device_mac_ops = {
+zx_protocol_device_t device_mac_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = mac_unbind,
     .release = mac_release,
@@ -166,6 +210,8 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   // TODO(fxb/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
   // TODO(fxb/36684): suuports VHT (802.11ac): WLAN_INFO_PHY_TYPE_VHT
 
+  info->wlan_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+
   // The current band/channel setting is for channel 11 only (in 2.4GHz).
   // TODO(fxb/36689): lists all bands and their channels.
   wlan_info_band_info_t* wlan_band = &info->wlan_info.bands[info->wlan_info.bands_count++];
@@ -188,8 +234,17 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   zx_status_t ret = ZX_OK;
 
+  if (!req) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (req->sme_channel == ZX_HANDLE_INVALID) {
+    IWL_ERR(mvm, "the given sme channel is invalid.\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   if (!mvm) {
-    IWL_ERR(mvm, "Cannot obtain MVM from ctx=%p while creating interface\n", ctx);
+    IWL_ERR(mvm, "cannot obtain MVM from ctx=%p while creating interface\n", ctx);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -216,6 +271,7 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   ret = device_add(iwl_trans->zxdev, &mac_args, &mvmvif->zxdev);
   if (ret == ZX_OK) {
     mvmvif->mac_role = req->role;
+    mvmvif->sme_channel = req->sme_channel;
   }
 
 unlock:
