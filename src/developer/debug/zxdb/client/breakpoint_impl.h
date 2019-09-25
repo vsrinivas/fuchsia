@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_ipc {
@@ -86,6 +87,9 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   // Given a process which is new or might apply to us for the first time,
   // Returns true if any addresses were resolved.
   bool RegisterProcess(Process* process);
+
+  // Returns the options for converting this breakpoint's input location to addresses,
+  ResolveOptions GetResolveOptions() const;
 
   bool is_internal_;
 

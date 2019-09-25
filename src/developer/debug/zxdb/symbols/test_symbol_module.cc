@@ -14,7 +14,9 @@ namespace zxdb {
 
 const char TestSymbolModule::kMyNamespaceName[] = "my_ns";
 const char TestSymbolModule::kMyFunctionName[] = "MyFunction";
-const int TestSymbolModule::kMyFunctionLine = 110;
+const int TestSymbolModule::kMyFunctionLine = 109;
+const uint64_t TestSymbolModule::kMyFunctionAddress = 0x1390u;
+const size_t TestSymbolModule::kMyFunctionPrologueSize = 8;
 const char TestSymbolModule::kNamespaceFunctionName[] = "my_ns::NamespaceFunction";
 const char TestSymbolModule::kMyClassName[] = "my_ns::MyClass";
 const char TestSymbolModule::kMyInnerClassName[] = "my_ns::MyClass::Inner";

@@ -78,8 +78,11 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                                     const InputLocation& input_location,
                                                     const ResolveOptions& options) const;
 
-  // Symbolizes the given address if possible.
-  Location LocationForAddress(const SymbolContext& symbol_context, uint64_t absolute_address) const;
+  // Symbolizes the given address if possible. The function can be specified if it's already known
+  // (some code paths have to compute that before calling). Otherwise, the address will be looked up
+  // and the function computed if necessary.
+  Location LocationForAddress(const SymbolContext& symbol_context, uint64_t absolute_address,
+                              const ResolveOptions& options, const Function* optional_func) const;
 
   // Converts the given global or static variable to a Location. This doesn't work for local
   // variables which are dynamic and based on the current CPU state and stack.

@@ -171,12 +171,8 @@ void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
 void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
   // Should only get this notification for relevant processes.
   FXL_DCHECK(CouldApplyToProcess(process));
-
-  // Resolve addresses.
-  ResolveOptions options;
-  options.symbolize = false;  // Just want the addresses back.
-  if (procs_[process].AddLocations(this, process,
-                                   module->ResolveInputLocation(settings_.location, options)))
+  if (procs_[process].AddLocations(
+          this, process, module->ResolveInputLocation(settings_.location, GetResolveOptions())))
     SyncBackend();
 }
 
@@ -380,12 +376,35 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
   record.locs.clear();
 
   // Resolve addresses.
-  ProcessSymbols* symbols = process->GetSymbols();
-  ResolveOptions options;
-  options.symbolize = false;  // Only need addresses.
-  changed |= record.AddLocations(this, process,
-                                 symbols->ResolveInputLocation(settings_.location, options));
+  changed |= record.AddLocations(
+      this, process,
+      process->GetSymbols()->ResolveInputLocation(settings_.location, GetResolveOptions()));
   return changed;
+}
+
+ResolveOptions BreakpointImpl::GetResolveOptions() const {
+  ResolveOptions options;
+  // We don't need the result to be symbolized unless required by skip_function_prologue.
+
+  if (settings_.location.type == InputLocation::Type::kAddress) {
+    // Only need addresses. Don't try to skip function prologues when the user gives an address or
+    // the address might move.
+    options.symbolize = false;
+    options.skip_function_prologue = false;
+  } else {
+    // When breaking on symbols or lines, skip function prologues so the function parameters
+    // can be displayed properly (they're not always correct in the prologue) as well as backtraces
+    // (on ARM, the link register is saved in the prologue so things may look funny before that).
+    // Function prologues require symbolization so we ask for both.
+    //
+    // TODO(brettw) we will eventually need an option to control this like other debugger. LLDB has
+    // a per-breakpoint setting and a global default preference. In GDB you can do "break *Foo" to
+    // skip the prologue.
+    options.symbolize = true;
+    options.skip_function_prologue = true;
+  }
+
+  return options;
 }
 
 }  // namespace zxdb

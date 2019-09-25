@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
@@ -348,6 +349,75 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   addrs = module_symbols->ResolveInputLocation(symbol_context, input_loc, options);
   ASSERT_EQ(1u, addrs.size());
   EXPECT_EQ(TestSymbolModule::kNamespaceFunctionName, addrs[0].symbol().Get()->GetFullName());
+}
+
+TEST(ModuleSymbols, SkipPrologue) {
+  auto module_symbols = fxl::MakeRefCounted<ModuleSymbolsImpl>(
+      TestSymbolModule::GetCheckedInTestFileName(),
+      TestSymbolModule::GetStrippedCheckedInTestFileName(), "");
+  Err err = module_symbols->Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  InputLocation input_fn_loc((Identifier(IdentifierComponent(TestSymbolModule::kMyFunctionName))));
+
+  // Query the function by name with no prologue skipping.
+  ResolveOptions no_skip_options;
+  no_skip_options.symbolize = true;
+  no_skip_options.skip_function_prologue = false;
+  auto no_skip_addrs =
+      module_symbols->ResolveInputLocation(symbol_context, input_fn_loc, no_skip_options);
+  ASSERT_EQ(1u, no_skip_addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+
+  // Now with prologue skipping.
+  ResolveOptions skip_options;
+  skip_options.symbolize = true;
+  skip_options.skip_function_prologue = true;
+  auto skip_addrs =
+      module_symbols->ResolveInputLocation(symbol_context, input_fn_loc, skip_options);
+  ASSERT_EQ(1u, skip_addrs.size());
+  EXPECT_EQ(no_skip_addrs[0].address() + TestSymbolModule::kMyFunctionPrologueSize,
+            skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+
+  // Query by line. No skipping.
+  InputLocation input_line_loc(FileLine("zxdb_symbol_test.cc", TestSymbolModule::kMyFunctionLine));
+  no_skip_addrs =
+      module_symbols->ResolveInputLocation(symbol_context, input_line_loc, no_skip_options);
+  ASSERT_EQ(1u, no_skip_addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+
+  // With skipping.
+  skip_addrs = module_symbols->ResolveInputLocation(symbol_context, input_line_loc, skip_options);
+  ASSERT_EQ(1u, skip_addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionAddress + TestSymbolModule::kMyFunctionPrologueSize,
+            skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+
+  // Query by address. No skipping.
+  InputLocation input_addr_loc(TestSymbolModule::kMyFunctionAddress);
+  no_skip_addrs =
+      module_symbols->ResolveInputLocation(symbol_context, input_addr_loc, no_skip_options);
+  ASSERT_EQ(1u, no_skip_addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+
+  // With skipping.
+  skip_addrs = module_symbols->ResolveInputLocation(symbol_context, input_addr_loc, skip_options);
+  ASSERT_EQ(1u, skip_addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionAddress + TestSymbolModule::kMyFunctionPrologueSize,
+            skip_addrs[0].address());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
 }
 
 }  // namespace zxdb

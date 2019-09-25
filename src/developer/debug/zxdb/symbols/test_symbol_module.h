@@ -37,6 +37,8 @@ class TestSymbolModule {
   static const char kMyNamespaceName[];
   static const char kMyFunctionName[];
   static const int kMyFunctionLine;
+  static const uint64_t kMyFunctionAddress;
+  static const size_t kMyFunctionPrologueSize;
   static const char kNamespaceFunctionName[];
   static const char kMyClassName[];
   static const char kMyInnerClassName[];

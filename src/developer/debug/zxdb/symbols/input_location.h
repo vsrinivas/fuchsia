@@ -15,17 +15,15 @@
 
 namespace zxdb {
 
-// Used for specifying the input location for things like "run to here" and
-// breakpoints. For these use-cases the user might specify the location in a
-// variety of forms.
+// Used for specifying the input location for things like "run to here" and breakpoints. For these
+// use-cases the user might specify the location in a variety of forms.
 //
-// See also the "Location" object which is an output location that provides
-// all information (address, symbols, etc.) for some state.
+// See also the "Location" object which is an output location that provides all information
+// (address, symbols, etc.) for some state.
 //
-// For the symbol and file name options, the symbol name and file name
-// must match exactly the full version of that from the symbol system.
-// The caller will need to have resolve file names with the symbol system
-// prior to setting.
+// For the symbol and file name options, the symbol name and file name must match exactly the full
+// version of that from the symbol system. The caller will need to have resolve file names with the
+// symbol system prior to setting.
 struct InputLocation {
   enum class Type { kNone, kLine, kSymbol, kAddress };
 
