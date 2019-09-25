@@ -98,6 +98,7 @@ namespace {
 using ::coroutine::CoroutineHandler;
 using ::testing::_;
 using ::testing::AllOf;
+using ::testing::AnyOfArray;
 using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::ElementsAre;
@@ -2329,39 +2330,66 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     commits.push_back(GetFirstHead()->GetId());
   }
 
-  // GetUnsyncedPieces should return the ids of all objects: 3 values and
-  // the 3 root nodes of the 3 commits.
+  // List all objects appearing in the commits.
+  // There is not enough data in a commit for a tree node to be split, but it may still contain
+  // multiple tree nodes. The values will not be split either, so all the objects are chunks and
+  // |GetObjectIdentifiers| returns all the piece identifiers that are part of the commits.
   bool called;
   Status status;
-  std::vector<ObjectIdentifier> object_identifiers;
+  std::set<ObjectIdentifier> object_identifiers;
+  for (size_t i = 0; i < commits.size(); i++) {
+    std::set<ObjectIdentifier> commit_object_identifiers;
+    btree::GetObjectIdentifiers(
+        environment_.coroutine_service(), storage_.get(),
+        {GetCommit(commits[i])->GetRootIdentifier(), PageStorage::Location::Local()},
+        callback::Capture(callback::SetWhenCalled(&called), &status, &commit_object_identifiers));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // We expect all identifiers to be chunks, and either they are tree nodes or they are one of
+    // the data identifiers. One of them should be the root of the commit.
+    EXPECT_THAT(commit_object_identifiers, Contains(GetCommit(commits[i])->GetRootIdentifier()));
+    for (const auto& object_identifier : commit_object_identifiers) {
+      EXPECT_TRUE(GetObjectDigestInfo(object_identifier.object_digest()).is_chunk());
+      bool is_tree = GetObjectDigestInfo(object_identifier.object_digest()).object_type ==
+                     ObjectType::TREE_NODE;
+      if (!is_tree) {
+        // Commit |i| contains data from data_array[i] as well as data from the previous commits
+        // since each is built on top of the previous one.
+        EXPECT_THAT(object_identifier,
+                    AnyOfArray(stored_identifiers.begin(), stored_identifiers.begin() + i + 1));
+      }
+      object_identifiers.insert(object_identifier);
+    }
+  }
+
+  // GetUnsyncedPieces should return the ids of all the objects appearing in the tree of the 3
+  // commits.
+  std::vector<ObjectIdentifier> returned_object_identifiers;
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &returned_object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  EXPECT_THAT(object_identifiers, UnorderedElementsAre(stored_identifiers[0], stored_identifiers[1],
-                                                       stored_identifiers[2],
-                                                       GetCommit(commits[0])->GetRootIdentifier(),
-                                                       GetCommit(commits[1])->GetRootIdentifier(),
-                                                       GetCommit(commits[2])->GetRootIdentifier()));
+  EXPECT_THAT(returned_object_identifiers, UnorderedElementsAreArray(object_identifiers));
 
-  // Mark the 2nd object as synced. We now expect to still find the 2 unsynced
-  // values and the (also unsynced) root node.
+  // Mark the 2nd object as synced. We now expect to still find the other unsynced objects.
   storage_->MarkPieceSynced(stored_identifiers[1],
                             callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  std::vector<ObjectIdentifier> objects;
+
+  object_identifiers.erase(stored_identifiers[1]);
+
+  returned_object_identifiers.clear();
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &objects));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &returned_object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  EXPECT_THAT(objects, UnorderedElementsAre(stored_identifiers[0], stored_identifiers[2],
-                                            GetCommit(commits[0])->GetRootIdentifier(),
-                                            GetCommit(commits[1])->GetRootIdentifier(),
-                                            GetCommit(commits[2])->GetRootIdentifier()));
+  EXPECT_THAT(returned_object_identifiers, UnorderedElementsAreArray(object_identifiers));
 }
 
 TEST_F(PageStorageTest, PageIsSynced) {
