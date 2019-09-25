@@ -67,6 +67,7 @@ group("fidl") {
     "fuchsia-hardware-virtioconsole",
     "fuchsia-hardware-vsock",
     "fuchsia-hardware-zxcrypt",
+    "fuchsia-input-report",
     "fuchsia-inspect",
     "fuchsia-io",
     "fuchsia-io2",

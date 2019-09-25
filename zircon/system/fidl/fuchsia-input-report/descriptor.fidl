@@ -1,0 +1,31 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+const uint32 MAX_DEVICE_NAME_LENGTH = 256;
+
+/// DeviceInfo provides more information about the device and lets a client
+/// distinguish between devices (e.g between two touchscreens that come from
+/// different vendors). If the device is a HID device, then the id information
+/// will come from the device itself. Other, non-HID devices may assign the
+/// ids in the driver, so it will be the driver author's responsibility to
+/// assign sensible ids.
+struct DeviceInfo {
+    uint32 vendor_id;
+    uint32 product_id;
+    uint32 version;
+    string:MAX_DEVICE_NAME_LENGTH name;
+};
+
+/// |DeviceDescriptor| describes a physical input device. Some physical devices may
+/// send multiple types of reports (E.g: a physical touchscreen can send touch and
+/// stylus reports, so it will have both a TouchDescriptor and a StylusDescriptor).
+table DeviceDescriptor {
+    /// |device_info| should always be present to help distinguish between physical devices.
+    1: DeviceInfo device_info;
+
+    /// When |mouse| is present the device has a mouse.
+    2: MouseDescriptor mouse;
+};

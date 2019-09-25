@@ -1,0 +1,56 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// This provides an easy, standardized way to specify units. New units can
+/// be added as needed. There should not be ambiguity between units, so no
+/// new units should be added that can be converted from the old units.
+///  (e.g: Please don't add DISTANCE_METERS since there is already DISTANCE).
+enum Unit : uint32 {
+    /// The device did not specify units.
+    NONE = 0;
+
+    /// The device specified units that are not convertible to any of the other units.
+    OTHER = 1;
+
+    /// A measurement of distance in 10^-6 meter units.
+    DISTANCE = 2;
+
+    /// A measurement of weight in 10^-3 gram units.
+    WEIGHT = 3;
+
+    /// A measurement of rotation is 10^-3 degrees.
+    ROTATION = 4;
+
+    /// A measurement of angular velocity is 10^-3 deg/s.
+    ANGULAR_VELOCITY = 5;
+
+    /// A measurement of linear velocity is 10^-3 m/s
+    LINEAR_VELOCITY = 6;
+
+    /// A measurement of acceleration is 10^-3 Gs
+    ACCELERATION = 7;
+
+    /// A measurement of magnetic_flux is 10^-6 T
+    MAGNETIC_FLUX = 8;
+
+    /// A measurement of light is 1 Candela
+    LUMINOUS_FLUX = 9;
+
+    /// A measurement of pressure is 10^-3 Pascal
+    PRESSURE = 10;
+};
+
+/// Describe a |Range| of values.
+struct Range {
+    int64 min;
+    int64 max;
+};
+
+/// An |Axis| is defined as a |range| and a |unit|.
+struct Axis {
+    Range range;
+    Unit unit;
+};

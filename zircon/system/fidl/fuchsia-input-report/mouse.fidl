@@ -1,0 +1,46 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// A hardcoded number of max mouse buttons. This should be increased in the future
+/// if we ever see mice with more buttons.
+const uint32 MOUSE_MAX_NUM_BUTTONS = 32;
+
+/// |MouseDescriptor| describes the capabilities of a mouse.
+table MouseDescriptor {
+    /// The range of relative X movement.
+    1: Axis movement_x;
+
+    /// The range of relative Y movement.
+    2: Axis movement_y;
+
+    /// The range of relative vertical scroll.
+    3: Axis scroll_v;
+
+    /// The range of relative horizontal scroll.
+    4: Axis scroll_h;
+
+    /// This is a vector of id's for the mouse buttons.
+    5: vector<uint8>:MOUSE_MAX_NUM_BUTTONS buttons;
+};
+
+/// |MouseReport| gives the relative movement of the mouse and currently
+/// pressed buttons. Relative means the movement seen between the previous
+/// report and this report. The client is responsble for tracking this and
+/// converting it to absolute movement.
+table MouseReport {
+    /// Relative X positional displacement.
+    1: int64 movement_x;
+    /// Relative Y positional displacement.
+    2: int64 movement_y;
+
+    /// Relative vertical scrolling displacement.
+    3: int64 scroll_v;
+    /// Relative horizontal scrolling displacement.
+    4: int64 scroll_h;
+
+    /// A list of currently pressed buttons.
+    5: vector<uint8>:MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+};
