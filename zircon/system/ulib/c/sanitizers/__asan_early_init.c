@@ -94,8 +94,10 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
   atomic_signal_fence(memory_order_seq_cst);
 }
 
+__EXPORT
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) { return shadow_bounds; }
 
+__EXPORT
 void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t threshold) {
   const uintptr_t shadow_base = base >> ASAN_SHADOW_SHIFT;
   if (shadow_base < shadow_bounds.shadow_base) {
@@ -128,11 +130,13 @@ static const char kBadDepsMessage[] =
 
 // This should never be called in the unsanitized runtime.
 // But it's still part of the ABI.
+__EXPORT
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
   __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
   __builtin_trap();
 }
 
+__EXPORT
 void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, uintptr_t threshold) {
   __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
   __builtin_trap();

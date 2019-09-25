@@ -22,15 +22,15 @@
 // This is referenced by generated code to decide whether to call
 // __asan_stack_malloc_* instead of doing normal stack allocation.
 // Never use stack malloc before the real runtime library is loaded.
-__WEAK const int __asan_option_detect_stack_use_after_return = 0;
+__EXPORT __WEAK const int __asan_option_detect_stack_use_after_return = 0;
 
 // This is the one set of things we define for real just as the
 // sanitizer runtime does.  Generated code calls these.  In practice,
 // almost certainly nothing in the the startup path needs them, but
 // defining them properly is barely more than defining trap stubs.
-#define ASAN_SET_SHADOW_XX(xx)                                         \
-  __WEAK void __asan_set_shadow_##xx(uintptr_t addr, uintptr_t size) { \
-    __unsanitized_memset((void*)addr, 0x##xx, size);                   \
+#define ASAN_SET_SHADOW_XX(xx)                                                  \
+  __EXPORT __WEAK void __asan_set_shadow_##xx(uintptr_t addr, uintptr_t size) { \
+    __unsanitized_memset((void*)addr, 0x##xx, size);                            \
   }
 
 ASAN_SET_SHADOW_XX(00)
@@ -43,7 +43,7 @@ ASAN_SET_SHADOW_XX(f8)
 // Everything else is trap stubs.  They should never be called.
 
 #define TRAP_STUB(decl) \
-  __WEAK decl { __builtin_trap(); }
+  __EXPORT __WEAK decl { __builtin_trap(); }
 
 // These are only called when a bug is found.  So unless there's
 // an actual bug in code that's on the dynamic linker startup path,

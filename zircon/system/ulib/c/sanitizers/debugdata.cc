@@ -130,6 +130,7 @@ zx_handle_t sanitizer_debugdata_connect() {
 
 }  // namespace
 
+__EXPORT
 void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   zx_handle_t h = sanitizer_debugdata_connect();
 
@@ -140,6 +141,7 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   }
 }
 
+__EXPORT
 zx_status_t __sanitizer_get_configuration(const char* name, zx_handle_t* out_vmo) {
   zx_handle_t h = sanitizer_debugdata_connect();
 
