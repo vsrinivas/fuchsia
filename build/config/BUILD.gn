@@ -261,6 +261,10 @@ config("default_warnings") {
     # TODO(36439): Temporarily disable -Wno-sizeof-array-div until we clear
     # all instances this appears.
     "-Wno-sizeof-array-div",
+
+    # TODO(37215): Temporarily disable this warning until we roll toolchain.
+    # Then we can re-enable it and cleanup instances it appears.
+    "-Wno-int-in-bool-context",
   ]
 }
 
