@@ -36,8 +36,13 @@ class Packet;
 
 class Station : public ClientInterface {
  public:
-  Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
-          JoinContext* join_ctx);
+  enum TimeoutTarget : uint8_t {
+    kDefault = 0,
+    kRust = 1,
+  };
+
+  Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mgr,
+          ChannelScheduler* chan_sched, JoinContext* join_ctx);
   ~Station() = default;
 
   enum class WlanState {
@@ -124,7 +129,7 @@ class Station : public ClientInterface {
 
   DeviceInterface* device_;
   ClientStation rust_client_;
-  TimerManager<> timer_mgr_;
+  TimerManager<TimeoutTarget> timer_mgr_;
   ChannelScheduler* chan_sched_;
   JoinContext* join_ctx_;
 

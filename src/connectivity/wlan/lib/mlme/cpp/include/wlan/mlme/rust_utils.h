@@ -18,7 +18,8 @@ using ClientStation = std::unique_ptr<wlan_client_sta_t, void (*)(wlan_client_st
 
 SequenceManager NewSequenceManager();
 ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
-                               common::MacAddr bssid, common::MacAddr iface_mac);
+                               wlan_scheduler_ops_t scheduler, common::MacAddr bssid,
+                               common::MacAddr iface_mac);
 
 }  // namespace wlan
 

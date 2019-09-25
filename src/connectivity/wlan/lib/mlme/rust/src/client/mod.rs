@@ -9,6 +9,7 @@ use {
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         error::Error,
+        timer::*,
     },
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
@@ -32,12 +33,16 @@ type MacAddr = [u8; 6];
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
 
+#[derive(Debug)]
+pub enum TimedEvent {}
+
 /// A STA running in Client mode.
 /// The Client STA is in its early development process and does not yet manage its internal state
 /// machine or track negotiated capabilities.
 pub struct ClientStation {
     device: Device,
     buf_provider: BufferProvider,
+    timer: Timer<TimedEvent>,
     seq_mgr: SequenceManager,
     bssid: MacAddr,
     iface_mac: MacAddr,
@@ -47,10 +52,12 @@ impl ClientStation {
     pub fn new(
         device: Device,
         buf_provider: BufferProvider,
+        scheduler: Scheduler,
         bssid: MacAddr,
         iface_mac: MacAddr,
     ) -> Self {
-        Self { device, buf_provider, seq_mgr: SequenceManager::new(), bssid, iface_mac }
+        let timer = Timer::<TimedEvent>::new(scheduler);
+        Self { device, buf_provider, timer, seq_mgr: SequenceManager::new(), bssid, iface_mac }
     }
 
     /// Returns a reference to the STA's SNS manager.
@@ -270,6 +277,10 @@ impl ClientStation {
             error!("error sending MLME-EAPOL.confirm message: {}", e);
         }
     }
+
+    pub fn handle_timed_event(&mut self, event_id: EventId) {
+        unreachable!()
+    }
 }
 
 #[cfg(test)]
@@ -282,16 +293,18 @@ mod tests {
     const BSSID: MacAddr = [6u8; 6];
     const IFACE_MAC: MacAddr = [7u8; 6];
 
-    fn make_client_station(device: Device) -> ClientStation {
+    fn make_client_station(device: Device, scheduler: Scheduler) -> ClientStation {
         let buf_provider = FakeBufferProvider::new();
-        let client = ClientStation::new(device, buf_provider, BSSID, IFACE_MAC);
+        let client = ClientStation::new(device, buf_provider, scheduler, BSSID, IFACE_MAC);
         client
     }
 
     #[test]
     fn client_send_open_auth_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.send_open_auth_frame().expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -313,7 +326,9 @@ mod tests {
     #[test]
     fn client_send_keep_alive_resp_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.send_keep_alive_resp_frame().expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -332,7 +347,9 @@ mod tests {
     fn client_send_data_frame() {
         let payload = vec![5; 8];
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client
             .send_data_frame([2; 6], [3; 6], false, false, 0x1234, &payload[..])
             .expect("error delivering WLAN frame");
@@ -358,7 +375,9 @@ mod tests {
     #[test]
     fn client_send_deauthentication_notification() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client
             .send_deauth_frame(mac::ReasonCode::AP_INITIATED)
             .expect("error delivering WLAN frame");
@@ -389,7 +408,9 @@ mod tests {
             0x10, 0, // Sequence Control
         ];
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&data_frame[..], false, true);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -407,7 +428,9 @@ mod tests {
     fn data_frame_to_ethernet_single_llc() {
         let data_frame = make_data_frame_single_llc(None, None);
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&data_frame[..], false, true);
         assert_eq!(fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
@@ -423,7 +446,9 @@ mod tests {
     fn data_frame_to_ethernet_amsdu() {
         let data_frame = make_data_frame_amsdu();
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&data_frame[..], false, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
@@ -449,7 +474,9 @@ mod tests {
     fn data_frame_to_ethernet_amsdu_padding_too_short() {
         let data_frame = make_data_frame_amsdu_padding_too_short();
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&data_frame[..], false, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
@@ -467,7 +494,9 @@ mod tests {
     fn data_frame_controlled_port_closed() {
         let data_frame = make_data_frame_single_llc(None, None);
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&data_frame[..], false, false);
 
         // Verify frame was not sent to netstack.
@@ -478,7 +507,9 @@ mod tests {
     fn eapol_frame_controlled_port_closed() {
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&eapol_frame[..], false, false);
 
         // Verify EAPoL frame was not sent to netstack.
@@ -498,7 +529,9 @@ mod tests {
     fn eapol_frame_is_controlled_port_open() {
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.handle_data_frame(&eapol_frame[..], false, true);
 
         // Verify EAPoL frame was not sent to netstack.
@@ -517,7 +550,9 @@ mod tests {
     #[test]
     fn send_eapol_ind_too_large() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client
             .send_eapol_indication([1; 6], [2; 6], &[5; 256])
             .expect_err("sending too large EAPOL frame should fail");
@@ -529,7 +564,9 @@ mod tests {
     #[test]
     fn send_eapol_ind_success() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client
             .send_eapol_indication([1; 6], [2; 6], &[5; 200])
             .expect("expected EAPOL.indication to be sent");
@@ -545,7 +582,9 @@ mod tests {
     #[test]
     fn send_eapol_frame_success() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.send_eapol_frame(IFACE_MAC, BSSID, false, &[5; 8]);
 
         // Verify EAPOL.confirm message was sent to SME.
@@ -579,7 +618,11 @@ mod tests {
     #[test]
     fn send_eapol_frame_failure() {
         let mut fake_device = FakeDevice::new();
-        let mut client = make_client_station(fake_device.as_device_fail_wlan_tx());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client = make_client_station(
+            fake_device.as_device_fail_wlan_tx(),
+            fake_scheduler.as_scheduler(),
+        );
         client.send_eapol_frame([1; 6], [2; 6], false, &[5; 200]);
 
         // Verify EAPOL.confirm message was sent to SME.

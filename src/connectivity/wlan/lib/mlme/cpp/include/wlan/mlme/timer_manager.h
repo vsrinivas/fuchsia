@@ -18,16 +18,20 @@ class TimeoutId {
  public:
   TimeoutId() = default;
 
+  explicit TimeoutId(uint64_t id) : id_(id) {}
+
   bool operator==(const TimeoutId& that) const { return id_ == that.id_; }
 
   bool operator!=(const TimeoutId& that) const { return !(*this == that); }
+
+  uint64_t raw() {
+    return id_;
+  }
 
  private:
   template <typename Event>
   friend class TimerManager;
   uint64_t id_ = 0;
-
-  explicit TimeoutId(uint64_t id) : id_(id) {}
 };
 
 template <typename Event = std::tuple<>>

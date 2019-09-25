@@ -118,6 +118,7 @@ extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, const ui
 
 extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              mlme_buffer_provider_ops_t buf_provider,
+                                             wlan_scheduler_ops_t scheduler,
                                              const uint8_t (*bssid)[6],
                                              const uint8_t (*iface_mac)[6]);
 
@@ -135,6 +136,9 @@ extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, const uint8_
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 
 extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);
+
+extern "C" void client_sta_timeout_fired(wlan_client_sta_t *sta,
+                                         wlan_scheduler_event_id_t event_id);
 
 extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data, uintptr_t len);
 

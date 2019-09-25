@@ -21,8 +21,8 @@ fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, Jo
     errorf("could not create STA timer: %d\n", status);
     return nullptr;
   }
-  return std::make_unique<Station>(device, TimerManager<>(std::move(timer)), chan_scheduler,
-                                   join_ctx);
+  return std::make_unique<Station>(device, TimerManager<Station::TimeoutTarget>(std::move(timer)),
+                                   chan_scheduler, join_ctx);
 }
 
 }  // namespace wlan

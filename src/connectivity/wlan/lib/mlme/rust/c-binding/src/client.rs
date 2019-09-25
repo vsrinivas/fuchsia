@@ -17,6 +17,7 @@ use {
         },
         device::{self, Device},
         error::ResultExt,
+        timer::*,
     },
 };
 
@@ -24,10 +25,11 @@ use {
 pub extern "C" fn client_sta_new(
     device: Device,
     buf_provider: BufferProvider,
+    scheduler: Scheduler,
     bssid: &[u8; 6],
     iface_mac: &[u8; 6],
 ) -> *mut ClientStation {
-    Box::into_raw(Box::new(ClientStation::new(device, buf_provider, *bssid, *iface_mac)))
+    Box::into_raw(Box::new(ClientStation::new(device, buf_provider, scheduler, *bssid, *iface_mac)))
 }
 
 #[no_mangle]
@@ -35,6 +37,11 @@ pub extern "C" fn client_sta_delete(sta: *mut ClientStation) {
     if !sta.is_null() {
         unsafe { Box::from_raw(sta) };
     }
+}
+
+#[no_mangle]
+pub extern "C" fn client_sta_timeout_fired(sta: &mut ClientStation, event_id: EventId) {
+    sta.handle_timed_event(event_id);
 }
 
 #[no_mangle]

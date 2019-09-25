@@ -39,8 +39,8 @@ using common::dBm;
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
 #define STA(c) static_cast<Station*>(c)
-Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
-                 JoinContext* join_ctx)
+Station::Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mgr,
+                 ChannelScheduler* chan_sched, JoinContext* join_ctx)
     : device_(device),
       rust_client_(nullptr, client_sta_delete),
       timer_mgr_(std::move(timer_mgr)),
@@ -64,8 +64,20 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
         return STA(sta)->device_->GetSmeChannelRef();
       },
   };
-  rust_client_ =
-      NewClientStation(rust_device, rust_buffer_provider, join_ctx_->bssid(), self_addr());
+  wlan_scheduler_ops_t scheduler = {
+      .cookie = static_cast<void*>(this),
+      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
+        TimeoutId id = {};
+        STA(cookie)->timer_mgr_.Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
+        return {._0 = id.raw()};
+      },
+      .cancel =
+          [](void* cookie, wlan_scheduler_event_id_t id) {
+            STA(cookie)->timer_mgr_.Cancel(TimeoutId(id._0));
+          },
+  };
+  rust_client_ = NewClientStation(rust_device, rust_buffer_provider, scheduler, join_ctx_->bssid(),
+                                  self_addr());
 
   Reset();
 }
@@ -651,7 +663,13 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 zx_status_t Station::HandleTimeout() {
   debugfn();
 
-  zx_status_t status = timer_mgr_.HandleTimeout([&](auto now, auto _event, auto timeout_id) {
+  zx_status_t status = timer_mgr_.HandleTimeout([&](auto now, auto target, auto timeout_id) {
+    if (target == TimeoutTarget::kRust) {
+      client_sta_timeout_fired(rust_client_.get(),
+                               wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
+      return;
+    }
+
     if (timeout_id == auth_timeout_) {
       debugjoin("auth timed out; moving back to idle state\n");
       state_ = WlanState::kIdle;
