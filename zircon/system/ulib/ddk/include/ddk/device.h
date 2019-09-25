@@ -128,9 +128,7 @@ typedef struct zx_protocol_device {
 
   //@ ## unbind
   // The unbind hook is called when the parent of this device is being removed (due
-  // to hot unplug, fatal error, etc).  At the point unbind is called, it is not
-  // possible for further open calls to occur, but io operations, etc
-  // may continue until those client connections are closed.
+  // to hot unplug, fatal error, etc).
   //
   // The driver should avoid further method calls to its parent device or any
   // protocols obtained from that device, and expect that any further such calls
@@ -138,6 +136,7 @@ typedef struct zx_protocol_device {
   //
   // The driver should adjust its state to encourage its client connections to close
   // (cause IO to error out, etc), and call **device_remove()** on itself when ready.
+  // See the docs for **device_remove()** for important semantics.
   //
   // The driver must continue to handle all device hooks until the **release** hook
   // is invoked.
