@@ -16,7 +16,6 @@
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
-#include "src/developer/feedback/crashpad_agent/crash_report_util.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/feedback/crashpad_agent/report_annotations.h"
@@ -316,9 +315,10 @@ void CrashpadAgent::PruneDatabase() {
 }
 
 size_t CrashpadAgent::CleanDatabase() {
-  // We set the |lockfile_ttl| to 0 to ensure that lockfiles are available for removal
-  // immediately after a report has been unlocked.
-  const size_t num_removed = static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/0));
+  // We set the |lockfile_ttl| to one day to ensure that reports in new aren't removed until
+  // a period of time has passed in which it is certain they are orphaned.
+  const size_t num_removed =
+      static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/60*60*24));
   if (num_removed > 0) {
     FX_LOGS(INFO) << fxl::StringPrintf("Removed %lu orphan file(s) from Crashpad database",
                                        num_removed);

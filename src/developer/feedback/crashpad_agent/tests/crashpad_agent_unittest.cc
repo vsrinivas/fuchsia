@@ -528,6 +528,27 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
   EXPECT_THAT(new_attachment_subdirs, Not(UnorderedElementsAreArray(attachment_subdirs)));
 }
 
+TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
+  // We generate ten crash reports before runnning the loop to make sure that one crash
+  // report filing doesn't clean up the concurrent crash reports being filed.
+  const size_t kNumReports = 10;
+
+  std::vector<fit::result<void, zx_status_t>> results;
+  for (size_t i = 0; i < kNumReports; ++i) {
+    CrashReport report;
+    report.set_program_name(kProgramName);
+    agent_->File(std::move(report), [&results](fit::result<void, zx_status_t> result) {
+      results.push_back(result);
+    });
+  }
+
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_EQ(results.size(), kNumReports);
+  for (const auto result : results) {
+    EXPECT_TRUE(result.is_ok());
+  }
+}
+
 TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ResetAgent(
