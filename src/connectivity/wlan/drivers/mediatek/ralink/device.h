@@ -334,7 +334,7 @@ class Device {
   // TODO(porce): Define oper_chan_ to read from the registers directly
   wlan_channel_t cfg_chan_ = wlan_channel_t{
       .primary = 0,
-      .cbw = CBW20,
+      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
   };
   uint16_t lna_gain_ = 0;
   uint8_t bg_rssi_offset_[3] = {};

@@ -111,8 +111,8 @@ TEST(SmeChannel, Bound) {
 #define DEV(c) static_cast<SmeChannelTestContext*>(c)
   wlanif_impl_protocol_ops_t proto_ops = {
       // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
-      .start = [](void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
-                  void* cookie) -> zx_status_t {
+      .start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                  zx_handle_t* out_sme_channel) -> zx_status_t {
         *out_sme_channel = DEV(ctx)->sme.release();
         return ZX_OK;
       },
@@ -120,25 +120,25 @@ TEST(SmeChannel, Bound) {
 
       // Capture incoming scan request.
       .start_scan =
-          [](void* ctx, wlanif_scan_req_t* req) {
+          [](void* ctx, const wlanif_scan_req_t* req) {
             DEV(ctx)->scan_req = {{
                 .bss_type = req->bss_type,
                 .scan_type = req->scan_type,
             }};
           },
-      .join_req = [](void* ctx, wlanif_join_req_t* req) {},
-      .auth_req = [](void* ctx, wlanif_auth_req_t* req) {},
-      .auth_resp = [](void* ctx, wlanif_auth_resp_t* req) {},
-      .deauth_req = [](void* ctx, wlanif_deauth_req_t* req) {},
-      .assoc_req = [](void* ctx, wlanif_assoc_req_t* req) {},
-      .assoc_resp = [](void* ctx, wlanif_assoc_resp_t* req) {},
-      .disassoc_req = [](void* ctx, wlanif_disassoc_req_t* req) {},
-      .reset_req = [](void* ctx, wlanif_reset_req_t* req) {},
-      .start_req = [](void* ctx, wlanif_start_req_t* req) {},
-      .stop_req = [](void* ctx, wlanif_stop_req_t* req) {},
-      .set_keys_req = [](void* ctx, wlanif_set_keys_req_t* req) {},
-      .del_keys_req = [](void* ctx, wlanif_del_keys_req_t* req) {},
-      .eapol_req = [](void* ctx, wlanif_eapol_req_t* req) {},
+      .join_req = [](void* ctx, const wlanif_join_req_t* req) {},
+      .auth_req = [](void* ctx, const wlanif_auth_req_t* req) {},
+      .auth_resp = [](void* ctx, const wlanif_auth_resp_t* req) {},
+      .deauth_req = [](void* ctx, const wlanif_deauth_req_t* req) {},
+      .assoc_req = [](void* ctx, const wlanif_assoc_req_t* req) {},
+      .assoc_resp = [](void* ctx, const wlanif_assoc_resp_t* req) {},
+      .disassoc_req = [](void* ctx, const wlanif_disassoc_req_t* req) {},
+      .reset_req = [](void* ctx, const wlanif_reset_req_t* req) {},
+      .start_req = [](void* ctx, const wlanif_start_req_t* req) {},
+      .stop_req = [](void* ctx, const wlanif_stop_req_t* req) {},
+      .set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req) {},
+      .del_keys_req = [](void* ctx, const wlanif_del_keys_req_t* req) {},
+      .eapol_req = [](void* ctx, const wlanif_eapol_req_t* req) {},
   };
   SmeChannelTestContext ctx;
   wlanif_impl_protocol_t proto = {

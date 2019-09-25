@@ -41,45 +41,62 @@ static zx_protocol_device_t eth_device_ops = {
     .release = [](void* ctx) { DEV(ctx)->EthRelease(); },
 };
 
-static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
+static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
     // MLME operations
     .on_scan_result = [](void* cookie,
-                         wlanif_scan_result_t* result) { DEV(cookie)->OnScanResult(result); },
-    .on_scan_end = [](void* cookie, wlanif_scan_end_t* end) { DEV(cookie)->OnScanEnd(end); },
-    .join_conf = [](void* cookie, wlanif_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
+                         const wlanif_scan_result_t* result) { DEV(cookie)->OnScanResult(result); },
+    .on_scan_end = [](void* cookie, const wlanif_scan_end_t* end) { DEV(cookie)->OnScanEnd(end); },
+    .join_conf = [](void* cookie,
+                    const wlanif_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
     .auth_conf = [](void* cookie,
-                    wlanif_auth_confirm_t* resp) { DEV(cookie)->AuthenticateConf(resp); },
-    .auth_ind = [](void* cookie, wlanif_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
-    .deauth_conf = [](void* cookie,
-                      wlanif_deauth_confirm_t* resp) { DEV(cookie)->DeauthenticateConf(resp); },
-    .deauth_ind = [](void* cookie,
-                     wlanif_deauth_indication_t* ind) { DEV(cookie)->DeauthenticateInd(ind); },
+                    const wlanif_auth_confirm_t* resp) { DEV(cookie)->AuthenticateConf(resp); },
+    .auth_ind = [](void* cookie,
+                   const wlanif_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
+    .deauth_conf =
+        [](void* cookie, const wlanif_deauth_confirm_t* resp) {
+          DEV(cookie)->DeauthenticateConf(resp);
+        },
+    .deauth_ind =
+        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+          DEV(cookie)->DeauthenticateInd(ind);
+        },
     .assoc_conf = [](void* cookie,
-                     wlanif_assoc_confirm_t* resp) { DEV(cookie)->AssociateConf(resp); },
-    .assoc_ind = [](void* cookie, wlanif_assoc_ind_t* ind) { DEV(cookie)->AssociateInd(ind); },
-    .disassoc_conf = [](void* cookie,
-                        wlanif_disassoc_confirm_t* resp) { DEV(cookie)->DisassociateConf(resp); },
-    .disassoc_ind = [](void* cookie,
-                       wlanif_disassoc_indication_t* ind) { DEV(cookie)->DisassociateInd(ind); },
-    .start_conf = [](void* cookie, wlanif_start_confirm_t* resp) { DEV(cookie)->StartConf(resp); },
-    .stop_conf = [](void* cookie, wlanif_stop_confirm_t* resp) { DEV(cookie)->StopConf(resp); },
-    .eapol_conf = [](void* cookie, wlanif_eapol_confirm_t* resp) { DEV(cookie)->EapolConf(resp); },
+                     const wlanif_assoc_confirm_t* resp) { DEV(cookie)->AssociateConf(resp); },
+    .assoc_ind = [](void* cookie,
+                    const wlanif_assoc_ind_t* ind) { DEV(cookie)->AssociateInd(ind); },
+    .disassoc_conf =
+        [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
+          DEV(cookie)->DisassociateConf(resp);
+        },
+    .disassoc_ind =
+        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+          DEV(cookie)->DisassociateInd(ind);
+        },
+    .start_conf = [](void* cookie,
+                     const wlanif_start_confirm_t* resp) { DEV(cookie)->StartConf(resp); },
+    .stop_conf = [](void* cookie,
+                    const wlanif_stop_confirm_t* resp) { DEV(cookie)->StopConf(resp); },
+    .eapol_conf = [](void* cookie,
+                     const wlanif_eapol_confirm_t* resp) { DEV(cookie)->EapolConf(resp); },
 
     // MLME extension operations
-    .signal_report = [](void* cookie,
-                        wlanif_signal_report_indication_t* ind) { DEV(cookie)->SignalReport(ind); },
-    .eapol_ind = [](void* cookie, wlanif_eapol_indication_t* ind) { DEV(cookie)->EapolInd(ind); },
+    .signal_report =
+        [](void* cookie, const wlanif_signal_report_indication_t* ind) {
+          DEV(cookie)->SignalReport(ind);
+        },
+    .eapol_ind = [](void* cookie,
+                    const wlanif_eapol_indication_t* ind) { DEV(cookie)->EapolInd(ind); },
     .stats_query_resp =
-        [](void* cookie, wlanif_stats_query_response_t* resp) {
+        [](void* cookie, const wlanif_stats_query_response_t* resp) {
           DEV(cookie)->StatsQueryResp(resp);
         },
     .relay_captured_frame =
-        [](void* cookie, wlanif_captured_frame_result_t* result) {
+        [](void* cookie, const wlanif_captured_frame_result_t* result) {
           DEV(cookie)->RelayCapturedFrame(result);
         },
 
     // Ethernet operations
-    .data_recv = [](void* cookie, void* data, size_t length,
+    .data_recv = [](void* cookie, const void* data, size_t length,
                     uint32_t flags) { DEV(cookie)->EthRecv(data, length, flags); },
 };
 
@@ -148,7 +165,7 @@ zx_status_t Device::Bind() {
   // device immediately
   zx_handle_t sme_channel = ZX_HANDLE_INVALID;
   zx_status_t status =
-      wlanif_impl_.ops->start(wlanif_impl_.ctx, &wlanif_impl_ifc_ops, &sme_channel, this);
+  wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &sme_channel);
   ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
     errorf("wlanif: call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
@@ -156,7 +173,7 @@ zx_status_t Device::Bind() {
   }
 
   // Query the device.
-  wlanif_impl_.ops->query(wlanif_impl_.ctx, &query_info_);
+  wlanif_impl_query(&wlanif_impl_, &query_info_);
 
   status = loop_.StartThread("wlanif-loop");
   if (status != ZX_OK) {
@@ -259,7 +276,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   }
   impl_req.num_ssids = num_ssids;
 
-  wlanif_impl_.ops->start_scan(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_start_scan(&wlanif_impl_, &impl_req);
 }
 
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
@@ -286,7 +303,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
   }
   std::memcpy(impl_req.op_rates, req.op_rate_set.data(), impl_req.num_op_rates);
 
-  wlanif_impl_.ops->join_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_join_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
@@ -303,7 +320,7 @@ void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
   // auth_failure_timeout
   impl_req.auth_failure_timeout = req.auth_failure_timeout;
 
-  wlanif_impl_.ops->auth_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_auth_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
@@ -315,7 +332,7 @@ void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
   // result_code
   impl_resp.result_code = ConvertAuthResultCode(resp.result_code);
 
-  wlanif_impl_.ops->auth_resp(wlanif_impl_.ctx, &impl_resp);
+  wlanif_impl_auth_resp(&wlanif_impl_, &impl_resp);
 }
 
 void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
@@ -329,7 +346,7 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
   // reason_code
   impl_req.reason_code = ConvertDeauthReasonCode(req.reason_code);
 
-  wlanif_impl_.ops->deauth_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_deauth_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
@@ -348,7 +365,7 @@ void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
     impl_req.rsne_len = 0;
   }
 
-  wlanif_impl_.ops->assoc_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_assoc_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
@@ -363,7 +380,7 @@ void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
   // association_id
   impl_resp.association_id = resp.association_id;
 
-  wlanif_impl_.ops->assoc_resp(wlanif_impl_.ctx, &impl_resp);
+  wlanif_impl_assoc_resp(&wlanif_impl_, &impl_resp);
 }
 
 void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
@@ -377,7 +394,7 @@ void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
   // reason_code
   impl_req.reason_code = req.reason_code;
 
-  wlanif_impl_.ops->disassoc_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_disassoc_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::ResetReq(wlan_mlme::ResetRequest req) {
@@ -391,7 +408,7 @@ void Device::ResetReq(wlan_mlme::ResetRequest req) {
   // set_default_mib
   impl_req.set_default_mib = req.set_default_mib;
 
-  wlanif_impl_.ops->reset_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_reset_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::StartReq(wlan_mlme::StartRequest req) {
@@ -417,7 +434,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   // rsne
   CopyRSNE(req.rsne.value_or({}), impl_req.rsne, &impl_req.rsne_len);
 
-  wlanif_impl_.ops->start_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_start_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::StopReq(wlan_mlme::StopRequest req) {
@@ -428,7 +445,7 @@ void Device::StopReq(wlan_mlme::StopRequest req) {
   // ssid
   CopySSID(req.ssid, &impl_req.ssid);
 
-  wlanif_impl_.ops->stop_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_stop_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
@@ -446,7 +463,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
     ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
   }
 
-  wlanif_impl_.ops->set_keys_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_set_keys_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
@@ -464,7 +481,7 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
     ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
   }
 
-  wlanif_impl_.ops->del_keys_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_del_keys_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::EapolReq(wlan_mlme::EapolRequest req) {
@@ -477,10 +494,10 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
   std::memcpy(impl_req.dst_addr, req.dst_addr.data(), ETH_ALEN);
 
   // data
-  impl_req.data_len = req.data.size();
-  impl_req.data = req.data.data();
+  impl_req.data_count = req.data.size();
+  impl_req.data_list = req.data.data();
 
-  wlanif_impl_.ops->eapol_req(wlanif_impl_.ctx, &impl_req);
+  wlanif_impl_eapol_req(&wlanif_impl_, &impl_req);
 }
 
 void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
@@ -527,7 +544,7 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
 
 void Device::StatsQueryReq() {
   if (wlanif_impl_.ops->stats_query_req != nullptr) {
-    wlanif_impl_.ops->stats_query_req(wlanif_impl_.ctx);
+    wlanif_impl_stats_query_req(&wlanif_impl_);
   }
 }
 
@@ -591,7 +608,7 @@ void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest
   wlanif_start_capture_frames_resp_t impl_resp = {};
 
   // forward request to driver
-  wlanif_impl_.ops->start_capture_frames(wlanif_impl_.ctx, &impl_req, &impl_resp);
+  wlanif_impl_start_capture_frames(&wlanif_impl_, &impl_req, &impl_resp);
 
   wlan_mlme::StartCaptureFramesResponse resp;
   resp.status = impl_resp.status;
@@ -599,9 +616,9 @@ void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest
   cb(resp);
 }
 
-void Device::StopCaptureFrames() { wlanif_impl_.ops->stop_capture_frames(wlanif_impl_.ctx); }
+void Device::StopCaptureFrames() { wlanif_impl_stop_capture_frames(&wlanif_impl_); }
 
-void Device::OnScanResult(wlanif_scan_result_t* result) {
+void Device::OnScanResult(const wlanif_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -618,7 +635,7 @@ void Device::OnScanResult(wlanif_scan_result_t* result) {
   binding_.events().OnScanResult(std::move(fidl_result));
 }
 
-void Device::OnScanEnd(wlanif_scan_end_t* end) {
+void Device::OnScanEnd(const wlanif_scan_end_t* end) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -635,7 +652,7 @@ void Device::OnScanEnd(wlanif_scan_end_t* end) {
   binding_.events().OnScanEnd(std::move(fidl_end));
 }
 
-void Device::JoinConf(wlanif_join_confirm_t* resp) {
+void Device::JoinConf(const wlanif_join_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -652,7 +669,7 @@ void Device::JoinConf(wlanif_join_confirm_t* resp) {
   binding_.events().JoinConf(std::move(fidl_resp));
 }
 
-void Device::AuthenticateConf(wlanif_auth_confirm_t* resp) {
+void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -675,7 +692,7 @@ void Device::AuthenticateConf(wlanif_auth_confirm_t* resp) {
   binding_.events().AuthenticateConf(std::move(fidl_resp));
 }
 
-void Device::AuthenticateInd(wlanif_auth_ind_t* ind) {
+void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!binding_.is_bound()) {
@@ -693,7 +710,7 @@ void Device::AuthenticateInd(wlanif_auth_ind_t* ind) {
   binding_.events().AuthenticateInd(std::move(fidl_ind));
 }
 
-void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
+void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -710,7 +727,7 @@ void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
   binding_.events().DeauthenticateConf(std::move(fidl_resp));
 }
 
-void Device::DeauthenticateInd(wlanif_deauth_indication_t* ind) {
+void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -730,7 +747,7 @@ void Device::DeauthenticateInd(wlanif_deauth_indication_t* ind) {
   binding_.events().DeauthenticateInd(std::move(fidl_ind));
 }
 
-void Device::AssociateConf(wlanif_assoc_confirm_t* resp) {
+void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // For unprotected network, set data state to online immediately. For protected network, do
@@ -754,7 +771,7 @@ void Device::AssociateConf(wlanif_assoc_confirm_t* resp) {
   binding_.events().AssociateConf(std::move(fidl_resp));
 }
 
-void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
+void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -780,7 +797,7 @@ void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
   binding_.events().AssociateInd(std::move(fidl_ind));
 }
 
-void Device::DisassociateConf(wlanif_disassoc_confirm_t* resp) {
+void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -797,7 +814,7 @@ void Device::DisassociateConf(wlanif_disassoc_confirm_t* resp) {
   binding_.events().DisassociateConf(std::move(fidl_resp));
 }
 
-void Device::DisassociateInd(wlanif_disassoc_indication_t* ind) {
+void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   SetEthernetStatusLocked(false);
@@ -817,7 +834,7 @@ void Device::DisassociateInd(wlanif_disassoc_indication_t* ind) {
   binding_.events().DisassociateInd(std::move(fidl_ind));
 }
 
-void Device::StartConf(wlanif_start_confirm_t* resp) {
+void Device::StartConf(const wlanif_start_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_START_RESULT_SUCCESS) {
@@ -836,7 +853,7 @@ void Device::StartConf(wlanif_start_confirm_t* resp) {
   binding_.events().StartConf(std::move(fidl_resp));
 }
 
-void Device::StopConf(wlanif_stop_confirm_t* resp) {
+void Device::StopConf(const wlanif_stop_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_STOP_RESULT_SUCCESS) {
@@ -853,7 +870,7 @@ void Device::StopConf(wlanif_stop_confirm_t* resp) {
   binding_.events().StopConf(fidl_resp);
 }
 
-void Device::EapolConf(wlanif_eapol_confirm_t* resp) {
+void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -867,7 +884,7 @@ void Device::EapolConf(wlanif_eapol_confirm_t* resp) {
   binding_.events().EapolConf(std::move(fidl_resp));
 }
 
-void Device::SignalReport(wlanif_signal_report_indication_t* ind) {
+void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -881,7 +898,7 @@ void Device::SignalReport(wlanif_signal_report_indication_t* ind) {
   binding_.events().SignalReport(std::move(fidl_ind));
 }
 
-void Device::EapolInd(wlanif_eapol_indication_t* ind) {
+void Device::EapolInd(const wlanif_eapol_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -896,13 +913,13 @@ void Device::EapolInd(wlanif_eapol_indication_t* ind) {
   std::memcpy(fidl_ind.dst_addr.data(), ind->dst_addr, ETH_ALEN);
 
   // data
-  fidl_ind.data.resize(ind->data_len);
-  fidl_ind.data.assign(ind->data, ind->data + ind->data_len);
+  fidl_ind.data.resize(ind->data_count);
+  fidl_ind.data.assign(ind->data_list, ind->data_list + ind->data_count);
 
   binding_.events().EapolInd(std::move(fidl_ind));
 }
 
-void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
+void Device::StatsQueryResp(const wlanif_stats_query_response_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
@@ -913,15 +930,15 @@ void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
   binding_.events().StatsQueryResp(std::move(fidl_resp));
 }
 
-void Device::RelayCapturedFrame(wlanif_captured_frame_result* result) {
+void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;
   }
 
   wlan_mlme::CapturedFrameResult fidl_result;
-  fidl_result.frame.resize(result->data_len);
-  fidl_result.frame.assign(result->data, result->data + result->data_len);
+  fidl_result.frame.resize(result->data_count);
+  fidl_result.frame.assign(result->data_list, result->data_list + result->data_count);
 
   binding_.events().RelayCapturedFrame(std::move(fidl_result));
 }
@@ -966,7 +983,7 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
 void Device::EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   if (wlanif_impl_.ops->data_queue_tx != nullptr) {
-    wlanif_impl_.ops->data_queue_tx(wlanif_impl_.ctx, options, netbuf, completion_cb, cookie);
+    wlanif_impl_data_queue_tx(&wlanif_impl_, options, netbuf, completion_cb, cookie);
   } else {
     completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, netbuf);
   }
@@ -987,7 +1004,7 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
       break;
     case ETHERNET_SETPARAM_MULTICAST_PROMISC:
       if (wlanif_impl_.ops->set_multicast_promisc != nullptr) {
-        return wlanif_impl_.ops->set_multicast_promisc(wlanif_impl_.ctx, !!value);
+        return wlanif_impl_set_multicast_promisc(&wlanif_impl_, !!value);
       } else {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -1008,7 +1025,7 @@ void Device::SetEthernetStatusUnlocked(bool online) {
   SetEthernetStatusLocked(online);
 }
 
-void Device::EthRecv(void* data, size_t length, uint32_t flags) {
+void Device::EthRecv(const void* data, size_t length, uint32_t flags) {
   std::lock_guard<std::mutex> lock(lock_);
   if (eth_started_) {
     ethernet_ifc_recv(&ethernet_ifc_, data, length, flags);

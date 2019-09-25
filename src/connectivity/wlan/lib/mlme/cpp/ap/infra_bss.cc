@@ -50,7 +50,7 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
       .primary = req.body()->channel,
       // TODO(WLAN-908): Augment MLME-START.request and forgo a guessing in
       // MLME.
-      .cbw = CBW20,
+      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
   };
 
   auto status = device_->SetChannel(chan);

@@ -9,8 +9,8 @@
 #include <string>
 
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/info.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan/protocol/info.h>
 
 bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
 bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
@@ -62,8 +62,8 @@ wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
 wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy);
 ::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy);
 
-const char* CbwSuffix(uint8_t cbw);
-const char* CbwStr(uint8_t cbw);
+const char* CbwSuffix(wlan_channel_bandwidth_t cbw);
+const char* CbwStr(wlan_channel_bandwidth_t cbw);
 
 }  // namespace common
 }  // namespace wlan

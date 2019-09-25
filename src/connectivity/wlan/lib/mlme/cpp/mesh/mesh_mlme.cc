@@ -25,7 +25,7 @@ namespace wlan_mesh = ::fuchsia::wlan::mesh;
 static wlan_channel_t GetChannel(uint8_t requested_channel) {
   return wlan_channel_t{
       .primary = requested_channel,
-      .cbw = CBW20,
+      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
   };
 }
 

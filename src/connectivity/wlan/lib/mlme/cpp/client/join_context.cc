@@ -29,7 +29,7 @@ wlan_channel_t JoinContext::SanitizeChannel(const wlan_channel_t& chan) {
   }
 
   wlan_channel_t chan_fallback = chan;
-  chan_fallback.cbw = CBW20;
+  chan_fallback.cbw = WLAN_CHANNEL_BANDWIDTH__20;
   errorf("Sanitize the invalid channel: %s to %s\n", common::ChanStrLong(chan).c_str(),
          common::ChanStrLong(chan_fallback).c_str());
   return chan_fallback;

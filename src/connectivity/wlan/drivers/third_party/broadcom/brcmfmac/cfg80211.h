@@ -240,7 +240,7 @@ struct escan_info {
   struct wiphy* wiphy;
   struct brcmf_if* ifp;
   zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                     wlanif_scan_req_t* request);
+                     const wlanif_scan_req_t* request);
 };
 
 /**
@@ -323,7 +323,7 @@ struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
   struct brcmf_p2p_info p2p;
   struct brcmf_btcoex_info* btcoex;
-  wlanif_scan_req_t* scan_request;
+  const wlanif_scan_req_t* scan_request;
   mtx_t usr_sync;
   struct wl_cfg80211_bss_info* bss_info;
   struct brcmf_cfg80211_connect_info conn_info;

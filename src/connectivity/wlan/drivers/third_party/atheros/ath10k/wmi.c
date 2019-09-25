@@ -2175,7 +2175,7 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
     rx_info.rssi_dbm = ATH10K_DEFAULT_NOISE_FLOOR + arg.snr;
 
     rx_info.chan.primary = arg.channel;
-    rx_info.chan.cbw = CBW20;
+    rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
     rx_info.chan.secondary80 = 0;
 
     rx_status = arg.status;

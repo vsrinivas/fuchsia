@@ -40,7 +40,7 @@
 #include <threads.h>
 #include <zircon/listnode.h>
 
-#include <wlan/protocol/info.h>
+#include <ddk/protocol/wlan/info.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"

@@ -51,17 +51,17 @@ uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
 uint8_t ConvertCBW(wlan_common::CBW cbw) {
   switch (cbw) {
     case wlan_common::CBW::CBW20:
-      return CBW20;
+      return WLAN_CHANNEL_BANDWIDTH__20;
     case wlan_common::CBW::CBW40:
-      return CBW40;
+      return WLAN_CHANNEL_BANDWIDTH__40;
     case wlan_common::CBW::CBW40BELOW:
-      return CBW40BELOW;
+      return WLAN_CHANNEL_BANDWIDTH__40BELOW;
     case wlan_common::CBW::CBW80:
-      return CBW80;
+      return WLAN_CHANNEL_BANDWIDTH__80;
     case wlan_common::CBW::CBW160:
-      return CBW160;
+      return WLAN_CHANNEL_BANDWIDTH__160;
     case wlan_common::CBW::CBW80P80:
-      return CBW80P80;
+      return WLAN_CHANNEL_BANDWIDTH__80P80;
   }
   ZX_ASSERT(0);
 }
@@ -181,19 +181,19 @@ wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type) {
   }
 }
 
-wlan_common::CBW ConvertCBW(uint8_t cbw) {
+wlan_common::CBW ConvertCBW(wlan_channel_bandwidth_t cbw) {
   switch (cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       return wlan_common::CBW::CBW20;
-    case CBW40:
+    case WLAN_CHANNEL_BANDWIDTH__40:
       return wlan_common::CBW::CBW40;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       return wlan_common::CBW::CBW40BELOW;
-    case CBW80:
+    case WLAN_CHANNEL_BANDWIDTH__80:
       return wlan_common::CBW::CBW80;
-    case CBW160:
+    case WLAN_CHANNEL_BANDWIDTH__160:
       return wlan_common::CBW::CBW160;
-    case CBW80P80:
+    case WLAN_CHANNEL_BANDWIDTH__80P80:
       return wlan_common::CBW::CBW80P80;
     default:
       ZX_ASSERT(0);
@@ -524,10 +524,10 @@ uint8_t ConvertKeyType(wlan_mlme::KeyType key_type) {
 void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const wlan_mlme::SetKeyDescriptor& fidl_key_desc) {
   // key
-  key_desc->key = const_cast<uint8_t*>(fidl_key_desc.key.data());
+  key_desc->key_list = const_cast<uint8_t*>(fidl_key_desc.key.data());
 
   // length
-  key_desc->length = fidl_key_desc.key.size();
+  key_desc->key_count = fidl_key_desc.key.size();
 
   // key_id
   key_desc->key_id = fidl_key_desc.key_id;
@@ -926,7 +926,7 @@ void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
 
 void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats& stats) {
   fidl_stats->hist.resize(0);
-  fidl_stats->hist.assign(stats.hist, stats.hist + stats.hist_len);
+  fidl_stats->hist.assign(stats.hist_list, stats.hist_list + stats.hist_count);
 }
 
 wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {
@@ -967,9 +967,9 @@ void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlanif_mlme_stats
 
 void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats) {
   ConvertDispatcherStats(&fidl_stats->dispatcher_stats, stats.dispatcher_stats);
-  if (stats.mlme_stats != nullptr) {
+  if (stats.mlme_stats_list != nullptr) {
     fidl_stats->mlme_stats = ::std::make_unique<wlan_stats::MlmeStats>();
-    ConvertMlmeStats(fidl_stats->mlme_stats.get(), *stats.mlme_stats);
+    ConvertMlmeStats(fidl_stats->mlme_stats.get(), *stats.mlme_stats_list);
   }
 }
 

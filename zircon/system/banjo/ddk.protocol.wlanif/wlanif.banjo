@@ -1,0 +1,566 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.protocol.wlanif;
+
+using ddk.hw.wlan.ieee80211;
+using ddk.hw.wlan.wlaninfo;
+using ddk.protocol.ethernet;
+using ddk.protocol.wlan.info;
+using zx;
+
+enum WlanScanType : uint8 {
+    ACTIVE = 1;
+    PASSIVE = 2;
+};
+
+/// IEEE Std 802.11-2016, 9.4.2.2
+const uint32 WLAN_SCAN_MAX_SSIDS = 32;
+
+struct WlanifSsid {
+    uint8 len;
+    array<uint8>:WLAN_MAX_SSID_LEN data;
+};
+
+const usize WLAN_ETH_ALEN = 6;
+
+struct WlanifScanReq {
+    uint64 txn_id;
+    ddk.protocol.wlan.info.WlanBssType bss_type;
+    array<uint8>:WLAN_ETH_ALEN bssid;
+    WlanifSsid ssid;
+    WlanScanType scan_type;
+    uint32 probe_delay;
+    usize num_channels;
+    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channel_list;
+    uint32 min_channel_time;
+    uint32 max_channel_time;
+    usize num_ssids;
+    array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS ssid_list;
+};
+
+/// IEEE Std 802.11-2016, 9.4.2.25.1
+const uint32 WLAN_RSNE_MAX_LEN = 255;
+
+struct WlanifBssDescription {
+    array<uint8>:WLAN_ETH_ALEN bssid;
+    WlanifSsid ssid;
+    ddk.protocol.wlan.info.WlanBssType bss_type;
+    uint32 beacon_period;
+    uint32 dtim_period;
+    uint64 timestamp;
+    uint64 local_time;
+    uint16 cap;
+    /// Concatenation of SuppRates and ExtSuppRates - MSB indicates basic rate
+    /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
+    array<uint8>:WLAN_MAC_MAX_RATES rates;
+    uint16 num_rates;
+
+    usize rsne_len;
+    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+    ddk.protocol.wlan.info.WlanChannel chan;
+    int8 rssi_dbm;
+    int16 rcpi_dbmh;
+    int16 rsni_dbh;
+};
+
+const uint32 WLAN_MAX_OP_RATES = 12;
+
+struct WlanifJoinReq {
+    WlanifBssDescription selected_bss;
+    uint32 join_failure_timeout;
+    uint32 nav_sync_delay;
+    usize num_op_rates;
+    array<uint16>:WLAN_MAX_OP_RATES op_rates;
+};
+
+enum WlanAuthType : uint8 {
+    OPEN_SYSTEM = 1;
+    SHARED_KEY = 2;
+    FAST_BSS_TRANSITION = 3;
+    SAE = 4;
+};
+
+struct WlanifAuthReq {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanAuthType auth_type;
+    uint32 auth_failure_timeout;
+};
+
+struct WlanifAuthInd {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanAuthType auth_type;
+};
+
+/// Deauthentication reasons: IEEE Std 802.11-2016, 9.4.1.7 (Table 9-45)
+enum WlanDeauthReason : uint16 {
+    /// 0 Reserved
+    UNSPECIFIED = 1;
+    INVALID_AUTHENTICATION = 2;
+    LEAVING_NETWORK_DEAUTH = 3;
+    INACTIVITY = 4;
+    NO_MORE_STAS = 5;
+    INVALID_CLASS2_FRAME = 6;
+    INVALID_CLASS3_FRAME = 7;
+    LEAVING_NETWORK_DISASSOC = 8;
+    NOT_AUTHENTICATED = 9;
+    UNACCEPTABLE_POWER_CA = 10;
+    UNACCEPTABLE_SUPPORTED_CHANNELS = 11;
+    BSS_TRANSITION_DISASSOC = 12;
+    INVALID_ELEMENT = 13;
+    MIC_FAILURE = 14;
+    FOURWAY_HANDSHAKE_TIMEOUT = 15;
+    GK_HANDSHAKE_TIMEOUT = 16;
+    HANDSHAKE_ELEMENT_MISMATCH = 17;
+    INVALID_GROUP_CIPHER = 18;
+    INVALID_PAIRWISE_CIPHER = 19;
+    INVALID_AKMP = 20;
+    UNSUPPORTED_RSNE_VERSION = 21;
+    INVALID_RSNE_CAPABILITIES = 22;
+    IEEE802_1_X_AUTH_FAILED = 23;
+    CIPHER_OUT_OF_POLICY = 24;
+    TDLS_PEER_UNREACHABLE = 25;
+    TDLS_UNSPECIFIED = 26;
+    SSP_REQUESTED_DISASSOC = 27;
+    NO_SSP_ROAMING_AGREEMENT = 28;
+    BAD_CIPHER_OR_AKM = 29;
+    NOT_AUTHORIZED_THIS_LOCATION = 30;
+    SERVICE_CHANGE_PRECLUDES_TS = 31;
+    UNSPECIFIED_QOS = 32;
+    NOT_ENOUGH_BANDWIDTH = 33;
+    MISSING_ACKS = 34;
+    EXCEEDED_TXOP = 35;
+    STA_LEAVING = 36;
+    /// Values 37 and 38 are overloaded but should be clear from context.
+    END_TS_BA_DLS = 37;
+    UNKNOWN_TS_BA = 38;
+    TIMEOUT = 39;
+    /// 40-44 Reserved
+    PEERKEY_MISMATCH = 45;
+    PEER_INITIATED = 46;
+    AP_INITIATED = 47;
+    INVALID_FT_ACTION_FRAME_COUNT = 48;
+    INVALID_PMKID = 49;
+    INVALID_MDE = 50;
+    INVALID_FTE = 51;
+    MESH_PEERING_CANCELED = 52;
+    MESH_MAX_PEERS = 53;
+    MESH_CONFIGURATION_POLICY_VIOLATION = 54;
+    MESH_CLOSE_RCVD = 55;
+    MESH_MAX_RETRIES = 56;
+    MESH_CONFIRM_TIMEOUT = 57;
+    MESH_INVALID_GTK = 58;
+    MESH_INCONSISTENT_PARAMETERS = 59;
+    MESH_INVALID_SECURITY_CAPABILITY = 60;
+    MESH_PATH_ERROR_NO_PROXY_INFORMATION = 61;
+    MESH_PATH_ERROR_NO_FORWARDING_INFORMATION = 62;
+    MESH_PATH_ERROR_DESTINATION_UNREACHABLE = 63;
+    MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64;
+    MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
+    MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
+    // 67 - 65535 Reserved
+};
+
+struct WlanifDeauthReq {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanDeauthReason reason_code;
+};
+
+struct WlanifAssocReq {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    usize rsne_len;
+    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+};
+
+struct WlanifAssocInd {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    uint16 listen_interval;
+    WlanifSsid ssid;
+    usize rsne_len;
+    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+};
+
+struct WlanifDisassocReq {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    uint16 reason_code;
+};
+
+struct WlanifResetReq {
+    array<uint8>:WLAN_ETH_ALEN sta_address;
+    bool set_default_mib;
+};
+
+struct WlanifStartReq {
+    WlanifSsid ssid;
+    ddk.protocol.wlan.info.WlanBssType bss_type;
+    uint32 beacon_period;
+    uint32 dtim_period;
+    uint8 channel;
+    usize rsne_len;
+    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+};
+
+struct WlanifStopReq {
+    WlanifSsid ssid;
+};
+
+struct SetKeyDescriptor {
+    vector<uint8> key;
+    uint16 key_id;
+    ddk.protocol.wlan.info.WlanKeyType key_type;
+    array<uint8>:WLAN_ETH_ALEN address;
+    uint64 rsc;
+    array<uint8>:3 cipher_suite_oui;
+    uint8 cipher_suite_type;
+};
+
+const uint32 WLAN_MAX_KEYLIST_SIZE = 4;
+
+struct WlanifSetKeysReq {
+    usize num_keys;
+    array<SetKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
+};
+
+struct DeleteKeyDescriptor {
+    uint16 key_id;
+    ddk.protocol.wlan.info.WlanKeyType key_type;
+    array<uint8>:WLAN_ETH_ALEN address;
+};
+
+struct WlanifDelKeysReq {
+    usize num_keys;
+    array<DeleteKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
+};
+
+struct WlanifEapolReq {
+    array<uint8>:WLAN_ETH_ALEN src_addr;
+    array<uint8>:WLAN_ETH_ALEN dst_addr;
+    vector<uint8> data;
+};
+
+/// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
+/// which management frame subtypes are supported for capture.
+///
+/// These values are set at `1 << MgmtFrameSubtypeValue`
+/// See IEEE Std 802.11-2016, 9.2.4.1.3, for value of each management frame subtype
+enum WlanMgmtCaptureFlag : uint32 {
+    ASSOC_REQ = 0x1;
+    ASSOC_RESP = 0x2;
+    REASSOC_REQ = 0x4;
+    REASSOC_RESP = 0x8;
+    PROBE_REQ = 0x10;
+    PROBE_RESP = 0x20;
+    TIMING_AD = 0x40;
+
+    BEACON = 0x100;
+    ATIM = 0x200;
+    DISASSOC = 0x400;
+    AUTH = 0x800;
+    DEAUTH = 0x1000;
+    ACTION = 0x2000;
+    ACTION_NO_ACK = 0x4000;
+};
+
+struct WlanifStartCaptureFramesReq {
+    uint32 mgmt_frame_flags;
+};
+
+struct WlanifStartCaptureFramesResp {
+    int32 status;
+    uint32 supported_mgmt_frames;
+};
+
+struct WlanifScanResult {
+    uint64 txn_id;
+    WlanifBssDescription bss;
+};
+
+enum WlanScanResult : uint8 {
+    SUCCESS = 0;
+    NOT_SUPPORTED = 1;
+    INVALID_ARGS = 2;
+    INTERNAL_ERROR = 3;
+};
+
+struct WlanifScanEnd {
+    uint64 txn_id;
+    WlanScanResult code;
+};
+
+enum WlanJoinResult : uint8 {
+    SUCCESS = 0;
+    FAILURE_TIMEOUT = 1;
+};
+
+struct WlanifJoinConfirm {
+    WlanJoinResult result_code;
+};
+
+enum WlanAuthResult : uint8 {
+    SUCCESS = 0;
+    REFUSED = 1;
+    ANTI_CLOGGING_TOKEN_REQUIRED = 2;
+    FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
+    REJECTED = 4;
+    FAILURE_TIMEOUT = 5;
+};
+
+struct WlanifAuthConfirm {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanAuthType auth_type;
+    WlanAuthResult result_code;
+};
+
+struct WlanifAuthResp {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanAuthResult result_code;
+};
+
+struct WlanifDeauthConfirm {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+};
+
+struct WlanifDeauthIndication {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanDeauthReason reason_code;
+};
+
+enum WlanAssocResult : uint8 {
+    SUCCESS = 0;
+    REFUSED_REASON_UNSPECIFIED = 1;
+    REFUSED_NOT_AUTHENTICATED = 2;
+    REFUSED_CAPABILITIES_MISMATCH = 3;
+    REFUSED_EXTERNAL_REASON = 4;
+    REFUSED_AP_OUT_OF_MEMORY = 5;
+    REFUSED_BASIC_RATES_MISMATCH = 6;
+    REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED = 7;
+    REFUSED_TEMPORARILY = 8;
+};
+
+struct WlanifAssocConfirm {
+    WlanAssocResult result_code;
+    uint16 association_id;
+};
+
+struct WlanifAssocResp {
+    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    WlanAssocResult result_code;
+    uint16 association_id;
+};
+
+struct WlanifDisassocConfirm {
+    int32 status;
+};
+
+struct WlanifDisassocIndication {
+    array<uint8>:WLAN_ETH_ALEN PeerStaAddress;
+    WlanDeauthReason reason_code;
+};
+
+enum WlanStartResult : uint8 {
+    SUCCESS = 0;
+    BSS_ALREADY_STARTED_OR_JOINED = 1;
+    RESET_REQUIRED_BEFORE_START = 2;
+    NOT_SUPPORTED = 3;
+};
+
+struct WlanifStartConfirm {
+    WlanStartResult result_code;
+};
+
+enum WlanStopResult : uint8 {
+    SUCCESS = 0;
+    BSS_ALREADY_STOPPED = 1;
+    INTERNAL_ERROR = 2;
+};
+
+struct WlanifStopConfirm {
+    WlanStopResult result_code;
+};
+
+enum WlanEapolResult : uint8 {
+    SUCCESS = 0;
+    TRANSMISSION_FAILURE = 1;
+};
+
+struct WlanifEapolConfirm {
+    WlanEapolResult result_code;
+};
+
+struct WlanifSignalReportIndication {
+    int8 rssi_dbm;
+};
+
+struct WlanifEapolIndication {
+    array<uint8>:WLAN_ETH_ALEN src_addr;
+    array<uint8>:WLAN_ETH_ALEN dst_addr;
+    vector<uint8> data;
+};
+
+struct WlanifBandCapabilities {
+    /// Values from enum Band (WLAN_BAND_*)
+    uint8 band_id;
+    usize num_basic_rates;
+    array<uint16>:WLAN_INFO_BAND_INFO_MAX_BASIC_RATES basic_rates;
+    uint16 base_frequency;
+    usize num_channels;
+    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    bool ht_supported;
+    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
+    bool vht_supported;
+    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_caps;
+};
+
+enum WlanifFeature : uint32 {
+    /// Supports DMA buffer transfer protocol
+    DMA = 0x1;
+    /// Synthetic (i.e., non-physical) device
+    SYNTH = 0x2;
+};
+
+struct WlanifQueryInfo {
+    array<uint8>:WLAN_ETH_ALEN mac_addr;
+    /// WLAN_MAC_ROLE_*
+    uint8 role;
+    /// WLANIF_FEATURE_*
+    uint32 features;
+    usize num_bands;
+    array<WlanifBandCapabilities>:WLAN_INFO_MAX_BANDS bands;
+    /// WLAN_DRIVER_FEATURE_*
+    uint32 driver_features;
+};
+
+struct WlanifCounter {
+    uint64 count;
+    string name;
+};
+
+struct WlanifPacketCounter {
+    WlanifCounter in;
+    WlanifCounter out;
+    WlanifCounter drop;
+    WlanifCounter in_bytes;
+    WlanifCounter out_bytes;
+    WlanifCounter drop_bytes;
+};
+
+struct WlanifDispatcherStats {
+    WlanifPacketCounter any_packet;
+    WlanifPacketCounter mgmt_frame;
+    WlanifPacketCounter ctrl_frame;
+    WlanifPacketCounter data_frame;
+};
+
+struct WlanifRssiStats {
+    vector<uint64> hist;
+};
+
+enum WlanifMlmeStatsType : uint8 {
+    CLIENT = 0;
+    AP = 1;
+};
+
+struct WlanifClientMlmeStats {
+    WlanifMlmeStatsType tag;
+    WlanifPacketCounter svc_msg;
+    WlanifPacketCounter data_frame;
+    WlanifPacketCounter mgmt_frame;
+    WlanifPacketCounter tx_frame;
+    WlanifPacketCounter rx_frame;
+    WlanifRssiStats assoc_data_rssi;
+    WlanifRssiStats beacon_rssi;
+};
+
+struct WlanifApMlmeStats {
+    WlanifMlmeStatsType tag;
+    WlanifPacketCounter not_used;
+};
+
+union WlanifMlmeStats {
+    WlanifMlmeStatsType tag;
+    WlanifClientMlmeStats client_mlme_stats;
+    WlanifApMlmeStats ap_mlme_stats;
+};
+
+struct WlanifStats {
+    WlanifDispatcherStats dispatcher_stats;
+    vector<WlanifMlmeStats> mlme_stats;
+};
+
+struct WlanifStatsQueryResponse {
+    WlanifStats stats;
+};
+
+struct WlanifCapturedFrameResult {
+    vector<uint8> data;
+};
+
+[Layout = "ddk-interface"]
+protocol WlanifImplIfc {
+    // MLME operations
+    OnScanResult(WlanifScanResult result) -> ();
+    OnScanEnd(WlanifScanEnd end) -> ();
+    JoinConf(WlanifJoinConfirm resp) -> ();
+    AuthConf(WlanifAuthConfirm resp) -> ();
+    AuthInd(WlanifAuthInd resp) -> ();
+    DeauthConf(WlanifDeauthConfirm resp) -> ();
+    DeauthInd(WlanifDeauthIndication ind) -> ();
+    AssocConf(WlanifAssocConfirm resp) -> ();
+    AssocInd(WlanifAssocInd resp) -> ();
+    DisassocConf(WlanifDisassocConfirm resp) -> ();
+    DisassocInd(WlanifDisassocIndication ind) -> ();
+    StartConf(WlanifStartConfirm resp) -> ();
+    StopConf(WlanifStopConfirm resp) -> ();
+    EapolConf(WlanifEapolConfirm resp) -> ();
+
+    // MLME extensions
+    SignalReport(WlanifSignalReportIndication ind) -> ();
+    EapolInd(WlanifEapolIndication ind) -> ();
+    StatsQueryResp(WlanifStatsQueryResponse resp) -> ();
+    RelayCapturedFrame(WlanifCapturedFrameResult result) -> ();
+
+    // Data operations
+    DataRecv(vector<voidptr> data, uint32 flags) -> ();
+};
+
+[Layout = "ddk-protocol"]
+protocol WlanifImpl {
+    // Lifecycle operations
+    Start(WlanifImplIfc ifc) -> (zx.status status, handle<channel> sme_channel);
+    Stop() -> ();
+
+    // State operation
+    Query() -> (WlanifQueryInfo info);
+
+    // MLME operations
+    StartScan(WlanifScanReq req) -> ();
+    JoinReq(WlanifJoinReq req) -> ();
+    AuthReq(WlanifAuthReq req) -> ();
+    AuthResp(WlanifAuthResp resp) -> ();
+    DeauthReq(WlanifDeauthReq req) -> ();
+    AssocReq(WlanifAssocReq req) -> ();
+    AssocResp(WlanifAssocResp resp) -> ();
+    DisassocReq(WlanifDisassocReq req) -> ();
+    ResetReq(WlanifResetReq req) -> ();
+    StartReq(WlanifStartReq req) -> ();
+    StopReq(WlanifStopReq req) -> ();
+    SetKeysReq(WlanifSetKeysReq req) -> ();
+    DelKeysReq(WlanifDelKeysReq req) -> ();
+    EapolReq(WlanifEapolReq req) -> ();
+
+    // MLME extensions
+    StatsQueryReq() -> ();
+    StartCaptureFrames(WlanifStartCaptureFramesReq req) -> (WlanifStartCaptureFramesResp resp);
+    StopCaptureFrames() -> ();
+
+    // Configuration operations
+    SetMulticastPromisc(bool enable) -> (zx.status status);
+
+    // Data operations
+    [Async]
+    DataQueueTx(uint32 options, ddk.protocol.ethernet.EthernetNetbuf? netbuf) ->
+               (zx.status status, ddk.protocol.ethernet.EthernetNetbuf? netbuf);
+
+};
+

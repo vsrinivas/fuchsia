@@ -4,13 +4,13 @@
 
 #include "../minstrel.h"
 
+#include <ddk/protocol/wlan/info.h>
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 #include <lib/timekeeper/test_clock.h>
 #include <test_timer.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
-#include <wlan/protocol/info.h>
 
 #include "../probe_sequence.h"
 

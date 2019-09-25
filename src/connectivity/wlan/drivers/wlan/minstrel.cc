@@ -98,7 +98,7 @@ zx::duration HeaderTxTimeHt() {
 // 1/2 1: QPSK, 1/2 2: QPSK, 3/4 3: 16-QAM, 1/2 4: 16-QAM, 3/4 5: 64-QAM, 2/3 6:
 // 64-QAM, 3/4 7: 64-QAM, 5/6 8: 256-QAM, 3/4 (since VHT) 9: 256-QAM, 5/6 (since
 // VHT)
-zx::duration PayloadTxTimeHt(CBW cbw, GI gi, size_t mcs_idx) {
+zx::duration PayloadTxTimeHt(wlan_channel_bandwidth_t cbw, wlan_gi_t gi, size_t mcs_idx) {
   // D_{bps} as defined in IEEE 802.11-2016 Table 19-26
   // Unit: Number of data bits per OFDM symbol (20 MHz channel width)
   constexpr uint16_t bits_per_symbol_list[] = {
@@ -108,13 +108,13 @@ zx::duration PayloadTxTimeHt(CBW cbw, GI gi, size_t mcs_idx) {
   // TODO(eyw): VHT would have kDataSubCarriers80 = 234 and kDataSubCarriers160
   // = 468
 
-  ZX_DEBUG_ASSERT(gi == WLAN_GI_400NS || gi == WLAN_GI_800NS);
+  ZX_DEBUG_ASSERT(gi == WLAN_GI__400NS || gi == WLAN_GI__800NS);
 
   int nss = 1 + mcs_idx / kHtNumUniqueMcs;
   int relative_mcs_idx = mcs_idx % kHtNumUniqueMcs;
 
   uint16_t bits_per_symbol = bits_per_symbol_list[relative_mcs_idx];
-  if (cbw == CBW40) {
+  if (cbw == WLAN_CHANNEL_BANDWIDTH__40) {
     bits_per_symbol = bits_per_symbol * kDataSubCarriers40 / kDataSubCarriers20;
   }
 
@@ -123,20 +123,20 @@ zx::duration PayloadTxTimeHt(CBW cbw, GI gi, size_t mcs_idx) {
   // Perform multiplication before division to prevent precision loss
   uint32_t total_time = kTxTimePerSymbolGi800 * 8 * kMinstrelFrameLength / (nss * bits_per_symbol);
 
-  if (gi == WLAN_GI_400NS) {
+  if (gi == WLAN_GI__400NS) {
     total_time = 800 + (kTxTimePerSymbolGi400 * 8 * kMinstrelFrameLength / (nss * bits_per_symbol));
   }
   return zx::nsec(total_time);
 }
 
-zx::duration TxTimeHt(CBW cbw, GI gi, uint8_t relative_mcs_idx) {
+zx::duration TxTimeHt(wlan_channel_bandwidth_t cbw, wlan_gi_t gi, uint8_t relative_mcs_idx) {
   return HeaderTxTimeHt() + PayloadTxTimeHt(cbw, gi, relative_mcs_idx);
 }
 
 // SupportedMcsRx is 78 bit long in IEEE802.11-2016, Figure 9-334
 // In reality, devices implement MCS 0-31, sometimes 32, almost never beyond 32.
-void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW cbw, GI gi,
-                    const SupportedMcsRxMcsHead& mcs_set) {
+void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
+                    wlan_channel_bandwidth_t cbw, wlan_gi_t gi, const SupportedMcsRxMcsHead& mcs_set) {
   size_t tx_stats_added = 0;
   for (uint8_t mcs_idx = 0; mcs_idx < kHtNumMcs; ++mcs_idx) {
     // Skip if this mcs is not supported
@@ -191,14 +191,14 @@ void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapa
   tx_vec_idx_t max_size = kHtNumMcs;
   // TODO(NET-1726): Enable CBW40 support once its information is available from
   // AssocCtx
-  const CBW assoc_chan_width = CBW20;
+  const uint8_t assoc_chan_width = WLAN_CHANNEL_BANDWIDTH__20;
   const bool sgi_20 = ht_cap.ht_cap_info.short_gi_20() == 1;
   const bool sgi_40 = ht_cap.ht_cap_info.short_gi_40() == 1;
 
   if (sgi_20) {
     max_size += kHtNumMcs;
   }
-  if (assoc_chan_width == CBW40) {
+  if (assoc_chan_width == WLAN_CHANNEL_BANDWIDTH__40) {
     max_size += kHtNumMcs;
     if (sgi_40) {
       max_size += kHtNumMcs;
@@ -211,14 +211,17 @@ void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapa
 
   tx_stats_map->reserve(max_size);
 
-  AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
+  AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__20, WLAN_GI__800NS, ht_cap.mcs_set.rx_mcs_head);
   if (sgi_20) {
-    AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head);
+    AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__20, WLAN_GI__400NS,
+                   ht_cap.mcs_set.rx_mcs_head);
   }
-  if (assoc_chan_width == CBW40) {
-    AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
+  if (assoc_chan_width == WLAN_CHANNEL_BANDWIDTH__40) {
+    AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__40, WLAN_GI__800NS,
+                   ht_cap.mcs_set.rx_mcs_head);
     if (sgi_40) {
-      AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head);
+      AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__40, WLAN_GI__400NS,
+                     ht_cap.mcs_set.rx_mcs_head);
     }
   }
   debugmstl("tx_stats_map size: %zu.\n", tx_stats_map->size());

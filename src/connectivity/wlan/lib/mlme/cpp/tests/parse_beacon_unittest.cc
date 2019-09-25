@@ -21,26 +21,27 @@ wlan_mlme::VhtOperation make_vht_op(wlan_mlme::VhtCbw cbw, uint8_t seg0, uint8_t
 
 TEST(ParseBeaconTest, GetVhtCbw) {
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 5)),
-            std::optional<CBW>{});
+            std::optional<wlan_channel_bandwidth_t>{});
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 10)),
-            std::optional<CBW>{});
+            std::optional<wlan_channel_bandwidth_t>{});
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 8, 0)),
-            std::optional{CBW80});
+            std::optional{WLAN_CHANNEL_BANDWIDTH__80});
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 8)),
-            std::optional{CBW160});
+            std::optional{WLAN_CHANNEL_BANDWIDTH__160});
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 20)),
-            std::optional{CBW80P80});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_20_40, 0, 8)), std::optional<CBW>{});
+            std::optional{WLAN_CHANNEL_BANDWIDTH__80P80});
+  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_20_40, 0, 8)),
+            std::optional<wlan_channel_bandwidth_t>{});
 }
 
 TEST(ParseBeaconTest, DeriveChannel) {
   // Fun fact: operator== for wlan_channel_t ignores the 'secondary80' field.
 
   // No DSSS or HT => use rx channel
-  EXPECT_EQ(DeriveChannel(3, {}, nullptr, {}), (wlan_channel_t{3, CBW20, 0}));
+  EXPECT_EQ(DeriveChannel(3, {}, nullptr, {}), (wlan_channel_t{3, WLAN_CHANNEL_BANDWIDTH__20, 0}));
 
   // DSSS wins over rx channel
-  EXPECT_EQ(DeriveChannel(3, 4, nullptr, {}), (wlan_channel_t{4, CBW20, 0}));
+  EXPECT_EQ(DeriveChannel(3, 4, nullptr, {}), (wlan_channel_t{4, WLAN_CHANNEL_BANDWIDTH__20, 0}));
 
   // HT wins over DSSS
   {
@@ -49,7 +50,8 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
     ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
-    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, CBW40BELOW, 0}));
+    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}),
+              (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0}));
   }
 
   // sta_chan_width set to TWENTY overrides bandwidth
@@ -59,7 +61,7 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
     ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::TWENTY);
-    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, CBW20, 0}));
+    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__20, 0}));
   }
 
   // VHT overrides CBW if HT is present
@@ -69,7 +71,8 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
     ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
-    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {CBW160}), (wlan_channel_t{36, CBW160, 0}));
+    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {WLAN_CHANNEL_BANDWIDTH__160}),
+              (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__160, 0}));
   }
 }
 

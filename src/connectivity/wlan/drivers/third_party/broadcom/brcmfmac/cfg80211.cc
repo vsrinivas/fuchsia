@@ -24,8 +24,8 @@
 #include <algorithm>
 
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlanif.h>
 #include <wlan/protocol/ieee80211.h>
-#include <wlan/protocol/if-impl.h>
 #include <wlan/protocol/mac.h>
 
 #include "bits.h"
@@ -153,21 +153,21 @@ uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
   ch_inf.chnum = ch->primary;
 
   switch (ch->cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       ch_inf.bw = BRCMU_CHAN_BW_20;
       ch_inf.sb = BRCMU_CHAN_SB_NONE;
       break;
-    case CBW40:
+    case WLAN_CHANNEL_BANDWIDTH__40:
       ch_inf.bw = BRCMU_CHAN_BW_40;
       ch_inf.sb = BRCMU_CHAN_SB_U;
       break;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       ch_inf.bw = BRCMU_CHAN_BW_40;
       ch_inf.sb = BRCMU_CHAN_SB_L;
       break;
-    case CBW80:
-    case CBW160:
-    case CBW80P80:
+    case WLAN_CHANNEL_BANDWIDTH__80:
+    case WLAN_CHANNEL_BANDWIDTH__160:
+    case WLAN_CHANNEL_BANDWIDTH__80P80:
     default:
       BRCMF_ERR("unsupported channel width\n");
       break;
@@ -468,7 +468,7 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
   wlanif_scan_end_t args;
   args.txn_id = txn_id;
   args.code = scan_result_code;
-  if (ndev->if_callbacks != NULL) {
+  if (ndev->if_proto.ops != NULL) {
     BRCMF_DBG(SCAN, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id, args.code);
     BRCMF_DBG(WLANIF, "Sending scan end event to SME. txn_id: %" PRIu64 ", result: %s\n",
               args.txn_id,
@@ -480,7 +480,7 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
                               ? "invalid args"
                               : args.code == WLAN_SCAN_RESULT_INTERNAL_ERROR ? "internal error"
                                                                              : "unknown");
-    ndev->if_callbacks->on_scan_end(ndev->if_callback_cookie, &args);
+    wlanif_impl_ifc_on_scan_end(&ndev->if_proto, &args);
   }
   ndev->scan_busy = false;
 }
@@ -488,7 +488,7 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted, bool fw_abort) {
   struct brcmf_scan_params_le params_le;
-  wlanif_scan_req_t* scan_request;
+  const wlanif_scan_req_t* scan_request;
   uint64_t reqid;
   uint32_t bucket;
   zx_status_t err = ZX_OK;
@@ -609,7 +609,8 @@ done:
 }
 
 static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
-                             struct brcmf_scan_params_le* params_le, wlanif_scan_req_t* request) {
+                             struct brcmf_scan_params_le* params_le,
+                             const wlanif_scan_req_t* request) {
   uint32_t n_ssids;
   uint32_t n_channels;
   int32_t i;
@@ -647,7 +648,7 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
     for (i = 0; i < (int32_t)n_channels; i++) {
       wlan_channel_t wlan_chan;
       wlan_chan.primary = request->channel_list[i];
-      wlan_chan.cbw = CBW20;
+      wlan_chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
       wlan_chan.secondary80 = 0;
       chanspec = channel_to_chanspec(&cfg->d11inf, &wlan_chan);
       BRCMF_DBG(SCAN, "Chan : %d, Channel spec: %x\n", request->channel_list[i], chanspec);
@@ -675,9 +676,9 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
         memcpy(ptr, &ssid_le, sizeof(ssid_le));
         ptr += sizeof(ssid_le);
       }
-    } else {
-      BRCMF_ERR("SSID list received for passive scan\n");
     }
+  } else {
+    BRCMF_ERR("SSID list received for passive scan\n");
   }
   /* Adding mask to channel numbers */
   params_le->channel_num =
@@ -685,7 +686,7 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
 }
 
 static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                                   wlanif_scan_req_t* request) {
+                                   const wlanif_scan_req_t* request) {
   int32_t params_size =
       BRCMF_SCAN_PARAMS_FIXED_SIZE + offsetof(struct brcmf_escan_params_le, params_le);
   struct brcmf_escan_params_le* params;
@@ -728,7 +729,7 @@ exit:
   return err;
 }
 
-static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, wlanif_scan_req_t* req) {
+static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, const wlanif_scan_req_t* req) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   zx_status_t err;
   struct escan_info* escan = &cfg->escan_info;
@@ -747,7 +748,7 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, wlanif_scan_req_t* req) 
   return err;
 }
 
-zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, wlanif_scan_req_t* req) {
+zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t* req) {
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter\n");
@@ -864,7 +865,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
             "reason: %" PRIu16 "\n",
             MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code);
 
-  ndev->if_callbacks->deauth_ind(ndev->if_callback_cookie, &ind);
+  wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
@@ -998,10 +999,10 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   BRCMF_DBG(WLANIF, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16 "\n",
             conf.result_code, conf.association_id);
 
-  ndev->if_callbacks->assoc_conf(ndev->if_callback_cookie, &conf);
+  wlanif_impl_ifc_assoc_conf(&ndev->if_proto, &conf);
 }
 
-zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* req) {
+zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct brcmf_ext_join_params_le join_params;
@@ -1096,14 +1097,14 @@ done:
   return err;
 }
 
-static void brcmf_notify_deauth(struct net_device* ndev, uint8_t peer_sta_address[ETH_ALEN]) {
+static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_address[ETH_ALEN]) {
   wlanif_deauth_confirm_t resp;
   memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
 
   BRCMF_DBG(WLANIF, "Sending deauth confirm to SME. address: " MAC_FMT_STR "\n",
             MAC_FMT_ARGS(peer_sta_address));
 
-  ndev->if_callbacks->deauth_conf(ndev->if_callback_cookie, &resp);
+  wlanif_impl_ifc_deauth_conf(&ndev->if_proto, &resp);
 }
 
 static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
@@ -1112,7 +1113,7 @@ static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
 
   BRCMF_DBG(WLANIF, "Sending disassoc confirm to SME. status: %" PRIu32 "\n", status);
 
-  ndev->if_callbacks->disassoc_conf(ndev->if_callback_cookie, &resp);
+  wlanif_impl_ifc_disassoc_conf(&ndev->if_proto, &resp);
 }
 
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
@@ -1150,7 +1151,7 @@ static void brcmf_disconnect_timeout(void* data) {
 }
 
 static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
-                                             uint8_t peer_sta_address[ETH_ALEN],
+                                             const uint8_t peer_sta_address[ETH_ALEN],
                                              uint16_t reason_code, bool deauthenticate) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
@@ -1237,7 +1238,7 @@ static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device
 }
 
 static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device* ndev,
-                                          set_key_descriptor_t* req) {
+                                          const set_key_descriptor_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_wsec_key* key;
   int32_t val;
@@ -1260,12 +1261,12 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (req->length == 0) {
+  if (req->key_count == 0) {
     return brcmf_cfg80211_del_key(wiphy, ndev, key_idx, pairwise, mac_addr);
   }
 
-  if (req->length > sizeof(key->data)) {
-    BRCMF_ERR("Too long key length (%u)\n", req->length);
+  if (req->key_count > sizeof(key->data)) {
+    BRCMF_ERR("Too long key length (%u)\n", req->key_count);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1282,9 +1283,9 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
   if ((ext_key) && (!address_is_multicast(mac_addr))) {
     memcpy((char*)&key->ea, (void*)mac_addr, ETH_ALEN);
   }
-  key->len = req->length;
+  key->len = req->key_count;
   key->index = key_idx;
-  memcpy(key->data, req->key, key->len);
+  memcpy(key->data, req->key_list, key->len);
   if (!ext_key) {
     key->flags = BRCMF_PRIMARY_KEY;
   }
@@ -1427,14 +1428,14 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
     // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
     memcpy(&eapol_ind.dst_addr, packet->data, ETH_ALEN);
     memcpy(&eapol_ind.src_addr, packet->data + 6, ETH_ALEN);
-    eapol_ind.data_len = packet->len - 14;
-    eapol_ind.data = packet->data + 14;
+    eapol_ind.data_count = packet->len - 14;
+    eapol_ind.data_list = packet->data + 14;
 
-    BRCMF_DBG(WLANIF, "Sending EAPOL frame to SME. data_len: %zu\n", eapol_ind.data_len);
+    BRCMF_DBG(WLANIF, "Sending EAPOL frame to SME. data_len: %zu\n", eapol_ind.data_count);
 
-    ndev->if_callbacks->eapol_ind(ndev->if_callback_cookie, &eapol_ind);
+    wlanif_impl_ifc_eapol_ind(&ndev->if_proto, &eapol_ind);
   } else {
-    ndev->if_callbacks->data_recv(ndev->if_callback_cookie, packet->data, packet->len, 0);
+    wlanif_impl_ifc_data_recv(&ndev->if_proto, packet->data, packet->len, 0);
   }
   brcmu_pkt_buf_free_netbuf(packet);
 }
@@ -1459,7 +1460,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
   result.bss.local_time = 0;
   result.bss.cap = capability;
   result.bss.chan.primary = (uint8_t)channel;
-  result.bss.chan.cbw = CBW20;  // TODO(cphoenix): Don't hard-code this.
+  result.bss.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;  // TODO(cphoenix): Don't hard-code this.
   result.bss.rssi_dbm = std::min<int16_t>(0, std::max<int16_t>(-255, rssi_dbm));
   result.bss.rcpi_dbmh = 0;
   result.bss.rsni_dbh = 0;
@@ -1467,7 +1468,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
   BRCMF_DBG(SCAN, "Returning scan result %.*s, channel %d, dbm %d, id %lu", result.bss.ssid.len,
             result.bss.ssid.data, channel, result.bss.rssi_dbm, result.txn_id);
 
-  ndev->if_callbacks->on_scan_result(ndev->if_callback_cookie, &result);
+  wlanif_impl_ifc_on_scan_result(&ndev->if_proto, &result);
 }
 
 static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
@@ -2319,7 +2320,7 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
 }
 
 // Returns an MLME result code (WLAN_START_RESULT_*)
-static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req_t* req) {
+static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_start_req_t* req) {
   if (req->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
     BRCMF_ERR("Attempt to start AP in unsupported mode (%d)\n", req->bss_type);
     return WLAN_START_RESULT_NOT_SUPPORTED;
@@ -2400,7 +2401,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
     goto fail;
   }
 
-  channel = {.primary = req->channel, .cbw = CBW20, .secondary80 = 0};
+  channel = {.primary = req->channel, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
   chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
   status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec, &fw_err);
   if (status != ZX_OK) {
@@ -2443,7 +2444,7 @@ fail:
 }
 
 // Returns an MLME result code (WLAN_STOP_RESULT_*)
-static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, wlanif_stop_req_t* req) {
+static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t status;
   int32_t fw_err = 0;
@@ -2496,7 +2497,7 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, wlanif_stop_req_t
 }
 
 // Deauthenticate with specified STA. The reason provided should be from WLAN_DEAUTH_REASON_*
-static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, uint8_t* mac,
+static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, const uint8_t* mac,
                                               uint8_t reason) {
   BRCMF_DBG(TRACE, "Enter: reason: %d\n", reason);
 
@@ -2570,8 +2571,8 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) 
   }
 }
 
-static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
-                                  void* cookie) {
+static zx_status_t brcmf_if_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                                  zx_handle_t* out_sme_channel) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   if (!ndev->sme_channel.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
@@ -2579,9 +2580,7 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t
 
   BRCMF_DBG(WLANIF, "Starting wlanif interface\n");
 
-  ndev->if_callbacks = static_cast<decltype(ndev->if_callbacks)>(malloc(sizeof(*ifc)));
-  memcpy(ndev->if_callbacks, ifc, sizeof(*ifc));
-  ndev->if_callback_cookie = cookie;
+  ndev->if_proto = *ifc;
   brcmf_netdev_open(ndev);
   ndev->flags = IFF_UP;
   brcmf_cfg80211_set_country(ndev_to_wiphy(ndev), "US");
@@ -2595,11 +2594,11 @@ static void brcmf_if_stop(void* ctx) {
 
   BRCMF_DBG(WLANIF, "Stopping wlanif interface\n");
 
-  free(ndev->if_callbacks);
-  ndev->if_callbacks = NULL;
+  ndev->if_proto.ops = nullptr;
+  ndev->if_proto.ctx = nullptr;
 }
 
-void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
+void brcmf_hook_start_scan(void* ctx, const wlanif_scan_req_t* req) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   zx_status_t result;
 
@@ -2628,7 +2627,7 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 // Because brcm's join/assoc is handled in a single operation (BRCMF_C_SET_SSID), we save off the
 // bss information, but otherwise wait until an ASSOCIATE.request is received to join so that we
 // have the negotiated RSNE.
-void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
+void brcmf_hook_join_req(void* ctx, const wlanif_join_req_t* req) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
   const uint8_t* bssid = req->selected_bss.bssid;
@@ -2646,10 +2645,10 @@ void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
                 ? "success"
                 : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout" : "unknown");
 
-  ndev->if_callbacks->join_conf(ndev->if_callback_cookie, &result);
+  wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }
 
-void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
+void brcmf_hook_auth_req(void* ctx, const wlanif_auth_req_t* req) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
   wlanif_auth_confirm_t response;
@@ -2701,12 +2700,12 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
                                         ? "timeout"
                                         : "unknown");
 
-  ndev->if_callbacks->auth_conf(ndev->if_callback_cookie, &response);
+  wlanif_impl_ifc_auth_conf(&ndev->if_proto, &response);
 }
 
 // In AP mode, receive a response from wlanif confirming that a client was successfully
 // authenticated.
-void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
+void brcmf_hook_auth_resp(void* ctx, const wlanif_auth_resp_t* ind) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
@@ -2759,7 +2758,7 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
 // Respond to a MLME-DEAUTHENTICATE.request message. Note that we are required to respond with a
 // MLME-DEAUTHENTICATE.confirm on completion (or failure), even though there is no status
 // reported.
-void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
+void brcmf_hook_deauth_req(void* ctx, const wlanif_deauth_req_t* req) {
   BRCMF_DBG(WLANIF, "Deauth request from SME. reason: %" PRIu16 "\n", req->reason_code);
 
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
@@ -2772,7 +2771,7 @@ void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
-void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
+void brcmf_hook_assoc_req(void* ctx, const wlanif_assoc_req_t* req) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
@@ -2797,7 +2796,7 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
   }
 }
 
-void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
+void brcmf_hook_assoc_resp(void* ctx, const wlanif_assoc_resp_t* ind) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
@@ -2840,7 +2839,7 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
   brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
 }
 
-void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
+void brcmf_hook_disassoc_req(void* ctx, const wlanif_disassoc_req_t* req) {
   BRCMF_DBG(WLANIF, "Disassoc request from SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
             MAC_FMT_ARGS(req->peer_sta_address), req->reason_code);
 
@@ -2852,7 +2851,7 @@ void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
   }  // else notification will happen asynchronously
 }
 
-void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
+void brcmf_hook_reset_req(void* ctx, const wlanif_reset_req_t* req) {
   BRCMF_DBG(WLANIF, "Reset request from SME. address: " MAC_FMT_STR "\n",
             MAC_FMT_ARGS(req->sta_address));
 
@@ -2860,7 +2859,7 @@ void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
 }
 
 /* Start AP mode */
-void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
+void brcmf_hook_start_req(void* ctx, const wlanif_start_req_t* req) {
   BRCMF_DBG(WLANIF, "Start AP request from SME. ssid: %.*s, channel: %u, rsne_len: %zu\n",
             req->ssid.len, req->ssid.data, req->channel, req->rsne_len);
 
@@ -2878,11 +2877,11 @@ void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
                             : result_code == WLAN_START_RESULT_NOT_SUPPORTED ? "not supported"
                                                                              : "unknown");
 
-  ndev->if_callbacks->start_conf(ndev->if_callback_cookie, &result);
+    wlanif_impl_ifc_start_conf(&ndev->if_proto, &result);
 }
 
 /* Stop AP mode */
-void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
+void brcmf_hook_stop_req(void* ctx, const wlanif_stop_req_t* req) {
   BRCMF_DBG(WLANIF, "Stop AP request from SME. ssid: %.*s\n", req->ssid.len, req->ssid.data);
 
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
@@ -2899,10 +2898,10 @@ void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
                 ? "already stopped"
                 : result_code == WLAN_STOP_RESULT_INTERNAL_ERROR ? "internal error" : "unknown");
 
-  ndev->if_callbacks->stop_conf(ndev->if_callback_cookie, &result);
+  wlanif_impl_ifc_stop_conf(&ndev->if_proto, &result);
 }
 
-void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
+void brcmf_hook_set_keys_req(void* ctx, const wlanif_set_keys_req_t* req) {
   BRCMF_DBG(WLANIF, "Set keys request from SME. num_keys: %zu\n", req->num_keys);
 
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
@@ -2917,21 +2916,21 @@ void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
   result = brcmf_cfg80211_add_key(wiphy, ndev, &req->keylist[0]);
 }
 
-void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
+void brcmf_hook_del_keys_req(void* ctx, const wlanif_del_keys_req_t* req) {
   BRCMF_DBG(WLANIF, "Del keys request from SME. num_keys: %zu\n", req->num_keys);
 
   BRCMF_ERR("Unimplemented\n");
 }
 
-void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
-  BRCMF_DBG(WLANIF, "EAPOL xmit request from SME. data_len: %zu\n", req->data_len);
+void brcmf_hook_eapol_req(void* ctx, const wlanif_eapol_req_t* req) {
+  BRCMF_DBG(WLANIF, "EAPOL xmit request from SME. data_len: %zu\n", req->data_count);
 
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   wlanif_eapol_confirm_t confirm;
   int packet_length;
 
   // Ethernet header length + EAPOL PDU length
-  packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_len;
+  packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_count;
   uint8_t* packet = static_cast<decltype(packet)>(malloc(packet_length));
   if (packet == NULL) {
     confirm.result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
@@ -2940,7 +2939,7 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
     memcpy(packet, req->dst_addr, ETH_ALEN);
     memcpy(packet + ETH_ALEN, req->src_addr, ETH_ALEN);
     *(uint16_t*)(packet + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
-    memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data, req->data_len);
+    memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
     ethernet_netbuf_t netbuf;
     netbuf.data_buffer = packet;
     netbuf.data_size = packet_length;
@@ -2956,14 +2955,14 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
           ? "success"
           : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure" : "unknown");
 
-  ndev->if_callbacks->eapol_conf(ndev->if_callback_cookie, &confirm);
+  wlanif_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
 }
 
 static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
   // 2.4 GHz
   uint32_t val = WLC_BAND_2G;
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
-  if (status == ZX_OK) {
+   if (status == ZX_OK) {
     bw_cap[WLAN_INFO_BAND_2GHZ] = val;
 
     // 5 GHz
@@ -3433,7 +3432,8 @@ void brcmf_hook_stats_query_req(void* ctx) {
 
   wlanif_stats_query_response_t response = {};
   wlanif_mlme_stats_t mlme_stats = {};
-  response.stats.mlme_stats = &mlme_stats;
+  response.stats.mlme_stats_list = &mlme_stats;
+  response.stats.mlme_stats_count = 1;
 
   // TODO(cphoenix): Fill in all the stats fields.
   switch (wdev->iftype) {
@@ -3487,11 +3487,12 @@ void brcmf_hook_stats_query_req(void* ctx) {
       break;
     }
     default:
-      response.stats.mlme_stats = NULL;
+      response.stats.mlme_stats_list = nullptr;
+      response.stats.mlme_stats_count = 0;
       break;
   }
 
-  ndev->if_callbacks->stats_query_resp(ndev->if_callback_cookie, &response);
+  wlanif_impl_ifc_stats_query_resp(&ndev->if_proto, &response);
 }
 
 void brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
@@ -3508,7 +3509,7 @@ zx_status_t brcmf_hook_set_multicast_promisc(void* ctx, bool enable) {
   return ZX_OK;
 }
 
-void brcmf_hook_start_capture_frames(void* ctx, wlanif_start_capture_frames_req_t* req,
+void brcmf_hook_start_capture_frames(void* ctx, const wlanif_start_capture_frames_req_t* req,
                                      wlanif_start_capture_frames_resp_t* resp) {
   BRCMF_ERR("start_capture_frames not supported\n");
   resp->status = ZX_ERR_NOT_SUPPORTED;
@@ -3785,9 +3786,8 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
                         ? "fast bss transition"
                         : auth_ind_params.auth_type == WLAN_AUTH_TYPE_SAE ? "SAE" : "unknown");
 
-    ndev->if_callbacks->auth_ind(ndev->if_callback_cookie, &auth_ind_params);
+    wlanif_impl_ifc_auth_ind(&ndev->if_proto, &auth_ind_params);
 
-    // Client has associated
   } else if (((event == BRCMF_E_ASSOC_IND) || (event == BRCMF_E_REASSOC_IND)) &&
              (reason == BRCMF_E_STATUS_SUCCESS)) {
     if (data == NULL || e->datalen == 0) {
@@ -3839,7 +3839,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     BRCMF_DBG(WLANIF, "Sending assoc indication to SME. address: " MAC_FMT_STR "\n",
               MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
 
-    ndev->if_callbacks->assoc_ind(ndev->if_callback_cookie, &assoc_ind_params);
+    wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
 
     // Client has disassociated
   } else if (event == BRCMF_E_DISASSOC_IND) {
@@ -3852,7 +3852,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
               "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
               MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
 
-    ndev->if_callbacks->disassoc_ind(ndev->if_callback_cookie, &disassoc_ind_params);
+    wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
 
     // Client has deauthenticated
   } else if ((event == BRCMF_E_DEAUTH_IND) || (event == BRCMF_E_DEAUTH)) {
@@ -3865,7 +3865,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
               "Sending deauth indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
               MAC_FMT_ARGS(deauth_ind_params.peer_sta_address), deauth_ind_params.reason_code);
 
-    ndev->if_callbacks->deauth_ind(ndev->if_callback_cookie, &deauth_ind_params);
+    wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
   }
   return ZX_OK;
 }

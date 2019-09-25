@@ -4,9 +4,9 @@
 
 #include "test_utils.h"
 
+#include <ddk/protocol/wlan/info.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/assoc_context.h>
-#include <wlan/protocol/info.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {

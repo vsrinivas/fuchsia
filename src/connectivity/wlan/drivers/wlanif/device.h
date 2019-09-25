@@ -13,7 +13,7 @@
 #include <mutex>
 
 #include <ddk/driver.h>
-#include <wlan/protocol/if-impl.h>
+#include <ddk/protocol/wlanif.h>
 
 namespace wlanif {
 
@@ -59,24 +59,24 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void StopCaptureFrames() override;
 
   // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
-  void OnScanResult(wlanif_scan_result_t* result);
-  void OnScanEnd(wlanif_scan_end_t* result);
-  void JoinConf(wlanif_join_confirm_t* resp);
-  void AuthenticateConf(wlanif_auth_confirm_t* resp);
-  void AuthenticateInd(wlanif_auth_ind_t* ind);
-  void DeauthenticateConf(wlanif_deauth_confirm_t* resp);
-  void DeauthenticateInd(wlanif_deauth_indication_t* ind);
-  void AssociateConf(wlanif_assoc_confirm_t* resp);
-  void AssociateInd(wlanif_assoc_ind_t* ind);
-  void DisassociateConf(wlanif_disassoc_confirm_t* resp);
-  void DisassociateInd(wlanif_disassoc_indication_t* ind);
-  void StartConf(wlanif_start_confirm_t* resp);
-  void StopConf(wlanif_stop_confirm_t* resp);
-  void EapolConf(wlanif_eapol_confirm_t* resp);
-  void SignalReport(wlanif_signal_report_indication_t* ind);
-  void EapolInd(wlanif_eapol_indication_t* ind);
-  void StatsQueryResp(wlanif_stats_query_response_t* resp);
-  void RelayCapturedFrame(wlanif_captured_frame_result* result);
+  void OnScanResult(const wlanif_scan_result_t* result);
+  void OnScanEnd(const wlanif_scan_end_t* result);
+  void JoinConf(const wlanif_join_confirm_t* resp);
+  void AuthenticateConf(const wlanif_auth_confirm_t* resp);
+  void AuthenticateInd(const wlanif_auth_ind_t* ind);
+  void DeauthenticateConf(const wlanif_deauth_confirm_t* resp);
+  void DeauthenticateInd(const wlanif_deauth_indication_t* ind);
+  void AssociateConf(const wlanif_assoc_confirm_t* resp);
+  void AssociateInd(const wlanif_assoc_ind_t* ind);
+  void DisassociateConf(const wlanif_disassoc_confirm_t* resp);
+  void DisassociateInd(const wlanif_disassoc_indication_t* ind);
+  void StartConf(const wlanif_start_confirm_t* resp);
+  void StopConf(const wlanif_stop_confirm_t* resp);
+  void EapolConf(const wlanif_eapol_confirm_t* resp);
+  void SignalReport(const wlanif_signal_report_indication_t* ind);
+  void EapolInd(const wlanif_eapol_indication_t* ind);
+  void StatsQueryResp(const wlanif_stats_query_response_t* resp);
+  void RelayCapturedFrame(const wlanif_captured_frame_result* result);
 
   // wlanif_protocol_t (ethernet_impl_protocol -> wlanif_impl_protocol)
   zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);
@@ -87,7 +87,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
   // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
-  void EthRecv(void* data, size_t length, uint32_t flags);
+  void EthRecv(const void* data, size_t length, uint32_t flags);
 
   zx_status_t Connect(zx::channel request);
 

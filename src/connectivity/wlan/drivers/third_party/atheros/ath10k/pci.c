@@ -3050,19 +3050,19 @@ static zx_status_t ath10k_pci_queue_tx(void* ctx, uint32_t options, wlan_tx_pack
     return ath10k_mac_op_tx(ar, pkt);
 }
 
-static const char* cbw_as_str(uint8_t cbw) {
+static const char* cbw_as_str(wlan_channel_bandwidth_t cbw) {
     switch (cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
         return "CBW20";
-    case CBW40:
+    case WLAN_CHANNEL_BANDWIDTH__40:
         return "CBW40ABOVE";
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
         return "CBW40BELOW";
-    case CBW80:
+    case WLAN_CHANNEL_BANDWIDTH__80:
         return "CBW80";
-    case CBW160:
+    case WLAN_CHANNEL_BANDWIDTH__160:
         return "CBW160";
-    case CBW80P80:
+    case WLAN_CHANNEL_BANDWIDTH__80P80:
         return "CBW80P80";
     default:
         return "Invalid";

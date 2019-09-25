@@ -8,8 +8,8 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/wlanif.h>
 #include <threads.h>
-#include <wlan/protocol/if-impl.h>
 #include <zircon/types.h>
 
 wlanif_impl_ifc_t wlanif_ifc = {};

@@ -9,8 +9,8 @@
 #include <string>
 
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/info.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan/protocol/info.h>
 
 namespace wlan {
 namespace common {

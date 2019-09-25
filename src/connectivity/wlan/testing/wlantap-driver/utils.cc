@@ -5,11 +5,11 @@
 #include "utils.h"
 
 #include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/wlan/info.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
-#include <wlan/protocol/info.h>
 
 namespace wlan {
 

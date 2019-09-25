@@ -71,14 +71,14 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   void* ctx = iface->dev_args.ctx;
   auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->dev_args.proto_ops);
   zx_handle_t sme_channel = ZX_HANDLE_INVALID;
-  wlanif_impl_ifc_t ifc_ops{};
-  status = iface_ops->start(ctx, &ifc_ops, &sme_channel, nullptr);
+  wlanif_impl_ifc_protocol_t ifc_ops{};
+  status = iface_ops->start(ctx, &ifc_ops, &sme_channel);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(sme_channel, local.get());
 
   // Verify calling start again will fail with proper error code.
   sme_channel = ZX_HANDLE_INVALID;
-  status = iface_ops->start(ctx, &ifc_ops, &sme_channel, nullptr);
+  status = iface_ops->start(ctx, &ifc_ops, &sme_channel);
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(sme_channel, ZX_HANDLE_INVALID);
 }

@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
+#include <ddk/protocol/wlanif.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan/protocol/if-impl.h>
 
 namespace wlanif {
 
@@ -33,7 +33,7 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
                                 const ::fuchsia::wlan::mlme::DeleteKeyDescriptor& fidl_key_desc);
 ::fuchsia::wlan::mlme::BSSTypes ConvertBSSType(uint8_t bss_type);
-::fuchsia::wlan::common::CBW ConvertCBW(uint8_t cbw);
+::fuchsia::wlan::common::CBW ConvertCBW(wlan_channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);
 ::fuchsia::wlan::mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason);
 ::fuchsia::wlan::mlme::ScanResultCodes ConvertScanResultCode(uint8_t code);

@@ -11,12 +11,12 @@
 #include <vector>
 
 #include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/protocol/wlan/info.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/protocol/info.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

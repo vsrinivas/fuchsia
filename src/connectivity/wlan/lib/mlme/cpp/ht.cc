@@ -94,15 +94,15 @@ HtOperation BuildHtOperation(const wlan_channel_t& chan) {
   HtOpInfoHead& head = hto.head;
 
   switch (chan.cbw) {
-    case CBW40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_ABOVE);
       head.set_sta_chan_width(HtOpInfoHead::ANY);
       break;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_BELOW);
       head.set_sta_chan_width(HtOpInfoHead::ANY);
       break;
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
     default:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_NONE);
       head.set_sta_chan_width(HtOpInfoHead::TWENTY);

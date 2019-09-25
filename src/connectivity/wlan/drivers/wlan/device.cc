@@ -567,8 +567,8 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
     const uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
     return {
         .phy = WLAN_INFO_PHY_TYPE_ERP,
-        .gi = WLAN_GI_800NS,
-        .cbw = CBW20,
+        .gi = WLAN_GI__800NS,
+        .cbw = WLAN_CHANNEL_BANDWIDTH__20,
         .nss = 1,
         .mcs_idx = mcs,
     };
@@ -909,7 +909,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           if (c == 0) {  // End of the valid channel
             break;
           }
-          auto chan = wlan_channel_t{.primary = c, .cbw = CBW20};
+          auto chan = wlan_channel_t{.primary = c, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
           if (!common::IsValidChan5Ghz(chan)) {
             errorf("wlanmac band info for %u MHz has invalid channel %u\n",
                    supported_channels.base_freq, c);
@@ -923,7 +923,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           if (c == 0) {  // End of the valid channel
             break;
           }
-          auto chan = wlan_channel_t{.primary = c, .cbw = CBW20};
+          auto chan = wlan_channel_t{.primary = c, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
           if (!common::IsValidChan2Ghz(chan)) {
             errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
                    supported_channels.base_freq, c);

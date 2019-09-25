@@ -1,0 +1,134 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.protocol.wlan.info;
+
+using ddk.hw.wlan.ieee80211;
+using wlan.protocol.info;
+using zx;
+
+enum WlanKeyType : uint8 {
+    PAIRWISE = 1;
+    GROUP = 2;
+    IGTK = 3;
+    PEER = 4;
+};
+
+/// IEEE Std 802.11-2016, 9.4.2.2
+const uint32 WLAN_MAX_SSID_LEN = 32;
+
+struct WlanSsid {
+    uint8 len;
+    array<uint8>:WLAN_MAX_SSID_LEN ssid;
+};
+
+/// Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
+/// VHT notation
+enum WlanChannelBandwidth : uint8 {
+    /// Default. Corresponds to SecondaryChannelOffset-None
+    _20 = 0;
+    _40 = 1;
+    /// Corresponds to SecondaryChannelOffset-Above
+    _40ABOVE = 1;
+    /// Corresponds to SecondaryChannelOffset-Below
+    _40BELOW = 2;
+    _80 = 3;
+    _160 = 4;
+    /// Non-contiguous frequency segments
+    _80P80 = 5;
+};
+
+struct WlanChannel {
+    /// Channel index used for the primary channel
+    uint8 primary;
+    /// Channel Bandwidth
+    WlanChannelBandwidth cbw;
+    // Channel index corresponding to the center frequency
+    // of the secondary frequency segment
+    uint8 secondary80;
+};
+
+enum WlanRxInfoValid : uint32 {
+    /// Bits 7-31 reserved
+    PHY = 0x1;
+    DATA_RATE = 0x2;
+    CHAN_WIDTH = 0x4;
+    MCS = 0x8;
+    RSSI = 0x10;
+    RCPI = 0x20;
+    SNR = 0x40;
+};
+
+/// Guard Interval
+enum WlanGi : uint8 {
+    /// all 802.11 phy
+    _800NS = 0x1;
+    /// 802.11n/ac
+    _400NS = 0x2;
+    /// 802.11n/ac
+    _200NS = 0x4;
+    /// 802.11ax
+    _3200NS = 0x10;
+    /// 802.11ax
+    _1600NS = 0x20;
+};
+
+enum WlanBssType : uint8 {
+    INFRASTRUCTURE = 1;
+    /// Independent BSS
+    IBSS = 2;
+    PERSONAL = 3;
+    MESH = 4;
+    ANY_BSS = 5;
+};
+
+struct WlanBssConfig {
+    array<uint8>:6 bssid;
+    /// Whether this BSS is an infrastructure or independent BSS.
+    WlanBssType bss_type;
+    /// If 'remote' is 'true', the BSS is *not* managed by this device.
+    bool remote;
+};
+
+/// Information defined only within a context of association
+/// Beware the subtle interpretation of each field: they are designed to
+/// reflect the parameters safe to use within an association
+/// Many parameters do not distinguish Rx capability from Tx capability.
+/// In those cases, a capability is commonly applied to both Rx and Tx.
+/// Some parameters are distinctively for Rx only, and some are Tx only.
+const uint32 WLAN_MAC_MAX_SUPP_RATES = 8;
+const uint32 WLAN_MAC_MAX_EXT_RATES = 255;
+const uint32 WLAN_MAC_MAX_RATES = 263; // (8 + 255)
+
+struct WlanAssocCtx {
+    array<uint8>:6 bssid;
+    uint16 aid;
+    uint16 listen_interval;
+    /// a single enumerator from enum PHY.
+    uint8 phy;
+    WlanChannel chan;
+    bool qos;
+
+    /// Coincatenation of SupportedRates and ExtendedSupportedRates
+    /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
+    uint16 rates_cnt;
+    array<uint8>:WLAN_MAC_MAX_RATES rates;
+
+    /// IEEE Std 802.11-2016, 9.4.1.4
+    array<uint8>:2 cap_info;
+
+    /// IEEE Std 802.11-2016, 9.4.2.56, 57
+    /// Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
+    /// the peer can receive at from this device, considering this device's Tx capability.
+    bool has_ht_cap;
+    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_cap;
+    bool has_ht_op;
+    wlan.protocol.info.WlanHtOp ht_op;
+
+    /// IEEE Std 802.11-2016, 9.4.2.158, 159
+    bool has_vht_cap;
+    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_cap;
+    bool has_vht_op;
+    wlan.protocol.info.WlanVhtOp vht_op;
+};

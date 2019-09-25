@@ -12,7 +12,7 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-std::optional<CBW> GetVhtCbw(const wlan_mlme::VhtOperation& vht_op) {
+std::optional<wlan_channel_bandwidth_t> GetVhtCbw(const wlan_mlme::VhtOperation& vht_op) {
   switch (vht_op.vht_cbw) {
     case to_enum_type(wlan_mlme::VhtCbw::CBW_80_160_80P80): {
       // See IEEE Std 802.11-2016, Table 9-253
@@ -25,11 +25,11 @@ std::optional<CBW> GetVhtCbw(const wlan_mlme::VhtOperation& vht_op) {
       } else if (seg1 > 0 && (gap > 8 && gap <= 16)) {
         // Reserved case. Fallback to HT CBW
       } else if (seg1 == 0) {
-        return {CBW80};
+        return {WLAN_CHANNEL_BANDWIDTH__80};
       } else if (gap == 8) {
-        return {CBW160};
+        return {WLAN_CHANNEL_BANDWIDTH__160};
       } else if (gap > 16) {
-        return {CBW80P80};
+        return {WLAN_CHANNEL_BANDWIDTH__80P80};
       }
     }
     default:
@@ -39,10 +39,11 @@ std::optional<CBW> GetVhtCbw(const wlan_mlme::VhtOperation& vht_op) {
 }
 
 wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_chan,
-                             const wlan_mlme::HtOperation* ht_op, std::optional<CBW> vht_cbw) {
+                             const wlan_mlme::HtOperation* ht_op,
+                             std::optional<wlan_channel_bandwidth_t> vht_cbw) {
   wlan_channel_t chan = {
       .primary = dsss_chan.value_or(rx_channel),
-      .cbw = CBW20,  // default
+      .cbw = WLAN_CHANNEL_BANDWIDTH__20,  // default
       .secondary80 = 0,
   };
 
@@ -58,20 +59,20 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_cha
 
   switch (ht_op->ht_op_info.secondary_chan_offset) {
     case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE):
-      chan.cbw = CBW40ABOVE;
+      chan.cbw = WLAN_CHANNEL_BANDWIDTH__40ABOVE;
       break;
     case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW):
-      chan.cbw = CBW40BELOW;
+      chan.cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
       break;
     default:  // SECONDARY_NONE or RESERVED
-      chan.cbw = CBW20;
+      chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
       break;
   }
 
   // This overrides Secondary Channel Offset.
   // TODO(NET-677): Conditionally apply
   if (ht_op->ht_op_info.sta_chan_width == to_enum_type(wlan_mlme::StaChanWidth::TWENTY)) {
-    chan.cbw = CBW20;
+    chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
     return chan;
   }
 
@@ -190,7 +191,7 @@ void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
   DoParseBeaconElements(ies, rx_channel, bss_desc, &dsss_chan, &supp_rates, &ext_supp_rates);
   FillRates(supp_rates, ext_supp_rates, &bss_desc->basic_rate_set, &bss_desc->op_rate_set);
 
-  std::optional<CBW> vht_cbw{};
+  std::optional<uint8_t> vht_cbw{};
   if (bss_desc->vht_op) {
     vht_cbw = GetVhtCbw(*bss_desc->vht_op);
   }

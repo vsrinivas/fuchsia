@@ -31,8 +31,8 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
     return ZX_ERR_INVALID_ARGS;
   }
   *tx_vec = TxVector{
-      .gi = WLAN_GI_800NS,
-      .cbw = CBW20,
+      .gi = WLAN_GI__800NS,
+      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
       .nss = 1,
   };
 
@@ -138,8 +138,8 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_HT: {
       uint8_t group_idx = (idx - kHtStartIdx) / kHtNumMcs;
-      GI gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI_400NS : WLAN_GI_800NS);
-      CBW cbw = (group_idx % kHtNumCbw == 0 ? CBW20 : CBW40);
+      wlan_gi_t gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI__400NS : WLAN_GI__800NS);
+      wlan_channel_bandwidth_t cbw = (group_idx % kHtNumCbw == 0 ? WLAN_CHANNEL_BANDWIDTH__20 : WLAN_CHANNEL_BANDWIDTH__40);
       uint8_t mcs_idx = (idx - kHtStartIdx) % kHtNumMcs;
 
       *tx_vec = TxVector{
@@ -154,8 +154,8 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_INFO_PHY_TYPE_ERP:
       *tx_vec = TxVector{
           .phy = phy,
-          .gi = WLAN_GI_800NS,
-          .cbw = CBW20,
+          .gi = WLAN_GI__800NS,
+          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kErpStartIdx),
       };
@@ -164,8 +164,8 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_INFO_PHY_TYPE_CCK:
       *tx_vec = TxVector{
           .phy = phy,
-          .gi = WLAN_GI_800NS,
-          .cbw = CBW20,
+          .gi = WLAN_GI__800NS,
+          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kDsssCckStartIdx),
       };
@@ -189,10 +189,11 @@ bool TxVector::IsValid() const {
     case WLAN_INFO_PHY_TYPE_CCK:
       return mcs_idx == 2 || mcs_idx == 3;
     case WLAN_INFO_PHY_TYPE_HT:
-      if (!(gi == WLAN_GI_800NS || gi == WLAN_GI_400NS)) {
+      if (!(gi == WLAN_GI__800NS || gi == WLAN_GI__400NS)) {
         return false;
       }
-      if (!(cbw == CBW20 || cbw == CBW40 || cbw == CBW40ABOVE || cbw == CBW40BELOW)) {
+      if (!(cbw == WLAN_CHANNEL_BANDWIDTH__20 || cbw == WLAN_CHANNEL_BANDWIDTH__40 ||
+            cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW)) {
         return false;
       }
       return 0 <= mcs_idx && mcs_idx < kHtNumMcs;
@@ -213,10 +214,11 @@ zx_status_t TxVector::ToIdx(tx_vec_idx_t* idx) const {
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_HT: {
       uint8_t group_idx = 0;
-      if (gi == WLAN_GI_400NS) {
+      if (gi == WLAN_GI__400NS) {
         group_idx = kHtNumCbw;
       }
-      if (cbw == CBW40 || cbw == CBW40ABOVE || cbw == CBW40BELOW) {
+      if (cbw == WLAN_CHANNEL_BANDWIDTH__40 || cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE ||
+          cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
         group_idx++;
       }
 

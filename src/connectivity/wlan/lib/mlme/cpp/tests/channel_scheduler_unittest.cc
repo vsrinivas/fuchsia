@@ -12,7 +12,8 @@ namespace {
 
 struct ChannelSchedulerTest : public ::testing::Test, public OnChannelHandler {
   ChannelSchedulerTest() : chan_sched_(this, &device_, device_.CreateTimer(1)) {
-    chan_sched_.SetChannel(wlan_channel_t{.primary = 1, .cbw = CBW20, .secondary80 = 0});
+    chan_sched_.SetChannel(
+        wlan_channel_t{.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   }
 
   virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override { str_ += "frame_on,"; }
@@ -27,9 +28,10 @@ struct ChannelSchedulerTest : public ::testing::Test, public OnChannelHandler {
 };
 
 OffChannelRequest CreateOffChannelRequest(OffChannelHandler* handler, uint8_t chan) {
-  return OffChannelRequest{.chan = {.primary = chan, .cbw = CBW20, .secondary80 = 0},
-                           .duration = zx::msec(200),
-                           .handler = handler};
+  return OffChannelRequest{
+      .chan = {.primary = chan, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0},
+      .duration = zx::msec(200),
+      .handler = handler};
 }
 
 struct MockOffChannelHandler : OffChannelHandler {
@@ -105,7 +107,7 @@ TEST_F(ChannelSchedulerTest, RequestOffChannelTimeChained) {
 }
 
 TEST_F(ChannelSchedulerTest, SetChannelSwitchesWhenOnChannel) {
-  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = CBW20, .secondary80 = 0});
+  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   EXPECT_TRUE(chan_sched_.OnChannel());
   EXPECT_EQ(6u, device_.GetChannelNumber());
 }
@@ -118,7 +120,7 @@ TEST_F(ChannelSchedulerTest, SetChannelDoesNotSwitchWhenOffChannel) {
   EXPECT_FALSE(chan_sched_.OnChannel());
 
   // Change the 'on' channel. Expect to stay off channel
-  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = CBW20, .secondary80 = 0});
+  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   EXPECT_FALSE(chan_sched_.OnChannel());
   EXPECT_EQ(7u, device_.GetChannelNumber());
 

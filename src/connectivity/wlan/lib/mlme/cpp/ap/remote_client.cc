@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/info.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>
@@ -18,7 +19,6 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
-#include <wlan/protocol/info.h>
 
 namespace wlan {
 

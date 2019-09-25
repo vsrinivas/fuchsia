@@ -54,8 +54,8 @@ static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVec
 
 struct TxVector {
   wlan_info_phy_type_t phy;
-  GI gi;
-  CBW cbw;
+  wlan_gi_t gi;
+  wlan_channel_bandwidth_t cbw;
   // number of spatial streams, for VHT and beyond
   uint8_t nss;
   // For HT,  see IEEE 802.11-2016 Table 19-27

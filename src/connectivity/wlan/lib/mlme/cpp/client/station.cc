@@ -963,7 +963,7 @@ bool Station::IsCbw40Rx() const {
       client_assoc.ht_cap.has_value() ? "yes" : "no",
       static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
 
-  if (join_chan.cbw == CBW20) {
+  if (join_chan.cbw == WLAN_CHANNEL_BANDWIDTH__20) {
     debugjoin("Disable CBW40: configured to use less CBW than capability\n");
     return false;
   }
@@ -1044,7 +1044,7 @@ zx_status_t Station::OverrideVhtCapability(VhtCapabilities* vht_cap,
   VhtCapabilitiesInfo& vci = vht_cap->vht_cap_info;
   if (vci.supported_cbw_set() > 0) {
     auto cbw = join_ctx.channel().cbw;
-    if (cbw != CBW160 && cbw != CBW80P80) {
+    if (cbw != WLAN_CHANNEL_BANDWIDTH__160 && cbw != WLAN_CHANNEL_BANDWIDTH__80P80) {
       vht_cap->vht_cap_info.set_supported_cbw_set(0);
     }
   }

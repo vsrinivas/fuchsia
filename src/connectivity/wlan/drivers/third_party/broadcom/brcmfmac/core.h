@@ -31,8 +31,8 @@
 #include <mutex>
 
 #include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/wlanif.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <wlan/protocol/if-impl.h>
 
 #include "bus.h"
 #include "fweh.h"
@@ -262,8 +262,7 @@ struct net_device {
   bool scan_busy;
   bool multicast_promisc;
   uint64_t scan_txn_id;
-  wlanif_impl_ifc_t* if_callbacks;
-  void* if_callback_cookie;
+  wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
   char name[123];
   void* priv;

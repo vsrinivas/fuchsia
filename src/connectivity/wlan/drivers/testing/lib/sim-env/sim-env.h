@@ -36,6 +36,7 @@
 
 #include <list>
 
+#include <ddk/protocol/wlan/info.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/info.h>

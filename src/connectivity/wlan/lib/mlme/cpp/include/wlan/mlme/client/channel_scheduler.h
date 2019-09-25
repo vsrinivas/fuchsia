@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 
+#include <ddk/protocol/wlan/info.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/timer.h>
-#include <wlan/protocol/info.h>
 
 namespace wlan {
 
@@ -74,7 +74,7 @@ class ChannelScheduler {
   DeviceInterface* device_;
   fbl::unique_ptr<Timer> timer_;
 
-  wlan_channel_t channel_ = {.primary = 1, .cbw = CBW20, .secondary80 = 0};
+  wlan_channel_t channel_ = {.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
   bool on_channel_ = true;
   bool ensure_on_channel_ = false;
   bool pending_off_channel_request_ = false;

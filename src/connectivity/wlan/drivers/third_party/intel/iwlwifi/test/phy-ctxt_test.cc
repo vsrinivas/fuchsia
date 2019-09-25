@@ -26,7 +26,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   wlan_channel_t chandef{};
 
   // Invalid channels. Expect the default value.
-  chandef.cbw = CBW20;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
   chandef.primary = 0;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 34;
@@ -41,7 +41,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // 2.4GHz channels. Expect the default value.
-  chandef.cbw = CBW20;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
   chandef.primary = 1;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 14;
@@ -50,7 +50,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   // 5GHz channels. But different bandwitdh.
 
   // 20Mhz primary channels. Expect the default value.
-  chandef.cbw = CBW20;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 64;
@@ -69,7 +69,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // HT40+ primary channels.
-  chandef.cbw = CBW40ABOVE;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__40ABOVE;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 40;  // not allowed
@@ -85,7 +85,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // HT40- primary channels.
-  chandef.cbw = CBW40BELOW;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
   chandef.primary = 36;  // invalid case since secondary cannot be below 36.
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 40;
@@ -103,7 +103,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_ABOVE);
 
   // 80Mhz primary channels.
-  chandef.cbw = CBW80;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__80;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_2_BELOW);
   chandef.primary = 40;
@@ -114,7 +114,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_2_ABOVE);
 
   // 160Mhz primary channels.
-  chandef.cbw = CBW160;
+  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__160;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_4_BELOW);
   chandef.primary = 40;

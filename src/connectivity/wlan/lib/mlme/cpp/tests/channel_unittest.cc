@@ -19,30 +19,30 @@ class ChannelTest : public ::testing::Test {
 TEST_F(ChannelTest, ValidCombo) {
   std::vector<wlan_channel_t> tvs = {
       // clang-format off
-        {  1, CBW20,        0},
-        { 11, CBW20,        0},
-        {  1, CBW40ABOVE,   0},
-        {  6, CBW40ABOVE,   0},
-        {  6, CBW40BELOW,   0},
-        { 11, CBW40BELOW,   0},
-        { 36, CBW40ABOVE,   0},
-        { 40, CBW40BELOW,   0},
-        {100, CBW40ABOVE,   0},
-        {104, CBW40BELOW,   0},
-        {149, CBW40ABOVE,   0},
-        {153, CBW40BELOW,   0},
-        { 36, CBW80,        0},
-        { 40, CBW80,        0},
-        {100, CBW80,        0},
-        {149, CBW80,        0},
-        {161, CBW80,        0},
-        { 36, CBW80P80,   106},
-        { 52, CBW80P80,   106},
-        {100, CBW80P80,    42},
-        {149, CBW80P80,    42},
-        {161, CBW80P80,    42},
-        { 36, CBW160,       0},
-        {100, CBW160,       0},
+        {  1, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        { 11, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        {  1, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {  6, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {  6, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        { 11, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        { 36, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        { 40, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        {100, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {104, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        {149, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {153, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        { 36, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        { 40, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        {100, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        {149, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        {161, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        { 36, WLAN_CHANNEL_BANDWIDTH__80P80,   106},
+        { 52, WLAN_CHANNEL_BANDWIDTH__80P80,   106},
+        {100, WLAN_CHANNEL_BANDWIDTH__80P80,    42},
+        {149, WLAN_CHANNEL_BANDWIDTH__80P80,    42},
+        {161, WLAN_CHANNEL_BANDWIDTH__80P80,    42},
+        { 36, WLAN_CHANNEL_BANDWIDTH__160,       0},
+        {100, WLAN_CHANNEL_BANDWIDTH__160,       0},
       // clang-format on
   };
 
@@ -52,23 +52,23 @@ TEST_F(ChannelTest, ValidCombo) {
 }
 
 TEST_F(ChannelTest, Equality) {
-  wlan_channel_t lhs{.primary = 1, .cbw = CBW20};
-  wlan_channel_t rhs{.primary = 1, .cbw = CBW20};
+  wlan_channel_t lhs{.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
+  wlan_channel_t rhs{.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
   EXPECT_EQ(true, lhs == rhs);
 
-  rhs.cbw = CBW40;
+  rhs.cbw = WLAN_CHANNEL_BANDWIDTH__40;
   EXPECT_EQ(true, lhs != rhs);
 
-  lhs.cbw = CBW40;
+  lhs.cbw = WLAN_CHANNEL_BANDWIDTH__40;
   EXPECT_EQ(true, lhs == rhs);
 
-  lhs.cbw = CBW40ABOVE;
+  lhs.cbw = WLAN_CHANNEL_BANDWIDTH__40ABOVE;
   EXPECT_EQ(true, lhs == rhs);
 
-  rhs.cbw = CBW40BELOW;
+  rhs.cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
   EXPECT_EQ(false, lhs == rhs);
 
-  rhs.cbw = CBW40;
+  rhs.cbw = WLAN_CHANNEL_BANDWIDTH__40;
   rhs.primary = 2;
   EXPECT_EQ(true, lhs != rhs);
 
@@ -79,24 +79,24 @@ TEST_F(ChannelTest, Equality) {
 TEST_F(ChannelTest, InvalidCombo) {
   std::vector<wlan_channel_t> tvs = {
       // clang-format off
-        {  0, CBW20,        0},
-        { 15, CBW20,        0},
-        {  8, CBW40ABOVE,   0},
-        {  4, CBW40BELOW,   0},
-        { 32, CBW20,        0},
-        { 68, CBW20,        0},
-        { 96, CBW20,        0},
-        {148, CBW20,        0},
-        {183, CBW20,        0},
-        { 36, CBW40BELOW,   0},
-        { 40, CBW40ABOVE,   0},
-        {149, CBW40BELOW,   0},
-        {153, CBW40ABOVE,   0},
-        {165, CBW80,        0},
-        { 36, CBW80P80,     0},
-        { 48, CBW80P80,    42},
-        {149, CBW80P80,   155},
-        {132, CBW160,      50},
+        {  0, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        { 15, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        {  8, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {  4, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        { 32, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        { 68, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        { 96, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        {148, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        {183, WLAN_CHANNEL_BANDWIDTH__20,        0},
+        { 36, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        { 40, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {149, WLAN_CHANNEL_BANDWIDTH__40BELOW,   0},
+        {153, WLAN_CHANNEL_BANDWIDTH__40ABOVE,   0},
+        {165, WLAN_CHANNEL_BANDWIDTH__80,        0},
+        { 36, WLAN_CHANNEL_BANDWIDTH__80P80,     0},
+        { 48, WLAN_CHANNEL_BANDWIDTH__80P80,    42},
+        {149, WLAN_CHANNEL_BANDWIDTH__80P80,   155},
+        {132, WLAN_CHANNEL_BANDWIDTH__160,      50},
         // Add more interesting cases
       // clang-format on
   };
@@ -118,20 +118,18 @@ TEST_F(ChannelTest, Conversion) {
   };
 
   std::vector<TestVector> tvs = {
-      // clang-format off
-        {{  0, CBW20,      0}, {  0, wlan_common::CBW::CBW20,      0}, true,},
-        {{  1, CBW20,      0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
-        {{ 11, CBW40BELOW, 0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
-        {{ 36, CBW20,      0}, { 36, wlan_common::CBW::CBW40,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW20,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW80,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW160,     0}, false,},
-        {{ 36, CBW40,    155}, { 36, wlan_common::CBW::CBW80P80, 155}, false,},
-        {{169, CBW160,     0}, {169, wlan_common::CBW::CBW160,     0}, true,},
-        {{  6, CBW40,      0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
-        {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
-        {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40BELOW, 0}, false,},
-      // clang-format on
+        {{  0, WLAN_CHANNEL_BANDWIDTH__20,      0}, {  0, wlan_common::CBW::CBW20,      0}, true,},
+        {{  1, WLAN_CHANNEL_BANDWIDTH__20,      0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 11, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__20,      0}, { 36, wlan_common::CBW::CBW40,      0}, false,},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40,      0}, { 36, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40,      0}, { 36, wlan_common::CBW::CBW80,      0}, false,},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40,      0}, { 36, wlan_common::CBW::CBW160,     0}, false,},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40,    155}, { 36, wlan_common::CBW::CBW80P80, 155}, false,},
+        {{169, WLAN_CHANNEL_BANDWIDTH__160,     0}, {169, wlan_common::CBW::CBW160,     0}, true,},
+        {{  6, WLAN_CHANNEL_BANDWIDTH__40,      0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
+        {{  6, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
+        {{  6, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0}, {  6, wlan_common::CBW::CBW40BELOW, 0}, false,},
   };
 
   for (auto tv : tvs) {
@@ -151,20 +149,20 @@ TEST_F(ChannelTest, GetCenterChanIdx) {
 
   std::vector<TestVector> tvs = {
       // clang-format off
-        {{  1, CBW20,      0},   1},
-        {{ 11, CBW20,      0},  11},
-        {{ 36, CBW20,      0},  36},
-        {{161, CBW20,      0}, 161},
-        {{  1, CBW40ABOVE, 0},   3},
-        {{  5, CBW40ABOVE, 0},   7},
-        {{  5, CBW40BELOW, 0},   3},
-        {{ 11, CBW40BELOW, 0},   9},
-        {{ 36, CBW40ABOVE, 0},  38},
-        {{ 36, CBW80,      0},  42},
-        {{104, CBW80,      0}, 106},
-        {{ 36, CBW80P80, 122},  42},
-        {{ 36, CBW160,     0},  50},
-        {{100, CBW160,     0}, 114}
+        {{  1, WLAN_CHANNEL_BANDWIDTH__20,      0},   1},
+        {{ 11, WLAN_CHANNEL_BANDWIDTH__20,      0},  11},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__20,      0},  36},
+        {{161, WLAN_CHANNEL_BANDWIDTH__20,      0}, 161},
+        {{  1, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0},   3},
+        {{  5, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0},   7},
+        {{  5, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0},   3},
+        {{ 11, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0},   9},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0},  38},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__80,      0},  42},
+        {{104, WLAN_CHANNEL_BANDWIDTH__80,      0}, 106},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__80P80, 122},  42},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__160,     0},  50},
+        {{100, WLAN_CHANNEL_BANDWIDTH__160,     0}, 114}
       // clang-format on
   };
 
@@ -182,17 +180,17 @@ TEST_F(ChannelTest, GetCenterFreq) {
 
   std::vector<TestVector> tvs = {
       // clang-format off
-        {{  1, CBW20,      0}, 2412},
-        {{  1, CBW40ABOVE, 0}, 2422},
-        {{  6, CBW40ABOVE, 0}, 2447},
-        {{  6, CBW40BELOW, 0}, 2427},
-        {{ 11, CBW20,      0}, 2462},
-        {{ 11, CBW40BELOW, 0}, 2452},
-        {{ 36, CBW20,      0}, 5180},
-        {{ 36, CBW40ABOVE, 0}, 5190},
-        {{ 36, CBW80,      0}, 5210},
-        {{ 36, CBW160,     0}, 5250},
-        {{161, CBW20,      0}, 5805},
+        {{  1, WLAN_CHANNEL_BANDWIDTH__20,      0}, 2412},
+        {{  1, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0}, 2422},
+        {{  6, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0}, 2447},
+        {{  6, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0}, 2427},
+        {{ 11, WLAN_CHANNEL_BANDWIDTH__20,      0}, 2462},
+        {{ 11, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0}, 2452},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__20,      0}, 5180},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__40ABOVE, 0}, 5190},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__80,      0}, 5210},
+        {{ 36, WLAN_CHANNEL_BANDWIDTH__160,     0}, 5250},
+        {{161, WLAN_CHANNEL_BANDWIDTH__20,      0}, 5805},
       // clang-format on
   };
 

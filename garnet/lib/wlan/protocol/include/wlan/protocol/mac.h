@@ -7,7 +7,7 @@
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/ethernet.h>
-#include <wlan/protocol/info.h>
+#include <ddk/protocol/wlan/info.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -108,7 +108,7 @@ typedef struct wlan_tx_info {
   // The PHY format to be used to transmit this packet.
   uint16_t phy;
   // The channel width to be used to transmit this packet.
-  uint8_t cbw;
+  wlan_channel_bandwidth_t cbw;
   // The modulation and coding scheme index for this packet. Depends on the PHY format and
   // channel width.
   uint8_t mcs;
@@ -139,13 +139,6 @@ enum {
   WLAN_PROTECTION_RX = 1,
   WLAN_PROTECTION_TX = 2,
   WLAN_PROTECTION_RX_TX = 3,
-};
-
-enum {
-  WLAN_KEY_TYPE_PAIRWISE = 1,
-  WLAN_KEY_TYPE_GROUP = 2,
-  WLAN_KEY_TYPE_IGTK = 3,
-  WLAN_KEY_TYPE_PEER = 4,
 };
 
 typedef struct wlan_key_config {

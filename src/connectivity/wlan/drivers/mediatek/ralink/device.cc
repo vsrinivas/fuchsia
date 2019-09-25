@@ -2485,12 +2485,12 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
   status = ReadRfcsr(&r30);
   CHECK_READ(RF30, status);
   switch (chan.cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       r30.set_tx_h20m(0);
       r30.set_rx_h20m(0);
       break;
-    case CBW40ABOVE:
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       r30.set_tx_h20m(1);
       r30.set_rx_h20m(1);
       break;
@@ -2524,7 +2524,8 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
   LdoCfg0 lc0;
   status = ReadRegister(&lc0);
   CHECK_READ(LDO_CFG0, status);
-  if (wlan::common::Is5Ghz(chan) || chan.cbw == CBW40ABOVE || chan.cbw == CBW40BELOW) {
+  if (wlan::common::Is5Ghz(chan) || chan.cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE ||
+      chan.cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
     lc0.set_ldo_core_vlevel(5);
   } else {
     // TODO(porce): Investigate if extra CBW40 in 2GHz support is necessary
@@ -2718,11 +2719,11 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
   CHECK_WRITE(RF6, status);
 
   switch (chan.cbw) {  // RFCSR30
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       status = WriteRfcsr(30, 0x10);
       break;
-    case CBW40ABOVE:
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       status = WriteRfcsr(30, 0x16);
       break;
     default:
@@ -2838,13 +2839,13 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
   CHECK_READ(TX_BAND_CFG, status);
 
   switch (chan.cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       tbc.set_tx_band_sel(0);
       break;
-    case CBW40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
       tbc.set_tx_band_sel(0);
       break;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       tbc.set_tx_band_sel(1);
       break;
     default:
@@ -2883,11 +2884,11 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
 
   if (rt_type_ == RT5592) {
     switch (chan.cbw) {  // BBP 141
-      case CBW20:
+      case WLAN_CHANNEL_BANDWIDTH__20:
         WriteGlrt(141, 0x1a);
         break;
-      case CBW40ABOVE:
-      case CBW40BELOW:
+      case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+      case WLAN_CHANNEL_BANDWIDTH__40BELOW:
         WriteGlrt(141, 0x10);
         break;
       default:
@@ -2951,13 +2952,13 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
   status = ReadBbp(&b4);
   CHECK_READ(BBP4, status);
   switch (chan.cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       b4.set_bandwidth(0);
       break;
-    case CBW40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
       b4.set_bandwidth(0x2);
       break;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       b4.set_bandwidth(0x2);
       break;
     default:
@@ -2972,13 +2973,13 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
   status = ReadBbp(&b3);
   CHECK_READ(BBP3, status);
   switch (chan.cbw) {
-    case CBW20:
+    case WLAN_CHANNEL_BANDWIDTH__20:
       b3.set_ht40_minus(0);
       break;
-    case CBW40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
       b3.set_ht40_minus(0);
       break;
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       b3.set_ht40_minus(1);
       break;
     default:
@@ -3354,7 +3355,7 @@ static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi
 
   info->valid_fields |= WLAN_RX_INFO_VALID_CHAN_WIDTH;
   // TODO(porce): Study how to distinguish CBW40ABOVE from CBW40BELOW, from rxwi.
-  info->chan.cbw = rxwi1.bw() ? CBW40 : CBW20;
+  info->chan.cbw = rxwi1.bw() ? WLAN_CHANNEL_BANDWIDTH__40 : WLAN_CHANNEL_BANDWIDTH__20;
 
   uint8_t phy_mode = rxwi1.phy_mode();
   bool is_ht = phy_mode == PhyMode::kHtMixMode || phy_mode == PhyMode::kHtGreenfield;
@@ -3899,7 +3900,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
 
   wlan_channel_t chan;
   chan.primary = 1;
-  chan.cbw = CBW20;
+  chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
   status = WlanmacSetChannel(0, &chan);
 
   StartInterruptPolling();
@@ -4440,8 +4441,9 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
 ::wlan::TxVector FromStatFifoRegister(const TxStatFifo& stat_fifo) {
   return ::wlan::TxVector{
       .phy = static_cast<wlan_info_phy_type_t>(ralink_phy_to_ddk_phy(stat_fifo.txq_phy())),
-      .gi = stat_fifo.txq_sgi() == 1 ? WLAN_GI_400NS : WLAN_GI_800NS,
-      .cbw = stat_fifo.txq_bw() == 1 ? CBW40 : CBW20,
+      .gi = static_cast<uint8_t>(stat_fifo.txq_sgi() == 1 ? WLAN_GI__400NS : WLAN_GI__800NS),
+      .cbw = static_cast<uint8_t>(stat_fifo.txq_bw() == 1 ? WLAN_CHANNEL_BANDWIDTH__40
+                                                          : WLAN_CHANNEL_BANDWIDTH__20),
       .mcs_idx = stat_fifo.txq_mcs(),
   };
 }
@@ -4579,13 +4581,13 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
   }
   txwi0.set_mcs(mcs);
 
-  uint8_t cbw = CBW20;
+  wlan_channel_bandwidth_t cbw = WLAN_CHANNEL_BANDWIDTH__20;
   if (wlan_pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH) {
     cbw = wlan_pkt->info.cbw;
     // TODO(porce): Investigate how to configure txwi differently
     // for CBW40ABOVE and CBW40BELOW
   }
-  txwi0.set_bw(cbw == CBW20 ? k20MHz : k40MHz);
+  txwi0.set_bw(cbw == WLAN_CHANNEL_BANDWIDTH__20 ? k20MHz : k40MHz);
 
   txwi0.set_sgi(0);   // Long guard interval for robustness
   txwi0.set_stbc(0);  // TODO(porce): Define the value.
@@ -4670,9 +4672,9 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
          wlan::common::ChanStr(*chan).c_str());
 
   switch (chan->cbw) {  // parameter sanity check
-    case CBW20:
-    case CBW40ABOVE:
-    case CBW40BELOW:
+    case WLAN_CHANNEL_BANDWIDTH__20:
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
       break;
     default:
       errorf("%s: unsupported CBW %u\n", __FUNCTION__, chan->cbw);

@@ -61,7 +61,7 @@ class ScannerTest : public ::testing::Test {
   ScannerTest()
       : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
         scanner_(&mock_dev_, &chan_sched_, mock_dev_.CreateTimer(1u)) {
-    mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = CBW20});
+    mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20});
   }
 
  protected:
