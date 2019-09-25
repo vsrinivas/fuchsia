@@ -124,7 +124,6 @@ executable("bin") {
 }
 
 package("debug_agent") {
-  deprecated_shell = "//build"
   rootjob_svc = "//build"
 
   deps = [
@@ -194,7 +193,6 @@ executable("unit_tests") {
 }
 
 test_package("debug_agent_tests") {
-  deprecated_shell = "//build"
   rootjob_svc = "//build"
 
   package_name = "debug_agent_tests"
