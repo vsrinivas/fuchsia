@@ -160,6 +160,7 @@ static constexpr const char* miscsvc_services[] = {
 // namespace instead.
 static constexpr const char* devcoordinator_services[] = {
     fuchsia_boot_FactoryItems_Name,
+    fuchsia_boot_Arguments_Name,
     fuchsia_boot_Items_Name,
     fuchsia_boot_ReadOnlyLog_Name,
     fuchsia_boot_RootJob_Name,

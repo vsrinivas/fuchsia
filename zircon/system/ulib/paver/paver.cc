@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -277,14 +278,50 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
   return ZX_OK;
 }
 
+zx::channel OpenServiceRoot() {
+  zx::channel request, service_root;
+  if (zx::channel::create(0, &request, &service_root) != ZX_OK) {
+    return zx::channel();
+  }
+  if (fdio_service_connect("/svc/.", request.release()) != ZX_OK) {
+    return zx::channel();
+  }
+  return service_root;
+}
+
+bool IsBootable(const abr::SlotData& slot) {
+  return slot.priority > 0 && (slot.tries_remaining > 0 || slot.successful_boot);
+}
+
+std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_client) {
+  const bool config_a_bootable = IsBootable(abr_client.Data().slots[0]);
+  const bool config_b_bootable = IsBootable(abr_client.Data().slots[1]);
+  const uint8_t config_a_priority = abr_client.Data().slots[0].priority;
+  const uint8_t config_b_priority = abr_client.Data().slots[1].priority;
+
+  // A wins on ties.
+  if (config_a_bootable && (config_a_priority >= config_b_priority || !config_b_bootable)) {
+    return Configuration::A;
+  } else if (config_b_bootable) {
+    return Configuration::B;
+  } else {
+    return std::nullopt;
+  }
+}
+
 }  // namespace
 
-bool Paver::InitializePartitioner() {
-  if (!partitioner_) {
+bool Paver::InitializePartitioner(zx::channel block_device,
+                                  std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (!*partitioner) {
     // Use global devfs if one wasn't injected via set_devfs_root.
     if (!devfs_root_) {
       devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
     }
+    if (!svc_root_) {
+      svc_root_ = OpenServiceRoot();
+    }
+
 #if defined(__x86_64__)
     Arch arch = Arch::kX64;
 #elif defined(__aarch64__)
@@ -292,8 +329,9 @@ bool Paver::InitializePartitioner() {
 #else
 #error "Unknown arch"
 #endif
-    partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), arch);
-    if (!partitioner_) {
+    *partitioner = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(svc_root_), arch,
+                                             std::move(block_device));
+    if (!partitioner) {
       ERROR("Unable to initialize a partitioner.\n");
       return false;
     }
@@ -303,7 +341,7 @@ bool Paver::InitializePartitioner() {
 
 void Paver::WriteAsset(Configuration configuration, Asset asset,
                        ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync completer) {
-  if (!InitializePartitioner()) {
+  if (!InitializePartitioner(&partitioner_)) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
@@ -312,7 +350,7 @@ void Paver::WriteAsset(Configuration configuration, Asset asset,
 }
 
 void Paver::WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) {
-  if (!InitializePartitioner()) {
+  if (!InitializePartitioner(&partitioner_)) {
     completer.Reply(ZX_ERR_BAD_STATE);
   }
 
@@ -328,7 +366,7 @@ void Paver::WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync
 
 void Paver::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
                             WriteBootloaderCompleter::Sync completer) {
-  if (!InitializePartitioner()) {
+  if (!InitializePartitioner(&partitioner_)) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
@@ -485,21 +523,10 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
 
 void Paver::WipeVolumes(zx::channel block_device, WipeVolumesCompleter::Sync completer) {
   partitioner_.reset();
-  // Use global devfs if one wasn't injected via set_devfs_root.
-  if (!devfs_root_) {
-    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
-  }
-#if defined(__x86_64__)
-  Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-  Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-  auto partitioner =
-      DevicePartitioner::Create(devfs_root_.duplicate(), arch, std::move(block_device));
-  if (!partitioner) {
-    ERROR("Unable to initialize a partitioner.\n");
+  abr_client_.reset();
+
+  std::unique_ptr<DevicePartitioner> partitioner;
+  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
@@ -509,21 +536,8 @@ void Paver::WipeVolumes(zx::channel block_device, WipeVolumesCompleter::Sync com
 
 void Paver::InitializePartitionTables(zx::channel block_device,
                                       InitializePartitionTablesCompleter::Sync completer) {
-  // Use global devfs if one wasn't injected via set_devfs_root.
-  if (!devfs_root_) {
-    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
-  }
-#if defined(__x86_64__)
-  Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-  Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-  auto partitioner =
-      DevicePartitioner::Create(devfs_root_.duplicate(), arch, std::move(block_device));
-  if (!partitioner) {
-    ERROR("Unable to initialize a partitioner.\n");
+  std::unique_ptr<DevicePartitioner> partitioner;
+  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
@@ -555,26 +569,136 @@ void Paver::InitializePartitionTables(zx::channel block_device,
 void Paver::WipePartitionTables(zx::channel block_device,
                                 WipePartitionTablesCompleter::Sync completer) {
   partitioner_.reset();
-  // Use global devfs if one wasn't injected via set_devfs_root.
-  if (!devfs_root_) {
-    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
-  }
-#if defined(__x86_64__)
-  Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-  Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-  auto partitioner =
-      DevicePartitioner::Create(devfs_root_.duplicate(), arch, std::move(block_device));
-  if (!partitioner) {
-    ERROR("Unable to initialize a partitioner.\n");
+  abr_client_.reset();
+
+  std::unique_ptr<DevicePartitioner> partitioner;
+  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
 
   completer.Reply(partitioner->WipePartitionTables());
+}
+
+zx_status_t Paver::InitializeAbrClient() {
+  if (abr_client_) {
+    return ZX_OK;
+  }
+
+  if (!InitializePartitioner(&partitioner_)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  std::unique_ptr<abr::Client> abr_client;
+  if (zx_status_t status = partitioner_->GetAbrClient(&abr_client); status != ZX_OK) {
+    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (!abr_client->IsValid()) {
+    ERROR("ABR metadata is not valid!\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  abr_client_ = std::move(abr_client);
+  return ZX_OK;
+}
+
+void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
+  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
+  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
+    result.set_err(status);
+    completer.Reply(std::move(result));
+    return;
+  }
+
+  std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
+  if (config) {
+    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
+    response.configuration = *config;
+    result.set_response(response);
+  } else {
+    result.set_err(ZX_ERR_BAD_STATE);
+  }
+  completer.Reply(std::move(result));
+}
+
+void Paver::SetActiveConfiguration(Configuration configuration,
+                                   SetActiveConfigurationCompleter::Sync completer) {
+  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
+    completer.Reply(status);
+    return;
+  }
+  auto data = abr_client_->Data();
+
+  abr::SlotData *primary, *secondary;
+  switch (configuration) {
+    case Configuration::A:
+      primary = &data.slots[0];
+      secondary = &data.slots[1];
+      break;
+    case Configuration::B:
+      primary = &data.slots[1];
+      secondary = &data.slots[0];
+      break;
+    default:
+      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
+      completer.Reply(ZX_ERR_INVALID_ARGS);
+      return;
+  }
+  if (secondary->priority >= abr::kMaxPriority) {
+    // 0 means unbootable, so we reset down to 1 to indicate lowest priority.
+    secondary->priority = 1;
+  }
+  primary->successful_boot = false;
+  primary->tries_remaining = abr::kMaxTriesRemaining;
+  primary->priority = static_cast<uint8_t>(secondary->priority + 1);
+
+  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
+    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
+    completer.Reply(status);
+    return;
+  }
+
+  completer.Reply(ZX_OK);
+}
+
+void Paver::MarkActiveConfigurationSuccessful(
+    MarkActiveConfigurationSuccessfulCompleter::Sync completer) {
+  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
+    completer.Reply(status);
+    return;
+  }
+  abr::Data data = abr_client_->Data();
+
+  std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
+  if (!config) {
+    ERROR("No configuration bootable. Cannot mark as successful boot.\n");
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  abr::SlotData *slot;
+  switch (*config) {
+    case Configuration::A:
+      slot = &data.slots[0];
+      break;
+    case Configuration::B:
+      slot = &data.slots[1];
+      break;
+    default:
+      // We've previously validated active is A or B.
+      ZX_ASSERT(false);
+  }
+  slot->tries_remaining = 0;
+  slot->successful_boot = true;
+
+  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
+    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
+    completer.Reply(status);
+    return;
+  }
+
+  completer.Reply(ZX_OK);
 }
 
 }  //  namespace paver

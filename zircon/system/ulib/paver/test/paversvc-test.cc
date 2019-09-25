@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <endian.h>
 #include <fcntl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/cksum.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
@@ -16,8 +20,12 @@
 
 #include <optional>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
 #include <zxtest/zxtest.h>
 
 #include "device-partitioner.h"
@@ -121,54 +129,74 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .export_partition_map = true,
 };
 
+class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
+ public:
+  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+    return fidl::Bind(dispatcher, std::move(request), this);
+  }
+
+  void Get(GetCompleter::Sync completer) {
+    zx::vmo vmo;
+    zx::vmo::create(fbl::round_up(sizeof(kArgs), ZX_PAGE_SIZE), 0, &vmo);
+    vmo.write(kArgs, 0, sizeof(kArgs));
+    completer.Reply(std::move(vmo), sizeof(kArgs));
+  }
+
+ private:
+  static constexpr char kArgs[] = "zvb.current_slot=_a";
+};
+
+class FakeSvc {
+ public:
+  explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
+    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir->AddEntry(::llcpp::fuchsia::boot::Arguments::Name,
+                       fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+                         return fake_boot_args_.Connect(dispatcher_, std::move(request));
+                       }));
+
+    zx::channel svc_remote;
+    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
+
+    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+  }
+
+  FakeBootArgs& fake_boot_args() { return fake_boot_args_; }
+  zx::channel& svc_chan() { return svc_local_; }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  fs::SynchronousVfs vfs_;
+  FakeBootArgs fake_boot_args_;
+  zx::channel svc_local_;
+};
+
 class PaverServiceTest : public zxtest::Test {
  public:
-  PaverServiceTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
+  PaverServiceTest();
 
-    client_.emplace(std::move(client));
-
-    ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
-
-    ASSERT_OK(paver_get_service_provider()->ops->connect(
-        provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name, server.release()));
-    loop_.StartThread("paver-svc-test-loop");
-  }
-
-  ~PaverServiceTest() {
-    paver_get_service_provider()->ops->release(provider_ctx_);
-    provider_ctx_ = nullptr;
-  }
+  ~PaverServiceTest();
 
  protected:
-  void SpawnIsolatedDevmgr() {
-    ASSERT_EQ(device_.get(), nullptr);
-    SkipBlockDevice::Create(kNandInfo, &device_);
-    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
-  }
+  void SpawnIsolatedDevmgr();
 
   // Spawn an isolated devmgr without a skip-block device.
-  void SpawnIsolatedDevmgrBlock() {
-    devmgr_launcher::Args args;
-    args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
-    args.driver_search_paths.push_back("/boot/driver");
-    args.disable_block_watcher = true;
-    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+  void SpawnIsolatedDevmgrBlock();
 
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
-    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
+  void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out);
+
+  static constexpr size_t kKilobyte = 1 << 10;
+
+  void SetAbr(const abr::Data& data) {
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
+                (60 * kKilobyte);
+    *reinterpret_cast<abr::Data*>(buf) = data;
   }
 
-  void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
-    zx::vmo vmo;
-    fzl::VmoMapper mapper;
-    const size_t size = kPageSize * num_pages;
-    ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
-    memset(mapper.start(), 0x4a, mapper.size());
-    out->vmo = std::move(vmo);
-    out->size = size;
+  abr::Data GetAbr() {
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
+                (60 * kKilobyte);
+    return *reinterpret_cast<abr::Data*>(buf);
   }
 
   void ValidateWritten(uint32_t block, size_t num_blocks) {
@@ -214,27 +242,191 @@ class PaverServiceTest : public zxtest::Test {
   IsolatedDevmgr devmgr_;
   std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> client_;
   async::Loop loop_;
+  // The paver makes synchronous calls into /svc, so it must run in a seperate loop to not
+  // deadlock.
+  async::Loop loop2_;
+  FakeSvc fake_svc_;
 };
 
-TEST_F(PaverServiceTest, QueryActiveConfiguration) {
+PaverServiceTest::PaverServiceTest()
+    : loop_(&kAsyncLoopConfigAttachToCurrentThread),
+      loop2_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      fake_svc_(loop2_.dispatcher()) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  client_.emplace(std::move(client));
+
+  ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
+
+  ASSERT_OK(paver_get_service_provider()->ops->connect(
+      provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name, server.release()));
+  loop_.StartThread("paver-svc-test-loop");
+  loop2_.StartThread("paver-svc-test-loop-2");
+}
+
+PaverServiceTest::~PaverServiceTest() {
+  loop_.Shutdown();
+  loop2_.Shutdown();
+  paver_get_service_provider()->ops->release(provider_ctx_);
+  provider_ctx_ = nullptr;
+}
+
+void PaverServiceTest::SpawnIsolatedDevmgr() {
+  ASSERT_EQ(device_.get(), nullptr);
+  SkipBlockDevice::Create(kNandInfo, &device_);
+  static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
+  static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
+}
+
+void PaverServiceTest::SpawnIsolatedDevmgrBlock() {
+  devmgr_launcher::Args args;
+  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.driver_search_paths.push_back("/boot/driver");
+  args.disable_block_watcher = true;
+  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+
+  fbl::unique_fd fd;
+  ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+  static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
+  static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
+}
+
+void PaverServiceTest::CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
+  zx::vmo vmo;
+  fzl::VmoMapper mapper;
+  const size_t size = kPageSize * num_pages;
+  ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+  memset(mapper.start(), 0x4a, mapper.size());
+  out->vmo = std::move(vmo);
+  out->size = size;
+}
+
+constexpr abr::Data kAbrData = {
+    .magic = {'\0', 'A', 'B', '0'},
+    .version_major = abr::kMajorVersion,
+    .version_minor = abr::kMinorVersion,
+    .reserved1 = {},
+    .slots =
+        {
+            {
+                .priority = 0,
+                .tries_remaining = 0,
+                .successful_boot = 0,
+                .reserved = {},
+            },
+            {
+                .priority = 1,
+                .tries_remaining = 0,
+                .successful_boot = 1,
+                .reserved = {},
+            },
+        },
+    .oneshot_recovery_boot = 0,
+    .reserved2 = {},
+    .crc32 = {},
+};
+
+void ComputeCrc(abr::Data* data) {
+  data->crc32 = htobe32(
+      crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
+}
+
+TEST_F(PaverServiceTest, QueryActiveConfigurationSlotB) {
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
   auto result = client_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
-  const auto& response = result.value();
-  ASSERT_TRUE(response.result.is_err());
-  ASSERT_EQ(response.result.err(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
+}
+
+TEST_F(PaverServiceTest, QueryActiveConfigurationSlotA) {
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[0].priority = 2;
+  abr_data.slots[0].successful_boot = 1;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->QueryActiveConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
 }
 
 TEST_F(PaverServiceTest, SetActiveConfiguration) {
-  auto configuration = ::llcpp::fuchsia::paver::Configuration::A;
-  auto result = client_->SetActiveConfiguration(configuration);
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slots[0].priority = 2;
+  abr_data.slots[0].tries_remaining = abr::kMaxTriesRemaining;
+  abr_data.slots[0].successful_boot = 0;
+  ComputeCrc(&abr_data);
+
+  auto result = client_->SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration::A);
   ASSERT_OK(result.status());
-  ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(result->status);
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceTest, SetActiveConfigurationRollover) {
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[1].priority = abr::kMaxPriority;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slots[1].priority = 1;
+  abr_data.slots[0].priority = 2;
+  abr_data.slots[0].tries_remaining = abr::kMaxTriesRemaining;
+  abr_data.slots[0].successful_boot = 0;
+  ComputeCrc(&abr_data);
+
+  auto result = client_->SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration::A);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
 TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[1].tries_remaining = 3;
+  abr_data.slots[1].successful_boot = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slots[1].tries_remaining = 0;
+  abr_data.slots[1].successful_boot = 1;
+  ComputeCrc(&abr_data);
+
   auto result = client_->MarkActiveConfigurationSuccessful();
   ASSERT_OK(result.status());
-  ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(result->status);
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessfulBothPriorityZero) {
+  SpawnIsolatedDevmgr();
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[1].tries_remaining = 3;
+  abr_data.slots[1].successful_boot = 0;
+  abr_data.slots[1].priority = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->MarkActiveConfigurationSuccessful();
+  ASSERT_OK(result.status());
+  ASSERT_NE(result->status, ZX_OK);
 }
 
 TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
@@ -365,10 +557,7 @@ TEST_F(PaverServiceTest, WriteVolumes) {
 }
 
 TEST_F(PaverServiceTest, WipeVolumes) {
-  SpawnIsolatedDevmgr();
-  auto result = client_->WipeVolumes(zx::channel());
-  ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  // TODO(ZX-4007): Figure out a way to test this.
 }
 
 // TODO(34771): Re-enable once bug in GPT is fixed.

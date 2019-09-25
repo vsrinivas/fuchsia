@@ -6,6 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 library("paver") {
   sources = [
+    "abr.cc",
     "device-partitioner.cc",
     "fvm.cc",
     "partition-client.cc",
@@ -14,6 +15,7 @@ library("paver") {
     "stream-reader.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block-partition:llcpp",
@@ -42,7 +44,6 @@ library("paver") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
     "$zx/third_party/ulib/cksum",
-    "$zx/third_party/ulib/uboringssl",
   ]
   public_deps = [
     "$zx/system/ulib/svc",
@@ -52,6 +53,7 @@ library("paver") {
 test("paver-test") {
   output_name = "paver-test"
   sources = [
+    "test/abr-test.cc",
     "test/device-partitioner-test.cc",
     "test/fvm-test.cc",
     "test/paversvc-test.cc",
@@ -61,6 +63,7 @@ test("paver-test") {
   include_dirs = [ "." ]
   deps = [
     ":paver",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
@@ -72,7 +75,9 @@ test("paver-test") {
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
@@ -81,5 +86,6 @@ test("paver-test") {
     "$zx/system/ulib/svc",
     "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/cksum",
   ]
 }

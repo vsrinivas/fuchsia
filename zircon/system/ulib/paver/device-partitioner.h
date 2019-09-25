@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <stdbool.h>
@@ -20,10 +21,12 @@
 #include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
 
+#include "abr.h"
 #include "partition-client.h"
 
 namespace paver {
 using gpt::GptDevice;
+using ::llcpp::fuchsia::paver::Configuration;
 
 enum class Partition {
   kUnknown,
@@ -36,6 +39,7 @@ enum class Partition {
   kVbMetaA,
   kVbMetaB,
   kVbMetaR,
+  kABRMeta,
   kFuchsiaVolumeManager,
 };
 
@@ -54,7 +58,8 @@ class DevicePartitioner {
   // implementation. Returns nullptr on failure.
   // |block_device| is root block device whichs contains the logical partitions we wish to operate
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
-  static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, Arch arch,
+  static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel svc_root,
+                                                   Arch arch,
                                                    zx::channel block_device = zx::channel());
 
   virtual ~DevicePartitioner() = default;
@@ -80,6 +85,13 @@ class DevicePartitioner {
 
   // Wipes partition tables.
   virtual zx_status_t WipePartitionTables() const = 0;
+
+  // Returns the currently booting slot.
+  virtual zx_status_t QueryBootConfig(Configuration* out) = 0;
+
+  // Returns ZX_ERR_NOT_SUPPORTED if abr partitioning is not supported, and other errors on other
+  // failures.
+  virtual zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -185,6 +197,12 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
+  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
+
+  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
  private:
   EfiDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
@@ -211,6 +229,12 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
+
+  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
   CrosDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -241,6 +265,12 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
+  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
+
+  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
 
@@ -254,7 +284,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
 // ZIRCON-R).
 class SkipBlockDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root,
+  static zx_status_t Initialize(fbl::unique_fd devfs_root, zx::channel svc_root,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return true; }
@@ -271,9 +301,18 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
- private:
-  SkipBlockDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
+  zx_status_t QueryBootConfig(Configuration* out) override;
 
+  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override;
+
+ private:
+  SkipBlockDevicePartitioner(fbl::unique_fd devfs_root, zx::channel svc_root)
+      : devfs_root_(std::move(devfs_root)), svc_root_(std::move(svc_root)) {}
+
+  zx_status_t SupportsVerfiedBoot();
+
+  std::optional<Configuration> boot_config_;
   fbl::unique_fd devfs_root_;
+  zx::channel svc_root_;
 };
 }  // namespace paver

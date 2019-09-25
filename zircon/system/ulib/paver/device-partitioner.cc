@@ -10,15 +10,11 @@
 #include <libgen.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
-#include <fbl/auto_call.h>
-#include <fbl/function.h>
-#include <fbl/string_buffer.h>
-#include <fs-management/fvm.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
-#include <gpt/cros.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -26,10 +22,17 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/status.h>
-#include <zxcrypt/volume.h>
 
-#include <utility>
 #include <string>
+#include <string_view>
+#include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/function.h>
+#include <fbl/string_buffer.h>
+#include <fs-management/fvm.h>
+#include <gpt/cros.h>
+#include <zxcrypt/volume.h>
 
 #include "pave-logging.h"
 
@@ -244,6 +247,83 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
   return ZX_OK;
 }
 
+// Implementation of abr::Client which works with a contiguous partition storing abr::Data.
+class AbrPartitionClient : public abr::Client {
+ public:
+  // |partition| should contain abr::Data with no offset.
+  static zx_status_t Create(std::unique_ptr<PartitionClient> partition,
+                            std::unique_ptr<abr::Client>* out) {
+    size_t block_size;
+    if (zx_status_t status = partition->GetBlockSize(&block_size); status != ZX_OK) {
+      return status;
+    }
+
+    zx::vmo vmo;
+    if (zx_status_t status = zx::vmo::create(fbl::round_up(block_size, ZX_PAGE_SIZE), 0, &vmo);
+        status != ZX_OK) {
+      return status;
+    }
+
+    if (zx_status_t status = partition->Read(vmo, block_size); status != ZX_OK) {
+      return status;
+    }
+
+    abr::Data data;
+    if (zx_status_t status = vmo.read(&data, 0, sizeof(data)); status != ZX_OK) {
+      return status;
+    }
+
+    out->reset(new AbrPartitionClient(std::move(partition), std::move(vmo), block_size, data));
+    return ZX_OK;
+  }
+
+  zx_status_t Persist(abr::Data data) override {
+    UpdateCrc(&data);
+    if (memcmp(&data, &data_, sizeof(data)) == 0) {
+      return ZX_OK;
+    }
+    if (zx_status_t status = vmo_.write(&data, 0, sizeof(data)); status != ZX_OK) {
+      return status;
+    }
+    if (zx_status_t status = partition_->Write(vmo_, block_size_); status != ZX_OK) {
+      return status;
+    }
+
+    data_ = data;
+    return ZX_OK;
+  }
+
+  const abr::Data& Data() const override { return data_; }
+
+ private:
+  AbrPartitionClient(std::unique_ptr<PartitionClient> partition, zx::vmo vmo, size_t block_size,
+                     const abr::Data& data)
+      : partition_(std::move(partition)),
+        vmo_(std::move(vmo)),
+        block_size_(block_size),
+        data_(data) {}
+
+  std::unique_ptr<PartitionClient> partition_;
+  zx::vmo vmo_;
+  size_t block_size_;
+  abr::Data data_;
+};
+
+// Extracts value from "zvb.current_slot" argument in boot arguments.
+std::optional<std::string_view> GetBootSlot(std::string_view boot_args) {
+  for (size_t begin = 0, end;
+       (end = boot_args.find_first_of('\0', begin)) != std::string_view::npos; begin = end + 1) {
+    const size_t sep = boot_args.find_first_of('=', begin);
+    if (sep + 1 < end) {
+      std::string_view key(&boot_args[begin], sep - begin);
+      if (key.compare("zvb.current_slot") == 0) {
+        return std::string_view(&boot_args[sep + 1], end - (sep + 1));
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 }  // namespace
 
 const char* PartitionName(Partition type) {
@@ -269,7 +349,8 @@ const char* PartitionName(Partition type) {
   }
 }
 
-fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root, Arch arch,
+fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
+                                                             zx::channel svc_root, Arch arch,
                                                              zx::channel block_device) {
   std::optional<fbl::unique_fd> block_dev;
   std::optional<fbl::unique_fd> block_dev_dup;
@@ -286,8 +367,8 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     block_dev_dup = block_dev->duplicate();
   }
   fbl::unique_ptr<DevicePartitioner> device_partitioner;
-  if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), &device_partitioner) ==
-       ZX_OK) ||
+  if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), std::move(svc_root),
+                                              &device_partitioner) == ZX_OK) ||
       (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev_dup),
                                          &device_partitioner) == ZX_OK) ||
       (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev),
@@ -1080,12 +1161,14 @@ zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_
  *====================================================*/
 
 zx_status_t SkipBlockDevicePartitioner::Initialize(
-    fbl::unique_fd devfs_root, fbl::unique_ptr<DevicePartitioner>* partitioner) {
+    fbl::unique_fd devfs_root, zx::channel svc_root,
+    fbl::unique_ptr<DevicePartitioner>* partitioner) {
   if (!HasSkipBlockDevice(devfs_root)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   LOG("Successfully initialized SkipBlockDevicePartitioner Device Partitioner\n");
-  *partitioner = WrapUnique(new SkipBlockDevicePartitioner(std::move(devfs_root)));
+  *partitioner =
+      WrapUnique(new SkipBlockDevicePartitioner(std::move(devfs_root), std::move(svc_root)));
   return ZX_OK;
 }
 
@@ -1122,7 +1205,8 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(
     }
     case Partition::kVbMetaA:
     case Partition::kVbMetaB:
-    case Partition::kVbMetaR: {
+    case Partition::kVbMetaR:
+    case Partition::kABRMeta: {
       const auto type = [&]() {
         switch (partition_type) {
           case Partition::kVbMetaA:
@@ -1131,6 +1215,8 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataB;
           case Partition::kVbMetaR:
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataR;
+          case Partition::kABRMeta:
+            return sysconfig::SyncClient::PartitionType::kABRMetadata;
           default:
             break;
         }
@@ -1218,5 +1304,77 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
 }
 
 zx_status_t SkipBlockDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t SkipBlockDevicePartitioner::QueryBootConfig(Configuration* out) {
+  if (boot_config_.has_value()) {
+    *out = *boot_config_;
+    return ZX_OK;
+  }
+
+  zx::channel local, remote;
+  if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
+    return status;
+  }
+  auto status = fdio_service_connect_at(svc_root_.get(), ::llcpp::fuchsia::boot::Arguments::Name,
+                                        remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  ::llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
+  auto result = client.Get();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const size_t size = result->size;
+  if (size == 0) {
+    ERROR("Kernel cmdline param zvb.current_slot not found!\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const auto args_buf = std::make_unique<char[]>(size);
+  if (zx_status_t status = result->vmo.read(args_buf.get(), 0, size); status != ZX_OK) {
+    return status;
+  }
+
+  const auto slot = GetBootSlot(std::string_view(args_buf.get(), size));
+  if (!slot.has_value()) {
+    ERROR("Kernel cmdline param zvb.current_slot not found!\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (slot->compare("_a") == 0) {
+    *boot_config_ = Configuration::A;
+  } else if (slot->compare("_b") == 0) {
+    *boot_config_ = Configuration::B;
+  } else {
+    ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot->size()),
+          slot->data());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  *out = *boot_config_;
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockDevicePartitioner::SupportsVerfiedBoot() {
+  Configuration config;
+  if (zx_status_t status = QueryBootConfig(&config); status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockDevicePartitioner::GetAbrClient(std::unique_ptr<abr::Client>* client) {
+  if (zx_status_t status = SupportsVerfiedBoot(); status != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<PartitionClient> partition;
+  if (zx_status_t status = FindPartition(Partition::kABRMeta, &partition); status != ZX_OK) {
+    return status;
+  }
+
+  return AbrPartitionClient::Create(std::move(partition), client);
+}
 
 }  // namespace paver
