@@ -18,10 +18,6 @@ library("mini-process") {
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/zircon",
   ]
-
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
 # This code goes into the mini-process where it doesn't have any runtime

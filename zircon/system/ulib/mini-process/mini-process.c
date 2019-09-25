@@ -47,6 +47,7 @@ static zx_status_t write_ctx_message(zx_handle_t channel, uintptr_t vdso_base,
 }
 
 // Sets up a VMO on the given VMAR which contains the mini process code and space for a stack.
+__EXPORT
 zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code, zx_vaddr_t* stack_base,
                                     zx_vaddr_t* sp) {
   // Allocate a single VMO for the child. It doubles as the stack on the top and
@@ -93,6 +94,7 @@ exit:
   return status;
 }
 
+__EXPORT
 zx_status_t mini_process_load_vdso(zx_handle_t process, zx_handle_t vmar, uintptr_t* base,
                                    uintptr_t* entry) {
   // This is not thread-safe.  It steals the startup handle, so it's not
@@ -120,6 +122,7 @@ zx_status_t mini_process_load_vdso(zx_handle_t process, zx_handle_t vmar, uintpt
   return status;
 }
 
+__EXPORT
 zx_status_t mini_process_wait_for_ack(zx_handle_t control_channel) {
   zx_signals_t observed;
   zx_status_t status = zx_object_wait_one(
@@ -146,6 +149,7 @@ zx_status_t mini_process_wait_for_ack(zx_handle_t control_channel) {
   return status;
 }
 
+__EXPORT
 zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread, zx_handle_t vmar,
                                    zx_handle_t transferred_handle, bool wait_for_ack,
                                    zx_handle_t* control_channel) {
@@ -216,12 +220,14 @@ exit:
   return status;
 }
 
+__EXPORT
 zx_status_t mini_process_cmd_send(zx_handle_t cntrl_channel, uint32_t what) {
   minip_cmd_t cmd = {.what = what, .status = ZX_OK};
 
   return zx_channel_write(cntrl_channel, 0, &cmd, sizeof(cmd), NULL, 0);
 }
 
+__EXPORT
 zx_status_t mini_process_cmd_read_reply(zx_handle_t cntrl_channel, zx_handle_t* handle) {
   zx_status_t status = zx_object_wait_one(
       cntrl_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
@@ -238,6 +244,7 @@ zx_status_t mini_process_cmd_read_reply(zx_handle_t cntrl_channel, zx_handle_t* 
   return reply.status;
 }
 
+__EXPORT
 zx_status_t mini_process_cmd(zx_handle_t cntrl_channel, uint32_t what, zx_handle_t* handle) {
   zx_status_t status = mini_process_cmd_send(cntrl_channel, what);
   if (status != ZX_OK)
@@ -245,6 +252,7 @@ zx_status_t mini_process_cmd(zx_handle_t cntrl_channel, uint32_t what, zx_handle
   return mini_process_cmd_read_reply(cntrl_channel, handle);
 }
 
+__EXPORT
 zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
                                zx_handle_t* process, zx_handle_t* thread) {
   *process = ZX_HANDLE_INVALID;
@@ -278,6 +286,7 @@ exit:
   return status;
 }
 
+__EXPORT
 zx_status_t start_mini_process_thread(zx_handle_t thread, zx_handle_t vmar) {
   zx_vaddr_t stack_base = 0;
   zx_vaddr_t sp = 0;
