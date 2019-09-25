@@ -4,6 +4,7 @@
 
 use sl4f_lib::test::facade::TestFacade;
 use sl4f_lib::test::types::{TestPlan, TestPlanTest};
+use std::fs;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_test() {
@@ -21,6 +22,17 @@ async fn launch_and_test_passing_test() {
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
     for step in steps.iter() {
         assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+
+        // check logs
+        let log_file_name = step["primary_log_path"].as_str().expect("can't get log file name");
+        assert_ne!(log_file_name, "");
+        let contents =
+            fs::read_to_string(log_file_name).expect("Something went wrong reading the logs");
+        let mut expected = "".to_string();
+        for i in 1..4 {
+            expected = format!("{}log{} for {}\n", expected, i, step["name"].as_str().unwrap());
+        }
+        assert_eq!(contents, expected);
     }
 }
 

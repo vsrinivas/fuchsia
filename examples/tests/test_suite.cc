@@ -55,9 +55,9 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     zx::socket test_case_log;
     zx::socket::create(0, &log_sock, &test_case_log);
     ptr->OnTestCaseStarted(test_case.name(), std::move(log_sock));
-    std::string msg1 = "log1 for " + test_case.name();
-    std::string msg2 = "log2 for " + test_case.name();
-    std::string msg3 = "log3 for " + test_case.name();
+    std::string msg1 = "log1 for " + test_case.name() + "\n";
+    std::string msg2 = "log2 for " + test_case.name() + "\n";
+    std::string msg3 = "log3 for " + test_case.name() + "\n";
     zx_status_t status;
     FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
         << status;

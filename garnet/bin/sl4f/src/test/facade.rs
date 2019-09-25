@@ -6,17 +6,108 @@ use {
     crate::test::types::{
         StepResult, StepResultItem, TestPlan, TestPlanTest, TestResult, TestResultItem, TestResults,
     },
+    failure::ResultExt,
     fidl_fuchsia_sys,
     fidl_fuchsia_test::{
         Invocation,
         RunListenerRequest::{OnTestCaseFinished, OnTestCaseStarted},
     },
+    fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
-    futures::TryStreamExt,
+    fuchsia_zircon as zx,
+    futures::{
+        future::BoxFuture,
+        io::{self, AsyncRead},
+        prelude::*,
+        ready,
+        task::{Context, Poll},
+    },
     serde_json::Value,
-    std::collections::HashMap,
-    std::fmt,
+    std::{cell::RefCell, collections::HashMap, fmt, fs::File, io::Write, marker::Unpin, pin::Pin},
+    uuid::Uuid,
+    zx::HandleBased,
 };
+
+#[must_use = "futures/streams"]
+pub struct LoggerStream {
+    socket: fasync::Socket,
+}
+impl Unpin for LoggerStream {}
+
+thread_local! {
+    pub static BUFFER:
+        RefCell<[u8; 256]> = RefCell::new([0; 256]);
+}
+
+impl LoggerStream {
+    /// Creates a new `LoggerStream` for given `socket`.
+    pub fn new(socket: zx::Socket) -> Result<LoggerStream, failure::Error> {
+        let l = LoggerStream {
+            socket: fasync::Socket::from_socket(socket).context("Invalid zircon socket")?,
+        };
+        Ok(l)
+    }
+}
+
+fn process_log_bytes(bytes: &[u8]) -> String {
+    // TODO(anmittal): Change this to consider break in logs and handle it.
+    let log = std::str::from_utf8(bytes).unwrap();
+    log.to_string()
+}
+
+impl Stream for LoggerStream {
+    type Item = io::Result<String>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        BUFFER.with(|b| {
+            let mut b = b.borrow_mut();
+            let len = ready!(Pin::new(&mut self.socket).poll_read(cx, &mut *b)?);
+            if len == 0 {
+                return Poll::Ready(None);
+            }
+            Poll::Ready(Some(process_log_bytes(&b[0..len])).map(Ok))
+        })
+    }
+}
+
+struct Step {
+    pub result: StepResult,
+    f: Option<BoxFuture<'static, io::Result<String>>>,
+}
+
+impl Step {
+    pub fn default() -> Step {
+        Step { result: StepResult::default(), f: None }
+    }
+
+    pub fn start_log_collection(&mut self, logger_socket: zx::Socket) {
+        if logger_socket.is_invalid_handle() {
+            return;
+        }
+
+        let ls = match LoggerStream::new(logger_socket) {
+            Err(e) => {
+                fx_log_err!("Logger: Failed to create fuchsia async socket: {:?}", e);
+                return;
+            }
+            Ok(ls) => ls,
+        };
+
+        let (remote, remote_handle) = ls.try_collect::<String>().remote_handle();
+
+        // spawn so that log collection can run in background.
+        fasync::spawn(remote);
+
+        self.f = Some(remote_handle.boxed());
+    }
+
+    pub async fn await_logs(&mut self) -> Result<String, failure::Error> {
+        if let Some(ref mut f) = self.f.take().as_mut() {
+            return Ok(f.await?);
+        }
+        Ok("".to_string())
+    }
+}
 
 #[derive(Debug)]
 pub struct TestFacade {}
@@ -114,11 +205,7 @@ impl TestFacade {
 
         let mut test_outcome = TestOutcome::Passed;
 
-        let mut steps = Vec::<StepResultItem>::new();
         let mut current_step_map = HashMap::new();
-        // TODO(anmittal): Use this to extract logs and show to user.
-        // To store logger socket so that other end doesn't receive a PEER CLOSED error.
-        let mut _logger = fuchsia_zircon::Socket::from(fuchsia_zircon::Handle::invalid());
         while let Some(result_event) = run_listener
             .try_next()
             .await
@@ -126,14 +213,18 @@ impl TestFacade {
         {
             match result_event {
                 OnTestCaseStarted { name, primary_log, control_handle: _ } => {
-                    let step = StepResult { name: name.clone(), ..StepResult::default() };
+                    let mut step = Step {
+                        result: StepResult { name: name.clone(), ..StepResult::default() },
+                        ..Step::default()
+                    };
+
+                    step.start_log_collection(primary_log);
                     current_step_map.insert(name, step);
-                    _logger = primary_log;
                 }
                 OnTestCaseFinished { name, outcome, control_handle: _ } => {
                     match current_step_map.get_mut(&name) {
                         Some(step) => {
-                            step.outcome = match outcome.status {
+                            step.result.outcome = match outcome.status {
                                 Some(status) => match status {
                                     fidl_fuchsia_test::Status::Passed => "passed".to_string(),
                                     fidl_fuchsia_test::Status::Failed => {
@@ -159,8 +250,10 @@ impl TestFacade {
             }
         }
 
+        let mut step_results = Vec::<StepResultItem>::new();
+
         for (_, mut step) in current_step_map {
-            if step.outcome == "".to_string() {
+            if step.result.outcome == "".to_string() {
                 // step not completed, test might have crashed.
                 match test_outcome {
                     TestOutcome::Passed | TestOutcome::Failed => {
@@ -168,9 +261,21 @@ impl TestFacade {
                     }
                     _ => {}
                 }
-                step.outcome = "inconclusive".to_string();
+                step.result.outcome = "inconclusive".to_string();
             }
-            steps.push(StepResultItem::Result(step));
+            let logs = step.await_logs().await?;
+
+            if logs.len() > 0 {
+                // TODO(anmittal): Display log until host can pull logs and display it.
+                fx_log_info!("logs: {}", logs);
+
+                let filename = format!("/data/{}", &Uuid::new_v4().to_string());
+                let mut file = File::create(&filename)?;
+                write!(file, "{}", logs)?;
+                step.result.primary_log_path = filename.clone();
+            }
+
+            step_results.push(StepResultItem::Result(step.result));
         }
 
         app.kill().map_err(|e| format_err!("Error killing test '{}': {}", url, e))?;
@@ -178,7 +283,7 @@ impl TestFacade {
         let mut test_result = TestResult::default();
         test_result.outcome = test_outcome.to_string();
 
-        test_result.steps = steps;
+        test_result.steps = step_results;
 
         Ok(test_result)
     }
