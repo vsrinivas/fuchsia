@@ -27,6 +27,17 @@ impl Summary for Number {
     }
 }
 
+impl Summary for NumberType {
+    fn summary(&self) -> String {
+        match self {
+            NumberType::Int => "Int",
+            NumberType::Uint => "Uint",
+            NumberType::Double => "Double",
+        }
+        .to_string()
+    }
+}
+
 impl Summary for Action {
     fn summary(&self) -> String {
         match self {
@@ -45,6 +56,14 @@ impl Summary for Action {
                 format!("Subtract({})", value.summary())
             }
             Action::SetNumber(SetNumber { value, .. }) => format!("Set({})", value.summary()),
+            Action::CreateArrayProperty(CreateArrayProperty { number_type, .. }) => {
+                format!("CreateArrayProperty({})", number_type.summary())
+            }
+            Action::ArraySet(ArraySet { value, .. }) => format!("ArraySet({})", value.summary()),
+            Action::ArrayAdd(ArrayAdd { value, .. }) => format!("ArrayAdd({})", value.summary()),
+            Action::ArraySubtract(ArraySubtract { value, .. }) => {
+                format!("ArraySubtract({})", value.summary())
+            }
             _ => "Unknown".to_string(),
         }
     }
@@ -181,6 +200,15 @@ mod tests {
         assert!(results.to_json().contains("foo: Subtract(Double)"));
         results.unimplemented("foo", &delete_property!(id:42));
         assert!(results.to_json().contains("foo: DeleteProperty"));
+
+        results.unimplemented("foo", &create_array_property!(parent: 42, id:42, name: "foo", slots: 42, type: NumberType::Uint));
+        assert!(results.to_json().contains("foo: CreateArrayProperty(Uint)"));
+        results.unimplemented("foo", &array_set!(id:42, index: 42, value: Number::UintT(42)));
+        assert!(results.to_json().contains("foo: ArraySet(Uint)"));
+        results.unimplemented("foo", &array_add!(id:42, index: 42, value: Number::UintT(42)));
+        assert!(results.to_json().contains("foo: ArrayAdd(Uint)"));
+        results.unimplemented("foo", &array_subtract!(id:42, index:42, value:Number::UintT(42)));
+        assert!(results.to_json().contains("foo: ArraySubtract(Uint)"));
 
         assert!(!results.to_json().contains("42"));
         assert!(!results.to_json().contains("bar"));

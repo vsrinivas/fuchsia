@@ -133,6 +133,18 @@ impl Node {
     }
 }
 
+struct Op {
+    int: fn(i64, i64) -> i64,
+    uint: fn(u64, u64) -> u64,
+    double: fn(f64, f64) -> f64,
+    name: &'static str,
+}
+
+const ADD: Op = Op { int: |a, b| a + b, uint: |a, b| a + b, double: |a, b| a + b, name: "add" };
+const SUBTRACT: Op =
+    Op { int: |a, b| a - b, uint: |a, b| a - b, double: |a, b| a - b, name: "subtract" };
+const SET: Op = Op { int: |_a, b| b, uint: |_a, b| b, double: |_a, b| b, name: "set" };
+
 impl Data {
     // ***** Here are the functions to apply Actions to a Data.
 
@@ -140,7 +152,7 @@ impl Data {
     pub fn apply(&mut self, action: &validate::Action) -> Result<(), Error> {
         match action {
             validate::Action::CreateNode(validate::CreateNode { parent, id, name }) => {
-                self.create_node(*parent, *id, name.to_owned())
+                self.create_node(*parent, *id, name)
             }
             validate::Action::DeleteNode(validate::DeleteNode { id }) => self.delete_node(*id),
             validate::Action::CreateNumericProperty(validate::CreateNumericProperty {
@@ -148,52 +160,40 @@ impl Data {
                 id,
                 name,
                 value,
-            }) => self.add_property(Property {
-                name: name.to_string(),
-                id: *id,
-                parent: *parent,
-                payload: {
-                    match value {
-                        validate::Number::IntT(value) => Payload::Int(*value),
-                        validate::Number::UintT(value) => Payload::Uint(*value),
-                        validate::Number::DoubleT(value) => Payload::Double(*value),
-                        unknown => bail!("Unknown number type {:?}", unknown),
-                    }
+            }) => self.add_property(
+                *parent,
+                *id,
+                name,
+                match value {
+                    validate::Number::IntT(value) => Payload::Int(*value),
+                    validate::Number::UintT(value) => Payload::Uint(*value),
+                    validate::Number::DoubleT(value) => Payload::Double(*value),
+                    unknown => bail!("Unknown number type {:?}", unknown),
                 },
-            }),
+            ),
             validate::Action::CreateBytesProperty(validate::CreateBytesProperty {
                 parent,
                 id,
                 name,
                 value,
-            }) => self.add_property(Property {
-                name: name.to_string(),
-                id: *id,
-                parent: *parent,
-                payload: { Payload::Bytes(value.clone()) },
-            }),
+            }) => self.add_property(*parent, *id, name, Payload::Bytes(value.clone())),
             validate::Action::CreateStringProperty(validate::CreateStringProperty {
                 parent,
                 id,
                 name,
                 value,
-            }) => self.add_property(Property {
-                name: name.to_string(),
-                id: *id,
-                parent: *parent,
-                payload: { Payload::String(value.to_string()) },
-            }),
+            }) => self.add_property(*parent, *id, name, Payload::String(value.to_string())),
             validate::Action::DeleteProperty(validate::DeleteProperty { id }) => {
                 self.delete_property(*id)
             }
             validate::Action::SetNumber(validate::SetNumber { id, value }) => {
-                self.set_number(*id, value)
+                self.modify_number(*id, value, SET)
             }
             validate::Action::AddNumber(validate::AddNumber { id, value }) => {
-                self.add_number(*id, value)
+                self.modify_number(*id, value, ADD)
             }
             validate::Action::SubtractNumber(validate::SubtractNumber { id, value }) => {
-                self.subtract_number(*id, value)
+                self.modify_number(*id, value, SUBTRACT)
             }
             validate::Action::SetBytes(validate::SetBytes { id, value }) => {
                 self.set_bytes(*id, value)
@@ -201,12 +201,48 @@ impl Data {
             validate::Action::SetString(validate::SetString { id, value }) => {
                 self.set_string(*id, value)
             }
+            validate::Action::CreateArrayProperty(validate::CreateArrayProperty {
+                parent,
+                id,
+                name,
+                slots,
+                number_type,
+            }) => self.add_property(
+                *parent,
+                *id,
+                name,
+                match number_type {
+                    validate::NumberType::Int => {
+                        Payload::IntArray(vec![0; *slots as usize], ArrayFormat::Default)
+                    }
+                    validate::NumberType::Uint => {
+                        Payload::UintArray(vec![0; *slots as usize], ArrayFormat::Default)
+                    }
+                    validate::NumberType::Double => {
+                        Payload::DoubleArray(vec![0.0; *slots as usize], ArrayFormat::Default)
+                    }
+                },
+            ),
+            validate::Action::ArrayAdd(validate::ArrayAdd { id, index, value }) => {
+                self.modify_array(*id, *index, value, ADD)
+            }
+            validate::Action::ArraySubtract(validate::ArraySubtract { id, index, value }) => {
+                self.modify_array(*id, *index, value, SUBTRACT)
+            }
+            validate::Action::ArraySet(validate::ArraySet { id, index, value }) => {
+                self.modify_array(*id, *index, value, SET)
+            }
             _ => bail!("Unknown action {:?}", action),
         }
     }
 
-    fn create_node(&mut self, parent: u32, id: u32, name: String) -> Result<(), Error> {
-        let node = Node { name, parent, children: HashSet::new(), properties: HashSet::new() };
+    fn create_node(&mut self, parent: u32, id: u32, name: &str) -> Result<(), Error> {
+        let node = Node {
+            name: name.to_owned(),
+            parent,
+            children: HashSet::new(),
+            properties: HashSet::new(),
+        };
         if let Some(_) = self.nodes.insert(id, node) {
             bail!("Create called when node already existed at {}", id);
         }
@@ -223,6 +259,8 @@ impl Data {
             bail!("Do not try to delete node 0");
         }
         if let Some(node) = self.nodes.remove(&id) {
+            // It's legal for a parent to be deleted first, so the parent may not exist when
+            // the child is deleted; this isn't an error.
             if let Some(parent) = self.nodes.get_mut(&node.parent) {
                 if !parent.children.remove(&id) {
                     // Most of these can only happen in case of internal logic errors.
@@ -232,8 +270,6 @@ impl Data {
                     // function just to test them?
                     bail!("Parent {} didn't know about this child {}", node.parent, id);
                 }
-            } else {
-                bail!("Parent {} of node {} doesn't exist", node.parent, id);
             }
         // Don't delete descendents.
         // They won't be reached during to_string() and they should be deleted
@@ -245,13 +281,19 @@ impl Data {
         Ok(())
     }
 
-    fn add_property(&mut self, property: Property) -> Result<(), Error> {
-        let id = property.id;
-        if let Some(node) = self.nodes.get_mut(&property.parent) {
+    fn add_property(
+        &mut self,
+        parent: u32,
+        id: u32,
+        name: &str,
+        payload: Payload,
+    ) -> Result<(), Error> {
+        if let Some(node) = self.nodes.get_mut(&parent) {
             node.properties.insert(id);
         } else {
-            bail!("Parent {} of property {} not found", property.parent, id);
+            bail!("Parent {} of property {} not found", parent, id);
         }
+        let property = Property { parent, id, name: name.into(), payload };
         if let Some(_) = self.properties.insert(id, property) {
             bail!("Property insert called on existing id {}", id);
         }
@@ -273,62 +315,75 @@ impl Data {
         Ok(())
     }
 
-    fn set_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
+    fn modify_number(&mut self, id: u32, value: &validate::Number, op: Op) -> Result<(), Error> {
         if let Some(property) = self.properties.get_mut(&id) {
             match (&property, value) {
-                (Property { payload: Payload::Int(_), .. }, Number::IntT(value)) => {
-                    property.payload = Payload::Int(*value)
+                (Property { payload: Payload::Int(old), .. }, Number::IntT(value)) => {
+                    property.payload = Payload::Int((op.int)(*old, *value));
                 }
-                (Property { payload: Payload::Uint(_), .. }, Number::UintT(value)) => {
-                    property.payload = Payload::Uint(*value)
+                (Property { payload: Payload::Uint(old), .. }, Number::UintT(value)) => {
+                    property.payload = Payload::Uint((op.uint)(*old, *value));
                 }
-                (Property { payload: Payload::Double(_), .. }, Number::DoubleT(value)) => {
-                    property.payload = Payload::Double(*value)
+                (Property { payload: Payload::Double(old), .. }, Number::DoubleT(value)) => {
+                    property.payload = Payload::Double((op.double)(*old, *value));
                 }
                 unexpected => bail!("Bad types {:?} trying to set number", unexpected),
             }
         } else {
-            bail!("Tried to set number on nonexistent property {}", id);
+            bail!("Tried to {} number on nonexistent property {}", op.name, id);
         }
         Ok(())
     }
 
-    fn add_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
-        if let Some(property) = self.properties.get_mut(&id) {
-            match (&property, value) {
-                (Property { payload: Payload::Int(n), .. }, Number::IntT(value)) => {
-                    property.payload = Payload::Int(n + value)
-                }
-                (Property { payload: Payload::Uint(n), .. }, Number::UintT(value)) => {
-                    property.payload = Payload::Uint(n + value)
-                }
-                (Property { payload: Payload::Double(n), .. }, Number::DoubleT(value)) => {
-                    property.payload = Payload::Double(n + value)
-                }
-                unexpected => bail!("Bad types {:?} trying to add number", unexpected),
-            }
-        } else {
-            bail!("Tried to add number on nonexistent property {}", id);
+    fn check_index<T>(numbers: &Vec<T>, index: usize) -> Result<(), Error> {
+        if index >= numbers.len() as usize {
+            bail!("Index {} too big for vector length {}", index, numbers.len());
         }
         Ok(())
     }
 
-    fn subtract_number(&mut self, id: u32, value: &validate::Number) -> Result<(), Error> {
-        if let Some(property) = self.properties.get_mut(&id) {
-            match (&property, value) {
-                (Property { payload: Payload::Int(n), .. }, Number::IntT(value)) => {
-                    property.payload = Payload::Int(n - value)
+    fn modify_array(
+        &mut self,
+        id: u32,
+        index64: u64,
+        value: &validate::Number,
+        op: Op,
+    ) -> Result<(), Error> {
+        if let Some(mut property) = self.properties.get_mut(&id) {
+            let index = index64 as usize;
+            // Out of range index is a NOP, not an error.
+            let number_len = match &property {
+                Property { payload: Payload::IntArray(numbers, _), .. } => numbers.len(),
+                Property { payload: Payload::UintArray(numbers, _), .. } => numbers.len(),
+                Property { payload: Payload::DoubleArray(numbers, _), .. } => numbers.len(),
+                unexpected => bail!("Bad types {:?} trying to set number", unexpected),
+            };
+            if index >= number_len {
+                return Ok(());
+            }
+            match (&mut property, value) {
+                (Property { payload: Payload::IntArray(numbers, _), .. }, Number::IntT(value)) => {
+                    Self::check_index(numbers, index)?;
+                    numbers[index] = (op.int)(numbers[index], *value);
                 }
-                (Property { payload: Payload::Uint(n), .. }, Number::UintT(value)) => {
-                    property.payload = Payload::Uint(n - value)
+                (
+                    Property { payload: Payload::UintArray(numbers, _), .. },
+                    Number::UintT(value),
+                ) => {
+                    Self::check_index(numbers, index)?;
+                    numbers[index] = (op.uint)(numbers[index], *value);
                 }
-                (Property { payload: Payload::Double(n), .. }, Number::DoubleT(value)) => {
-                    property.payload = Payload::Double(n - value)
+                (
+                    Property { payload: Payload::DoubleArray(numbers, _), .. },
+                    Number::DoubleT(value),
+                ) => {
+                    Self::check_index(numbers, index)?;
+                    numbers[index] = (op.double)(numbers[index], *value);
                 }
-                unexpected => bail!("Bad types {:?} trying to subtract number", unexpected),
+                unexpected => bail!("Type mismatch {:?} trying to set number", unexpected),
             }
         } else {
-            bail!("Tried to subtract number on nonexistent property {}", id);
+            bail!("Tried to {} number on nonexistent property {}", op.name, id);
         }
         Ok(())
     }
@@ -783,12 +838,8 @@ enum ArrayType {
 mod tests {
     use {
         super::*,
-        crate::{
-            add_number, create_bytes_property, create_node, create_numeric_property,
-            create_string_property, delete_node, delete_property, puppet, set_bytes, set_number,
-            set_string, subtract_number,
-        },
-        fidl_test_inspect_validate::{Number, ROOT_ID},
+        crate::*,
+        fidl_test_inspect_validate::{Number, NumberType, ROOT_ID},
         fuchsia_async as fasync,
         fuchsia_inspect::format::{bitfields::BlockHeader, constants},
     };
@@ -804,9 +855,9 @@ mod tests {
         Ok(())
     }
 
-    // Make sure every action modifies the string representation of the data tree.
+    // Make sure every action correctly modifies the string representation of the data tree.
     #[test]
-    fn test_actions() -> Result<(), Error> {
+    fn test_creation_deletion() -> Result<(), Error> {
         let mut info = Data::new();
         assert!(!info.to_string().contains("child ->"));
         info.apply(&create_node!(parent: ROOT_ID, id: 1, name: "child"))?;
@@ -833,6 +884,14 @@ mod tests {
             &create_bytes_property!(parent: ROOT_ID, id: 7, name: "bytes", value: vec!(1u8, 2u8)),
         )?;
         assert!(info.to_string().contains("bytes: Bytes([1, 2])"));
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 8, name: "i_ntarr", slots: 1, type: NumberType::Int))?;
+        assert!(info.to_string().contains("i_ntarr: IntArray([0], Default)"));
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 9, name: "u_intarr", slots: 2, type: NumberType::Uint))?;
+        println!("{}", info.to_string());
+        assert!(info.to_string().contains("u_intarr: UintArray([0, 0], Default)"));
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 10, name: "dblarr", slots: 3, type: NumberType::Double))?;
+        println!("{}", info.to_string());
+        assert!(info.to_string().contains("dblarr: DoubleArray([0.0, 0.0, 0.0], Default)"));
         info.apply(&delete_property!(id: 3))?;
         assert!(!info.to_string().contains("int-42") && info.to_string().contains("stringfoo"));
         info.apply(&delete_property!(id: 4))?;
@@ -843,6 +902,12 @@ mod tests {
         assert!(!info.to_string().contains("frac"));
         info.apply(&delete_property!(id: 7))?;
         assert!(!info.to_string().contains("bytes"));
+        info.apply(&delete_property!(id: 8))?;
+        assert!(!info.to_string().contains("i_ntarr"));
+        info.apply(&delete_property!(id: 9))?;
+        assert!(!info.to_string().contains("u_intarr"));
+        info.apply(&delete_property!(id: 10))?;
+        assert!(!info.to_string().contains("dblarr"));
         info.apply(&delete_node!(id:2))?;
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
@@ -874,6 +939,47 @@ mod tests {
     }
 
     #[test]
+    fn test_array_int_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
+                                           type: NumberType::Int))?;
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::IntT(3))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([0, 3, 0], Default)"));
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::UintT(3))).is_err());
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::DoubleT(3.0))).is_err());
+        assert!(info.to_string().contains("value: IntArray([0, 3, 0], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Number::IntT(5))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([0, 3, -5], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Number::UintT(5))).is_err());
+        assert!(info
+            .apply(&array_subtract!(id: 3, index: 2,
+                                            value: Number::DoubleT(5.0)))
+            .is_err());
+        assert!(info.to_string().contains("value: IntArray([0, 3, -5], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(22))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([0, 22, -5], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::UintT(23))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(24.0))).is_err());
+        assert!(info.to_string().contains("value: IntArray([0, 22, -5], Default)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_out_of_bounds_nop() -> Result<(), Error> {
+        // Accesses to indexes beyond the array are legal and should have no effect on the data.
+        let mut info = Data::new();
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
+                                           type: NumberType::Int))?;
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::IntT(3))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([0, 3, 0], Default)"));
+        assert!(info.apply(&array_add!(id: 3, index: 3, value: Number::IntT(3))).is_ok());
+        assert!(info.apply(&array_add!(id: 3, index: 6, value: Number::IntT(3))).is_ok());
+        assert!(info.apply(&array_add!(id: 3, index: 12345, value: Number::IntT(3))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([0, 3, 0], Default)"));
+        Ok(())
+    }
+
+    #[test]
     fn test_basic_uint_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -897,6 +1003,31 @@ mod tests {
     }
 
     #[test]
+    fn test_array_uint_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
+                                     type: NumberType::Uint))?;
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::UintT(3))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([0, 3, 0], Default)"));
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::IntT(3))).is_err());
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::DoubleT(3.0))).is_err());
+        assert!(info.to_string().contains("value: UintArray([0, 3, 0], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::UintT(22))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([0, 22, 0], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(23))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(24.0))).is_err());
+        assert!(info.to_string().contains("value: UintArray([0, 22, 0], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 1, value: Number::UintT(5))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([0, 17, 0], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 1, value: Number::IntT(5))).is_err());
+        assert!(info
+            .apply(&array_subtract!(id: 3, index: 1, value: Number::DoubleT(5.0)))
+            .is_err());
+        assert!(info.to_string().contains("value: UintArray([0, 17, 0], Default)"));
+        Ok(())
+    }
+
+    #[test]
     fn test_basic_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -916,6 +1047,29 @@ mod tests {
         assert!(info.apply(&set_number!(id: 3, value: Number::UintT(23))).is_err());
         assert!(info.apply(&set_number!(id: 3, value: Number::UintT(24))).is_err());
         assert!(info.to_string().contains("value: Double(22.0)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_double_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
+                                     type: NumberType::Double))?;
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::DoubleT(3.0))).is_ok());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 3.0, 0.0], Default)"));
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::IntT(3))).is_err());
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Number::UintT(3))).is_err());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 3.0, 0.0], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Number::DoubleT(5.0))).is_ok());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 3.0, -5.0], Default)"));
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Number::UintT(5))).is_err());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 3.0, -5.0], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(22.0))).is_ok());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 22.0, -5.0], Default)"));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(23))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(24))).is_err());
+        assert!(info.to_string().contains("value: DoubleArray([0.0, 22.0, -5.0], Default)"));
         Ok(())
     }
 
@@ -975,6 +1129,16 @@ mod tests {
         // Can't delete nonexistent property
         info = Data::new();
         assert!(info.apply(&delete_property!(id: 1)).is_err());
+        // Can't do basic-int on array or vice versa
+        info = Data::new();
+        info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
+                                     value: Number::IntT(42)))?;
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 4, name: "array", slots: 2,
+                                     type: NumberType::Int))?;
+        assert!(info.apply(&set_number!(id: 3, value: Number::IntT(5))).is_ok());
+        assert!(info.apply(&array_set!(id: 4, index: 0, value: Number::IntT(5))).is_ok());
+        assert!(info.apply(&set_number!(id: 4, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 0, value: Number::IntT(5))).is_err());
         Ok(())
     }
 
@@ -1160,7 +1324,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_to_string() -> Result<(), Error> {
+    async fn test_to_string_order() -> Result<(), Error> {
         // Make sure property payloads are distinguished by name, value, and type
         // but ignore id and parent, and that prefix is used.
         let int0 = Property { name: "int0".into(), id: 2, parent: 1, payload: Payload::Int(0) }

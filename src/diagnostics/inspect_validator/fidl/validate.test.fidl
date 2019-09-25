@@ -43,6 +43,12 @@ struct DeleteNode {
     uint32 id;
 };
 
+enum NumberType : uint8 {
+    INT = 1;
+    UINT = 2;
+    DOUBLE = 3;
+};
+
 xunion Number {
     int64 int_t;
     uint64 uint_t;
@@ -103,6 +109,32 @@ struct SetString {
     string value;
 };
 
+struct CreateArrayProperty {
+    uint32 parent;
+    uint32 id;
+    string name;
+    uint64 slots;
+    NumberType number_type;
+};
+
+struct ArraySet {
+    uint32 id;
+    uint64 index;
+    Number value;
+};
+
+struct ArrayAdd {
+    uint32 id;
+    uint64 index;
+    Number value;
+};
+
+struct ArraySubtract {
+    uint32 id;
+    uint64 index;
+    Number value;
+};
+
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
     CreateNode create_node;
@@ -116,6 +148,10 @@ xunion Action {
     SetBytes set_bytes;
     AddNumber add_number;
     SubtractNumber subtract_number;
+    CreateArrayProperty create_array_property;
+    ArraySet array_set;
+    ArrayAdd array_add;
+    ArraySubtract array_subtract;
 };
 
 [Discoverable]

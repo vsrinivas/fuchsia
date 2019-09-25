@@ -29,6 +29,9 @@ enum Property {
     Uint(UintProperty),
     Double(DoubleProperty),
     Bytes(BytesProperty),
+    IntArray(IntArrayProperty),
+    UintArray(UintArrayProperty),
+    DoubleArray(DoubleArrayProperty),
 }
 
 struct Actor {
@@ -110,6 +113,52 @@ impl Actor {
                 Property::Bytes(p) => p.set(&value),
                 unexpected => bail!("Illegal property {:?} for SetBytes", unexpected),
             },
+            Action::CreateArrayProperty(CreateArrayProperty {
+                parent,
+                id,
+                name,
+                slots,
+                number_type,
+            }) => {
+                self.properties.insert(
+                    id,
+                    match number_type {
+                        NumberType::Int => Property::IntArray(
+                            self.find_parent(parent)?.create_int_array(name, slots as usize),
+                        ),
+                        NumberType::Uint => Property::UintArray(
+                            self.find_parent(parent)?.create_uint_array(name, slots as usize),
+                        ),
+                        NumberType::Double => Property::DoubleArray(
+                            self.find_parent(parent)?.create_double_array(name, slots as usize),
+                        ),
+                    },
+                );
+            }
+            Action::ArraySet(ArraySet { id, index, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::IntArray(p), Number::IntT(v)) => p.set(index as usize, v),
+                    (Property::UintArray(p), Number::UintT(v)) => p.set(index as usize, v),
+                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.set(index as usize, v),
+                    unexpected => bail!("Illegal types {:?} for ArraySet", unexpected),
+                };
+            }
+            Action::ArrayAdd(ArrayAdd { id, index, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::IntArray(p), Number::IntT(v)) => p.add(index as usize, v),
+                    (Property::UintArray(p), Number::UintT(v)) => p.add(index as usize, v),
+                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.add(index as usize, v),
+                    unexpected => bail!("Illegal types {:?} for ArrayAdd", unexpected),
+                };
+            }
+            Action::ArraySubtract(ArraySubtract { id, index, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::IntArray(p), Number::IntT(v)) => p.subtract(index as usize, v),
+                    (Property::UintArray(p), Number::UintT(v)) => p.subtract(index as usize, v),
+                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.subtract(index as usize, v),
+                    unexpected => bail!("Illegal types {:?} for ArraySubtract", unexpected),
+                };
+            }
             unexpected => {
                 bail!("Unexpected action {:?}", unexpected);
             }

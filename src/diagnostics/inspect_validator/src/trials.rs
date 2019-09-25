@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate::{self, Number, ROOT_ID};
+use super::validate::{self, Number, NumberType, ROOT_ID};
 
 pub struct Step {
     pub actions: Vec<validate::Action>,
@@ -29,7 +29,17 @@ impl Step {
 }
 
 pub fn real_trials() -> Vec<Trial> {
-    vec![simple_ops_trial(), basic_trial()]
+    vec![
+        basic_node(),
+        basic_int(),
+        basic_uint(),
+        basic_double(),
+        basic_string(),
+        basic_bytes(),
+        basic_int_array(),
+        basic_uint_array(),
+        basic_double_array(),
+    ]
 }
 
 #[macro_export]
@@ -128,58 +138,180 @@ macro_rules! delete_property {
     };
 }
 
-fn basic_trial() -> Trial {
+#[macro_export]
+macro_rules! create_array_property {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, slots: $slots:expr, type: $type:expr) => {
+        validate::Action::CreateArrayProperty(validate::CreateArrayProperty {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            slots: $slots,
+            number_type: $type,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! array_set {
+    (id: $id:expr, index: $index:expr, value: $value:expr) => {
+        validate::Action::ArraySet(validate::ArraySet { id: $id, index: $index, value: $value })
+    };
+}
+
+#[macro_export]
+macro_rules! array_add {
+    (id: $id:expr, index: $index:expr, value: $value:expr) => {
+        validate::Action::ArrayAdd(validate::ArrayAdd { id: $id, index: $index, value: $value })
+    };
+}
+
+#[macro_export]
+macro_rules! array_subtract {
+    (id: $id:expr, index: $index:expr, value: $value:expr) => {
+        validate::Action::ArraySubtract(validate::ArraySubtract {
+            id: $id,
+            index: $index,
+            value: $value,
+        })
+    };
+}
+
+fn basic_node() -> Trial {
     Trial {
-        name: "Basic Trial".into(),
+        name: "Basic Node".into(),
         steps: vec![Step {
             actions: vec![
                 create_node!(parent: ROOT_ID, id: 1, name: "child"),
-                create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
-                create_numeric_property!(parent: ROOT_ID, id:2, name: "answer", value: Number::IntT(42)),
-                create_node!(parent: ROOT_ID, id: 2, name: "grandchild"),
-                create_string_property!(parent: 1, id:3, name: "str2", value: "bar"),
-                create_numeric_property!(parent: 2, id:4, name: "question", value: Number::IntT(7)),
-                create_numeric_property!(parent: 2, id:5, name: "uint", value: Number::UintT(8)),
-                create_numeric_property!(parent: 2, id: 6, name: "double-double", value: Number::DoubleT(0.5)),
-                create_bytes_property!(parent: 2, id: 7, name: "byte byte byte", value: vec![1, 2, 3]),
-                delete_property!(id: 1),
-                delete_property!(id: 2),
-                delete_property!(id: 3),
-                delete_property!(id: 4),
-                delete_property!(id: 5),
-                delete_property!(id: 6),
-                delete_property!(id: 7),
+                create_node!(parent: 1, id: 2, name: "grandchild"),
                 delete_node!( id: 2),
                 delete_node!( id: 1 ),
+                // Verify they can be deleted in either order.
+                create_node!(parent: ROOT_ID, id: 1, name: "child"),
+                create_node!(parent: 1, id: 2, name: "grandchild"),
+                delete_node!( id: 1),
+                delete_node!( id: 2 ),
             ],
         }],
     }
 }
 
-fn simple_ops_trial() -> Trial {
+fn basic_string() -> Trial {
     Trial {
-        name: "Simple Ops".into(),
+        name: "Basic String".into(),
         steps: vec![Step {
             actions: vec![
-                create_numeric_property!(parent: ROOT_ID, id: 4, name: "float", value: Number::DoubleT(1.0)),
-                add_number!(id: 4, value: Number::DoubleT(2.0)),
-                subtract_number!(id: 4, value: Number::DoubleT(3.5)),
-                set_number!(id: 4, value: Number::DoubleT(19.0)),
-                create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(1)),
-                add_number!(id: 5, value: Number::IntT(2)),
-                subtract_number!(id: 5, value: Number::IntT(3)),
-                set_number!(id: 5, value: Number::IntT(19)),
-                create_numeric_property!(parent: ROOT_ID, id: 6, name: "uint", value: Number::UintT(1)),
-                add_number!(id: 6, value: Number::UintT(2)),
-                subtract_number!(id: 6, value: Number::UintT(3)),
-                set_number!(id: 6, value: Number::UintT(19)),
-                create_string_property!(parent: ROOT_ID, id: 7, name: "str", value: "foo"),
-                set_string!(id: 7, value: "bar"),
-                create_bytes_property!(parent: ROOT_ID, id: 8, name: "bytes", value: vec![1u8, 2u8]),
-                set_bytes!(id: 8, value: vec![3u8]),
+                create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
+                set_string!(id: 1, value: "bar"),
+                set_string!(id: 1, value: "This Is A Longer String"),
+                set_string!(id: 1, value: "."),
+                // Make sure it can hold a string bigger than the biggest block (3000 chars > 2040)
+                set_string!(id: 1, value: ["1234567890"; 300].to_vec().join("")),
+                delete_property!(id: 1),
             ],
         }],
     }
+}
+
+fn basic_bytes() -> Trial {
+    Trial {
+        name: "Basic bytes".into(),
+        steps: vec![Step {
+            actions: vec![
+                create_bytes_property!(parent: ROOT_ID, id: 8, name: "bytes", value: vec![1u8, 2u8]),
+                set_bytes!(id: 8, value: vec![3u8, 4, 5, 6, 7]),
+                set_bytes!(id: 8, value: vec![8u8]),
+                delete_property!(id: 8),
+            ],
+        }],
+    }
+}
+
+fn basic_int() -> Trial {
+    Trial {
+        name: "Basic Int".into(),
+        steps: vec![Step {
+            actions: vec![
+                create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(10)),
+                set_number!(id: 5, value: Number::IntT(std::i64::MAX)),
+                subtract_number!(id: 5, value: Number::IntT(3)),
+                set_number!(id: 5, value: Number::IntT(std::i64::MIN)),
+                add_number!(id: 5, value: Number::IntT(2)),
+                delete_property!(id: 5),
+            ],
+        }],
+    }
+}
+
+fn basic_uint() -> Trial {
+    Trial {
+        name: "Basic Uint".into(),
+        steps: vec![Step {
+            actions: vec![
+                create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1)),
+                set_number!(id: 5, value: Number::UintT(std::u64::MAX)),
+                subtract_number!(id: 5, value: Number::UintT(3)),
+                set_number!(id: 5, value: Number::UintT(0)),
+                add_number!(id: 5, value: Number::UintT(2)),
+                delete_property!(id: 5),
+            ],
+        }],
+    }
+}
+
+fn basic_double() -> Trial {
+    Trial {
+        name: "Basic Double".into(),
+        steps: vec![Step {
+            actions: vec![
+                create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::DoubleT(1.0)),
+                set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
+                subtract_number!(id: 5, value: Number::DoubleT(std::f64::MIN/10_f64)),
+                set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
+                add_number!(id: 5, value: Number::DoubleT(std::f64::MIN / 10_f64)),
+                delete_property!(id: 5),
+            ],
+        }],
+    }
+}
+
+fn basic_int_array() -> Trial {
+    let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 5, name: "int", slots: 5,
+                                       type: NumberType::Int)];
+    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
+    // TODO(cphoenix): Once the fix lands, test lots of values.
+    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+        actions.push(array_add!(id: 5, index: *index, value: Number::IntT(7 + *index as i64)));
+        actions.push(array_subtract!(id: 5, index: *index, value: Number::IntT(3)));
+        actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
+    }
+    actions.push(delete_property!(id: 5));
+    Trial { name: "Int Array Ops".into(), steps: vec![Step { actions: actions }] }
+}
+
+fn basic_uint_array() -> Trial {
+    let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 6, name: "uint", slots: 5,
+                                       type: NumberType::Uint)];
+    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
+    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+        actions.push(array_add!(id: 6, index: *index, value: Number::UintT(11 + *index as u64)));
+        actions.push(array_subtract!(id: 6, index: *index, value: Number::UintT(3)));
+        actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
+    }
+    actions.push(delete_property!(id: 6));
+    Trial { name: "Unt Array Ops".into(), steps: vec![Step { actions: actions }] }
+}
+
+fn basic_double_array() -> Trial {
+    let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 4, name: "float", slots: 5,
+                                       type: NumberType::Double)];
+    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
+    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+        actions.push(array_add!(id: 4, index: *index, value: Number::DoubleT(2.0 + *index as f64)));
+        actions.push(array_subtract!(id: 4, index: *index, value: Number::DoubleT(3.5)));
+        actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));
+    }
+    actions.push(delete_property!(id: 4));
+    Trial { name: "Int Array Ops".into(), steps: vec![Step { actions: actions }] }
 }
 
 #[cfg(test)]
