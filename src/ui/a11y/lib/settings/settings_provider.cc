@@ -154,6 +154,12 @@ void SettingsProvider::AddWatcher(
   watchers_.AddInterfacePtr(std::move(watcher_proxy));
 }
 
+fuchsia::accessibility::SettingsPtr SettingsProvider::GetSettings() {
+  auto settings_ptr = fuchsia::accessibility::Settings::New();
+  settings_.Clone(settings_ptr.get());
+  return settings_ptr;
+}
+
 std::array<float, 9> SettingsProvider::GetColorAdjustmentMatrix() {
   std::array<float, 9> color_inversion_matrix = kIdentityMatrix;
   std::array<float, 9> color_correction_matrix = kIdentityMatrix;

@@ -19,4 +19,8 @@ void SettingsManager::Watch(
   settings_provider_.AddWatcher(std::move(watcher));
 }
 
+fuchsia::accessibility::SettingsPtr SettingsManager::GetSettings() {
+  return settings_provider_.GetSettings();
+}
+
 }  // namespace a11y

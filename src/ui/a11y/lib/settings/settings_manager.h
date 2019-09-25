@@ -24,6 +24,9 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
   // |fuchsia::accessibility::SettingsManager|:
   void Watch(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) override;
 
+  // Returns a copy of current set of settings.
+  fuchsia::accessibility::SettingsPtr GetSettings();
+
  private:
   SettingsProvider settings_provider_;
   fidl::Binding<fuchsia::accessibility::SettingsProvider> settings_provider_binding_;

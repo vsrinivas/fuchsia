@@ -18,14 +18,9 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       tts_manager_(startup_context_.get()),
       // For now, we use a simple Tts Engine which only logs the output.
       // On initialization, it registers itself with the Tts manager.
-      log_engine_(startup_context_.get()),
-      settings_watcher_binding_(this) {
+      log_engine_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       settings_manager_bindings_.GetHandler(&settings_manager_));
-
-  // Register a11y manager as a settings watcher.
-  // TODO(17180): Remove watcher logic from this class.
-  settings_manager_.Watch(settings_watcher_binding_.NewBinding());
 
   // Register a11y manager as a settings provider.
   settings_manager_.RegisterSettingProvider(settings_provider_ptr_.NewRequest());
@@ -66,6 +61,7 @@ void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings&
   if (systemSettings.has_screen_reader()) {
     settings_provider_ptr_->SetScreenReaderEnabled(systemSettings.screen_reader(),
                                                    InternalSettingsCallback);
+    ToggleScreenReaderSetting(systemSettings.screen_reader());
   }
   if (systemSettings.has_color_inversion()) {
     settings_provider_ptr_->SetColorInversionEnabled(systemSettings.color_inversion(),
@@ -109,39 +105,7 @@ void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result resul
 
 void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
 
-fuchsia::accessibility::SettingsPtr App::GetSettings() {
-  auto settings_ptr = fuchsia::accessibility::Settings::New();
-  settings_.Clone(settings_ptr.get());
-  return settings_ptr;
-}
-
-void App::SetSettings(fuchsia::accessibility::Settings provided_settings) {
-  settings_.set_magnification_enabled(provided_settings.has_magnification_enabled() &&
-                                      provided_settings.magnification_enabled());
-
-  if (provided_settings.has_magnification_zoom_factor()) {
-    settings_.set_magnification_zoom_factor(provided_settings.magnification_zoom_factor());
-  } else {
-    settings_.set_magnification_zoom_factor(kDefaultMagnificationZoomFactor);
-  }
-
-  settings_.set_screen_reader_enabled(provided_settings.has_screen_reader_enabled() &&
-                                      provided_settings.screen_reader_enabled());
-
-  settings_.set_color_inversion_enabled(provided_settings.has_color_inversion_enabled() &&
-                                        provided_settings.color_inversion_enabled());
-
-  if (provided_settings.has_color_correction()) {
-    settings_.set_color_correction(provided_settings.color_correction());
-  } else {
-    settings_.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
-  }
-
-  if (provided_settings.has_color_adjustment_matrix()) {
-    settings_.set_color_adjustment_matrix(provided_settings.color_adjustment_matrix());
-  }
-}
-
+fuchsia::accessibility::SettingsPtr App::GetSettings() { return settings_manager_.GetSettings(); }
 void App::OnScreenReaderEnabled(bool enabled) {
   // Reset SemanticsTree and registered views in SemanticsManagerImpl.
   semantics_manager_.SetSemanticsManagerEnabled(enabled);
@@ -166,18 +130,14 @@ void App::OnAccessibilityPointerEventListenerEnabled(bool enabled) {
   }
 }
 
-void App::OnSettingsChange(fuchsia::accessibility::Settings provided_settings) {
-  // Check if screen reader settings have changed.
-  if (provided_settings.has_screen_reader_enabled()) {
-    const bool screen_reader_enabled = provided_settings.screen_reader_enabled();
-    if ((settings_.has_screen_reader_enabled() && settings_.screen_reader_enabled()) !=
-        screen_reader_enabled) {
-      OnAccessibilityPointerEventListenerEnabled(screen_reader_enabled);
-      OnScreenReaderEnabled(screen_reader_enabled);
-    }
+void App::ToggleScreenReaderSetting(bool new_screen_reader_enabled_value) {
+  fuchsia::accessibility::SettingsPtr settings_ptr = settings_manager_.GetSettings();
+  const bool old_screen_reader_enabled_value =
+      settings_ptr->has_screen_reader_enabled() && settings_ptr->screen_reader_enabled();
+  if (new_screen_reader_enabled_value != old_screen_reader_enabled_value) {
+    OnAccessibilityPointerEventListenerEnabled(new_screen_reader_enabled_value);
+    OnScreenReaderEnabled(new_screen_reader_enabled_value);
   }
-  // Set A11y Settings.
-  SetSettings(std::move(provided_settings));
 }
 
 }  // namespace a11y_manager

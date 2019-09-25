@@ -23,6 +23,8 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
 
   void AddWatcher(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher);
 
+  fuchsia::accessibility::SettingsPtr GetSettings();
+
  private:
   // |fuchsia::accessibility::SettingsProvider|
   void SetMagnificationEnabled(bool magnification_enabled,

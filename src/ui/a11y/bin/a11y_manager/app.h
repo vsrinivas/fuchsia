@@ -26,27 +26,24 @@
 namespace a11y_manager {
 
 // A11y manager application entry point.
-class App : public fuchsia::accessibility::SettingsWatcher {
+class App {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> context);
-  ~App() override;
-
-  // |fuchsia::accessibility::SettingsWatcher|
-  void OnSettingsChange(fuchsia::accessibility::Settings provided_settings) override;
+  ~App();
 
   // Returns a copy of current set of settings owned by A11y Manager.
   fuchsia::accessibility::SettingsPtr GetSettings();
 
  private:
-  // Helper function to copy given settings to member variable.
-  void SetSettings(fuchsia::accessibility::Settings provided_settings);
-
   // Callback for Setui's Watch() method.
   void SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result);
 
   // Set up continuous watch of setui's accessibility settings. The Watch(...) method returns on the
   // initial call, and afterwards uses a hanging get to return only when settings change.
   void WatchSetui();
+
+  // Changes screen reader status when settings change.
+  void ToggleScreenReaderSetting(bool enabled);
 
   // Initializes Screen Reader pointer when screen reader is enabled, and destroys
   // the pointer when Screen Reader is disabled.
@@ -78,12 +75,9 @@ class App : public fuchsia::accessibility::SettingsWatcher {
 
   // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
-  fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
-
-  fuchsia::accessibility::Settings settings_;
 
   // Interface between a11y manager and Root presenter to register a
   // accessibility pointer event listener.
