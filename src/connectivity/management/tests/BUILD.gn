@@ -51,7 +51,8 @@ test_package("network_manager_integration_tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":network_manager_integration_tests",
+    #TODO(dpradilla) Reenable once test flake is resolved. See fxb/37114, fxb/37105
+    #":network_manager_integration_tests",
     "//src/connectivity/management/network_manager",
     "//src/connectivity/management/network_manager:network_manager_tests",
     "//src/connectivity/management/network_manager_cli",
