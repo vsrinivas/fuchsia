@@ -77,6 +77,7 @@ standard_configs = [
   "$zx/public/gn/config:thread_safety_annotations",
   "$zx/public/gn/config:warn-implicit-fallthrough",
   "$zx/public/gn/config:visibility_hidden",
+  "$zx/public/gn/config:auto_var_init",
 
   {
     # Additional configs apply only to code built into shared libraries.

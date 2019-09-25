@@ -690,3 +690,10 @@ config("rodso") {
     ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
   }
 }
+
+config("auto_var_init") {
+  if (!is_gcc) {
+    # Automatically initialize variables with a pattern.
+    cflags = [ "-ftrivial-auto-var-init=pattern" ]
+  }
+}
