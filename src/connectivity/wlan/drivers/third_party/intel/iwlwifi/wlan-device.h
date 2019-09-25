@@ -9,6 +9,9 @@
 
 #include <ddk/protocol/wlanphyimpl.h>
 
+#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
+
+extern wlanmac_protocol_ops_t wlanmac_ops;
 extern wlanphy_impl_protocol_ops_t wlanphy_ops;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_

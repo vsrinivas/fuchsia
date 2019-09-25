@@ -983,6 +983,7 @@ static void iwl_pci_release(void* ctx) {
   free(trans);
 }
 
+// TODO(fxb/36795): move to wlan-device.c
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = iwl_pci_unbind,

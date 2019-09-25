@@ -22,6 +22,10 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <zircon/status.h>
+
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -30,13 +34,26 @@
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
 static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  if (!ctx || !info) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   memset(info, 0, sizeof(*info));
+
+  info->ifc_info.mac_role = mvmvif->mac_role;
+
   IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
   return ZX_OK;  // Temporarily returns OK to make the interface list-able.
 }
 
 static zx_status_t mac_start(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
                              void* cookie) {
+  // Initialize the output result.
+  if (!ctx || !ifc) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
   return ZX_OK;  // Temporarily returns OK to make the interface list-able.
 }
@@ -105,6 +122,28 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .start_hw_scan = mac_start_hw_scan,
 };
 
+static void mac_unbind(void* ctx) {
+  struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t status;
+
+  status = device_remove(mvmvif->zxdev);
+  if (status != ZX_OK) {
+    IWL_ERR(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
+            zx_status_get_string(status));
+  }
+}
+
+static void mac_release(void* ctx) {
+  struct iwl_mvm_vif* mvmvif = ctx;
+  free(mvmvif);
+}
+
+static zx_protocol_device_t device_mac_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .unbind = mac_unbind,
+    .release = mac_release,
+};
+
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
@@ -142,10 +181,47 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   return ZX_OK;
 }
 
+// This function is working with a PHY context ('ctx') to create a MAC interface.
 static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                                     uint16_t* out_iface_id) {
-  IWL_ERR(ctx, "%s() needs porting ...\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_trans* iwl_trans = ctx;
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  zx_status_t ret = ZX_OK;
+
+  if (!mvm) {
+    IWL_ERR(mvm, "Cannot obtain MVM from ctx=%p while creating interface\n", ctx);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  mtx_lock(&mvm->mutex);
+
+  // Allocate a MAC context. This will be initialized once iwl_mvm_mac_add_interface() is called.
+  struct iwl_mvm_vif* mvmvif = calloc(1, sizeof(struct iwl_mvm_vif));
+  if (!mvmvif) {
+    ret = ZX_ERR_NO_MEMORY;
+    goto unlock;
+  }
+
+  // Add MAC interface
+  device_add_args_t mac_args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "iwlwifi-wlanmac",
+      .ctx = mvmvif,
+      .ops = &device_mac_ops,
+      .proto_id = ZX_PROTOCOL_WLANMAC,
+      .proto_ops = &wlanmac_ops,
+  };
+
+  // Add this MAC device into the tree. The parent device is the PHY device.
+  ret = device_add(iwl_trans->zxdev, &mac_args, &mvmvif->zxdev);
+  if (ret == ZX_OK) {
+    mvmvif->mac_role = req->role;
+  }
+
+unlock:
+  mtx_unlock(&mvm->mutex);
+
+  return ret;
 }
 
 static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {

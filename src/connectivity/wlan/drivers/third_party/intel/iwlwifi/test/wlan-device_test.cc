@@ -23,9 +23,38 @@ namespace {
 
 class WlanDeviceTest : public SingleApTest {
  public:
-  WlanDeviceTest() {}
+  WlanDeviceTest()
+      : mvmvif_sta_{
+            .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
+        } {}
   ~WlanDeviceTest() {}
+
+ protected:
+  struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
 };
+
+/////////////////////////////////////       MAC       //////////////////////////////////////////////
+
+TEST_F(WlanDeviceTest, MacQuery) {
+  // Test input null pointers
+  uint32_t options = 0;
+  void* whatever = &options;
+  ASSERT_EQ(wlanmac_ops.query(nullptr, options, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.query(whatever, options, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.query(nullptr, options, reinterpret_cast<wlanmac_info*>(whatever)),
+            ZX_ERR_INVALID_ARGS);
+
+  wlanmac_info_t info;
+  ASSERT_EQ(wlanmac_ops.query(&mvmvif_sta_, options, &info), ZX_OK);
+  ASSERT_EQ(info.ifc_info.mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+}
+
+TEST_F(WlanDeviceTest, MacStart) {
+  // Test input null pointers
+  ASSERT_EQ(wlanmac_ops.start(nullptr, nullptr, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+}
+
+/////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 TEST_F(WlanDeviceTest, PhyQuery) {
   // Test input null pointers
