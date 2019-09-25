@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
@@ -12,10 +13,8 @@
 #include <hid-parser/usages.h>
 #include <zxtest/zxtest.h>
 
-#include <unistd.h>
-
 // See hid-utest-data.cpp for the definitions of the test data
-extern "C" const uint8_t push_pop_test[62];
+extern "C" const uint8_t push_pop_test[70];
 extern "C" const uint8_t minmax_signed_test[68];
 
 TEST(HidParserHelperTest, ParseEmptyData) {
@@ -115,7 +114,7 @@ TEST(HidParserHelperTest, ParsePushPop) {
   // Next comes 'X' and 'Y' field again
   expected_flags = hid::kData | hid::kRelative | hid::kScalar;
   EXPECT_EQ(fields[6].attr.usage.page, hid::usage::Page::kGenericDesktop);
-  EXPECT_EQ(fields[6].attr.usage.usage, 0);
+  EXPECT_EQ(fields[6].attr.usage.usage, hid::usage::GenericDesktop::kX);
   EXPECT_EQ(fields[6].attr.bit_sz, 8);
   EXPECT_EQ(fields[6].attr.logc_mm.min, -127);
   EXPECT_EQ(fields[6].attr.logc_mm.max, 127);
@@ -123,7 +122,7 @@ TEST(HidParserHelperTest, ParsePushPop) {
   EXPECT_EQ(fields[6].attr.phys_mm.max, 127);
   EXPECT_EQ(expected_flags & fields[6].flags, expected_flags);
   EXPECT_EQ(fields[7].attr.usage.page, hid::usage::Page::kGenericDesktop);
-  EXPECT_EQ(fields[7].attr.usage.usage, 0);
+  EXPECT_EQ(fields[7].attr.usage.usage, hid::usage::GenericDesktop::kY);
   EXPECT_EQ(fields[7].attr.bit_sz, 8);
   EXPECT_EQ(fields[7].attr.logc_mm.min, -127);
   EXPECT_EQ(fields[7].attr.logc_mm.max, 127);
@@ -140,7 +139,7 @@ TEST(HidParserHelperTest, ParsePushPop) {
 
   for (uint8_t ix = 9; ix != 12; ++ix) {
     EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
-    EXPECT_EQ(fields[ix].attr.usage.usage, 0);
+    EXPECT_EQ(fields[ix].attr.usage.usage, ix - 8);
     EXPECT_EQ(fields[ix].attr.bit_sz, 1);
     EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
     EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);

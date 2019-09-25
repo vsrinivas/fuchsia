@@ -8,7 +8,7 @@
 // functionality
 
 // Adapted from boot_mouse_r_desc, this tests the push and pop ability
-extern "C" const uint8_t push_pop_test[62] = {
+extern "C" const uint8_t push_pop_test[70] = {
     0x05, 0x01,  // Usage Page (Generic Desktop Ctrls)
     0x09, 0x02,  // Usage (Mouse)
     0xA1, 0x01,  // Collection (Application)
@@ -41,10 +41,14 @@ extern "C" const uint8_t push_pop_test[62] = {
     0xA4,        //     Push
 
     0xB4,        //     Pop
+    0x09, 0x30,  //     Usage (X)
+    0x09, 0x31,  //     Usage (Y)
     0x81, 0x06,  //     Input (Data,Var,Rel,No Wrap,Linear,No Null Position)
     0xB4,        //     Pop
     0x81, 0x03,  //     Input (Const,Var,Abs,No Wrap,Linear,No Null Position)
     0xB4,        //     Pop
+    0x19, 0x01,  //     Usage Minimum (0x01)
+    0x29, 0x03,  //     Usage Maximum (0x03)
     0x81, 0x02,  //     Input (Data,Var,Abs,No Wrap,Linear,No Null Position)
 
     0xC0,  //   End Collection

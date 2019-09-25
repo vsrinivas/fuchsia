@@ -335,7 +335,7 @@ class ParseState {
     UsageIterator usage_it(this, flags);
 
     for (uint32_t ix = 0; ix != table_.report_count; ++ix) {
-      attributes.usage.usage = usage_it.next_usage();
+      attributes.usage = usage_it.next_usage();
 
       auto curr_col = &coll_[coll_.size() - 1];
 
@@ -552,34 +552,49 @@ class ParseState {
           index_(0),
           last_usage_(0),
           is_array_(FieldTypeFlags::kArray & field_type) {
+      usage_page_ = ps->table_.attributes.usage.page;
       if ((ps->usage_range_.max == 0) && (ps->usage_range_.min == 0)) {
         usages_ = &ps->usages_;
+        has_usage_ = (usages_->size() != 0);
       } else {
         usage_range_ = ps->usage_range_;
+        has_usage_ = true;
       }
     }
 
-    uint32_t next_usage() {
-      int64_t usage;
-      if (usages_ == nullptr) {
-        usage = usage_range_.min + index_;
-        if (usage > usage_range_.max)
-          usage = usage_range_.max;
-      } else {
-        usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
-        last_usage_ = static_cast<uint32_t>(usage);
+    Usage next_usage() {
+      Usage usage = {};
+      if (!has_usage_) {
+        return usage;
       }
-      if (!is_array_)
+
+      int64_t usage_long = 0;
+      if (usages_ == nullptr) {
+        usage_long = usage_range_.min + index_;
+        if (usage_long > usage_range_.max)
+          usage_long = usage_range_.max;
+      } else {
+        usage_long = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
+        last_usage_ = static_cast<uint32_t>(usage_long);
+      }
+      if (!is_array_) {
         ++index_;
-      return static_cast<uint32_t>(usage);
+      }
+
+      usage.page = usage_page_;
+      usage.usage = static_cast<uint32_t>(usage_long);
+
+      return usage;
     }
 
    private:
     const fbl::Vector<uint32_t>* usages_;
     MinMax usage_range_;
+    int16_t usage_page_;
     uint32_t index_;
     uint32_t last_usage_;
     bool is_array_;
+    bool has_usage_;
   };
 
   bool validate_ranges() const {

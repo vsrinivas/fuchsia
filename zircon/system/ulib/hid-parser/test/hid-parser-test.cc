@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
@@ -11,8 +12,6 @@
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
 #include <zxtest/zxtest.h>
-
-#include <unistd.h>
 
 // See hid-report-data.cpp for the definitions of the test data.
 extern "C" const uint8_t boot_mouse_r_desc[50];
@@ -501,12 +500,12 @@ TEST(HidHelperTest, ParsePs3Controller) {
   const hid::ReportField* output_fields = dev->report[0].output_fields;
   const hid::ReportField* feature_fields = dev->report[0].feature_fields;
 
-  // First field is 8 bits, constant GenericDesktop page, but no usage described.
-  // being it is a version number?
+  // First field is 8 bits  but no usage described (which is normally padding).
+  // Maybe it is a version number?
   auto expected_flags = hid::kConstant | hid::kAbsolute | hid::kScalar;
 
   EXPECT_EQ(fields[0].type, hid::kInput);
-  EXPECT_EQ(fields[0].attr.usage.page, hid::usage::Page::kGenericDesktop);
+  EXPECT_EQ(fields[0].attr.usage.page, 0);
   EXPECT_EQ(fields[0].attr.usage.usage, 0);
   EXPECT_EQ(fields[0].attr.logc_mm.min, 0);
   EXPECT_EQ(fields[0].attr.logc_mm.max, 255);
@@ -533,7 +532,7 @@ TEST(HidHelperTest, ParsePs3Controller) {
   // The next 13 fields are 13 bits of constant, vendor-defined. Probably padding.
   for (uint8_t ix = 20; ix != 33; ++ix) {
     EXPECT_EQ(fields[ix].type, hid::kInput);
-    EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kVendorDefinedStart);
+    EXPECT_EQ(fields[ix].attr.usage.page, 0);
     EXPECT_EQ(fields[ix].attr.usage.usage, 0);
     EXPECT_EQ(fields[ix].attr.bit_sz, 1);
     EXPECT_EQ(fields[ix].attr.offset, 35u + (ix - 20u));
@@ -745,7 +744,7 @@ TEST(HidHelperTest, ParseEveTablet) {
   expected_flags = hid::kConstant | hid::kAbsolute | hid::kScalar;
 
   EXPECT_EQ(fields[1].type, hid::kInput);
-  EXPECT_EQ(fields[1].attr.usage.page, hid::usage::Page::kGenericDesktop);
+  EXPECT_EQ(fields[1].attr.usage.page, 0);
   EXPECT_EQ(fields[1].attr.usage.usage, 0);
   EXPECT_EQ(fields[1].attr.bit_sz, 7);
   EXPECT_EQ(fields[1].attr.offset, 1);
