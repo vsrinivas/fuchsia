@@ -43,12 +43,6 @@ void main() {
     );
     await tester.pumpWidget(widget);
 
-    when(suggestionService.getSuggestions('hello'))
-        .thenAnswer((_) => Future<Iterable<Suggestion>>.value(<Suggestion>[
-              Suggestion(id: 'one', displayInfo: DisplayInfo(title: 'hi')),
-              Suggestion(id: 'two', displayInfo: DisplayInfo(title: 'there')),
-            ]));
-
     final completer = Completer();
     final model = key.currentState.model;
     model.suggestions.addListener(completer.complete);
@@ -65,4 +59,16 @@ void main() {
 }
 
 // Mock classes.
-class MockSuggestionService extends Mock implements SuggestionService {}
+class MockSuggestionService extends Mock implements SuggestionService {
+  @override
+  Future<Iterable<Suggestion>> getSuggestions(
+    String query, [
+    int maxSuggestions = 20,
+  ]) async =>
+      query == 'hello'
+          ? [
+              Suggestion(id: 'one', displayInfo: DisplayInfo(title: 'hi')),
+              Suggestion(id: 'two', displayInfo: DisplayInfo(title: 'there')),
+            ]
+          : [];
+}

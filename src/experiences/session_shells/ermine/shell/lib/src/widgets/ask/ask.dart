@@ -41,7 +41,7 @@ class AskState extends State<Ask> implements Inspectable {
     model = AskModel(
       suggestionService: widget.suggestionService,
       onDismiss: widget.onDismiss,
-    );
+    )..query('');
   }
 
   @override
