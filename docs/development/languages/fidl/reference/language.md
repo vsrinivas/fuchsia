@@ -240,7 +240,7 @@ The following primitive types are supported:
 Numbers are suffixed with their size in bits, **`bool`** is 1
 byte.
 
-We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built_in-aliases).
+We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-aliases).
 
 #### Use
 
@@ -388,7 +388,7 @@ struct Record {
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
-*   We have a [built-in alias](#built_in-aliases) for **`bytes`** to mean
+*   We have a [built-in alias](#built-in-aliases) for **`bytes`** to mean
     `vector<uint8>`, and it can be size bound in a similar fashion e.g.
     `bytes:1024`.
 
@@ -855,7 +855,7 @@ struct Message {
 Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
 and a vector of up to `5` strings of `MAX_SIZE` called `chapters`.
 
-Note that **`byte`** and **`bytes`** are built in aliases, [see below](#built_in-aliases).
+Note that **`byte`** and **`bytes`** are built in aliases, [see below](#built-in-aliases).
 
 ### Built-ins
 
@@ -864,7 +864,7 @@ FIDL provides several built-ins:
 * convenience types (**`byte`** and **`bytes`**)
 * `zx library` [see below](#zx-library)
 
-#### Built-in aliases
+#### Built-in aliases {#built-in-aliases}
 
 The types **`byte`** and **`bytes`** are built-in, and are conceptually
 equivalent to:
