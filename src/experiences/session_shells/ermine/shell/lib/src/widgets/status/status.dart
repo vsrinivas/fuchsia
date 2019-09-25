@@ -2,36 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:quickui/uistream.dart';
 
 import '../../models/status_model.dart';
-import 'status_graph_visualizer.dart';
-import 'status_grid_visualizer.dart';
-import 'status_progress_bar_visualizer.dart';
+import 'status_graph.dart';
+import 'status_progress.dart';
 
-const _listItemHeight = 28.0;
-const _statusTextStyle = TextStyle(
+const kPadding = 12.0;
+const kTitleWidth = 100.0;
+const kRowHeight = 28.0;
+const kItemHeight = 16.0;
+const kIconHeight = 18.0;
+const kProgressBarWidth = 87.0;
+const kStatusBackgroundColor = Color(0xFF0C0C0C);
+const kStatusBorderColor = Color(0xFF262626);
+const kDefaultTextStyle = TextStyle(
+  fontFamily: 'Roboto Mono',
+  fontSize: 11,
+  letterSpacing: 0,
+  fontWeight: FontWeight.w400,
   color: Colors.white,
-  fontSize: 11,
-  letterSpacing: 0,
-  fontFamily: 'RobotoMono',
-  fontWeight: FontWeight.w400,
 );
-const _statusTextStyleBlack = TextStyle(
-  color: Colors.black,
-  fontSize: 11,
-  letterSpacing: 0,
-  fontFamily: 'RobotoMono',
-  fontWeight: FontWeight.w400,
-);
-Paint _fillPaint = Paint()
-  ..strokeWidth = 0.5
-  ..color = Colors.white
-  ..style = PaintingStyle.fill;
 
-/// Builds the display for the Status menu.
 class Status extends StatelessWidget {
   final StatusModel model;
 
@@ -39,349 +33,223 @@ class Status extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: ListView(
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          // Buttons
-          Container(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  height: 14,
-                  width: 37,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'SLEEP',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-                SizedBox(
-                  width: 20,
-                ),
-                Container(
-                  height: 14,
-                  width: 50,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'RESTART',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-                SizedBox(
-                  width: 20,
-                ),
-                Container(
-                  height: 14,
-                  width: 63,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'POWER OFF',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-                SizedBox(
-                  width: 90,
-                ),
-                Container(
-                  height: 14,
-                  width: 64,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'SETTINGS',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: model.launchSettings,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Volume
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('VOLUME'),
-            rowContent: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Container(
-                  width: 150,
-                  child: StatusProgressBarVisualizer(
-                    model: model.dummyVolumeModel,
-                    textAlignment: TextAlign.center,
-                    textStyle: _statusTextStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Container(
-                  height: 14,
-                  width: 24,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'MIN',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Container(
-                  height: 14,
-                  width: 24,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'MAX',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Brightness
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('BRIGHTNESS'),
-            rowContent: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Container(
-                  width: 150,
-                  child: StatusProgressBarVisualizer(
-                    model: model.dummyBrightnessModel,
-                    textAlignment: TextAlign.center,
-                    textStyle: _statusTextStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Container(
-                  height: 14,
-                  width: 24,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'MIN',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Container(
-                  height: 14,
-                  width: 24,
-                  color: Colors.white,
-                  child: FlatButton(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.all(0),
-                    child: Text(
-                      'MAX',
-                      style: _statusTextStyleBlack,
-                      textAlign: TextAlign.left,
-                    ),
-                    onPressed: null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Music Player
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('MUSIC'),
-            rowContent: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  Container(
-                    height: 14,
-                    width: 31,
-                    color: Colors.white,
-                    child: FlatButton(
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: EdgeInsets.all(0),
-                      child: Text(
-                        'BACK',
-                        style: _statusTextStyleBlack,
-                        textAlign: TextAlign.left,
-                      ),
-                      onPressed: null,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Container(
-                    height: 14,
-                    width: 38,
-                    color: Colors.white,
-                    child: FlatButton(
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: EdgeInsets.all(0),
-                      child: Text(
-                        'PAUSE',
-                        style: _statusTextStyleBlack,
-                        textAlign: TextAlign.left,
-                      ),
-                      onPressed: null,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Container(
-                    height: 14,
-                    width: 31,
-                    color: Colors.white,
-                    child: FlatButton(
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: EdgeInsets.all(0),
-                      child: Text(
-                        'SKIP',
-                        style: _statusTextStyleBlack,
-                        textAlign: TextAlign.left,
-                      ),
-                      onPressed: null,
-                    ),
-                  ),
-                ]),
-          ),
-          // Processes
-          StatusGridVisualizer(
-            model: StatusGridVisualizerModel(),
-            textStyle: _statusTextStyle,
-            title: _packageTitleText('TOP PROCESSES'),
-            titleHeight: _listItemHeight,
-          ),
-          // Memory
-          _RowItem(
-              height: _listItemHeight,
-              rowTitle: _packageTitleText('MEMORY'),
-              rowContent: StatusProgressBarVisualizer(
-                model: model.memoryModel,
-                textAlignment: TextAlign.right,
-                textStyle: _statusTextStyle,
-              )),
-          // Battery
-          // _RowItem(
-          //     height: _listItemHeight,
-          //     rowTitle: _packageTitleText('BATT'),
-          //     rowContent: StatusProgressBarVisualizer(
-          //       model: model.batteryModel,
-          //       textAlignment: TextAlign.right,
-          //       textStyle: _statusTextStyle,
-          //     )),
-          // CPU Usage
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('CPU'),
-            rowContent: StatusGraphVisualizer(
-              textStyle: _statusTextStyle,
-              drawStyle: _fillPaint,
-              axisAlignment: MainAxisAlignment.spaceBetween,
-              model: model.dummyCpuModel,
-            ),
-          ),
-          // Tasks
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('TASKS'),
-            rowContent: _packageContentText(model.getTasks()),
-          ),
-          // Weather
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('WEATHER'),
-            rowContent: _packageContentText(model.getWeather()),
-          ),
-          // Date
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('DATE'),
-            rowContent: _packageContentText(model.getDate()),
-          ),
-          // Network
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('NETWORK'),
-            rowContent: _packageContentText(model.getNetwork()),
-          ),
-          // FPS
-          _RowItem(
-            height: _listItemHeight,
-            rowTitle: _packageTitleText('FPS'),
-            rowContent: _packageContentText(model.getFps()),
-          ),
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(kPadding),
+      child: Column(
+        children: <Widget>[
+          _ManualStatusEntry(),
+          _StatusEntry(model.volume),
+          _StatusEntry(model.brightness),
+          _StatusEntry(model.processes),
+          _StatusEntry(model.memory),
+          _StatusEntry(model.cpu),
+          _StatusEntry(model.network),
         ],
       ),
     );
   }
-
-  Widget _packageTitleText(String title) =>
-      Text(title, style: _statusTextStyle);
-
-  Widget _packageContentText(String title) =>
-      Text(title, style: _statusTextStyle, textAlign: TextAlign.right);
 }
 
-class _RowItem extends StatelessWidget {
-  final double height;
-  final Widget rowTitle;
-  final Widget rowContent;
+class _StatusEntry extends StatelessWidget {
+  final UiStream uiStream;
 
-  const _RowItem({this.height, this.rowTitle, this.rowContent});
+  _StatusEntry(this.uiStream) {
+    uiStream.listen();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: ListTile(
-        dense: true,
-        leading: rowTitle,
-        title: rowContent,
-        contentPadding: EdgeInsets.zero,
+    return StreamBuilder<Spec>(
+      stream: uiStream.stream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Offstage();
+        }
+        final spec = snapshot.data;
+        final widgets = _buildFromSpec(spec, uiStream.update);
+        return Container(
+          constraints: BoxConstraints(minHeight: kRowHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: widgets,
+          ),
+        );
+      },
+    );
+  }
+
+// Returns a list of [Row] widgets from the given [Spec].
+// The first row would include title [Text] and may be followed by widgets
+// associated with the [Value] type. A [GridValue] widget is returned in its
+// own row.
+  List<Widget> _buildFromSpec(Spec spec, void Function(Value) update) {
+    // Split the values into lists separated by [GridValue].
+    List<Widget> result = <Widget>[];
+    List<Widget> widgets = <Widget>[];
+
+    Widget titleRow(String title, List<Widget> children) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        textBaseline: TextBaseline.alphabetic,
+        children: <Widget>[
+          Container(
+            width: kTitleWidth,
+            child: Text(title.toUpperCase()),
+          ),
+          Expanded(
+            child: Wrap(
+              children: children,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.end,
+              spacing: kPadding,
+              runSpacing: kPadding,
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget valueRow(List<Widget> children) {
+      return Wrap(
+        children: children,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.end,
+        spacing: kPadding,
+        runSpacing: kPadding,
+      );
+    }
+
+    for (final group in spec.groups) {
+      for (final value in group.values) {
+        final widget = _buildFromValue(value, update);
+        if (value is GridValue) {
+          if (result.isEmpty) {
+            result.add(titleRow(group.title, widgets.toList()));
+          } else {
+            result.add(valueRow(widgets.toList()));
+          }
+          widgets.clear();
+          result.add(widget);
+        } else {
+          widgets.add(widget);
+        }
+      }
+      if (widgets.isNotEmpty) {
+        if (result.isEmpty) {
+          result.add(titleRow(group.title, widgets.toList()));
+        } else {
+          result.add(valueRow(widgets.toList()));
+        }
+      }
+    }
+    return result;
+  }
+
+  Widget _buildFromValue(Value value, void Function(Value) update) {
+    if (value.$tag == ValueTag.button) {
+      return GestureDetector(
+        onTap: () => update(value),
+        child: Container(
+          height: kItemHeight,
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
+          child: Text(
+            value.button.label.toUpperCase(),
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      );
+    }
+    if (value.$tag == ValueTag.text) {
+      return Text(value.text.text.toUpperCase());
+    }
+    if (value.$tag == ValueTag.progress) {
+      return SizedBox(
+        height: kItemHeight,
+        width: kProgressBarWidth,
+        child: ProgressBar(
+          value: value.progress.value,
+          onChange: (v) => update(Value.withProgress(
+              ProgressValue(value: v, action: value.progress.action))),
+        ),
+      );
+    }
+
+    if (value.$tag == ValueTag.grid) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: GridView.count(
+          shrinkWrap: true,
+          childAspectRatio: 4,
+          physics: NeverScrollableScrollPhysics(),
+          crossAxisCount: value.grid.columns,
+          children: value.grid.values.map((v) => Text(v.text)).toList(),
+        ),
+      );
+    }
+    if (value.$tag == ValueTag.icon) {
+      return GestureDetector(
+        child: Icon(
+          IconData(
+            value.icon.codePoint,
+            fontFamily: value.icon.fontFamily ?? 'MaterialIcons',
+          ),
+          size: kIconHeight,
+        ),
+        onTap: () => update(value),
+      );
+    }
+    if (value.$tag == ValueTag.graph) {
+      return QuickGraph(value: value.graph.value, step: value.graph.step);
+    }
+    return Offstage();
+  }
+}
+
+class _ManualStatusEntry extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return _buildSystemButtons();
+  }
+
+  Widget _buildSystemButtons() {
+    List<Widget> buttons = <Widget>[];
+    Widget restart = _buildButton('Restart', null);
+    Widget shutdown = _buildButton('Shutdown', null);
+    Widget settings = _buildButton('Settings', null);
+    buttons
+      ..add(restart)
+      ..add(shutdown)
+      ..add(SizedBox(width: 150))
+      ..add(settings);
+    return Container(
+        constraints: BoxConstraints(minHeight: kRowHeight),
+        child: Wrap(
+          children: buttons,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.end,
+          spacing: kPadding,
+          runSpacing: kPadding,
+        ));
+  }
+
+  Widget _buildButton(String label, void Function() onTap) {
+    return GestureDetector(
+      onTap: () => onTap,
+      child: Container(
+        height: kItemHeight,
+        color: Colors.white,
+        padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
       ),
     );
   }

@@ -14,7 +14,7 @@ import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 class UiStream {
   final QuickUi _ui;
   StreamSubscription<Spec> _subscription;
-  final _controller = StreamController<Spec>();
+  final _controller = StreamController<Spec>.broadcast();
 
   /// Constructor.
   UiStream(QuickUi ui) : _ui = ui;

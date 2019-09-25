@@ -30,8 +30,8 @@ class StatusContainer extends StatelessWidget {
       color: ErmineStyle.kBackgroundColor,
       elevation: Elevations.systemOverlayElevation,
       child: Container(
-        width: 377,
-        height: 432,
+        width: 450,
+        height: 300,
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(color: ErmineStyle.kOverlayBorderColor),
