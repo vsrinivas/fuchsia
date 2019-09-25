@@ -44,7 +44,7 @@ class SystemInstance : public devmgr::FsProvider {
                        zx::channel fshost_server);
   // Thread entry point
   static int pwrbtn_monitor_starter(void* arg);
-  int PwrbtnMonitorStarter();
+  int PwrbtnMonitorStarter(devmgr::Coordinator* coordinator);
 
   void start_console_shell(const devmgr::BootArgs& boot_args);
   int ConsoleStarter(const devmgr::BootArgs* arg);

@@ -177,7 +177,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
   }
 
   zx::debuglog logger;
-  status = zx::debuglog::create(zx::resource(), 0, &logger);
+  status = zx::debuglog::create(coordinator->root_resource(), 0, &logger);
   if (status != ZX_OK) {
     return status;
   }
@@ -465,11 +465,11 @@ void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
 
 // Thread entry point
 int SystemInstance::pwrbtn_monitor_starter(void* arg) {
-  auto instance = static_cast<SystemInstance*>(arg);
-  return instance->PwrbtnMonitorStarter();
+  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
+  return args->instance->PwrbtnMonitorStarter(args->coordinator);
 }
 
-int SystemInstance::PwrbtnMonitorStarter() {
+int SystemInstance::PwrbtnMonitorStarter(devmgr::Coordinator* coordinator) {
   const char* name = "pwrbtn-monitor";
   const char* argv[] = {"/boot/bin/pwrbtn-monitor", nullptr};
 
@@ -482,7 +482,7 @@ int SystemInstance::PwrbtnMonitorStarter() {
   }
 
   zx::debuglog debuglog;
-  if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) != ZX_OK)) {
+  if ((status = zx::debuglog::create(coordinator->root_resource(), 0, &debuglog) != ZX_OK)) {
     printf("devcoordinator: cannot create debuglog handle\n");
     return 1;
   }
