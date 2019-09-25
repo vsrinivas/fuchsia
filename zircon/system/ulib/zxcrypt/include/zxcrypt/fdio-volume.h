@@ -63,7 +63,7 @@ zx_status_t TryWithKeysFrom(
 
 // |zxcrypt::FdioVolumeManager| represents a channel to an instance of a bound
 // zxcrypt device (named "zxcrypt" in the device tree).
-class FdioVolumeManager {
+class __EXPORT FdioVolumeManager {
  public:
   explicit FdioVolumeManager(zx::channel&& chan);
 
@@ -92,7 +92,7 @@ class FdioVolumeManager {
 // |zxcrypt::FdioVolume| is a zxcrypt volume which does IO via a file
 // descriptor.  It can be used on the host to prepare zxcrypt images, and
 // is often more convenient for testing.
-class FdioVolume final : public Volume {
+class __EXPORT FdioVolume final : public Volume {
  public:
   explicit FdioVolume(fbl::unique_fd&& block_dev_fd, fbl::unique_fd&& devfs_root_fd);
 

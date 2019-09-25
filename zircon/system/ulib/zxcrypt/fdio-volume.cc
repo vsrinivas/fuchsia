@@ -92,6 +92,7 @@ zx_status_t SelectKeySourcePolicy(KeySourcePolicy* out) {
 // Returns a ordered vector of |KeySource|s, representing all key sources,
 // ordered from most-preferred to least-preferred, that we should try for the
 // purposes of creating a new volume
+__EXPORT
 fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp) {
   fbl::Vector<KeySource> r;
   switch (ksp) {
@@ -112,6 +113,7 @@ fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp) {
 // Returns a ordered vector of |KeySource|s, representing all key sources,
 // ordered from most-preferred to least-preferred, that we should try for the
 // purposes of unsealing an existing volume
+__EXPORT
 fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp) {
   fbl::Vector<KeySource> r;
   switch (ksp) {
@@ -129,6 +131,7 @@ fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp) {
   return r;
 }
 
+__EXPORT
 zx_status_t TryWithKeysFrom(
     const fbl::Vector<KeySource>& ordered_key_sources, Activity activity,
     fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>, size_t)> callback) {

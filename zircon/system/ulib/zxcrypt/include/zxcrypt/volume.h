@@ -52,7 +52,7 @@ typedef struct {
   size_t count;
 } SliceRegion;
 
-class Volume {
+class __EXPORT Volume {
  public:
   // The supported version, named by the algorithms they use.  New version should increment the
   // version number and update the default version.  Zero indicates an error state.
