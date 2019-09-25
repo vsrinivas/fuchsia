@@ -114,6 +114,8 @@ TEST_F(DiskCleanupManagerTest, DontEvictPageWhenInternalConnectionsRemain) {
 
   disk_cleanup_manager_.OnExternallyUsed(ledger_name, page);
   disk_cleanup_manager_.OnInternallyUsed(ledger_name, page);
+  disk_cleanup_manager_.OnInternallyUsed(ledger_name, page);
+  disk_cleanup_manager_.OnInternallyUnused(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::YES;
   disk_cleanup_manager_.OnExternallyUnused(ledger_name, page);
   RunLoopUntilIdle();
@@ -126,6 +128,8 @@ TEST_F(DiskCleanupManagerTest, DontEvictPageWhenExternalConnectionsRemain) {
 
   disk_cleanup_manager_.OnInternallyUsed(ledger_name, page);
   disk_cleanup_manager_.OnExternallyUsed(ledger_name, page);
+  disk_cleanup_manager_.OnExternallyUsed(ledger_name, page);
+  disk_cleanup_manager_.OnExternallyUnused(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::YES;
   disk_cleanup_manager_.OnInternallyUnused(ledger_name, page);
   RunLoopUntilIdle();

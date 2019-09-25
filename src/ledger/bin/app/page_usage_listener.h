@@ -10,7 +10,8 @@
 namespace ledger {
 
 // A listener on page usage, that receives notifications when a page is opened or closed by internal
-// or external connetions.
+// or external connetions. Although OnUsed/OnUnused called will be balanced, an
+// Unused call may be reordered after a Used.
 class PageUsageListener {
  public:
   PageUsageListener() {}

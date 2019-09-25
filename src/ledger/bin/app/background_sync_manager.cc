@@ -61,39 +61,38 @@ void BackgroundSyncManager::SetDelegate(Delegate* delegate) {
 
 void BackgroundSyncManager::OnExternallyUsed(fxl::StringView ledger_name,
                                              storage::PageIdView page_id) {
-  pages_state_[{ledger_name.ToString(), page_id.ToString()}].has_external_connections = true;
+  pages_connection_count_[{ledger_name.ToString(), page_id.ToString()}]++;
 }
 
 void BackgroundSyncManager::OnExternallyUnused(fxl::StringView ledger_name,
                                                storage::PageIdView page_id) {
-  auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
-  FXL_DCHECK(it != pages_state_.end());
-  it->second.has_external_connections = false;
+  auto it = pages_connection_count_.find({ledger_name.ToString(), page_id.ToString()});
+  FXL_DCHECK(it != pages_connection_count_.end());
+  FXL_DCHECK(it->second > 0);
+  it->second--;
   HandlePageIfUnused(it);
 }
 
 void BackgroundSyncManager::OnInternallyUsed(fxl::StringView ledger_name,
                                              storage::PageIdView page_id) {
-  pages_state_[{ledger_name.ToString(), page_id.ToString()}].has_internal_connections = true;
+  // Behavior is the same of external and internal connections.
+  OnExternallyUsed(ledger_name, page_id);
 }
 
 void BackgroundSyncManager::OnInternallyUnused(fxl::StringView ledger_name,
                                                storage::PageIdView page_id) {
-  auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
-  FXL_DCHECK(it != pages_state_.end());
-  it->second.has_internal_connections = false;
-  HandlePageIfUnused(it);
+  // Behavior is the same of external and internal connections.
+  OnExternallyUnused(ledger_name, page_id);
 }
 
 bool BackgroundSyncManager::IsEmpty() { return pending_operations_ == 0; }
 
 void BackgroundSyncManager::HandlePageIfUnused(
-    std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it) {
-  PageState page_state = it->second;
-  if (page_state.has_internal_connections || page_state.has_external_connections) {
+    std::map<std::pair<std::string, storage::PageId>, int32_t>::iterator it) {
+  if (it->second > 0) {
     return;
   }
-  pages_state_.erase(it);
+  pages_connection_count_.erase(it);
   TrySync();
 }
 
@@ -107,7 +106,7 @@ void BackgroundSyncManager::TrySync() {
     if (status != Status::OK) {
       return;
     }
-    size_t open_pages = pages_state_.size();
+    size_t open_pages = pages_connection_count_.size();
     if (open_pages < open_pages_limit_) {
       std::vector<PageInfo> sync_candidates =
           SelectSyncCandidates(std::move(pages_it), open_pages_limit_ - open_pages);

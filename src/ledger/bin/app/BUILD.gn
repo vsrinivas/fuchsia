@@ -217,7 +217,7 @@ source_set("unittests") {
     "background_sync_manager_unittest.cc",
     "commits_children_manager_unittest.cc",
     "delaying_facade_unittest.cc",
-    "disk_cleanup_manager_unittest.cc",
+    "disk_cleanup_manager_impl_unittest.cc",
     "fidl/serialization_size_unittest.cc",
     "flags_unittest.cc",
     "heads_children_manager_unittest.cc",

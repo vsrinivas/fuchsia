@@ -30,7 +30,7 @@ void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
 void DiskCleanupManagerImpl::OnExternallyUsed(fxl::StringView ledger_name,
                                               storage::PageIdView page_id) {
   PageState& page_state = pages_state_[{ledger_name.ToString(), page_id.ToString()}];
-  page_state.has_external_connections = true;
+  page_state.external_connections_count++;
   page_state.is_eviction_candidate = true;
   page_eviction_manager_.MarkPageOpened(ledger_name, page_id);
 }
@@ -39,7 +39,8 @@ void DiskCleanupManagerImpl::OnExternallyUnused(fxl::StringView ledger_name,
                                                 storage::PageIdView page_id) {
   auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
   FXL_DCHECK(it != pages_state_.end());
-  it->second.has_external_connections = false;
+  FXL_DCHECK(it->second.external_connections_count > 0);
+  it->second.external_connections_count--;
   HandlePageIfUnused(it, ledger_name, page_id);
 
   page_eviction_manager_.MarkPageClosed(ledger_name, page_id);
@@ -47,14 +48,15 @@ void DiskCleanupManagerImpl::OnExternallyUnused(fxl::StringView ledger_name,
 
 void DiskCleanupManagerImpl::OnInternallyUsed(fxl::StringView ledger_name,
                                               storage::PageIdView page_id) {
-  pages_state_[{ledger_name.ToString(), page_id.ToString()}].has_internal_connections = true;
+  pages_state_[{ledger_name.ToString(), page_id.ToString()}].internal_connections_count++;
 }
 
 void DiskCleanupManagerImpl::OnInternallyUnused(fxl::StringView ledger_name,
                                                 storage::PageIdView page_id) {
   auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
   FXL_DCHECK(it != pages_state_.end());
-  it->second.has_internal_connections = false;
+  FXL_DCHECK(it->second.internal_connections_count > 0);
+  it->second.internal_connections_count--;
   HandlePageIfUnused(it, ledger_name, page_id);
 }
 
@@ -62,7 +64,7 @@ void DiskCleanupManagerImpl::HandlePageIfUnused(
     std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it,
     fxl::StringView ledger_name, storage::PageIdView page_id) {
   PageState page_state = it->second;
-  if (page_state.has_internal_connections || page_state.has_external_connections) {
+  if (page_state.internal_connections_count > 0 || page_state.external_connections_count > 0) {
     return;
   }
   // The page is now closed, we can remove the entry.

@@ -46,17 +46,10 @@ class BackgroundSyncManager : public PageUsageListener {
   }
 
  private:
-  // The state of a page while it is being used by at least one internal or external connection.
-  struct PageState {
-    bool has_internal_connections = false;
-    bool has_external_connections = false;
-  };
-
   // If there are no active internal or external connections to the page, tries to start
   // synchronization of closed pages, and and removes the entry from the pages state map. |it| must
-  // be a valid iterator into |pages_state_map_|.
-  void HandlePageIfUnused(
-      std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it);
+  // be a valid iterator into |pages_connection_count_| map.
+  void HandlePageIfUnused(std::map<std::pair<std::string, storage::PageId>, int32_t>::iterator it);
 
   // Triggers the start of the synchronization of closed pages.
   void TrySync();
@@ -80,7 +73,7 @@ class BackgroundSyncManager : public PageUsageListener {
 
   // Holds information about the state of pages that are currently open by internal or external
   // connections. Entries are removed if there are no active connections.
-  std::map<std::pair<std::string, storage::PageId>, PageState> pages_state_;
+  std::map<std::pair<std::string, storage::PageId>, int32_t> pages_connection_count_;
   // The number of pages that can be open at once. BackgroundSyncManager should not trigger
   // synchronization if current number of open pages is not less than the given limit.
   const size_t open_pages_limit_;

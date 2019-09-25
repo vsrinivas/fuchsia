@@ -38,8 +38,8 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
  private:
   // The state of a page while it is being used by at least one internal or external connection.
   struct PageState {
-    bool has_internal_connections = false;
-    bool has_external_connections = false;
+    int32_t internal_connections_count = 0;
+    int32_t external_connections_count = 0;
 
     // Initially false. Becomes true if an external connection has been opened for this page. Never
     // changes back to false.

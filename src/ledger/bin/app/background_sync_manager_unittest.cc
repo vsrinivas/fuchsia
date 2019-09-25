@@ -105,6 +105,50 @@ class BackgroundSyncManagerTest : public TestWithEnvironment {
   FakeDelegate delegate_;
 };
 
+TEST_F(BackgroundSyncManagerTest, AsynchronousExternalUsedAndUnused) {
+  std::string ledger_name = "ledger";
+  storage::PageId first_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // Check for external usage.
+    EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
+    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
+    EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, first_page_id), Status::OK);
+    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+
+    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 1);
+  });
+}
+
+TEST_F(BackgroundSyncManagerTest, AsynchronousInternalUsedAndUnused) {
+  std::string ledger_name = "ledger";
+  storage::PageId first_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // Check for internal usage.
+    EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
+    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
+    EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, first_page_id), Status::OK);
+    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_.OnInternallyUnused(ledger_name, first_page_id);
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+
+    background_sync_manager_.OnInternallyUnused(ledger_name, first_page_id);
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 1);
+  });
+}
+
 // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=35727): This test should be rewritten,
 // once there is any mechanism to store a synchronization state of a page. In this case, sync should
 // not be triggered for the page again, if it has just been closed after sync.
