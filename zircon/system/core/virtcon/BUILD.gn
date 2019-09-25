@@ -80,6 +80,6 @@ test("virtual-console-test") {
             ]
   deps = [
     ":common",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
 }

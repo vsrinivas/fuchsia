@@ -8,7 +8,7 @@
 
 #include <fbl/unique_ptr.h>
 #include <gfx/gfx.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "vc.h"
 
@@ -81,12 +81,12 @@ class TextconHelper {
     pixels_y += font->height - 1;
     vc_surface = gfx_create_surface(nullptr, pixels_x, pixels_y, /* stride= */ pixels_x,
                                     ZX_PIXEL_FORMAT_RGB_565, 0);
-    EXPECT_TRUE(vc_surface, "");
+    EXPECT_TRUE(vc_surface);
     // This takes ownership of vc_surface.
-    EXPECT_EQ(vc_init_gfx(&main_test_graphics, vc_surface), ZX_OK, "");
-    EXPECT_EQ(vc_alloc(&vc_dev, color_scheme), ZX_OK, "");
-    EXPECT_EQ(vc_dev->columns, size_x, "");
-    EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y), "");
+    EXPECT_OK(vc_init_gfx(&main_test_graphics, vc_surface));
+    EXPECT_OK(vc_alloc(&vc_dev, color_scheme));
+    EXPECT_EQ(vc_dev->columns, size_x);
+    EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y));
     // Mark the console as active so that display updates get
     // propagated to vc_surface.
     vc_dev->active = true;
@@ -133,8 +133,8 @@ class TextconHelper {
           uint32_t y_pixels = pixel_index / vc_surface->stride;
           uint32_t x_chars = x_pixels / vc_dev->charw;
           uint32_t y_chars = y_pixels / vc_dev->charh;
-          EXPECT_LT(x_chars, cmp_size_x, "");
-          EXPECT_LT(y_chars, cmp_size_y, "");
+          EXPECT_LT(x_chars, cmp_size_x);
+          EXPECT_LT(y_chars, cmp_size_y);
           diffs[x_chars + y_chars * cmp_size_x] = true;
         }
       }
@@ -154,7 +154,7 @@ class TextconHelper {
         *ptr++ = '\n';
       }
       *ptr++ = 0;
-      EXPECT_EQ(ptr, string.get() + string_size, "");
+      EXPECT_EQ(ptr, string.get() + string_size);
       return string;
     }
 
@@ -190,12 +190,12 @@ class TextconHelper {
 
   void AssertTextbufLineContains(vc_char_t* buf, int line_num, const char* str) {
     size_t len = strlen(str);
-    EXPECT_LE(len, size_x, "");
+    EXPECT_LE(len, size_x);
     for (size_t i = 0; i < len; ++i)
-      EXPECT_EQ(str[i], vc_char_get_char(buf[size_x * line_num + i]), "");
+      EXPECT_EQ(str[i], vc_char_get_char(buf[size_x * line_num + i]));
     // The rest of the line should contain spaces.
     for (size_t i = len; i < size_x; ++i)
-      EXPECT_EQ(' ', vc_char_get_char(buf[size_x * line_num + i]), "");
+      EXPECT_EQ(' ', vc_char_get_char(buf[size_x * line_num + i]));
   }
 
   void AssertLineContains(int line_num, const char* str) {
@@ -213,24 +213,18 @@ class TextconHelper {
   vc_t* vc_dev;
 };
 
-bool test_simple() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, Simple) {
   TextconHelper tc(10, 5);
   tc.PutString("Hello");
   tc.AssertLineContains(0, "Hello");
   tc.AssertLineContains(1, "");
-
-  END_TEST;
 }
 
 // This tests the DisplaySnapshot test helper above.  If we write directly
 // to vc_dev's text buffer without invalidating the display, the test
 // machinery should detect which characters in the display were not updated
 // properly.
-bool test_display_update_comparison() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DisplayUpdateComparison) {
   TextconHelper tc(10, 3);
   // Write some characters directly into the text buffer.
   auto SetChar = [&](int x, int y, char ch) {
@@ -244,25 +238,21 @@ bool test_display_update_comparison() {
   // properly updated.
   TextconHelper::DisplaySnapshot snapshot(&tc);
   tc.InvalidateAllGraphics();
-  EXPECT_TRUE(snapshot.ChangedSinceSnapshot(), "");
+  EXPECT_TRUE(snapshot.ChangedSinceSnapshot());
   const char* expected =
       "|-----------|\n"  // Console status line
       "|-----------|\n"  // Cursor at left was painted during tc init
       "|--DD--D----|\n"  // Chars set by SetChar() above
       "|-----------|\n"
       "|-----------|\n";  // Bottom margin
-  EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
-
-  END_TEST;
+  EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0);
 }
 
 // This tests updating the display with all of the different colorschemes. This
 // catches that the tc and the vcs set their colorschemes correctly. If
 // something goes wrong, either all of the chars will appear to be changed or
 // none will be changed.
-bool test_display_color_schemes() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DisplayColorSchemes) {
   int colors[] = {kDarkColorScheme, kLightColorScheme, kSpecialColorScheme};
   for (size_t c = 0; c < countof(colors); c++) {
     TextconHelper tc(10, 3, &color_schemes[colors[c]]);
@@ -278,34 +268,26 @@ bool test_display_color_schemes() {
     // properly updated.
     TextconHelper::DisplaySnapshot snapshot(&tc);
     tc.InvalidateAllGraphics();
-    EXPECT_TRUE(snapshot.ChangedSinceSnapshot(), "");
+    EXPECT_TRUE(snapshot.ChangedSinceSnapshot());
     const char* expected =
         "|-----------|\n"  // Console status line
         "|-----------|\n"  // Cursor at left was painted during tc init
         "|--DD--D----|\n"  // Chars set by SetChar() above
         "|-----------|\n"
         "|-----------|\n";  // Bottom margin
-    EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
+    EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0);
   }
-
-  END_TEST;
 }
 
-bool test_wrapping() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, Wrapping) {
   TextconHelper tc(10, 5);
   tc.PutString("Hello world! More text here.");
   tc.AssertLineContains(0, "Hello worl");
   tc.AssertLineContains(1, "d! More te");
   tc.AssertLineContains(2, "xt here.");
-
-  END_TEST;
 }
 
-bool test_tabs() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, Tabs) {
   TextconHelper tc(80, 40);
   tc.PutString("\tA\n");
   tc.PutString(" \tB\n");
@@ -315,37 +297,25 @@ bool test_tabs() {
   tc.AssertLineContains(1, "        B");
   tc.AssertLineContains(2, "        C");
   tc.AssertLineContains(3, "                D");
-
-  END_TEST;
 }
 
-bool test_backspace_moves_cursor() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, BackspaceMovesCursor) {
   TextconHelper tc(10, 5);
   tc.PutString("ABCDEF\b\b\b\bxy");
   // Backspace only moves the cursor and does not erase, so "EF" is left
   // in place.
   tc.AssertLineContains(0, "ABxyEF");
-
-  END_TEST;
 }
 
-bool test_backspace_at_start_of_line() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, BackspaceAtStartOfLine) {
   TextconHelper tc(10, 5);
   tc.PutString("Foo\n\bBar");
   // When the cursor is at the start of a line, backspace has no effect.
   tc.AssertLineContains(0, "Foo");
   tc.AssertLineContains(1, "Bar");
-
-  END_TEST;
 }
 
-bool test_delete_chars() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DeleteChars) {
   TextconHelper tc(20, 10);
 
   tc.PutString("123456");
@@ -358,13 +328,9 @@ bool test_delete_chars() {
   // used to trigger an assertion failure.
   tc.PutString("\x1b[2P");
   tc.AssertLineContains(0, "1256");
-
-  END_TEST;
 }
 
-bool test_delete_chars_overflow() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DeleteCharsOverflow) {
   TextconHelper tc(6, 10);
 
   // Fill the width of the console, leaving the cursor on the next line.
@@ -376,28 +342,20 @@ bool test_delete_chars_overflow() {
   // because there are only 4 characters to the right of the cursor.
   tc.PutString("\x1b[5P");
   tc.AssertLineContains(0, "12");
-
-  END_TEST;
 }
 
-bool test_scroll_up() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollUp) {
   TextconHelper tc(10, 4);
   tc.PutString("AAA\nBBB\nCCC\nDDD\n");
   tc.AssertLineContains(0, "BBB");
   tc.AssertLineContains(1, "CCC");
   tc.AssertLineContains(2, "DDD");
   tc.AssertLineContains(3, "");
-  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1, "");
-
-  END_TEST;
+  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1);
 }
 
 // Same as scroll_up(), but using ESC E (NEL) instead of "\n".
-bool test_scroll_up_nel() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollUpNel) {
   TextconHelper tc(10, 4);
   tc.PutString(
       "AAA"
@@ -416,14 +374,10 @@ bool test_scroll_up_nel() {
   tc.AssertLineContains(1, "CCC");
   tc.AssertLineContains(2, "DDD");
   tc.AssertLineContains(3, "");
-  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1, "");
-
-  END_TEST;
+  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1);
 }
 
-bool test_insert_lines() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, InsertLines) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB\nCCC\nDDD\nEEE");
   tc.PutString("\x1b[2A");  // Move the cursor up 2 lines
@@ -434,14 +388,10 @@ bool test_insert_lines() {
   tc.AssertLineContains(2, "   Z");
   tc.AssertLineContains(3, "");
   tc.AssertLineContains(4, "CCC");
-  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 0, "");
-
-  END_TEST;
+  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 0);
 }
 
-bool test_delete_lines() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DeleteLines) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB\nCCC\nDDD\nEEE");
   tc.PutString("\x1b[2A");  // Move the cursor up 2 lines
@@ -455,74 +405,54 @@ bool test_delete_lines() {
   // TODO(mseaborn): We probably don't want to be adding the deleted
   // lines to the scrollback in this case, because they are not from the
   // top of the console.
-  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 2, "");
-
-  END_TEST;
+  EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 2);
 }
 
 // Test for a bug where this would cause an out-of-bounds array access.
-bool test_insert_lines_many() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, InsertLinesMany) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB");
   tc.PutString("\x1b[999L");  // Insert 999 lines
   tc.PutString("Z");          // Output char to show where the cursor ends up
   tc.AssertLineContains(0, "AAA");
   tc.AssertLineContains(1, "   Z");
-
-  END_TEST;
 }
 
 // Test for a bug where this would cause an out-of-bounds array access.
-bool test_delete_lines_many() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DeleteLinesMany) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB");
   tc.PutString("\x1b[999M");  // Delete 999 lines
   tc.PutString("Z");          // Output char to show where the cursor ends up
   tc.AssertLineContains(0, "AAA");
   tc.AssertLineContains(1, "   Z");
-
-  END_TEST;
 }
 
 // Check that passing a huge parameter via "insert lines" completes in a
 // reasonable amount of time.  (We don't check the time here but we assume
 // that someone will notice if this takes a long time.)
-bool test_insert_lines_huge() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, InsertLinesHuge) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB");
   tc.PutString("\x1b[2000000000L");  // Insert lines
   tc.PutString("Z");                 // Output char to show where the cursor ends up
   tc.AssertLineContains(0, "AAA");
   tc.AssertLineContains(1, "   Z");
-
-  END_TEST;
 }
 
 // Check that passing a huge parameter via "delete lines" completes in a
 // reasonable amount of time.  (We don't check the time here but we assume
 // that someone will notice if this takes a long time.)
-bool test_delete_lines_huge() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, DeleteLinesHuge) {
   TextconHelper tc(10, 5);
   tc.PutString("AAA\nBBB");
   tc.PutString("\x1b[200000000M");  // Delete lines
   tc.PutString("Z");                // Output char to show where the cursor ends up
   tc.AssertLineContains(0, "AAA");
   tc.AssertLineContains(1, "   Z");
-
-  END_TEST;
 }
 
-bool test_move_cursor_up_and_scroll() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, MoveCursorUpAndScroll) {
   TextconHelper tc(10, 4);
   tc.PutString("AAA\nBBB\nCCC\nDDD");
   tc.PutString(
@@ -541,13 +471,9 @@ bool test_move_cursor_up_and_scroll() {
   tc.AssertLineContains(1, "AAA  3");
   tc.AssertLineContains(2, "BBB 2");
   tc.AssertLineContains(3, "CCC1");
-
-  END_TEST;
 }
 
-bool test_move_cursor_down_and_scroll() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, MoveCursorDownAndScroll) {
   TextconHelper tc(10, 4);
   tc.PutString(
       "1"
@@ -570,43 +496,31 @@ bool test_move_cursor_down_and_scroll() {
   tc.AssertLineContains(1, "  3");
   tc.AssertLineContains(2, "   4");
   tc.AssertLineContains(3, "    5");
-
-  END_TEST;
 }
 
-bool test_cursor_hide_and_show() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, CursorHideAndShow) {
   TextconHelper tc(10, 4);
-  ASSERT_FALSE(tc.vc_dev->hide_cursor, "");
+  ASSERT_FALSE(tc.vc_dev->hide_cursor);
   tc.PutString("\x1b[?25l");  // Hide cursor
-  ASSERT_TRUE(tc.vc_dev->hide_cursor, "");
+  ASSERT_TRUE(tc.vc_dev->hide_cursor);
   tc.PutString("\x1b[?25h");  // Show cursor
-  ASSERT_FALSE(tc.vc_dev->hide_cursor, "");
-
-  END_TEST;
+  ASSERT_FALSE(tc.vc_dev->hide_cursor);
 }
 
 // This tests for a bug: If the cursor was positioned over a character when
 // we scroll up, that character would get erased.
-bool test_cursor_scroll_bug() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, CursorScrollBug) {
   TextconHelper tc(10, 3);
   // Move the cursor to the bottom line.
   tc.PutString("\n\n\n");
   // Scroll down when the cursor is over "C".
   tc.PutString("ABCDE\b\b\b\n");
-
-  END_TEST;
 }
 
 // Test for a bug where scrolling the console viewport by a large delta
 // (e.g. going from the top to the bottom) can crash due to out-of-bounds
 // memory accesses.
-bool test_scroll_viewport_by_large_delta() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollViewportByLargeDelta) {
   TextconHelper tc(2, 2);
   tc.PutString("\n");
   for (int lines = 1; lines < 100; ++lines) {
@@ -614,44 +528,36 @@ bool test_scroll_viewport_by_large_delta() {
 
     // Scroll up, to show older lines.
     vc_scroll_viewport_top(tc.vc_dev);
-    EXPECT_EQ(tc.vc_dev->viewport_y, -lines, "");
+    EXPECT_EQ(tc.vc_dev->viewport_y, -lines);
 
     // Scroll down, to show newer lines.
     vc_scroll_viewport_bottom(tc.vc_dev);
-    EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+    EXPECT_EQ(tc.vc_dev->viewport_y, 0);
   }
-
-  END_TEST;
 }
 
 // When the console is displaying only the main console region (and no
 // scrollback), the console should keep displaying that as new lines are
 // outputted.
-bool test_viewport_scrolling_follows_bottom() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ViewportScrollingFollowsBottom) {
   TextconHelper tc(1, 1);
   for (unsigned i = 0; i < tc.vc_dev->scrollback_rows_max * 2; ++i) {
-    EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+    EXPECT_EQ(tc.vc_dev->viewport_y, 0);
     tc.PutString("\n");
   }
-
-  END_TEST;
 }
 
 // When the console is displaying some of the scrollback buffer, then as
 // new lines are outputted, the console should scroll the viewpoint to keep
 // displaying the same point, unless we're at the top of the scrollback
 // buffer.
-bool test_viewport_scrolling_follows_scrollback() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ViewportScrollingFollowsScrollback) {
   TextconHelper tc(1, 1);
   // Add 3 lines to the scrollback buffer.
   tc.PutString("\n\n\n");
   vc_scroll_viewport(tc.vc_dev, -2);
 
-  EXPECT_EQ(tc.vc_dev->viewport_y, -2, "");
+  EXPECT_EQ(tc.vc_dev->viewport_y, -2);
   int limit = tc.vc_dev->scrollback_rows_max;
   for (int line = 3; line < limit * 2; ++line) {
     // Output different strings on each line in order to test that the
@@ -659,22 +565,18 @@ bool test_viewport_scrolling_follows_scrollback() {
     // lines from the scrollback region.
     char str[3] = {static_cast<char>('0' + (line % 10)), '\n', '\0'};
     tc.PutString(str);
-    EXPECT_EQ(tc.vc_dev->viewport_y, -MIN(line, limit), "");
+    EXPECT_EQ(tc.vc_dev->viewport_y, -MIN(line, limit));
   }
-
-  END_TEST;
 }
 
-bool test_output_when_viewport_scrolled() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, OutputWhenViewportScrolled) {
   TextconHelper tc(10, 3);
   // Line 1 will move into the scrollback region.
   tc.PutString("1\n 2\n  3\n   4");
-  EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+  EXPECT_EQ(tc.vc_dev->viewport_y, 0);
   vc_scroll_viewport_top(tc.vc_dev);
 
-  EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
+  EXPECT_EQ(tc.vc_dev->viewport_y, -1);
   // Check redrawing consistency.
   tc.PutString("");
 
@@ -694,19 +596,15 @@ bool test_output_when_viewport_scrolled() {
   tc.AssertLineContains(0, "      ium");
   tc.AssertLineContains(1, "  3");
   tc.AssertLineContains(2, "   4");
-
-  END_TEST;
 }
 
-bool test_scrolling_when_viewport_scrolled() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollingWhenViewportScrolled) {
   TextconHelper tc(10, 3);
   // Line 1 will move into the scrollback region.
   tc.PutString("1\n 2\n  3\n   4");
-  EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+  EXPECT_EQ(tc.vc_dev->viewport_y, 0);
   vc_scroll_viewport_top(tc.vc_dev);
-  EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
+  EXPECT_EQ(tc.vc_dev->viewport_y, -1);
   // Check redrawing consistency.
   tc.PutString("");
 
@@ -715,40 +613,32 @@ bool test_scrolling_when_viewport_scrolled() {
   tc.AssertLineContains(0, "  3");
   tc.AssertLineContains(1, "   4");
   tc.AssertLineContains(2, "5");
-
-  END_TEST;
 }
 
 // Test that vc_get_scrollback_lines() gives the correct results.
-bool test_scrollback_lines_count() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollbackLinesCount) {
   TextconHelper tc(10, 3);
   tc.PutString("\n\n");
 
   // Reduce the scrollback limit to make the test faster.
   const int kLimit = 20;
-  EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max, "");
+  EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max);
   tc.vc_dev->scrollback_rows_max = kLimit;
 
   for (int lines = 1; lines < kLimit * 4; ++lines) {
     tc.PutString("\n");
-    EXPECT_EQ(MIN(lines, kLimit), vc_get_scrollback_lines(tc.vc_dev), "");
+    EXPECT_EQ(MIN(lines, kLimit), vc_get_scrollback_lines(tc.vc_dev));
   }
-
-  END_TEST;
 }
 
 // Test that the scrollback lines have the correct contents.
-bool test_scrollback_lines_contents() {
-  BEGIN_TEST;
-
+TEST(GfxConsoleTextbufTests, ScrollbackLinesContents) {
   // Use a 1-row-high console, which simplifies this test.
   TextconHelper tc(3, 1);
 
   // Reduce the scrollback limit to make the test faster.
   const int kLimit = 20;
-  EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max, "");
+  EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max);
   tc.vc_dev->scrollback_rows_max = kLimit;
 
   vc_char_t test_val = 0;
@@ -756,52 +646,19 @@ bool test_scrollback_lines_contents() {
     tc.vc_dev->text_buf[0] = test_val++;
     tc.PutString("\n");
 
-    EXPECT_EQ(lines, vc_get_scrollback_lines(tc.vc_dev), "");
+    EXPECT_EQ(lines, vc_get_scrollback_lines(tc.vc_dev));
     for (int i = 0; i < lines; ++i)
-      EXPECT_EQ(i, vc_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+      EXPECT_EQ(i, vc_get_scrollback_line_ptr(tc.vc_dev, i)[0]);
   }
   for (int lines = 0; lines < kLimit * 3; ++lines) {
     tc.vc_dev->text_buf[0] = test_val++;
     tc.PutString("\n");
 
-    EXPECT_EQ(kLimit, vc_get_scrollback_lines(tc.vc_dev), "");
+    EXPECT_EQ(kLimit, vc_get_scrollback_lines(tc.vc_dev));
     for (int i = 0; i < kLimit; ++i) {
-      EXPECT_EQ(test_val + i - kLimit, vc_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+      EXPECT_EQ(test_val + i - kLimit, vc_get_scrollback_line_ptr(tc.vc_dev, i)[0]);
     }
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
-RUN_TEST(test_simple)
-RUN_TEST(test_display_update_comparison)
-RUN_TEST(test_display_color_schemes)
-RUN_TEST(test_wrapping)
-RUN_TEST(test_tabs)
-RUN_TEST(test_backspace_moves_cursor)
-RUN_TEST(test_backspace_at_start_of_line)
-RUN_TEST(test_delete_chars)
-RUN_TEST(test_delete_chars_overflow)
-RUN_TEST(test_scroll_up)
-RUN_TEST(test_scroll_up_nel)
-RUN_TEST(test_insert_lines)
-RUN_TEST(test_delete_lines)
-RUN_TEST(test_insert_lines_many)
-RUN_TEST(test_delete_lines_many)
-RUN_TEST(test_insert_lines_huge)
-RUN_TEST(test_delete_lines_huge)
-RUN_TEST(test_move_cursor_up_and_scroll)
-RUN_TEST(test_move_cursor_down_and_scroll)
-RUN_TEST(test_cursor_hide_and_show)
-RUN_TEST(test_cursor_scroll_bug)
-RUN_TEST(test_scroll_viewport_by_large_delta)
-RUN_TEST(test_viewport_scrolling_follows_bottom)
-RUN_TEST(test_viewport_scrolling_follows_scrollback)
-RUN_TEST(test_output_when_viewport_scrolled)
-RUN_TEST(test_scrolling_when_viewport_scrolled)
-RUN_TEST(test_scrollback_lines_count)
-RUN_TEST(test_scrollback_lines_contents)
-END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }  // namespace
