@@ -92,8 +92,8 @@ class ScopedTaskRunner {
   explicit ScopedTaskRunner(async_dispatcher_t* dispatcher = async_get_default_dispatcher());
 
   template <class Controller>
-  ScopedTaskRunner(typename TaskController::Tag<Controller> controller_type,
-                   async_dispatcher_t* dispatcher = async_get_default_dispatcher())
+  explicit ScopedTaskRunner(typename TaskController::Tag<Controller> controller_type,
+                            async_dispatcher_t* dispatcher = async_get_default_dispatcher())
       : dispatcher_(dispatcher), controller_(std::make_shared<Controller>()) {}
 
   ~ScopedTaskRunner();
@@ -110,6 +110,16 @@ class ScopedTaskRunner {
   // This method is idempotent and will automatically be called when this class
   // goes out of scope.
   void ShutDown();
+
+  // Shuts down the current controller and assigns a new |SimpleTaskController|.
+  void Reset();
+
+  // Shuts down the current controller and assigns a new one of the specified type.
+  template <class Controller>
+  void Reset(typename TaskController::Tag<Controller> controller_type) {
+    ShutDown();
+    controller_ = std::make_shared<Controller>();
+  }
 
   // Posts a task to run as soon as possible on the dispatcher after the current
   // dispatch cycle.
@@ -151,7 +161,7 @@ class ScopedTaskRunner {
 
  private:
   async_dispatcher_t* const dispatcher_;
-  const std::shared_ptr<TaskController> controller_;
+  std::shared_ptr<TaskController> controller_;
 
   // The only thing preventing this from being movable is the const fields. If
   // we ever need this to be movable, we can do it easily.

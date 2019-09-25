@@ -86,6 +86,18 @@ TEST(ScopedTaskRunnerTest, MakeScopedAfterShutdown) {
   EXPECT_FALSE(called);
 }
 
+TEST(ScopedTaskRunnerTest, Reset) {
+  bool beforeCalled = false, afterCalled = false;
+  ScopedTaskRunner tasks;
+  auto before = tasks.MakeScoped([&] { beforeCalled = true; });
+  tasks.Reset();
+  auto after = tasks.MakeScoped([&] { afterCalled = true; });
+  before();
+  after();
+  EXPECT_FALSE(beforeCalled);
+  EXPECT_TRUE(afterCalled);
+}
+
 TEST(ScopedTaskRunnerTest, DestroyDuringTaskOnThread) {
   bool called = false;
   auto* tasks = new ScopedTaskRunner;

@@ -26,6 +26,8 @@ ScopedTaskRunner::~ScopedTaskRunner() { ShutDown(); }
 
 void ScopedTaskRunner::ShutDown() { controller_->ShutDown(); }
 
+void ScopedTaskRunner::Reset() { Reset(SimpleTaskController::Type{}); }
+
 void ScopedTaskRunner::PostTask(fit::closure task) {
   async::PostTask(dispatcher_, MakeScoped(std::move(task)));
 }
