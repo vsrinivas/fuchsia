@@ -13,9 +13,18 @@
 
 namespace hid {
 
+// Extracts |value_out| from |report| as the closest unit type to |attr.unit|. The unit type
+// can be gotten from the |GetUnitTypeFromUnit| function. This is the recommended
+// extraction function for the users of this library.
+bool ExtractAsUnitType(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                       double* value_out);
+// Inserts |value_in| into |report|. This function assumes that |value_in| is in the
+// unit type closest to |attr.unit|.
+bool InsertAsUnitType(uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                      double value_in);
+
 // Extracts |value_out| from |report| and ensures that is in the units
-// specified by |attr|. This is the recommended extraction function for
-// users of this library.
+// specified by |attr|.
 bool ExtractAsUnit(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
                    double* value_out);
 // Inserts |value_in| into |report| after it has been translated into

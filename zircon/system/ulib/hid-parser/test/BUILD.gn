@@ -14,6 +14,7 @@ test("hid-parser") {
     "hid-helper-test.cc",
     "hid-parser-test.cc",
     "hid-report-data.cc",
+    "hid-units-test.cc",
     "hid-utest-data.cc",
   ]
   deps = [

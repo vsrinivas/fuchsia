@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
+
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
-
-#include <type_traits>
 
 namespace hid {
 namespace {
@@ -222,6 +222,29 @@ bool InsertWithUnit(uint8_t* report, size_t report_len, const hid::Attributes& a
   }
 
   return InsertAsUnit(report, report_len, attr, value_converted);
+}
+
+bool InsertAsUnitType(uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                      double value_in) {
+  Unit unit_in = unit::GetUnitFromUnitType(unit::GetUnitTypeFromUnit(attr.unit));
+  double value_out;
+  if (!unit::ConvertUnits(unit_in, value_in, attr.unit, &value_out)) {
+    return false;
+  }
+
+  return InsertAsUnit(report, report_len, attr, value_out);
+}
+
+bool ExtractAsUnitType(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                       double* value_out) {
+  double val_out;
+  bool ret = ExtractAsUnit(report, report_len, attr, &val_out);
+  if (!ret) {
+    return false;
+  }
+
+  *value_out = unit::ConvertValToUnitType(attr.unit, val_out);
+  return true;
 }
 
 #undef MIN

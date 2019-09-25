@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/compiler.h>
 
 #include <hid-parser/units.h>
 
@@ -153,6 +154,32 @@ bool ConvertTemperature(double val_in, const hid::Unit& unit_in, double& val_out
 namespace hid {
 namespace unit {
 
+static constexpr bool CanConvertUnits(const hid::Unit& unit_in, const hid::Unit& unit_out) {
+  // If either units have length, then we have to check that the systems are compatible.
+  if ((unit_in.type & (0xF << length_shift)) || (unit_out.type & (0xF << length_shift))) {
+    // If the systems match, we can just check if the whole types match.
+    if (GetSystem(unit_in) == GetSystem(unit_out)) {
+      return unit_in.type == unit_out.type;
+    }
+    // If the systems don't match, then they have to either both be linear or both be rotation.
+    if (((GetSystem(unit_in) == System::si_linear) &&
+         (GetSystem(unit_out) == System::eng_linear)) ||
+        ((GetSystem(unit_in) == System::eng_linear) &&
+         (GetSystem(unit_out) == System::si_linear)) ||
+        ((GetSystem(unit_in) == System::si_rotation) &&
+         (GetSystem(unit_out) == System::eng_rotation)) ||
+        ((GetSystem(unit_in) == System::eng_rotation) &&
+         (GetSystem(unit_out) == System::si_rotation))) {
+      // The types (excluding the system) have to match as well.
+      return (unit_in.type & ~system_mask) == (unit_out.type & ~system_mask);
+    }
+    // If we make it here, then there are incompatible systems.
+    return false;
+  }
+  // If there's no length, then all we have to check is the types without the systems.
+  return (unit_in.type & ~system_mask) == (unit_out.type & ~system_mask);
+}
+
 void SetSystem(Unit& unit, hid::unit::System system) {
   SetUnitTypeExp(unit.type, static_cast<int8_t>(system), system_shift);
 }
@@ -201,7 +228,7 @@ int GetLuminousExp(const Unit& unit) { return GetUnitTypeExp(unit.type, luminous
 
 bool ConvertUnits(const Unit& unit_in, double val_in, const Unit& unit_out, double* val_out) {
   // If the units don't have the same measurements it's impossible to do a conversion.
-  if ((unit_in.type & ~system_mask) != (unit_out.type & ~system_mask)) {
+  if (!CanConvertUnits(unit_in, unit_out)) {
     return false;
   }
 
@@ -226,6 +253,143 @@ bool ConvertUnits(const Unit& unit_in, double val_in, const Unit& unit_out, doub
 
   *val_out = val;
   return true;
+}
+
+struct UnitConversion {
+  Unit unit;
+  UnitType unit_type;
+};
+
+static UnitConversion defined_units[] = {
+    {
+        .unit =
+            {
+                .type =
+                    (static_cast<uint8_t>(System::si_linear) << system_shift) | (1 << length_shift),
+                .exp = -4,
+            },
+        .unit_type = UnitType::Distance,
+    },
+
+    {
+        .unit =
+            {
+                .type =
+                    (static_cast<uint8_t>(System::si_linear) << system_shift) | (1 << mass_shift),
+                .exp = -3,
+            },
+        .unit_type = UnitType::Weight,
+    },
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::eng_rotation) << system_shift) |
+                        (1 << length_shift),
+                // This exponent is affected by length being 10^-2 m (cm).
+                .exp = -4,
+            },
+        .unit_type = UnitType::Rotation,
+    },
+
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_rotation) << system_shift) |
+                        (1 << length_shift) | (static_cast<uint8_t>(-1 & 0xF) << time_shift),
+                .exp = -3,
+            },
+        .unit_type = UnitType::AngularVelocity,
+    },
+
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << length_shift) | (static_cast<uint8_t>(-1 & 0xF) << time_shift),
+                // This exponent is affected by length being 10^-2 m (cm).
+                .exp = -1,
+            },
+        .unit_type = UnitType::LinearVelocity,
+    },
+
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << length_shift) | (static_cast<uint8_t>(-2 & 0xF) << time_shift),
+                // This exponent is affected by length being 10^-2 m (cm).
+                .exp = -1,
+            },
+        .unit_type = UnitType::Acceleration,
+    },
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << mass_shift) | (static_cast<uint8_t>(-1 & 0xF) << current_shift) |
+                        (static_cast<uint8_t>(-2 & 0xF) << time_shift),
+                .exp = 1,
+            },
+        .unit_type = UnitType::MagneticFlux,
+    },
+
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << luminous_shift),
+                .exp = 1,
+            },
+        .unit_type = UnitType::Light,
+    },
+
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << mass_shift) | (1 << length_shift) |
+                        (static_cast<uint8_t>(-2 & 0xF) << time_shift),
+                // This exponent is affected by length being 10^-2 m (cm).
+                .exp = -2,
+            },
+        .unit_type = UnitType::Pressure,
+    },
+};
+
+Unit GetUnitFromUnitType(UnitType type) {
+  for (size_t i = 0; i < countof(defined_units); i++) {
+    if (defined_units[i].unit_type == type) {
+      return defined_units[i].unit;
+    }
+  }
+  Unit other = {};
+  return other;
+}
+
+UnitType GetUnitTypeFromUnit(const Unit& unit) {
+  for (size_t i = 0; i < countof(defined_units); i++) {
+    if (CanConvertUnits(defined_units[i].unit, unit)) {
+      return defined_units[i].unit_type;
+    }
+  }
+  if (unit.type == 0) {
+    return UnitType::None;
+  }
+  return UnitType::Other;
+}
+
+double ConvertValToUnitType(const Unit& unit_in, double val_in) {
+  double val_out;
+
+  for (size_t i = 0; i < countof(defined_units); i++) {
+    if (ConvertUnits(unit_in, val_in, defined_units[i].unit, &val_out)) {
+      return val_out;
+    }
+  }
+
+  // If we didn't find a matching UnitType than |unit_in| matches Other, which
+  // means we return the value unchanged.
+  return val_in;
 }
 
 }  // namespace unit

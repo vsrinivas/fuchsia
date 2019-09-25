@@ -5,11 +5,53 @@
 #ifndef HID_PARSER_UNITS_H_
 #define HID_PARSER_UNITS_H_
 
-#include <hid-parser/parser.h>
 #include <stdint.h>
+
+#include <hid-parser/parser.h>
 
 namespace hid {
 namespace unit {
+
+// UnitTypes are the helpful, "default" units in the system.
+// These should used throughout the system.
+enum class UnitType : uint32_t {
+  // This is used when a HID device does not specify units.
+  None,
+  // This is used when a HID device has a set of units not described below.
+  Other,
+  // A measurement of distance in 10^-6 meter units.
+  Distance,
+  // A measurement of weight in 10^-3 gram units.
+  Weight,
+  // A measurement of rotation is 10^-3 degree.
+  Rotation,
+  // A measurement of angular velocity is 10^-3 deg/s.
+  AngularVelocity,
+  // A measurement of linear velocity is 10^-3 m/s
+  LinearVelocity,
+  // A measurement of acceleration is 10^-3 Gs
+  Acceleration,
+  // A measurement of magnetic_flux is 10^-6 Tesla (kg/(Amp * s^2))
+  MagneticFlux,
+  // A measurement of light is 1 Candela.
+  Light,
+  // A measurement of pressure is 10^-3 Pascal (kg/(m*s^2))
+  Pressure,
+};
+
+// Get the exact unit from the UnitType.
+Unit GetUnitFromUnitType(UnitType type);
+
+// Get the closest convertible UnitType from the unit.
+// If the unit cannot be converted into a UnitType, |Other| will be returned.
+// If there are no unit's, |None| will be returned.
+UnitType GetUnitTypeFromUnit(const Unit& unit);
+
+double ConvertValToUnitType(const Unit& unit_in, double val_in);
+
+// Below is the full unit definitions as outlined by the HID standard.
+// These can be used if there is a strong need to do something more
+// specific than using a UnitType.
 
 // Each system defines the units for the following measurements:
 // length, mass, time, temperature, current, luminous intensity.
