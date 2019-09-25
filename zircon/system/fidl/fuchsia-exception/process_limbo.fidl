@@ -3,11 +3,47 @@
 
 library fuchsia.exception;
 
+using zx;
+
 /// Protocol meant for clients interested in obtaining processes that are
 /// suspended waiting for an exception handler (in limbo). This is the core
 /// feature that enables Just In Time (JIT) debugging.
 [Discoverable]
 protocol ProcessLimbo {
-    /// Returns all the processes currently waiting on an exception.
-    GetProcessesWaitingOnException() -> (vector<ProcessException> process_exceptions);
+  /// Returns information on all the processes currently waiting on an exception.
+  /// The information provided is intended to correctly identify an exception
+  /// and determine whether the caller wants to actually handle it.
+  /// To retrieve an exception, use the |GetException| call.
+  ///
+  /// NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+  ///       right, so no modification will be able to be done on them.
+  ListProcessesWaitingOnException()->(vector<ProcessExceptionMetadata> exception_list);
+
+  /// Removes the process from limbo and retrieves the exception handle and
+  /// associated metadata from an exception.
+  ///
+  /// Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+  /// list of available exceptions.
+  ///
+  /// Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+  RetrieveException(zx.koid process_koid)->(ProcessException process_exception) error zx.status;
 };
+
+/// Intended to be read only metadada associated with an exception waiting in
+/// limbo. The handles provided will only have read-only access to the resource,
+/// so no modification can be done to them.
+///
+/// NOTE: Both |process| and |thread| will be valid if present.
+table ProcessExceptionMetadata {
+  1: ExceptionInfo info;
+
+  /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  2: handle<process> process;
+
+  /// The thread that generated the exception.
+  /// The process may have other threads that are not reflected here.
+  /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  3: handle<thread> thread;
+};
+
+

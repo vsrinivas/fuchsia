@@ -38,8 +38,107 @@ enum class ExceptionType : uint32_t {
 
 struct ExceptionInfo;
 class Handler;
+struct ProcessExceptionMetadata;
 struct ProcessException;
+struct ProcessLimbo_RetrieveException_Response;
+struct ProcessLimbo_RetrieveException_Result;
 class ProcessLimbo;
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionMetadataTable;
+
+// Intended to be read only metadada associated with an exception waiting in
+// limbo. The handles provided will only have read-only access to the resource,
+// so no modification can be done to them.
+//
+// NOTE: Both |process| and |thread| will be valid if present.
+struct ProcessExceptionMetadata final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const ExceptionInfo& info() const {
+    ZX_ASSERT(has_info());
+    return *reinterpret_cast<const ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
+  }
+  ExceptionInfo& info() {
+    ZX_ASSERT(has_info());
+    return *reinterpret_cast<ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_info() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  const ::zx::process& process() const {
+    ZX_ASSERT(has_process());
+    return *reinterpret_cast<const ::zx::process*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::zx::process& process() {
+    ZX_ASSERT(has_process());
+    return *reinterpret_cast<::zx::process*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_process() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // The thread that generated the exception.
+  // The process may have other threads that are not reflected here.
+  // Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  const ::zx::thread& thread() const {
+    ZX_ASSERT(has_thread());
+    return *reinterpret_cast<const ::zx::thread*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::zx::thread& thread() {
+    ZX_ASSERT(has_thread());
+    return *reinterpret_cast<::zx::thread*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_thread() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  ProcessExceptionMetadata() = default;
+  ~ProcessExceptionMetadata() = default;
+  ProcessExceptionMetadata(ProcessExceptionMetadata&& other) noexcept = default;
+  ProcessExceptionMetadata& operator=(ProcessExceptionMetadata&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessExceptionMetadataTable;
+  static constexpr uint32_t MaxNumHandles = 2;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 88;
+
+ private:
+  ProcessExceptionMetadata(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class ProcessExceptionMetadata::Builder {
+ public:
+  ProcessExceptionMetadata view() { return ProcessExceptionMetadata(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_info(ExceptionInfo* elem);
+
+  // Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  Builder&& set_process(::zx::process* elem);
+
+  // The thread that generated the exception.
+  // The process may have other threads that are not reflected here.
+  // Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
+  Builder&& set_thread(::zx::thread* elem);
+
+ private:
+  Builder() = default;
+  friend Builder ProcessExceptionMetadata::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+};
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionTable;
 
@@ -371,7 +470,115 @@ class Handler final {
 
 };
 
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+
+struct ProcessLimbo_RetrieveException_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 3;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 112;
+
+  ProcessException process_exception = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+
+struct ProcessLimbo_RetrieveException_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ProcessLimbo_RetrieveException_Result();
+  ~ProcessLimbo_RetrieveException_Result();
+
+  ProcessLimbo_RetrieveException_Result(ProcessLimbo_RetrieveException_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ProcessLimbo_RetrieveException_Result& operator=(ProcessLimbo_RetrieveException_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static ProcessLimbo_RetrieveException_Result WithResponse(ProcessLimbo_RetrieveException_Response&& val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ProcessLimbo_RetrieveException_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ProcessLimbo_RetrieveException_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static ProcessLimbo_RetrieveException_Result WithErr(int32_t&& val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 3;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 112;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ProcessLimbo_RetrieveException_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ProcessLimbo_RetrieveException_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
 
 // Protocol meant for clients interested in obtaining processes that are
 // suspended waiting for an exception handler (in limbo). This is the core
@@ -381,12 +588,12 @@ class ProcessLimbo final {
  public:
   static constexpr char Name[] = "fuchsia.exception.ProcessLimbo";
 
-  struct GetProcessesWaitingOnExceptionResponse final {
+  struct ListProcessesWaitingOnExceptionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::VectorView<ProcessException> process_exceptions;
+    ::fidl::VectorView<ProcessExceptionMetadata> exception_list;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboGetProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 4294967295;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -394,7 +601,35 @@ class ProcessLimbo final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using GetProcessesWaitingOnExceptionRequest = ::fidl::AnyZeroArgMessage;
+  using ListProcessesWaitingOnExceptionRequest = ::fidl::AnyZeroArgMessage;
+
+  struct RetrieveExceptionResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ProcessLimbo_RetrieveException_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+    static constexpr uint32_t MaxNumHandles = 3;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 112;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct RetrieveExceptionRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint64_t process_koid;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = RetrieveExceptionResponse;
+  };
 
 
   // Collection of return types of FIDL calls in this interface.
@@ -402,13 +637,29 @@ class ProcessLimbo final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
-    class GetProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ListProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
-      ~GetProcessesWaitingOnException_Impl() = default;
-      GetProcessesWaitingOnException_Impl(GetProcessesWaitingOnException_Impl&& other) = default;
-      GetProcessesWaitingOnException_Impl& operator=(GetProcessesWaitingOnException_Impl&& other) = default;
+      ListProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
+      ~ListProcessesWaitingOnException_Impl() = default;
+      ListProcessesWaitingOnException_Impl(ListProcessesWaitingOnException_Impl&& other) = default;
+      ListProcessesWaitingOnException_Impl& operator=(ListProcessesWaitingOnException_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class RetrieveException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      RetrieveException_Impl(zx::unowned_channel _client_end, uint64_t process_koid);
+      ~RetrieveException_Impl() = default;
+      RetrieveException_Impl(RetrieveException_Impl&& other) = default;
+      RetrieveException_Impl& operator=(RetrieveException_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -419,7 +670,8 @@ class ProcessLimbo final {
     };
 
    public:
-    using GetProcessesWaitingOnException = GetProcessesWaitingOnException_Impl<GetProcessesWaitingOnExceptionResponse>;
+    using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
+    using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -428,13 +680,29 @@ class ProcessLimbo final {
     UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
-    class GetProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ListProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetProcessesWaitingOnException_Impl() = default;
-      GetProcessesWaitingOnException_Impl(GetProcessesWaitingOnException_Impl&& other) = default;
-      GetProcessesWaitingOnException_Impl& operator=(GetProcessesWaitingOnException_Impl&& other) = default;
+      ListProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ListProcessesWaitingOnException_Impl() = default;
+      ListProcessesWaitingOnException_Impl(ListProcessesWaitingOnException_Impl&& other) = default;
+      ListProcessesWaitingOnException_Impl& operator=(ListProcessesWaitingOnException_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class RetrieveException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      RetrieveException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+      ~RetrieveException_Impl() = default;
+      RetrieveException_Impl(RetrieveException_Impl&& other) = default;
+      RetrieveException_Impl& operator=(RetrieveException_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -445,7 +713,8 @@ class ProcessLimbo final {
     };
 
    public:
-    using GetProcessesWaitingOnException = GetProcessesWaitingOnException_Impl<GetProcessesWaitingOnExceptionResponse>;
+    using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
+    using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
   };
 
   class SyncClient final {
@@ -459,13 +728,45 @@ class ProcessLimbo final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Returns all the processes currently waiting on an exception.
+    // Returns information on all the processes currently waiting on an exception.
+    // The information provided is intended to correctly identify an exception
+    // and determine whether the caller wants to actually handle it.
+    // To retrieve an exception, use the |GetException| call.
+    //
+    // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+    //       right, so no modification will be able to be done on them.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException();
+    ResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException();
 
-    // Returns all the processes currently waiting on an exception.
+    // Returns information on all the processes currently waiting on an exception.
+    // The information provided is intended to correctly identify an exception
+    // and determine whether the caller wants to actually handle it.
+    // To retrieve an exception, use the |GetException| call.
+    //
+    // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+    //       right, so no modification will be able to be done on them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(::fidl::BytePart _response_buffer);
+    UnownedResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(::fidl::BytePart _response_buffer);
+
+    // Removes the process from limbo and retrieves the exception handle and
+    // associated metadata from an exception.
+    //
+    // Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+    // list of available exceptions.
+    //
+    // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::RetrieveException RetrieveException(uint64_t process_koid);
+
+    // Removes the process from limbo and retrieves the exception handle and
+    // associated metadata from an exception.
+    //
+    // Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+    // list of available exceptions.
+    //
+    // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::RetrieveException RetrieveException(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -476,13 +777,45 @@ class ProcessLimbo final {
     Call() = delete;
    public:
 
-    // Returns all the processes currently waiting on an exception.
+    // Returns information on all the processes currently waiting on an exception.
+    // The information provided is intended to correctly identify an exception
+    // and determine whether the caller wants to actually handle it.
+    // To retrieve an exception, use the |GetException| call.
+    //
+    // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+    //       right, so no modification will be able to be done on them.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(zx::unowned_channel _client_end);
+    static ResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(zx::unowned_channel _client_end);
 
-    // Returns all the processes currently waiting on an exception.
+    // Returns information on all the processes currently waiting on an exception.
+    // The information provided is intended to correctly identify an exception
+    // and determine whether the caller wants to actually handle it.
+    // To retrieve an exception, use the |GetException| call.
+    //
+    // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+    //       right, so no modification will be able to be done on them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetProcessesWaitingOnException GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Removes the process from limbo and retrieves the exception handle and
+    // associated metadata from an exception.
+    //
+    // Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+    // list of available exceptions.
+    //
+    // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, uint64_t process_koid);
+
+    // Removes the process from limbo and retrieves the exception handle and
+    // associated metadata from an exception.
+    //
+    // Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+    // list of available exceptions.
+    //
+    // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -492,8 +825,23 @@ class ProcessLimbo final {
     InPlace() = delete;
    public:
 
-    // Returns all the processes currently waiting on an exception.
-    static ::fidl::DecodeResult<GetProcessesWaitingOnExceptionResponse> GetProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // Returns information on all the processes currently waiting on an exception.
+    // The information provided is intended to correctly identify an exception
+    // and determine whether the caller wants to actually handle it.
+    // To retrieve an exception, use the |GetException| call.
+    //
+    // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
+    //       right, so no modification will be able to be done on them.
+    static ::fidl::DecodeResult<ListProcessesWaitingOnExceptionResponse> ListProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Removes the process from limbo and retrieves the exception handle and
+    // associated metadata from an exception.
+    //
+    // Use |ListProcessesWaitingOnException| to choose a |process_koid| from the
+    // list of available exceptions.
+    //
+    // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    static ::fidl::DecodeResult<RetrieveExceptionResponse> RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -505,19 +853,33 @@ class ProcessLimbo final {
     using _Outer = ProcessLimbo;
     using _Base = ::fidl::CompleterBase;
 
-    class GetProcessesWaitingOnExceptionCompleterBase : public _Base {
+    class ListProcessesWaitingOnExceptionCompleterBase : public _Base {
      public:
-      void Reply(::fidl::VectorView<ProcessException> process_exceptions);
-      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessException> process_exceptions);
-      void Reply(::fidl::DecodedMessage<GetProcessesWaitingOnExceptionResponse> params);
+      void Reply(::fidl::VectorView<ProcessExceptionMetadata> exception_list);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessExceptionMetadata> exception_list);
+      void Reply(::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using GetProcessesWaitingOnExceptionCompleter = ::fidl::Completer<GetProcessesWaitingOnExceptionCompleterBase>;
+    using ListProcessesWaitingOnExceptionCompleter = ::fidl::Completer<ListProcessesWaitingOnExceptionCompleterBase>;
 
-    virtual void GetProcessesWaitingOnException(GetProcessesWaitingOnExceptionCompleter::Sync _completer) = 0;
+    virtual void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCompleter::Sync _completer) = 0;
+
+    class RetrieveExceptionCompleterBase : public _Base {
+     public:
+      void Reply(ProcessLimbo_RetrieveException_Result result);
+      void Reply(::fidl::BytePart _buffer, ProcessLimbo_RetrieveException_Result result);
+      void Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using RetrieveExceptionCompleter = ::fidl::Completer<RetrieveExceptionCompleterBase>;
+
+    virtual void RetrieveException(uint64_t process_koid, RetrieveExceptionCompleter::Sync _completer) = 0;
 
   };
 
@@ -565,15 +927,45 @@ static_assert(offsetof(::llcpp::fuchsia::exception::Handler::OnExceptionRequest,
 static_assert(offsetof(::llcpp::fuchsia::exception::Handler::OnExceptionRequest, info) == 24);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessExceptionMetadata> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessExceptionMetadata>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessException> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessException>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response, process_exception) == 0);
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response) == ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response::PrimarySize);
+
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse)
-    == ::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::GetProcessesWaitingOnExceptionResponse, process_exceptions) == 16);
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse, exception_list) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest, process_koid) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse, result) == 16);
 
 }  // namespace fidl

@@ -66,8 +66,8 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(limbo.NewRequest());
 
-  std::vector<ProcessException> exceptions;
-  zx_status_t status = limbo->GetProcessesWaitingOnException(&exceptions);
+  std::vector<ProcessExceptionMetadata> exceptions;
+  zx_status_t status = limbo->ListProcessesWaitingOnException(&exceptions);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
   ASSERT_TRUE(exceptions.empty());
 }

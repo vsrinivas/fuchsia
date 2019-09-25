@@ -16,22 +16,16 @@
 
 namespace {
 
-std::string GetProcessName(const fuchsia::exception::ProcessException& pe) {
+std::string GetProcessName(const fuchsia::exception::ProcessExceptionMetadata& pe) {
   if (pe.has_process())
     return fsl::GetObjectName(pe.process().get());
-
-  zx::process process;
-  FXL_DCHECK(pe.exception().get_process(&process) == ZX_OK);
-  return fsl::GetObjectName(process.get());
+  return {};
 }
 
-std::string GetThreadName(const fuchsia::exception::ProcessException& pe) {
+std::string GetThreadName(const fuchsia::exception::ProcessExceptionMetadata& pe) {
   if (pe.has_thread())
     return fsl::GetObjectName(pe.thread().get());
-
-  zx::thread thread;
-  FXL_DCHECK(pe.exception().get_thread(&thread) == ZX_OK);
-  return fsl::GetObjectName(thread.get());
+  return {};
 }
 
 }  // namespace
@@ -42,8 +36,8 @@ int main() {
   fuchsia::exception::ProcessLimboSyncPtr process_limbo;
   environment_services->Connect(process_limbo.NewRequest());
 
-  std::vector<fuchsia::exception::ProcessException> exceptions;
-  zx_status_t status = process_limbo->GetProcessesWaitingOnException(&exceptions);
+  std::vector<fuchsia::exception::ProcessExceptionMetadata> exceptions;
+  zx_status_t status = process_limbo->ListProcessesWaitingOnException(&exceptions);
   FXL_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 
   printf("Got %zu exceptions.\n", exceptions.size());

@@ -30,7 +30,9 @@ class ExceptionBroker : public Handler, public ProcessLimbo {
 
   // fuchsia.exception.ProcessLimbo implementation.
 
-  void GetProcessesWaitingOnException(GetProcessesWaitingOnExceptionCallback) override;
+  void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback) override;
+
+  void RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback) override;
 
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
@@ -40,6 +42,8 @@ class ExceptionBroker : public Handler, public ProcessLimbo {
 
   bool use_limbo() const { return use_limbo_; }
   void set_use_limbo(bool use_limbo) { use_limbo_ = use_limbo; }
+
+  const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
 
  private:
   void FileCrashReport(ProcessException);     // |use_limbo_| == false.
@@ -61,7 +65,7 @@ class ExceptionBroker : public Handler, public ProcessLimbo {
   //                - Define an eviction policy (FIFO probably).
   //                - Set a timeout for exceptions (configurable).
   //                - Decide on a throttle mechanism (if the same process is crashing continously).
-  std::vector<ProcessException> limbo_;
+  std::map<zx_koid_t, ProcessException> limbo_;
 
   // TODO(donosoc): This should be moved into reading a config file at startup.
   //                Exposed for testing purposes.
