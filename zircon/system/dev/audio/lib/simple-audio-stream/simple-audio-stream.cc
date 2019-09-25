@@ -14,13 +14,6 @@
 
 namespace audio {
 
-// Device FIDL thunks
-fuchsia_hardware_audio_Device_ops_t SimpleAudioStream::AUDIO_FIDL_THUNKS{
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
-      return reinterpret_cast<SimpleAudioStream*>(ctx)->GetChannel(txn);
-    },
-};
-
 void SimpleAudioStream::Shutdown() {
   if (!is_shutdown_) {
     if (domain_ != nullptr) {
@@ -184,7 +177,7 @@ zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {
   return ZX_OK;
 }
 
-zx_status_t SimpleAudioStream::GetChannel(fidl_txn_t* txn) {
+void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
@@ -195,7 +188,8 @@ zx_status_t SimpleAudioStream::GetChannel(fidl_txn_t* txn) {
   auto channel = dispatcher::Channel::Create<AudioStreamChannel>();
   if (channel == nullptr) {
     zxlogf(ERROR, "Could not allocate dispatcher::channel in %s\n", __PRETTY_FUNCTION__);
-    return ZX_ERR_NO_MEMORY;
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
   }
 
   dispatcher::Channel::ProcessHandler phandler(
@@ -219,11 +213,8 @@ zx_status_t SimpleAudioStream::GetChannel(fidl_txn_t* txn) {
       ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
       stream_channel_ = channel;
     }
-
-    return fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
   }
-
-  return res;
+  completer.Reply(std::move(client_endpoint));
 }
 
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \

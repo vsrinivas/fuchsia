@@ -12,14 +12,14 @@ library("simple-audio-stream") {
     "simple-audio-stream.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:c.headers",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp.headers",
     "$zx/system/ulib/ddktl:headers",
     "$zx/system/ulib/dispatcher-pool:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",
@@ -38,8 +38,10 @@ test("sa-unittest") {
     ":simple-audio-stream",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/operation",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/audio-utils",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fzl",

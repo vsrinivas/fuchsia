@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
 
+#include <audio-utils/audio-output.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {
+
+using ::llcpp::fuchsia::hardware::audio::Device;
 
 class MockSimpleAudio : public SimpleAudioStream {
  public:
@@ -37,7 +41,7 @@ class MockSimpleAudio : public SimpleAudioStream {
     cur_gain_state_.cur_mute = false;
     cur_gain_state_.cur_agc = false;
     cur_gain_state_.min_gain = 0;
-    cur_gain_state_.max_gain = 0;
+    cur_gain_state_.max_gain = 100;
     cur_gain_state_.gain_step = 0;
     cur_gain_state_.can_mute = false;
     cur_gain_state_.can_agc = false;
@@ -48,6 +52,11 @@ class MockSimpleAudio : public SimpleAudioStream {
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
 
+    return ZX_OK;
+  }
+
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_->token()) override {
+    cur_gain_state_.cur_gain = req.gain;
     return ZX_OK;
   }
 
@@ -134,4 +143,26 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   stream->DdkUnbind();
   EXPECT_TRUE(tester.Ok());
 }
+
+TEST(SimpleAudioTest, SetAndGetGain) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<audio::MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  Device::SyncClient client(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  // After we get the channel we use audio::utils serialization until we convert to FIDL.
+  auto channel_client = audio::utils::AudioOutput::Create(1);
+  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+
+  auto gain = 1.2345f;
+  channel_client->SetGain(gain);
+
+  audio_stream_cmd_get_gain_resp gain_state;
+  channel_client->GetGain(&gain_state);
+  ASSERT_EQ(gain_state.cur_gain, gain);
+}
+
 }  // namespace audio

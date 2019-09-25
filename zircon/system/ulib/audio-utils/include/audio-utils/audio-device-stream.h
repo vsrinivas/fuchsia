@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef AUDIO_UTILS_AUDIO_DEVICE_STREAM_H_
+#define AUDIO_UTILS_AUDIO_DEVICE_STREAM_H_
 
-#include <zircon/device/audio.h>
-#include <zircon/types.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
+
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
@@ -45,6 +47,7 @@ class AudioDeviceStream {
 
   bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_); }
   bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_); }
+  void SetStreamChannel(zx::channel channel) { stream_ch_ = std::move(channel); }
 
   const char* name() const { return name_; }
   bool input() const { return direction_ == StreamDirection::kInput; }
@@ -91,3 +94,5 @@ class AudioDeviceStream {
 
 }  // namespace utils
 }  // namespace audio
+
+#endif  // AUDIO_UTILS_AUDIO_DEVICE_STREAM_H_

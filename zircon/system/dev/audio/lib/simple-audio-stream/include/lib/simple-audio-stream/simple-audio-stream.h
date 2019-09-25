@@ -2,17 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_LIB_SIMPLE_AUDIO_STREAM_INCLUDE_LIB_SIMPLE_AUDIO_STREAM_SIMPLE_AUDIO_STREAM_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_LIB_SIMPLE_AUDIO_STREAM_INCLUDE_LIB_SIMPLE_AUDIO_STREAM_SIMPLE_AUDIO_STREAM_H_
 
-#include <audio-proto/audio-proto.h>
-#include <ddktl/device.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -20,6 +13,16 @@
 #include <atomic>
 #include <type_traits>
 #include <utility>
+
+#include <audio-proto/audio-proto.h>
+#include <ddktl/device.h>
+#include <ddktl/fidl.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 
 namespace audio {
 
@@ -37,7 +40,8 @@ using SimpleAudioStreamBase =
 
 class SimpleAudioStream : public SimpleAudioStreamBase,
                           public SimpleAudioStreamProtocol,
-                          public fbl::RefCounted<SimpleAudioStream> {
+                          public fbl::RefCounted<SimpleAudioStream>,
+                          public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   // Create
   //
@@ -86,7 +90,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t DdkSuspend(uint32_t flags);
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::audio::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
   }
 
  protected:
@@ -311,7 +317,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t PublishInternal();
 
   // fuchsia hardware audio Device Interface
-  zx_status_t GetChannel(fidl_txn_t* txn);
+  void GetChannel(GetChannelCompleter::Sync completer);
 
   // Stream interface
   zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged)
@@ -366,8 +372,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t OnStop(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
       __TA_REQUIRES(domain_->token());
 
-  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
-
   // Stream and ring buffer channel state.
   fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_->token());
   fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(channel_lock_);
@@ -389,3 +393,5 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 };
 
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_LIB_SIMPLE_AUDIO_STREAM_INCLUDE_LIB_SIMPLE_AUDIO_STREAM_SIMPLE_AUDIO_STREAM_H_
