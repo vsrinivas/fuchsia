@@ -19,6 +19,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/sys/inspect/cpp/component.h>
 
 #include <map>
@@ -42,6 +43,7 @@
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
@@ -175,19 +177,14 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     inspect::StringProperty is_embedded_property;
     inspect::StringProperty is_deleted_property;
     inspect::StringProperty module_source_property;
+    inspect::StringProperty module_intent_action_property;
+    inspect::StringProperty module_intent_handler_property;
+    inspect::StringProperty module_intent_params_property;
 
     // Helper for initializing inspect nodes and properties.
     void InitializeInspect(StoryControllerImpl* const story_controller_) {
       mod_inspect_node =
           story_controller_->story_inspect_node_->CreateChild(module_data->module_url());
-
-      std::string mod_source_string;
-      if (module_data->module_source() == fuchsia::modular::ModuleSource::INTERNAL) {
-        mod_source_string = "INTERNAL";
-      } else {
-        mod_source_string = "EXTERNAL";
-      }
-      module_source_property = mod_inspect_node.CreateString("module_source", mod_source_string);
 
       std::string is_embedded_str;
       if (module_data->is_embedded()) {
@@ -196,7 +193,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
         is_embedded_str = "False";
       }
 
-      is_embedded_property = mod_inspect_node.CreateString("is_embedded", is_embedded_str);
+      is_embedded_property =
+          mod_inspect_node.CreateString(modular_config::kInspectIsEmbedded, is_embedded_str);
 
       std::string is_deleted_str;
       if (module_data->module_deleted()) {
@@ -205,7 +203,31 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
         is_deleted_str = "False";
       }
 
-      is_deleted_property = mod_inspect_node.CreateString("is_deleted", is_deleted_str);
+      is_deleted_property =
+          mod_inspect_node.CreateString(modular_config::kInspectIsDeleted, is_deleted_str);
+
+      std::string mod_source_string;
+      if (module_data->module_source() == fuchsia::modular::ModuleSource::INTERNAL) {
+        mod_source_string = "INTERNAL";
+      } else {
+        mod_source_string = "EXTERNAL";
+      }
+      module_source_property =
+          mod_inspect_node.CreateString(modular_config::kInspectModuleSource, mod_source_string);
+
+      module_intent_action_property = mod_inspect_node.CreateString(
+          modular_config::kInspectIntentAction, module_data->intent().action.value_or(""));
+      module_intent_handler_property = mod_inspect_node.CreateString(
+          modular_config::kInspectIntentHandler, module_data->intent().handler.value_or(""));
+
+      std::string formatted_params = "";
+      if (module_data->intent().parameters.has_value()) {
+        for (auto& param : *module_data->intent().parameters) {
+          formatted_params.append("name : " + param.name.value_or("") + " ");
+        }
+      }
+      module_intent_params_property =
+          mod_inspect_node.CreateString(modular_config::kInspectIntentParams, formatted_params);
     }
   };
 

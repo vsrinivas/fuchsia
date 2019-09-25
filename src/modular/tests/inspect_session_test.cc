@@ -40,6 +40,10 @@ using testing::Not;
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 constexpr char kSessionmgrInspectRootGlobPath[] =
     "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/inspect/root.inspect";
+// The initial module's intent parameter data. This needs to be JSON formatted.
+constexpr char kInitialIntentParameterData[] = "\"initial\"";
+constexpr char kIntentAction[] = "action";
+constexpr char kIntentParameterName[] = "intent_parameter";
 
 class InspectSessionTest : public modular::testing::TestHarnessFixture {
  protected:
@@ -86,6 +90,23 @@ class InspectSessionTest : public modular::testing::TestHarnessFixture {
 
     *out_vmo = std::move(info.vmofile().vmo);
     return ZX_OK;
+  }
+  fuchsia::modular::Intent CreateIntent(std::string handler, std::string parameter_name,
+                                        std::string parameter_data) {
+    fuchsia::modular::Intent intent;
+    intent.handler = handler;
+    intent.action = kIntentAction;
+
+    fuchsia::modular::IntentParameter intent_parameter;
+    intent_parameter.name = parameter_name;
+    intent_parameter.data = fuchsia::modular::IntentParameterData();
+    fsl::SizedVmo vmo;
+    ZX_ASSERT(fsl::VmoFromString(parameter_data, &vmo));
+    intent_parameter.data.set_json(std::move(vmo).ToTransport());
+    intent.parameters.emplace();
+    intent.parameters->push_back(std::move(intent_parameter));
+
+    return intent;
   }
 
   modular::testing::FakeSessionShell fake_session_shell_;
@@ -175,7 +196,9 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
-  add_mod.intent.handler = kFakeModuleUrl;
+  auto initial_module_intent =
+      CreateIntent(kFakeModuleUrl, kIntentParameterName, kInitialIntentParameterData);
+  add_mod.intent = std::move(initial_module_intent);
 
   StoryCommand command;
   command.set_add_mod(std::move(add_mod));
@@ -206,8 +229,12 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
   EXPECT_THAT(grandchild.at(0),
               NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                  StringIs("is_embedded", "False"), StringIs("module_source", "EXTERNAL"),
-                  StringIs("is_deleted", "False"))))));
+                  StringIs(modular_config::kInspectIsEmbedded, "False"),
+                  StringIs(modular_config::kInspectModuleSource, "EXTERNAL"),
+                  StringIs(modular_config::kInspectIntentHandler, kFakeModuleUrl),
+                  StringIs(modular_config::kInspectIntentAction, "action"),
+                  StringIs(modular_config::kInspectIsDeleted, "False"),
+                  StringIs(modular_config::kInspectIntentParams, "name : intent_parameter "))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });

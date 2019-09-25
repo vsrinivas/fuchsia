@@ -89,6 +89,7 @@ source_set("story_runner") {
     "//src/modular/bin/sessionmgr/story/model:noop_story_model_storage",
     "//src/modular/bin/sessionmgr/story/model:story_model_owner",
     "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

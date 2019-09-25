@@ -58,6 +58,14 @@ constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
 constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
 
+// Inspect property constants
+constexpr char kInspectModuleSource[] = "module_source";
+constexpr char kInspectIsEmbedded[] = "is_embedded";
+constexpr char kInspectIntentAction[] = "intent_action";
+constexpr char kInspectIntentHandler[] = "intent_handler";
+constexpr char kInspectIntentParams[] = "intent_params";
+constexpr char kInspectIsDeleted[] = "is_deleted";
+
 // Shell constants
 inline constexpr char kDefaultBaseShellUrl[] =
     "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"

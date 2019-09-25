@@ -643,6 +643,22 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
       return;
     }
 
+    // Update the inspect properties of a mod.
+    if (running_mod_info) {
+      running_mod_info->module_intent_action_property.Set(
+          module_data_.intent().action.value_or(""));
+      running_mod_info->module_intent_handler_property.Set(
+          module_data_.intent().handler.value_or(""));
+
+      std::string param_names_str = "";
+      if (module_data_.intent().parameters.has_value()) {
+        for (auto& param : *module_data_.intent().parameters) {
+          param_names_str.append("name : " + param.name.value_or("") + " ");
+        }
+      }
+      running_mod_info->module_intent_params_property.Set(param_names_str);
+    }
+
     // We do not auto-start Modules that were added through ModuleContext on
     // other devices.
     //
