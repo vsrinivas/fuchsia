@@ -56,7 +56,7 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
 
 void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
   ZX_DEBUG_ASSERT(bop != nullptr);
-  fbl::unique_ptr<BlockMessage> msg(static_cast<BlockMessage*>(cookie));
+  fbl::unique_ptr<Message> msg(static_cast<Message*>(cookie));
   msg->Complete(status);
 }
 
@@ -73,7 +73,7 @@ uint32_t OpcodeToCommand(uint32_t opcode) {
 }
 
 void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset,
-                BlockMessage* msg, BlockMessageQueue* queue) {
+                Message* msg, MessageQueue* queue) {
   block_op_t* bop = msg->Op();
   bop->rw.length = (uint32_t)length;
   bop->rw.vmo = vmo;
@@ -84,49 +84,7 @@ void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t 
 
 }  // namespace
 
-IoBuffer::IoBuffer(zx::vmo vmo, vmoid_t id) : io_vmo_(std::move(vmo)), vmoid_(id) {}
-
-IoBuffer::~IoBuffer() {}
-
-zx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
-  uint64_t vmo_size;
-  zx_status_t status;
-  if ((status = io_vmo_.get_size(&vmo_size)) != ZX_OK) {
-    return status;
-  } else if ((vmo_offset > vmo_size) || (vmo_size - vmo_offset < length)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  return ZX_OK;
-}
-
-zx_status_t BlockMessage::Create(size_t block_op_size, fbl::unique_ptr<BlockMessage>* out) {
-  BlockMessage* msg = new (block_op_size) BlockMessage();
-  if (msg == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  msg->iobuf_ = nullptr;
-  msg->server_ = nullptr;
-  msg->op_size_ = block_op_size;
-  *out = fbl::unique_ptr<BlockMessage>(msg);
-  return ZX_OK;
-}
-
-void BlockMessage::Init(fbl::RefPtr<IoBuffer> iobuf, BlockServer* server,
-                        block_fifo_request_t* req) {
-  memset(_op_raw_, 0, op_size_);
-  iobuf_ = std::move(iobuf);
-  server_ = server;
-  reqid_ = req->reqid;
-  group_ = req->group;
-}
-
-void BlockMessage::Complete(zx_status_t status) {
-  server_->TxnComplete(status, reqid_, group_);
-  server_->TxnEnd();
-  iobuf_ = nullptr;
-}
-
-void BlockServer::BarrierComplete() {
+void Server::BarrierComplete() {
   // This is the only location that unsets the OpsComplete
   // signal. We'll never "miss" a signal, because we process
   // the queue AFTER unsetting it.
@@ -135,7 +93,7 @@ void BlockServer::BarrierComplete() {
   InQueueDrainer();
 }
 
-void BlockServer::TerminateQueue() {
+void Server::TerminateQueue() {
   InQueueDrainer();
   while (true) {
     if (pending_count_.load() == 0 && in_queue_.is_empty()) {
@@ -149,7 +107,7 @@ void BlockServer::TerminateQueue() {
     }
   }
 }
-void BlockServer::TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group) {
+void Server::TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group) {
   if (group == kNoGroup) {
     OutOfBandRespond(fifo_, status, reqid, group);
   } else {
@@ -158,7 +116,7 @@ void BlockServer::TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group
   }
 }
 
-zx_status_t BlockServer::Read(block_fifo_request_t* requests, size_t* count) {
+zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
   auto cleanup = fbl::MakeAutoCall([this]() {
     TerminateQueue();
     ZX_ASSERT(pending_count_.load() == 0);
@@ -198,7 +156,7 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, size_t* count) {
   }
 }
 
-zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
+zx_status_t Server::FindVmoIDLocked(vmoid_t* out) {
   for (vmoid_t i = last_id_; i < std::numeric_limits<vmoid_t>::max(); i++) {
     if (!tree_.find(i).IsValid()) {
       *out = i;
@@ -216,7 +174,7 @@ zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
   return ZX_ERR_NO_RESOURCES;
 }
 
-zx_status_t BlockServer::AttachVmo(zx::vmo vmo, vmoid_t* out) {
+zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
   zx_status_t status;
   vmoid_t id;
   fbl::AutoLock server_lock(&server_lock_);
@@ -234,7 +192,7 @@ zx_status_t BlockServer::AttachVmo(zx::vmo vmo, vmoid_t* out) {
   return ZX_OK;
 }
 
-void BlockServer::TxnEnd() {
+void Server::TxnEnd() {
   size_t old_count = pending_count_.fetch_sub(1);
   ZX_ASSERT(old_count > 0);
   if ((old_count == 1) && barrier_in_progress_.load()) {
@@ -245,7 +203,7 @@ void BlockServer::TxnEnd() {
   }
 }
 
-void BlockServer::InQueueDrainer() {
+void Server::InQueueDrainer() {
   while (true) {
     if (in_queue_.is_empty()) {
       return;
@@ -282,11 +240,11 @@ void BlockServer::InQueueDrainer() {
   }
 }
 
-zx_status_t BlockServer::Create(ddk::BlockProtocolClient* bp,
-                                fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                                BlockServer** out) {
+zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
+                           fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
+                           Server** out) {
   fbl::AllocChecker ac;
-  BlockServer* bs = new (&ac) BlockServer(bp);
+  Server* bs = new (&ac) Server(bp);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -318,7 +276,7 @@ zx_status_t BlockServer::Create(ddk::BlockProtocolClient* bp,
   return ZX_OK;
 }
 
-zx_status_t BlockServer::ProcessReadWriteRequest(block_fifo_request_t* request) {
+zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   groupid_t group = request->group;
 
   // TODO(ZX-1586): Reduce the usage of this lock (only used to protect
@@ -344,8 +302,8 @@ zx_status_t BlockServer::ProcessReadWriteRequest(block_fifo_request_t* request) 
     return status;
   }
 
-  fbl::unique_ptr<BlockMessage> msg;
-  if ((status = BlockMessage::Create(block_op_size_, &msg)) != ZX_OK) {
+  fbl::unique_ptr<Message> msg;
+  if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
     return status;
   }
   msg->Init(iobuf.CopyPointer(), this, request);
@@ -362,13 +320,13 @@ zx_status_t BlockServer::ProcessReadWriteRequest(block_fifo_request_t* request) 
     //
     // Once all of these smaller messages are created, splice
     // them into the input queue together.
-    BlockMessageQueue sub_txns_queue;
+    MessageQueue sub_txns_queue;
     uint32_t sub_txns = fbl::round_up(len_remaining, max_xfer) / max_xfer;
     uint32_t sub_txn_idx = 0;
     while (sub_txn_idx != sub_txns) {
       // We'll be using a new BlockMsg for each sub-component.
       if (msg == nullptr) {
-        if ((status = BlockMessage::Create(block_op_size_, &msg)) != ZX_OK) {
+        if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
           return status;
         }
         msg->Init(iobuf.CopyPointer(), this, request);
@@ -398,7 +356,7 @@ zx_status_t BlockServer::ProcessReadWriteRequest(block_fifo_request_t* request) 
   return ZX_OK;
 }
 
-zx_status_t BlockServer::ProcessCloseVmoRequest(block_fifo_request_t* request) {
+zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
   fbl::AutoLock server_lock(&server_lock_);
 
   auto iobuf = tree_.find(request->vmoid);
@@ -413,11 +371,11 @@ zx_status_t BlockServer::ProcessCloseVmoRequest(block_fifo_request_t* request) {
   return ZX_OK;
 }
 
-zx_status_t BlockServer::ProcessFlushRequest(block_fifo_request_t* request) {
+zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
   zx_status_t status;
 
-  fbl::unique_ptr<BlockMessage> msg;
-  if ((status = BlockMessage::Create(block_op_size_, &msg)) != ZX_OK) {
+  fbl::unique_ptr<Message> msg;
+  if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
     return status;
   }
   msg->Init(nullptr, this, request);
@@ -426,13 +384,13 @@ zx_status_t BlockServer::ProcessFlushRequest(block_fifo_request_t* request) {
   return ZX_OK;
 }
 
-zx_status_t BlockServer::ProcessTrimRequest(block_fifo_request_t* request) {
+zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
   if (!request->length) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<BlockMessage> msg;
-  zx_status_t status = BlockMessage::Create(block_op_size_, &msg);
+  fbl::unique_ptr<Message> msg;
+  zx_status_t status = Message::Create(block_op_size_, &msg);
   if (status != ZX_OK) {
     return status;
   }
@@ -444,7 +402,7 @@ zx_status_t BlockServer::ProcessTrimRequest(block_fifo_request_t* request) {
   return ZX_OK;
 }
 
-void BlockServer::ProcessRequest(block_fifo_request_t* request) {
+void Server::ProcessRequest(block_fifo_request_t* request) {
   zx_status_t status;
   switch (request->opcode & BLOCKIO_OP_MASK) {
     case BLOCKIO_READ:
@@ -473,7 +431,7 @@ void BlockServer::ProcessRequest(block_fifo_request_t* request) {
   }
 }
 
-zx_status_t BlockServer::Serve() {
+zx_status_t Server::Serve() {
   zx_status_t status;
   block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
   size_t count;
@@ -517,7 +475,7 @@ zx_status_t BlockServer::Serve() {
   }
 }
 
-BlockServer::BlockServer(ddk::BlockProtocolClient* bp)
+Server::Server(ddk::BlockProtocolClient* bp)
     : bp_(bp),
       block_op_size_(0),
       pending_count_(0),
@@ -527,12 +485,12 @@ BlockServer::BlockServer(ddk::BlockProtocolClient* bp)
   bp->Query(&info_, &block_op_size);
 }
 
-BlockServer::~BlockServer() {
+Server::~Server() {
   ZX_ASSERT(pending_count_.load() == 0);
   ZX_ASSERT(in_queue_.is_empty());
 }
 
-void BlockServer::ShutDown() {
+void Server::ShutDown() {
   // Identify that the server should stop reading and return,
   // implicitly closing the fifo.
   fifo_.signal(0, kSignalFifoTerminate);

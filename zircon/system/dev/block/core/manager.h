@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_MANAGER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_MANAGER_H_
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_
 
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -16,14 +16,14 @@
 
 #include "server.h"
 
-// ServerManager controls the state of a background thread (or threads) servicing Fifo
+// Manager controls the state of a background thread (or threads) servicing Fifo
 // requests.
-class ServerManager {
+class Manager {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(ServerManager);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Manager);
 
-  ServerManager();
-  ~ServerManager();
+  Manager();
+  ~Manager();
 
   // Launches the Fifo server in a background thread.
   //
@@ -74,7 +74,7 @@ class ServerManager {
 
   thrd_t thread_;
   std::atomic<ThreadState> state_ = ThreadState::None;
-  BlockServer* server_ = nullptr;
+  Server* server_ = nullptr;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_MANAGER_H_
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_

@@ -38,8 +38,7 @@
 #include <fbl/mutex.h>
 #include <storage-metrics/block-metrics.h>
 
-#include "server-manager.h"
-#include "server.h"
+#include "manager.h"
 
 class BlockDevice;
 
@@ -187,7 +186,7 @@ class BlockDevice : public BlockDeviceType,
   bool has_bootpart_ = false;
 
   // Manages the background FIFO server.
-  ServerManager server_manager_;
+  Manager manager_;
 
   fbl::Mutex io_lock_;
   zx::vmo io_vmo_ TA_GUARDED(io_lock_);
@@ -463,18 +462,18 @@ zx_status_t BlockDevice::FidlBlockGetStats(bool clear, fidl_txn_t* txn) {
 
 zx_status_t BlockDevice::FidlBlockGetFifo(fidl_txn_t* txn) {
   zx::fifo fifo;
-  zx_status_t status = server_manager_.StartServer(&self_protocol_, &fifo);
+  zx_status_t status = manager_.StartServer(&self_protocol_, &fifo);
   return fuchsia_hardware_block_BlockGetFifo_reply(txn, status, fifo.release());
 }
 
 zx_status_t BlockDevice::FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn) {
   fuchsia_hardware_block_VmoID vmoid = {fuchsia_hardware_block_VMOID_INVALID};
-  zx_status_t status = server_manager_.AttachVmo(zx::vmo(vmo), &vmoid.id);
+  zx_status_t status = manager_.AttachVmo(zx::vmo(vmo), &vmoid.id);
   return fuchsia_hardware_block_BlockAttachVmo_reply(txn, status, &vmoid);
 }
 
 zx_status_t BlockDevice::FidlBlockCloseFifo(fidl_txn_t* txn) {
-  return fuchsia_hardware_block_BlockCloseFifo_reply(txn, server_manager_.CloseFifoServer());
+  return fuchsia_hardware_block_BlockCloseFifo_reply(txn, manager_.CloseFifoServer());
 }
 
 zx_status_t BlockDevice::FidlBlockRebindDevice(fidl_txn_t* txn) {

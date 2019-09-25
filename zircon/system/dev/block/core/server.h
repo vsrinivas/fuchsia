@@ -24,91 +24,21 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
+#include "iobuffer.h"
+#include "message.h"
 #include "txn-group.h"
 
-// Represents the mapping of "vmoid --> VMO"
-class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,
-                 public fbl::RefCounted<IoBuffer> {
+class Server {
  public:
-  vmoid_t GetKey() const { return vmoid_; }
-
-  // TODO(smklein): This function is currently labelled 'hack' since we have
-  // no way to ensure that the size of the VMO won't change in between
-  // checking it and using it.  This will require a mechanism to "pin" VMO pages.
-  // The units of length and vmo_offset is bytes.
-  zx_status_t ValidateVmoHack(uint64_t length, uint64_t vmo_offset);
-
-  zx_handle_t vmo() const { return io_vmo_.get(); }
-
-  IoBuffer(zx::vmo vmo, vmoid_t vmoid);
-  ~IoBuffer();
-
- private:
-  friend struct TypeWAVLTraits;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(IoBuffer);
-
-  const zx::vmo io_vmo_;
-  const vmoid_t vmoid_;
-};
-
-class BlockServer;
-class BlockMessage;
-
-// A single unit of work transmitted to the underlying block layer.
-// BlockMessage contains a block_op_t, which is dynamically sized. Therefore, it implements its
-// own allocator that takes block_op_size.
-class BlockMessage final : public fbl::DoublyLinkedListable<BlockMessage*> {
- public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlockMessage);
-  BlockMessage() {}
-
-  // Overloaded new operator allows variable-sized allocation to match block op size.
-  void* operator new(size_t size) = delete;
-  void* operator new(size_t size, size_t block_op_size) {
-    return calloc(1, size + block_op_size - sizeof(block_op_t));
-  }
-  void operator delete(void* msg) { free(msg); }
-
-  // Allocate a new, uninitialized BlockMessage whose block_op begins in a memory region that
-  // is block_op_size bytes long.
-  static zx_status_t Create(size_t block_op_size, fbl::unique_ptr<BlockMessage>* out);
-
-  // Initialize the contents of this from the supplied args. block_op op_ is cleared.
-  void Init(fbl::RefPtr<IoBuffer> iobuf, BlockServer* server, block_fifo_request_t* req);
-
-  // End the transaction specified by reqid and group, and release iobuf.
-  // BlockMessage can be reused with another call to Init().
-  void Complete(zx_status_t status);
-
-  block_op_t* Op() { return &op_; }
-
- private:
-  fbl::RefPtr<IoBuffer> iobuf_;
-  BlockServer* server_;
-  reqid_t reqid_;
-  groupid_t group_;
-  size_t op_size_;
-  // Must be at the end of structure.
-  union {
-    block_op_t op_;
-    uint8_t _op_raw_[1];  // Extra space for underlying block_op.
-  };
-};
-
-using BlockMessageQueue = fbl::DoublyLinkedList<BlockMessage*>;
-
-class BlockServer {
- public:
-  // Creates a new BlockServer.
+  // Creates a new Server.
   static zx_status_t Create(ddk::BlockProtocolClient* bp,
                             fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                            BlockServer** out);
+                            Server** out);
 
-  // Starts the BlockServer using the current thread
+  // Starts the Server using the current thread
   zx_status_t Serve() TA_EXCL(server_lock_);
   zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_);
 
@@ -127,11 +57,11 @@ class BlockServer {
   void TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group);
 
   void ShutDown();
-  ~BlockServer();
+  ~Server();
 
  private:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-  BlockServer(ddk::BlockProtocolClient* bp);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Server);
+  Server(ddk::BlockProtocolClient* bp);
 
   // Helper for processing a single message read from the FIFO.
   void ProcessRequest(block_fifo_request_t* request);
@@ -166,7 +96,7 @@ class BlockServer {
   // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
   // next operation that arrives.
   bool deferred_barrier_before_ = false;
-  BlockMessageQueue in_queue_;
+  MessageQueue in_queue_;
   std::atomic<size_t> pending_count_;
   std::atomic<bool> barrier_in_progress_;
   TransactionGroup groups_[MAX_TXN_GROUP_COUNT];

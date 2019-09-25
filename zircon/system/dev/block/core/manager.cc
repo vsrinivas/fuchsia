@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "server-manager.h"
+#include "manager.h"
 
 #include <assert.h>
 
@@ -10,11 +10,11 @@
 
 #include <ddk/debug.h>
 
-ServerManager::ServerManager() = default;
+Manager::Manager() = default;
 
-ServerManager::~ServerManager() { CloseFifoServer(); }
+Manager::~Manager() { CloseFifoServer(); }
 
-bool ServerManager::IsFifoServerRunning() {
+bool Manager::IsFifoServerRunning() {
   switch (GetState()) {
     case ThreadState::Running:
       return true;
@@ -29,14 +29,14 @@ bool ServerManager::IsFifoServerRunning() {
   return false;
 }
 
-zx_status_t ServerManager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* out_fifo) {
+zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* out_fifo) {
   if (IsFifoServerRunning()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   ZX_DEBUG_ASSERT(server_ == nullptr);
-  BlockServer* server;
+  Server* server;
   fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
-  zx_status_t status = BlockServer::Create(protocol, &fifo, &server);
+  zx_status_t status = Server::Create(protocol, &fifo, &server);
   if (status != ZX_OK) {
     return status;
   }
@@ -50,7 +50,7 @@ zx_status_t ServerManager::StartServer(ddk::BlockProtocolClient* protocol, zx::f
   return ZX_OK;
 }
 
-zx_status_t ServerManager::CloseFifoServer() {
+zx_status_t Manager::CloseFifoServer() {
   switch (GetState()) {
     case ThreadState::Running:
       server_->ShutDown();
@@ -66,26 +66,26 @@ zx_status_t ServerManager::CloseFifoServer() {
   return ZX_OK;
 }
 
-zx_status_t ServerManager::AttachVmo(zx::vmo vmo, vmoid_t* out_vmoid) {
+zx_status_t Manager::AttachVmo(zx::vmo vmo, vmoid_t* out_vmoid) {
   if (server_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
   return server_->AttachVmo(std::move(vmo), out_vmoid);
 }
 
-void ServerManager::JoinServer() {
+void Manager::JoinServer() {
   thrd_join(thread_, nullptr);
   FreeServer();
 }
 
-void ServerManager::FreeServer() {
+void Manager::FreeServer() {
   SetState(ThreadState::None);
   delete server_;
   server_ = nullptr;
 }
 
-int ServerManager::RunServer(void* arg) {
-  ServerManager* manager = reinterpret_cast<ServerManager*>(arg);
+int Manager::RunServer(void* arg) {
+  Manager* manager = reinterpret_cast<Manager*>(arg);
 
   // The completion of "thrd_create" synchronizes-with the beginning of this thread, so
   // we may assume that "manager->server_" is available for our usage.

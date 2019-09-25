@@ -6,7 +6,9 @@ driver("core") {
   output_name = "block.core"
   sources = [
     "block-device.cc",
-    "server-manager.cc",
+    "iobuffer.cc",
+    "manager.cc",
+    "message.cc",
     "server.cc",
     "txn-group.cc",
   ]
