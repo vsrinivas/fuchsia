@@ -12,6 +12,7 @@
 use {
     crate::collection::*,
     crate::selectors,
+    crate::trie::*,
     failure::{self, err_msg, format_err, Error},
     fidl_fuchsia_diagnostics_inspect::{
         DisplaySettings, FormatSettings, ReaderError, ReaderRequest, ReaderRequestStream,
@@ -26,6 +27,8 @@ use {
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
 };
+
+type InspectDataTrie = Trie<char, (PathBuf, DirectoryProxy)>;
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
@@ -145,16 +148,22 @@ impl DataCollector for InspectDataCollector {
 pub struct InspectDataRepository {
     // TODO(lukenicholson): Wrap directory proxies in a trie of
     // component names to make filtering by selectors work.
-    data_directories: Vec<(PathBuf, DirectoryProxy)>,
+    data_directories: InspectDataTrie,
 }
 
 impl InspectDataRepository {
     pub fn new() -> Self {
-        InspectDataRepository { data_directories: Vec::new() }
+        InspectDataRepository { data_directories: InspectDataTrie::new() }
     }
 
-    pub fn add(&mut self, component_hierachy_path: PathBuf, directory_proxy: DirectoryProxy) {
-        self.data_directories.push((component_hierachy_path, directory_proxy));
+    pub fn add(
+        &mut self,
+        component_name: String,
+        component_hierachy_path: PathBuf,
+        directory_proxy: DirectoryProxy,
+    ) {
+        self.data_directories
+            .insert(component_name.chars().collect(), (component_hierachy_path, directory_proxy));
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
@@ -163,7 +172,7 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, y)| match io_util::clone_directory(y, CLONE_FLAG_SAME_RIGHTS) {
+            .filter_map(|(_, (_, y))| match io_util::clone_directory(&y, CLONE_FLAG_SAME_RIGHTS) {
                 Ok(directory) => Some(directory),
                 Err(_) => None,
             })
@@ -473,7 +482,7 @@ mod tests {
                 let out_dir_proxy =
                     InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
-                inspect_repo.add(path, out_dir_proxy);
+                inspect_repo.add("root.inspect".to_string(), path, out_dir_proxy);
 
                 let reader_server = ReaderServer::new(Arc::new(Mutex::new(inspect_repo)));
 

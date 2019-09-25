@@ -23,6 +23,7 @@ mod diagnostics;
 mod inspect;
 mod logs;
 mod selectors;
+mod trie;
 
 static ARCHIVE_PATH: &str = "/data/archive";
 static ARCHIVE_CONFIG_FILE: &str = "/config/data/archivist_config.json";
@@ -308,7 +309,11 @@ fn populate_inspect_repo(
     // as an Option is only to support mock objects for equality in tests.
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
 
-    inspect_repo.add(inspect_reader_data.component_hierarchy_path, inspect_directory_proxy);
+    inspect_repo.add(
+        inspect_reader_data.component_name,
+        inspect_reader_data.component_hierarchy_path,
+        inspect_directory_proxy,
+    );
     Ok(())
 }
 
