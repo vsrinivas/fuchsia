@@ -5,22 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_DEVICE_H_
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/wlanphyimpl.h>
-#include <fbl/unique_ptr.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
-#include <usb/usb.h>
-#include <wlan/common/macaddr.h>
-#include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
-
-#include <fuchsia/wlan/device/cpp/fidl.h>
 
 #include <array>
 #include <cstddef>
@@ -31,6 +19,18 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/usb.h>
+#include <ddk/protocol/wlanphyimpl.h>
+#include <fbl/unique_ptr.h>
+#include <usb/usb.h>
+#include <wlan/common/macaddr.h>
+#include <wlan/protocol/mac.h>
 
 namespace ralink {
 
@@ -343,6 +343,7 @@ class Device {
   std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
   uint16_t iface_id_ __TA_GUARDED(lock_) = 0;
   uint16_t iface_role_ __TA_GUARDED(lock_) = 0;
+  zx::channel iface_sme_channel_ __TA_GUARDED(lock_) = {};
 
   constexpr static zx::duration kDisconnectQuiescePeriod = zx::msec(10);
   zx::time last_disconnect_time_ = {};

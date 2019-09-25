@@ -3522,6 +3522,7 @@ void Device::MacRelease() {
   // Bump the iface id in case the phy isn't being released and we want to create another
   // iface.
   iface_id_++;
+  iface_sme_channel_.reset();
 }
 
 zx_status_t Device::AddPhyDevice() {
@@ -3568,7 +3569,8 @@ zx_status_t Device::Query(wlan_info_t* info) {
   info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
   info->caps =
       WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
-  info->driver_features = WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT;
+  info->driver_features =
+      WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT | WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
   info->bands_count = 1;
   info->bands[0] = {
       .band = WLAN_INFO_BAND_2GHZ,
@@ -3715,6 +3717,13 @@ zx_status_t Device::CreateIface(const wlanphy_impl_create_iface_req_t* req,
   }
 
   zx_status_t status = AddMacDevice();
+  {
+    std::lock_guard<std::mutex> guard(lock_);
+    *out_iface_id = iface_id_;
+    iface_role_ = req->role;
+    iface_state_ = IFC_RUNNING;
+    iface_sme_channel_ = zx::channel(req->sme_channel);
+  }
 
   if (status != ZX_OK) {
     errorf("could not add iface device err: %s\n", zx_status_get_string(status));
@@ -3795,6 +3804,9 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
   if (wlanmac_proxy_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
+  if (!iface_sme_channel_.is_valid()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
 
   zx_status_t status = LoadFirmware();
   if (status != ZX_OK) {
@@ -3808,7 +3820,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
     zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_, parent_req_size_);
     if (status != ZX_OK) {
       errorf("failed to allocate rx usb request\n");
-      return status;
+      goto err;
     }
     usb_request_complete_t complete = {
         .callback = &Device::ReadRequestComplete,
@@ -3817,79 +3829,85 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
     usb_request_queue(&usb_, req, &complete);
   }
   // Only one TX queue for now
-  auto tx_endpt = tx_endpts_.front();
-  for (size_t i = 0; i < kWriteReqCount; i++) {
-    usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt, parent_req_size_);
-    if (status != ZX_OK) {
-      errorf("failed to allocate tx usb request\n");
-      return status;
+  {
+    auto tx_endpt = tx_endpts_.front();
+    for (size_t i = 0; i < kWriteReqCount; i++) {
+      usb_request_t* req;
+      zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt, parent_req_size_);
+      if (status != ZX_OK) {
+        errorf("failed to allocate tx usb request\n");
+        goto err;
+      }
+      free_write_reqs_.push_back(req);
     }
-    free_write_reqs_.push_back(req);
   }
 
   status = EnableRadio();
   if (status != ZX_OK) {
     errorf("could not enable radio\n");
-    return status;
+    goto err;
   }
 
   status = StartQueues();
   if (status != ZX_OK) {
     errorf("could not start queues\n");
-    return status;
+    goto err;
   }
 
   status = SetupInterface();
   if (status != ZX_OK) {
     errorf("could not setup interface\n");
-    return status;
+    goto err;
   }
 
   // TODO(tkilbourn): configure erp?
   // TODO(tkilbourn): configure tx
 
-  // TODO(tkilbourn): configure retry limit (move this)
-  TxRtyCfg trc;
-  status = ReadRegister(&trc);
-  CHECK_READ(TX_RTY_CFG, status);
-  trc.set_short_rty_limit(0x07);
-  trc.set_long_rty_limit(0x04);
-  status = WriteRegister(trc);
-  CHECK_WRITE(TX_RTY_CFG, status);
+  {
+    // TODO(tkilbourn): configure retry limit (move this)
+    TxRtyCfg trc;
+    status = ReadRegister(&trc);
+    CHECK_READ(TX_RTY_CFG, status);
+    trc.set_short_rty_limit(0x07);
+    trc.set_long_rty_limit(0x04);
+    status = WriteRegister(trc);
+    CHECK_WRITE(TX_RTY_CFG, status);
 
-  // TODO(tkilbourn): configure power save (move these)
-  AutoWakeupCfg awc;
-  status = ReadRegister(&awc);
-  CHECK_READ(AUTO_WAKEUP_CFG, status);
-  awc.set_wakeup_lead_time(0);
-  awc.set_sleep_tbtt_num(0);
-  awc.set_auto_wakeup_en(0);
-  status = WriteRegister(awc);
-  CHECK_WRITE(AUTO_WAKEUP_CFG, status);
+    // TODO(tkilbourn): configure power save (move these)
+    AutoWakeupCfg awc;
+    status = ReadRegister(&awc);
+    CHECK_READ(AUTO_WAKEUP_CFG, status);
+    awc.set_wakeup_lead_time(0);
+    awc.set_sleep_tbtt_num(0);
+    awc.set_auto_wakeup_en(0);
+    status = WriteRegister(awc);
+    CHECK_WRITE(AUTO_WAKEUP_CFG, status);
+  }
 
   status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
   if (status != ZX_OK) {
     errorf("error waking MCU err=%d\n", status);
-    return status;
+    goto err;
   }
 
-  // TODO(tkilbourn): configure antenna
-  // for now I'm hardcoding some antenna values
-  Bbp1 bbp1;
-  status = ReadBbp(&bbp1);
-  CHECK_READ(BBP1, status);
-  Bbp3 bbp3;
-  status = ReadBbp(&bbp3);
-  CHECK_READ(BBP3, status);
-  bbp3.set_val(0x00);
-  bbp1.set_val(0x40);
-  status = WriteBbp(bbp3);
-  CHECK_WRITE(BBP3, status);
-  status = WriteBbp(bbp1);
-  CHECK_WRITE(BBP1, status);
-  status = WriteBbp(BbpRegister<66>(0x1c));
-  CHECK_WRITE(BBP66, status);
+  {
+    // TODO(tkilbourn): configure antenna
+    // for now I'm hardcoding some antenna values
+    Bbp1 bbp1;
+    status = ReadBbp(&bbp1);
+    CHECK_READ(BBP1, status);
+    Bbp3 bbp3;
+    status = ReadBbp(&bbp3);
+    CHECK_READ(BBP3, status);
+    bbp3.set_val(0x00);
+    bbp1.set_val(0x40);
+    status = WriteBbp(bbp3);
+    CHECK_WRITE(BBP3, status);
+    status = WriteBbp(bbp1);
+    CHECK_WRITE(BBP1, status);
+    status = WriteBbp(BbpRegister<66>(0x1c));
+    CHECK_WRITE(BBP66, status);
+  }
 
   status = SetRxFilter();
   if (status != ZX_OK) {
@@ -3905,8 +3923,13 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
 
   StartInterruptPolling();
 
+  *out_sme_channel = iface_sme_channel_.release();
   infof("wlan started\n");
   return ZX_OK;
+
+err:
+  iface_sme_channel_.reset();
+  return status;
 }
 
 zx_status_t Device::StartInterruptPolling() {
