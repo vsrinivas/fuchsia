@@ -10,6 +10,7 @@ group("input") {
     "goodix",
     "hid",
     "hid-buttons",
+    "hid-input-report",
     "hidctl",
     "i2c-hid",
     "usb-hid",
