@@ -151,7 +151,10 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
   SdioUpdateBlockSizeLocked(0, 0, true);
   // 0 is the common function. Already initialized
   for (size_t i = 1; i < hw_info_.num_funcs; i++) {
-    st = InitFunc(static_cast<uint8_t>(i));
+    if ((st = InitFunc(static_cast<uint8_t>(i))) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc_probe_sdio: Failed to initialize function %zu, retcode = %d\n", i, st);
+      return st;
+    }
   }
 
   zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized successfully\n");

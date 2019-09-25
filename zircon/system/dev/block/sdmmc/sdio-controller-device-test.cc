@@ -582,4 +582,15 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
   EXPECT_NOT_OK(dut_.SdioDoRwTxn(3, &txn));
 }
 
+TEST_F(SdioControllerDeviceTest, ProbeFail) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x5000'0000; });
+
+  // Set the function 3 CIS pointer to zero. This should cause InitFunc and subsequently ProbeSdio
+  // to fail.
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x00, 0x00}, 0);
+
+  EXPECT_NOT_OK(dut_.ProbeSdio());
+}
+
 }  // namespace sdmmc
