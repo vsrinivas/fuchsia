@@ -80,7 +80,9 @@ pub async fn load_vmo<'a>(
 ) -> Result<zx::Vmo, Error> {
     let file_proxy =
         io_util::open_file(dir_proxy, &Path::new(object_name), io_util::OPEN_RIGHT_READABLE)?;
-    let (status, fidlbuf) = file_proxy.get_buffer(VMO_FLAG_READ).await
+    let (status, fidlbuf) = file_proxy
+        .get_buffer(VMO_FLAG_READ)
+        .await
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
     if status != zx::Status::OK {

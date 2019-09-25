@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod library_loader;
-
 use {
     crate::{
         clonable_error::ClonableError,
@@ -31,6 +29,7 @@ use {
         future::{AbortHandle, Abortable, BoxFuture},
         lock::Mutex,
     },
+    library_loader,
     rand::Rng,
     std::{collections::HashMap, iter, path::Path, sync::Arc},
 };
@@ -215,7 +214,10 @@ impl ElfRunner {
         elf_dir
             .add_entry("job_id", { read_only(move || Ok(Vec::from(job_id.to_string()))) })
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
-        runtime_dir.controller.add_entry_res("elf", elf_dir).await
+        runtime_dir
+            .controller
+            .add_entry_res("elf", elf_dir)
+            .await
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
         Ok(())
     }
@@ -264,7 +266,8 @@ impl ElfRunner {
         // applications to get handles to things the application author didn't intend.
         library_loader::start(lib_proxy, ll_service_chan);
 
-        let executable_vmo = library_loader::load_vmo(pkg_proxy, &bin_path).await
+        let executable_vmo = library_loader::load_vmo(pkg_proxy, &bin_path)
+            .await
             .context("error loading executable")?;
 
         let child_job = job_default().create_child_job()?;
@@ -339,9 +342,10 @@ impl ElfRunner {
             .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         // Load the component
-        let (runtime_dir, mut launch_info) =
-            self.load_launch_info(&resolved_url, start_info, &launcher).await
-                .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
+        let (runtime_dir, mut launch_info) = self
+            .load_launch_info(&resolved_url, start_info, &launcher)
+            .await
+            .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         let job_koid = launch_info
             .job
@@ -367,7 +371,8 @@ impl ElfRunner {
             }
 
             Ok(process_koid)
-        }.await
+        }
+            .await
             .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
         if let Some(runtime_dir) = runtime_dir {
@@ -557,7 +562,9 @@ mod tests {
         let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
         let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
         let runner = ElfRunner::new(launcher_connector);
-        runner.start_async(start_info).await
+        runner
+            .start_async(start_info)
+            .await
             .expect_err("hello_world_fail_test succeeded unexpectedly");
         Ok(())
     }

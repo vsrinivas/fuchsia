@@ -9,5 +9,6 @@ group("tests") {
     "fuchsia_backoff:fuchsia_backoff_tests",
     "fuchsia_url:tests",
     "fuchsia_url_rewrite:tests",
+    "library_loader:tests",
   ]
 }
