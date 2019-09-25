@@ -21,6 +21,7 @@ mod central;
 mod gatt;
 
 fn do_scan(
+    appname: &String,
     args: &[String],
     central: &CentralProxy,
 ) -> (Option<u64>, bool, impl Future<Output = Result<(), Error>>) {
@@ -49,8 +50,11 @@ fn do_scan(
     };
 
     if matches.opt_present("h") {
-        let brief = "Usage: ble-central-tool scan (--connect|--scan-count=N) [--name-filter=NAME] \
-                     [--uuid-filter=UUID]";
+        let brief = format!(
+            "Usage: {} scan (--connect|--scan-count=N) [--name-filter=NAME] \
+             [--uuid-filter=UUID]",
+            appname
+        );
         print!("{}", opts.usage(&brief));
         return (None, false, Left(future::ready(Err(BTError::new("invalid input").into()))));
     }
@@ -184,7 +188,7 @@ fn main() -> Result<(), Error> {
                 let fut = {
                     let mut central = state.write();
                     let (remaining_scan_results, connect, fut) =
-                        do_scan(&args[2..], central.get_svc());
+                        do_scan(appname, &args[2..], central.get_svc());
                     central.remaining_scan_results = remaining_scan_results;
                     central.connect = connect;
                     fut
