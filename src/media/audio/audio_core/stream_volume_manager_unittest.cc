@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
+#include <lib/gtest/test_loop_fixture.h>
+
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
@@ -26,63 +28,92 @@ class MockStreamVolume : public StreamVolume {
   VolumeCommand volume_command_ = {};
 };
 
-TEST(StreamVolumeManagerTest, StreamCanUpdateSelf) {
-  MockStreamVolume mock;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+class StreamVolumeManagerTest : public ::gtest::TestLoopFixture {
+ protected:
+  StreamVolumeManagerTest() : manager_(dispatcher()) {}
 
-  StreamVolumeManager manager;
-  manager.NotifyStreamChanged(&mock);
-  EXPECT_FLOAT_EQ(mock.volume_command_.volume, 1.0);
-  EXPECT_FLOAT_EQ(mock.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
-  EXPECT_EQ(mock.volume_command_.ramp, std::nullopt);
+  fuchsia::media::audio::VolumeControlPtr AddClientForUsage(fuchsia::media::Usage usage) {
+    fuchsia::media::audio::VolumeControlPtr volume_control_ptr;
+    manager_.BindUsageVolumeClient(std::move(usage), volume_control_ptr.NewRequest(dispatcher()));
+    return volume_control_ptr;
+  }
+
+  MockStreamVolume mock_;
+  StreamVolumeManager manager_;
+};
+
+TEST_F(StreamVolumeManagerTest, StreamCanUpdateSelf) {
+  mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+
+  manager_.NotifyStreamChanged(&mock_);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 1.0);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
+  EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
 }
 
-TEST(StreamVolumeManagerTest, UsageChangesUpdateRegisteredStreams) {
-  MockStreamVolume mock;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+TEST_F(StreamVolumeManagerTest, UsageChangesUpdateRegisteredStreams) {
+  mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
 
-  StreamVolumeManager manager;
-  manager.AddStream(&mock);
-  manager.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), -10.0);
+  manager_.AddStream(&mock_);
+  manager_.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), -10.0);
 
-  EXPECT_FLOAT_EQ(mock.volume_command_.gain_db_adjustment, -10.0);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, -10.0);
 }
 
-TEST(StreamVolumeManagerTest, StreamMuteIsConsidered) {
-  MockStreamVolume mock;
-  mock.mute_ = true;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+TEST_F(StreamVolumeManagerTest, StreamMuteIsConsidered) {
+  mock_.mute_ = true;
+  mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
 
-  StreamVolumeManager manager;
-  manager.AddStream(&mock);
-  manager.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 0.0);
+  manager_.AddStream(&mock_);
+  manager_.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 0.0);
 
-  EXPECT_EQ(mock.volume_command_.gain_db_adjustment, fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_EQ(mock_.volume_command_.gain_db_adjustment, fuchsia::media::audio::MUTED_GAIN_DB);
 }
 
-TEST(StreamVolumeManagerTest, StreamsCanBeRemoved) {
-  MockStreamVolume mock;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+TEST_F(StreamVolumeManagerTest, StreamsCanBeRemoved) {
+  mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
 
-  StreamVolumeManager manager;
-  manager.AddStream(&mock);
-  manager.RemoveStream(&mock);
-  manager.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 10.0);
+  manager_.AddStream(&mock_);
+  manager_.RemoveStream(&mock_);
+  manager_.SetUsageGain(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 10.0);
 
-  EXPECT_FLOAT_EQ(mock.volume_command_.volume, 0.0);
-  EXPECT_FLOAT_EQ(mock.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
-  EXPECT_EQ(mock.volume_command_.ramp, std::nullopt);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 0.0);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
+  EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
 }
 
-TEST(StreamVolumeManagerTest, StreamsCanRamp) {
-  MockStreamVolume mock;
-  mock.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+TEST_F(StreamVolumeManagerTest, StreamsCanRamp) {
+  mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION);
 
-  StreamVolumeManager manager;
-  manager.NotifyStreamChanged(&mock, Ramp{100, fuchsia::media::audio::RampType::SCALE_LINEAR});
+  manager_.NotifyStreamChanged(&mock_, Ramp{100, fuchsia::media::audio::RampType::SCALE_LINEAR});
 
-  EXPECT_EQ(mock.volume_command_.ramp->duration_ns, 100);
-  EXPECT_EQ(mock.volume_command_.ramp->ramp_type, fuchsia::media::audio::RampType::SCALE_LINEAR);
+  EXPECT_EQ(mock_.volume_command_.ramp->duration_ns, 100);
+  EXPECT_EQ(mock_.volume_command_.ramp->ramp_type, fuchsia::media::audio::RampType::SCALE_LINEAR);
+}
+
+TEST_F(StreamVolumeManagerTest, UsageVolumeChangeUpdatesStream) {
+  MockStreamVolume media_stream;
+  media_stream.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA);
+
+  MockStreamVolume system_agent_stream;
+  system_agent_stream.usage_ = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+
+  manager_.AddStream(&media_stream);
+  manager_.AddStream(&system_agent_stream);
+
+  auto media_client = AddClientForUsage(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA));
+  media_client->SetVolume(0.8);
+  RunLoopUntilIdle();
+
+  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8);
+  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 0.0);
+
+  auto system_client =
+      AddClientForUsage(UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT));
+  system_client->SetVolume(0.9);
+  RunLoopUntilIdle();
+  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8);
+  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 0.9);
 }
 
 }  // namespace

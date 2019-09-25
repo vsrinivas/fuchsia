@@ -13,6 +13,7 @@
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/usage_settings.h"
+#include "src/media/audio/audio_core/volume_control.h"
 
 namespace media::audio {
 
@@ -50,13 +51,16 @@ class StreamVolumeManager {
   StreamVolumeManager& operator=(StreamVolumeManager) = delete;
   StreamVolumeManager& operator=(StreamVolumeManager&&) = delete;
 
-  StreamVolumeManager() = default;
+  StreamVolumeManager(async_dispatcher_t* fidl_dispatcher);
 
   const UsageGainSettings& GetUsageGainSettings() const;
 
   // Sets usage gain settings and updates affected streams.
   void SetUsageGain(fuchsia::media::Usage usage, float gain_db);
   void SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db);
+
+  void BindUsageVolumeClient(fuchsia::media::Usage usage,
+                             fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request);
 
   // Prompts the volume manager to recompute the stream's adjusted gain and send a realization
   // request.
@@ -67,9 +71,28 @@ class StreamVolumeManager {
   void RemoveStream(StreamVolume* stream_volume);
 
  private:
+  class VolumeSettingImpl final : public VolumeSetting {
+   public:
+    VolumeSettingImpl(fuchsia::media::Usage usage, StreamVolumeManager* owner);
+
+    void SetVolume(float volume) override;
+
+   private:
+    fuchsia::media::Usage usage_;
+    StreamVolumeManager* owner_;
+  };
+
+  void SetUsageVolume(fuchsia::media::Usage usage, float volume);
+
   void UpdateStreamsWithUsage(fuchsia::media::Usage usage);
   void UpdateStream(StreamVolume* stream, std::optional<Ramp> ramp);
 
+  std::array<VolumeSettingImpl, fuchsia::media::RENDER_USAGE_COUNT>
+      render_usage_volume_setting_impls_;
+  std::array<VolumeSettingImpl, fuchsia::media::CAPTURE_USAGE_COUNT>
+      capture_usage_volume_setting_impls_;
+  std::array<VolumeControl, fuchsia::media::RENDER_USAGE_COUNT> render_usage_volume_controls_;
+  std::array<VolumeControl, fuchsia::media::CAPTURE_USAGE_COUNT> capture_usage_volume_controls_;
   std::unordered_set<StreamVolume*> stream_volumes_;
   UsageGainSettings usage_gain_settings_;
   UsageVolumeSettings usage_volume_settings_;

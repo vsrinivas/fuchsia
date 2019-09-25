@@ -6,6 +6,55 @@
 
 namespace media::audio {
 
+StreamVolumeManager::VolumeSettingImpl::VolumeSettingImpl(fuchsia::media::Usage usage,
+                                                          StreamVolumeManager* owner)
+    : usage_(std::move(usage)), owner_(owner) {}
+
+void StreamVolumeManager::VolumeSettingImpl::SetVolume(float volume) {
+  owner_->SetUsageVolume(fidl::Clone(usage_), volume);
+}
+
+StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher)
+    : render_usage_volume_setting_impls_{
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::BACKGROUND), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::COMMUNICATION), this),
+      },
+      capture_usage_volume_setting_impls_{
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::BACKGROUND), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::FOREGROUND), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT), this),
+          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::COMMUNICATION), this),
+      },
+      render_usage_volume_controls_{
+        VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND)], fidl_dispatcher),
+        VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA)], fidl_dispatcher),
+        VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION)], fidl_dispatcher),
+        VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT)], fidl_dispatcher),
+        VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)], fidl_dispatcher)
+      },
+      capture_usage_volume_controls_{
+        VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::BACKGROUND)], fidl_dispatcher),
+        VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND)], fidl_dispatcher),
+        VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)], fidl_dispatcher),
+        VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION)], fidl_dispatcher),
+      } {
+  FXL_DCHECK(fidl_dispatcher);
+
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION) == 2);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT) == 3);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION) == 4);
+
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::BACKGROUND) == 0);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND) == 1);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT) == 2);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION) == 3);
+}
+
 const UsageGainSettings& StreamVolumeManager::GetUsageGainSettings() const {
   return usage_gain_settings_;
 }
@@ -20,6 +69,18 @@ void StreamVolumeManager::SetUsageGainAdjustment(fuchsia::media::Usage usage, fl
   UpdateStreamsWithUsage(std::move(usage));
 }
 
+void StreamVolumeManager::BindUsageVolumeClient(
+    fuchsia::media::Usage usage,
+    fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request) {
+  if (usage.is_render_usage()) {
+    render_usage_volume_controls_[fidl::ToUnderlying(usage.render_usage())].AddBinding(
+        std::move(request));
+  } else {
+    capture_usage_volume_controls_[fidl::ToUnderlying(usage.capture_usage())].AddBinding(
+        std::move(request));
+  }
+}
+
 void StreamVolumeManager::NotifyStreamChanged(StreamVolume* stream_volume) {
   UpdateStream(stream_volume, std::nullopt);
 }
@@ -31,8 +92,14 @@ void StreamVolumeManager::NotifyStreamChanged(StreamVolume* stream_volume, Ramp 
 void StreamVolumeManager::AddStream(StreamVolume* stream_volume) {
   stream_volumes_.insert(stream_volume);
 }
+
 void StreamVolumeManager::RemoveStream(StreamVolume* stream_volume) {
   stream_volumes_.erase(stream_volume);
+}
+
+void StreamVolumeManager::SetUsageVolume(fuchsia::media::Usage usage, float volume) {
+  usage_volume_settings_.SetUsageVolume(fidl::Clone(usage), volume);
+  UpdateStreamsWithUsage(std::move(usage));
 }
 
 void StreamVolumeManager::UpdateStreamsWithUsage(fuchsia::media::Usage usage) {
