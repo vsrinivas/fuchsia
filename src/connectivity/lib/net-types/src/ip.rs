@@ -249,7 +249,12 @@ impl Ipv4 {
 
     /// The Class E subnet.
     ///
-    /// The Class E subnet is meant for experimental purposes.
+    /// The Class E subnet is meant for experimental purposes, and should not be
+    /// used on the general internet. [RFC 1812 Section 5.3.7] suggests that
+    /// routers SHOULD discard packets with a source address in the Class E
+    /// subnet.
+    ///
+    /// [RFC 1812 Section 5.3.7]: https://tools.ietf.org/html/rfc1812#section-5.3.7
     pub const CLASS_E_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([240, 0, 0, 0]), prefix: 4 };
 }
@@ -372,12 +377,58 @@ pub trait IpAddress:
     /// - a multicast address
     /// - the IPv4 global broadcast address
     /// - the IPv4 subnet-specific broadcast address for the given `subnet`
+    /// - an IPv4 address whose host bits (those bits following the network
+    ///   prefix) are all 0
     /// - the unspecified address
+    /// - an IPv4 Class E address
     ///
-    /// Note one exception to these rules: If `subnet` is an IPv4 /32, then the
+    /// Note two exceptions to these rules: If `subnet` is an IPv4 /32, then the
     /// single unicast address in the subnet is also technically the subnet
-    /// broadcast address. In this case, the "no subnet-specific broadcast" rule
-    /// doesn't apply.
+    /// broadcast address. If `subnet` is an IPv4 /31, then both addresses in
+    /// that subnet are broadcast addresses. In either case, the "no
+    /// subnet-specific broadcast" and "no address with a host part of all
+    /// zeroes" rules don't apply. Note further that this exception *doesn't*
+    /// apply to the unspecified address, which is never considered a unicast
+    /// address regardless of what subnet it's in.
+    ///
+    /// # RFC Deep Dive
+    ///
+    /// ## IPv4 addresses ending in zeroes
+    ///
+    /// In this section, we justify the rule that IPv4 addresses whose host bits
+    /// are all 0 are not considered unicast addresses.
+    ///
+    /// In earlier standards, an IPv4 address whose bits were all 0 after the
+    /// network prefix (e.g., 192.168.0.0 in the subnet 192.168.0.0/16) were a
+    /// form of "network-prefix-directed" broadcast addresses. Similarly,
+    /// 0.0.0.0 was considered a form of "limited broadcast address". These have
+    /// since been deprecated (in the case of 0.0.0.0, it is now considered the
+    /// "unspecified" address).
+    ///
+    /// As evidence that this deprecation is official, consider [RFC 1812
+    /// Section 5.3.5]. In reference to these types of addresses, it states that
+    /// "packets addressed to any of these addresses SHOULD be silently
+    /// discarded [by routers]". This not only deprecates them as broadcast
+    /// addresses, but also as unicast addresses (after all, unicast addresses
+    /// are not particularly useful if packets destined to them are discarded by
+    /// routers).
+    ///
+    /// ## IPv4 /31 and /32 exceptions
+    ///
+    /// In this section, we justify the exceptions that all addresses in IPv4
+    /// /31 and /32 subnets are considered unicast.
+    ///
+    /// For /31 subnets, the case is easy. [RFC 3021 Section 2.1] states that
+    /// both addresses in a /31 subnet "MUST be interpreted as host addresses."
+    ///
+    /// For /32, the case is a bit more vague. RFC 3021 makes no mention of /32
+    /// subnets. However, the same reasoning applies - if an exception is not
+    /// made, then there do not exist any host addresses in a /32 subnet. [RFC
+    /// 4632 Section 3.1] also vaguely implies this interpretation by referring
+    /// to addresses in /32 subnets as "host routes."
+    ///
+    /// [RFC 1812 Section 5.3.5]: https://tools.ietf.org/html/rfc1812#page-92
+    /// [RFC 4632 Section 3.1]: https://tools.ietf.org/html/rfc4632#section-3.1
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool;
 
     /// Invokes one function on this address if it is an [`Ipv4Addr`] and
@@ -606,8 +657,14 @@ impl IpAddress for Ipv4Addr {
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool {
         !self.is_multicast()
             && !self.is_global_broadcast()
-            && (subnet.prefix() == 32 || *self != subnet.broadcast())
+            // This clause implements the rules that (the subnet broadcast is
+            // not unicast AND the address with an all-zeroes host part is not
+            // unicast) UNLESS the prefix length is 31 or 32.
+            && (subnet.prefix() == 32
+                || subnet.prefix() == 31
+                || (*self != subnet.broadcast() && *self != subnet.network()))
             && self.is_specified()
+            && !self.is_class_e()
     }
 
     #[inline]
@@ -1261,22 +1318,44 @@ mod tests {
                 &Subnet::new(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
                     .unwrap()
             ));
+
         // Unspecified address
         assert!(!Ipv4::UNSPECIFIED_ADDRESS
             .is_unicast_in_subnet(&Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 16).unwrap()));
         assert!(!Ipv6::UNSPECIFIED_ADDRESS
             .is_unicast_in_subnet(&Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 64).unwrap()));
-        // Global broadcast
+        // The "31- or 32-bit prefix" exception doesn't apply to the unspecified
+        // address (IPv4 only).
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS
+            .is_unicast_in_subnet(&Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 31).unwrap()));
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS
+            .is_unicast_in_subnet(&Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 32).unwrap()));
+        // All-zeroes host part (IPv4 only)
+        assert!(!Ipv4Addr::new([1, 2, 0, 0])
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+        // Exception: 31- or 32-bit prefix (IPv4 only)
+        assert!(Ipv4Addr::new([1, 2, 3, 0])
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 3, 0]), 31).unwrap()));
+        assert!(Ipv4Addr::new([1, 2, 3, 0])
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 3, 0]), 32).unwrap()));
+        // Global broadcast (IPv4 only)
         assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
             .into_addr()
-            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 16).unwrap()));
-        // Subnet broadcast
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([128, 0, 0, 0]), 1).unwrap()));
+        // Subnet broadcast (IPv4 only)
         assert!(!Ipv4Addr::new([1, 2, 255, 255])
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+        // Exception: 31- or 32-bit prefix (IPv4 only)
+        assert!(Ipv4Addr::new([1, 2, 255, 255])
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 255, 254]), 31).unwrap()));
+        assert!(Ipv4Addr::new([1, 2, 255, 255])
+            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 255, 255]), 32).unwrap()));
         // Multicast
         assert!(!Ipv4Addr::new([224, 0, 0, 1]).is_unicast_in_subnet(&Ipv4::MULTICAST_SUBNET));
         assert!(!Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
             .is_unicast_in_subnet(&Ipv6::MULTICAST_SUBNET));
+        // Class E (IPv4 only)
+        assert!(!Ipv4Addr::new([240, 0, 0, 1]).is_unicast_in_subnet(&Ipv4::CLASS_E_SUBNET));
     }
 
     macro_rules! add_mask_test {
