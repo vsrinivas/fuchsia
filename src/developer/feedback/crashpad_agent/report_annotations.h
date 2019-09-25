@@ -15,7 +15,8 @@ namespace feedback {
 // * Some annotations are report-specific, e.g., Dart exception type.
 // * Adds any annotations in the GenericCrashReport from |report|.
 std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
-                                                    const fuchsia::feedback::Data& feedback_data);
+                                                    const fuchsia::feedback::Data& feedback_data,
+                                                    bool has_minidump);
 
 }  // namespace feedback
 

@@ -25,14 +25,18 @@ std::string ReadStringFromFile(const std::string& filepath) {
 }
 
 std::map<std::string, std::string> MakeCrashServerAnnotations(
-    const fuchsia::feedback::Data& feedback_data, const std::string& program_name) {
+    const fuchsia::feedback::CrashReport& report, const fuchsia::feedback::Data& feedback_data,
+    const bool has_minidump) {
   std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
       {"version", ReadStringFromFile("/config/build-info/version")},
       // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
-      {"ptype", program_name},
+      {"ptype", report.program_name()},
       {"osName", "Fuchsia"},
       {"osVersion", "0.0.0"},
+      // Only the minidump file needs to be processed by the crash server. Reports without a
+      // minidump should not have their file attachments processed.
+      {"should_process", has_minidump ? "true" : "false"},
   };
 
   if (feedback_data.has_annotations()) {
@@ -47,10 +51,11 @@ std::map<std::string, std::string> MakeCrashServerAnnotations(
 }  // namespace
 
 std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
-                                                    const fuchsia::feedback::Data& feedback_data) {
+                                                    const fuchsia::feedback::Data& feedback_data,
+                                                    const bool has_minidump) {
   // Crash server annotations common to all crash reports.
   std::map<std::string, std::string> annotations =
-      MakeCrashServerAnnotations(feedback_data, report.program_name());
+      MakeCrashServerAnnotations(report, feedback_data, has_minidump);
 
   // Optional annotations filled by the client.
   ExtractAnnotations(report, &annotations);

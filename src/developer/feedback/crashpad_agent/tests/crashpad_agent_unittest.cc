@@ -197,6 +197,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
         {"osVersion", "0.0.0"},
+        {"should_process", "false"},
     };
     if (feedback_data_provider_) {
       for (const auto& [key, value] : feedback_data_provider_->annotations()) {
@@ -440,7 +441,9 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
   fsl::VmoFromString("minidump", &minidump);
   ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
   CheckAttachmentsInDatabase();
-  CheckAnnotationsOnServer();
+  CheckAnnotationsOnServer({
+      {"should_process", "true"},
+  });
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {

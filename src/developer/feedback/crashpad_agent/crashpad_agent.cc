@@ -197,10 +197,10 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
           feedback_data = result.take_value();
         }
 
-        const std::map<std::string, std::string> annotations =
-            BuildAnnotations(report, feedback_data);
         bool has_minidump = false;
         BuildAttachments(report, feedback_data, crashpad_report.get(), &has_minidump);
+        const std::map<std::string, std::string> annotations =
+            BuildAnnotations(report, feedback_data, has_minidump);
 
         // Finish new local crash report.
         crashpad::UUID local_report_id;
