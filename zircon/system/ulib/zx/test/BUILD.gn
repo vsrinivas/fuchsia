@@ -13,6 +13,8 @@ test("zx") {
   sources = [
     "object-test.cc",
     "traits.cc",
+    "util.cc",
+    "util.h",
     "zx-test.cc",
   ]
   deps = [

@@ -156,6 +156,7 @@ class object : public object_base {
   }
 
   zx_status_t get_child(uint64_t koid, zx_rights_t rights, object<void>* result) const {
+    static_assert(object_traits<T>::supports_get_child, "Object must support getting children.");
     // Allow for |result| and |this| being the same container, though that
     // can only happen for |T=void|, due to strict aliasing.
     object<void> h;
@@ -165,6 +166,8 @@ class object : public object_base {
   }
 
   zx_status_t set_profile(const object<profile>& profile, uint32_t options) const {
+    static_assert(object_traits<T>::supports_set_profile,
+                  "Object must support scheduling profiles.");
     return zx_object_set_profile(get(), profile.get(), options);
   }
 

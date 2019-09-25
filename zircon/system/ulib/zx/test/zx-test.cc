@@ -32,6 +32,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "util.h"
+
 namespace {
 
 zx_status_t validate_handle(zx_handle_t handle) {
@@ -449,6 +451,31 @@ TEST(ZxTestCase, ThreadSelf) {
 
   // This does not compile:
   // const zx::thread self = zx::thread::self();
+}
+
+TEST(ZxTestCase, ThreadCreate) {
+  zx::thread thread;
+  const char* name = "test thread";
+  ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name), 0u, &thread));
+  EXPECT_TRUE(thread.is_valid());
+  EXPECT_OK(validate_handle(thread.get()));
+
+  EXPECT_OK(thread.kill());
+}
+
+TEST(ZxTestCase, ThreadSetProfile) {
+  zx::thread thread;
+  const char* name = "test thread";
+  ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name), 0u, &thread));
+
+  zx::profile profile;
+  zx_profile_info_t info = {};
+  info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
+  info.priority = ZX_PRIORITY_LOWEST;
+  ASSERT_OK(zx::profile::create(GetRootJob(), 0u, &info, &profile));
+  EXPECT_OK(thread.set_profile(profile, 0u));
+
+  EXPECT_OK(thread.kill());
 }
 
 void thread_suspend_test_fn(uintptr_t, uintptr_t) {
