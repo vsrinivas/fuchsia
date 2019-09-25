@@ -101,6 +101,7 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, fbl
 
 }  // namespace
 
+__EXPORT
 zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* out) {
   IsolatedDevmgr devmgr;
 
