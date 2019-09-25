@@ -55,7 +55,7 @@ direction = { incoming | outgoing }
 
 quick = { ("quick")? }
 
-proto = { "proto" ~ (tcp | udp | icmp) }
+proto = { ("proto" ~ (tcp | udp | icmp))? }
   tcp = { "tcp" }
   udp = { "udp" }
   icmp = { "icmp" }
@@ -122,11 +122,14 @@ fn parse_quick(pair: Pair<Rule>) -> bool {
 
 fn parse_proto(pair: Pair<Rule>) -> filter::SocketProtocol {
     assert_eq!(pair.as_rule(), Rule::proto);
-    match pair.into_inner().next().unwrap().as_rule() {
-        Rule::tcp => filter::SocketProtocol::Tcp,
-        Rule::udp => filter::SocketProtocol::Udp,
-        Rule::icmp => filter::SocketProtocol::Icmp,
-        _ => unreachable!(),
+    match pair.into_inner().next() {
+        Some(pair) => match pair.as_rule() {
+            Rule::tcp => filter::SocketProtocol::Tcp,
+            Rule::udp => filter::SocketProtocol::Udp,
+            Rule::icmp => filter::SocketProtocol::Icmp,
+            _ => unreachable!(),
+        },
+        None => filter::SocketProtocol::Any,
     }
 }
 
@@ -422,7 +425,29 @@ mod test {
     }
 
     #[test]
-    fn test_simple_rule() {
+    fn test_rule_with_proto_any() {
+        test_parse_line_to_rules(
+            "pass in;",
+            &[filter::Rule {
+                action: filter::Action::Pass,
+                direction: filter::Direction::Incoming,
+                quick: false,
+                proto: filter::SocketProtocol::Any,
+                src_subnet: None,
+                src_subnet_invert_match: false,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
+                dst_subnet: None,
+                dst_subnet_invert_match: false,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
+                nic: 0,
+                log: false,
+                keep_state: true,
+            }],
+        );
+    }
+
+    #[test]
+    fn test_rule_with_proto_tcp() {
         test_parse_line_to_rules(
             "pass in proto tcp;",
             &[filter::Rule {
@@ -732,6 +757,22 @@ mod test {
     #[test]
     fn test_nat_rule_with_from_v4_subnet_to_v4_address() {
         test_parse_line_to_nat_rules(
+            "nat from 1.2.3.0/24 -> from 192.168.1.1;",
+            &[filter::Nat {
+                proto: filter::SocketProtocol::Any,
+                src_subnet: net::Subnet {
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
+                    prefix_len: 24,
+                },
+                new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
+                nic: 0,
+            }],
+        );
+    }
+
+    #[test]
+    fn test_nat_rule_with_proto_tcp_from_v4_subnet_to_v4_address() {
+        test_parse_line_to_nat_rules(
             "nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;",
             &[filter::Nat {
                 proto: filter::SocketProtocol::Tcp,
@@ -747,6 +788,21 @@ mod test {
 
     #[test]
     fn test_rdr_rule_with_to_v4_address_port_to_v4_address_port() {
+        test_parse_line_to_rdr_rules(
+            "rdr to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
+            &[filter::Rdr {
+                proto: filter::SocketProtocol::Any,
+                dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                dst_port_range: filter::PortRange { start: 10000, end: 10000 },
+                new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
+                new_dst_port_range: filter::PortRange { start: 20000, end: 20000 },
+                nic: 0,
+            }],
+        );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_proto_tcp_to_v4_address_port_to_v4_address_port() {
         test_parse_line_to_rdr_rules(
             "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
             &[filter::Rdr {

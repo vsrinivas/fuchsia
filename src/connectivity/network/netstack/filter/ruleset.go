@@ -95,6 +95,15 @@ type Rule struct {
 	keepState            bool
 }
 
+func (r *Rule) Match(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16) bool {
+	return r.direction == dir &&
+		(r.transProto == 0 || r.transProto == transProto) &&
+		(r.srcSubnet == nil || r.srcSubnet.Contains(srcAddr) != r.srcSubnetInvertMatch) &&
+		r.srcPortRange.Contains(srcPort) &&
+		(r.dstSubnet == nil || r.dstSubnet.Contains(dstAddr) != r.dstSubnetInvertMatch) &&
+		r.dstPortRange.Contains(dstPort)
+}
+
 // NAT is a special rule for Network Address Translation, which rewrites
 // the address of an outgoing packet.
 type NAT struct {
@@ -102,6 +111,10 @@ type NAT struct {
 	srcSubnet  *tcpip.Subnet
 	newSrcAddr tcpip.Address
 	nic        tcpip.NICID
+}
+
+func (nat *NAT) Match(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) bool {
+	return (nat.transProto == 0 || nat.transProto == transProto) && nat.srcSubnet.Contains(srcAddr)
 }
 
 // RDR is a special rule for Redirector, which forwards an incoming packet
@@ -131,6 +144,10 @@ func (rdr *RDR) IsValid() bool {
 		return false
 	}
 	return dstPortRangeLen == newDstPortRangeLen
+}
+
+func (rdr *RDR) Match(transProto tcpip.TransportProtocolNumber, dstAddr tcpip.Address, dstPort uint16) bool {
+	return (rdr.transProto == 0 || rdr.transProto == transProto) && rdr.dstAddr == dstAddr && rdr.dstPortRange.Contains(dstPort)
 }
 
 // When n is the Nth port in the range defined by rdr.dstPortRange, newDstPortRange

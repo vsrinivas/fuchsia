@@ -126,6 +126,7 @@ func TestFromTransProto(t *testing.T) {
 		netTransProto filter.SocketProtocol
 		err           error
 	}{
+		{0, filter.SocketProtocolAny, nil},
 		{header.ICMPv4ProtocolNumber, filter.SocketProtocolIcmp, nil},
 		{header.ICMPv6ProtocolNumber, filter.SocketProtocolIcmpv6, nil},
 		{header.TCPProtocolNumber, filter.SocketProtocolTcp, nil},
@@ -153,11 +154,12 @@ func TestToTransProto(t *testing.T) {
 		transProto    tcpip.TransportProtocolNumber
 		err           error
 	}{
+		{filter.SocketProtocolAny, 0, nil},
 		{filter.SocketProtocolTcp, header.TCPProtocolNumber, nil},
 		{filter.SocketProtocolUdp, header.UDPProtocolNumber, nil},
 		{filter.SocketProtocolIcmp, header.ICMPv4ProtocolNumber, nil},
 		{filter.SocketProtocolIcmpv6, header.ICMPv6ProtocolNumber, nil},
-		{filter.SocketProtocol(9999), tcpip.TransportProtocolNumber(0), ErrUnknownProtocol},
+		{filter.SocketProtocol(9999), 0, ErrUnknownProtocol},
 	}
 
 	for _, test := range tests {

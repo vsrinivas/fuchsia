@@ -98,12 +98,6 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	f.rulesetNAT.Lock()
 	f.rulesetNAT.v = []NAT{
 		{
-			transProto: header.UDPProtocolNumber,
-			srcSubnet:  &testLanNet,
-			newSrcAddr: testRouterNICAddr2,
-		},
-		{
-			transProto: header.TCPProtocolNumber,
 			srcSubnet:  &testLanNet,
 			newSrcAddr: testRouterNICAddr2,
 		},

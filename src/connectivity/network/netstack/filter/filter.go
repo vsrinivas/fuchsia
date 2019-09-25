@@ -472,12 +472,7 @@ func (f *Filter) matchMain(dir Direction, transProto tcpip.TransportProtocolNumb
 	var rm *Rule
 	for i := range f.rulesetMain.v {
 		r := &f.rulesetMain.v[i]
-		if r.direction == dir &&
-			r.transProto == transProto &&
-			(r.srcSubnet == nil || r.srcSubnet.Contains(srcAddr) != r.srcSubnetInvertMatch) &&
-			r.srcPortRange.Contains(srcPort) &&
-			(r.dstSubnet == nil || r.dstSubnet.Contains(dstAddr) != r.dstSubnetInvertMatch) &&
-			r.dstPortRange.Contains(dstPort) {
+		if r.Match(dir, transProto, srcAddr, srcPort, dstAddr, dstPort) {
 			rm = r
 			if r.quick {
 				break
@@ -492,8 +487,7 @@ func (f *Filter) matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpi
 	defer f.rulesetNAT.RUnlock()
 	for i := range f.rulesetNAT.v {
 		r := &f.rulesetNAT.v[i]
-		if r.transProto == transProto &&
-			r.srcSubnet.Contains(srcAddr) {
+		if r.Match(transProto, srcAddr) {
 			return r
 		}
 	}
@@ -505,7 +499,7 @@ func (f *Filter) matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpi
 	defer f.rulesetRDR.RUnlock()
 	for i := range f.rulesetRDR.v {
 		r := &f.rulesetRDR.v[i]
-		if r.transProto == transProto && r.dstAddr == dstAddr && r.dstPortRange.Contains(dstPort) {
+		if r.Match(transProto, dstAddr, dstPort) {
 			return r
 		}
 	}

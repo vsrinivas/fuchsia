@@ -19,10 +19,11 @@ enum Action {
 };
 
 enum SocketProtocol {
+    ANY = 0;
     ICMP = 1;
-    TCP = 6;
-    UDP = 17;
-    ICMPV6 = 58;
+    TCP = 2;
+    UDP = 3;
+    ICMPV6 = 4;
 };
 
 /// PortRange specifies an inclusive range of port numbers.

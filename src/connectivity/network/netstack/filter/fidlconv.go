@@ -63,6 +63,8 @@ func toDirection(o filter.Direction) (Direction, error) {
 
 func fromTransProto(o tcpip.TransportProtocolNumber) (filter.SocketProtocol, error) {
 	switch o {
+	case 0:
+		return filter.SocketProtocolAny, nil
 	case header.ICMPv4ProtocolNumber:
 		return filter.SocketProtocolIcmp, nil
 	case header.TCPProtocolNumber:
@@ -78,6 +80,8 @@ func fromTransProto(o tcpip.TransportProtocolNumber) (filter.SocketProtocol, err
 
 func toTransProto(o filter.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	switch o {
+	case filter.SocketProtocolAny:
+		return 0, nil
 	case filter.SocketProtocolIcmp:
 		return header.ICMPv4ProtocolNumber, nil
 	case filter.SocketProtocolTcp:
@@ -87,7 +91,7 @@ func toTransProto(o filter.SocketProtocol) (tcpip.TransportProtocolNumber, error
 	case filter.SocketProtocolIcmpv6:
 		return header.ICMPv6ProtocolNumber, nil
 	default:
-		return tcpip.TransportProtocolNumber(0), ErrUnknownProtocol
+		return 0, ErrUnknownProtocol
 	}
 }
 

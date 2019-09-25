@@ -15,54 +15,12 @@ import (
 	"github.com/google/netstack/tcpip/header"
 )
 
-var srcSubnet = func() tcpip.Subnet {
-	srcSubnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
-	if err != nil {
-		panic(err)
-	}
-	return srcSubnet
-}()
-
-var ruleset1 = []Rule{
-	{
-		action:       Drop,
-		direction:    Incoming,
-		transProto:   header.TCPProtocolNumber,
-		srcSubnet:    &srcSubnet,
-		srcPortRange: PortRange{100, 100},
-		log:          testing.Verbose(),
-	},
-}
-
-var ruleset1a = []Rule{
-	{
-		action:       Drop,
-		direction:    Incoming,
-		transProto:   header.TCPProtocolNumber,
-		srcSubnet:    &srcSubnet,
-		srcPortRange: PortRange{100, 101},
-		log:          testing.Verbose(),
-	},
-}
-
-var ruleset2 = []Rule{
-	{
-		action:     Drop,
-		direction:  Incoming,
-		transProto: header.UDPProtocolNumber,
-		log:        testing.Verbose(),
-	},
-	{
-		action:       Pass,
-		direction:    Incoming,
-		transProto:   header.UDPProtocolNumber,
-		srcSubnet:    &srcSubnet,
-		srcPortRange: PortRange{100, 100},
-		log:          testing.Verbose(),
-	},
-}
-
 func TestRun(t *testing.T) {
+	subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var tests = []struct {
 		description string
 		ruleset     []Rule
@@ -73,7 +31,16 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			"TcpDrop",
-			ruleset1,
+			[]Rule{
+				{
+					action:       Drop,
+					direction:    Incoming,
+					transProto:   header.TCPProtocolNumber,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 100},
+					log:          testing.Verbose(),
+				},
+			},
 			Incoming,
 			header.IPv4ProtocolNumber,
 			func() (buffer.Prependable, buffer.VectorisedView) {
@@ -88,7 +55,16 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"TcpDropInRange",
-			ruleset1a,
+			[]Rule{
+				{
+					action:       Drop,
+					direction:    Incoming,
+					transProto:   header.TCPProtocolNumber,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 101},
+					log:          testing.Verbose(),
+				},
+			},
 			Incoming,
 			header.IPv4ProtocolNumber,
 			func() (buffer.Prependable, buffer.VectorisedView) {
@@ -103,7 +79,16 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"TcpDropInRange",
-			ruleset1a,
+			[]Rule{
+				{
+					action:       Drop,
+					direction:    Incoming,
+					transProto:   header.TCPProtocolNumber,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 101},
+					log:          testing.Verbose(),
+				},
+			},
 			Incoming,
 			header.IPv4ProtocolNumber,
 			func() (buffer.Prependable, buffer.VectorisedView) {
@@ -118,7 +103,16 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"TcpFragmentPass",
-			ruleset1,
+			[]Rule{
+				{
+					action:       Drop,
+					direction:    Incoming,
+					transProto:   header.TCPProtocolNumber,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 100},
+					log:          testing.Verbose(),
+				},
+			},
 			Incoming,
 			header.IPv4ProtocolNumber,
 			func() (buffer.Prependable, buffer.VectorisedView) {
@@ -136,7 +130,22 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"UdpPass",
-			ruleset2,
+			[]Rule{
+				{
+					action:     Drop,
+					direction:  Incoming,
+					transProto: header.UDPProtocolNumber,
+					log:        testing.Verbose(),
+				},
+				{
+					action:       Pass,
+					direction:    Incoming,
+					transProto:   header.UDPProtocolNumber,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 100},
+					log:          testing.Verbose(),
+				},
+			},
 			Incoming,
 			header.IPv4ProtocolNumber,
 			func() (buffer.Prependable, buffer.VectorisedView) {
@@ -148,6 +157,29 @@ func TestRun(t *testing.T) {
 				})
 			},
 			Pass,
+		},
+		{
+			"AnyDrop",
+			[]Rule{
+				{
+					action:       Drop,
+					direction:    Incoming,
+					srcSubnet:    &subnet,
+					srcPortRange: PortRange{100, 101},
+					log:          testing.Verbose(),
+				},
+			},
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() (buffer.Prependable, buffer.VectorisedView) {
+				return udpV4Packet([]byte("payload"), &udpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+			},
+			Drop,
 		},
 	}
 
@@ -188,12 +220,26 @@ func generateRandomUdp4Packet() Packet {
 }
 
 func BenchmarkFilterConcurrency(b *testing.B) {
+	subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	b.StopTimer()
 
 	f := New(nil)
 
 	f.rulesetMain.Lock()
-	f.rulesetMain.v = ruleset1
+	f.rulesetMain.v = []Rule{
+		{
+			action:       Drop,
+			direction:    Incoming,
+			transProto:   header.TCPProtocolNumber,
+			srcSubnet:    &subnet,
+			srcPortRange: PortRange{100, 100},
+			log:          testing.Verbose(),
+		},
+	}
 	f.rulesetMain.Unlock()
 
 	// Unique number of src+dst combinations

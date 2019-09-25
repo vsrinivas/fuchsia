@@ -16,7 +16,7 @@
 
 ## Regular Rule Syntax
   ```
-  action direction ["quick"] "proto" proto
+  action direction ["quick"] ["proto" proto]
      ["from" [["!"]src_subnet] [src_port]]
      ["to" [["!"]dst_subnet] [dst_port]] [log] [state] ";"
   ```
@@ -34,7 +34,7 @@
     The rule is selected immediately. Usually a rule is selected only
     if that is the last matched rule in the set of rules.
 
-  * proto
+  * proto (optional)
 
     "tcp", "udp", or "icmp".
 
@@ -114,10 +114,10 @@
 
 ## NAT Rule Syntax
   ```
-  "nat" "proto" proto "from" subnet "->" "from" ipaddr ";"
+  "nat" ["proto" proto] "from" subnet "->" "from" ipaddr ";"
   ```
 
-  * proto
+  * proto (optional)
 
     "tcp", "udp", or "icmp".
 
@@ -131,11 +131,11 @@
 
 ### Examples
 
-  * "nat proto tcp from 192.168.42.0/24 -> from 10.0.0.1;"
+  * "nat from 192.168.42.0/24 -> from 10.0.0.1;"
     ```
     &[
         filter::Nat {
-            proto: net::SocketProtocol::Tcp,
+            proto: filter::SocketProtocol::Any,
             src_subnet: net::Subnet{
                 addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 42, 0] }),
                 prefix_len: 24,
@@ -148,10 +148,10 @@
 
 ## RDR Rule Syntax
   ```
-  "rdr" "proto" proto "to" ipaddr dst_port "->" "to" ipaddr dst_port ";"
+  "rdr" ["proto" proto] "to" ipaddr dst_port "->" "to" ipaddr dst_port ";"
   ```
 
-  * proto
+  * proto (optional)
 
     "tcp", "udp", or "icmp".
 
