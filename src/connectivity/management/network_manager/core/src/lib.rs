@@ -14,7 +14,7 @@
 
 #[macro_use]
 extern crate log;
-mod error;
+pub mod error;
 pub mod hal;
 pub mod lifmgr;
 pub mod packet_filter;

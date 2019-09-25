@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/reachability"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}
