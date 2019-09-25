@@ -6,7 +6,7 @@
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace audio {
 
@@ -125,8 +125,7 @@ class Bind : public fake_ddk::Bind {
   bool remove_called_ = false;
 };
 
-bool DdkLifeCycleTest() {
-  BEGIN_TEST;
+TEST(SimpleAudioTest, DdkLifeCycleTest) {
   Bind tester;
   auto stream = audio::SimpleAudioStream::Create<audio::MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(stream);
@@ -134,10 +133,5 @@ bool DdkLifeCycleTest() {
   EXPECT_FALSE(tester.IsRemoved());
   stream->DdkUnbind();
   EXPECT_TRUE(tester.Ok());
-  END_TEST;
 }
 }  // namespace audio
-
-BEGIN_TEST_CASE(SimpleAudioTest)
-RUN_TEST_SMALL(audio::DdkLifeCycleTest)
-END_TEST_CASE(SimpleAudioTest)
