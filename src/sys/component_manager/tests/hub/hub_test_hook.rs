@@ -88,10 +88,10 @@ impl RouteFrameworkCapabilityHook for HubTestHook {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum HubReportEvent {
-    DirectoryListing(Vec<String>),
-    FileContent(String),
+    DirectoryListing { listing: Vec<String>, responder: fhub::HubReportListDirectoryResponder },
+    FileContent { content: String, responder: fhub::HubReportReportFileContentResponder },
 }
 
 // A futures channel between the task where the integration test is running
@@ -120,11 +120,11 @@ impl HubTestCapability {
         fasync::spawn(async move {
             while let Some(Ok(request)) = stream.next().await {
                 let (path, event) = match request {
-                    fhub::HubReportRequest::ListDirectory { path, entries, .. } => {
-                        (path, HubReportEvent::DirectoryListing(entries))
+                    fhub::HubReportRequest::ListDirectory { path, entries, responder } => {
+                        (path, HubReportEvent::DirectoryListing { listing: entries, responder })
                     }
-                    fhub::HubReportRequest::ReportFileContent { path, content, .. } => {
-                        (path, HubReportEvent::FileContent(content))
+                    fhub::HubReportRequest::ReportFileContent { path, content, responder } => {
+                        (path, HubReportEvent::FileContent { content, responder })
                     }
                 };
                 let mut sender = {

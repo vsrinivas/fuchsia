@@ -58,6 +58,8 @@ pub enum ModelError {
     },
     #[fail(display = "failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
+    #[fail(display = "failed to remove entry {}", entry_name)]
+    RemoveEntryError { entry_name: String },
     #[fail(display = "open directory error")]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
 }
@@ -104,6 +106,10 @@ impl ModelError {
 
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
+    }
+
+    pub fn remove_entry_error(entry_name: impl Into<String>) -> ModelError {
+        ModelError::RemoveEntryError { entry_name: entry_name.into() }
     }
 
     pub fn open_directory_error(

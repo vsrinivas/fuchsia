@@ -23,6 +23,7 @@ async fn report_directory_contents(
     let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
     hub_report
         .list_directory(dir_path, get_names_from_listing!(dir_listing))
+        .await
         .context("list directory failed")?;
     Ok(())
 }

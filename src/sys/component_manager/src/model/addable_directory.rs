@@ -39,6 +39,11 @@ pub trait AddableDirectoryWithResult<'entries> {
     where
         Entry: DirectoryEntry + 'entries;
 
+    fn remove_node<'a>(
+        &'a self,
+        name: &'a str
+    ) -> BoxFuture<Result<(), ModelError>>;
+
     // Adds a connection to a directory. Nameed 'open_node' instead of 'open' to avoid conflicts.
     fn open_node<'a>(
         &'a self,
@@ -94,6 +99,17 @@ impl<'entries> AddableDirectoryWithResult<'entries>
             self.add_entry_res(String::from(name), entry)
                 .await
                 .map_err(|_| ModelError::add_entry_error(moniker.clone(), name))
+        })
+    }
+
+    fn remove_node<'a>(
+        &'a self,
+        name: &'a str
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async move {
+            self.remove_entry(String::from(name))
+                .await
+                .map_err(|_| ModelError::remove_entry_error(name))
         })
     }
 

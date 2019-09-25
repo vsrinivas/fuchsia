@@ -436,6 +436,26 @@ impl HubInner {
         Ok(())
     }
 
+    async fn on_remove_dynamic_child_async(
+        &self,
+        realm: Arc<model::Realm>,
+    ) -> Result<(), ModelError> {
+        let mut instance_map = self.instances.lock().await;
+
+        // TODO(xbhatnag): Investigate error handling scenarios here.
+        //                 Can these errors arise from faulty components or from
+        //                 a bug in ComponentManager?
+        let parent_moniker =
+            realm.abs_moniker.parent().expect("a root component cannot be dynamic");
+        let leaf = realm.abs_moniker.leaf().expect("a root component cannot be dynamic");
+
+        instance_map[&parent_moniker].children_directory.remove_node(leaf.as_str()).await?;
+        instance_map
+            .remove(&realm.abs_moniker)
+            .expect("the dynamic component must exist in the instance map");
+        Ok(())
+    }
+
     // TODO(fsamuel): We should probably preserve the original error messages
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
@@ -461,9 +481,8 @@ impl model::AddDynamicChildHook for HubInner {
 }
 
 impl model::RemoveDynamicChildHook for HubInner {
-    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub with the deleted child
-        Box::pin(async { Ok(()) })
+    fn on(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_remove_dynamic_child_async(realm))
     }
 }
 

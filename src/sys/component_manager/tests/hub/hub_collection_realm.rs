@@ -25,6 +25,7 @@ async fn report_directory_contents(
     let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
     hub_report
         .list_directory(dir_path, get_names_from_listing!(dir_listing))
+        .await
         .context("list directory failed")?;
     Ok(())
 }
@@ -68,9 +69,28 @@ async fn main() -> Result<(), Error> {
     let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
     realm.bind_child(&mut child_ref, server_end).await?.expect("failed to bind to child");
 
+    // Read the hub of the dynamic child and pass the results to the integration test
+    // via HubReport
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1").await?;
+
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
     report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1/children").await?;
+
+    // Delete the dynamic child
+    let mut child_ref = fsys::ChildRef {
+        name: "simple_instance".to_string(),
+        collection: Some("coll".to_string()),
+    };
+    realm
+        .destroy_child(&mut child_ref)
+        .await
+        .context("delete_child failed")?
+        .expect("failed to delete child");
+
+    // Read the children of this component and pass the results to the integration test
+    // via HubReport.
+    report_directory_contents(&hub_report, "/hub/children").await?;
 
     Ok(())
 }

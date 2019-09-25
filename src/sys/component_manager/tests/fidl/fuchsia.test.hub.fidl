@@ -17,9 +17,9 @@ protocol HubReport {
   /// Returns a list of the entiries within the directories specified by the
   /// provided path.
   ListDirectory(string:fuchsia.io.MAX_PATH path,
-                vector<string:fuchsia.io.MAX_FILENAME>:MAX_NUM_ENTRIES entries);
+                vector<string:fuchsia.io.MAX_FILENAME>:MAX_NUM_ENTRIES entries) -> ();
 
   /// Returns the content of the file specified by the provided path.
   ReportFileContent(string:fuchsia.io.MAX_PATH path,
-                    string:fuchsia.io.MAX_BUF content);
+                    string:fuchsia.io.MAX_BUF content) -> ();
 };
