@@ -67,6 +67,23 @@ typedef struct zx_protocol_device {
   // This field must be set to `DEVICE_OPS_VERSION`
   uint64_t version;
 
+  //@ ## get_protocol
+  // The get_protocol hook is called when a driver invokes
+  // **device_get_protocol()** on a device object.  The implementation must
+  // populate *protocol* with a protocol structure determined by *proto_id*.
+  // If the requested *proto_id* is not supported, the implementation must
+  // return ZX_ERR_NOT_SUPPORTED.
+  //
+  // The default get_protocol hook returns with *protocol*=*proto_ops* if *proto_id*
+  // matches the one given when **device_add()** created the device, and returns
+  // ZX_ERR_NOT_SUPPORTED otherwise.
+  //
+  // See the **device_get_protocol()** docs for a description of the layout of
+  // *protocol*.
+  //
+  // This hook is never called by the devhost runtime other than when
+  // **device_get_protocol()** is invoked by some driver.  It is executed
+  // synchronously in the same thread as the caller.
   zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
   //@ ## open
@@ -85,6 +102,13 @@ typedef struct zx_protocol_device {
   // A child created for return as an instance **must** be created with the
   // **DEVICE_ADD_INSTANCE** flag set in the arguments to **device_add()**.
   //
+  // This hook is almost always called from the devhost's main thread.  The
+  // one exception is if **device_add()** is invoked with *client_remote* provided and
+  // the neither **DEVICE_ADD_MUST_ISOLATE** nor **DEVICE_ADD_INVISIBLE** were
+  // provided, in which case this hook will be executed synchronously from the thread
+  // that invoked **device_add()**, before **device_add()** returns.
+  // DO NOT rely on that exception being true.  The implementation may in the
+  // future push all invocations to the main thread.
   zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 
   //@ ## close
@@ -95,6 +119,11 @@ typedef struct zx_protocol_device {
   // that is called is the close hook on the **instance**, not the parent.
   //
   // The default close implementation returns **ZX_OK**.
+  //
+  // This hook is almost always called from the devhost's main thread.  The one
+  // exception is in the same situation as for the open hook described
+  // above, in which the close hook may run to handle certain failure conditions
+  // after the open hook ran.
   zx_status_t (*close)(void* ctx, uint32_t flags);
 
   //@ ## unbind
@@ -113,6 +142,14 @@ typedef struct zx_protocol_device {
   // The driver must continue to handle all device hooks until the **release** hook
   // is invoked.
   //
+  // This hook may be called from any thread including the devhost's main
+  // thread.  It will be executed either when **device_remove()** is invoked on
+  // this device's parent, or sometime after a fuchsia.device.Controller/ScheduleUnbind
+  // request is received.
+  // When **device_remove()** is invoked on this device's parent, this hook
+  // will currently execute on the calling thread before **device_remove()**
+  // returns.  This behavior will be removed in the near future, so do not
+  // rely on it.
   void (*unbind)(void* ctx);
 
   //@ ## release
@@ -126,9 +163,14 @@ typedef struct zx_protocol_device {
   //
   // The driver must free all memory and release all resources related to this device
   // before returning.
+  //
+  // This hook may be called from any thread including the devhost's main
+  // thread.
   void (*release)(void* ctx);
 
   //@ ## read
+  // DEPRECATED: DO NOT ADD NEW USES
+  //
   // The read hook is an attempt to do a non-blocking read operation.
   //
   // On success *actual* must be set to the number of bytes read (which may be less
@@ -145,9 +187,12 @@ typedef struct zx_protocol_device {
   //
   // The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
   //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*read)(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual);
 
   //@ ## write
+  // DEPRECATED: DO NOT ADD NEW USES
+  //
   // The write hook is an attempt to do a non-blocking write operation.
   //
   // On success *actual* must be set to the number of bytes written (which may be
@@ -161,14 +206,20 @@ typedef struct zx_protocol_device {
   //
   // The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
   //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*write)(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual);
 
   //@ ## get_size
+  // DEPRECATED: DO NOT ADD NEW USES
+  //
   // If the device is seekable, the get_size hook should return the size of the device.
   //
   // This is the offset at which no more reads or writes are possible.
   //
   // The default implementation returns 0.
+  //
+  // This hook may be executed on any thread, including the devhost's main
+  // thread.
   zx_off_t (*get_size)(void* ctx);
 
   //@ ## suspend_new
@@ -188,6 +239,8 @@ typedef struct zx_protocol_device {
   // their sleep states.
   //
   // This hook assumes that the drivers are aware of their current state.
+  //
+  // This hook will only be executed on the devhost's main thread.
   //
   // TODO(ravoorir): Remove the old suspend when all the drivers are moved to
   // new suspend and rename suspend_new to suspend.
@@ -212,13 +265,17 @@ typedef struct zx_protocol_device {
   //
   // This hook assumes that the drivers are aware of their current state.
   //
+  // This hook will only be executed on the devhost's main thread.
+  //
   // TODO(ravoorir): Remove the old resume when all the drivers are moved to
   // new suspend and resume.
   zx_status_t (*resume_new)(void* ctx, uint8_t requested_state, uint8_t* out_state);
   // Stops the device and puts it in a low power mode
+  // DEPRECATED: Use suspend_new instead.
   zx_status_t (*suspend)(void* ctx, uint32_t flags);
 
-  // Restarts the device after being suspended
+  // This hook is never invoked.
+  // DEPRECATED: Use resume_new instead.
   zx_status_t (*resume)(void* ctx, uint32_t flags);
 
   //@ ## rxrpc
@@ -234,6 +291,8 @@ typedef struct zx_protocol_device {
   // This method is called with ZX_HANDLE_INVALID for the channel
   // when a new client connects -- at which point any state from
   // the previous client should be torn down.
+  //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 
   //@ ## message
@@ -250,6 +309,8 @@ typedef struct zx_protocol_device {
   //
   // If this method returns anything other than ZX_OK, the underlying
   // connection is closed.
+  //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 } zx_protocol_device_t;
 

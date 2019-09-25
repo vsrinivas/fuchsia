@@ -5,10 +5,10 @@
 #ifndef DDK_DRIVER_H_
 #define DDK_DRIVER_H_
 
-#include <zircon/types.h>
-#include <zircon/listnode.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <ddk/device-power-states.h>
 
@@ -31,18 +31,26 @@ typedef struct zx_driver_ops {
 
   // Opportunity to do on-load work. Called ony once, before any other ops are called. The driver
   // may optionally return a context pointer to be passed to the other driver ops.
+  //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*init)(void** out_ctx);
 
   // Requests that the driver bind to the provided device, initialize it, and publish any
   // children.
+  //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*bind)(void* ctx, zx_device_t* device);
 
   // Only provided by bus manager drivers, create() is invoked to instantiate a bus device
   // instance in a new device host process
+  //
+  // This hook will only be executed on the devhost's main thread.
   zx_status_t (*create)(void* ctx, zx_device_t* parent, const char* name, const char* args,
                         zx_handle_t rpc_channel);
 
   // Last call before driver is unloaded.
+  //
+  // This hook will only be executed on the devhost's main thread.
   void (*release)(void* ctx);
 
   // Allows the driver to run its hardware unit tests. If tests are enabled for the driver, and
@@ -51,6 +59,8 @@ typedef struct zx_driver_ops {
   // and the driver should be prepared to accept calls to bind(). The tests may write output to
   // |channel| in the form of fuchsia.driver.test.Logger messages. The driver-unit-test library
   // may be used to assist with the implementation of the tests, including output via |channel|.
+  //
+  // This hook will only be executed on the devhost's main thread.
   bool (*run_unit_tests)(void* ctx, zx_device_t* parent, zx_handle_t channel);
 } zx_driver_ops_t;
 
@@ -224,16 +234,18 @@ zx_status_t device_add_composite(zx_device_t* dev, const char* name, const zx_de
                                  size_t props_count, const device_component_t* components,
                                  size_t components_count, uint32_t coresident_device_index);
 
-#define ROUNDUP(a, b) \
-    ({ const __typeof (a) _a = (a); \
-       const __typeof (b) _b = (b); \
-       (_a + (_a % _b == 0 ? 0 : (_b - (_a % _b)))); \
-    })
-#define ROUNDDOWN(a, b) \
-    ({ const __typeof (a) _a = (a); \
-       const __typeof (b) _b = (b); \
-       _a - (_a % _b); \
-    })
+#define ROUNDUP(a, b)                             \
+  ({                                              \
+    const __typeof(a) _a = (a);                   \
+    const __typeof(b) _b = (b);                   \
+    (_a + (_a % _b == 0 ? 0 : (_b - (_a % _b)))); \
+  })
+#define ROUNDDOWN(a, b)         \
+  ({                            \
+    const __typeof(a) _a = (a); \
+    const __typeof(b) _b = (b); \
+    _a - (_a % _b);             \
+  })
 #define ALIGN(a, b) ROUNDUP(a, b)
 
 // temporary accessor for root resource handle
