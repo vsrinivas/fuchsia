@@ -123,6 +123,9 @@ The accepted SGR control sequences all have the form `"\033[%um"`
 
 ## Common markup element syntax ##
 
+{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{% verbatim %}
+
 All the markup elements share a common syntactic structure to facilitate
 simple matching and parsing code.  Each element has the form:
 
@@ -423,3 +426,6 @@ raw logging stream, accumulating context and massaging text as it goes.
   ```
   {{{mmap:0x7acba69d5000:0x5a000:load:1:rx:0x1000}}}
   ```
+
+{# Re-enable variable substition #}
+{% endverbatim %}

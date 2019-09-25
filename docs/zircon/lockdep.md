@@ -361,6 +361,9 @@ The lock validator detects and reports two broad classes of violations:
 When a violation is detected at the point of lock acquisition the validator
 produces a message like the following in the kernel log:
 
+{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{% verbatim %}
+
 ```
 [00002.668] 01032:01039> ZIRCON KERNEL OOPS
 [00002.668] 01032:01039> Lock validation failed for thread 0xffff000001e53598 pid 1032 tid 1039 (userboot:userboot):
@@ -378,6 +381,9 @@ produces a message like the following in the kernel log:
 [00002.668] 01032:01039> {{{bt:3:0xffffffff101711e0}}}
 [00002.668] 01032:01039> {{{bt:4:0xffffffff100edae0}}}
 ```
+
+{# Re-enable variable substition #}
+{% endverbatim %}
 
 The error is informational and non-fatal. The first line identifies the thread
 and process where the kernel lock violation occurred. The next line identifies
