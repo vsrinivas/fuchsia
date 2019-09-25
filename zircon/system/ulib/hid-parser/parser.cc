@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid-parser/item.h>
-#include <hid-parser/parser.h>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <hid-parser/item.h>
+#include <hid-parser/parser.h>
 
 namespace {
 
@@ -105,6 +104,10 @@ bool is_app_collection(uint32_t col) {
   return (col == static_cast<uint32_t>(CollectionType::kApplication));
 }
 
+bool report_id_has_items(ReportID id) {
+  return (id.input_count != 0) || (id.feature_count != 0) || (id.output_count != 0);
+}
+
 class ParseState {
  public:
   static char* Alloc(size_t size) {
@@ -123,7 +126,17 @@ class ParseState {
   bool Init() {
     fbl::AllocChecker ac;
     coll_.reserve(kMaxCollectionCount, &ac);
-    return ac.check();
+    if (!ac.check())
+      return false;
+
+    // Add the initial report ID representing "no report_id".
+    ReportID empty_report_id = {false, 0, 0, 0, 0};
+    report_ids_.push_back(empty_report_id, &ac);
+    if (!ac.check())
+      return false;
+    table_.report_id = &report_ids_[0];
+
+    return true;
   }
 
   ParseResult Finish(DeviceDescriptor** device) {
@@ -139,18 +152,16 @@ class ParseState {
     // valid within the destination memory area.
 
     // Check if we actually have items or report ids before going forward.
-    if (report_ids_.size() == 0 || coll_.size() == 0) {
+    if (coll_.size() == 0) {
       return kParseMoreNeeded;
     }
 
-    // If report_ids_ has just the unnumbered report, then the device
-    // doesn't declare report ids.
-    bool no_report_id = !report_ids_[0].has_report_id;
+    // If there's one report in |report_ids_| then there's just the null id.
+    bool no_report_id = report_ids_.size() == 1;
 
-    // If we have items with no report ID, then it's illegal to declare
-    // report IDs afterwards.
-    if (no_report_id && report_ids_.size() > 1) {
-      return kParserInvalidID;
+    // If we have ids, then erase the null id since it shouldn't have items in it.
+    if (!no_report_id) {
+      report_ids_.erase(0);
     }
     size_t report_count = report_ids_.size();
 
@@ -319,16 +330,6 @@ class ParseState {
     if (!validate_ranges())
       return kParseInvalidRange;
 
-    // If we haven't seen any report ids yet create the no-ID report.
-    if (report_ids_.size() == 0) {
-      ReportID new_report_id = {false, 0, 0, 0, 0};
-      fbl::AllocChecker ac;
-      report_ids_.push_back(new_report_id, &ac);
-      if (!ac.check())
-        return kParseNoMemory;
-      table_.report_id = &report_ids_[report_ids_.size() - 1];
-    }
-
     auto flags = expand_bitfield(data);
     Attributes attributes = table_.attributes;
     UsageIterator usage_it(this, flags);
@@ -457,6 +458,10 @@ class ParseState {
       return kParserInvalidID;
     if (data > UINT8_MAX)
       return kParseInvalidRange;
+
+    // It's an error to define a report id after items have been defined with no id.
+    if (report_id_has_items(report_ids_[0]))
+      return kParserMissingID;
 
     // Check if we've seen the report id before.
     uint8_t id = static_cast<uint8_t>(data);

@@ -250,7 +250,8 @@ enum ParseResult : uint32_t {
   kParseMissingUsage = 14,
   kParserMissingPage = 15,
   kParserUnexpectedPop = 16,
-  kParserInvalidID = 17
+  kParserInvalidID = 17,
+  kParserMissingID = 18,
 };
 
 ParseResult ParseReportDescriptor(const uint8_t* rpt_desc, size_t desc_len,
