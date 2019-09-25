@@ -70,6 +70,7 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_optio
 
 }  // namespace
 
+__EXPORT
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {
   switch (df) {

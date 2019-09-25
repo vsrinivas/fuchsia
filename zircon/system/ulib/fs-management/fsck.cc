@@ -81,6 +81,7 @@ zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, Laun
 
 }  // namespace
 
+__EXPORT
 zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
                  LaunchCallback cb) {
   switch (df) {

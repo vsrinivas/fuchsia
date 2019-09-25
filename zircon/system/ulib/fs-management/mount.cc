@@ -341,14 +341,17 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
   return DISK_FORMAT_UNKNOWN;
 }
 
+__EXPORT
 disk_format_t detect_disk_format(int fd) {
   return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Silent);
 }
 
+__EXPORT
 disk_format_t detect_disk_format_log_unknown(int fd) {
   return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Verbose);
 }
 
+__EXPORT
 zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
                    LaunchCallback cb) {
   Mounter mounter(mount_fd);
@@ -362,6 +365,7 @@ zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_op
   return mounter.Mount(std::move(block_device), df, *options, cb);
 }
 
+__EXPORT
 zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb) {
   if (!options->create_mountpoint) {
@@ -383,6 +387,7 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
   return mounter.Mount(std::move(block_device), df, *options, cb);
 }
 
+__EXPORT
 zx_status_t fumount(int mount_fd) {
   zx_handle_t h;
   zx_status_t status;
@@ -400,6 +405,7 @@ zx_status_t fumount(int mount_fd) {
   return vfs_unmount_handle(c.release(), ZX_TIME_INFINITE);
 }
 
+__EXPORT
 zx_status_t umount(const char* mount_path) {
   fprintf(stderr, "Unmounting %s\n", mount_path);
   unique_fd fd(open(mount_path, O_DIRECTORY | O_NOREMOTE | O_ADMIN));

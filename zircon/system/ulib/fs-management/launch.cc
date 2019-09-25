@@ -129,26 +129,31 @@ zx_status_t Launch(StdioType stdio, ProcessAction proc_action, int argc, const c
 
 }  // namespace
 
+__EXPORT
 zx_status_t launch_silent_sync(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                                size_t len) {
   return Launch(StdioType::kNone, ProcessAction::kBlock, argc, argv, handles, types, len);
 }
 
+__EXPORT
 zx_status_t launch_silent_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                                 size_t len) {
   return Launch(StdioType::kNone, ProcessAction::kNonBlock, argc, argv, handles, types, len);
 }
 
+__EXPORT
 zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                               size_t len) {
   return Launch(StdioType::kClone, ProcessAction::kBlock, argc, argv, handles, types, len);
 }
 
+__EXPORT
 zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                                size_t len) {
   return Launch(StdioType::kClone, ProcessAction::kNonBlock, argc, argv, handles, types, len);
 }
 
+__EXPORT
 zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
                               size_t len) {
   return Launch(StdioType::kLog, ProcessAction::kNonBlock, argc, argv, handles, types, len);

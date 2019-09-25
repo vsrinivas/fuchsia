@@ -80,6 +80,7 @@ typedef struct mount_options {
   bool enable_journal;
 } mount_options_t;
 
+__EXPORT
 extern const mount_options_t default_mount_options;
 
 typedef struct mkfs_options {
@@ -87,6 +88,7 @@ typedef struct mkfs_options {
   bool verbose;
 } mkfs_options_t;
 
+__EXPORT
 extern const mkfs_options_t default_mkfs_options;
 
 typedef struct fsck_options {
@@ -98,6 +100,7 @@ typedef struct fsck_options {
   bool apply_journal;  // Apply journal prior to running the consistency checker.
 } fsck_options_t;
 
+__EXPORT
 extern const fsck_options_t default_fsck_options;
 
 // Callback that will launch the requested program.  |argv[argc]| is guaranteed
