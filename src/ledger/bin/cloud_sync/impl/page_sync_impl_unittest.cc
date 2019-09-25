@@ -46,7 +46,7 @@ cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
 class TestSyncStateWatcher : public SyncStateWatcher {
  public:
   TestSyncStateWatcher() = default;
-  ~TestSyncStateWatcher() override{};
+  ~TestSyncStateWatcher() override = default;
 
   void Notify(SyncStateContainer sync_state) override {
     if (!states.empty() && sync_state == *states.rbegin()) {

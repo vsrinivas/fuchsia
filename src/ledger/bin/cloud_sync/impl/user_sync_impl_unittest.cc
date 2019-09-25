@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
-#include <utility>
-
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <utility>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
@@ -24,7 +24,7 @@ namespace {
 class TestSyncStateWatcher : public SyncStateWatcher {
  public:
   TestSyncStateWatcher() = default;
-  ~TestSyncStateWatcher() override{};
+  ~TestSyncStateWatcher() override = default;
 
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };

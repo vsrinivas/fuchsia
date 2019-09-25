@@ -33,7 +33,7 @@ ValidationTestsLauncher::CloudProviderProxy::CloudProviderProxy(
   });
 }
 
-ValidationTestsLauncher::CloudProviderProxy::~CloudProviderProxy(){};
+ValidationTestsLauncher::CloudProviderProxy::~CloudProviderProxy() = default;
 
 void ValidationTestsLauncher::CloudProviderProxy::set_on_empty(fit::closure on_empty) {
   on_empty_ = std::move(on_empty);

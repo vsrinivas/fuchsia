@@ -28,8 +28,7 @@ namespace {
 class FakeCommitTracker : public LiveCommitTracker {
  public:
   FakeCommitTracker() = default;
-
-  ~FakeCommitTracker() override{};
+  ~FakeCommitTracker() override = default;
 
   // Returns a copy of every currently live/tracked commit.
   std::vector<std::unique_ptr<const Commit>> GetLiveCommits() const override {

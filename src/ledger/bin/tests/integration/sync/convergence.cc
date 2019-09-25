@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/zx/time.h>
+
 #include <trace/event.h>
 
 #include "fuchsia/ledger/cpp/fidl.h"
@@ -195,7 +196,7 @@ class ConvergenceTest : public BaseIntegrationTest,
  public:
   ConvergenceTest()
       : BaseIntegrationTest(std::get<const LedgerAppInstanceFactoryBuilder*>(GetParam())) {}
-  ~ConvergenceTest() override{};
+  ~ConvergenceTest() override = default;
 
   void SetUp() override {
     BaseIntegrationTest::SetUp();
@@ -238,8 +239,7 @@ class ConvergenceTest : public BaseIntegrationTest,
     fidl::InterfaceRequest<PageSnapshot> page_snapshot_request = (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(), std::move(page_snapshot));
-    (*page)->GetSnapshot(std::move(page_snapshot_request), {},
-                         std::move(page_watcher));
+    (*page)->GetSnapshot(std::move(page_snapshot_request), {}, std::move(page_watcher));
     return watcher;
   }
 

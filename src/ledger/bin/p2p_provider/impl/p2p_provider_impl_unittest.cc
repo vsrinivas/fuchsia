@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& os, const RecordingClient::Message& m) {
 class P2PProviderImplTest : public gtest::TestLoopFixture {
  public:
   P2PProviderImplTest() = default;
-  ~P2PProviderImplTest() override {}
+  ~P2PProviderImplTest() override = default;
 
   std::unique_ptr<P2PProvider> GetProvider(uint64_t host_id, std::string user_name) {
     fuchsia::overnet::OvernetPtr overnet;
