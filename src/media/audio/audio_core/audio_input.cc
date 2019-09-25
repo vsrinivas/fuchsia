@@ -6,7 +6,6 @@
 
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {
@@ -15,12 +14,15 @@ constexpr zx_duration_t kMinFenceDistance = ZX_MSEC(200);
 constexpr zx_duration_t kMaxFenceDistance = kMinFenceDistance + ZX_MSEC(20);
 
 // static
-fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, AudioDeviceManager* manager) {
-  return fbl::AdoptRef(new AudioInput(std::move(channel), manager));
+fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
+                                           ObjectRegistry* registry) {
+  return fbl::AdoptRef(new AudioInput(std::move(channel), threading_model, registry));
 }
 
-AudioInput::AudioInput(zx::channel channel, AudioDeviceManager* manager)
-    : AudioDevice(Type::Input, manager), initial_stream_channel_(std::move(channel)) {}
+AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,
+                       ObjectRegistry* registry)
+    : AudioDevice(Type::Input, threading_model, registry),
+      initial_stream_channel_(std::move(channel)) {}
 
 zx_status_t AudioInput::Init() {
   TRACE_DURATION("audio", "AudioInput::Init");
@@ -122,7 +124,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   // Reflect this message to the AudioDeviceManager so it can deal with the
   // routing consequences of the plug state change.
   threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
-    output->device_manager().HandlePlugStateChange(std::move(output), plugged, plug_time);
+    output->object_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
   });
 }
 

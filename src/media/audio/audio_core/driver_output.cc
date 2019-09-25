@@ -11,7 +11,6 @@
 
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -43,12 +42,15 @@ constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
 constexpr const char* kWavFileExtension = ".wav";
 
 fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
-                                              AudioDeviceManager* manager) {
-  return fbl::AdoptRef(new DriverOutput(manager, std::move(stream_channel)));
+                                              ThreadingModel* threading_model,
+                                              ObjectRegistry* registry) {
+  return fbl::AdoptRef(new DriverOutput(threading_model, registry, std::move(stream_channel)));
 }
 
-DriverOutput::DriverOutput(AudioDeviceManager* manager, zx::channel initial_stream_channel)
-    : AudioOutput(manager), initial_stream_channel_(std::move(initial_stream_channel)) {}
+DriverOutput::DriverOutput(ThreadingModel* threading_model, ObjectRegistry* registry,
+                           zx::channel initial_stream_channel)
+    : AudioOutput(threading_model, registry),
+      initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
@@ -467,7 +469,7 @@ void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
   threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
-    output->device_manager().HandlePlugStateChange(std::move(output), plugged, plug_time);
+    output->object_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
   });
 }
 

@@ -20,6 +20,7 @@
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
+#include "src/media/audio/audio_core/object_registry.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
@@ -28,7 +29,7 @@ namespace media::audio {
 class AudioCapturerImpl;
 class SystemGainMuteProvider;
 
-class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
+class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public ObjectRegistry {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
@@ -58,71 +59,37 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   void AddDeviceEnumeratorClient(
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
-  // Add an AudioRenderer to the set of active AudioRenderers.
-  void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) {
-    FXL_DCHECK(audio_renderer);
-    audio_renderers_.push_back(std::move(audio_renderer));
-  }
-
-  // Remove an AudioRenderer from the set of active AudioRenderers.
-  void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) {
-    FXL_DCHECK(audio_renderer != nullptr);
-    FXL_DCHECK(audio_renderer->InContainer());
-    audio_renderers_.erase(*audio_renderer);
-  }
-
   // Select the initial set of outputs for a newly-configured AudioRenderer.
   void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer);
 
   // Link an output to an AudioRenderer.
   void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer);
 
-  // Add/remove an AudioCapturer to/from the set of active AudioCapturers.
-  void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer);
-  void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer);
-
-  // Begin initializing a device and add it to the set of devices waiting to be initialized.
-  //
-  // Called from the plug detector when a new stream device first shows up.
-  void AddDevice(const fbl::RefPtr<AudioDevice>& device);
-
-  // Move device from pending-init list to active-devices list. Notify users and re-evaluate policy.
-  void ActivateDevice(const fbl::RefPtr<AudioDevice>& device);
-
-  // Shutdown this device; remove it from the appropriate set of active devices.
-  void RemoveDevice(const fbl::RefPtr<AudioDevice>& device);
-
-  // Handles a plugged/unplugged state change for the supplied audio device.
-  void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                             zx_time_t plug_time);
-
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy);
-
-  static inline bool ValidateRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
-    switch (policy) {
-      case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT:
-      case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS:
-        return true;
-        // Note: no default: handler here. If someone adds a new policy to the enum without updating
-        // this code, we want a Build Break to notify us that we need to handle the new policy.
-    }
-
-    return false;
-  }
 
   // SetSystemGain/Mute has been called. 'changed' tells us whether System Gain or Mute values
   // actually changed. If not, only update devices that (because of calls to SetDeviceGain) have
   // diverged from System settings.
   void OnSystemGain(bool changed);
 
-  // Implementation of the AudioDeviceEnumerator FIDL interface.
+  // |media::audio::ObjectRegistry|
+  void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) override;
+  void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) override;
+  void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) override;
+  void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) override;
+  void AddDevice(const fbl::RefPtr<AudioDevice>& device) override;
+  void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override;
+  void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override;
+  void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+                          zx_time_t plug_time) override;
+
+  // |fuchsia::media::AudioDeviceEnumerator|
   void GetDevices(GetDevicesCallback cbk) final;
   void GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) final;
   void SetDeviceGain(uint64_t device_token, fuchsia::media::AudioGainInfo gain_info,
                      uint32_t set_flags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
-
   void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
                           bool is_input) final;
 

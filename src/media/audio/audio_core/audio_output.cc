@@ -21,7 +21,8 @@ namespace media::audio {
 
 static constexpr fxl::TimeDelta kMaxTrimPeriod = fxl::TimeDelta::FromMilliseconds(10);
 
-AudioOutput::AudioOutput(AudioDeviceManager* manager) : AudioDevice(Type::Output, manager) {
+AudioOutput::AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
+    : AudioDevice(Type::Output, threading_model, registry) {
   next_sched_time_ = fxl::TimePoint::Now();
   next_sched_time_known_ = true;
   source_link_refs_.reserve(16u);

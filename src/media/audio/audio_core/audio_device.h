@@ -20,6 +20,7 @@
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
+#include "src/media/audio/audio_core/object_registry.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
 
@@ -89,7 +90,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
  protected:
   friend class fbl::RefPtr<AudioDevice>;
 
-  AudioDevice(Type type, AudioDeviceManager* manager);
+  AudioDevice(Type type, ThreadingModel* threading_model, ObjectRegistry* registry);
   ~AudioDevice() override;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -192,12 +193,13 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
-  ThreadingModel& threading_model();
-  AudioDeviceManager& device_manager() { return device_manager_; }
+  ThreadingModel& threading_model() { return threading_model_; }
+  ObjectRegistry& object_registry() { return object_registry_; }
   const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
  private:
-  AudioDeviceManager& device_manager_;
+  ObjectRegistry& object_registry_;
+  ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
   WakeupEvent mix_wakeup_;
 

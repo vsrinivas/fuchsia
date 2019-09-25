@@ -17,7 +17,8 @@ constexpr bool kEnableFinalMixWavWriter = false;
 
 class DriverOutput : public AudioOutput {
  public:
-  static fbl::RefPtr<AudioOutput> Create(zx::channel channel, AudioDeviceManager* manager);
+  static fbl::RefPtr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
+                                         ObjectRegistry* registry);
   ~DriverOutput();
 
  protected:
@@ -42,7 +43,8 @@ class DriverOutput : public AudioOutput {
     Shutdown,
   };
 
-  DriverOutput(AudioDeviceManager* manager, zx::channel initial_stream_channel);
+  DriverOutput(ThreadingModel* threading_model, ObjectRegistry* registry,
+               zx::channel initial_stream_channel);
   void ScheduleNextLowWaterWakeup();
 
   // Callbacks triggered by our driver object as it completes various

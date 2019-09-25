@@ -20,14 +20,16 @@ static constexpr fxl::TimeDelta TRIM_PERIOD = fxl::TimeDelta::FromMilliseconds(1
 
 class ThrottleOutput : public AudioOutput {
  public:
-  static fbl::RefPtr<AudioOutput> Create(AudioDeviceManager* manager) {
-    return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(manager));
+  static fbl::RefPtr<AudioOutput> Create(ThreadingModel* threading_model,
+                                         ObjectRegistry* registry) {
+    return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(threading_model, registry));
   }
 
   ~ThrottleOutput() override = default;
 
  protected:
-  explicit ThrottleOutput(AudioDeviceManager* manager) : AudioOutput(manager) {}
+  ThrottleOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
+      : AudioOutput(threading_model, registry) {}
 
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {

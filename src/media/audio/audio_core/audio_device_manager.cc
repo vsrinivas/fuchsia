@@ -22,6 +22,21 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
+
+inline bool ValidateRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
+  switch (policy) {
+    case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT:
+    case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS:
+      return true;
+      // Note: no default: handler here. If someone adds a new policy to the enum without updating
+      // this code, we want a Build Break to notify us that we need to handle the new policy.
+  }
+
+  return false;
+}
+
+}  // namespace
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
                                        EffectsLoader* effects_loader,
@@ -46,7 +61,7 @@ zx_status_t AudioDeviceManager::Init() {
   TRACE_DURATION("audio", "AudioDeviceManager::Init");
 
   // Instantiate and initialize the default throttle output.
-  auto throttle_output = ThrottleOutput::Create(this);
+  auto throttle_output = ThrottleOutput::Create(&threading_model(), this);
   if (throttle_output == nullptr) {
     FXL_LOG(ERROR) << "AudioDeviceManager failed to create default throttle output!";
     return ZX_ERR_NO_MEMORY;
@@ -276,9 +291,9 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   }
 }
 
-void AudioDeviceManager::HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                                               zx_time_t plug_time) {
-  TRACE_DURATION("audio", "AudioDeviceManager::HandlePlugStateChange");
+void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+                                            zx_time_t plug_time) {
+  TRACE_DURATION("audio", "AudioDeviceManager::OnPlugStateChanged");
   FXL_DCHECK(device != nullptr);
 
   // Update our bookkeeping for device's plug state. If no change, we're done.
@@ -432,6 +447,17 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(AudioOutput* output,
     audio_renderer->SetThrottleOutput(
         fbl::RefPtr<AudioLinkPacketSource>::Downcast(std::move(link)));
   }
+}
+
+void AudioDeviceManager::AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) {
+  FXL_DCHECK(audio_renderer);
+  audio_renderers_.push_back(std::move(audio_renderer));
+}
+
+void AudioDeviceManager::RemoveAudioRenderer(AudioRendererImpl* audio_renderer) {
+  FXL_DCHECK(audio_renderer != nullptr);
+  FXL_DCHECK(audio_renderer->InContainer());
+  audio_renderers_.erase(*audio_renderer);
 }
 
 void AudioDeviceManager::AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) {
@@ -752,9 +778,9 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   // Hand the stream off to the proper type of class to manage.
   fbl::RefPtr<AudioDevice> new_device;
   if (is_input) {
-    new_device = AudioInput::Create(std::move(device_channel), this);
+    new_device = AudioInput::Create(std::move(device_channel), &threading_model(), this);
   } else {
-    new_device = DriverOutput::Create(std::move(device_channel), this);
+    new_device = DriverOutput::Create(std::move(device_channel), &threading_model(), this);
   }
 
   if (new_device == nullptr) {

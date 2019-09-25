@@ -30,19 +30,18 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
 }
 }  // namespace
 
-AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
+AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
+                         ObjectRegistry* registry)
     : AudioObject(type),
-      device_manager_(*manager),
-      mix_domain_(manager ? manager->threading_model().AcquireMixDomain() : nullptr),
+      object_registry_(*registry),
+      threading_model_(*threading_model),
+      mix_domain_(threading_model->AcquireMixDomain()),
       driver_(new AudioDriver(this)) {
-  // audio_core_inspect_tests currently relies on creating a subclass of AudioDevice with a null
-  // AudioDeviceManager, so we skip the nullptr asserts on |manager| and |mix_domain_|.
+  FXL_DCHECK(registry);
   FXL_DCHECK((type == Type::Input) || (type == Type::Output));
 }
 
 AudioDevice::~AudioDevice() = default;
-
-ThreadingModel& AudioDevice::threading_model() { return device_manager_.threading_model(); }
 
 void AudioDevice::Wakeup() {
   TRACE_DURATION("audio", "AudioDevice::Wakeup");
@@ -145,7 +144,7 @@ void AudioDevice::ActivateSelf() {
 
     // Now poke our manager.
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->device_manager().ActivateDevice(std::move(self)); });
+        [self = fbl::RefPtr(this)]() { self->object_registry().ActivateDevice(std::move(self)); });
   }
 }
 
@@ -159,7 +158,7 @@ void AudioDevice::ShutdownSelf() {
     PreventNewLinks();
 
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->device_manager().RemoveDevice(self); });
+        [self = fbl::RefPtr(this)]() { self->object_registry().RemoveDevice(self); });
   }
 }
 

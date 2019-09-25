@@ -6,6 +6,8 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "fake_audio_device.h",
+    "fake_object_registry.h",
     "threading_model_fixture.h",
   ]
 

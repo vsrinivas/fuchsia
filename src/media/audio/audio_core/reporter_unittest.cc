@@ -5,21 +5,24 @@
 
 #include <lib/inspect/testing/cpp/inspect.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/testing/fake_audio_device.h"
+#include "src/media/audio/audio_core/testing/fake_object_registry.h"
+#include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
-namespace media::audio::test {
+namespace media::audio {
+namespace {
 
-using inspect::testing::ChildrenMatch;
-using inspect::testing::DoubleIs;
-using inspect::testing::NameMatches;
-using inspect::testing::NodeMatches;
-using inspect::testing::PropertyList;
-using inspect::testing::UintIs;
-using testing::AllOf;
-using testing::IsEmpty;
+using ::inspect::testing::ChildrenMatch;
+using ::inspect::testing::DoubleIs;
+using ::inspect::testing::NameMatches;
+using ::inspect::testing::NodeMatches;
+using ::inspect::testing::PropertyList;
+using ::inspect::testing::UintIs;
+using ::testing::AllOf;
+using ::testing::IsEmpty;
 
-class ReporterTest : public gtest::TestLoopFixture {
+class ReporterTest : public testing::ThreadingModelFixture {
  public:
   ReporterTest() {
     std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
@@ -42,20 +45,7 @@ class ReporterTest : public gtest::TestLoopFixture {
   }
 
   Reporter under_test_;
-};
-
-class TestInput : public AudioDevice {
- public:
-  TestInput() : AudioDevice(Type::Input, nullptr) {}
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
-  void OnWakeup() override {}
-};
-
-class TestOutput : public AudioDevice {
- public:
-  TestOutput() : AudioDevice(Type::Output, nullptr) {}
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
-  void OnWakeup() override {}
+  testing::FakeObjectRegistry object_registry_;
 };
 
 // Tests reporter initial state.
@@ -97,7 +87,7 @@ TEST_F(ReporterTest, RootMetrics) {
   under_test_.FailedToObtainStreamChannel("", false, 0);
   under_test_.FailedToObtainStreamChannel("", false, 0);
   under_test_.FailedToObtainStreamChannel("", false, 0);
-  TestInput device;
+  testing::FakeAudioInput device(&threading_model(), &object_registry_);
   under_test_.DeviceStartupFailed(device);
   under_test_.DeviceStartupFailed(device);
   under_test_.DeviceStartupFailed(device);
@@ -115,10 +105,10 @@ TEST_F(ReporterTest, RootMetrics) {
 
 // Tests methods that add and remove devices.
 TEST_F(ReporterTest, AddRemoveDevices) {
-  TestOutput output_device_a;
-  TestOutput output_device_b;
-  TestInput input_device_a;
-  TestInput input_device_b;
+  testing::FakeAudioOutput output_device_a(&threading_model(), &object_registry_);
+  testing::FakeAudioOutput output_device_b(&threading_model(), &object_registry_);
+  testing::FakeAudioInput input_device_a(&threading_model(), &object_registry_);
+  testing::FakeAudioInput input_device_b(&threading_model(), &object_registry_);
 
   under_test_.AddingDevice("output_device_a", output_device_a);
   under_test_.AddingDevice("output_device_b", output_device_b);
@@ -176,8 +166,8 @@ TEST_F(ReporterTest, AddRemoveDevices) {
 
 // Tests the initial state of added devices.
 TEST_F(ReporterTest, DeviceInitialState) {
-  TestOutput output_device;
-  TestInput input_device;
+  testing::FakeAudioOutput output_device(&threading_model(), &object_registry_);
+  testing::FakeAudioInput input_device(&threading_model(), &object_registry_);
 
   under_test_.AddingDevice("output_device", output_device);
   under_test_.AddingDevice("input_device", input_device);
@@ -202,8 +192,8 @@ TEST_F(ReporterTest, DeviceInitialState) {
 
 // Tests method SettingDeviceGainInfo.
 TEST_F(ReporterTest, SettingDeviceGainInfo) {
-  TestOutput output_device;
-  TestInput input_device;
+  testing::FakeAudioOutput output_device(&threading_model(), &object_registry_);
+  testing::FakeAudioInput input_device(&threading_model(), &object_registry_);
 
   under_test_.AddingDevice("output_device", output_device);
 
@@ -482,4 +472,5 @@ TEST_F(ReporterTest, CapturerMetrics) {
                       UintIs("calls to SetGainWithRamp", 2))))))))))));
 }
 
-}  // namespace media::audio::test
+}  // namespace
+}  // namespace media::audio

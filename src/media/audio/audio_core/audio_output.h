@@ -27,7 +27,7 @@ class AudioOutput : public AudioDevice {
   int64_t min_clock_lead_time_nsec() const { return min_clock_lead_time_nsec_; }
 
  protected:
-  explicit AudioOutput(AudioDeviceManager* manager);
+  AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry);
 
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.
