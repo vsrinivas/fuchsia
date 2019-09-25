@@ -43,12 +43,14 @@ bool ExceptionMatches(const zx_exception_info_t& info, zx_koid_t pid, zx_koid_t 
 
 }  // namespace
 
+__EXPORT
 ExceptionCatcher::~ExceptionCatcher() {
   zx_status_t status = Stop();
   ZX_ASSERT_MSG(status == ZX_OK, "ExceptionCatcher::Stop() failed (%s)",
                 zx_status_get_string(status));
 }
 
+__EXPORT
 zx_status_t ExceptionCatcher::Stop() {
   // Move these to local vars so they always get cleared when we return.
   zx::channel exception_channel = std::move(exception_channel_);
@@ -67,10 +69,12 @@ zx_status_t ExceptionCatcher::Stop() {
   return (active_exceptions.empty() && !exceptions_in_channel) ? ZX_OK : ZX_ERR_CANCELED;
 }
 
+__EXPORT
 zx_status_t ExceptionCatcher::ExpectException() {
   return ExpectException(ZX_KOID_INVALID, ZX_KOID_INVALID);
 }
 
+__EXPORT
 zx_status_t ExceptionCatcher::ExpectException(const zx::thread& thread) {
   zx_koid_t tid;
   zx_status_t status = GetKoid(thread, &tid);
@@ -80,6 +84,7 @@ zx_status_t ExceptionCatcher::ExpectException(const zx::thread& thread) {
   return ExpectException(ZX_KOID_INVALID, tid);
 }
 
+__EXPORT
 zx_status_t ExceptionCatcher::ExpectException(const zx::process& process) {
   zx_koid_t pid;
   zx_status_t status = GetKoid(process, &pid);
