@@ -217,6 +217,13 @@ void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
   device_manager().EnableDeviceSettings(enabled);
 }
 
+void AudioCoreImpl::BindUsageVolumeControl(
+    fuchsia::media::Usage usage,
+    fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> volume_control) {
+  TRACE_DURATION("audio", "AudioCoreImpl::BindUsageVolumeControl");
+  volume_manager_.BindUsageVolumeClient(std::move(usage), std::move(volume_control));
+}
+
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                    fuchsia::media::Behavior behavior) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetInteraction");

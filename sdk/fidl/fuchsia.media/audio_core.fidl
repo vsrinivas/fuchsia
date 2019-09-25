@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using fuchsia.media.audio;
+
 /// Usage annotating the purpose of the stream being used to render audio.
 /// An AudioRenderer's usage cannot be changed after creation.  The
 /// AudioRenderUsage is used by audio policy to dictate how audio streams
@@ -144,6 +146,9 @@ protocol AudioCore {
     /// Set the Usage gain applied to Capturers. By default, the gain for all
     /// capture usages is set to Unity (0 db).
     SetCaptureUsageGain(AudioCaptureUsage usage, float32 gain_db);
+
+    /// Binds to a volume control protocol for the given usage.
+    BindUsageVolumeControl(Usage usage, request<fuchsia.media.audio.VolumeControl> volume_control);
 
     /// SetInteraction allows changing how audio_core handles interactions of multiple active
     /// streams simultaneously.  If streams of Usage `active` are processing audio, and streams of

@@ -22,6 +22,11 @@ class AudioTest : public HermeticAudioCoreTest {
 };
 
 //
+// UsageVolumeControlTest
+//
+class UsageVolumeControlTest : public HermeticAudioCoreTest {};
+
+//
 // SystemGainMuteTest class
 //
 class SystemGainMuteTest : public HermeticAudioCoreTest {
@@ -210,6 +215,38 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   EXPECT_TRUE(audio_capturer_2.is_bound());
 
   // TearDown will validate that parent Audio survived after child unbound.
+}
+
+TEST_F(UsageVolumeControlTest, ConnectToUsageVolume) {
+  fuchsia::media::AudioCorePtr audio_core;
+  environment()->ConnectToService(audio_core.NewRequest());
+  audio_core.set_error_handler(ErrorHandler());
+
+  fuchsia::media::audio::VolumeControlPtr client1;
+  fuchsia::media::audio::VolumeControlPtr client2;
+
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
+
+  audio_core->BindUsageVolumeControl(fidl::Clone(usage), client1.NewRequest());
+  audio_core->BindUsageVolumeControl(fidl::Clone(usage), client2.NewRequest());
+
+  float volume = 0.0;
+  bool muted = false;
+  client2.events().OnVolumeMuteChanged =
+      CompletionCallback([&volume, &muted](float new_volume, bool new_muted) {
+        volume = new_volume;
+        muted = new_muted;
+      });
+
+  client1->SetVolume(0.5);
+  ExpectCallback();
+  EXPECT_FLOAT_EQ(volume, 0.5);
+  EXPECT_EQ(muted, false);
+
+  client1->SetMute(true);
+  ExpectCallback();
+  EXPECT_EQ(muted, true);
 }
 
 //
