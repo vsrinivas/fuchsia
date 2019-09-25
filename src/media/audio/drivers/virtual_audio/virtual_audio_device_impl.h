@@ -5,6 +5,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/closure-queue/closure_queue.h>
 
 #include <memory>
 
@@ -12,7 +13,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
-#include "src/media/lib/codec_impl/include/lib/media/codec_impl/closure_queue.h"
 
 namespace virtual_audio {
 

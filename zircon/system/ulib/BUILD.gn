@@ -37,6 +37,7 @@ group("ulib") {
     "c",
     "c:crt1",
     "chromeos-disk-setup",
+    "closure-queue",
     "cmdline",
     "cobalt-client",
     "crypto",

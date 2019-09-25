@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
-#define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#ifndef LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_
+#define LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <threads.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <mutex>
 #include <queue>
-
-#include <src/lib/fxl/synchronization/thread_annotations.h>
 
 class ClosureQueue {
  public:
@@ -56,6 +55,20 @@ class ClosureQueue {
   void StopAndClear();
   bool is_stopped();
 
+  // The DDK has some sync calls such as DdkSuspend().  By allowing the DDK's
+  // main dispatcher thread to pump the queue, the code that calls Enqueue() can
+  // be simpler.
+  //
+  // The calling thread must be the dispatcher_thread.
+  //
+  // This method will wait for at least one task to be in the queue, and then
+  // run exactly one task (here on the dispatcher_thread that's calling this
+  // method), then will return to the caller.
+  //
+  // TODO(dustingreen): If DdkSuspend() and similar become async, consider
+  // removing this method.
+  void RunOneHere();
+
  private:
   class Impl {
    public:
@@ -64,6 +77,7 @@ class ClosureQueue {
     void Enqueue(std::shared_ptr<Impl> self_shared, fit::closure to_run);
     void StopAndClear();
     bool is_stopped();
+    void RunOneHere();
 
    private:
     Impl(async_dispatcher_t* dispatcher, thrd_t dispatcher_thread);
@@ -71,12 +85,18 @@ class ClosureQueue {
     std::mutex lock_;
     // Starts non-nullptr.  Set to nullptr to indicate that StopAndClear() has
     // run.
-    async_dispatcher_t* dispatcher_ FXL_GUARDED_BY(lock_){};
-    const thrd_t dispatcher_thread_{};
-    std::queue<fit::closure> pending_ FXL_GUARDED_BY(lock_);
+    //
+    // TODO(dustingreen): __TA_GUARDED(lock_), when I can figure out why it doesn't seem to work.
+    // __TA_GUARDED(lock_)
+    async_dispatcher_t* dispatcher_ = {};
+    const thrd_t dispatcher_thread_ = {};
+    // TODO(dustingreen): __TA_GUARDED(lock_), when I can figure out why it doesn't seem to work.
+    // __TA_GUARDED(lock_)
+    std::queue<fit::closure> pending_;
+    std::condition_variable pending_not_empty_condition_;
   };
 
   std::shared_ptr<Impl> impl_;
 };
 
-#endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#endif  // LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_

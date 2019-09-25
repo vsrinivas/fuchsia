@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/codec_impl/closure_queue.h"
+#include "lib/closure-queue/closure_queue.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
@@ -49,6 +49,11 @@ bool ClosureQueue::is_stopped() {
   return impl_->is_stopped();
 }
 
+void ClosureQueue::RunOneHere() {
+  ZX_DEBUG_ASSERT(impl_);
+  impl_->RunOneHere();
+}
+
 std::shared_ptr<ClosureQueue::Impl> ClosureQueue::Impl::Create(async_dispatcher_t* dispatcher,
                                                                thrd_t dispatcher_thread) {
   return std::shared_ptr<ClosureQueue::Impl>(new ClosureQueue::Impl(dispatcher, dispatcher_thread));
@@ -84,6 +89,7 @@ void ClosureQueue::Impl::Enqueue(std::shared_ptr<Impl> self_shared, fit::closure
   // isn't forced to keep re-checking-for/accepting additional tasks, which might tend to starve out
   // other work.
   if (was_empty) {
+    pending_not_empty_condition_.notify_all();
     // Posting to a dispatcher under a lock is necessary here because otherwise
     // the dispatcher can already be deleted.
     zx_status_t result = async::PostTask(dispatcher_, [self_shared] {
@@ -140,15 +146,31 @@ void ClosureQueue::Impl::TryRunAll() {
     }
     ZX_DEBUG_ASSERT(dispatcher_);
     local_pending.swap(pending_);
-    // Because Enqueue() only calls async::PostTask() if was_empty, which is
-    // only true if any previous run of TryRunAll() ran already, which means any
-    // given run of TryRunAll() will see at least the first item Enqueue()ed
-    // that had was_empty true.
-    ZX_DEBUG_ASSERT(!local_pending.empty());
+    // local_pending can be empty at this point, but only if RunOneHere() was
+    // used.
   }  // ~lock
   while (!local_pending.empty()) {
     fit::closure local_to_run = std::move(local_pending.front());
     local_pending.pop();
     local_to_run();
+    // local_to_run() may have run StopAndClear().
+    if (is_stopped()) {
+      break;
+    }
   }
+}
+
+void ClosureQueue::Impl::RunOneHere() {
+  ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  fit::closure local_to_run;
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    ZX_DEBUG_ASSERT(dispatcher_);
+    while (pending_.empty()) {
+      pending_not_empty_condition_.wait(lock);
+    }
+    local_to_run = std::move(pending_.front());
+    pending_.pop();
+  }  // ~lock
+  local_to_run();
 }

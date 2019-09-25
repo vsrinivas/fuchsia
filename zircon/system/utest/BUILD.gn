@@ -201,6 +201,7 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "cleanup",
+      "closure-queue",
       "compiler",
       "core",
       "cprng",

@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("closure-queue") {
+  # Note: The appearance of "sdk" does not mean this will or is intended to be
+  # in the sdk. It's just the way we export from zircon for use elsewhere.
+  sdk = "source"
+  sdk_headers = [ "lib/closure-queue/closure_queue.h" ]
+
+  sources = [
+    "closure_queue.cc",
+  ]
+  public = [
+    "include/lib/closure-queue/closure_queue.h",
+  ]
+  deps = [
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/zx",
+  ]
+}
