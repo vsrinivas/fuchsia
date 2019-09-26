@@ -105,7 +105,7 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
 }
 
 ThreadController::StopOp StepThreadController::OnThreadStop(
-    debug_ipc::NotifyException::Type stop_type,
+    debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_unsymolized_function_) {
     Log("Trying to step out of unsymbolized function.");
@@ -128,9 +128,9 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // A "none" type means to ignore the exception type and evaluate the
     // current code location. It is used when this controller is nested. A
     // synthetic exception is used to step into inline functions.
-    if (stop_type != debug_ipc::NotifyException::Type::kNone &&
-        stop_type != debug_ipc::NotifyException::Type::kSynthetic &&
-        stop_type != debug_ipc::NotifyException::Type::kSingleStep) {
+    if (stop_type != debug_ipc::ExceptionType::kNone &&
+        stop_type != debug_ipc::ExceptionType::kSynthetic &&
+        stop_type != debug_ipc::ExceptionType::kSingleStep) {
       Log("Not our exception type, stop is somebody else's.");
       return kUnexpected;
     }
@@ -204,8 +204,8 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     }
   }
 
-  if (stop_type == debug_ipc::NotifyException::Type::kSynthetic ||
-      stop_type == debug_ipc::NotifyException::Type::kNone) {
+  if (stop_type == debug_ipc::ExceptionType::kSynthetic ||
+      stop_type == debug_ipc::ExceptionType::kNone) {
     // Handle virtually stepping into inline functions by modifying the hidden
     // ambiguous inline frame count.
     //

@@ -222,7 +222,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     ASSERT_EQ(thread_excp.size(), 1u);
     auto& brk_notify = thread_excp.front();
     EXPECT_EQ(brk_notify.thread.thread_koid, thread_koid);
-    EXPECT_EQ(brk_notify.type, debug_ipc::NotifyException::Type::kSoftware);
+    EXPECT_EQ(brk_notify.type, debug_ipc::ExceptionType::kSoftware);
 
     ASSERT_EQ(brk_notify.hit_breakpoints.size(), 1u);
     auto& hit_brk = brk_notify.hit_breakpoints.front();
@@ -255,7 +255,7 @@ void BreakpointStreamBackend::ResumeAllThreads() {
 
 // Records the exception given from the debug agent.
 void BreakpointStreamBackend::HandleNotifyException(NotifyException exception) {
-  DEBUG_LOG(Test) << "Received " << NotifyException::TypeToString(exception.type)
+  DEBUG_LOG(Test) << "Received " << ExceptionTypeToString(exception.type)
                   << " on Thread: " << exception.thread.thread_koid;
   thread_excp_.push_back(exception);
   ShouldQuitLoop();

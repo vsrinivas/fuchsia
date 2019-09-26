@@ -138,7 +138,7 @@ class ThreadController {
   // active and any of them can report "stop". When a thread is being
   // continued, the main controller will get GetContinueOp() called to see what
   // type of continuation it wants.
-  virtual StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+  virtual StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                               const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
 
   // Writes the log message prefixed with the thread controller type. Callers

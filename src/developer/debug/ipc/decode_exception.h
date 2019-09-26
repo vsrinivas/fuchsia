@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_IPC_DECODE_EXCEPTION_H_
 #define SRC_DEVELOPER_DEBUG_IPC_DECODE_EXCEPTION_H_
 
+#include <stdint.h>
+
 #include <optional>
 
 #include "src/developer/debug/ipc/protocol.h"
@@ -35,8 +37,8 @@ class X64ExceptionInfo {
   virtual std::optional<DebugRegs> FetchDebugRegs() = 0;
 };
 
-NotifyException::Type DecodeException(uint32_t code, X64ExceptionInfo* info);
-NotifyException::Type DecodeException(uint32_t code, Arm64ExceptionInfo* info);
+ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info);
+ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info);
 
 }  // namespace debug_ipc
 

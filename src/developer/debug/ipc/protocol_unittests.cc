@@ -818,7 +818,7 @@ TEST(Protocol, NotifyException) {
   initial.thread.name = "foo";
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
-  initial.type = NotifyException::Type::kHardware;
+  initial.type = ExceptionType::kHardware;
 
   initial.hit_breakpoints.emplace_back();
   initial.hit_breakpoints[0].id = 45;

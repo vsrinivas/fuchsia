@@ -15,7 +15,7 @@ namespace fidlcat {
   TEST_F(InterceptionWorkflowTestX64, name) { DISPLAY_EXCEPTION_TEST_CONTENT(type, expected); } \
   TEST_F(InterceptionWorkflowTestArm, name) { DISPLAY_EXCEPTION_TEST_CONTENT(type, expected); }
 
-DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::NotifyException::Type::kPageFault,
+DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::ExceptionType::kPageFault,
                        "\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10\x1B[0m\n"
@@ -26,7 +26,7 @@ DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::NotifyException::Ty
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
                        "thread stopped on exception\x1B[0m\n");
 
-DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::NotifyException::Type::kGeneral,
+DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::ExceptionType::kGeneral,
                        "\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10\x1B[0m\n"

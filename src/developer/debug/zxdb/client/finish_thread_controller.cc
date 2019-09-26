@@ -36,7 +36,7 @@ FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_fin
 FinishThreadController::~FinishThreadController() = default;
 
 FinishThreadController::StopOp FinishThreadController::OnThreadStop(
-    debug_ipc::NotifyException::Type stop_type,
+    debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_physical_controller_) {
     Log("Dispatching to physical frame finisher.");
@@ -59,7 +59,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     // Clear the exception type since it will typically be a software
     // breakpoint from the finish controller which the step controllers don't
     // expect.
-    stop_type = debug_ipc::NotifyException::Type::kNone;
+    stop_type = debug_ipc::ExceptionType::kNone;
   }
 
   if (step_over_controller_) {

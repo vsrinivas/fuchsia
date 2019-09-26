@@ -23,7 +23,7 @@ TEST_F(BacktraceCacheControllerTest, DoCache) {
   thread()->AddObserver(&cache);
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           NotifyException::Type::kSoftware,
+                           ExceptionType::kSoftware,
                            MockFrameVectorToFrameVector(GetStack()), true);
 
   EXPECT_EQ(cache.backtraces().size(), 1u);

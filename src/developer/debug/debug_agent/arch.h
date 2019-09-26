@@ -87,8 +87,7 @@ class ArchProvider {
   // Currently HW notifications can mean both a single step or a hardware debug
   // register exception. We need platform-specific queries to figure which one
   // is it.
-  debug_ipc::NotifyException::Type DecodeExceptionType(const DebuggedThread&,
-                                                       uint32_t exception_type);
+  debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&, uint32_t exception_type);
 
   // TODO: Support watchpoints.
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);

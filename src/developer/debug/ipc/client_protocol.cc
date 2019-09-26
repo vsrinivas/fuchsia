@@ -628,9 +628,9 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
 
   uint32_t type;
-  if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(NotifyException::Type::kLast))
+  if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(ExceptionType::kLast))
     return false;
-  notify->type = static_cast<NotifyException::Type>(type);
+  notify->type = static_cast<ExceptionType>(type);
 
   return Deserialize(reader, &notify->hit_breakpoints);
 }

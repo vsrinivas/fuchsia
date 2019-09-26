@@ -199,7 +199,7 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
                                                         uint64_t thread_koid) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftware;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -238,7 +238,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
                                                        uint64_t thread_koid) {
   // Trigger next breakpoint, when the syscall has completed.
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftware;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -257,7 +257,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
   debug_ipc::MessageLoop::Current()->Run();
 }
 
-void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::NotifyException::Type type,
+void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::ExceptionType type,
                                                            const char* expected) {
   ProcessController controller(this, session(), loop());
 
@@ -270,7 +270,7 @@ void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::NotifyExce
 
 void InterceptionWorkflowTest::PerformExceptionTest(
     ProcessController* controller, std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
-    debug_ipc::NotifyException::Type type) {
+    debug_ipc::ExceptionType type) {
   controller->Initialize(session(), std::move(dispatcher), "");
 
   TriggerException(kFirstPid, kFirstThreadKoid, type);
@@ -279,7 +279,7 @@ void InterceptionWorkflowTest::PerformExceptionTest(
 }
 
 void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t thread_koid,
-                                                debug_ipc::NotifyException::Type type) {
+                                                debug_ipc::ExceptionType type) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
   notification.type = type;

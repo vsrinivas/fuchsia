@@ -105,7 +105,7 @@ class SessionThreadObserver : public ThreadObserver {
   // The breakpoints that triggered from the last stop notification.
   const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
 
-  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+  void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
     stop_count_++;
     breakpoints_.clear();
@@ -212,7 +212,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   sink()->ResetResumeState();
   thread_observer.ResetStopState();
   debug_ipc::NotifyException notify;
-  notify.type = debug_ipc::NotifyException::Type::kSoftware;
+  notify.type = debug_ipc::ExceptionType::kSoftware;
   notify.thread.process_koid = kProcessKoid;
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -258,7 +258,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   fxl::WeakPtr<Breakpoint> weak_bp = bp->GetWeakPtr();
 
   debug_ipc::NotifyException notify;
-  notify.type = debug_ipc::NotifyException::Type::kSoftware;
+  notify.type = debug_ipc::ExceptionType::kSoftware;
   notify.thread.process_koid = kProcessKoid;
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

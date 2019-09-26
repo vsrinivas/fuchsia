@@ -61,7 +61,7 @@ ThreadController::ContinueOp StepOverThreadController::GetContinueOp() {
 }
 
 ThreadController::StopOp StepOverThreadController::OnThreadStop(
-    debug_ipc::NotifyException::Type stop_type,
+    debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_) {
     // Currently trying to step out of a sub-frame.
@@ -97,7 +97,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // Pass no exception type or breakpoints because we just want the step
     // controller to evaluate the current position regardless of how we got
     // here.
-    if (auto op = step_into_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {});
+    if (auto op = step_into_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
         op != kStopDone)
       return op;
 
@@ -153,7 +153,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Pass the "none" exception type here to bypass checking the exception
   // type. The current exception type may have been for the original "finish"
   // controller above.
-  return finish_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {});
+  return finish_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
 }
 
 }  // namespace zxdb

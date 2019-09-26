@@ -58,7 +58,7 @@ class StepOverThreadController : public ThreadController {
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
-  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+  StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   const char* GetName() const override { return "Step Over"; }
 

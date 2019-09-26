@@ -26,7 +26,7 @@ class FinishThreadControllerTest : public InlineThreadControllerTest {};
 TEST_F(FinishThreadControllerTest, FinishInline) {
   auto mock_frames = GetStack();
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // "Finish" from the top stack frame, which is an inline one.
@@ -45,7 +45,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   mock_frames = GetStack();
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // That's still inside the frame's range, so it should continue.
@@ -58,7 +58,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   mock_frames[0]->SetAddress(after_inline);
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Should not have resumed.
@@ -75,7 +75,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   auto mock_frames = GetStack();
   uint64_t frame_2_ip = mock_frames[2]->GetAddress();
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // "Finish" frame 3,
@@ -96,7 +96,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are
   // "software").
   debug_ipc::NotifyException exception;
-  exception.type = debug_ipc::NotifyException::Type::kSoftware;
+  exception.type = debug_ipc::ExceptionType::kSoftware;
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -119,7 +119,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
@@ -130,7 +130,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 4);
   mock_frames[0]->SetAddress(kMiddleInline2FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
@@ -139,7 +139,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 5);
   mock_frames[0]->SetAddress(kMiddleInline1FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 }

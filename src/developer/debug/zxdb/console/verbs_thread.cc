@@ -466,7 +466,7 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
       console->context().SetActiveFrameIdForThread(thread.get(), 0);
 
       // Tell the user where they are.
-      console->context().OutputThreadContext(thread.get(), debug_ipc::NotifyException::Type::kNone,
+      console->context().OutputThreadContext(thread.get(), debug_ipc::ExceptionType::kNone,
                                              {});
     }
   });
@@ -735,7 +735,7 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
     if (show_source) {
       // Output the full source location.
       console->context().OutputThreadContext(weak_thread.get(),
-                                             debug_ipc::NotifyException::Type::kNone, {});
+                                             debug_ipc::ExceptionType::kNone, {});
 
     } else {
       // Not current, just output the one-line description.
@@ -770,7 +770,7 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
     if (weak_thread) {
       // Thread is current, show current location.
       console->context().OutputThreadContext(weak_thread.get(),
-                                             debug_ipc::NotifyException::Type::kNone, {});
+                                             debug_ipc::ExceptionType::kNone, {});
     }
   });
   return Err();
@@ -814,8 +814,8 @@ Err PauseSystem(System* system, Thread* current_thread) {
 
     // Follow with the source context of the current thread if there is one.
     if (weak_thread) {
-      console->context().OutputThreadContext(weak_thread.get(),
-                                             debug_ipc::NotifyException::Type::kNone, {});
+      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
+                                             {});
     }
   });
   return Err();

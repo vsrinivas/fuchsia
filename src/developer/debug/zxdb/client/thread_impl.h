@@ -54,7 +54,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   //
   // The his breakpoints should include all breakpoints, including internal
   // ones.
-  void OnException(debug_ipc::NotifyException::Type type,
+  void OnException(debug_ipc::ExceptionType type,
                    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
  private:

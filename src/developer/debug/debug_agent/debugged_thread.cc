@@ -90,7 +90,7 @@ void LogExceptionNotification(debug_ipc::FileLineFunction location, const Debugg
 
   std::stringstream ss;
   ss << ThreadPreamble(thread) << "Notifying exception "
-     << debug_ipc::NotifyException::TypeToString(exception.type) << ". ";
+     << debug_ipc::ExceptionTypeToString(exception.type) << ". ";
   ss << "Breakpoints hit: ";
   int count = 0;
   for (auto& bp : exception.hit_breakpoints) {
@@ -159,25 +159,25 @@ void DebuggedThread::OnException(zx::exception exception_token,
 
   DEBUG_LOG(Thread) << ThreadPreamble(this)
                     << "Exception: " << ExceptionTypeToString(exception_info.type) << " -> "
-                    << debug_ipc::NotifyException::TypeToString(exception.type);
+                    << debug_ipc::ExceptionTypeToString(exception.type);
 
   zx_thread_state_general_regs regs;
   thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
 
   switch (exception.type) {
-    case debug_ipc::NotifyException::Type::kSingleStep:
+    case debug_ipc::ExceptionType::kSingleStep:
       return HandleSingleStep(&exception, &regs);
-    case debug_ipc::NotifyException::Type::kSoftware:
+    case debug_ipc::ExceptionType::kSoftware:
       return HandleSoftwareBreakpoint(&exception, &regs);
-    case debug_ipc::NotifyException::Type::kHardware:
+    case debug_ipc::ExceptionType::kHardware:
       return HandleHardwareBreakpoint(&exception, &regs);
-    case debug_ipc::NotifyException::Type::kWatchpoint:
+    case debug_ipc::ExceptionType::kWatchpoint:
       return HandleWatchpoint(&exception, &regs);
-    case debug_ipc::NotifyException::Type::kNone:
-    case debug_ipc::NotifyException::Type::kLast:
+    case debug_ipc::ExceptionType::kNone:
+    case debug_ipc::ExceptionType::kLast:
       break;
     // TODO(donosoc): Should synthetic be general or invalid?
-    case debug_ipc::NotifyException::Type::kSynthetic:
+    case debug_ipc::ExceptionType::kSynthetic:
     default:
       return HandleGeneralException(&exception, &regs);
   }

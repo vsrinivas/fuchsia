@@ -277,8 +277,8 @@ uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t
   return exception_addr;
 }
 
-debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
-                                                                   uint32_t exception_type) {
+debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
+                                                           uint32_t exception_type) {
   ExceptionInfo info(thread);
   return debug_ipc::DecodeException(exception_type, &info);
 }

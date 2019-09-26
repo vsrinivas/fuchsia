@@ -28,11 +28,11 @@
 namespace fidlcat {
 
 void InterceptingThreadObserver::OnThreadStopped(
-    zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
+    zxdb::Thread* thread, debug_ipc::ExceptionType type,
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
   FXL_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
 
-  if (type != debug_ipc::NotifyException::Type::kSoftware) {
+  if (type != debug_ipc::ExceptionType::kSoftware) {
     FXL_CHECK(hit_breakpoints.empty());
     if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
       threads_in_error_.emplace(thread->GetKoid());

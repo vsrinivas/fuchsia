@@ -211,12 +211,12 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&, zx:
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {
+debug_ipc::ExceptionType HardwareNotificationType(const zx::thread&) {
   // TODO: For now zxdb only supports single step.
-  return debug_ipc::NotifyException::Type::kSingleStep;
+  return debug_ipc::ExceptionType::kSingleStep;
 }
 
-debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
+debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
                                                                    uint32_t exception_type) {
   ExceptionInfo info(thread);
   return debug_ipc::DecodeException(exception_type, &info);
@@ -229,9 +229,9 @@ uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t
   return exception_addr;
 }
 
-debug_ipc::NotifyException::Type HardwareNotificationType(const DebuggedThread& thread) {
+debug_ipc::ExceptionType HardwareNotificationType(const DebuggedThread& thread) {
   // TODO(donosoc): Implement hw exception detection logic.
-  return debug_ipc::NotifyException::Type::kSingleStep;
+  return debug_ipc::ExceptionType::kSingleStep;
 }
 
 zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {

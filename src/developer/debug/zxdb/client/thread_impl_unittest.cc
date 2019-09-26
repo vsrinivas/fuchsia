@@ -33,7 +33,7 @@ class ContinueThreadController : public ThreadController {
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
-  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+  StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     *got_stop_ = true;
     return kContinue;
@@ -56,7 +56,7 @@ class UnexpectedThreadController : public ThreadController {
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
-  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+  StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     return kUnexpected;
   }
@@ -83,7 +83,7 @@ TEST_F(ThreadImplTest, Frames) {
 
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
-  break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  break_notification.type = debug_ipc::ExceptionType::kSoftware;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -147,7 +147,7 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftware;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -165,7 +165,7 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
 
   // Notify on thread stop again (this is the same address as above but it
   // doesn't matter).
-  notification.type = debug_ipc::NotifyException::Type::kGeneral;
+  notification.type = debug_ipc::ExceptionType::kGeneral;
   InjectException(notification);
 
   // The controller should have been notified and the thread should have issued
@@ -187,7 +187,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftware;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -203,7 +203,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
 
   // Notify on thread stop again (this is the same address as above but it
   // doesn't matter).
-  notification.type = debug_ipc::NotifyException::Type::kSingleStep;
+  notification.type = debug_ipc::ExceptionType::kSingleStep;
   InjectException(notification);
 
   // When all controllers report unexpected, the thread should stop.
@@ -230,7 +230,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.type = debug_ipc::ExceptionType::kSoftware;
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;

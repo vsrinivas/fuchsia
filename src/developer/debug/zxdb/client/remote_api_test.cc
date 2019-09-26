@@ -88,7 +88,7 @@ void RemoteAPITest::InjectExceptionWithStack(const debug_ipc::NotifyException& e
 }
 
 void RemoteAPITest::InjectExceptionWithStack(
-    uint64_t process_koid, uint64_t thread_koid, debug_ipc::NotifyException::Type exception_type,
+    uint64_t process_koid, uint64_t thread_koid, debug_ipc::ExceptionType exception_type,
     std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
     const std::vector<debug_ipc::BreakpointStats>& breakpoints) {
   // Need to supply at least one stack frame to get the address from.

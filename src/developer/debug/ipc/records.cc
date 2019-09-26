@@ -8,6 +8,63 @@
 
 namespace debug_ipc {
 
+bool IsDebug(ExceptionType type) {
+  switch (type) {
+    // There's an argument to be had about whether these belong here.
+    case ExceptionType::kThreadStarting:
+    case ExceptionType::kThreadExiting:
+    case ExceptionType::kProcessStarting:
+
+    case ExceptionType::kHardware:
+    case ExceptionType::kWatchpoint:
+    case ExceptionType::kSingleStep:
+    case ExceptionType::kSoftware:
+    case ExceptionType::kSynthetic:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const char* ExceptionTypeToString(ExceptionType type) {
+  switch (type) {
+    case ExceptionType::kNone:
+      return "None";
+    case ExceptionType::kGeneral:
+      return "General";
+    case ExceptionType::kPageFault:
+      return "Fatal Page Fault";
+    case ExceptionType::kUndefinedInstruction:
+      return "Undefined Instruction";
+    case ExceptionType::kUnalignedAccess:
+      return "Unaligned Access";
+    case ExceptionType::kPolicyError:
+      return "Policy Error";
+    case ExceptionType::kThreadStarting:
+      return "Thread Starting";
+    case ExceptionType::kThreadExiting:
+      return "Thread Exiting";
+    case ExceptionType::kProcessStarting:
+      return "Process Starting";
+    case ExceptionType::kHardware:
+      return "Hardware";
+    case ExceptionType::kWatchpoint:
+      return "Watchpoint";
+    case ExceptionType::kSingleStep:
+      return "Single Step";
+    case ExceptionType::kSoftware:
+      return "Software";
+    case ExceptionType::kSynthetic:
+      return "Synthetic";
+    case ExceptionType::kUnknown:
+      return "Unknown";
+    case ExceptionType::kLast:
+      return "kLast";
+  }
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
 const char* ThreadRecord::StateToString(ThreadRecord::State state) {
   switch (state) {
     case ThreadRecord::State::kNew:

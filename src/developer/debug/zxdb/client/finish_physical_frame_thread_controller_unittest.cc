@@ -28,7 +28,7 @@ class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTes
   debug_ipc::NotifyException MakeBreakNotification() {
     debug_ipc::NotifyException n;
 
-    n.type = debug_ipc::NotifyException::Type::kSoftware;
+    n.type = debug_ipc::ExceptionType::kSoftware;
     n.thread.process_koid = process()->GetKoid();
     n.thread.thread_koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -145,7 +145,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   const uint64_t return_address = mock_frames[2]->GetAddress();
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   Stack& stack = thread()->GetStack();
 
@@ -184,7 +184,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
                                                  mock_frames[0]->GetPhysicalFrame(), true));
 
   InjectExceptionWithStack(
-      process()->GetKoid(), thread()->GetKoid(), debug_ipc::NotifyException::Type::kSingleStep,
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSingleStep,
       MockFrameVectorToFrameVector(std::move(mock_frames)), true, hit_breakpoints);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 

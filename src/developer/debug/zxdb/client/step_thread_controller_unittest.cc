@@ -38,7 +38,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException exception;
-  exception.type = debug_ipc::NotifyException::Type::kSingleStep;
+  exception.type = debug_ipc::ExceptionType::kSingleStep;
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -59,7 +59,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Issue a software exception in the range.
-  exception.type = debug_ipc::NotifyException::Type::kSoftware;
+  exception.type = debug_ipc::ExceptionType::kSoftware;
   exception.thread.frames[0].ip += 4;
   InjectException(exception);
 
@@ -108,7 +108,7 @@ TEST_F(StepThreadControllerTest, Line0) {
   mock_frames.push_back(GetTopFrame(kAddr1));
   mock_frames[0]->SetFileLine(line10);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Continue the thread with the controller stepping in range.
@@ -127,7 +127,7 @@ TEST_F(StepThreadControllerTest, Line0) {
   mock_frames.push_back(GetTopFrame(kAddr2));
   mock_frames[0]->SetFileLine(line0);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
@@ -136,7 +136,7 @@ TEST_F(StepThreadControllerTest, Line0) {
   mock_frames.push_back(GetTopFrame(kAddr3));
   mock_frames[0]->SetFileLine(line10);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
@@ -144,7 +144,7 @@ TEST_F(StepThreadControllerTest, Line0) {
   mock_frames.push_back(GetTopFrame(kAddr4));
   mock_frames[0]->SetFileLine(line11);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
@@ -183,7 +183,7 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
 
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException exception;
-  exception.type = debug_ipc::NotifyException::Type::kSingleStep;
+  exception.type = debug_ipc::ExceptionType::kSingleStep;
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -248,7 +248,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(bool stop_on_no_symbol
 
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException src_exception;
-  src_exception.type = debug_ipc::NotifyException::Type::kSingleStep;
+  src_exception.type = debug_ipc::ExceptionType::kSingleStep;
   src_exception.thread.process_koid = process()->GetKoid();
   src_exception.thread.thread_koid = thread()->GetKoid();
   src_exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
@@ -289,7 +289,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(bool stop_on_no_symbol
 
   // Send a breakpoint completion notification at the previous stack frame.
   // Breakpoint exceptions are "software".
-  src_exception.type = debug_ipc::NotifyException::Type::kSoftware;
+  src_exception.type = debug_ipc::ExceptionType::kSoftware;
   src_exception.hit_breakpoints.resize(1);
   src_exception.hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
   src_exception.hit_breakpoints[0].hit_count = 1;
@@ -319,7 +319,7 @@ TEST_F(StepThreadControllerTest, Inline) {
   FileLine file_line = mock_frames[1]->GetLocation().file_line();
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Hide the inline frame at the top so we're about to step into it.

@@ -85,7 +85,7 @@ TEST_F(VerbsMemoryTest, Stack) {
       &session(), thread, Location(Location::State::kSymbolized, kIP1), kSP1, 0,
       std::vector<Register>{Register(debug_ipc::RegisterID::kX64_rsp, kSP1),
                             Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));
-  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::NotifyException::Type::kSingleStep,
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSingleStep,
                            std::move(frames), true);
   console.GetOutputEvent();  // Eat output from the exception.
 
@@ -104,28 +104,28 @@ TEST_F(VerbsMemoryTest, Stack) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      R"(   Address               Data 
-0x10000000 0x000000000000eeff ◁ rsp
-0x10000008 0x0000000000000000 
-0x10000010 0x0000000000000000 ◁ frame 1 rsp
-0x10000018 0x0000000000000000 
-0x10000020 0x0000000000000000 ◁ frame 1 rax
-0x10000028 0x0000000000000000 
-0x10000030 0x0000000000000000 
-0x10000038 0x0000000000000000 
-0x10000040 0x0000000000000000 
-0x10000048 0x0000000000000000 
-0x10000050 0x0000000000000000 
-0x10000058 0x0000000000000000 
-0x10000060 0x0000000000000000 
-0x10000068 0x0000000000000000 
-0x10000070 0x0000000000000000 
-0x10000078 0x0000000000000000 
-0x10000080 0x0000000000000000 
-0x10000088 0x0000000000000000 
-0x10000090 0x0000000000000000 
-0x10000098 0x0000000000000000 
-↓ For more lines: stack -n 20 0x100000a0)",
+      "   Address               Data \n"
+      "0x10000000 0x000000000000eeff ◁ rsp\n"
+      "0x10000008 0x0000000000000000 \n"
+      "0x10000010 0x0000000000000000 ◁ frame 1 rsp\n"
+      "0x10000018 0x0000000000000000 \n"
+      "0x10000020 0x0000000000000000 ◁ frame 1 rax\n"
+      "0x10000028 0x0000000000000000 \n"
+      "0x10000030 0x0000000000000000 \n"
+      "0x10000038 0x0000000000000000 \n"
+      "0x10000040 0x0000000000000000 \n"
+      "0x10000048 0x0000000000000000 \n"
+      "0x10000050 0x0000000000000000 \n"
+      "0x10000058 0x0000000000000000 \n"
+      "0x10000060 0x0000000000000000 \n"
+      "0x10000068 0x0000000000000000 \n"
+      "0x10000070 0x0000000000000000 \n"
+      "0x10000078 0x0000000000000000 \n"
+      "0x10000080 0x0000000000000000 \n"
+      "0x10000088 0x0000000000000000 \n"
+      "0x10000090 0x0000000000000000 \n"
+      "0x10000098 0x0000000000000000 \n"
+      "↓ For more lines: stack -n 20 0x100000a0",
       event.output.AsString());
 }
 

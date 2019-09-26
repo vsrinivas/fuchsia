@@ -210,7 +210,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
     debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
-    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
     // Verify that the correct breakpoint was hit.
@@ -228,7 +228,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 2u);
     exception = mock_stream_backend.exceptions()[1];
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
-    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
     // Verify that the correct breakpoint was hit.
@@ -343,8 +343,8 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
     debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
-    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware)
-        << "Got: " << debug_ipc::NotifyException::TypeToString(exception.type);
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kHardware)
+        << "Got: " << debug_ipc::ExceptionTypeToString(exception.type);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
     // Verify that the correct breakpoint was hit.

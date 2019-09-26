@@ -16,6 +16,54 @@ namespace debug_ipc {
 
 #pragma pack(push, 8)
 
+enum class ExceptionType : uint32_t {
+  // No current exception, used as placeholder or to indicate not set.
+  kNone = 0,
+
+  // Zircon defines this as a sort of catch-all exception.
+  kGeneral,
+
+  // The usual band of execution traps.
+  kPageFault,
+  kUndefinedInstruction,
+  kUnalignedAccess,
+
+  // Indicates the process was killed due to misusing a syscall, e.g. passing a bad handle.
+  kPolicyError,
+
+  // Synthetic exeptions used by zircon to communicated with the debugger. The debug agent
+  // generally shouldn't pass these on, but we should recognize them at least.
+  kThreadStarting,
+  kThreadExiting,
+  kProcessStarting,
+
+  // Hardware breakpoints are issues by the CPU via debug registers.
+  kHardware,
+
+  // HW exceptions triggered on memory read/write.
+  kWatchpoint,
+
+  // Single-step completion issued by the CPU.
+  kSingleStep,
+
+  // Software breakpoint. This will be issued when a breakpoint is hit and
+  // when the debugged program manually issues a breakpoint instruction.
+  kSoftware,
+
+  // Indicates this exception is not a real CPU exception but was generated
+  // internally for the purposes of sending a stop notification. The frontend
+  // uses this value when the thread didn't actually do anything, but the
+  // should be updated as if it hit an exception.
+  kSynthetic,
+
+  // For exception codes the debugger doesn't recognize.
+  kUnknown,
+
+  kLast  // Not an actual exception type, for range checking.
+};
+const char* ExceptionTypeToString(ExceptionType);
+bool IsDebug(ExceptionType);
+
 // Note: see "ps" source:
 // https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/psutils/ps.c
 struct ProcessTreeRecord {

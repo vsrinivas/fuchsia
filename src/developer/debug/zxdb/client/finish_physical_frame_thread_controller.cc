@@ -28,7 +28,7 @@ FinishPhysicalFrameThreadController::FinishPhysicalFrameThreadController(Stack& 
 FinishPhysicalFrameThreadController::~FinishPhysicalFrameThreadController() = default;
 
 FinishPhysicalFrameThreadController::StopOp FinishPhysicalFrameThreadController::OnThreadStop(
-    debug_ipc::NotifyException::Type stop_type,
+    debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (until_controller_) {
     if (auto op = until_controller_->OnThreadStop(stop_type, hit_breakpoints); op != kStopDone)

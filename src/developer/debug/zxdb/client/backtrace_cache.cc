@@ -50,9 +50,9 @@ BacktraceCache::~BacktraceCache() = default;
 
 fxl::WeakPtr<BacktraceCache> BacktraceCache::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void BacktraceCache::OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+void BacktraceCache::OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  if (!should_cache_ || type != NotifyException::Type::kSoftware)
+  if (!should_cache_ || type != ExceptionType::kSoftware)
     return;
 
   if (thread->GetState() != ThreadRecord::State::kBlocked)

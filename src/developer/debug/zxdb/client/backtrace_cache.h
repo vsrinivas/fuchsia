@@ -40,7 +40,7 @@ class BacktraceCache final : public ThreadObserver {
 
   fxl::WeakPtr<BacktraceCache> GetWeakPtr();
 
-  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+  void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
 
   const std::vector<Backtrace>& backtraces() const { return backtraces_; }

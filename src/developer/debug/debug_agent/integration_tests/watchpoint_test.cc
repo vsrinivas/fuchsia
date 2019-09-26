@@ -142,8 +142,8 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     ASSERT_EQ(exceptions.size(), 1u);
 
     auto& exception = exceptions[0];
-    EXPECT_EQ(exception.type, NotifyException::Type::kWatchpoint)
-        << NotifyException::TypeToString(exception.type);
+    EXPECT_EQ(exception.type, ExceptionType::kWatchpoint)
+        << ExceptionTypeToString(exception.type);
     EXPECT_EQ(exception.thread.process_koid, backend.process_koid());
     EXPECT_EQ(exception.thread.thread_koid, backend.thread_koid());
 
@@ -215,7 +215,7 @@ void WatchpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
 
 // Records the exception given from the debug agent.
 void WatchpointStreamBackend::HandleNotifyException(NotifyException exception) {
-  DEBUG_LOG(Test) << "Received " << NotifyException::TypeToString(exception.type)
+  DEBUG_LOG(Test) << "Received " << ExceptionTypeToString(exception.type)
                   << " on Thread: " << exception.thread.thread_koid;
   exceptions_.push_back(std::move(exception));
   ShouldQuitLoop();

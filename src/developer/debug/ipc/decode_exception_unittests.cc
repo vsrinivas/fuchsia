@@ -34,48 +34,48 @@ TEST(DecodeException, Arm64) {
   ArmTestInfo info;
 
   // Exceptions that require no decoding.
-  EXPECT_EQ(NotifyException::Type::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
-  EXPECT_EQ(NotifyException::Type::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
-  EXPECT_EQ(NotifyException::Type::kUndefinedInstruction,
+  EXPECT_EQ(ExceptionType::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
+  EXPECT_EQ(ExceptionType::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
+  EXPECT_EQ(ExceptionType::kUndefinedInstruction,
             DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
-  EXPECT_EQ(NotifyException::Type::kUnalignedAccess,
+  EXPECT_EQ(ExceptionType::kUnalignedAccess,
             DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
-  EXPECT_EQ(NotifyException::Type::kThreadStarting,
+  EXPECT_EQ(ExceptionType::kThreadStarting,
             DecodeException(ZX_EXCP_THREAD_STARTING, &info));
-  EXPECT_EQ(NotifyException::Type::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
-  EXPECT_EQ(NotifyException::Type::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
-  EXPECT_EQ(NotifyException::Type::kProcessStarting,
+  EXPECT_EQ(ExceptionType::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
+  EXPECT_EQ(ExceptionType::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
+  EXPECT_EQ(ExceptionType::kProcessStarting,
             DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
 
   // Hardware breakpoints. The meaty stuff.
   info.esr = 0b110000 << 26;
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.esr = 0b110001 << 26;
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
   info.esr = 0b110010 << 26;
-  EXPECT_EQ(NotifyException::Type::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.esr = 0b110011 << 26;
-  EXPECT_EQ(NotifyException::Type::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 }
 
 TEST(DecodeException, X64) {
   X64TestInfo info;
 
   // Exceptions that require no decoding.
-  EXPECT_EQ(NotifyException::Type::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
-  EXPECT_EQ(NotifyException::Type::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
-  EXPECT_EQ(NotifyException::Type::kUndefinedInstruction,
+  EXPECT_EQ(ExceptionType::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
+  EXPECT_EQ(ExceptionType::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
+  EXPECT_EQ(ExceptionType::kUndefinedInstruction,
             DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
-  EXPECT_EQ(NotifyException::Type::kUnalignedAccess,
+  EXPECT_EQ(ExceptionType::kUnalignedAccess,
             DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
-  EXPECT_EQ(NotifyException::Type::kThreadStarting,
+  EXPECT_EQ(ExceptionType::kThreadStarting,
             DecodeException(ZX_EXCP_THREAD_STARTING, &info));
-  EXPECT_EQ(NotifyException::Type::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
-  EXPECT_EQ(NotifyException::Type::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
-  EXPECT_EQ(NotifyException::Type::kProcessStarting,
+  EXPECT_EQ(ExceptionType::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
+  EXPECT_EQ(ExceptionType::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
+  EXPECT_EQ(ExceptionType::kProcessStarting,
             DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
 
   // Hardware breakpoints. The meaty stuff.
@@ -85,28 +85,28 @@ TEST(DecodeException, X64) {
   info.regs.dr3 = 0x4444444444444444;
 
   info.regs.dr6 = X86_FLAG_MASK(DR6B0);
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.watchpoint = info.regs.dr0;
-  EXPECT_EQ(NotifyException::Type::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
   info.regs.dr6 = X86_FLAG_MASK(DR6B1);
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.watchpoint = info.regs.dr1;
-  EXPECT_EQ(NotifyException::Type::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
   info.regs.dr6 = X86_FLAG_MASK(DR6B2);
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.watchpoint = info.regs.dr2;
-  EXPECT_EQ(NotifyException::Type::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
   info.regs.dr6 = X86_FLAG_MASK(DR6B3);
-  EXPECT_EQ(NotifyException::Type::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
   info.watchpoint = info.regs.dr3;
-  EXPECT_EQ(NotifyException::Type::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
   info.watchpoint = 0;
   info.regs.dr6 = X86_FLAG_MASK(DR6BS);
-  EXPECT_EQ(NotifyException::Type::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
+  EXPECT_EQ(ExceptionType::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 }
 
 }  // namespace debug_ipc

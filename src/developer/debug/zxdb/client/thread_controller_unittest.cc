@@ -28,7 +28,7 @@ class DummyThreadController : public ThreadController {
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::StepInstruction(); }
-  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+  StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     return kStopDone;
   }
@@ -80,7 +80,7 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
 
   // Set the stack.
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Check the initial state of the inline frames on the stack. This is also
@@ -152,7 +152,7 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   mock_frames[0]->set_is_ambiguous_inline(false);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
+                           debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 }
 

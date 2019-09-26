@@ -13,33 +13,33 @@
 namespace debug_ipc {
 namespace {
 
-NotifyException::Type DecodeZircon(uint32_t code) {
+ExceptionType DecodeZircon(uint32_t code) {
   if (code == ZX_EXCP_SW_BREAKPOINT) {
-    return NotifyException::Type::kSoftware;
+    return ExceptionType::kSoftware;
   } else if (code == ZX_EXCP_HW_BREAKPOINT) {
-    return NotifyException::Type::kLast;
+    return ExceptionType::kLast;
   } else if (code == ZX_EXCP_GENERAL) {
-    return NotifyException::Type::kGeneral;
+    return ExceptionType::kGeneral;
   } else if (code == ZX_EXCP_FATAL_PAGE_FAULT) {
-    return NotifyException::Type::kPageFault;
+    return ExceptionType::kPageFault;
   } else if (code == ZX_EXCP_UNDEFINED_INSTRUCTION) {
-    return NotifyException::Type::kUndefinedInstruction;
+    return ExceptionType::kUndefinedInstruction;
   } else if (code == ZX_EXCP_UNALIGNED_ACCESS) {
-    return NotifyException::Type::kUnalignedAccess;
+    return ExceptionType::kUnalignedAccess;
   } else if (code == ZX_EXCP_THREAD_STARTING) {
-    return NotifyException::Type::kThreadStarting;
+    return ExceptionType::kThreadStarting;
   } else if (code == ZX_EXCP_PROCESS_STARTING) {
-    return NotifyException::Type::kProcessStarting;
+    return ExceptionType::kProcessStarting;
   } else if (code == ZX_EXCP_THREAD_EXITING) {
-    return NotifyException::Type::kThreadExiting;
+    return ExceptionType::kThreadExiting;
   } else if (code == ZX_EXCP_POLICY_ERROR) {
-    return NotifyException::Type::kPolicyError;
+    return ExceptionType::kPolicyError;
   } else {
-    return NotifyException::Type::kUnknown;
+    return ExceptionType::kUnknown;
   }
 }
 
-NotifyException::Type DecodeESR(uint32_t esr) {
+ExceptionType DecodeESR(uint32_t esr) {
   // The ESR register holds information about the last exception in the form of:
   // |31      26|25|24                              0|
   // |    EC    |IL|             ISS                 |
@@ -53,26 +53,26 @@ NotifyException::Type DecodeESR(uint32_t esr) {
   switch (ec) {
     case 0b111000: /* BRK from arm32 */
     case 0b111100: /* BRK from arm64 */
-      return NotifyException::Type::kSoftware;
+      return ExceptionType::kSoftware;
     case 0b110000: /* HW breakpoint from a lower level */
     case 0b110001: /* HW breakpoint from same level */
-      return NotifyException::Type::kHardware;
+      return ExceptionType::kHardware;
     case 0b110010: /* software step from lower level */
     case 0b110011: /* software step from same level */
-      return NotifyException::Type::kSingleStep;
+      return ExceptionType::kSingleStep;
     default:
       break;
   }
 
-  return NotifyException::Type::kUnknown;
+  return ExceptionType::kUnknown;
 }
 
 }  // namespace
 
-NotifyException::Type DecodeException(uint32_t code, X64ExceptionInfo* info) {
+ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
   auto ret = DecodeZircon(code);
 
-  if (ret != NotifyException::Type::kLast) {
+  if (ret != ExceptionType::kLast) {
     return ret;
   }
 
@@ -81,7 +81,7 @@ NotifyException::Type DecodeException(uint32_t code, X64ExceptionInfo* info) {
   if (auto got = info->FetchDebugRegs()) {
     regs = *got;
   } else {
-    return NotifyException::Type::kSingleStep;
+    return ExceptionType::kSingleStep;
   }
 
   // TODO(DX-1445): This permits only one trigger per exception, when overlaps
@@ -97,22 +97,22 @@ NotifyException::Type DecodeException(uint32_t code, X64ExceptionInfo* info) {
   } else if (X86_FLAG_VALUE(regs.dr6, DR6B3)) {
     exception_address = regs.dr3;
   } else if (X86_FLAG_VALUE(regs.dr6, DR6BS)) {
-    return NotifyException::Type::kSingleStep;
+    return ExceptionType::kSingleStep;
   } else {
     FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
   }
 
   if (info->AddrIsWatchpoint(exception_address)) {
-    return NotifyException::Type::kWatchpoint;
+    return ExceptionType::kWatchpoint;
   }
 
-  return NotifyException::Type::kHardware;
+  return ExceptionType::kHardware;
 }
 
-NotifyException::Type DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
+ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
   auto ret = DecodeZircon(code);
 
-  if (ret != NotifyException::Type::kLast) {
+  if (ret != ExceptionType::kLast) {
     return ret;
   }
 
@@ -121,18 +121,18 @@ NotifyException::Type DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
   if (auto got = info->FetchESR()) {
     esr = *got;
   } else {
-    return NotifyException::Type::kUnknown;
+    return ExceptionType::kUnknown;
   }
 
   auto decoded_type = DecodeESR(esr);
 
-  if (decoded_type == debug_ipc::NotifyException::Type::kSingleStep ||
-      decoded_type == debug_ipc::NotifyException::Type::kHardware) {
+  if (decoded_type == debug_ipc::ExceptionType::kSingleStep ||
+      decoded_type == debug_ipc::ExceptionType::kHardware) {
     return decoded_type;
   }
 
   FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr;
-  return debug_ipc::NotifyException::Type::kUnknown;
+  return debug_ipc::ExceptionType::kUnknown;
 }
 
 }  // namespace debug_ipc

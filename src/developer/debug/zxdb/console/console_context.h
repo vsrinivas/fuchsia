@@ -102,7 +102,7 @@ class ConsoleContext : public ProcessObserver,
 
   // Outputs to the console information on the given stopped thread with the
   // given reasons for stopping.
-  void OutputThreadContext(const Thread* thread, debug_ipc::NotifyException::Type type,
+  void OutputThreadContext(const Thread* thread, debug_ipc::ExceptionType type,
                            const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
 
   // Fills the current effective process, thread, etc. into the given Command
@@ -166,7 +166,7 @@ class ConsoleContext : public ProcessObserver,
   void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:
-  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+  void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 

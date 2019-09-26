@@ -116,7 +116,7 @@ void ThreadImpl::Continue() {
       debug_ipc::MessageLoop::Current()->PostTask(
           FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
             if (thread) {
-              thread->OnException(debug_ipc::NotifyException::Type::kSynthetic, {});
+              thread->OnException(debug_ipc::ExceptionType::kSynthetic, {});
             }
           });
       return;
@@ -241,11 +241,11 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   stack_.SetFrames(record.stack_amount, record.frames);
 }
 
-void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
+void ThreadImpl::OnException(debug_ipc::ExceptionType type,
                              const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (settings().GetBool(ClientSettings::Thread::kDebugStepping)) {
     printf("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s\r\n",
-           debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
+           debug_ipc::ExceptionTypeToString(type), stack_[0]->GetAddress(),
            ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
   }
 
@@ -323,7 +323,7 @@ void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
   // Non-debug exceptions also mean the thread should always stop (check this
   // after running the controllers for the same reason as the breakpoint check
   // above).
-  if (!debug_ipc::NotifyException::IsDebug(type))
+  if (!debug_ipc::IsDebug(type))
     should_stop = true;
 
   if (should_stop) {

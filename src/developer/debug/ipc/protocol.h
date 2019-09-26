@@ -397,59 +397,11 @@ struct NotifyThread {
 
 // Data passed for exceptions.
 struct NotifyException {
-  enum class Type : uint32_t {
-    // No current exception, used as placeholder or to indicate not set.
-    kNone = 0,
-
-    // Zircon defines this as a sort of catch-all exception.
-    kGeneral,
-
-    // The usual band of execution traps.
-    kPageFault,
-    kUndefinedInstruction,
-    kUnalignedAccess,
-
-    // Indicates the process was killed due to misusing a syscall, e.g. passing a bad handle.
-    kPolicyError,
-
-    // Synthetic exeptions used by zircon to communicated with the debugger. The debug agent
-    // generally shouldn't pass these on, but we should recognize them at least.
-    kThreadStarting,
-    kThreadExiting,
-    kProcessStarting,
-
-    // Hardware breakpoints are issues by the CPU via debug registers.
-    kHardware,
-
-    // HW exceptions triggered on memory read/write.
-    kWatchpoint,
-
-    // Single-step completion issued by the CPU.
-    kSingleStep,
-
-    // Software breakpoint. This will be issued when a breakpoint is hit and
-    // when the debugged program manually issues a breakpoint instruction.
-    kSoftware,
-
-    // Indicates this exception is not a real CPU exception but was generated
-    // internally for the purposes of sending a stop notification. The frontend
-    // uses this value when the thread didn't actually do anything, but the
-    // should be updated as if it hit an exception.
-    kSynthetic,
-
-    // For exception codes the debugger doesn't recognize.
-    kUnknown,
-
-    kLast  // Not an actual exception type, for range checking.
-  };
-  static const char* TypeToString(Type);
-  static bool IsDebug(Type);
-
   // Holds the state and a minimal stack (up to 2 frames) of the thread at the
   // moment of notification.
   ThreadRecord thread;
 
-  Type type = Type::kNone;
+  ExceptionType type = ExceptionType::kNone;
 
   // When the stop was caused by hitting a breakpoint, this vector will contain
   // the post-hit stats of every hit breakpoint (since there can be more than

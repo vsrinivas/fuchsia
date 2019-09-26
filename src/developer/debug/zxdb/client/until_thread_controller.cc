@@ -64,7 +64,7 @@ ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
 }
 
 ThreadController::StopOp UntilThreadController::OnThreadStop(
-    debug_ipc::NotifyException::Type stop_type,
+    debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   // Other controllers such as the StepOverRangeThreadController can use this
   // as a sub-controller. If the controllers don't care about breakpoint set
