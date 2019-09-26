@@ -6,11 +6,11 @@ library fuchsia.bluetooth.control;
 
 using fuchsia.bluetooth;
 
-// Possible values for the LE Appearance property which describes the external
-// appearance of a
-// device at a high level.
-// (See the Bluetooth assigned-numbers document:
-// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
+/// Possible values for the LE Appearance property which describes the external
+/// appearance of a
+/// device at a high level.
+/// (See the Bluetooth assigned-numbers document:
+/// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
 enum Appearance {
     UNKNOWN = 0;
     PHONE = 64;
@@ -73,41 +73,41 @@ enum TechnologyType {
     DUAL_MODE = 2;
 };
 
-// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device.
+/// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device.
 struct RemoteDevice {
-    // Uniquely identifies this device on the current system.
+    /// Uniquely identifies this device on the current system.
     string identifier;
 
-    // Bluetooth device address that identifies this remote device. Clients
-    // should display this field to the user when `name` is not available.
-    //
-    // NOTE: Clients should use the `identifier` field to distinguish between
-    // remote devices instead of using their address.
+    /// Bluetooth device address that identifies this remote device. Clients
+    /// should display this field to the user when `name` is not available.
+    ///
+    /// NOTE: Clients should use the `identifier` field to distinguish between
+    /// remote devices instead of using their address.
     string address;
 
-    // The Bluetooth technologies that are supported by this device.
+    /// The Bluetooth technologies that are supported by this device.
     TechnologyType technology;
 
-    // The name of the remote device if present or known.
+    /// The name of the remote device if present or known.
     string? name;
 
-    // The LE appearance property. Present if this is a LE device and the
-    // appearance information was obtained over advertising and/or GATT.
+    /// The LE appearance property. Present if this is a LE device and the
+    /// appearance information was obtained over advertising and/or GATT.
     Appearance appearance;
 
-    // The most recently obtained advertising signal strength for this device.
+    /// The most recently obtained advertising signal strength for this device.
     fuchsia.bluetooth.Int8? rssi;
 
-    // The most recently obtained transmission power for this device.
+    /// The most recently obtained transmission power for this device.
     fuchsia.bluetooth.Int8? tx_power;
 
-    // Whether or not a BR/EDR and/or LE connection exists between the local
-    // adapter and this device.
+    /// Whether or not a BR/EDR and/or LE connection exists between the local
+    /// adapter and this device.
     bool connected;
 
-    // Whether or not a bond exists between the local adapter and this device.
+    /// Whether or not a bond exists between the local adapter and this device.
     bool bonded;
 
-    // The list of service UUIDs known to be published on this remote device.
+    /// The list of service UUIDs known to be published on this remote device.
     vector<string> service_uuids;
 };
