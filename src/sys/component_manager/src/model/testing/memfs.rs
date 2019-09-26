@@ -7,6 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
     io_util,
+    log::*,
     std::os::raw,
     std::ptr,
     std::sync::atomic::AtomicPtr,
@@ -21,6 +22,8 @@ pub struct Memfs {
     root_handle: DirectoryProxy,
     fs_handle: *mut MemfsFilesystem,
     async_loop: *mut AsyncLoop,
+    // This is in an Option so the drop function can take ownership of it
+    memfs_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Memfs {
@@ -30,7 +33,7 @@ impl Memfs {
         let config = AsyncLoopConfig {
             default_getter: async_get_default_dispatcher,
             default_setter: async_set_default_dispatcher,
-            make_default_for_current_thread: true,
+            make_default_for_current_thread: false,
             prologue: ptr::null_mut(),
             epilogue: ptr::null_mut(),
             data: ptr::null_mut(),
@@ -59,7 +62,7 @@ impl Memfs {
 
         // Put it in a mutex so Rust is willing to move it between threads
         let mut async_loop_ptr = AtomicPtr::new(async_loop);
-        thread::spawn(move || {
+        let memfs_thread = thread::spawn(move || {
             unsafe { async_loop_run(*async_loop_ptr.get_mut(), zx::sys::ZX_TIME_INFINITE, false) };
         });
         Memfs {
@@ -71,6 +74,7 @@ impl Memfs {
             ),
             fs_handle: memfs_filesystem,
             async_loop,
+            memfs_thread: Some(memfs_thread),
         }
     }
 
@@ -95,6 +99,15 @@ impl Drop for Memfs {
                 zx::Status::OK,
                 "sync_completion_wait returned with non-ok status"
             );
+            async_loop_quit(self.async_loop);
+        }
+        if let Some(memfs_thread) = self.memfs_thread.take() {
+            let res = memfs_thread.join();
+            if let Err(e) = res {
+                error!("failed to join to memfs thread: {:?}", e)
+            }
+        }
+        unsafe {
             async_loop_destroy(self.async_loop);
         }
     }
@@ -133,6 +146,7 @@ extern "C" {
         out_loop: *mut *mut AsyncLoop,
     ) -> zx::sys::zx_status_t;
     fn async_loop_get_dispatcher(loop_: *mut AsyncLoop) -> *mut AsyncDispatcher;
+    fn async_loop_quit(loop_: *mut AsyncLoop);
     fn async_loop_destroy(loop_: *mut AsyncLoop);
     fn async_loop_run(
         loop_: *mut AsyncLoop,
@@ -208,6 +222,6 @@ mod tests {
 
         assert_eq!(file_contents, read_contents);
 
-        //drop(memfs);
+        drop(memfs);
     }
 }
