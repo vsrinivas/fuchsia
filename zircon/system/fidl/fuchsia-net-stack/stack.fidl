@@ -4,8 +4,8 @@
 
 library fuchsia.net.stack;
 
-using fuchsia.net;
 using fuchsia.hardware.ethernet;
+using fuchsia.net;
 
 enum PresenceStatus {
     /// The interface is added.

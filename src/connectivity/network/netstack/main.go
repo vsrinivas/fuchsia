@@ -185,7 +185,9 @@ func Main() {
 	var stackService stack.StackService
 	ctx.OutgoingService.AddService(
 		stack.StackName,
-		&stack.StackStub{Impl: &stackImpl{ns: ns}},
+		&stack.StackStub{Impl: &stackImpl{
+			ns: ns,
+		}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := stackService.BindingSet.Add(s, c, nil)
 			return err

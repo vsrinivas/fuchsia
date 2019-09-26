@@ -54,6 +54,10 @@ pub enum Opt {
     #[structopt(name = "log")]
     /// commands for logging
     Log(LogCmd),
+
+    #[structopt(name = "stats")]
+    /// commands for aggregates statistics
+    Stat(StatCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -221,4 +225,11 @@ pub enum LogCmd {
         )]
         log_level: LogLevelArg,
     },
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum StatCmd {
+    #[structopt(name = "show")]
+    /// show classified netstack stats
+    Show,
 }

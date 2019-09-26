@@ -100,7 +100,7 @@ func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceI
 	if err != nil {
 		result.SetErr(stack.ErrorInternal)
 	} else {
-		result.SetResponse(stack.StackAddEthernetInterfaceResponse {
+		result.SetResponse(stack.StackAddEthernetInterfaceResponse{
 			Id: uint64(ifs.nicid),
 		})
 	}
@@ -137,7 +137,7 @@ func (ns *Netstack) getInterface(id uint64) stack.StackGetInterfaceInfoResult {
 		if !ok {
 			panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
 		}
-		result.SetResponse(stack.StackGetInterfaceInfoResponse {
+		result.SetResponse(stack.StackGetInterfaceInfoResponse{
 			Info: getInterfaceInfo(ifs, nicInfo.ProtocolAddresses),
 		})
 	}
@@ -222,7 +222,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) s
 	return result
 }
 
-func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackDelInterfaceAddressResult  {
+func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackDelInterfaceAddressResult {
 	var result stack.StackDelInterfaceAddressResult
 
 	protocolAddr := toProtocolAddr(ifAddr)

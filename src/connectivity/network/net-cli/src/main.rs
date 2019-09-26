@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use fdio;
+use failure::{err_msg, format_err, Error, ResultExt};
 use fidl_fuchsia_hardware_ethernet as zx_eth;
+use fidl_fuchsia_io as io;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{
@@ -15,9 +15,12 @@ use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
+use glob::glob;
 use prettytable::{cell, format, row, Table};
+use std::convert::TryInto;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
+use std::path::Path;
 use structopt::StructOpt;
 
 mod opts;
@@ -35,29 +38,47 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match opt {
-            Opt::If(cmd) => do_if(cmd, stack).await,
+            Opt::If(cmd) => do_if(cmd, stack, netstack).await,
             Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
             Opt::Route(cmd) => do_route(cmd, netstack).await,
             Opt::Filter(cmd) => do_filter(cmd, filter).await,
             Opt::Log(cmd) => do_log(cmd, log).await,
+            Opt::Stat(cmd) => do_stat(cmd).await,
         }
     };
     exec.run_singlethreaded(fut)
 }
 
-fn shortlist_interfaces(name_pattern: &str, ifaces: &mut Vec<InterfaceInfo>) {
-    ifaces.retain(|i| i.properties.name.contains(name_pattern))
+fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<InterfaceInfo>) {
+    interfaces.retain(|i| i.properties.name.contains(name_pattern))
 }
 
-fn tabulate_ifaces_info(ifaces: Vec<InterfaceInfo>) -> String {
+fn display_unit(value: u64) -> (u64, char) {
+    const KILO: u64 = 1024;
+    let units = [' ', 'K', 'M', 'G', 'T', 'P'];
+
+    let (i, unit) = units
+        .iter()
+        .enumerate()
+        .find(|(i, _)| KILO.pow((i + 1) as u32) > value)
+        .unwrap_or((units.len(), units.last().unwrap()));
+    (value / (KILO.pow(i as u32)), *unit)
+}
+
+async fn tabulate_interfaces_info(
+    interfaces: Vec<InterfaceInfo>,
+    netstack: &NetstackProxy,
+) -> Result<String, Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
-    for (i, info) in ifaces.into_iter().enumerate() {
+    for (i, info) in interfaces.into_iter().enumerate() {
         if i > 0 {
             t.add_row(row![]);
         }
 
+        let stats =
+            netstack.get_stats(info.id as u32).await.context("error retrieving interface stats")?;
         let pretty::InterfaceInfo {
             id,
             properties:
@@ -74,35 +95,48 @@ fn tabulate_ifaces_info(ifaces: Vec<InterfaceInfo>) -> String {
                 },
         } = info.into();
 
-        t.add_row(row!["nicid", id]);
-        t.add_row(row!["name", name]);
-        t.add_row(row!["topopath", topopath]);
-        t.add_row(row!["filepath", filepath]);
+        t.add_row(row!["nicid", H2->id]);
+        t.add_row(row!["name", H2->name]);
+        t.add_row(row!["topopath", H2->topopath]);
+        t.add_row(row!["filepath", H2->filepath]);
 
         if let Some(mac) = mac {
-            t.add_row(row!["mac", mac]);
+            t.add_row(row!["mac", H2->mac]);
         } else {
-            t.add_row(row!["mac", "-"]);
+            t.add_row(row!["mac", H2->"-"]);
         }
 
-        t.add_row(row!["mtu", mtu]);
-        t.add_row(row!["features", format!("{:?}", features)]);
-        t.add_row(row!["status", format!("{} | {}", administrative_status, physical_status)]);
+        t.add_row(row!["mtu", H2->mtu]);
+        t.add_row(row!["features", H2->format!("{:?}", features)]);
+        t.add_row(row!["status", H2->format!("{} | {}", administrative_status, physical_status)]);
         for addr in addresses {
-            t.add_row(row!["addr", addr]);
+            t.add_row(row!["addr", H2->addr]);
+        }
+
+        for (direction, stats) in [("Rx", stats.rx), ("Tx", stats.tx)].into_iter() {
+            for (stat, value) in
+                [("pkts", stats.pkts_total), ("bytes", stats.bytes_total)].into_iter()
+            {
+                let (unit_value, unit) = display_unit(*value);
+                t.add_row(
+                    row![format!("{} {}", direction, stat), r->format!("{} {}", unit_value, unit), cell!(), r->value],
+                );
+            }
         }
     }
-    t.to_string()
+    Ok(t.to_string())
 }
 
-async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
+async fn do_if(cmd: opts::IfCmd, stack: StackProxy, netstack: NetstackProxy) -> Result<(), Error> {
     match cmd {
         IfCmd::List { name_pattern } => {
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
             }
-            let result = tabulate_ifaces_info(response);
+            let result = tabulate_interfaces_info(response, &netstack)
+                .await
+                .context("error tabulating interface info")?;
             println!("{}", result);
         }
         IfCmd::Add { path } => {
@@ -391,6 +425,83 @@ async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
     Ok(())
 }
 
+async fn do_stat(cmd: opts::StatCmd) -> Result<(), Error> {
+    match cmd {
+        StatCmd::Show => {
+            let mut entries = Vec::new();
+            let globs = [
+                "/hub/c/netstack.cmx/*/out/debug/counters", // accessed in "sys" realm
+                "/hub/r/sys/*/c/netstack.cmx/*/out/debug/counters", // accessed in "app" realm
+            ];
+            globs.into_iter().try_for_each(|pattern| {
+                Ok::<_, glob::PatternError>(entries.extend(glob(pattern)?))
+            })?;
+            if entries.is_empty() {
+                let () = Err(format_err!("failed to find netstack counters in {:?}", globs))?;
+            }
+            let multiple = entries.len() > 1;
+            for (i, entry) in entries.into_iter().enumerate() {
+                let path = entry?;
+                let path_str = path
+                    .to_str()
+                    .ok_or_else(|| format_err!("path {} is not valid UTF-8", path.display()))?;
+                if multiple {
+                    if i > 0 {
+                        println!();
+                    }
+                    // Show the stats path for distinction.
+                    println!("Stats from {}", path.display());
+                }
+                dump_stat(path_str).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn dump_stat(path: &str) -> Result<(), Error> {
+    let dir_proxy = io_util::open_directory_in_namespace(path, io::OPEN_RIGHT_READABLE)?;
+    let dir_entries = files_async::readdir_recursive(&dir_proxy)
+        .await
+        .context("failed to read dir recursively")?;
+
+    let mut t = Table::new();
+    t.set_format(format::FormatBuilder::new().padding(2, 2).build());
+    t.set_titles(row!["Packet Count", "Classification"]);
+
+    let mut has_error = false;
+    for entry in dir_entries {
+        let file_proxy =
+            io_util::open_file(&dir_proxy, &Path::new(&entry.name), io::OPEN_RIGHT_READABLE)?;
+        let (status, contents) = file_proxy
+            .read(std::mem::size_of::<u64>() as u64 + 1) // Read one more byte than needed for sanity check
+            .await
+            .context("failed to call fuchsia.io.File.Read")?;
+        if let Err(status) = zx::ok(status) {
+            has_error = true;
+            t.add_row(row![r->format!("({})", status), entry.name]);
+            continue;
+        }
+
+        let bytes_for_u64: Result<[u8; 8], _> = contents[..].try_into();
+        match bytes_for_u64 {
+            Ok(c) => {
+                let pkt_count = u64::from_le_bytes(c);
+                t.add_row(row![r->pkt_count, entry.name]);
+            }
+            Err(std::array::TryFromSliceError { .. }) => {
+                t.add_row(row![r->format!("(observed {}/{} bytes)", contents.len(), std::mem::size_of::<u64>()), entry.name]);
+            }
+        }
+    }
+    t.printstd();
+    if has_error {
+        Err(err_msg("failed to access statistics"))
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, fidl_fuchsia_net_stack::*};
@@ -424,21 +535,39 @@ mod tests {
         ]
     }
 
-    fn shortlist_ifaces_by_nicid(name_pattern: &str) -> Vec<u64> {
-        let mut ifaces = get_fake_interfaces();
-        let () = shortlist_interfaces(name_pattern, &mut ifaces);
-        ifaces.into_iter().map(|i| i.id).collect()
+    fn shortlist_interfaces_by_nicid(name_pattern: &str) -> Vec<u64> {
+        let mut interfaces = get_fake_interfaces();
+        let () = shortlist_interfaces(name_pattern, &mut interfaces);
+        interfaces.into_iter().map(|i| i.id).collect()
     }
 
     #[test]
     fn test_shortlist_interfaces() {
-        assert_eq!(vec![1, 10, 20, 30, 100, 200, 300], shortlist_ifaces_by_nicid(""));
-        assert_eq!(vec![0_u64; 0], shortlist_ifaces_by_nicid("no such thing"));
+        assert_eq!(vec![1, 10, 20, 30, 100, 200, 300], shortlist_interfaces_by_nicid(""));
+        assert_eq!(vec![0_u64; 0], shortlist_interfaces_by_nicid("no such thing"));
 
-        assert_eq!(vec![1], shortlist_ifaces_by_nicid("lo"));
-        assert_eq!(vec![10, 20, 30], shortlist_ifaces_by_nicid("eth"));
-        assert_eq!(vec![10, 20, 30], shortlist_ifaces_by_nicid("th"));
-        assert_eq!(vec![100, 200, 300], shortlist_ifaces_by_nicid("wlan"));
-        assert_eq!(vec![10, 100], shortlist_ifaces_by_nicid("001"));
+        assert_eq!(vec![1], shortlist_interfaces_by_nicid("lo"));
+        assert_eq!(vec![10, 20, 30], shortlist_interfaces_by_nicid("eth"));
+        assert_eq!(vec![10, 20, 30], shortlist_interfaces_by_nicid("th"));
+        assert_eq!(vec![100, 200, 300], shortlist_interfaces_by_nicid("wlan"));
+        assert_eq!(vec![10, 100], shortlist_interfaces_by_nicid("001"));
+    }
+
+    #[test]
+    fn test_display_unit() {
+        const KILO: u64 = 1024;
+
+        let mut x: u64 = 249;
+        assert_eq!((249, ' '), display_unit(x));
+        x = x * (1 + KILO);
+        assert_eq!((249, 'K'), display_unit(x));
+        x = x * KILO;
+        assert_eq!((249, 'M'), display_unit(x));
+        x = x * KILO;
+        assert_eq!((249, 'G'), display_unit(x));
+        x = x * KILO;
+        assert_eq!((249, 'T'), display_unit(x));
+        x = x * KILO;
+        assert_eq!((249, 'P'), display_unit(x));
     }
 }
