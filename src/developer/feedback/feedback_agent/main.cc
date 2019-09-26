@@ -28,10 +28,13 @@ fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvi
     actions.h.id = PA_HND(PA_USER0, 0);
     actions.h.handle = request.TakeChannel().release();
 
-    const std::string process_name =
-        fxl::StringPrintf("data_provider_%03d", ++(*total_num_connections));
+    ++(*total_num_connections);
+
+    const std::string process_name = "feedback_data_provider";
+    const std::string connection_id = fxl::StringPrintf("%03d", *total_num_connections);
     const char* args[] = {
         process_name.c_str(),
+        connection_id.c_str(),
         nullptr,
     };
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};

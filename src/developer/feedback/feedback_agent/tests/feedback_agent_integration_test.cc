@@ -218,15 +218,15 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
   //     p: 112304 vulkan_loader.cmx
   //   j: 115016
   //     p: 115021 feedback_agent.cmx
-  //     p: 115022 /pkg/bin/data_provider
-  //     p: 115023 /pkg/bin/data_provider
-  //     p: 115024 /pkg/bin/data_provider
+  //     p: 115022 feedback_data_provider
+  //     p: 115023 feedback_data_provider
+  //     p: 115024 feedback_data_provider
   //   j: 116540
   //     p: 116545 archivist.cmx
   //
   // There is basically a job the for the test component and a job for each injected service. The
   // one of interest is feedback_agent.cmx and we check the number of sibling processes named
-  // /pkg/bin/data_provider.
+  // "feedback_data_provider".
 
   fuchsia::sys::JobProviderSyncPtr job_provider;
   ASSERT_EQ(fdio_service_connect("/hub/job", job_provider.NewRequest().TakeChannel().release()),
@@ -240,7 +240,6 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
   ASSERT_GE(child_jobs.size(), 1u);
 
   uint32_t num_feedback_agents = 0u;
-  const std::regex data_provider_regex("data_provider_\\d{3}");
   for (const auto& child_job : child_jobs) {
     auto processes = GetChildProcesses(child_job.get());
     ASSERT_GE(processes.size(), 1u);
@@ -252,7 +251,7 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
       if (process_name == "feedback_agent.cmx") {
         contains_feedback_agent = true;
         num_feedback_agents++;
-      } else if (std::regex_match(process_name, data_provider_regex)) {
+      } else if (process_name == "feedback_data_provider") {
         num_data_providers++;
       }
     }

@@ -18,19 +18,16 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/data_provider.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
 
-  std::string process_name;
-  // feedback_agent is supposed to pass the process name as argv[0], but we are never too prudent.
-  if (argc > 0) {
-    process_name = argv[0];
-  } else {
-    process_name = "data_provider";
-  }
+  FXL_CHECK(argc == 2) << "feedback_agent is supposed to spawn us with two arguments";
+  const std::string process_identifier = fxl::StringPrintf("%s (connection %s)", argv[0], argv[1]);
   FX_LOGS(INFO) << "Client opened a new connection to fuchsia.feedback.DataProvider. Spawned "
-                << process_name;
+                << process_identifier;
 
   // This process is spawned by feedback_agent, which forwards it the incoming request through
   // PA_USER0.
@@ -53,15 +50,15 @@ int main(int argc, const char** argv) {
   // TODO(DX-1497): in addition to exiting the process when the connection is closed, we should have
   // an internal timeout since the last call and exit the process then in case clients don't close
   // the connection themselves.
-  binding.set_error_handler([&loop, &process_name](zx_status_t status) {
+  binding.set_error_handler([&loop, &process_identifier](zx_status_t status) {
     loop.Shutdown();
     // We exit successfully when the client closes the connection.
     if (status == ZX_ERR_PEER_CLOSED) {
       FX_LOGS(INFO) << "Client closed the connection to fuchsia.feedback.DataProvider. Exiting "
-                    << process_name;
+                    << process_identifier;
       exit(0);
     } else {
-      FX_PLOGS(ERROR, status) << "Received channel error. Exiting " << process_name;
+      FX_PLOGS(ERROR, status) << "Received channel error. Exiting " << process_identifier;
       exit(1);
     }
   });
