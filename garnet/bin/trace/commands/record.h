@@ -18,6 +18,7 @@
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
+#include "garnet/bin/trace/utils.h"
 #include "garnet/lib/measure/argument_value.h"
 #include "garnet/lib/measure/duration.h"
 #include "garnet/lib/measure/measurements.h"
@@ -25,6 +26,12 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 namespace tracing {
+
+static constexpr uint32_t kDefaultDurationSeconds = 10;
+static constexpr uint32_t kDefaultBufferSizeMegabytes = 4;
+
+static constexpr char kDefaultOutputFileName[] = "/tmp/trace.json";
+static constexpr char kDefaultBinaryOutputFileName[] = "/tmp/trace.fxt";
 
 class RecordCommand : public CommandWithController {
  public:
@@ -35,19 +42,18 @@ class RecordCommand : public CommandWithController {
     std::string app;
     std::vector<std::string> args;
     std::vector<std::string> categories = {};
-    fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
+    fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(kDefaultDurationSeconds);
     bool detach = false;
     bool decouple = false;
     bool spawn = false;
     bool return_child_result = true;
     std::optional<std::string> environment_name;
-    uint32_t buffer_size_megabytes = 4;
+    uint32_t buffer_size_megabytes = kDefaultBufferSizeMegabytes;
     std::vector<ProviderSpec> provider_specs;
     controller::BufferingMode buffering_mode = controller::BufferingMode::ONESHOT;
     bool binary = false;
     bool compress = false;
-    std::string output_file_name = "/tmp/trace.json";
-    static constexpr char kDefaultBinaryOutputFileName[] = "/tmp/trace.fxt";
+    std::string output_file_name = kDefaultOutputFileName;
     std::string benchmark_results_file;
     std::string test_suite;
     measure::Measurements measurements;

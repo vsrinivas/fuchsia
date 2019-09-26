@@ -34,6 +34,8 @@ source_set("trace_app") {
     "results_output.h",
     "tracer.cc",
     "tracer.h",
+    "utils.cc",
+    "utils.h",
   ]
 
   public_deps = [
