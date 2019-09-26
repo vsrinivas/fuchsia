@@ -5,12 +5,15 @@
 #![allow(warnings)]
 use {fidl_fuchsia_bluetooth, std::fmt};
 
-pub use {self::uuid::*, adapter_info::*, address::*, bonding_data::*, id::*, peer::*};
+pub use {
+    self::uuid::*, adapter_info::*, address::*, bonding_data::*, host_info::*, id::*, peer::*,
+};
 mod adapter_info;
 mod address;
 mod bonding_data;
 /// Bluetooth HCI emulator protocol types
 pub mod emulator;
+pub mod host_info;
 mod id;
 /// Bluetooth LowEnergy types
 pub mod le;
