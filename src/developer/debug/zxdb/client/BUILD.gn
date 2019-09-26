@@ -38,7 +38,6 @@ static_library("client") {
     "setting_store_observer.h",
     "setting_value.h",
     "stack.h",
-    "step_into_thread_controller.h",
     "step_mode.h",
     "step_over_thread_controller.h",
     "step_thread_controller.h",
@@ -103,7 +102,6 @@ static_library("client") {
     "socket_connect.cc",
     "socket_connect.h",
     "stack.cc",
-    "step_into_thread_controller.cc",
     "step_over_thread_controller.cc",
     "step_thread_controller.cc",
     "symbol_server.cc",
@@ -122,13 +120,13 @@ static_library("client") {
   ]
 
   public_deps = [
+    "//src/developer/debug/third_party/libunwindstack",
     "//garnet/third_party/llvm:LLVMAArch64Desc",
     "//garnet/third_party/llvm:LLVMAArch64Disassembler",
     "//garnet/third_party/llvm:LLVMX86Desc",
     "//garnet/third_party/llvm:LLVMX86Disassembler",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
-    "//src/developer/debug/third_party/libunwindstack",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",
     "//src/developer/debug/zxdb/symbols",
@@ -237,7 +235,6 @@ source_set("tests") {
     "setting_store_unittest.cc",
     "setting_value_unittest.cc",
     "stack_unittest.cc",
-    "step_into_thread_controller_unittest.cc",
     "step_over_thread_controller_unittest.cc",
     "step_thread_controller_unittest.cc",
     "string_util_unittest.cc",

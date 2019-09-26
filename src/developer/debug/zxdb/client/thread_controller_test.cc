@@ -14,10 +14,10 @@
 namespace zxdb {
 
 // static
-const uint64_t ThreadControllerTest::kUnsymbolizedModuleAddress;
+const uint64_t ThreadControllerTest::kUnsymbolizedModuleAddress = 0x4000000;
 
 // static
-const uint64_t ThreadControllerTest::kSymbolizedModuleAddress;
+const uint64_t ThreadControllerTest::kSymbolizedModuleAddress = 0x5000000;
 
 ThreadControllerTest::ThreadControllerTest() = default;
 ThreadControllerTest::~ThreadControllerTest() = default;
@@ -29,7 +29,7 @@ void ThreadControllerTest::SetUp() {
 
   // Inject a mock module symbols.
   std::string build_id("abcd");  // Identifies the module below.
-  module_symbols_ = MakeModuleSymbols();
+  module_symbols_ = fxl::MakeRefCounted<MockModuleSymbols>("file.so");
   session().system().GetSymbols()->InjectModuleForTesting(build_id, module_symbols_.get());
 
   // Make the process load the mocked module symbols and the other one with no
@@ -49,10 +49,6 @@ void ThreadControllerTest::SetUp() {
 
   TargetImpl* target = session().system_impl().GetTargetImpls()[0];
   target->process()->OnModules(modules, std::vector<uint64_t>());
-}
-
-fxl::RefPtr<MockModuleSymbols> ThreadControllerTest::MakeModuleSymbols() {
-  return fxl::MakeRefCounted<MockModuleSymbols>("file.so");
 }
 
 }  // namespace zxdb
