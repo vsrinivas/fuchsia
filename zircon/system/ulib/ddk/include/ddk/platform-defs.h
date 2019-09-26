@@ -121,6 +121,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AML_USB_PHY_V2      24
 #define PDEV_DID_AMLOGIC_SPI         25
 #define PDEV_DID_AMLOGIC_SECURE_MEM  26
+#define PDEV_DID_AMLOGIC_GE2D        27
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6
@@ -236,6 +237,7 @@ __BEGIN_CDECLS
 #define PDEV_VID_ARM                18
 #define PDEV_PID_ISP                1
 #define PDEV_PID_GDC                2
+#define PDEV_PID_GE2D               4
 // TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
 #define PDEV_PID_ISP_BARE_METAL     3
 #define PDEV_DID_ARM_MALI_IV009     1

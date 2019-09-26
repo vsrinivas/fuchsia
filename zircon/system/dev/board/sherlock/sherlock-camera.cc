@@ -26,6 +26,45 @@ constexpr uint32_t kClkGpioDriveStrength = 3;
 // TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
 constexpr bool kUseArmDriver = false;
 
+constexpr pbus_mmio_t ge2d_mmios[] = {
+    // GE2D Base
+    {
+        .base = T931_GE2D_BASE,
+        .length = T931_GE2D_LENGTH,
+    },
+};
+
+constexpr pbus_bti_t ge2d_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_GE2D,
+    },
+};
+
+// IRQ for GE2D
+constexpr pbus_irq_t ge2d_irqs[] = {
+    {
+        .irq = T931_MALI_GE2D_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static pbus_dev_t ge2d_dev = []() {
+  // GE2D
+  pbus_dev_t dev = {};
+  dev.name = "ge2d";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.did = PDEV_DID_AMLOGIC_GE2D;
+  dev.mmio_list = ge2d_mmios;
+  dev.mmio_count = countof(ge2d_mmios);
+  dev.bti_list = ge2d_btis;
+  dev.bti_count = countof(ge2d_btis);
+  dev.irq_list = ge2d_irqs;
+  dev.irq_count = countof(ge2d_irqs);
+  return dev;
+}();
+
 constexpr pbus_mmio_t gdc_mmios[] = {
     // HIU for clocks.
     {
@@ -329,6 +368,12 @@ zx_status_t Sherlock::CameraInit() {
   status = pbus_.DeviceAdd(&gdc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
+
+  status = pbus_.DeviceAdd(&ge2d_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 

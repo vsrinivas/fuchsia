@@ -5,8 +5,9 @@
 #ifndef SYSROOT_ZIRCON_DEVICE_SYSMEM_H_
 #define SYSROOT_ZIRCON_DEVICE_SYSMEM_H_
 
-#include <ddk/metadata.h>
 #include <fuchsia/sysmem/c/fidl.h>
+
+#include <ddk/metadata.h>
 
 // "SyM"
 #define SYSMEM_METADATA (0x53794d00 | DEVICE_METADATA_PRIVATE)

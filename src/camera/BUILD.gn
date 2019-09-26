@@ -20,6 +20,7 @@ group("tests") {
 
   deps = [
     "drivers/hw_accel/gdc/test:gdc-task",
+    "drivers/hw_accel/ge2d/test:ge2d-task",
     "drivers/isp/mali-009/test:mali_009_test",
     "drivers/isp/modules/test:modules_bin",
     "drivers/test_utils/test:test_utils_test",
@@ -32,6 +33,7 @@ test_package("camera_full_test") {
     "//src/camera/calibration/image_writer/test:image_writer_test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
+    "//src/camera/drivers/hw_accel/ge2d/test:ge2d-task",
     "//src/camera/drivers/isp/modules:gamma-rgb-registers",
     "//src/camera/drivers/isp/modules:isp-mem-array",
     "//src/camera/drivers/isp/modules/test:modules_bin",
@@ -50,6 +52,11 @@ test_package("camera_full_test") {
     {
       name = "gdc-task"
       manifest = "drivers/hw_accel/gdc/test/meta/gdc-task.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "ge2d-task"
+      manifest = "drivers/hw_accel/ge2d/test/meta/ge2d-task.cmx"
       environments = basic_envs
     },
     {
@@ -116,6 +123,7 @@ test_package("camera_full_on_device_test") {
       manifest = "test/camera_streaming_test/meta/camera_streaming_test.cmx"
       environments = [ sherlock_env ]
     },
+
     # Put additional tests that can run on the device here.
   ]
 }

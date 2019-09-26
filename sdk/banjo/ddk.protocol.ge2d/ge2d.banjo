@@ -29,7 +29,6 @@ struct ResizeInfo {
 };
 
 struct WaterMarkInfo {
-    handle<vmo> watermark_vmo;
     // Where to place WaterMark on the input image
     uint32 loc_x;
     uint32 loc_y;
@@ -60,6 +59,7 @@ protocol Ge2d {
     InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
                       zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
                       WaterMarkInfo info,
+		      handle<vmo> watermark_vmo,
                       vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);

@@ -35,6 +35,7 @@ enum {
   BTI_SYSMEM,
   BTI_THERMAL,
   BTI_TEE,
+  BTI_GE2D,
 };
 
 // MAC address metadata indices
