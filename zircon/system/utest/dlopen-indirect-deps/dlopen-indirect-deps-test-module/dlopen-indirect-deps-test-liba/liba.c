@@ -2,5 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/compiler.h>
+
 void libb_symbol(void);
+__EXPORT
 void liba_symbol(void) { libb_symbol(); }
