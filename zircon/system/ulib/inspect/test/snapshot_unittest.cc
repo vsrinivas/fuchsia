@@ -15,6 +15,7 @@ using inspect::internal::Block;
 using inspect::internal::BlockType;
 using inspect::internal::HeaderBlockFields;
 using inspect::internal::kMagicNumber;
+using inspect::internal::kMinOrderSize;
 
 TEST(Snapshot, ValidRead) {
   fzl::OwnedVmoMapper vmo;
@@ -37,6 +38,15 @@ TEST(Snapshot, ValidRead) {
   uint8_t buf[snapshot.size() - sizeof(Block)];
   memset(buf, 'a', snapshot.size() - sizeof(Block));
   EXPECT_EQ(0, memcmp(snapshot.data() + sizeof(Block), buf, snapshot.size() - sizeof(Block)));
+}
+
+TEST(Snapshot, InvalidBufferSize) {
+  for (size_t i = 0; i < kMinOrderSize; i++) {
+    Snapshot snapshot;
+    std::vector<uint8_t> buffer;
+    buffer.resize(i);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, Snapshot::Create(std::move(buffer), &snapshot));
+  }
 }
 
 TEST(Snapshot, InvalidWritePending) {

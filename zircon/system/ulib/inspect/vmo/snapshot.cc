@@ -17,6 +17,11 @@ Snapshot::Snapshot(std::vector<uint8_t> buffer) : buffer_(std::move(buffer)) {}
 
 zx_status_t Snapshot::Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot) {
   ZX_ASSERT(out_snapshot);
+
+  if (buffer.size() < kMinOrderSize) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // A buffer does not have concurrent writers or observers, so we don't use
   // this.
   uint64_t unused;
