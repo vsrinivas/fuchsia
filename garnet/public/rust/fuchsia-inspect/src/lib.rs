@@ -696,6 +696,7 @@ macro_rules! histogram_property {
 macro_rules! linear_histogram_property {
     ($name_cap:ident, $type:ident) => {
         paste::item! {
+            #[derive(Debug)]
             pub struct [<$name_cap LinearHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
                 floor: $type,
@@ -729,6 +730,7 @@ macro_rules! linear_histogram_property {
 macro_rules! exponential_histogram_property {
     ($name_cap:ident, $type:ident) => {
         paste::item! {
+            #[derive(Debug)]
             pub struct [<$name_cap ExponentialHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
                 floor: $type,

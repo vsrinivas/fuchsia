@@ -16,9 +16,10 @@ use {
     fuchsia_zircon::Vmo,
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
+        self,
         cmp::min,
         collections::{HashMap, HashSet},
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
     },
 };
 
@@ -145,6 +146,68 @@ const SUBTRACT: Op =
     Op { int: |a, b| a - b, uint: |a, b| a - b, double: |a, b| a - b, name: "subtract" };
 const SET: Op = Op { int: |_a, b| b, uint: |_a, b| b, double: |_a, b| b, name: "set" };
 
+macro_rules! insert_linear_fn {
+    ($name:ident, $type:ident) => {
+        fn $name(numbers: &mut Vec<$type>, value: $type, count: u64) -> Result<(), Error> {
+            let buckets: $type = (numbers.len() as i32 - 4).try_into().unwrap();
+            let floor = numbers[0];
+            let step_size = numbers[1];
+            let index: usize = if value < floor {
+                2
+            } else if value >= floor + buckets * step_size {
+                numbers.len() - 1
+            } else {
+                (((value - floor) / step_size) as $type + 3 as $type) as i32 as usize
+            };
+            numbers[index] += count as $type;
+            Ok(())
+        }
+    };
+}
+
+insert_linear_fn! {insert_linear_i, i64}
+insert_linear_fn! {insert_linear_u, u64}
+insert_linear_fn! {insert_linear_d, f64}
+
+// DO NOT USE this algorithm in non-test libraries!
+// It's good to implement the test with a different algorithm than the code being tested.
+// But this is a BAD algorithm in real life.
+// 1) Too many casts - extreme values may not be handled correctly.
+// 2) Floating point math is imprecise; int/uint values over 2^56 or so won't be
+//     calculated correctly because they can't be expressed precisely, and the log2/log2
+//     division may come down on the wrong side of the bucket boundary. That's why there's
+//     a fudge factor added to int results - but that's only correct up to a million or so.
+macro_rules! insert_exponential_fn {
+    ($name:ident, $type:ident, $fudge_factor:expr) => {
+        fn $name(numbers: &mut Vec<$type>, value: $type, count: u64) -> Result<(), Error> {
+            let buckets = numbers.len() - 5;
+            let floor = numbers[0];
+            let initial_step = numbers[1];
+            let step_multiplier = numbers[2];
+            let index = if value < floor {
+                3
+            } else if value < floor + initial_step {
+                4
+            } else if value
+                >= floor + initial_step * (step_multiplier as f64).powi(buckets as i32 - 1) as $type
+            {
+                numbers.len() - 1
+            } else {
+                ((((value as f64 - floor as f64) / initial_step as f64) as f64).log2()
+                    / (step_multiplier as f64 + $fudge_factor).log2())
+                .trunc() as usize
+                    + 5
+            };
+            numbers[index] += count as $type;
+            Ok(())
+        }
+    };
+}
+
+insert_exponential_fn! {insert_exponential_i, i64, 0.0000000000000000000001}
+insert_exponential_fn! {insert_exponential_u, u64, 0.0000000000000000000001}
+insert_exponential_fn! {insert_exponential_d, f64, 0.0}
+
 impl Data {
     // ***** Here are the functions to apply Actions to a Data.
 
@@ -231,6 +294,202 @@ impl Data {
             }
             validate::Action::ArraySet(validate::ArraySet { id, index, value }) => {
                 self.modify_array(*id, *index, value, SET)
+            }
+            validate::Action::CreateLinearHistogram(validate::CreateLinearHistogram {
+                parent,
+                id,
+                name,
+                floor,
+                step_size,
+                buckets,
+            }) => self.add_property(
+                *parent,
+                *id,
+                name,
+                match (floor, step_size) {
+                    (validate::Number::IntT(floor), validate::Number::IntT(step_size)) => {
+                        let mut data = vec![0; *buckets as usize + 4];
+                        data[0] = *floor;
+                        data[1] = *step_size;
+                        Payload::IntArray(data, ArrayFormat::LinearHistogram)
+                    }
+                    (validate::Number::UintT(floor), validate::Number::UintT(step_size)) => {
+                        let mut data = vec![0; *buckets as usize + 4];
+                        data[0] = *floor;
+                        data[1] = *step_size;
+                        Payload::UintArray(data, ArrayFormat::LinearHistogram)
+                    }
+                    (validate::Number::DoubleT(floor), validate::Number::DoubleT(step_size)) => {
+                        let mut data = vec![0.0; *buckets as usize + 4];
+                        data[0] = *floor;
+                        data[1] = *step_size;
+                        Payload::DoubleArray(data, ArrayFormat::LinearHistogram)
+                    }
+                    unexpected => bail!("Bad types in CreateLinearHistogram: {:?}", unexpected),
+                },
+            ),
+            validate::Action::CreateExponentialHistogram(
+                validate::CreateExponentialHistogram {
+                    parent,
+                    id,
+                    name,
+                    floor,
+                    initial_step,
+                    step_multiplier,
+                    buckets,
+                },
+            ) => self.add_property(
+                *parent,
+                *id,
+                name,
+                match (floor, initial_step, step_multiplier) {
+                    (
+                        validate::Number::IntT(floor),
+                        validate::Number::IntT(initial_step),
+                        validate::Number::IntT(step_multiplier),
+                    ) => {
+                        let mut data = vec![0i64; *buckets as usize + 5];
+                        data[0] = *floor;
+                        data[1] = *initial_step;
+                        data[2] = *step_multiplier;
+                        Payload::IntArray(data, ArrayFormat::ExponentialHistogram)
+                    }
+                    (
+                        validate::Number::UintT(floor),
+                        validate::Number::UintT(initial_step),
+                        validate::Number::UintT(step_multiplier),
+                    ) => {
+                        let mut data = vec![0u64; *buckets as usize + 5];
+                        data[0] = *floor;
+                        data[1] = *initial_step;
+                        data[2] = *step_multiplier;
+                        Payload::UintArray(data, ArrayFormat::ExponentialHistogram)
+                    }
+                    (
+                        validate::Number::DoubleT(floor),
+                        validate::Number::DoubleT(initial_step),
+                        validate::Number::DoubleT(step_multiplier),
+                    ) => {
+                        let mut data = vec![0.0f64; *buckets as usize + 5];
+                        data[0] = *floor;
+                        data[1] = *initial_step;
+                        data[2] = *step_multiplier;
+                        Payload::DoubleArray(data, ArrayFormat::ExponentialHistogram)
+                    }
+                    unexpected => {
+                        bail!("Bad types in CreateExponentialHistogram: {:?}", unexpected)
+                    }
+                },
+            ),
+            validate::Action::Insert(validate::Insert { id, value }) => {
+                if let Some(mut property) = self.properties.get_mut(&id) {
+                    match (&mut property, value) {
+                        (
+                            Property {
+                                payload: Payload::IntArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::IntT(value),
+                        ) => insert_linear_i(numbers, *value, 1),
+                        (
+                            Property {
+                                payload:
+                                    Payload::IntArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::IntT(value),
+                        ) => insert_exponential_i(numbers, *value, 1),
+                        (
+                            Property {
+                                payload: Payload::UintArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::UintT(value),
+                        ) => insert_linear_u(numbers, *value, 1),
+                        (
+                            Property {
+                                payload:
+                                    Payload::UintArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::UintT(value),
+                        ) => insert_exponential_u(numbers, *value, 1),
+                        (
+                            Property {
+                                payload: Payload::DoubleArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::DoubleT(value),
+                        ) => insert_linear_d(numbers, *value, 1),
+                        (
+                            Property {
+                                payload:
+                                    Payload::DoubleArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::DoubleT(value),
+                        ) => insert_exponential_d(numbers, *value, 1),
+                        unexpected => bail!("Type mismatch {:?} trying to insert", unexpected),
+                    }
+                } else {
+                    bail!("Tried to insert number on nonexistent property {}", id);
+                }
+            }
+            validate::Action::InsertMultiple(validate::InsertMultiple { id, value, count }) => {
+                if let Some(mut property) = self.properties.get_mut(&id) {
+                    match (&mut property, value) {
+                        (
+                            Property {
+                                payload: Payload::IntArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::IntT(value),
+                        ) => insert_linear_i(numbers, *value, *count),
+                        (
+                            Property {
+                                payload:
+                                    Payload::IntArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::IntT(value),
+                        ) => insert_exponential_i(numbers, *value, *count),
+                        (
+                            Property {
+                                payload: Payload::UintArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::UintT(value),
+                        ) => insert_linear_u(numbers, *value, *count),
+                        (
+                            Property {
+                                payload:
+                                    Payload::UintArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::UintT(value),
+                        ) => insert_exponential_u(numbers, *value, *count),
+                        (
+                            Property {
+                                payload: Payload::DoubleArray(numbers, ArrayFormat::LinearHistogram),
+                                ..
+                            },
+                            Number::DoubleT(value),
+                        ) => insert_linear_d(numbers, *value, *count),
+                        (
+                            Property {
+                                payload:
+                                    Payload::DoubleArray(numbers, ArrayFormat::ExponentialHistogram),
+                                ..
+                            },
+                            Number::DoubleT(value),
+                        ) => insert_exponential_d(numbers, *value, *count),
+                        unexpected => {
+                            bail!("Type mismatch {:?} trying to insert multiple", unexpected)
+                        }
+                    }
+                } else {
+                    bail!("Tried to insert_multiple number on nonexistent property {}", id);
+                }
             }
             _ => bail!("Unknown action {:?}", action),
         }
@@ -353,9 +612,15 @@ impl Data {
             let index = index64 as usize;
             // Out of range index is a NOP, not an error.
             let number_len = match &property {
-                Property { payload: Payload::IntArray(numbers, _), .. } => numbers.len(),
-                Property { payload: Payload::UintArray(numbers, _), .. } => numbers.len(),
-                Property { payload: Payload::DoubleArray(numbers, _), .. } => numbers.len(),
+                Property { payload: Payload::IntArray(numbers, ArrayFormat::Default), .. } => {
+                    numbers.len()
+                }
+                Property { payload: Payload::UintArray(numbers, ArrayFormat::Default), .. } => {
+                    numbers.len()
+                }
+                Property {
+                    payload: Payload::DoubleArray(numbers, ArrayFormat::Default), ..
+                } => numbers.len(),
                 unexpected => bail!("Bad types {:?} trying to set number", unexpected),
             };
             if index >= number_len {
@@ -887,11 +1152,42 @@ mod tests {
         info.apply(&create_array_property!(parent: ROOT_ID, id: 8, name: "i_ntarr", slots: 1, type: NumberType::Int))?;
         assert!(info.to_string().contains("i_ntarr: IntArray([0], Default)"));
         info.apply(&create_array_property!(parent: ROOT_ID, id: 9, name: "u_intarr", slots: 2, type: NumberType::Uint))?;
-        println!("{}", info.to_string());
         assert!(info.to_string().contains("u_intarr: UintArray([0, 0], Default)"));
         info.apply(&create_array_property!(parent: ROOT_ID, id: 10, name: "dblarr", slots: 3, type: NumberType::Double))?;
-        println!("{}", info.to_string());
         assert!(info.to_string().contains("dblarr: DoubleArray([0.0, 0.0, 0.0], Default)"));
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 11, name: "ILhist", floor: 12,
+            step_size: 3, buckets: 2, type: IntT))?;
+        assert!(info
+            .to_string()
+            .contains("ILhist: IntArray([12, 3, 0, 0, 0, 0], LinearHistogram)"));
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 12, name: "ULhist", floor: 34,
+            step_size: 5, buckets: 2, type: UintT))?;
+        assert!(info
+            .to_string()
+            .contains("ULhist: UintArray([34, 5, 0, 0, 0, 0], LinearHistogram)"));
+        info.apply(
+            &create_linear_histogram!(parent: ROOT_ID, id: 13, name: "DLhist", floor: 56.0,
+            step_size: 7.0, buckets: 2, type: DoubleT),
+        )?;
+        assert!(info
+            .to_string()
+            .contains("DLhist: DoubleArray([56.0, 7.0, 0.0, 0.0, 0.0, 0.0], LinearHistogram)"));
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 14, name: "IEhist",
+            floor: 12, initial_step: 3, step_multiplier: 5, buckets: 2, type: IntT))?;
+        assert!(info
+            .to_string()
+            .contains("IEhist: IntArray([12, 3, 5, 0, 0, 0, 0], ExponentialHistogram)"));
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 15, name: "UEhist",
+            floor: 34, initial_step: 9, step_multiplier: 6, buckets: 2, type: UintT))?;
+        assert!(info
+            .to_string()
+            .contains("UEhist: UintArray([34, 9, 6, 0, 0, 0, 0], ExponentialHistogram)"));
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 16, name: "DEhist",
+            floor: 56.0, initial_step: 27.0, step_multiplier: 7.0, buckets: 2, type: DoubleT))?;
+        assert!(info.to_string().contains(
+            "DEhist: DoubleArray([56.0, 27.0, 7.0, 0.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+
         info.apply(&delete_property!(id: 3))?;
         assert!(!info.to_string().contains("int-42") && info.to_string().contains("stringfoo"));
         info.apply(&delete_property!(id: 4))?;
@@ -908,6 +1204,18 @@ mod tests {
         assert!(!info.to_string().contains("u_intarr"));
         info.apply(&delete_property!(id: 10))?;
         assert!(!info.to_string().contains("dblarr"));
+        info.apply(&delete_property!(id: 11))?;
+        assert!(!info.to_string().contains("ILhist"));
+        info.apply(&delete_property!(id: 12))?;
+        assert!(!info.to_string().contains("ULhist"));
+        info.apply(&delete_property!(id: 13))?;
+        assert!(!info.to_string().contains("DLhist"));
+        info.apply(&delete_property!(id: 14))?;
+        assert!(!info.to_string().contains("IEhist"));
+        info.apply(&delete_property!(id: 15))?;
+        assert!(!info.to_string().contains("UEhist"));
+        info.apply(&delete_property!(id: 16))?;
+        assert!(!info.to_string().contains("DEhist"));
         info.apply(&delete_node!(id:2))?;
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
@@ -961,6 +1269,86 @@ mod tests {
         assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::UintT(23))).is_err());
         assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(24.0))).is_err());
         assert!(info.to_string().contains("value: IntArray([0, 22, -5], Default)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_linear_int_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 4, step_size: 2, buckets: 2, type: IntT))?;
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 0, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(4))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 1, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(5))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 2, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(6))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 2, 1, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(8))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 2, 1, 1], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(std::i64::MAX))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 0, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 1, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(std::i64::MIN))).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 2, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(222))).is_err());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 2, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert_multiple!(id: 3, value: Number::IntT(7), count: 4)).is_ok());
+        assert!(info.to_string().contains("value: IntArray([4, 2, 2, 2, 5, 2], LinearHistogram)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_exponential_int_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        // Bucket boundaries are 5, 7, 13
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 5, initial_step: 2,
+                    step_multiplier: 4, buckets: 2, type: IntT))?;
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 0, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(5))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 1, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(6))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 2, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(7))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 2, 1, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(13))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 2, 1, 1], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(std::i64::MAX))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 0, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 1, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(std::i64::MIN))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 2, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(222))).is_err());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 2, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert_multiple!(id: 3, value: Number::IntT(12), count: 4)).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: IntArray([5, 2, 4, 2, 2, 5, 2], ExponentialHistogram)"));
         Ok(())
     }
 
@@ -1028,6 +1416,80 @@ mod tests {
     }
 
     #[test]
+    fn test_linear_uint_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 4, step_size: 2, buckets: 2, type: UintT))?;
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 0, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(4))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 1, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(5))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 2, 0, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(6))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 2, 1, 0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(8))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 2, 1, 1], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(std::u64::MAX))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 0, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 1, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::UintT(222))).is_err());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 1, 2, 1, 2], LinearHistogram)"));
+        assert!(info.apply(&insert_multiple!(id: 3, value: Number::UintT(7), count: 4)).is_ok());
+        assert!(info.to_string().contains("value: UintArray([4, 2, 1, 2, 5, 2], LinearHistogram)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_exponential_uint_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        // Bucket boundaries are 5, 7, 13
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 5, initial_step: 2,
+                    step_multiplier: 4, buckets: 2, type: UintT))?;
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 0, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(5))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 1, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(6))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 2, 0, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(7))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 2, 1, 0], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(13))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 2, 1, 1], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(std::u64::MAX))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 0, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 1, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::UintT(222))).is_err());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 1, 2, 1, 2], ExponentialHistogram)"));
+        assert!(info.apply(&insert_multiple!(id: 3, value: Number::UintT(12), count: 4)).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: UintArray([5, 2, 4, 1, 2, 5, 2], ExponentialHistogram)"));
+        Ok(())
+    }
+
+    #[test]
     fn test_basic_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -1070,6 +1532,130 @@ mod tests {
         assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(23))).is_err());
         assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::IntT(24))).is_err());
         assert!(info.to_string().contains("value: DoubleArray([0.0, 22.0, -5.0], Default)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_linear_double_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 4.0, step_size: 0.5, buckets: 2, type: DoubleT))?;
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 0.0, 0.0, 0.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(4.0))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 1.0, 0.0, 0.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(4.25))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 2.0, 0.0, 0.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(4.75))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 2.0, 1.0, 0.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(5.1))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 2.0, 1.0, 1.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MAX))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 0.0, 2.0, 1.0, 2.0], LinearHistogram)"));
+        assert!(info
+            .apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MIN_POSITIVE)))
+            .is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 1.0, 2.0, 1.0, 2.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MIN))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 2.0, 2.0, 1.0, 2.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 3.0, 2.0, 1.0, 2.0], LinearHistogram)"));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(222.0))).is_err());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 3.0, 2.0, 1.0, 2.0], LinearHistogram)"));
+        assert!(info
+            .apply(&insert_multiple!(id: 3, value: Number::DoubleT(4.5), count: 4))
+            .is_ok());
+        assert!(info
+            .to_string()
+            .contains("value: DoubleArray([4.0, 0.5, 3.0, 2.0, 5.0, 2.0], LinearHistogram)"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_exponential_double_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        // Bucket boundaries are 5, 7, 13, 37
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 3, name: "value",
+                    floor: 5.0, initial_step: 2.0,
+                    step_multiplier: 4.0, buckets: 3, type: DoubleT))?;
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(5.0))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 1.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(6.9))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(7.1))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 1.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info
+            .apply(&insert_multiple!(id: 3, value: Number::DoubleT(12.9), count: 4))
+            .is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 5.0, 0.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(13.1))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 5.0, 1.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(36.9))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 5.0, 2.0, 0.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(37.1))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 5.0, 2.0, 1.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MAX))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 0.0, 2.0, 5.0, 2.0, 2.0], ExponentialHistogram)"
+        ));
+        assert!(info
+            .apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MIN_POSITIVE)))
+            .is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 1.0, 2.0, 5.0, 2.0, 2.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(std::f64::MIN))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 2.0, 2.0, 5.0, 2.0, 2.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::DoubleT(0.0))).is_ok());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 3.0, 2.0, 5.0, 2.0, 2.0], ExponentialHistogram)"
+        ));
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(0))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::UintT(0))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Number::DoubleT(222.0))).is_err());
+        assert!(info.to_string().contains(
+            "value: DoubleArray([5.0, 2.0, 4.0, 3.0, 2.0, 5.0, 2.0, 2.0], ExponentialHistogram)"
+        ));
         Ok(())
     }
 
@@ -1129,16 +1715,34 @@ mod tests {
         // Can't delete nonexistent property
         info = Data::new();
         assert!(info.apply(&delete_property!(id: 1)).is_err());
-        // Can't do basic-int on array or vice versa
+        // Can't do basic-int on array or histogram, or any vice versa
         info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
                                      value: Number::IntT(42)))?;
         info.apply(&create_array_property!(parent: ROOT_ID, id: 4, name: "array", slots: 2,
                                      type: NumberType::Int))?;
+        info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 5, name: "lin",
+                                floor: 5, step_size: 2,
+                                buckets: 2, type: IntT))?;
+        info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 6, name: "exp",
+                                floor: 5, initial_step: 2,
+                                step_multiplier: 2, buckets: 2, type: IntT))?;
         assert!(info.apply(&set_number!(id: 3, value: Number::IntT(5))).is_ok());
         assert!(info.apply(&array_set!(id: 4, index: 0, value: Number::IntT(5))).is_ok());
+        assert!(info.apply(&insert!(id: 5, value: Number::IntT(2))).is_ok());
+        assert!(info.apply(&insert!(id: 6, value: Number::IntT(2))).is_ok());
+        assert!(info.apply(&insert_multiple!(id: 5, value: Number::IntT(2), count: 3)).is_ok());
+        assert!(info.apply(&insert_multiple!(id: 6, value: Number::IntT(2), count: 3)).is_ok());
         assert!(info.apply(&set_number!(id: 4, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&set_number!(id: 5, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&set_number!(id: 6, value: Number::IntT(5))).is_err());
         assert!(info.apply(&array_set!(id: 3, index: 0, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&array_set!(id: 5, index: 0, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&array_set!(id: 6, index: 0, value: Number::IntT(5))).is_err());
+        assert!(info.apply(&insert!(id: 3, value: Number::IntT(2))).is_err());
+        assert!(info.apply(&insert!(id: 4, value: Number::IntT(2))).is_err());
+        assert!(info.apply(&insert_multiple!(id: 3, value: Number::IntT(2), count: 3)).is_err());
+        assert!(info.apply(&insert_multiple!(id: 4, value: Number::IntT(2), count: 3)).is_err());
         Ok(())
     }
 

@@ -32,6 +32,12 @@ enum Property {
     IntArray(IntArrayProperty),
     UintArray(UintArrayProperty),
     DoubleArray(DoubleArrayProperty),
+    IntLinearHistogram(IntLinearHistogramProperty),
+    UintLinearHistogram(UintLinearHistogramProperty),
+    DoubleLinearHistogram(DoubleLinearHistogramProperty),
+    IntExponentialHistogram(IntExponentialHistogramProperty),
+    UintExponentialHistogram(UintExponentialHistogramProperty),
+    DoubleExponentialHistogram(DoubleExponentialHistogramProperty),
 }
 
 struct Actor {
@@ -157,6 +163,146 @@ impl Actor {
                     (Property::UintArray(p), Number::UintT(v)) => p.subtract(index as usize, v),
                     (Property::DoubleArray(p), Number::DoubleT(v)) => p.subtract(index as usize, v),
                     unexpected => bail!("Illegal types {:?} for ArraySubtract", unexpected),
+                };
+            }
+            Action::CreateLinearHistogram(CreateLinearHistogram {
+                parent,
+                id,
+                name,
+                floor,
+                step_size,
+                buckets,
+            }) => {
+                let buckets = buckets as usize;
+                self.properties.insert(
+                    id,
+                    match (floor, step_size) {
+                        (Number::IntT(floor), Number::IntT(step_size)) => {
+                            Property::IntLinearHistogram(
+                                self.find_parent(parent)?.create_int_linear_histogram(
+                                    name,
+                                    LinearHistogramParams { floor, step_size, buckets },
+                                ),
+                            )
+                        }
+                        (Number::UintT(floor), Number::UintT(step_size)) => {
+                            Property::UintLinearHistogram(
+                                self.find_parent(parent)?.create_uint_linear_histogram(
+                                    name,
+                                    LinearHistogramParams { floor, step_size, buckets },
+                                ),
+                            )
+                        }
+                        (Number::DoubleT(floor), Number::DoubleT(step_size)) => {
+                            Property::DoubleLinearHistogram(
+                                self.find_parent(parent)?.create_double_linear_histogram(
+                                    name,
+                                    LinearHistogramParams { floor, step_size, buckets },
+                                ),
+                            )
+                        }
+                        unexpected => {
+                            bail!("Illegal types {:?} for CreateLinearHistogram", unexpected)
+                        }
+                    },
+                );
+            }
+            Action::CreateExponentialHistogram(CreateExponentialHistogram {
+                parent,
+                id,
+                name,
+                floor,
+                initial_step,
+                step_multiplier,
+                buckets,
+            }) => {
+                let buckets = buckets as usize;
+                self.properties.insert(
+                    id,
+                    match (floor, initial_step, step_multiplier) {
+                        (
+                            Number::IntT(floor),
+                            Number::IntT(initial_step),
+                            Number::IntT(step_multiplier),
+                        ) => Property::IntExponentialHistogram(
+                            self.find_parent(parent)?.create_int_exponential_histogram(
+                                name,
+                                ExponentialHistogramParams {
+                                    floor,
+                                    initial_step,
+                                    step_multiplier,
+                                    buckets,
+                                },
+                            ),
+                        ),
+                        (
+                            Number::UintT(floor),
+                            Number::UintT(initial_step),
+                            Number::UintT(step_multiplier),
+                        ) => Property::UintExponentialHistogram(
+                            self.find_parent(parent)?.create_uint_exponential_histogram(
+                                name,
+                                ExponentialHistogramParams {
+                                    floor,
+                                    initial_step,
+                                    step_multiplier,
+                                    buckets,
+                                },
+                            ),
+                        ),
+                        (
+                            Number::DoubleT(floor),
+                            Number::DoubleT(initial_step),
+                            Number::DoubleT(step_multiplier),
+                        ) => Property::DoubleExponentialHistogram(
+                            self.find_parent(parent)?.create_double_exponential_histogram(
+                                name,
+                                ExponentialHistogramParams {
+                                    floor,
+                                    initial_step,
+                                    step_multiplier,
+                                    buckets,
+                                },
+                            ),
+                        ),
+                        unexpected => {
+                            bail!("Illegal types {:?} for CreateExponentialHistogram", unexpected)
+                        }
+                    },
+                );
+            }
+            Action::Insert(Insert { id, value }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::IntLinearHistogram(p), Number::IntT(v)) => p.insert(v),
+                    (Property::UintLinearHistogram(p), Number::UintT(v)) => p.insert(v),
+                    (Property::DoubleLinearHistogram(p), Number::DoubleT(v)) => p.insert(v),
+                    (Property::IntExponentialHistogram(p), Number::IntT(v)) => p.insert(v),
+                    (Property::UintExponentialHistogram(p), Number::UintT(v)) => p.insert(v),
+                    (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => p.insert(v),
+                    unexpected => bail!("Illegal types {:?} for Insert", unexpected),
+                };
+            }
+            Action::InsertMultiple(InsertMultiple { id, value, count }) => {
+                match (self.find_property(id)?, value) {
+                    (Property::IntLinearHistogram(p), Number::IntT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    (Property::UintLinearHistogram(p), Number::UintT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    (Property::DoubleLinearHistogram(p), Number::DoubleT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    (Property::IntExponentialHistogram(p), Number::IntT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    (Property::UintExponentialHistogram(p), Number::UintT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => {
+                        p.insert_multiple(v, count as usize)
+                    }
+                    unexpected => bail!("Illegal types {:?} for InsertMultiple", unexpected),
                 };
             }
             unexpected => {

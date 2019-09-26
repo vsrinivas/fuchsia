@@ -39,6 +39,9 @@ pub fn real_trials() -> Vec<Trial> {
         basic_int_array(),
         basic_uint_array(),
         basic_double_array(),
+        int_histogram_ops_trial(),
+        uint_histogram_ops_trial(),
+        double_histogram_ops_trial(),
     ]
 }
 
@@ -172,6 +175,56 @@ macro_rules! array_subtract {
             id: $id,
             index: $index,
             value: $value,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! create_linear_histogram {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, floor: $floor:expr,
+        step_size: $step_size:expr, buckets: $buckets:expr, type: $type:ident) => {
+        validate::Action::CreateLinearHistogram(validate::CreateLinearHistogram {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            floor: Number::$type($floor),
+            step_size: Number::$type($step_size),
+            buckets: $buckets,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! create_exponential_histogram {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, floor: $floor:expr,
+        initial_step: $initial_step:expr, step_multiplier: $step_multiplier:expr,
+        buckets: $buckets:expr, type: $type:ident) => {
+        validate::Action::CreateExponentialHistogram(validate::CreateExponentialHistogram {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            floor: Number::$type($floor),
+            initial_step: Number::$type($initial_step),
+            step_multiplier: Number::$type($step_multiplier),
+            buckets: $buckets,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! insert {
+    (id: $id:expr, value: $value:expr) => {
+        validate::Action::Insert(validate::Insert { id: $id, value: $value })
+    };
+}
+
+#[macro_export]
+macro_rules! insert_multiple {
+    (id: $id:expr, value: $value:expr, count: $count:expr) => {
+        validate::Action::InsertMultiple(validate::InsertMultiple {
+            id: $id,
+            value: $value,
+            count: $count,
         })
     };
 }
@@ -312,6 +365,88 @@ fn basic_double_array() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     Trial { name: "Int Array Ops".into(), steps: vec![Step { actions: actions }] }
+}
+
+fn int_histogram_ops_trial() -> Trial {
+    fn push_ops(actions: &mut Vec<validate::Action>, value: i64) {
+        actions.push(insert!(id: 4, value: Number::IntT(value)));
+        actions.push(insert_multiple!(id: 4, value: Number::IntT(value), count: 3));
+        actions.push(insert!(id: 5, value: Number::IntT(value)));
+        actions.push(insert_multiple!(id: 5, value: Number::IntT(value), count: 3));
+    }
+    let mut actions = vec![
+        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5,
+                                 step_size: 3, buckets: 3, type: IntT),
+        create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist", floor: 5,
+                                 initial_step: 2, step_multiplier: 4,
+                                 buckets: 3, type: IntT),
+    ];
+    for value in &[std::i64::MIN, std::i64::MAX, 0] {
+        push_ops(&mut actions, *value);
+    }
+    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
+    //    for value in -10_i64..100 {
+    for &value in &[-10_i64, 4, 5, 6, 7, 12, 15, 16, 100] {
+        push_ops(&mut actions, value);
+    }
+    actions.push(delete_property!(id: 4));
+    actions.push(delete_property!(id: 5));
+    Trial { name: "Int Histogram Ops".into(), steps: vec![Step { actions: actions }] }
+}
+
+fn uint_histogram_ops_trial() -> Trial {
+    fn push_ops(actions: &mut Vec<validate::Action>, value: u64) {
+        actions.push(insert!(id: 4, value: Number::UintT(value)));
+        actions.push(insert_multiple!(id: 4, value: Number::UintT(value), count: 3));
+        actions.push(insert!(id: 5, value: Number::UintT(value)));
+        actions.push(insert_multiple!(id: 5, value: Number::UintT(value), count: 3));
+    }
+    let mut actions = vec![
+        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5,
+                                 step_size: 3, buckets: 3, type: UintT),
+        create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist", floor: 5,
+                                 initial_step: 2, step_multiplier: 4,
+                                 buckets: 3, type: UintT),
+    ];
+    for value in &[std::u64::MAX, 0] {
+        push_ops(&mut actions, *value);
+    }
+    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
+    //    for value in 0_u64..100 {
+    for &value in &[0_u64, 4, 5, 6, 7, 12, 15, 16, 100] {
+        push_ops(&mut actions, value);
+    }
+    actions.push(delete_property!(id: 4));
+    actions.push(delete_property!(id: 5));
+    Trial { name: "Uint Histogram Ops".into(), steps: vec![Step { actions: actions }] }
+}
+
+fn double_histogram_ops_trial() -> Trial {
+    fn push_ops(actions: &mut Vec<validate::Action>, value: f64) {
+        actions.push(insert!(id: 4, value: Number::DoubleT(value)));
+        actions.push(insert_multiple!(id: 4, value: Number::DoubleT(value), count: 3));
+        actions.push(insert!(id: 5, value: Number::DoubleT(value)));
+        actions.push(insert_multiple!(id: 5, value: Number::DoubleT(value), count: 3));
+    }
+    let mut actions = vec![
+        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5.0,
+                                 step_size: 3.0, buckets: 3, type: DoubleT),
+        create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist",
+                                floor: std::f64::consts::PI, initial_step: 2.0,
+                                step_multiplier: 4.0, buckets: 3, type: DoubleT),
+    ];
+    // TODO(cphoenix): What about NAN and +/- INFINITY?
+    for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
+        push_ops(&mut actions, *value);
+    }
+    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
+    //    for value in -100_i64..1000 {
+    for &value in &[-100, 30, 40, 50, 60, 70, 100, 150, 160, 1000] {
+        push_ops(&mut actions, value as f64 / 10.0);
+    }
+    actions.push(delete_property!(id: 4));
+    actions.push(delete_property!(id: 5));
+    Trial { name: "Double Histogram Ops".into(), steps: vec![Step { actions: actions }] }
 }
 
 #[cfg(test)]

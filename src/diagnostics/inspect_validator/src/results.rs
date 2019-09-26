@@ -64,6 +64,16 @@ impl Summary for Action {
             Action::ArraySubtract(ArraySubtract { value, .. }) => {
                 format!("ArraySubtract({})", value.summary())
             }
+            Action::CreateLinearHistogram(CreateLinearHistogram { floor, .. }) => {
+                format!("CreateLinearHistogram({})", floor.summary())
+            }
+            Action::CreateExponentialHistogram(CreateExponentialHistogram { floor, .. }) => {
+                format!("CreateExponentialHistogram({})", floor.summary())
+            }
+            Action::Insert(Insert { value, .. }) => format!("Insert({})", value.summary()),
+            Action::InsertMultiple(InsertMultiple { value, .. }) => {
+                format!("InsertMultiple({})", value.summary())
+            }
             _ => "Unknown".to_string(),
         }
     }
@@ -209,6 +219,20 @@ mod tests {
         assert!(results.to_json().contains("foo: ArrayAdd(Uint)"));
         results.unimplemented("foo", &array_subtract!(id:42, index:42, value:Number::UintT(42)));
         assert!(results.to_json().contains("foo: ArraySubtract(Uint)"));
+
+        results.unimplemented(
+            "foo",
+            &create_linear_histogram!(parent: 42, id:42, name: "foo", floor: 42, step_size: 42,
+                                buckets: 42, type: IntT),
+        );
+        assert!(results.to_json().contains("foo: CreateLinearHistogram(Int)"));
+        results.unimplemented("foo", &create_exponential_histogram!(parent: 42, id:42, name: "foo", floor: 42, initial_step: 42,
+                                step_multiplier: 42, buckets: 42, type: UintT));
+        assert!(results.to_json().contains("foo: CreateExponentialHistogram(Uint)"));
+        results.unimplemented("foo", &insert!(id:42, value:Number::UintT(42)));
+        assert!(results.to_json().contains("foo: Insert(Uint)"));
+        results.unimplemented("foo", &insert_multiple!(id:42, value:Number::UintT(42), count: 42));
+        assert!(results.to_json().contains("foo: InsertMultiple(Uint)"));
 
         assert!(!results.to_json().contains("42"));
         assert!(!results.to_json().contains("bar"));

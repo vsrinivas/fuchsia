@@ -135,6 +135,36 @@ struct ArraySubtract {
     Number value;
 };
 
+struct CreateLinearHistogram {
+    uint32 parent;
+    uint32 id;
+    string name;
+    Number floor;
+    Number step_size;
+    uint64 buckets;
+};
+
+struct CreateExponentialHistogram {
+    uint32 parent;
+    uint32 id;
+    string name;
+    Number floor;
+    Number initial_step;
+    Number step_multiplier;
+    uint64 buckets;
+};
+
+struct Insert {
+    uint32 id;
+    Number value;
+};
+
+struct InsertMultiple {
+    uint32 id;
+    Number value;
+    uint64 count;
+};
+
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
     CreateNode create_node;
@@ -152,6 +182,10 @@ xunion Action {
     ArraySet array_set;
     ArrayAdd array_add;
     ArraySubtract array_subtract;
+    CreateLinearHistogram create_linear_histogram;
+    CreateExponentialHistogram create_exponential_histogram;
+    Insert insert;
+    InsertMultiple insert_multiple;
 };
 
 [Discoverable]

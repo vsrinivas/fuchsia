@@ -38,7 +38,8 @@ async fn run_trial(
     trial: &mut trials::Trial,
     results: &mut results::Results,
 ) -> Result<(), Error> {
-    try_compare(data, puppet, &trial.name, -1, None, -1)?;
+    let trial_name = format!("{}:{}", puppet_name, trial.name);
+    try_compare(data, puppet, &trial_name, -1, None, -1)?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         for (action_number, action) in step.actions.iter_mut().enumerate() {
             if let Err(e) = data.apply(action) {
@@ -78,7 +79,7 @@ async fn run_trial(
             try_compare(
                 data,
                 puppet,
-                &trial.name,
+                &trial_name,
                 step_index as i32,
                 Some(action),
                 action_number as i32,
