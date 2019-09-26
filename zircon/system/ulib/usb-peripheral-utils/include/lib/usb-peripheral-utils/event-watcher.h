@@ -13,7 +13,7 @@
 
 namespace usb_peripheral_utils {
 
-class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events::Interface {
+class __EXPORT EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events::Interface {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
