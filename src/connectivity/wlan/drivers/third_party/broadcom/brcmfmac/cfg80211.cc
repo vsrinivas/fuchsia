@@ -147,7 +147,7 @@ struct parsed_vndr_ies {
 
 static inline void fill_with_broadcast_addr(uint8_t* address) { memset(address, 0xff, ETH_ALEN); }
 
-uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
+uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, const wlan_channel_t* ch) {
   struct brcmu_chan ch_inf;
 
   ch_inf.chnum = ch->primary;
@@ -1579,7 +1579,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     // contain a scan result)
     if (status == BRCMF_E_STATUS_PARTIAL) {
       BRCMF_ERR("Insufficient escan result data exp: %d got: %d\n", sizeof(*escan_result_le),
-          e->datalen);
+                e->datalen);
     }
     goto chk_scan_end;
   }
