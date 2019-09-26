@@ -19,14 +19,15 @@ template <typename T>
 class InspectedContainer {
  public:
   explicit InspectedContainer(fit::function<void(fit::closure)> callback) {
-    std::vector<fit::function<void(fit::closure)>> callbacks;
+    CallbackList callbacks;
     callbacks.emplace_back(std::move(callback));
-    variant_.template emplace<std::vector<fit::function<void(fit::closure)>>>(std::move(callbacks));
+    variant_.template emplace<CallbackList>(std::move(callbacks));
   }
   ~InspectedContainer() = default;
 
   void set_on_empty(fit::closure on_empty_callback) {
-    if (std::holds_alternative<std::vector<fit::function<void(fit::closure)>>>(variant_)) {
+    FXL_DCHECK(!std::holds_alternative<Abandoned>(variant_));
+    if (std::holds_alternative<CallbackList>(variant_)) {
       on_empty_callback_ = std::move(on_empty_callback);
       return;
     }
@@ -37,9 +38,14 @@ class InspectedContainer {
   // matured, |callback| will be stored within this object until this object is matured; otherwise
   // |callback| will be called immediately (though not necessarily synchronously).
   void AddCallback(fit::function<void(fit::closure)> callback) {
-    if (std::holds_alternative<std::vector<fit::function<void(fit::closure)>>>(variant_)) {
-      std::get<std::vector<fit::function<void(fit::closure)>>>(variant_).emplace_back(
-          std::move(callback));
+    if (std::holds_alternative<Abandoned>(variant_)) {
+        callback([] {});
+        return;
+    }
+    if (std::holds_alternative<CallbackList>(variant_)) {
+      auto& callbacks = std::get<CallbackList>(variant_);
+      FXL_DCHECK(!callbacks.empty());
+      callbacks.emplace_back(std::move(callback));
       return;
     }
     callback(std::get<T>(variant_).CreateDetacher());
@@ -50,33 +56,32 @@ class InspectedContainer {
   // during the lifetime of ths object.
   template <typename... Args>
   void Mature(Args&&... args) {
-    FXL_DCHECK(std::holds_alternative<std::vector<fit::function<void(fit::closure)>>>(variant_));
-    std::vector<fit::function<void(fit::closure)>> callbacks;
-    callbacks.swap(std::get<std::vector<fit::function<void(fit::closure)>>>(variant_));
+    FXL_DCHECK(std::holds_alternative<CallbackList>(variant_));
+    CallbackList callbacks;
+    callbacks.swap(std::get<CallbackList>(variant_));
+    FXL_DCHECK(!callbacks.empty());
+
     T& emplaced_inspected = variant_.template emplace<T>(std::forward<Args>(args)...);
     emplaced_inspected.set_on_empty(std::move(on_empty_callback_));
-    // We create all detachers before passing any of them to the callbacks - the callbacks are at
-    // liberty to synchronously call the detachers they are passed, and we don't want to dither
-    // between having one, then zero, then one again, and so on outstanding detachers over the
-    // course of calling the several callbacks.
-    std::vector<fit::closure> detachers;
-    detachers.reserve(callbacks.size());
-    for (size_t index = 0; index < callbacks.size(); index++) {
-      detachers.emplace_back(emplaced_inspected.CreateDetacher());
-    }
-    size_t index = 0;
-    for (fit::function<void(fit::closure)>& callback : callbacks) {
-      callback(std::move(detachers[index]));
-      index++;
+
+    // Create a detacher, and keep it alive until all callback have been called
+    // with their own detacher. It ensures that if callbacks release the
+    // detacher synchronously, this object doesn't become empty until the end of
+    // this method.
+    auto keep_alive = fit::defer(emplaced_inspected.CreateDetacher());
+    for (auto& callback : callbacks) {
+      callback(emplaced_inspected.CreateDetacher());
     }
   }
 
   // Signals to this object that the data for which it is waiting will never arrive, and that this
   // object should call all stored callbacks indicating as much and then signal its emptiness.
   void Abandon() {
-    FXL_DCHECK(std::holds_alternative<std::vector<fit::function<void(fit::closure)>>>(variant_));
-    for (fit::function<void(fit::closure)>& callback :
-         std::get<std::vector<fit::function<void(fit::closure)>>>(variant_)) {
+    FXL_DCHECK(std::holds_alternative<CallbackList>(variant_));
+    CallbackList callbacks;
+    callbacks.swap(std::get<CallbackList>(variant_));
+    variant_.template emplace<Abandoned>();
+    for (auto& callback : callbacks) {
       callback([] {});
     }
     if (on_empty_callback_) {
@@ -85,8 +90,11 @@ class InspectedContainer {
   }
 
  private:
+  using CallbackList = std::vector<fit::function<void(fit::closure)>>;
+  using Abandoned = std::monostate;
+
   fit::closure on_empty_callback_;
-  std::variant<std::vector<fit::function<void(fit::closure)>>, T> variant_;
+  std::variant<CallbackList, T, Abandoned> variant_;
 };
 
 }  // namespace ledger
