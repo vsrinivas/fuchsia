@@ -27,6 +27,7 @@ environments = [
        ...
     }
     tags = ["<environment tags...>"]
+    netboot = <boolean>
   },
   ...
 ]
@@ -75,11 +76,16 @@ tests for particular tags) must be added. Labels are used for special tests
 that require different configurations. Before using tags, please consult with
 fuchsia-infra-team@google.com"
 
+### Netboot
+
+Netboot specifies whether to netboot instead of paving before running the tests
+in the shard for that environment. If omitted, it will be treated as false.
+
 ## Validation
 
 The `test_plaforms` list in
 [//build/testing/platforms.gni](/build/testing/platforms.gni)
-is the source of truth for what platforms are are available for testing and what
+is the source of truth for what platforms are available for testing and what
 dimensions they possess to match against. Say an environment *matches* a
 platform entry if the former's `dimensions` is a subscope of the latter; say an
 environment is *valid* for the current architecture if it matches a
