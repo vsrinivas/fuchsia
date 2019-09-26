@@ -4,11 +4,15 @@
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
 
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/async/default.h>
-#include <src/lib/fxl/logging.h>
-#include <trace-engine/instrumentation.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+
+#include <src/lib/fxl/logging.h>
+#include <trace-engine/instrumentation.h>
 
 namespace ktrace_provider {
 
@@ -20,9 +24,22 @@ void LogImporter::Start() {
   if (log_)
     return;
 
-  zx_status_t status = zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log_);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
+    FXL_PLOG(ERROR, status) << "Failed to create channel";
+    return;
+  }
+  constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
+  status = fdio_service_connect(kReadOnlyLogPath, remote.release());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to connect to ReadOnlyLog";
+    return;
+  }
+
+  status = fuchsia_boot_ReadOnlyLogGet(local.get(), log_.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "ReadOnlyLogGet failed";
     return;
   }
 
