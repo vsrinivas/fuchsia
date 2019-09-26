@@ -330,9 +330,8 @@ fn basic_double() -> Trial {
 fn basic_int_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 5, name: "int", slots: 5,
                                        type: NumberType::Int)];
-    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
     // TODO(cphoenix): Once the fix lands, test lots of values.
-    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
         actions.push(array_add!(id: 5, index: *index, value: Number::IntT(7 + *index as i64)));
         actions.push(array_subtract!(id: 5, index: *index, value: Number::IntT(3)));
         actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
@@ -344,8 +343,7 @@ fn basic_int_array() -> Trial {
 fn basic_uint_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 6, name: "uint", slots: 5,
                                        type: NumberType::Uint)];
-    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
-    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
         actions.push(array_add!(id: 6, index: *index, value: Number::UintT(11 + *index as u64)));
         actions.push(array_subtract!(id: 6, index: *index, value: Number::UintT(3)));
         actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
@@ -357,8 +355,7 @@ fn basic_uint_array() -> Trial {
 fn basic_double_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 4, name: "float", slots: 5,
                                        type: NumberType::Double)];
-    // TODO(cphoenix): Add 6 to the list of indexes, Rust fails!
-    for index in [0u64, 2, 4, 5, 12, 120, 12000].iter() {
+    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
         actions.push(array_add!(id: 4, index: *index, value: Number::DoubleT(2.0 + *index as f64)));
         actions.push(array_subtract!(id: 4, index: *index, value: Number::DoubleT(3.5)));
         actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));

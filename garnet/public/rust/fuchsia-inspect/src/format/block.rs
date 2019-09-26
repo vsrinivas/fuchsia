@@ -244,9 +244,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the value of an int ARRAY_VALUE slot.
     pub fn array_get_int_slot(&self, slot_index: usize) -> Result<i64, Error> {
         self.check_array_entry_type(BlockType::IntValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         let mut bytes = [0u8; 8];
         self.container
             .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
@@ -256,9 +254,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the value of a double ARRAY_VALUE slot.
     pub fn array_get_double_slot(&self, slot_index: usize) -> Result<f64, Error> {
         self.check_array_entry_type(BlockType::DoubleValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         let mut bytes = [0u8; 8];
         self.container
             .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
@@ -268,9 +264,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the value of a uint ARRAY_VALUE slot.
     pub fn array_get_uint_slot(&self, slot_index: usize) -> Result<u64, Error> {
         self.check_array_entry_type(BlockType::UintValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         let mut bytes = [0u8; 8];
         self.container
             .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
@@ -285,6 +279,14 @@ impl<T: ReadableBlockContainer> Block<T> {
         } else {
             bail!("Invalid array entry type. Expected: {}, got: {}", expected, actual);
         }
+    }
+
+    /// Ensure that the index is within the array bounds.
+    fn check_array_index(&self, slot_index: usize) -> Result<(), Error> {
+        if slot_index >= self.array_slots()? {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        Ok(())
     }
 
     /// Get the parent block index of a *_VALUE block.
@@ -502,8 +504,15 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         if !entry_type.is_numeric_value() {
             bail!("Invalid entry type");
         }
-        if slots > constants::ARRAY_MAX_SLOTS {
-            bail!("{} exceeds the maxium number of slots: 255", slots);
+        let order = self.order();
+        let max_capacity = utils::array_capacity(order);
+        if slots > max_capacity {
+            bail!(
+                "{} exceeds the maximum number of slots for order {}: {}",
+                slots,
+                order,
+                max_capacity
+            );
         }
         self.write_value_header(BlockType::ArrayValue, name_index, parent_index)?;
         let mut payload = Payload(0);
@@ -517,9 +526,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of an int ARRAY_VALUE block.
     pub fn array_set_int_slot(&self, slot_index: usize, value: i64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::IntValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         self.container.write_bytes(
             utils::offset_for_index(self.index + 1) + slot_index * 8,
             &value.to_le_bytes(),
@@ -530,9 +537,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of a double ARRAY_VALUE block.
     pub fn array_set_double_slot(&self, slot_index: usize, value: f64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::DoubleValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         self.container.write_bytes(
             utils::offset_for_index(self.index + 1) + slot_index * 8,
             &value.to_bits().to_le_bytes(),
@@ -543,9 +548,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of a uint ARRAY_VALUE block.
     pub fn array_set_uint_slot(&self, slot_index: usize, value: u64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::UintValue)?;
-        if slot_index > utils::array_capacity(self.order()) {
-            bail!("Index out of bounds: {}", slot_index);
-        }
+        self.check_array_index(slot_index)?;
         self.container.write_bytes(
             utils::offset_for_index(self.index + 1) + slot_index * 8,
             &value.to_le_bytes(),
@@ -793,6 +796,7 @@ mod tests {
         let block = Block::new(container, index);
         let mut header = BlockHeader(0);
         header.set_block_type(block_type.to_u8().unwrap());
+        header.set_order(2);
         block.write_header(header);
         block
     }
@@ -801,7 +805,7 @@ mod tests {
         f: fn(&Block<&[u8]>) -> Result<T, Error>,
         error_types: &BTreeSet<BlockType>,
     ) {
-        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let container = [0u8; constants::MIN_ORDER_SIZE * 3];
         for block_type in BlockType::all().iter() {
             let block = create_with_type(&container[..], 0, block_type.clone());
             let result = f(&block);
@@ -817,7 +821,7 @@ mod tests {
         f: fn(&mut Block<&[u8]>) -> Result<T, Error>,
         ok_types: &BTreeSet<BlockType>,
     ) {
-        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let container = [0u8; constants::MIN_ORDER_SIZE * 3];
         for block_type in BlockType::all().iter() {
             let mut block = create_with_type(&container[..], 0, block_type.clone());
             let result = f(&mut block);
@@ -1252,13 +1256,14 @@ mod tests {
         assert_eq!(block.array_slots().unwrap(), 4);
         assert_eq!(block.array_entry_type().unwrap(), BlockType::UintValue);
 
-        for i in 0..6 {
+        for i in 0..4 {
             assert!(block.array_set_uint_slot(i, (i as u64 + 1) * 5).is_ok());
         }
+        assert!(block.array_set_uint_slot(4, 3).is_err());
         assert!(block.array_set_uint_slot(7, 5).is_err());
         assert_eq!(container[..8], [0xb2, 0x02, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..16], [0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-        for i in 0..6 {
+        for i in 0..4 {
             assert_eq!(
                 container[8 * (i + 2)..8 * (i + 3)],
                 [(i as u8 + 1) * 5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -1278,16 +1283,17 @@ mod tests {
         assert!(bad_block.array_format().is_err());
         assert!(bad_block.array_entry_type().is_err());
 
-        for i in 0..6 {
+        for i in 0..4 {
             assert_eq!(block.array_get_uint_slot(i).unwrap(), (i as u64 + 1) * 5);
         }
+        assert!(block.array_get_uint_slot(4).is_err());
 
         let types = BTreeSet::from_iter(vec![BlockType::ArrayValue]);
         test_ok_types(move |b| b.array_format(), &types);
         test_ok_types(move |b| b.array_slots(), &types);
         test_ok_types(
             move |b| {
-                b.become_array_value(5, ArrayFormat::Default, BlockType::UintValue, 1, 2)?;
+                b.become_array_value(2, ArrayFormat::Default, BlockType::UintValue, 1, 2)?;
                 b.array_set_uint_slot(0, 3)?;
                 b.array_get_uint_slot(0)
             },
@@ -1296,12 +1302,29 @@ mod tests {
     }
 
     #[test]
-    fn array_max_value() {
-        let container = [0u8; constants::MIN_ORDER_SIZE * 4];
-        let block = Block::new_free(&container[..], 0, 2, 0).unwrap();
+    fn array_slots_bigger_than_block_order() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 8];
+        // A block of size 7 (max) can hold 254 values: 2048B - 8B (header) - 8B (array metadata)
+        // gives 2032, which means 254 values of 8 bytes each maximum.
+        let block = Block::new_free(&container[..], 0, 7, 0).unwrap();
+        block.become_reserved().unwrap();
         assert!(block
             .become_array_value(257, ArrayFormat::Default, BlockType::IntValue, 1, 2)
             .is_err());
+        assert!(block
+            .become_array_value(254, ArrayFormat::Default, BlockType::IntValue, 1, 2)
+            .is_ok());
+
+        // A block of size 2 can hold 6 values: 64B - 8B (header) - 8B (array metadata)
+        // gives 48, which means 6 values of 8 bytes each maximum.
+        let block = Block::new_free(&container[..], 0, 2, 0).unwrap();
+        block.become_reserved().unwrap();
+        assert!(block
+            .become_array_value(8, ArrayFormat::Default, BlockType::IntValue, 1, 2)
+            .is_err());
+        assert!(block
+            .become_array_value(6, ArrayFormat::Default, BlockType::IntValue, 1, 2)
+            .is_ok());
     }
 
     fn get_header(container: &[u8]) -> Block<&[u8]> {
