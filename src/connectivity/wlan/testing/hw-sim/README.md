@@ -1,16 +1,13 @@
 ## Introduction
 
-WLAN Hardware Simulator, or `hw-sim`, is a framework used to simulate a Fuchsia compatible WLAN device, its corresponding vendor driver and the radio environment it is in. It is mostly used to perform integration tests that involve some interaction between the system and the components mentioned above. It can also be started from Fuchsia command line to function as a fake WLAN device and its radio environment.
+WLAN Hardware Simulator, or `hw-sim`, is a framework used to simulate a Fuchsia compatible WLAN device, its corresponding vendor driver and the radio environment it is in. It is mostly used to perform integration tests that involve some interaction between the system and the components mentioned above.
 
-## Run `wlan-hw-sim-tests` locally
-
-At the time of writing, this test will **NOT** pass on any platform with a supported physical WLAN device. Unplug any WLAN dongle if you intend to run this test on a physical device. Do **NOT** attempt to run the test on devices with supported built-in WLAN adapter, such as a device with an ath10k device, unless the adapter's driver is excluded in the build.
+## Run tests locally
 
 The most convenient way to run this test locally is to run it in a QEMU instance.
 
 ##### QEMU without network (run test from QEMU command prompt directly)
 
-1. Make sure QEMU is working by following https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#Boot-from-QEMU
 1. Make sure `src/connectivity/wlan:tests` is included in `with-base` so that the driver for the fake wlantap device is loaded in QEMU. For example:
 
     ```
@@ -23,16 +20,18 @@ The most convenient way to run this test locally is to run it in a QEMU instance
     fx run -k
     ```
 
-1. In the QEMU command prompt, run the test
+    Note: If QEMU is not working, troubleshoot steps can be found at https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#Boot-from-QEMU
+
+1. In the QEMU command prompt, run the tests individually in the `test` directory. For example:
 
     ```
-    run wlan-hw-sim-tests
+    run-test-component simulate_scan
     ```
 
 1. Rust tests hides `stdout` when tests pass. To force displaying `stdout`, run the test with `--nocapture`
 
     ````
-    run wlan-hw-sim-tests --nocapture
+    run-test-component simulate_scan --nocapture
     ````
 
 1. After the test finishes, exit QEMU by
@@ -56,13 +55,19 @@ The most convenient way to run this test locally is to run it in a QEMU instance
 1. From another terminal on the **host**,
 
     ```
-    fx run-test wlan-hw-sim-tests
+    fx run-test wlan-hw-sim-test
     ```
 
 1. To force `stdout` display, pass `--nocapture` with additional `--` so that it does not get parsed by `run-test`
     ````
-    fx run-test wlan-hw-sim-tests -- --nocapture
+    fx run-test wlan-hw-sim-test -- --nocapture
     ````
+
+1. Individual tests can be run with
+
+    ```
+    fx run-test wlan-hw-sim-test -t simulate_scan
+    ```
 
 ## Special notes for debugging flakiness in CQ
 
@@ -96,25 +101,6 @@ Often when debugging flakiness, it is more helpful to run the tests repeatedly. 
     ````
 
 1. Run the test in QEMU command prompt (not with `fx run`)
-     ````
-     for i in $(seq 1 1000); do run wlan-hw-sim-tests || break; echo success: attempt $i; done;
-     ````
-
-## Running `hw-sim` in the command line
-
-WLAN Hardware Simulator can be started from the command line. It currently supports `scan` and `connect`. It is recommended to run it on a physical device, since it has to be running all the time while `wlan` commands are issued from another terminal window. This can also be achieved in QEMU (with network support) by starting the package from within QEMU and issuing the commands via `fx shell`
-
-1. Start `hw-sim` in one terminal:
-    ```
-    run fuchsia-pkg://fuchsia.com/wlan-hw-sim#meta/wlan-hw-sim.cmx
-    ```
-
-    Note: Full URL must be used because the package has the same prefix as package `wlan-hw-sim-tests`
-
-1. From another terminal:
-    ````
-    wlan scan
-    wlan connect fakenet
-    ````
-
-    Note: In the simulated radio envrionment, there is only one network with SSID `fakenet` and no protection.
+     ```
+     for i in $(seq 1 1000); do run-test-component simulate_scan || break; echo success: attempt $i; done;
+     ```
