@@ -10,8 +10,6 @@
 
 namespace virtual_camera {
 
-static const char* kVirtualCameraVendorName = "Google Inc.";
-static const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
 static constexpr uint32_t kBufferCountForCamping = 5;
 static constexpr uint32_t kFakeImageCodedWidth = 640;
 static constexpr uint32_t kFakeImageMinWidth = 640;
@@ -144,6 +142,7 @@ void VirtualCamera2ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback)
   fuchsia::camera2::DeviceInfo camera_device_info;
   camera_device_info.set_vendor_name(kVirtualCameraVendorName);
   camera_device_info.set_product_name(kVirtualCameraProductName);
+  camera_device_info.set_type(fuchsia::camera2::DeviceType::VIRTUAL);
   callback(std::move(camera_device_info));
 }
 

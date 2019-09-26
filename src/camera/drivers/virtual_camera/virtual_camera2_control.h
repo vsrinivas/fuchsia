@@ -126,6 +126,8 @@ class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
       task_{this};
 };
 
+inline const char* kVirtualCameraVendorName = "Google Inc.";
+inline const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
 }  // namespace virtual_camera
 
 #endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA2_CONTROL_H_

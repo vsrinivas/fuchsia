@@ -8,6 +8,15 @@ import("//build/package.gni")
 driver_module("virtual_camera_driver") {
   output_name = "virtual_camera_driver"
 
+  deps = [
+    "//src/camera/drivers/virtual_camera:virtual-camera-source",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+source_set("virtual-camera-source") {
   sources = [
     "color_source.cc",
     "color_source.h",
@@ -41,9 +50,6 @@ driver_module("virtual_camera_driver") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 package("virtual_camera") {
