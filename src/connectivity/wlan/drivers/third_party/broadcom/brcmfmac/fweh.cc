@@ -88,8 +88,7 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) { return "nod
  * @fweh: firmware event handling info.
  * @event: event queue entry.
  */
-static void brcmf_fweh_queue_event(brcmf_pub* drvr,
-                                   brcmf_fweh_info* fweh,
+static void brcmf_fweh_queue_event(brcmf_pub* drvr, brcmf_fweh_info* fweh,
                                    brcmf_fweh_queue_item* event) {
   // spin_lock_irqsave(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.lock();
@@ -190,6 +189,65 @@ static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_even
 }
 
 /**
+ * brcmf_fweh_handle_event() - call the handler for an event
+ *
+ * @drvr: driver information object.
+ * @event_packet: event packet to handle.
+ *
+ * Converts the event message to host endianness and calls the
+ * appropriate event handler, freeing the event upon completion.
+ */
+static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_item* event) {
+  struct brcmf_if* ifp;
+  zx_status_t err = ZX_OK;
+  struct brcmf_event_msg_be* emsg_be;
+  struct brcmf_event_msg emsg;
+
+  BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM\n",
+            brcmf_fweh_event_name(event->code), event->code, event->emsg.ifidx,
+            event->emsg.bsscfgidx, event->emsg.addr);
+
+  /* convert event message */
+  emsg_be = &event->emsg;
+  emsg.version = be16toh(emsg_be->version);
+  emsg.flags = be16toh(emsg_be->flags);
+  emsg.event_code = event->code;
+  emsg.status = be32toh(emsg_be->status);
+  emsg.reason = be32toh(emsg_be->reason);
+  emsg.auth_type = be32toh(emsg_be->auth_type);
+  emsg.datalen = be32toh(emsg_be->datalen);
+  memcpy(emsg.addr, emsg_be->addr, ETH_ALEN);
+  memcpy(emsg.ifname, emsg_be->ifname, sizeof(emsg.ifname));
+  emsg.ifidx = emsg_be->ifidx;
+  emsg.bsscfgidx = emsg_be->bsscfgidx;
+
+  BRCMF_DBG(EVENT, "  version %u flags %u status %u reason %u\n", emsg.version, emsg.flags,
+            emsg.status, emsg.reason);
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, min_t(uint32_t, emsg.datalen, 64),
+                     "event payload, len=%d\n", emsg.datalen);
+
+  /* special handling of interface event */
+  if (event->code == BRCMF_E_IF) {
+    brcmf_fweh_handle_if_event(drvr, &emsg, event->data);
+    goto event_free;
+  }
+
+  if (event->code == BRCMF_E_TDLS_PEER_EVENT) {
+    ifp = drvr->iflist[0];
+  } else {
+    ifp = drvr->iflist[emsg.bsscfgidx];
+  }
+
+  err = brcmf_fweh_call_event_handler(ifp, event->code, &emsg, event->data);
+  if (err != ZX_OK) {
+    BRCMF_ERR("event handler failed (%d)\n", event->code);
+    err = ZX_OK;
+  }
+event_free:
+  free(event);
+}
+
+/**
  * brcmf_fweh_dequeue_event() - get event from the queue.
  *
  * @fweh: firmware event handling info.
@@ -216,59 +274,12 @@ static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(brcmf_pub* drvr,
  * @work: worker object.
  */
 static void brcmf_fweh_event_worker(struct work_struct* work) {
-  struct brcmf_pub* drvr;
-  struct brcmf_if* ifp;
-  struct brcmf_fweh_info* fweh;
   struct brcmf_fweh_queue_item* event;
-  zx_status_t err = ZX_OK;
-  struct brcmf_event_msg_be* emsg_be;
-  struct brcmf_event_msg emsg;
-
-  fweh = containerof(work, struct brcmf_fweh_info, event_work);
-  drvr = containerof(fweh, struct brcmf_pub, fweh);
+  struct brcmf_fweh_info* fweh = containerof(work, struct brcmf_fweh_info, event_work);
+  struct brcmf_pub* drvr = containerof(fweh, struct brcmf_pub, fweh);
 
   while ((event = brcmf_fweh_dequeue_event(drvr, fweh))) {
-    BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM\n",
-              brcmf_fweh_event_name(event->code), event->code, event->emsg.ifidx,
-              event->emsg.bsscfgidx, event->emsg.addr);
-
-    /* convert event message */
-    emsg_be = &event->emsg;
-    emsg.version = be16toh(emsg_be->version);
-    emsg.flags = be16toh(emsg_be->flags);
-    emsg.event_code = event->code;
-    emsg.status = be32toh(emsg_be->status);
-    emsg.reason = be32toh(emsg_be->reason);
-    emsg.auth_type = be32toh(emsg_be->auth_type);
-    emsg.datalen = be32toh(emsg_be->datalen);
-    memcpy(emsg.addr, emsg_be->addr, ETH_ALEN);
-    memcpy(emsg.ifname, emsg_be->ifname, sizeof(emsg.ifname));
-    emsg.ifidx = emsg_be->ifidx;
-    emsg.bsscfgidx = emsg_be->bsscfgidx;
-
-    BRCMF_DBG(EVENT, "  version %u flags %u status %u reason %u\n", emsg.version, emsg.flags,
-              emsg.status, emsg.reason);
-    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, min_t(uint32_t, emsg.datalen, 64),
-                       "event payload, len=%d\n", emsg.datalen);
-
-    /* special handling of interface event */
-    if (event->code == BRCMF_E_IF) {
-      brcmf_fweh_handle_if_event(drvr, &emsg, event->data);
-      goto event_free;
-    }
-
-    if (event->code == BRCMF_E_TDLS_PEER_EVENT) {
-      ifp = drvr->iflist[0];
-    } else {
-      ifp = drvr->iflist[emsg.bsscfgidx];
-    }
-    err = brcmf_fweh_call_event_handler(ifp, event->code, &emsg, event->data);
-    if (err != ZX_OK) {
-      BRCMF_ERR("event handler failed (%d)\n", event->code);
-      err = ZX_OK;
-    }
-  event_free:
-    free(event);
+    brcmf_fweh_handle_event(drvr, event);
   }
 }
 
@@ -430,5 +441,12 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
   memcpy(event->ifaddr, event_packet->eth.h_dest, ETH_ALEN);
 
   // BRCMF_DBG(TEMP, "Queueing event!");
-  brcmf_fweh_queue_event(drvr, fweh, event);
+
+  if (brcmf_bus_get_bus_type(drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    // The simulator's behavior is synchronous: we want all events to be processed immediately.
+    // So, we bypass the workqueue and just call directly into the handler.
+    brcmf_fweh_handle_event(drvr, event);
+  } else {
+    brcmf_fweh_queue_event(drvr, fweh, event);
+  }
 }
