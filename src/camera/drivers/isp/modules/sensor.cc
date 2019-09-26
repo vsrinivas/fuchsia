@@ -35,7 +35,7 @@ zx_status_t Sensor::HwInit() {
   // a different mode is added, we need to make sure we call the
   // correct init sequence API. This check is to ensure that when
   // and if a different mode is added, we catch it.
-  if (sensor_modes_[current_sensor_mode_].wdr_mode != WDR_MODE_LINEAR) {
+  if (sensor_modes_[current_sensor_mode_].wdr_mode != CAMERASENSOR_WDR_MODE_LINEAR) {
     FX_LOGF(ERROR, "", "%s: unsupported WDR mode %d\n", __func__, status);
     return ZX_ERR_INVALID_ARGS;
   }

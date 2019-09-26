@@ -241,7 +241,7 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   }
 
   switch (supported_modes[mode].wdr_mode) {
-    case WDR_MODE_LINEAR: {
+    case CAMERASENSOR_WDR_MODE_LINEAR: {
       InitSensor(supported_modes[mode].idx);
 
       ctx_.again_delay = 0;

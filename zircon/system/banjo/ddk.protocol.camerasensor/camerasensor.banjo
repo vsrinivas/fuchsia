@@ -5,10 +5,10 @@
 library ddk.protocol.camerasensor;
 using zx;
 
-const uint8 WDR_MODE_LINEAR = 0x00000000;
-const uint8 WDR_MODE_NATIVE = 0x00000001;
-const uint8 WDR_MODE_FS_LIN = 0x00000002;
-const uint8 WDR_MODE_COUNT = 0x00000003;
+const uint8 CAMERASENSOR_WDR_MODE_LINEAR = 0x00000000;
+const uint8 CAMERASENSOR_WDR_MODE_NATIVE = 0x00000001;
+const uint8 CAMERASENSOR_WDR_MODE_FS_LIN = 0x00000002;
+const uint8 CAMERASENSOR_WDR_MODE_COUNT = 0x00000003;
 
 const uint8 BAYER_RGGB = 0;
 const uint8 BAYER_GRBG = 1;

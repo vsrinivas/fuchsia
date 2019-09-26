@@ -20,7 +20,7 @@ constexpr camera_sensor_mode_t kMode = {
             .height = 2720,
         },
     .exposures = 1,
-    .wdr_mode = WDR_MODE_LINEAR,
+    .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
     .bits = 10,
     .lanes = 2,
     .mbps = 1000,
