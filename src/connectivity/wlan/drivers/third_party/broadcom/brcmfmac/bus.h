@@ -139,6 +139,10 @@ struct brcmf_bus {
 /*
  * callback wrappers
  */
+static inline enum brcmf_bus_type brcmf_bus_get_bus_type(struct brcmf_bus* bus) {
+  return bus->ops->get_bus_type();
+}
+
 static inline zx_status_t brcmf_bus_preinit(struct brcmf_bus* bus) {
   if (!bus->ops->preinit) {
     return ZX_OK;
