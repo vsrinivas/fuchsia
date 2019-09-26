@@ -66,6 +66,19 @@ impl FIDLClone for TimeZone {
     }
 }
 
+impl FIDLClone for AudioStreamSettings {
+    fn clone(&self) -> Self {
+        return AudioStreamSettings {
+            stream: self.stream,
+            source: self.source,
+            user_volume: Some(Volume {
+                level: self.user_volume.as_ref().unwrap().level,
+                muted: self.user_volume.as_ref().unwrap().muted,
+            }),
+        };
+    }
+}
+
 impl FIDLClone for AccessibilitySettings {
     fn clone(&self) -> Self {
         let mut settings = AccessibilitySettings::empty();
