@@ -64,6 +64,12 @@ def make_variant(name, info):
             # ASan drivers need devhost.asan.
             aux = [(file + '.asan', group) for file, group in aux]
             has_libcxx = True
+        if name == 'asan-ubsan':
+            libprefix = 'asan-ubsan/'
+            runtime = 'libclang_rt.asan.so'
+            # ASan drivers need devhost.asan.
+            aux = [(file + '.asan', group) for file, group in aux]
+            has_libcxx = True
         elif name == 'profile' or name.startswith('fuzzer.'):
             libprefix = name + '/'
             if name.find('asan') != -1:
