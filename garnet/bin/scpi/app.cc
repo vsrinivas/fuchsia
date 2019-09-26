@@ -7,7 +7,6 @@
 #include <ddk/protocol/scpi.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -27,47 +26,40 @@ App::App(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(co
 
 App::~App() {}
 
-zx::handle App::GetRootResource() {
+std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> App::GetStatsService() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    return {};
+    return nullptr;
   }
-  status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
+  status = fdio_service_connect("/svc/fuchsia.kernel.Stats", remote.release());
   if (status != ZX_OK) {
-    return {};
+    return nullptr;
   }
 
-  zx_handle_t root_resource;
-  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource);
-
-  if (fidl_status != ZX_OK)
-    return {};
-
-  return zx::handle(root_resource);
-}
-
-size_t App::ReadCpuCount(const zx::handle& root_resource) {
-  size_t actual, available;
-  zx_status_t err = root_resource.get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
-  if (err != ZX_OK) {
-    return 0;
-  }
-  return available;
+  cpu_stats_buffer_ =
+      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
+  last_cpu_stats_buffer_ =
+      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
+  mem_stats_buffer_ =
+      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetMemoryStatsResponse>>();
+  return std::make_unique<llcpp::fuchsia::kernel::Stats::SyncClient>(std::move(local));
 }
 
 bool App::ReadCpuStats() {
-  size_t actual, available;
-  zx_status_t err =
-      root_resource_handle_.get_info(ZX_INFO_CPU_STATS, &cpu_stats_[0],
-                                     num_cores_ * sizeof(zx_info_cpu_stats), &actual, &available);
-  return (err == ZX_OK);
+  auto result = stats_->GetCpuStats(cpu_stats_buffer_->view());
+  if (result.status() == ZX_OK) {
+    cpu_stats_ = &result->stats;
+  }
+  return result.status() != ZX_OK;
 }
 
 bool App::ReadMemStats() {
-  zx_status_t err = root_resource_handle_.get_info(ZX_INFO_KMEM_STATS, &mem_stats_,
-                                                   sizeof(zx_info_kmem_stats_t), NULL, NULL);
-  return (err == ZX_OK);
+  auto result = stats_->GetMemoryStats(mem_stats_buffer_->view());
+  if (result.status() == ZX_OK) {
+    mem_stats_ = &result->stats;
+  }
+  return result.status() != ZX_OK;
 }
 
 zx_status_t App::Start() {
@@ -104,10 +96,7 @@ zx_status_t App::Start() {
     return ZX_ERR_UNAVAILABLE;
   }
 
-  root_resource_handle_ = GetRootResource();
-  num_cores_ = ReadCpuCount(root_resource_handle_);
-  cpu_stats_.reserve(num_cores_);
-  last_cpu_stats_.reserve(num_cores_);
+  stats_ = GetStatsService();
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   return ZX_OK;
 }
@@ -180,7 +169,8 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
     return;
   }
 
-  last_cpu_stats_.swap(cpu_stats_);
+  last_cpu_stats_buffer_.swap(cpu_stats_buffer_);
+  last_cpu_stats_ = cpu_stats_;
   sleep(1);
 
   if (!ReadCpuStats()) {
@@ -191,8 +181,11 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
 
   zx_time_t idle_time, busy_time;
   double busypercent_sum = 0;
-  for (size_t i = 0; i < num_cores_; i++) {
-    idle_time = cpu_stats_[i].idle_time - last_cpu_stats_[i].idle_time;
+  size_t num_cores =
+      std::min(cpu_stats_->per_cpu_stats.count(), last_cpu_stats_->per_cpu_stats.count());
+  for (size_t i = 0; i < num_cores; i++) {
+    idle_time =
+        cpu_stats_->per_cpu_stats[i].idle_time() - last_cpu_stats_->per_cpu_stats[i].idle_time();
     busy_time = delay - (idle_time > delay ? delay : idle_time);
     double busypercent = (busy_time * 100) / (double)delay;
     busypercent_sum += busypercent;
@@ -207,7 +200,7 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
   }
 
   info.memory_utilization =
-      ((mem_stats_.total_bytes - mem_stats_.free_bytes) * 100 / mem_stats_.total_bytes);
+      ((mem_stats_->total_bytes() - mem_stats_->free_bytes()) * 100 / mem_stats_->total_bytes());
 
   callback(fuchsia::scpi::Status::OK, std::move(info));
 }

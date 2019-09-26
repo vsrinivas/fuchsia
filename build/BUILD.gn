@@ -109,7 +109,6 @@ group("rootresource_svc_allowlist") {
   # out a very powerful capability. Do not add yourself to this unless this is the only
   # way to accomplish your goal and you have talked to the security team about this.
   visibility = [
-    "//garnet/bin/scpi:scpi",
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
     "//garnet/bin/thermd:thermd",

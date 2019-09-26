@@ -6,6 +6,7 @@
 #define GARNET_BIN_SCPI_APP_H_
 
 #include <fcntl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/scpi/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -26,17 +27,22 @@ class App : public fuchsia::scpi::SystemController {
  private:
   App(const App&) = delete;
   App& operator=(const App&) = delete;
-  zx::handle GetRootResource();
-  size_t ReadCpuCount(const zx::handle& root_resource);
+  std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> GetStatsService();
   bool ReadCpuStats();
   bool ReadMemStats();
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::scpi::SystemController> bindings_;
   zx::handle thermal_handle_;
-  zx::handle root_resource_handle_;
-  std::vector<zx_info_cpu_stats_t> cpu_stats_;
-  zx_info_kmem_stats_t mem_stats_;
-  std::vector<zx_info_cpu_stats_t> last_cpu_stats_;
+  std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_;
+  std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
+      cpu_stats_buffer_;
+  llcpp::fuchsia::kernel::CpuStats* cpu_stats_ = nullptr;
+  std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
+      last_cpu_stats_buffer_;
+  llcpp::fuchsia::kernel::CpuStats* last_cpu_stats_ = nullptr;
+  std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetMemoryStatsResponse>>
+      mem_stats_buffer_;
+  llcpp::fuchsia::kernel::MemoryStats* mem_stats_ = nullptr;
   size_t num_cores_;
 };
 
