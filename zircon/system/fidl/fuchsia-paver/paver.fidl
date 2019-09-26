@@ -70,7 +70,16 @@ protocol PayloadStream {
 /// paved to.
 [Discoverable, Layout = "Simple"]
 protocol Paver {
+    /// Initializes ABR metadata. Should only be called to initialize ABR
+    /// metadata for the first time (i.e. it should not be called every boot),
+    /// or recover from corrupted ABR metadata.
+    ///
+    /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    /// and we always boot from configuration A.
+    InitializeAbr() -> (zx.status status);
+
     /// Queries active configuration.
+    ///
     /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     /// and we always boot from configuration A.
     QueryActiveConfiguration() -> (Configuration configuration) error zx.status;

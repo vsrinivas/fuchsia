@@ -40,6 +40,8 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void WipePartitionTables(zx::channel block_device,
                            WipePartitionTablesCompleter::Sync completer) override;
 
+  void InitializeAbr(InitializeAbrCompleter::Sync completer) override;
+
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override;
 
   void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,

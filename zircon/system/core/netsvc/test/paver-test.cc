@@ -41,6 +41,7 @@ namespace {
 
 enum class Command {
   kUnknown,
+  kInitializeAbr,
   kQueryActiveConfiguration,
   kQueryConfigurationStatus,
   kSetConfigurationActive,
@@ -60,6 +61,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::Bind(dispatcher, std::move(request), this);
+  }
+
+  void InitializeAbr(InitializeAbrCompleter::Sync completer) {
+    last_command_ = Command::kInitializeAbr;
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {

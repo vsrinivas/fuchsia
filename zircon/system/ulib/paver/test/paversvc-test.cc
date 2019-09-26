@@ -343,6 +343,37 @@ void ComputeCrc(abr::Data* data) {
       crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
 }
 
+TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
+  abr::Data abr_data = {};
+  memset(&abr_data, 0x3d, sizeof(abr_data));
+  SetAbr(abr_data);
+
+  auto result = client_->InitializeAbr();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+}
+
+TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
+  abr::Data abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->InitializeAbr();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
+  abr::Data abr_data = {};
+  memset(&abr_data, 0x3d, sizeof(abr_data));
+  SetAbr(abr_data);
+
+  auto result = client_->QueryActiveConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_err());
+  ASSERT_STATUS(result->result.err(), ZX_ERR_NOT_SUPPORTED);
+}
+
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);

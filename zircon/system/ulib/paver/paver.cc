@@ -659,6 +659,47 @@ zx_status_t Paver::InitializeAbrClient() {
   return ZX_OK;
 }
 
+void Paver::InitializeAbr(InitializeAbrCompleter::Sync completer) {
+  if (abr_client_) {
+    completer.Reply(ZX_OK);
+    return;
+  }
+
+  if (!InitializePartitioner(&partitioner_)) {
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  std::unique_ptr<abr::Client> abr_client;
+  if (zx_status_t status = partitioner_->GetAbrClient(&abr_client); status != ZX_OK) {
+    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
+    completer.Reply(status);
+    return;
+  }
+
+  if (abr_client->IsValid()) {
+    abr_client_ = std::move(abr_client);
+    completer.Reply(ZX_OK);
+    return;
+  }
+
+  abr::Data data = abr_client->Data();
+  memset(&data, 0, sizeof(data));
+  memcpy(data.magic, abr::kMagic, sizeof(abr::kMagic));
+  data.version_major = abr::kMajorVersion;
+  data.version_minor = abr::kMinorVersion;
+
+  if (zx_status_t status = abr_client->Persist(data); status != ZX_OK) {
+    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
+    completer.Reply(status);
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(abr_client->IsValid());
+  abr_client_ = std::move(abr_client);
+  completer.Reply(ZX_OK);
+}
+
 void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {

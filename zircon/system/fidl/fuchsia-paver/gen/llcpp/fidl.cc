@@ -502,6 +502,9 @@ int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
 namespace {
 
 [[maybe_unused]]
+constexpr uint64_t kPaver_InitializeAbr_Ordinal = 0x2233bf3300000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
@@ -550,6 +553,68 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
 
 }  // namespace
+template <>
+Paver::ResultOf::InitializeAbr_Impl<Paver::InitializeAbrResponse>::InitializeAbr_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeAbrRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, InitializeAbrRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializeAbrRequest));
+  ::fidl::DecodedMessage<InitializeAbrRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Paver::InPlace::InitializeAbr(std::move(_client_end), Super::response_buffer()));
+}
+
+Paver::ResultOf::InitializeAbr Paver::SyncClient::InitializeAbr() {
+  return ResultOf::InitializeAbr(zx::unowned_channel(this->channel_));
+}
+
+Paver::ResultOf::InitializeAbr Paver::Call::InitializeAbr(zx::unowned_channel _client_end) {
+  return ResultOf::InitializeAbr(std::move(_client_end));
+}
+
+template <>
+Paver::UnownedResultOf::InitializeAbr_Impl<Paver::InitializeAbrResponse>::InitializeAbr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(InitializeAbrRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, InitializeAbrRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(InitializeAbrRequest));
+  ::fidl::DecodedMessage<InitializeAbrRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Paver::InPlace::InitializeAbr(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Paver::UnownedResultOf::InitializeAbr Paver::SyncClient::InitializeAbr(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::InitializeAbr(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Paver::UnownedResultOf::InitializeAbr Paver::Call::InitializeAbr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::InitializeAbr(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Paver::InitializeAbrResponse> Paver::InPlace::InitializeAbr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(InitializeAbrRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<InitializeAbrRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::InitializeAbrResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<InitializeAbrRequest, InitializeAbrResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::InitializeAbrResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 template <>
 Paver::ResultOf::QueryActiveConfiguration_Impl<Paver::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
@@ -1389,6 +1454,17 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
+    case kPaver_InitializeAbr_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<InitializeAbrRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->InitializeAbr(
+        Interface::InitializeAbrCompleter::Sync(txn));
+      return true;
+    }
     case kPaver_QueryActiveConfiguration_Ordinal:
     {
       auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
@@ -1556,6 +1632,35 @@ bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }
   return found;
+}
+
+
+void Paver::Interface::InitializeAbrCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeAbrResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<InitializeAbrResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializeAbrResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeAbrResponse>(std::move(_response_bytes)));
+}
+
+void Paver::Interface::InitializeAbrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < InitializeAbrResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<InitializeAbrResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(InitializeAbrResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeAbrResponse>(std::move(_buffer)));
+}
+
+void Paver::Interface::InitializeAbrCompleterBase::Reply(::fidl::DecodedMessage<InitializeAbrResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  CompleterBase::SendReply(std::move(params));
 }
 
 

@@ -789,6 +789,7 @@ struct Paver_ReadAsset_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
@@ -822,6 +823,21 @@ class Paver final {
   Paver() = delete;
  public:
   static constexpr char Name[] = "fuchsia.paver.Paver";
+
+  struct InitializeAbrResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverInitializeAbrResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using InitializeAbrRequest = ::fidl::AnyZeroArgMessage;
 
   struct QueryActiveConfigurationResponse final {
     FIDL_ALIGNDECL
@@ -1171,6 +1187,22 @@ class Paver final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
+    class InitializeAbr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      InitializeAbr_Impl(zx::unowned_channel _client_end);
+      ~InitializeAbr_Impl() = default;
+      InitializeAbr_Impl(InitializeAbr_Impl&& other) = default;
+      InitializeAbr_Impl& operator=(InitializeAbr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class QueryActiveConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1380,6 +1412,7 @@ class Paver final {
     };
 
    public:
+    using InitializeAbr = InitializeAbr_Impl<InitializeAbrResponse>;
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
     using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
     using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
@@ -1400,6 +1433,22 @@ class Paver final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
+    template <typename ResponseType>
+    class InitializeAbr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      InitializeAbr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~InitializeAbr_Impl() = default;
+      InitializeAbr_Impl(InitializeAbr_Impl&& other) = default;
+      InitializeAbr_Impl& operator=(InitializeAbr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     template <typename ResponseType>
     class QueryActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -1610,6 +1659,7 @@ class Paver final {
     };
 
    public:
+    using InitializeAbr = InitializeAbr_Impl<InitializeAbrResponse>;
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
     using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
     using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
@@ -1636,13 +1686,33 @@ class Paver final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Initializes ABR metadata. Should only be called to initialize ABR
+    // metadata for the first time (i.e. it should not be called every boot),
+    // or recover from corrupted ABR metadata.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::InitializeAbr InitializeAbr();
+
+    // Initializes ABR metadata. Should only be called to initialize ABR
+    // metadata for the first time (i.e. it should not be called every boot),
+    // or recover from corrupted ABR metadata.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::InitializeAbr InitializeAbr(::fidl::BytePart _response_buffer);
+
     // Queries active configuration.
+    //
     // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     // and we always boot from configuration A.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
 
     // Queries active configuration.
+    //
     // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     // and we always boot from configuration A.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1865,13 +1935,33 @@ class Paver final {
     Call() = delete;
    public:
 
+    // Initializes ABR metadata. Should only be called to initialize ABR
+    // metadata for the first time (i.e. it should not be called every boot),
+    // or recover from corrupted ABR metadata.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::InitializeAbr InitializeAbr(zx::unowned_channel _client_end);
+
+    // Initializes ABR metadata. Should only be called to initialize ABR
+    // metadata for the first time (i.e. it should not be called every boot),
+    // or recover from corrupted ABR metadata.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::InitializeAbr InitializeAbr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Queries active configuration.
+    //
     // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     // and we always boot from configuration A.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(zx::unowned_channel _client_end);
 
     // Queries active configuration.
+    //
     // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     // and we always boot from configuration A.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2093,7 +2183,16 @@ class Paver final {
     InPlace() = delete;
    public:
 
+    // Initializes ABR metadata. Should only be called to initialize ABR
+    // metadata for the first time (i.e. it should not be called every boot),
+    // or recover from corrupted ABR metadata.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
+    static ::fidl::DecodeResult<InitializeAbrResponse> InitializeAbr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
     // Queries active configuration.
+    //
     // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
     // and we always boot from configuration A.
     static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -2199,6 +2298,20 @@ class Paver final {
     virtual ~Interface() = default;
     using _Outer = Paver;
     using _Base = ::fidl::CompleterBase;
+
+    class InitializeAbrCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<InitializeAbrResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using InitializeAbrCompleter = ::fidl::Completer<InitializeAbrCompleterBase>;
+
+    virtual void InitializeAbr(InitializeAbrCompleter::Sync _completer) = 0;
 
     class QueryActiveConfigurationCompleterBase : public _Base {
      public:
@@ -2474,6 +2587,14 @@ static_assert(sizeof(::llcpp::fuchsia::paver::Paver_ReadAsset_Response) == ::llc
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver_ReadAsset_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_ReadAsset_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::InitializeAbrResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::InitializeAbrResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::InitializeAbrResponse)
+    == ::llcpp::fuchsia::paver::Paver::InitializeAbrResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::InitializeAbrResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse> : public std::true_type {};
