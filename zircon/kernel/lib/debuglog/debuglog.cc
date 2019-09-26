@@ -357,13 +357,17 @@ static int debuglog_dumper(void* arg) {
   dlog_reader_t reader;
   dlog_reader_init(&reader, debuglog_dumper_notify, &dumper_event);
 
-  for (;;) {
-    if (dumper_shutdown_requested.load()) {
-      break;
-    }
+  bool done = false;
+  while (!done) {
     event_wait(&dumper_event);
 
-    // dump records to kernel console
+    // If shutdown has been requested, this will be our last loop iteration.
+    //
+    //We do not break early because we guarantee that any messages logged prior to the start of the
+    // shutdown sequence will be emitted.
+    done = dumper_shutdown_requested.load();
+
+    // Read out all the records and dump them to the kernel console.
     size_t actual;
     while (dlog_read(&reader, 0, &rec, DLOG_MAX_RECORD, &actual) == ZX_OK) {
       if (rec.hdr.datalen && (rec.data[rec.hdr.datalen - 1] == '\n')) {
