@@ -190,10 +190,13 @@ void LoggerWriter::SetSocket(zx_handle_t handle) {
 
 }  // namespace
 
+__EXPORT
 log_writer_t* log_create_logger_writer(void) { return new LoggerWriter(); }
 
+__EXPORT
 void log_destroy_logger_writer(log_writer_t* writer) { delete static_cast<LoggerWriter*>(writer); }
 
+__EXPORT
 void log_set_logger_writer_socket(log_writer_t* writer, zx_handle_t handle) {
   static_cast<LoggerWriter*>(writer)->SetSocket(handle);
 }
