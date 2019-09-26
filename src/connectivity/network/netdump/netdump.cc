@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -26,6 +27,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -90,6 +92,27 @@ typedef struct {
   uint32_t blk_tot_len;
   uint32_t pkt_len;
 } __attribute__((packed)) simple_pkt_t;
+
+// Statistics tracking netdump operations
+struct Stats {
+  // Packet counts
+  uint64_t pkts_filtered_in;
+  uint64_t pkts_filtered_out;
+  uint64_t pkts_len_small;    // Too small to be parsed.
+  uint64_t pkts_eth_rx_fail;  // ETH_FIFO_RX_OK flag unset
+
+  // Byte counts
+  uint64_t bytes_filtered_in;
+  uint64_t bytes_filtered_out;
+  uint64_t bytes_len_small;
+  uint64_t bytes_eth_rx_fail;
+
+  // File dump statistics
+  uint64_t pkts_write_ok;
+  uint64_t pkts_write_fail;
+
+  // Extend below.
+};
 
 static constexpr size_t SIMPLE_PKT_MIN_SIZE = sizeof(simple_pkt_t) + sizeof(uint32_t);
 
@@ -379,8 +402,13 @@ int write_packet(int fd, void* data, size_t len) {
   return 0;
 }
 
-void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
-               const NetdumpOptions& options) {
+void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count, const NetdumpOptions& options,
+               Stats* stats) {
+  if (stats == nullptr) {
+    std::cerr << "Couldn't track statistics. Bail out" << std::endl;
+    return;
+  }
+
   eth_fifo_entry_t entries[count];
 
   bool dumpfile_write_error =
@@ -415,31 +443,39 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
       if (e->flags & ETH_FIFO_RX_OK) {
         void* buffer = iobuf + e->offset;
         uint16_t length = e->length;
+
         bool do_write = true;  // Whether the packet is included for write-out to dumpfile.
         packet.populate(buffer, length);
         if (packet.frame == nullptr) {
+          stats->pkts_len_small++;
+          stats->bytes_len_small += length;
           // Not setting `do_write` to false in order to record small frames.
           switch (options.print_format) {
             case PrintFormat::LOG:
               [[fallthrough]];
             case PrintFormat::HEXDUMP:
-              std::cout << "Packet size (" << length << ") too small for Ethernet headers"
-                        << std::endl;
               if (options.verbose_level == 2 || options.print_format == PrintFormat::HEXDUMP) {
                 hexdump8_very_ex(buffer, length, 0, hexdump_stdio_printf, stdout);
               }
               break;
             case PrintFormat::PCAPNG:
               if (write_packet(STDOUT_FILENO, buffer, length) < 0) {
+                stats->pkts_write_fail += (n - i);
                 return;
               }
+              stats->pkts_write_ok++;
               break;
             default:
               ZX_ASSERT_MSG(false, "Unknown print format.");
               break;
           }
+
         } else {
+          // pkts_eth_rx_ok++
+          // bytes_eth_rx_ok += length
           if (filter_packet(options, &packet)) {
+            stats->pkts_filtered_in++;
+            stats->bytes_filtered_in += length;
             switch (options.print_format) {
               case PrintFormat::LOG:
                 parse_packet(packet, options);
@@ -450,8 +486,10 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
                 break;
               case PrintFormat::PCAPNG:
                 if (write_packet(STDOUT_FILENO, buffer, length) < 0) {
+                  stats->pkts_write_fail += (n - i);
                   return;
                 }
+                stats->pkts_write_ok++;
                 break;
               default:
                 ZX_ASSERT_MSG(false, "Unknown print format.");
@@ -459,17 +497,27 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
             }
             --packets_remaining;
           } else {
+            stats->pkts_filtered_out++;
+            stats->bytes_filtered_out += length;
             do_write = false;
           }
         }
 
-        if (do_write && (write_packet(options.dumpfile_fd, buffer, length) < 0)) {
-          return;
+        if (do_write && options.dumpfile_fd != -1) {
+          auto write_status = write_packet(options.dumpfile_fd, buffer, length);
+          if (write_status < 0) {
+            stats->pkts_write_fail += (n - i);
+            return;
+          }
+          stats->pkts_write_ok++;
         }
 
         if (packets_remaining == 0 || zx::clock::get_monotonic() >= options.timeout_deadline) {
+          // Normal end condition
           return;
         }
+      } else {
+        stats->pkts_eth_rx_fail++;
       }
 
       e->length = BUFSIZE;
@@ -601,6 +649,37 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
 
 }  // namespace netdump
 
+void show_stats(const netdump::Stats& stats) {
+  // TODO(porce): Integration test with the emulated network.
+  auto pkts_len_ok = stats.pkts_filtered_in + stats.pkts_filtered_out;
+  auto pkts_eth_rx_ok = pkts_len_ok + stats.pkts_len_small;
+  auto pkts_seen = pkts_eth_rx_ok + stats.pkts_eth_rx_fail;
+
+  auto bytes_len_ok = stats.bytes_filtered_in + stats.bytes_filtered_out;
+  auto bytes_eth_rx_ok = bytes_len_ok + stats.bytes_len_small;
+  auto bytes_seen = bytes_eth_rx_ok + stats.bytes_eth_rx_fail;
+
+  // Use stderr for auxiliary info not to disturb PCAPNG live streaming.
+  fprintf(stderr, "\n --\nPacket capture statistics\n");
+
+  fprintf(stderr, "  pkts_seen           : %" PRIu64 "\n", pkts_seen);
+  fprintf(stderr, "  pkts_filtered_in    : %" PRIu64 "\n", stats.pkts_filtered_in);
+  fprintf(stderr, "  pkts_filtered_out   : %" PRIu64 "\n", stats.pkts_filtered_out);
+  fprintf(stderr, "  pkts_eth_rx_fail    : %" PRIu64 "\n", stats.pkts_eth_rx_fail);
+  fprintf(stderr, "  pkts_len_small      : %" PRIu64 "\n", stats.pkts_len_small);
+
+  fprintf(stderr, "  bytes_seen          : %" PRIu64 "\n", bytes_seen);
+  fprintf(stderr, "  bytes_filtered_in   : %" PRIu64 "\n", stats.bytes_filtered_in);
+  fprintf(stderr, "  bytes_filtered_out  : %" PRIu64 "\n", stats.bytes_filtered_out);
+  fprintf(stderr, "  bytes_eth_rx_fail   : %" PRIu64 "\n", stats.bytes_eth_rx_fail);
+  fprintf(stderr, "  bytes_len_small     : %" PRIu64 "\n", stats.bytes_len_small);
+
+  fprintf(stderr, "  pkts_write_ok       : %" PRIu64 "\n", stats.pkts_write_ok);
+  fprintf(stderr, "  pkts_write_fail     : %" PRIu64 "\n", stats.pkts_write_fail);
+
+  fprintf(stderr, "\n");
+}
+
 int main(int argc, const char** argv) {
   netdump::NetdumpOptions options;
   std::vector<std::string> args(argv + 1, argv + argc);
@@ -689,11 +768,18 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  handle_rx(rx_fifo, iobuf, count, options);
+  netdump::Stats stats = {};
+  handle_rx(rx_fifo, iobuf, count, options, &stats);
 
   zx_handle_close(rx_fifo.get());
   if (options.dumpfile_fd != -1) {
     close(options.dumpfile_fd);
   }
+
+  if (options.print_format == netdump::PrintFormat::LOG ||
+      options.print_format == netdump::PrintFormat::HEXDUMP) {
+    show_stats(stats);
+  }
+
   return 0;
 }
