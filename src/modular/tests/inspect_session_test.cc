@@ -29,6 +29,7 @@ using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
 using ::fxl::Substitute;
+using inspect::testing::DoubleIs;
 using inspect::testing::IntIs;
 using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
@@ -234,7 +235,10 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
                   StringIs(modular_config::kInspectIntentHandler, kFakeModuleUrl),
                   StringIs(modular_config::kInspectIntentAction, "action"),
                   StringIs(modular_config::kInspectIsDeleted, "False"),
-                  StringIs(modular_config::kInspectIntentParams, "name : intent_parameter "))))));
+                  StringIs(modular_config::kInspectIntentParams, "name : intent_parameter "),
+                  StringIs(modular_config::kInspectSurfaceRelationArrangement, "NONE"),
+                  StringIs(modular_config::kInspectSurfaceRelationDependency, "NONE"),
+                  DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });

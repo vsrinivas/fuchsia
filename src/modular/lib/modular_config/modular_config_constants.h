@@ -65,6 +65,9 @@ constexpr char kInspectIntentAction[] = "intent_action";
 constexpr char kInspectIntentHandler[] = "intent_handler";
 constexpr char kInspectIntentParams[] = "intent_params";
 constexpr char kInspectIsDeleted[] = "is_deleted";
+constexpr char kInspectSurfaceRelationArrangement[] = "surface_arrangement";
+constexpr char kInspectSurfaceRelationDependency[] = "surface_dependency";
+constexpr char kInspectSurfaceRelationEmphasis[] = "surface_emphasis";
 
 // Shell constants
 inline constexpr char kDefaultBaseShellUrl[] =

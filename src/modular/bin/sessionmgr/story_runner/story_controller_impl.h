@@ -180,6 +180,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     inspect::StringProperty module_intent_action_property;
     inspect::StringProperty module_intent_handler_property;
     inspect::StringProperty module_intent_params_property;
+    inspect::StringProperty module_surface_relation_arrangement;
+    inspect::StringProperty module_surface_relation_dependency;
+    inspect::DoubleProperty module_surface_relation_emphasis;
 
     // Helper for initializing inspect nodes and properties.
     void InitializeInspect(StoryControllerImpl* const story_controller_) {
@@ -228,6 +231,42 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       }
       module_intent_params_property =
           mod_inspect_node.CreateString(modular_config::kInspectIntentParams, formatted_params);
+
+      if (module_data->has_surface_relation()) {
+        std::string arrangement;
+        switch (module_data->surface_relation().arrangement) {
+          case fuchsia::modular::SurfaceArrangement::COPRESENT:
+            arrangement = "COPRESENT";
+            break;
+          case fuchsia::modular::SurfaceArrangement::SEQUENTIAL:
+            arrangement = "SEQUENTIAL";
+            break;
+          case fuchsia::modular::SurfaceArrangement::ONTOP:
+            arrangement = "ONTOP";
+            break;
+          case fuchsia::modular::SurfaceArrangement::NONE:
+            arrangement = "NONE";
+            break;
+        }
+        module_surface_relation_arrangement = mod_inspect_node.CreateString(
+            modular_config::kInspectSurfaceRelationArrangement, arrangement);
+
+        std::string dependency;
+        switch (module_data->surface_relation().dependency) {
+          case fuchsia::modular::SurfaceDependency::DEPENDENT:
+            dependency = "DEPENDENT";
+            break;
+          case fuchsia::modular::SurfaceDependency::NONE:
+            dependency = "NONE";
+            break;
+        }
+
+        module_surface_relation_dependency = mod_inspect_node.CreateString(
+            modular_config::kInspectSurfaceRelationDependency, dependency);
+        module_surface_relation_emphasis =
+            mod_inspect_node.CreateDouble(modular_config::kInspectSurfaceRelationEmphasis,
+                                          module_data->surface_relation().emphasis);
+      }
     }
   };
 
