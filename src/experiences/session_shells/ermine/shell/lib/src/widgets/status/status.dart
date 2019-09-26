@@ -37,7 +37,7 @@ class Status extends StatelessWidget {
       padding: EdgeInsets.all(kPadding),
       child: Column(
         children: <Widget>[
-          _ManualStatusEntry(),
+          _ManualStatusEntry(model),
           _StatusEntry(model.brightness),
           _StatusEntry(model.memory),
         ],
@@ -206,35 +206,30 @@ class _StatusEntry extends StatelessWidget {
 }
 
 class _ManualStatusEntry extends StatelessWidget {
+  final StatusModel model;
+
+  const _ManualStatusEntry(this.model);
+
   @override
   Widget build(BuildContext context) {
-    return _buildSystemButtons();
-  }
-
-  Widget _buildSystemButtons() {
-    List<Widget> buttons = <Widget>[];
-    Widget restart = _buildButton('Restart', null);
-    Widget shutdown = _buildButton('Shutdown', null);
-    Widget settings = _buildButton('Settings', null);
-    buttons
-      ..add(restart)
-      ..add(shutdown)
-      ..add(SizedBox(width: 150))
-      ..add(settings);
     return Container(
-        constraints: BoxConstraints(minHeight: kRowHeight),
-        child: Wrap(
-          children: buttons,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.end,
-          spacing: kPadding,
-          runSpacing: kPadding,
-        ));
+      padding: EdgeInsets.only(bottom: kPadding),
+      height: kRowHeight,
+      child: Row(
+        children: <Widget>[
+          _buildButton('Restart', null),
+          Padding(padding: EdgeInsets.only(right: kPadding)),
+          _buildButton('Shutdown', null),
+          Spacer(),
+          _buildButton('Settings', model.launchSettings),
+        ],
+      ),
+    );
   }
 
   Widget _buildButton(String label, void Function() onTap) {
     return GestureDetector(
-      onTap: () => onTap,
+      onTap: onTap,
       child: Container(
         height: kItemHeight,
         color: Colors.white,

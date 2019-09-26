@@ -3,32 +3,60 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fuchsia_inspect/inspect.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:quickui/uistream.dart';
 import 'package:settings/settings.dart';
-import 'package:fuchsia_services/services.dart';
 
 import '../utils/utils.dart';
+
+const _kSettingsPackageUrl =
+    'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx';
 
 class StatusModel implements Inspectable {
   /// The [GlobalKey] associated with [Status] widget.
   final GlobalKey key = GlobalKey(debugLabel: 'status');
   UiStream brightness;
   UiStream memory;
-  StartupContext startupContext;
+  final StartupContext startupContext;
+  final modular.PuppetMasterProxy puppetMaster;
 
-  StatusModel({this.startupContext}) {
+  StatusModel({this.startupContext, this.puppetMaster}) {
     brightness = UiStream(Brightness.fromStartupContext(startupContext));
     memory = UiStream(Memory.fromStartupContext(startupContext));
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
-    return StatusModel(startupContext: startupContext);
+    final puppetMaster = modular.PuppetMasterProxy();
+    startupContext.incoming.connectToService(puppetMaster);
+
+    return StatusModel(
+      startupContext: startupContext,
+      puppetMaster: puppetMaster,
+    );
   }
 
   void dispose() {
+    puppetMaster.ctrl.close();
     brightness.dispose();
     memory.dispose();
+  }
+
+  // Launch settings mod.
+  void launchSettings() {
+    final storyMaster = modular.StoryPuppetMasterProxy();
+    puppetMaster.controlStory('settings', storyMaster.ctrl.request());
+    final addMod = modular.AddMod(
+      intent: modular.Intent(action: '', handler: _kSettingsPackageUrl),
+      surfaceParentModName: [],
+      modName: ['root'],
+      surfaceRelation: modular.SurfaceRelation(),
+    );
+    storyMaster
+      ..enqueue([modular.StoryCommand.withAddMod(addMod)])
+      ..execute();
   }
 
   @override
