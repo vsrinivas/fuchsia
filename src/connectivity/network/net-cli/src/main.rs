@@ -27,26 +27,23 @@ mod opts;
 
 use crate::opts::*;
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
         connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
-    let fut = async {
-        match opt {
-            Opt::If(cmd) => do_if(cmd, stack, netstack).await,
-            Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
-            Opt::Route(cmd) => do_route(cmd, netstack).await,
-            Opt::Filter(cmd) => do_filter(cmd, filter).await,
-            Opt::Log(cmd) => do_log(cmd, log).await,
-            Opt::Stat(cmd) => do_stat(cmd).await,
-        }
-    };
-    exec.run_singlethreaded(fut)
+    match opt {
+        Opt::If(cmd) => do_if(cmd, stack, netstack).await,
+        Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
+        Opt::Route(cmd) => do_route(cmd, netstack).await,
+        Opt::Filter(cmd) => do_filter(cmd, filter).await,
+        Opt::Log(cmd) => do_log(cmd, log).await,
+        Opt::Stat(cmd) => do_stat(cmd).await,
+    }
 }
 
 fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<InterfaceInfo>) {
