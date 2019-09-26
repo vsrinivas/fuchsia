@@ -6,31 +6,25 @@
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <gtest/gtest.h>
-#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <lib/fsl/vmo/vector.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/images/cpp/images.h>
 #include <lib/zx/clock.h>
-#include "src/lib/fxl/logging.h"
-#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <string>
-#include <vector>
 
+#include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
@@ -44,7 +38,6 @@
 namespace {
 
 constexpr char kEnvironment[] = "ScenicPixelTest";
-constexpr zx::duration kTimeout = zx::sec(15);
 // If you change the size of YUV buffers, make sure that the YUV test in
 // host_image_unittest.cc is also updated. Unlike that unit test,
 // scenic_pixel_test.cc has no way to confirm that it is going through the
@@ -54,195 +47,9 @@ constexpr uint32_t kYuvSize = 64;
 
 const float kPi = glm::pi<float>();
 
-// These tests need Scenic and RootPresenter at minimum, which expand to the
-// dependencies below. Using |TestWithEnvironment|, we use
-// |fuchsia.sys.Environment| and |fuchsia.sys.Loader| from the system (declared
-// in our *.cmx sandbox) and launch these other services in the environment we
-// create in our test fixture.
-//
-// Another way to do this would be to whitelist these services in our sandbox
-// and inject/start them via the |fuchsia.test| facet. However that has the
-// disadvantage that it uses one instance of those services across all tests in
-// the binary, making each test not hermetic wrt. the others. A trade-off is
-// that the |TestWithEnvironment| method is more verbose.
-const std::map<std::string, std::string> kServices = {
-    {"fuchsia.tracing.provider.Registry",
-     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
-    {"fuchsia.ui.input.ImeService", "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},
-    {"fuchsia.ui.policy.Presenter",
-     "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
-    {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.shortcut.Manager", "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"},
-    {"fuchsia.vulkan.loader.Loader",
-     "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"},
-    {"fuchsia.sysmem.Allocator",
-     "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"}};
-
-struct DisplayDimensions {
-  float width, height;
-};
-
-struct TestSession {
-  static constexpr float kDefaultCameraOffset = 1001;
-
-  TestSession(fuchsia::ui::scenic::Scenic* scenic, const DisplayDimensions& display_dimensions)
-      : session(scenic),
-        display_dimensions(display_dimensions),
-        compositor(&session),
-        layer_stack(&session),
-        layer(&session),
-        renderer(&session),
-        scene(&session),
-        ambient_light(&session),
-        root_node(&session) {
-    compositor.SetLayerStack(layer_stack);
-    layer_stack.AddLayer(layer);
-    layer.SetSize(display_dimensions.width, display_dimensions.height);
-    layer.SetRenderer(renderer);
-    scene.AddLight(ambient_light);
-    ambient_light.SetColor(1.f, 1.f, 1.f);
-    scene.AddChild(root_node.id());
-  }
-
-  // Sets up a camera at (x, y) = (width / 2, height / 2) looking at +z such
-  // that the near plane is at -1000 and the far plane is at 0.
-  //
-  // Note that the ortho camera (fov = 0) ignores the transform and is
-  // effectively always set this way.
-  template <typename Camera = scenic::Camera>
-  Camera SetUpCamera(float offset = kDefaultCameraOffset) {
-    // SCN-1276: The near plane is hardcoded at -1000 and far at 0 in camera
-    // space.
-    const float eye_position[3] = {display_dimensions.width / 2.f, display_dimensions.height / 2.f,
-                                   -offset};
-    const float look_at[3] = {display_dimensions.width / 2.f, display_dimensions.height / 2.f, 1};
-    static const float up[3] = {0, -1, 0};
-    Camera camera(scene);
-    camera.SetTransform(eye_position, look_at, up);
-    renderer.SetCamera(camera.id());
-    return camera;
-  }
-
-  scenic::Session session;
-  const DisplayDimensions display_dimensions;
-  scenic::DisplayCompositor compositor;
-  scenic::LayerStack layer_stack;
-  scenic::Layer layer;
-  scenic::Renderer renderer;
-  scenic::Scene scene;
-  scenic::AmbientLight ambient_light;
-  scenic::EntityNode root_node;
-};
-
-// Test fixture that sets up an environment suitable for Scenic pixel tests
-// and provides related utilities. The environment includes Scenic and
-// RootPresenter, and their dependencies.
-class ScenicPixelTest : public sys::testing::TestWithEnvironment {
+class ScenicPixelTest : public gfx::PixelTest {
  protected:
-  ScenicPixelTest() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-
-    for (const auto& entry : kServices) {
-      fuchsia::sys::LaunchInfo launch_info;
-      launch_info.url = entry.second;
-      services->AddServiceWithLaunchInfo(std::move(launch_info), entry.first);
-    }
-
-    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
-
-    environment_->ConnectToService(scenic_.NewRequest());
-    scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
-    });
-  }
-
-  // Blocking wrapper around |Scenic::TakeScreenshot|. This should not be called
-  // from within a loop |Run|, as it spins up its own to block and nested loops
-  // are undefined behavior.
-  scenic::Screenshot TakeScreenshot() {
-    fuchsia::ui::scenic::ScreenshotData screenshot_out;
-    scenic_->TakeScreenshot(
-        [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
-          EXPECT_TRUE(status) << "Failed to take screenshot";
-          screenshot_out = std::move(screenshot);
-          QuitLoop();
-        });
-    EXPECT_FALSE(RunLoopWithTimeout(kTimeout)) << "Timed out waiting for screenshot.";
-    return scenic::Screenshot(screenshot_out);
-  }
-
-  // Create a |ViewContext| that allows us to present a view via
-  // |RootPresenter|. See also examples/ui/hello_base_view
-  scenic::ViewContext CreatePresentationContext() {
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    scenic::ViewContext view_context = {
-        .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = std::move(view_token),
-    };
-
-    fuchsia::ui::policy::PresenterPtr presenter;
-    environment_->ConnectToService(presenter.NewRequest());
-    presenter->PresentView(std::move(view_holder_token), nullptr);
-
-    return view_context;
-  }
-
-  // Runs until the view renders its next frame.
-  void RunUntilPresent(scenic::TestView* view) {
-    // Typical sequence of events:
-    // 1. We set up a view bound as a |SessionListener|.
-    // 2. The view sends its initial |Present| to get itself connected, without
-    //    a callback.
-    // 3. We call |RunUntilPresent| which sets a present callback on our
-    //    |TestView|.
-    // 4. |RunUntilPresent| runs the message loop, which allows the view to
-    //    receive a Scenic event telling us our metrics.
-    // 5. In response, the view sets up the scene graph with the test scene.
-    // 6. The view calls |Present| with the callback set in |RunUntilPresent|.
-    // 7. The still-running message loop eventually dispatches the present
-    //    callback, which quits the loop.
-
-    view->set_present_callback([this](auto) { QuitLoop(); });
-    ASSERT_FALSE(RunLoopWithTimeout(zx::sec(10)));
-  }
-
-  // Blocking call to |scenic::Session::Present|.
-  void Present(scenic::Session* session, zx::time present_time = zx::time(0)) {
-    session->Present(present_time, [this](auto) { QuitLoop(); });
-    ASSERT_FALSE(RunLoopWithTimeout(zx::sec(10)));
-  }
-
-  DisplayDimensions GetDisplayDimensions() {
-    DisplayDimensions display_dimensions;
-    scenic_->GetDisplayInfo(
-        [this, &display_dimensions](fuchsia::ui::gfx::DisplayInfo display_info) {
-          display_dimensions = {.width = static_cast<float>(display_info.width_in_px),
-                                .height = static_cast<float>(display_info.height_in_px)};
-          QuitLoop();
-        });
-    RunLoop();
-    return display_dimensions;
-  }
-
-  // As an alternative to using RootPresenter, tests can set up their own
-  // session. This offers more control over the camera and compositor.
-  std::unique_ptr<TestSession> SetUpTestSession() {
-    auto test_session = std::make_unique<TestSession>(scenic_.get(), GetDisplayDimensions());
-
-    test_session->session.set_error_handler([this](auto) {
-      FXL_LOG(ERROR) << "Session terminated.";
-      QuitLoop();
-    });
-
-    return test_session;
-  }
-
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-
- private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  ScenicPixelTest() : gfx::PixelTest(kEnvironment) {}
 };
 
 TEST_F(ScenicPixelTest, SolidColor) {
@@ -383,7 +190,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   // camera.
   std::string camera_type[2] = {"orthographic", "perspective"};
   auto camera = test_session->SetUpCamera();
-  float fov[2] = {0, 2 * atan((display_height / 2.f) / TestSession::kDefaultCameraOffset)};
+  float fov[2] = {0, 2 * atan((display_height / 2.f) / gfx::TestSession::kDefaultCameraOffset)};
 
   for (int i = 0; i < 2; i++) {
     FXL_LOG(INFO) << "Testing " << camera_type[i] << " camera";
@@ -422,9 +229,9 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   const float viewport_width = display_width / 2;
   const float viewport_height = display_height;
 
-  float fovy = 2 * atan((display_height / 2.f) / TestSession::kDefaultCameraOffset);
+  float fovy = 2 * atan((display_height / 2.f) / gfx::TestSession::kDefaultCameraOffset);
   glm::mat4 projection = glm::perspective(fovy, viewport_width / viewport_height, 0.1f,
-                                          TestSession::kDefaultCameraOffset);
+                                          gfx::TestSession::kDefaultCameraOffset);
   projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
   test_session->SetUpCamera<scenic::StereoCamera>().SetStereoProjection(glm::value_ptr(projection),
@@ -785,7 +592,7 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   const auto [display_width, display_height] = test_session->display_dimensions;
 
   // Initialize second session
-  auto unique_session_2 = std::make_unique<scenic::Session>(scenic_.get());
+  auto unique_session_2 = std::make_unique<scenic::Session>(scenic());
   auto session2 = unique_session_2.get();
   session2->set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Session terminated.";
@@ -793,7 +600,7 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   });
 
   // Initialize third session
-  auto unique_session_3 = std::make_unique<scenic::Session>(scenic_.get());
+  auto unique_session_3 = std::make_unique<scenic::Session>(scenic());
   auto session3 = unique_session_3.get();
   session3->set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Session terminated.";
@@ -911,7 +718,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   test_session->SetUpCamera().SetProjection(0);
 
   // Initialize session 2.
-  auto unique_session2 = std::make_unique<scenic::Session>(scenic_.get());
+  auto unique_session2 = std::make_unique<scenic::Session>(scenic());
   auto session2 = unique_session2.get();
   session2->set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Session terminated.";
@@ -919,7 +726,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   });
 
   // Initialize session 3.
-  auto unique_session3 = std::make_unique<scenic::Session>(scenic_.get());
+  auto unique_session3 = std::make_unique<scenic::Session>(scenic());
   auto session3 = unique_session3.get();
   session3->set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Session terminated.";
@@ -1253,7 +1060,8 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
 
   static const glm::quat face_right = glm::angleAxis(kPi / 2, glm::vec3(0, -1, 0));
   static const float kFovy = kPi / 4;
-  static const float background_height = 2 * tan(kFovy / 2) * TestSession::kDefaultCameraOffset;
+  static const float background_height =
+      2 * tan(kFovy / 2) * gfx::TestSession::kDefaultCameraOffset;
   const float background_width = background_height / display_height * display_width;
 
   struct Shape {
