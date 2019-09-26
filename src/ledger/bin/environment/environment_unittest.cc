@@ -123,5 +123,30 @@ TEST(EnvironmentWithRealLoopTest, NotificationFactoryTest) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(EnvironmentTest, IniatilizationDefaultDiffCompatibilityPolicy) {
+  auto io_loop = test_loop().StartNewLoop();
+  Environment env = EnvironmentBuilder()
+                        .SetStartupContext(component_context_provider_.context())
+                        .SetAsync(dispatcher())
+                        .SetIOAsync(io_loop->dispatcher())
+                        .Build();
+
+  EXPECT_EQ(env.diff_compatibility_policy(),
+            storage::DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES);
+}
+
+TEST_F(EnvironmentTest, IniatilizationDiffCompatibilityPolicy) {
+  auto io_loop = test_loop().StartNewLoop();
+  Environment env =
+      EnvironmentBuilder()
+          .SetStartupContext(component_context_provider_.context())
+          .SetAsync(dispatcher())
+          .SetIOAsync(io_loop->dispatcher())
+          .SetDiffCompatibilityPolicy(storage::DiffCompatibilityPolicy::USE_ONLY_DIFFS)
+          .Build();
+
+  EXPECT_EQ(env.diff_compatibility_policy(), storage::DiffCompatibilityPolicy::USE_ONLY_DIFFS);
+}
+
 }  // namespace
 }  // namespace ledger

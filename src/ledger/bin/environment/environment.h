@@ -32,7 +32,8 @@ class Environment {
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory, NotificationFactory notification_factory,
               std::unique_ptr<timekeeper::Clock> clock, std::unique_ptr<rng::Random> random,
-              storage::GarbageCollectionPolicy gc_policy);
+              storage::GarbageCollectionPolicy gc_policy,
+              storage::DiffCompatibilityPolicy diff_compatibility_policy);
   Environment(Environment&& other) noexcept;
   ~Environment();
 
@@ -61,6 +62,10 @@ class Environment {
 
   storage::GarbageCollectionPolicy gc_policy() const { return gc_policy_; }
 
+  storage::DiffCompatibilityPolicy diff_compatibility_policy() const {
+    return diff_compatibility_policy_;
+  }
+
  private:
   bool disable_statistics_;
 
@@ -79,6 +84,7 @@ class Environment {
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_;
+  storage::DiffCompatibilityPolicy diff_compatibility_policy_;
 };
 
 // Builder for the environment.
@@ -107,6 +113,8 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
   EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
   EnvironmentBuilder& SetGcPolicy(storage::GarbageCollectionPolicy gc_policy);
+  EnvironmentBuilder& SetDiffCompatibilityPolicy(
+      storage::DiffCompatibilityPolicy diff_compatibility_policy);
 
   Environment Build();
 
@@ -122,6 +130,8 @@ class EnvironmentBuilder {
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_ = storage::GarbageCollectionPolicy::NEVER;
+  storage::DiffCompatibilityPolicy diff_compatibility_policy_ =
+      storage::DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES;
 };
 
 }  // namespace ledger

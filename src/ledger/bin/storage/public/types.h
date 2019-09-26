@@ -240,6 +240,14 @@ enum class GarbageCollectionPolicy {
   EAGER_LIVE_REFERENCES,
 };
 
+enum class DiffCompatibilityPolicy {
+  // Tree nodes are uploaded to the cloud and storage falls back to getting objects from the cloud
+  // if a tree cannot be obtained by diffs.
+  USE_DIFFS_AND_TREE_NODES,
+  // Tree nodes are not uploaded nor downloaded from the cloud: diffs must be available.
+  USE_ONLY_DIFFS,
+};
+
 // A clock entry, for a single device.
 struct ClockEntry {
   CommitId commit_id;
