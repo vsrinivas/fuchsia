@@ -98,57 +98,57 @@ TEST_F(ObjectIdentifierFactoryImplTest, DecodingInvalidObjectDigest) {
   ASSERT_FALSE(factory.MakeObjectIdentifierFromStorageBytes(encoded, &identifier));
 }
 
-TEST_F(ObjectIdentifierFactoryImplTest, StartDeletionSuccess) {
+TEST_F(ObjectIdentifierFactoryImplTest, TrackDeletionSuccess) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   ObjectIdentifierFactoryImpl factory;
-  EXPECT_TRUE(factory.StartDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
 }
 
-TEST_F(ObjectIdentifierFactoryImplTest, StartDeletionAlreadyPending) {
+TEST_F(ObjectIdentifierFactoryImplTest, TrackDeletionAlreadyPending) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   ObjectIdentifierFactoryImpl factory;
-  EXPECT_TRUE(factory.StartDeletion(digest));
-  EXPECT_FALSE(factory.StartDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
+  EXPECT_FALSE(factory.TrackDeletion(digest));
 }
 
-TEST_F(ObjectIdentifierFactoryImplTest, StartDeletionCurrentlyTracked) {
+TEST_F(ObjectIdentifierFactoryImplTest, TrackDeletionCurrentlyTracked) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   ObjectIdentifierFactoryImpl factory;
   {
     auto identifier = factory.MakeObjectIdentifier(0u, digest);
-    EXPECT_FALSE(factory.StartDeletion(digest));
+    EXPECT_FALSE(factory.TrackDeletion(digest));
   }
-  EXPECT_TRUE(factory.StartDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
 }
 
-TEST_F(ObjectIdentifierFactoryImplTest, CompleteDeletion) {
+TEST_F(ObjectIdentifierFactoryImplTest, UntrackDeletion) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   ObjectIdentifierFactoryImpl factory;
-  EXPECT_TRUE(factory.StartDeletion(digest));
-  EXPECT_TRUE(factory.CompleteDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
+  EXPECT_TRUE(factory.UntrackDeletion(digest));
 }
 
 TEST_F(ObjectIdentifierFactoryImplTest, AllocatingIdentifierImplicitlyAborts) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   ObjectIdentifierFactoryImpl factory;
-  EXPECT_TRUE(factory.StartDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
   {
     // Allocate and immediately throw away an identifier for |digest|.
     auto identifier = factory.MakeObjectIdentifier(0u, digest);
   }
   // Allocating an identifier aborts the pending transaction, even if the identifier is not live
   // anymore when completing.
-  EXPECT_FALSE(factory.CompleteDeletion(digest));
+  EXPECT_FALSE(factory.UntrackDeletion(digest));
 
   // Perform another aborted deletion cycle to catch a bug where aborted deletions are not cleaned
   // up.
-  EXPECT_TRUE(factory.StartDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
   factory.MakeObjectIdentifier(0u, digest);
-  EXPECT_FALSE(factory.CompleteDeletion(digest));
+  EXPECT_FALSE(factory.UntrackDeletion(digest));
 
   // Perform a full deletion cycle after an aborted one.
-  EXPECT_TRUE(factory.StartDeletion(digest));
-  EXPECT_TRUE(factory.CompleteDeletion(digest));
+  EXPECT_TRUE(factory.TrackDeletion(digest));
+  EXPECT_TRUE(factory.UntrackDeletion(digest));
 }
 
 }  // namespace

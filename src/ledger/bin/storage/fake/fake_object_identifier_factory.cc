@@ -54,9 +54,9 @@ std::string FakeObjectIdentifierFactory::ObjectIdentifierToStorageBytes(
   return storage::EncodeObjectIdentifier(identifier);
 }
 
-bool FakeObjectIdentifierFactory::StartDeletion(const ObjectDigest& object_digest) { return false; }
+bool FakeObjectIdentifierFactory::TrackDeletion(const ObjectDigest& object_digest) { return false; }
 
-bool FakeObjectIdentifierFactory::CompleteDeletion(const ObjectDigest& object_digest) {
+bool FakeObjectIdentifierFactory::UntrackDeletion(const ObjectDigest& object_digest) {
   return false;
 }
 

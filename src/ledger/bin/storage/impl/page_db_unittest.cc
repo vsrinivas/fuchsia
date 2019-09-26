@@ -300,8 +300,7 @@ TEST_F(PageDbTest, DeleteObjectWithLiveReference) {
 
     // First attempt to delete the object. This should fail because |object_identifier| still
     // references it.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, object_references),
-              Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, object_references), Status::CANCELED);
 
     // Discard the live reference.
     object_identifier = ObjectIdentifier();
@@ -340,7 +339,7 @@ TEST_F(PageDbTest, DeleteObjectAbortedByLiveReference) {
     // Attempt to start deletion, fails because the object is live.
     std::unique_ptr<PageDbImpl::Batch> batch;
     ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
-    EXPECT_EQ(batch->DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the live reference.
     object_identifier = ObjectIdentifier();
@@ -354,7 +353,7 @@ TEST_F(PageDbTest, DeleteObjectAbortedByLiveReference) {
         page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
 
     // Check that deletion has been aborted.
-    EXPECT_EQ(batch->Execute(handler), Status::INTERNAL_ERROR);
+    EXPECT_EQ(batch->Execute(handler), Status::CANCELED);
   });
 }
 
@@ -388,13 +387,13 @@ TEST_F(PageDbTest, DeleteTransientObjectWithOnDiskReferences) {
     parent_identifier = ObjectIdentifier();
 
     // Deletion should fail because of the on-disk references.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the commit-object on-disk reference.
     EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
 
     // Deletion should still fail because of the object-object reference.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the object-object on-disk reference.
     EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
@@ -441,13 +440,13 @@ TEST_F(PageDbTest, DeleteLocalObjectWithOnDiskReferences) {
     parent_identifier = ObjectIdentifier();
 
     // Deletion should fail because of the on-disk references.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the object-object on-disk reference.
     EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
 
     // Deletion should still fail because of the commit-object reference.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the commit-object on-disk reference.
     EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
@@ -494,7 +493,7 @@ TEST_F(PageDbTest, DeleteSyncedObjectWithOnDiskReferences) {
     parent_identifier = ObjectIdentifier();
 
     // Deletion should fail because of the object-object reference.
-    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the object-object on-disk reference.
     EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
@@ -548,7 +547,7 @@ TEST_F(PageDbTest, DeleteObjectBatchAbort) {
     page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest1);
 
     // Check that the whole batch has been aborted.
-    EXPECT_EQ(batch->Execute(handler), Status::INTERNAL_ERROR);
+    EXPECT_EQ(batch->Execute(handler), Status::CANCELED);
 
     // Check that both deletions have stopped been tracked: it should be possible to restart them
     // immediately.

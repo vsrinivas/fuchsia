@@ -92,7 +92,7 @@ long ObjectIdentifierFactoryImpl::count(const ObjectDigest& digest) const {
 
 int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
 
-bool ObjectIdentifierFactoryImpl::StartDeletion(const ObjectDigest& object_digest) {
+bool ObjectIdentifierFactoryImpl::TrackDeletion(const ObjectDigest& object_digest) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 
@@ -121,7 +121,7 @@ void ObjectIdentifierFactoryImpl::AbortDeletion(const ObjectDigest& object_diges
   it->second = true;
 }
 
-bool ObjectIdentifierFactoryImpl::CompleteDeletion(const ObjectDigest& object_digest) {
+bool ObjectIdentifierFactoryImpl::UntrackDeletion(const ObjectDigest& object_digest) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 

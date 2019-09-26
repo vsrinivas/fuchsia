@@ -45,9 +45,9 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
                                             ObjectIdentifier* object_identifier) override;
   std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) override;
 
-  FXL_WARN_UNUSED_RESULT bool StartDeletion(const ObjectDigest& object_digest) override;
+  FXL_WARN_UNUSED_RESULT bool TrackDeletion(const ObjectDigest& object_digest) override;
 
-  FXL_WARN_UNUSED_RESULT bool CompleteDeletion(const ObjectDigest& object_digest) override;
+  FXL_WARN_UNUSED_RESULT bool UntrackDeletion(const ObjectDigest& object_digest) override;
 
  private:
   // Marks the deletion of |object_digest| as aborted if the object is currently pending deletion.

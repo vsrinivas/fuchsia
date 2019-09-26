@@ -28,6 +28,8 @@ fxl::StringView StatusToString(Status status) {
       return "INTERNAL_ERROR";
     case Status::INTERRUPTED:
       return "INTERRUPTED";
+    case Status::CANCELED:
+      return "CANCELED";
     case Status::INVALID_ARGUMENT:
       return "INVALID_ARGUMENT";
     case Status::NETWORK_ERROR:
@@ -50,6 +52,8 @@ zx_status_t ConvertToEpitaph(Status status) {
     case Status::NOT_IMPLEMENTED:
       FXL_DCHECK(false) << "Status: " << status << " should never be sent to the client.";
       return ZX_ERR_INTERNAL;
+    case Status::CANCELED:
+      return ZX_ERR_CANCELED;
     case Status::DATA_INTEGRITY_ERROR:
       return ZX_ERR_IO_DATA_INTEGRITY;
     case Status::ILLEGAL_STATE:

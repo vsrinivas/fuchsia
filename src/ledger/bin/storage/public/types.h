@@ -159,12 +159,12 @@ class ObjectIdentifierFactory {
   // Registers |object_digest| as pending deletion and returns true if there is currently no object
   // identifier for this digest and it is not already pending deletion. Returns false otherwise
   // (which means that deletion cannot proceed safely).
-  FXL_WARN_UNUSED_RESULT virtual bool StartDeletion(const ObjectDigest& object_digest) = 0;
+  FXL_WARN_UNUSED_RESULT virtual bool TrackDeletion(const ObjectDigest& object_digest) = 0;
 
   // Marks the deletion of |object_digest| as complete and returns true if the object was currently
   // pending deletion and the deletion was not aborted already. Returns false otherwise (which means
   // that deletion cannot proceed safely).
-  FXL_WARN_UNUSED_RESULT virtual bool CompleteDeletion(const ObjectDigest& object_digest) = 0;
+  FXL_WARN_UNUSED_RESULT virtual bool UntrackDeletion(const ObjectDigest& object_digest) = 0;
 };
 
 // Object-object references, for garbage collection.

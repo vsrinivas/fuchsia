@@ -1538,7 +1538,7 @@ TEST_F(PageStorageTest, DeleteObjectAbortsWhenOnDiskReference) {
         callback::Capture(callback::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+    EXPECT_EQ(status, Status::CANCELED);
 
     // Attempt to delete the root piece of |commit1|.
     PageStorageImplAccessorForTest::DeleteObject(
@@ -1546,7 +1546,7 @@ TEST_F(PageStorageTest, DeleteObjectAbortsWhenOnDiskReference) {
         callback::Capture(callback::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+    EXPECT_EQ(status, Status::CANCELED);
 
     // Check that the pieces are is still there.
     RetrackIdentifier(&object_identifier);
@@ -1624,7 +1624,7 @@ TEST_F(PageStorageTest, DeleteObjectAbortsWhenLiveReference) {
 
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    EXPECT_EQ(status, Status::INTERNAL_ERROR);
+    EXPECT_EQ(status, Status::CANCELED);
 
     // Check that the object is still there.
     std::unique_ptr<const Piece> piece;

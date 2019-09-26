@@ -111,9 +111,9 @@ Status PageDbBatchImpl::WriteObject(CoroutineHandler* handler, const Piece& piec
 Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
                                      const ObjectDigest& object_digest,
                                      const ObjectReferencesAndPriority& references) {
-  if (!factory_->StartDeletion(object_digest)) {
+  if (!factory_->TrackDeletion(object_digest)) {
     FXL_VLOG(1) << "Object is live, cannot be deleted: " << object_digest;
-    return Status::INTERNAL_ERROR;
+    return Status::CANCELED;
   }
   std::map<std::string, PageDbObjectStatus> keys;
   RETURN_ON_ERROR(page_db_->GetObjectStatusKeys(handler, object_digest, &keys));
@@ -123,9 +123,9 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
     if (seen_status.insert(object_status).second &&
         !IsGarbageCollectable(handler, object_digest, object_status)) {
       // Abort the deletion.
-      (void)factory_->CompleteDeletion(object_digest);
+      (void)factory_->UntrackDeletion(object_digest);
       FXL_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
-      return Status::INTERNAL_ERROR;
+      return Status::CANCELED;
     }
     RETURN_ON_ERROR(batch_->Delete(handler, object_status_key));
   }
@@ -223,7 +223,7 @@ Status PageDbBatchImpl::SetClockEntry(coroutine::CoroutineHandler* handler, Devi
 
 Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
   if (!UntrackPendingDeletions()) {
-    return Status::INTERNAL_ERROR;
+    return Status::CANCELED;
   }
   return batch_->Execute(handler);
 }
@@ -231,7 +231,7 @@ Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
 bool PageDbBatchImpl::UntrackPendingDeletions() {
   bool aborted = false;
   for (const ObjectDigest& object_digest : pending_deletion_) {
-    if (!factory_->CompleteDeletion(object_digest)) {
+    if (!factory_->UntrackDeletion(object_digest)) {
       FXL_VLOG(1) << "Deletion has been aborted, object cannot be deleted: " << object_digest;
       aborted = true;
     }

@@ -35,9 +35,9 @@ class FakeObjectIdentifierFactory : public ObjectIdentifierFactory {
                                             ObjectIdentifier* object_identifier) override;
   std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) override;
 
-  FXL_WARN_UNUSED_RESULT bool StartDeletion(const ObjectDigest& object_digest) override;
+  FXL_WARN_UNUSED_RESULT bool TrackDeletion(const ObjectDigest& object_digest) override;
 
-  FXL_WARN_UNUSED_RESULT bool CompleteDeletion(const ObjectDigest& object_digest) override;
+  FXL_WARN_UNUSED_RESULT bool UntrackDeletion(const ObjectDigest& object_digest) override;
 
  private:
   // Token for each digest. Entries are never cleaned up, the count stays to at least 1 because the
