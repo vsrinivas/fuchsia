@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/echo_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cmx",
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fidl.examples.echo.Echo"
+        ]
+    }
+}

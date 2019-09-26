@@ -20,6 +20,7 @@ group("tests") {
     "component_manager:tests",
     "component_manager_for_test:tests",
     "dash:tests",
+    "gtest_runner:tests",
     "lib:tests",
     "locate:tests",
     "timekeeper:tests",

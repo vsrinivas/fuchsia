@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "gtest_runner"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/by_addr:by_addr",
+    "//src/sys/lib/library_loader:library_loader",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:serde_json",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
+  ]
+
+  non_rust_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/memfs",
+  ]
+}
+
+package("gtest_runner") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "gtest_runner"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/gtest_runner.cmx"
+      dest = "gtest_runner.cmx"
+    },
+  ]
+}
+
+test_package("gtest_runner_unittests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "gtest_runner_bin_test"
+      dest = "gtest_runner_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gtest_runner",
+    ":gtest_runner_unittests",
+    "tests",
+  ]
+}

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/gtest_runner"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
