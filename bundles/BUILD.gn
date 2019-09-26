@@ -39,7 +39,8 @@ group("kitchen_sink") {
   testonly = true
   public_deps = [
     "//bundles:tests",
-    "//peridot/packages:kitchen_sink",
+    "//garnet/packages:kitchen_sink",
+    "//peridot/packages:all",
     "//src/connectivity/telephony",
     "//topaz",
   ]
