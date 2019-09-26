@@ -38,7 +38,7 @@ uint arm64_cpu_cpu_ids[SMP_MAX_CPUS] = {0};
 // total number of detected cpus
 uint arm_num_cpus = 1;
 
-// per cpu structures, each cpu will point to theirs using the fixed register
+// per cpu structures, each cpu will point to theirs using the x18 register
 arm64_percpu arm64_percpu_array[SMP_MAX_CPUS];
 
 void arch_register_mpid(uint cpu_id, uint64_t mpid) {

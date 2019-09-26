@@ -278,14 +278,6 @@ static inline void arm64_restore_percpu_pointer() {
   arm64_write_percpu_ptr(get_current_thread()->arch.current_percpu_ptr);
 }
 
-static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
-  // If we're returning to kernel space, make sure we restore the correct
-  // per-CPU pointer to the fixed register.
-  if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
-    regs[15] = (uint64_t)arm64_read_percpu_ptr();
-  }
-}
-
 /* called from assembly */
 extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -359,7 +351,10 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
     arch_iframe_process_pending_signals(iframe);
   }
 
-  fix_exception_percpu_pointer(exception_flags, iframe->r);
+  /* if we're returning to kernel space, make sure we restore the correct x18 */
+  if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
+    iframe->r[18] = (uint64_t)arm64_read_percpu_ptr();
+  }
 }
 
 /* called from assembly */
@@ -396,7 +391,10 @@ extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
     thread_preempt();
   }
 
-  fix_exception_percpu_pointer(exception_flags, iframe->r);
+  /* if we're returning to kernel space, make sure we restore the correct x18 */
+  if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
+    iframe->r[18] = (uint64_t)arm64_read_percpu_ptr();
+  }
 
   return 0;
 }
@@ -422,7 +420,7 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* ifram
 
 /* called from assembly */
 extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int which) {
-  // Restore the percpu pointer unconditionally.
+  // restore the percpu pointer (x18) unconditionally
   arm64_restore_percpu_pointer();
 
   printf("invalid exception, which 0x%x\n", which);

@@ -5,11 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <asm.h>
+#include <arch/asm_macros.h>
 #include <arch/arch_thread.h>
 #include <arch/arm64.h>
-#include <arch/arm64/asm.h>
 #include <arch/arm64/exceptions.h>
-#include <arch/asm_macros.h>
 #include <zircon/zx-syscall-numbers.h>
 
 .section .text.boot.vectab,"ax",@progbits
@@ -446,7 +446,7 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     start_isr_func
     // Restore per cpu pointer
     mrs  x11, tpidr_el1
-    ldr  percpu_ptr, [x11, #CURRENT_PERCPU_PTR_OFFSET]
+    ldr  x18, [x11, #CURRENT_PERCPU_PTR_OFFSET]
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
