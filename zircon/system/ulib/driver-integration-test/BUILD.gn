@@ -18,6 +18,7 @@ library("driver-integration-test") {
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inspector",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

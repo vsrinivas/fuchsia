@@ -40,7 +40,6 @@ zedboot_binary_patterns = [
   # These are the core things needed for booting (local and netboot).
   "bin/bootsvc",
   "bin/console",
-  "bin/devcoordinator",
   "bin/device-name-provider",
   "bin/dlog",
   "bin/fshost",
@@ -132,6 +131,14 @@ component_manager_target_name = get_label_info(component_manager_label, "name")
 component_manager_manifest =
     component_manager_target_dir + "/" + component_manager_target_name
 
+coordinator_label =
+    "//src/devices/coordinator:coordinator.bootfs"
+coordinator_target_dir =
+    get_label_info(coordinator_label, "target_out_dir")
+coordinator_target_name = get_label_info(coordinator_label, "name")
+coordinator_manifest =
+    coordinator_target_dir + "/" + coordinator_target_name
+
 root_manifests_label = "//src/sys/root:root_manifests.bootfs"
 root_manifests_target_dir =
     get_label_info(root_manifests_label, "target_out_dir")
@@ -146,10 +153,12 @@ zbi("zbi") {
     ":zedboot.manifest",
     ":zxcrypt_config.txt",
     component_manager_label,
+    coordinator_label,
     root_manifests_label,
   ]
   inputs = [
     component_manager_manifest,
+    coordinator_manifest,
     root_manifests_manifest,
     zircon_kernel_zbi,
     manifest_file,

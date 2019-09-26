@@ -14,17 +14,6 @@ package("bootsvc") {
     # When this package() is included in a zbi(), the cmdline
     # entry to set userboot.root will be included too.
     ":cmdline",
-
-    # At runtime, bootsvc launches devcoordinator, so it needs to be in the
-    # zbi() as well.  Note this is in data_deps of the package() rather
-    # than the executable() so that as long as devcoordinator is just an
-    # executable() target itself, it will just go into the zbi() and not
-    # into this package().  When devcoordinator becomes a package() target
-    # itself, then having this on either the package() or the executable()
-    # will have the same effect: just include that whole package() in any
-    # zbi() that contains this one, but don't include anything related to
-    # devcoordinator into this package itself.
-    "$zx/system/core/devmgr/devcoordinator",
   ]
 }
 
@@ -183,10 +172,16 @@ zbi_test("bootsvc-integration-tests") {
     ":integration-test-factory-item",
     ":integration-test-image-arg",
 
-    # Pull in devcoordinator so that we can test requesting libdriver.so
-    # from the bootsvc loader service.  This could possibly be smaller, but
-    # seems pretty reasonable.
-    "$zx/system/core/devmgr/devcoordinator",
+    # Pull in the dependencies of devcoordinator so that we can test
+    # requesting libdriver.so # from the bootsvc loader service.
+    # This could possibly be smaller, but seems pretty reasonable.
+    "$zx/system/core/devmgr/component",
+    "$zx/system/core/miscsvc",
+    "$zx/system/core/netsvc",
+    "$zx/system/core/netsvc:device-name-provider",
+    "$zx/system/core/pwrbtn-monitor",
+    "$zx/system/core/svchost",
+    "$zx/system/core/virtcon:virtual-console",
   ]
 
   output_dir = root_build_dir

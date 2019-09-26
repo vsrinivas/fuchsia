@@ -1,0 +1,173 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("coordinator") {
+  sources = [
+    "binding-internal.h",
+    "binding.cc",
+    "boot-args.cc",
+    "boot-args.h",
+    "composite-device.cc",
+    "coordinator.cc",
+    "coordinator.h",
+    "devfs.cc",
+    "devfs.h",
+    "devhost-loader-service.cc",
+    "devhost-loader-service.h",
+    "device.cc",
+    "device.h",
+    "driver-test-reporter.cc",
+    "driver-test-reporter.h",
+    "driver.cc",
+    "driver.h",
+    "env.cc",
+    "fdio.cc",
+    "fidl.cc",
+    "main.cc",
+    "suspend-task.cc",
+    "system-instance.cc",
+    "system-instance.h",
+    "task.cc",
+    "unbind-task.cc",
+    "vmo-writer.cc",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+
+  public_deps = [
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/driver-info",
+    "//zircon/public/lib/inspector",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/loader-service",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-device-manager:llcpp",
+    "//zircon/system/fidl/fuchsia-driver-test:c",
+    "//zircon/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
+    "//zircon/system/fidl/fuchsia-mem:c",
+  ]
+}
+
+generate_manifest("coordinator.bootfs") {
+  deps = [
+    ":coordinator",
+  ]
+
+  #TODO(bwb) rename file in the image to coordinator in the future
+  args = [ "--entry=bin/devcoordinator=" +
+           rebase_path("$root_build_dir/coordinator", root_build_dir) ]
+}
+
+executable("test") {
+  output_name = "devcoordinator_test"
+  testonly = true
+  sources = [
+    "binding-internal.h",
+    "binding-test.cc",
+    "binding.cc",
+    "boot-args-test.cc",
+    "boot-args.cc",
+    "boot-args.h",
+    "composite-device.cc",
+    "coordinator-test.cc",
+    "coordinator.cc",
+    "coordinator.h",
+    "devfs.cc",
+    "devfs.h",
+    "devhost-loader-service.cc",
+    "devhost-loader-service.h",
+    "device.cc",
+    "device.h",
+    "driver-test-reporter.cc",
+    "driver-test-reporter.h",
+    "driver.cc",
+    "driver.h",
+    "env.cc",
+    "fdio.cc",
+    "fidl.cc",
+    "suspend-task.cc",
+    "system-instance.cc",
+    "system-instance.h",
+    "task-test.cc",
+    "task.cc",
+    "unbind-task.cc",
+    "vmo-writer.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/driver-info",
+    "//zircon/public/lib/inspector",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/loader-service",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-device-manager:llcpp",
+    "//zircon/system/fidl/fuchsia-driver-test:c",
+    "//zircon/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
+    "//zircon/system/fidl/fuchsia-mem:c",
+  ]
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+test_package("coordinator_tests") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":test",
+  ]
+
+  binaries = [
+    {
+      name = "devcoordinator_test"
+    },
+  ]
+
+  tests = [
+    {
+      name = "devcoordinator_test"
+      environments = basic_envs
+    },
+  ]
+}

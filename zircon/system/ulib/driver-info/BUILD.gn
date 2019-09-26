@@ -5,6 +5,8 @@
 import("$zx_build/public/gn/library_shim.gni")
 
 library("driver-info") {
+  sdk = "source"
+  sdk_headers = []
   sources = [
     "driver-info.c",
   ]
