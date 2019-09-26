@@ -12,11 +12,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -38,8 +36,8 @@ const (
 )
 
 type upCommand struct {
-	// GCS root directory at which build artifacts will be uploaded.
-	gcsRoot string
+	// GCS bucket to which build artifacts will be uploaded.
+	gcsBucket string
 	// UUID under which to index artifacts.
 	uuid string
 	// The maximum number of concurrent uploading routines.
@@ -52,11 +50,11 @@ func (upCommand) Synopsis() string { return "upload artifacts from a build to Go
 
 func (upCommand) Usage() string {
 	return `
-artifactory up -root $GCS_ROOT -uuid $UUID <build directory>
+artifactory up -bucket $GCS_BUCKET -uuid $UUID <build directory>
 
-Uploads artifacts from a build to $GCS_URL with the following structure:
+Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 
-├── $GCS_ROOT
+├── $GCS_BUCKET
 │   │   ├── blobs
 │   │   │   └── <blob names>
 │   │   ├── $UUID
@@ -73,7 +71,7 @@ flags:
 }
 
 func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&cmd.gcsRoot, "root", "", "root GCS path at which to upload artifacts; must be of the form gs://<bucket>/<namespace>")
+	f.StringVar(&cmd.gcsBucket, "bucket", "", "GCS bucket to which artifacts will be uploaded")
 	f.StringVar(&cmd.uuid, "uuid", "", "UUID under which to index uploaded artifacts")
 	f.IntVar(&cmd.j, "j", 1000, "maximum number of concurrent uploading processes")
 }
@@ -93,23 +91,13 @@ func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 }
 
 func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
-	if cmd.gcsRoot == "" {
-		return fmt.Errorf("-root is required")
+	if cmd.gcsBucket == "" {
+		return fmt.Errorf("-bucket is required")
 	} else if cmd.uuid == "" {
 		return fmt.Errorf("-uuid is required")
 	}
 
-	url, err := url.Parse(cmd.gcsRoot)
-	if err != nil {
-		return err
-	}
-	bucket := url.Host
-	namespace := strings.TrimLeft(url.Path, "/")
-	if cmd.gcsRoot != fmt.Sprintf("gs://%s/%s", bucket, namespace) {
-		return fmt.Errorf("invalid URL: -root %q not of the form gs://<bucket>/<namespace>", cmd.gcsRoot)
-	}
-
-	sink, err := newCloudSink(ctx, bucket, namespace)
+	sink, err := newCloudSink(ctx, cmd.gcsBucket, "")
 	if err != nil {
 		return err
 	}
@@ -223,7 +211,7 @@ func (s cloudSink) subsinkAt(subspace string) dataSink {
 	return &cloudSink{
 		client:    s.client,
 		bucket:    s.bucket,
-		namespace: path.Join(s.namespace, subspace),
+		namespace: subspace,
 	}
 }
 
