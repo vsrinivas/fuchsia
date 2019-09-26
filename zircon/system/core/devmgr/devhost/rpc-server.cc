@@ -53,28 +53,15 @@ void describe_error(zx::channel h, zx_status_t status) {
   h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-static fidl_union_tag_t device_or_tty(const fbl::RefPtr<zx_device_t>& dev) {
-  // only a couple of special cases for now
-  const char* libname = dev->driver->libname().c_str();
-  if ((strcmp(libname, "/boot/driver/pty.so") == 0) ||
-      (strcmp(libname, "/boot/driver/console.so") == 0) ||
-      (strcmp(libname, "/boot/driver/virtio.so") == 0)) {
-    return fuchsia_io_NodeInfoTag_tty;
-  } else {
-    return fuchsia_io_NodeInfoTag_device;
-  }
-}
-
 static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, fs::OnOpenMsg* msg,
                                       zx::eventpair* handle) {
   memset(msg, 0, sizeof(*msg));
   msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-  msg->extra.tag = device_or_tty(dev);
+  msg->extra.tag = fuchsia_io_NodeInfoTag_device;
   msg->primary.s = ZX_OK;
   msg->primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
   handle->reset();
-  zx_handle_t* event = (msg->extra.tag == fuchsia_io_NodeInfoTag_device) ? &msg->extra.device.event
-                                                                         : &msg->extra.tty.event;
+  zx_handle_t* event = &msg->extra.device.event;
   if (dev->event.is_valid()) {
     zx_status_t r;
     if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC, handle)) != ZX_OK) {
@@ -192,15 +179,14 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
   const auto& dev = conn->dev;
   fuchsia_io_NodeInfo info;
   memset(&info, 0, sizeof(info));
-  info.tag = device_or_tty(dev);
+  info.tag = fuchsia_io_NodeInfoTag_device;
   if (dev->event != ZX_HANDLE_INVALID) {
     zx::eventpair event;
     zx_status_t status = dev->event.duplicate(ZX_RIGHTS_BASIC, &event);
     if (status != ZX_OK) {
       return status;
     }
-    zx_handle_t* event_handle =
-        (info.tag == fuchsia_io_NodeInfoTag_device) ? &info.device.event : &info.tty.event;
+    zx_handle_t* event_handle = &info.device.event;
     *event_handle = event.release();
   }
   return fuchsia_io_NodeDescribe_reply(txn, &info);
@@ -631,12 +617,12 @@ static zx_status_t fidl_DeviceControllerResume(void* ctx,
   return fuchsia_device_ControllerResume_reply(txn, &result);
 }
 
-static zx_status_t fidl_DeviceControllerUpdatePowerStateMapping(void* ctx,
-                    const fuchsia_device_SystemPowerStateInfo mapping[6], fidl_txn_t* txn) {
+static zx_status_t fidl_DeviceControllerUpdatePowerStateMapping(
+    void* ctx, const fuchsia_device_SystemPowerStateInfo mapping[6], fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   fuchsia_device_Controller_UpdatePowerStateMapping_Result result{};
-  std::array<fuchsia_device_SystemPowerStateInfo,
-      fuchsia_device_manager_MAX_SYSTEM_POWER_STATES> states_mapping;
+  std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
+      states_mapping;
   for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
     states_mapping[i] = mapping[i];
   }
@@ -753,4 +739,4 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
   return conn->dev->MessageOp(msg, txn);
 }
 
-}
+}  // namespace devmgr
