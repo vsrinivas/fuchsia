@@ -183,91 +183,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     inspect::StringProperty module_surface_relation_arrangement;
     inspect::StringProperty module_surface_relation_dependency;
     inspect::DoubleProperty module_surface_relation_emphasis;
-
+    inspect::StringProperty module_path_property;
     // Helper for initializing inspect nodes and properties.
-    void InitializeInspect(StoryControllerImpl* const story_controller_) {
-      mod_inspect_node =
-          story_controller_->story_inspect_node_->CreateChild(module_data->module_url());
-
-      std::string is_embedded_str;
-      if (module_data->is_embedded()) {
-        is_embedded_str = "True";
-      } else {
-        is_embedded_str = "False";
-      }
-
-      is_embedded_property =
-          mod_inspect_node.CreateString(modular_config::kInspectIsEmbedded, is_embedded_str);
-
-      std::string is_deleted_str;
-      if (module_data->module_deleted()) {
-        is_deleted_str = "True";
-      } else {
-        is_deleted_str = "False";
-      }
-
-      is_deleted_property =
-          mod_inspect_node.CreateString(modular_config::kInspectIsDeleted, is_deleted_str);
-
-      std::string mod_source_string;
-      if (module_data->module_source() == fuchsia::modular::ModuleSource::INTERNAL) {
-        mod_source_string = "INTERNAL";
-      } else {
-        mod_source_string = "EXTERNAL";
-      }
-      module_source_property =
-          mod_inspect_node.CreateString(modular_config::kInspectModuleSource, mod_source_string);
-
-      module_intent_action_property = mod_inspect_node.CreateString(
-          modular_config::kInspectIntentAction, module_data->intent().action.value_or(""));
-      module_intent_handler_property = mod_inspect_node.CreateString(
-          modular_config::kInspectIntentHandler, module_data->intent().handler.value_or(""));
-
-      std::string formatted_params = "";
-      if (module_data->intent().parameters.has_value()) {
-        for (auto& param : *module_data->intent().parameters) {
-          formatted_params.append("name : " + param.name.value_or("") + " ");
-        }
-      }
-      module_intent_params_property =
-          mod_inspect_node.CreateString(modular_config::kInspectIntentParams, formatted_params);
-
-      if (module_data->has_surface_relation()) {
-        std::string arrangement;
-        switch (module_data->surface_relation().arrangement) {
-          case fuchsia::modular::SurfaceArrangement::COPRESENT:
-            arrangement = "COPRESENT";
-            break;
-          case fuchsia::modular::SurfaceArrangement::SEQUENTIAL:
-            arrangement = "SEQUENTIAL";
-            break;
-          case fuchsia::modular::SurfaceArrangement::ONTOP:
-            arrangement = "ONTOP";
-            break;
-          case fuchsia::modular::SurfaceArrangement::NONE:
-            arrangement = "NONE";
-            break;
-        }
-        module_surface_relation_arrangement = mod_inspect_node.CreateString(
-            modular_config::kInspectSurfaceRelationArrangement, arrangement);
-
-        std::string dependency;
-        switch (module_data->surface_relation().dependency) {
-          case fuchsia::modular::SurfaceDependency::DEPENDENT:
-            dependency = "DEPENDENT";
-            break;
-          case fuchsia::modular::SurfaceDependency::NONE:
-            dependency = "NONE";
-            break;
-        }
-
-        module_surface_relation_dependency = mod_inspect_node.CreateString(
-            modular_config::kInspectSurfaceRelationDependency, dependency);
-        module_surface_relation_emphasis =
-            mod_inspect_node.CreateDouble(modular_config::kInspectSurfaceRelationEmphasis,
-                                          module_data->surface_relation().emphasis);
-      }
-    }
+    void InitializeInspect(StoryControllerImpl* const story_controller_impl);
   };
 
   // A module's story shell-related information that we pend until we are able

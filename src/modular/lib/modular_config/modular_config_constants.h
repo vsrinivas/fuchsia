@@ -68,6 +68,7 @@ constexpr char kInspectIsDeleted[] = "is_deleted";
 constexpr char kInspectSurfaceRelationArrangement[] = "surface_arrangement";
 constexpr char kInspectSurfaceRelationDependency[] = "surface_dependency";
 constexpr char kInspectSurfaceRelationEmphasis[] = "surface_emphasis";
+constexpr char kInspectModulePath[] = "module_path";
 
 // Shell constants
 inline constexpr char kDefaultBaseShellUrl[] =

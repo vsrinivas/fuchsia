@@ -238,7 +238,8 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
                   StringIs(modular_config::kInspectIntentParams, "name : intent_parameter "),
                   StringIs(modular_config::kInspectSurfaceRelationArrangement, "NONE"),
                   StringIs(modular_config::kInspectSurfaceRelationDependency, "NONE"),
-                  DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0))))));
+                  DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0),
+                  StringIs(modular_config::kInspectModulePath, "mod1"))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
