@@ -21,7 +21,7 @@ using driver_integration_test::IsolatedDevmgr;
 using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
 using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
 
-class USBVirtualBusBase {
+class __EXPORT USBVirtualBusBase {
  public:
   USBVirtualBusBase();
 

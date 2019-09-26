@@ -20,6 +20,7 @@ zx_status_t WatchDirectory(int dirfd, Callback* callback) {
   return fdio_watch_directory(dirfd, WatcherCallback, ZX_TIME_INFINITE, callback);
 }
 
+__EXPORT
 zx_status_t WaitForAnyFile(int dirfd, int event, const char* name, void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
@@ -32,6 +33,7 @@ zx_status_t WaitForAnyFile(int dirfd, int event, const char* name, void* cookie)
   }
 }
 
+__EXPORT
 zx_status_t WaitForFile(int dirfd, int event, const char* fn, void* name) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
