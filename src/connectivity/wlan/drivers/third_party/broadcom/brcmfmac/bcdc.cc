@@ -36,21 +36,6 @@
 #define BCDC_SET_IF_IDX(hdr, idx) \
   ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
 
-/**
- * struct brcmf_proto_bcdc_header - BCDC header format
- *
- * @flags: flags contain protocol and checksum info.
- * @priority: 802.1d priority and USB flow control info (bit 4:7).
- * @flags2: additional flags containing dongle interface index.
- * @data_offset: start of packet data. header is following by firmware signals.
- */
-struct brcmf_proto_bcdc_header {
-  uint8_t flags;
-  uint8_t priority;
-  uint8_t flags2;
-  uint8_t data_offset;
-};
-
 /*
  * maximum length of firmware signal data between
  * the BCDC header and packet data in the tx path.

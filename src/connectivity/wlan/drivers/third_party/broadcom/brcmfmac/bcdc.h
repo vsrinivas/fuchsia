@@ -20,10 +20,25 @@
 #include "netbuf.h"
 
 struct brcmf_proto_bcdc_dcmd {
-  uint32_t cmd;    /* dongle command value */
-  uint32_t len;    /* input/output buflen (excludes header) */
-  uint32_t flags;  /* flag defns given below */
-  int32_t status;  /* status code returned from the device */
+  uint32_t cmd;   /* dongle command value */
+  uint32_t len;   /* input/output buflen (excludes header) */
+  uint32_t flags; /* flag defns given below */
+  int32_t status; /* status code returned from the device */
+};
+
+/**
+ * struct brcmf_proto_bcdc_header - BCDC header format
+ *
+ * @flags: flags contain protocol and checksum info.
+ * @priority: 802.1d priority and USB flow control info (bit 4:7).
+ * @flags2: additional flags containing dongle interface index.
+ * @data_offset: start of packet data. header is following by firmware signals.
+ */
+struct brcmf_proto_bcdc_header {
+  uint8_t flags;
+  uint8_t priority;
+  uint8_t flags2;
+  uint8_t data_offset;
 };
 
 // clang-format off
