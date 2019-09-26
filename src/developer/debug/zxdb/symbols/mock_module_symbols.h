@@ -49,13 +49,15 @@ class MockModuleSymbols : public ModuleSymbols {
   LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const override;
   bool HasBinary() const override;
 
- private:
+ protected:
+  // This class is derived from so these are protected.
   FRIEND_MAKE_REF_COUNTED(MockModuleSymbols);
   FRIEND_REF_COUNTED_THREAD_SAFE(MockModuleSymbols);
 
   explicit MockModuleSymbols(const std::string& local_file_name);
   ~MockModuleSymbols() override;
 
+ private:
   Index index_;
 
   std::string local_file_name_;
