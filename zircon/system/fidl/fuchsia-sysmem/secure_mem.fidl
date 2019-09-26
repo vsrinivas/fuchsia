@@ -1,0 +1,113 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+using zx;
+
+/// SecureMem
+///
+/// The client is sysmem.  The server is securemem driver.
+///
+/// TEE - Trusted Execution Environment.
+///
+/// REE - Rich Execution Environment.
+///
+/// Enables sysmem to call the securemem driver to get any secure heaps
+/// configured via the TEE (or via the securemem driver), and set any physical
+/// secure heaps configured via sysmem.
+///
+/// Presently, dynamically-allocated secure heaps are configured via sysmem, as
+/// it starts quite early during boot and can successfully reserve contiguous
+/// physical memory.  Presently, fixed-location secure heaps are configured via
+/// TEE, as the plumbing goes from the bootloader to the TEE.  However, this
+/// protocol intentionally doesn't care which heaps are dynamically-allocated
+/// and which are fixed-location.
+///
+// Needs Layout = "Simple" because used with "FIDL Simple C Bindings" (by
+// sysmem; the server end uses llcpp).
+[Layout = "Simple"]
+protocol SecureMem {
+    /// Gets the physical address and length of any secure heap whose physical
+    /// range is configured via the TEE.
+    ///
+    /// Presently, these will be fixed physical addresses and lengths, with the
+    /// location plumbed via the TEE.
+    ///
+    /// This is preferred over RegisterHeap() when there isn't any special
+    /// heap-specific per-VMO setup or teardown required.
+    ///
+    /// The physical range must be secured/protected by the TEE before the
+    /// securemem driver responds to this request with success.
+    ///
+    /// Sysmem should only call this once.  Returning zero heaps is not a
+    /// failure.
+    ///
+    /// Errors:
+    ///  * ZX_ERR_BAD_STATE - called more than once.
+    ///  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    ///    with TEE which doesn't generate zx_status_t errors).
+    ///  * other errors are possible, such as from communication failures or
+    ///    server propagation of zx_status_t failures
+    GetPhysicalSecureHeaps() -> (PhysicalSecureHeaps heaps) error zx.status;
+
+    /// This request from sysmem to the securemem driver lets the TEE know the
+    /// physical memory address and length of any secure heap whose location is
+    /// configured/established via sysmem.
+    ///
+    /// Only sysmem can call this because only sysmem is handed the client end
+    /// of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    /// securemem driver is the server end of this protocol.
+    ///
+    /// Presently, these physical ranges will be dynamically-allocated by sysmem
+    /// early during boot.
+    ///
+    /// The heap ID is included in case that's relevant to the securemem driver,
+    /// for more informative log messages, and for consistency with
+    /// GetPhysicalSecureHeaps().
+    ///
+    /// The securemem driver must configure all the provided ranges as secure
+    /// with the TEE before responding to this message with success.
+    ///
+    /// For heaps configured via sysmem, both the HeapType and heap location are
+    /// configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    /// securemem driver determines that the number of heaps or HeapType(s) are
+    /// not what's supported by the securemem driver.  Typically these aspects
+    /// are essentially fixed for a given device, so this error would typically
+    /// imply a configuration or plumbing problem.
+    ///
+    /// Sysmem should only call this once.
+    ///
+    /// Errors:
+    ///  * ZX_ERR_BAD_STATE - called more than once
+    ///  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    ///  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    ///    with TEE which doesn't generate zx_status_t errors).
+    ///  * other errors are possible, such as from communication failures or
+    ///    server propagation of zx_status_t failures
+    SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps) -> () error zx.status;
+};
+
+struct PhysicalSecureHeap {
+    /// This must be a HeapType that is secure/protected.
+    HeapType heap;
+    /// Must be at least PAGE_SIZE aligned.
+    uint64 physical_address;
+    /// Must be at least PAGE_SIZE aligned.
+    uint64 size_bytes;
+};
+
+// Sysmem uses layout=Simple, which requires picking a specific array size.
+// Each heap consumes ~24 bytes on the stack, so we limit to a number that
+// exceeds the needs of any current use case (1 heap in each direction so far),
+// without over-using stack space (24 bytes * 32 == 768 bytes).
+const uint32 MAX_HEAPS_COUNT = 32;
+
+// In this struct we use array instead of vector because layout=Simple.
+struct PhysicalSecureHeaps {
+    /// Must be <= MAX_HEAPS_COUNT.
+    uint32 heaps_count;
+    /// Only the first heaps_count are meaningful.  The rest are ignored.
+    array<PhysicalSecureHeap>:MAX_HEAPS_COUNT heaps;
+};

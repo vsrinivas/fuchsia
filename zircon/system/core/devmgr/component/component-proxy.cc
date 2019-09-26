@@ -996,6 +996,16 @@ zx_status_t ComponentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_c
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
+zx_status_t ComponentProxy::SysmemRegisterSecureMem(zx::channel tee_connection) {
+  // TODO(dustingreen): Implement.
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ComponentProxy::SysmemUnregisterSecureMem() {
+  // TODO(dustingreen): Implement.
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
   UsbModeSwitchProxyRequest req = {};
   ProxyResponse resp = {};

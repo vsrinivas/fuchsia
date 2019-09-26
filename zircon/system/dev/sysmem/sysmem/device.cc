@@ -189,11 +189,24 @@ zx_status_t in_proc_sysmem_RegisterHeap(void* ctx, uint64_t heap,
   return self->RegisterHeap(heap, heap_connection_param);
 }
 
+zx_status_t in_proc_sysmem_RegisterSecureMem(void* ctx, zx_handle_t secure_mem_connection) {
+  // TODO(dustingreen): Implement.  For now close the handle - also, this not actually being called
+  // yet.
+  zx::channel just_close(secure_mem_connection);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t in_proc_sysmem_UnregisterSecureMem(void* ctx) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // In-proc sysmem interface.  Essentially an in-proc version of
 // fuchsia.sysmem.DriverConnector.
 sysmem_protocol_ops_t in_proc_sysmem_protocol_ops = {
     .connect = in_proc_sysmem_Connect,
     .register_heap = in_proc_sysmem_RegisterHeap,
+    .register_secure_mem = in_proc_sysmem_RegisterSecureMem,
+    .unregister_secure_mem = in_proc_sysmem_UnregisterSecureMem,
 };
 
 }  // namespace

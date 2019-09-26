@@ -25,6 +25,8 @@ class BufferCollectionToken;
 class Heap;
 class DriverConnector;
 class Allocator;
+struct SecureMem_SetPhysicalSecureHeaps_Response;
+struct SecureMem_SetPhysicalSecureHeaps_Result;
 enum class PixelFormatType : uint32_t {
   INVALID = 0u,
   R8G8B8A8 = 1u,
@@ -43,10 +45,16 @@ struct ImagePlane;
 enum class HeapType : uint64_t {
   SYSTEM_RAM = 0u,
   AMLOGIC_SECURE = 1152921504606912512u,
+  AMLOGIC_SECURE_VDEC = 1152921504606912513u,
   GOLDFISH_DEVICE_LOCAL = 1152921504606978048u,
 };
 
 
+struct PhysicalSecureHeap;
+struct PhysicalSecureHeaps;
+struct SecureMem_GetPhysicalSecureHeaps_Response;
+struct SecureMem_GetPhysicalSecureHeaps_Result;
+class SecureMem;
 struct BufferMemoryConstraints;
 struct FormatModifier;
 struct PixelFormat;
@@ -108,6 +116,8 @@ constexpr uint32_t videoUsageHwProtected = 4u;
 constexpr uint32_t videoUsageHwEncoder = 2u;
 
 constexpr uint32_t videoUsageHwDecoder = 1u;
+
+constexpr uint32_t videoUsageDecryptorOutput = 16u;
 
 constexpr uint32_t videoUsageCapture = 8u;
 
@@ -2013,6 +2023,115 @@ class Allocator final {
 
 
 
+struct SecureMem_SetPhysicalSecureHeaps_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+
+struct SecureMem_SetPhysicalSecureHeaps_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  SecureMem_SetPhysicalSecureHeaps_Result();
+  ~SecureMem_SetPhysicalSecureHeaps_Result();
+
+  SecureMem_SetPhysicalSecureHeaps_Result(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  SecureMem_SetPhysicalSecureHeaps_Result& operator=(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(SecureMem_SetPhysicalSecureHeaps_Response&& val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  SecureMem_SetPhysicalSecureHeaps_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  SecureMem_SetPhysicalSecureHeaps_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t&& val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(SecureMem_SetPhysicalSecureHeaps_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    SecureMem_SetPhysicalSecureHeaps_Response response_;
+    int32_t err_;
+  };
+};
+
+constexpr uint32_t MAX_HEAPS_COUNT = 32u;
+
+
+
 struct ImagePlane {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -2026,6 +2145,695 @@ struct ImagePlane {
   // Stride in bytes per row.
   // Only meaningful for linear buffer formats.
   uint32_t bytes_per_row = {};
+};
+
+
+
+struct PhysicalSecureHeap {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // This must be a HeapType that is secure/protected.
+  HeapType heap = {};
+
+  // Must be at least PAGE_SIZE aligned.
+  uint64_t physical_address = {};
+
+  // Must be at least PAGE_SIZE aligned.
+  uint64_t size_bytes = {};
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_PhysicalSecureHeapsTable;
+
+struct PhysicalSecureHeaps {
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_PhysicalSecureHeapsTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 776;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // Must be <= MAX_HEAPS_COUNT.
+  uint32_t heaps_count = {};
+
+  // Only the first heaps_count are meaningful.  The rest are ignored.
+  ::fidl::Array<PhysicalSecureHeap, 32> heaps = {};
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
+
+struct SecureMem_GetPhysicalSecureHeaps_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 776;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  PhysicalSecureHeaps heaps = {};
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+
+struct SecureMem_GetPhysicalSecureHeaps_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  SecureMem_GetPhysicalSecureHeaps_Result();
+  ~SecureMem_GetPhysicalSecureHeaps_Result();
+
+  SecureMem_GetPhysicalSecureHeaps_Result(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  SecureMem_GetPhysicalSecureHeaps_Result& operator=(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(SecureMem_GetPhysicalSecureHeaps_Response&& val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  SecureMem_GetPhysicalSecureHeaps_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  SecureMem_GetPhysicalSecureHeaps_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t&& val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 784;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(SecureMem_GetPhysicalSecureHeaps_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    SecureMem_GetPhysicalSecureHeaps_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+
+// SecureMem
+//
+// The client is sysmem.  The server is securemem driver.
+//
+// TEE - Trusted Execution Environment.
+//
+// REE - Rich Execution Environment.
+//
+// Enables sysmem to call the securemem driver to get any secure heaps
+// configured via the TEE (or via the securemem driver), and set any physical
+// secure heaps configured via sysmem.
+//
+// Presently, dynamically-allocated secure heaps are configured via sysmem, as
+// it starts quite early during boot and can successfully reserve contiguous
+// physical memory.  Presently, fixed-location secure heaps are configured via
+// TEE, as the plumbing goes from the bootloader to the TEE.  However, this
+// protocol intentionally doesn't care which heaps are dynamically-allocated
+// and which are fixed-location.
+//
+class SecureMem final {
+  SecureMem() = delete;
+ public:
+
+  struct GetPhysicalSecureHeapsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 800;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetPhysicalSecureHeapsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct SetPhysicalSecureHeapsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct SetPhysicalSecureHeapsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    PhysicalSecureHeaps heaps;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 792;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SetPhysicalSecureHeapsResponse;
+  };
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetPhysicalSecureHeaps_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end);
+      ~GetPhysicalSecureHeaps_Impl() = default;
+      GetPhysicalSecureHeaps_Impl(GetPhysicalSecureHeaps_Impl&& other) = default;
+      GetPhysicalSecureHeaps_Impl& operator=(GetPhysicalSecureHeaps_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetPhysicalSecureHeaps_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps);
+      ~SetPhysicalSecureHeaps_Impl() = default;
+      SetPhysicalSecureHeaps_Impl(SetPhysicalSecureHeaps_Impl&& other) = default;
+      SetPhysicalSecureHeaps_Impl& operator=(SetPhysicalSecureHeaps_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetPhysicalSecureHeaps = GetPhysicalSecureHeaps_Impl<GetPhysicalSecureHeapsResponse>;
+    using SetPhysicalSecureHeaps = SetPhysicalSecureHeaps_Impl<SetPhysicalSecureHeapsResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetPhysicalSecureHeaps_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetPhysicalSecureHeaps_Impl() = default;
+      GetPhysicalSecureHeaps_Impl(GetPhysicalSecureHeaps_Impl&& other) = default;
+      GetPhysicalSecureHeaps_Impl& operator=(GetPhysicalSecureHeaps_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetPhysicalSecureHeaps_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+      ~SetPhysicalSecureHeaps_Impl() = default;
+      SetPhysicalSecureHeaps_Impl(SetPhysicalSecureHeaps_Impl&& other) = default;
+      SetPhysicalSecureHeaps_Impl& operator=(SetPhysicalSecureHeaps_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetPhysicalSecureHeaps = GetPhysicalSecureHeaps_Impl<GetPhysicalSecureHeapsResponse>;
+    using SetPhysicalSecureHeaps = SetPhysicalSecureHeaps_Impl<SetPhysicalSecureHeapsResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Gets the physical address and length of any secure heap whose physical
+    // range is configured via the TEE.
+    //
+    // Presently, these will be fixed physical addresses and lengths, with the
+    // location plumbed via the TEE.
+    //
+    // This is preferred over RegisterHeap() when there isn't any special
+    // heap-specific per-VMO setup or teardown required.
+    //
+    // The physical range must be secured/protected by the TEE before the
+    // securemem driver responds to this request with success.
+    //
+    // Sysmem should only call this once.  Returning zero heaps is not a
+    // failure.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once.
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::GetPhysicalSecureHeaps GetPhysicalSecureHeaps();
+
+    // Gets the physical address and length of any secure heap whose physical
+    // range is configured via the TEE.
+    //
+    // Presently, these will be fixed physical addresses and lengths, with the
+    // location plumbed via the TEE.
+    //
+    // This is preferred over RegisterHeap() when there isn't any special
+    // heap-specific per-VMO setup or teardown required.
+    //
+    // The physical range must be secured/protected by the TEE before the
+    // securemem driver responds to this request with success.
+    //
+    // Sysmem should only call this once.  Returning zero heaps is not a
+    // failure.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once.
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetPhysicalSecureHeaps GetPhysicalSecureHeaps(::fidl::BytePart _response_buffer);
+
+    // This request from sysmem to the securemem driver lets the TEE know the
+    // physical memory address and length of any secure heap whose location is
+    // configured/established via sysmem.
+    //
+    // Only sysmem can call this because only sysmem is handed the client end
+    // of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    // securemem driver is the server end of this protocol.
+    //
+    // Presently, these physical ranges will be dynamically-allocated by sysmem
+    // early during boot.
+    //
+    // The heap ID is included in case that's relevant to the securemem driver,
+    // for more informative log messages, and for consistency with
+    // GetPhysicalSecureHeaps().
+    //
+    // The securemem driver must configure all the provided ranges as secure
+    // with the TEE before responding to this message with success.
+    //
+    // For heaps configured via sysmem, both the HeapType and heap location are
+    // configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    // securemem driver determines that the number of heaps or HeapType(s) are
+    // not what's supported by the securemem driver.  Typically these aspects
+    // are essentially fixed for a given device, so this error would typically
+    // imply a configuration or plumbing problem.
+    //
+    // Sysmem should only call this once.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once
+    //  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps);
+
+    // This request from sysmem to the securemem driver lets the TEE know the
+    // physical memory address and length of any secure heap whose location is
+    // configured/established via sysmem.
+    //
+    // Only sysmem can call this because only sysmem is handed the client end
+    // of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    // securemem driver is the server end of this protocol.
+    //
+    // Presently, these physical ranges will be dynamically-allocated by sysmem
+    // early during boot.
+    //
+    // The heap ID is included in case that's relevant to the securemem driver,
+    // for more informative log messages, and for consistency with
+    // GetPhysicalSecureHeaps().
+    //
+    // The securemem driver must configure all the provided ranges as secure
+    // with the TEE before responding to this message with success.
+    //
+    // For heaps configured via sysmem, both the HeapType and heap location are
+    // configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    // securemem driver determines that the number of heaps or HeapType(s) are
+    // not what's supported by the securemem driver.  Typically these aspects
+    // are essentially fixed for a given device, so this error would typically
+    // imply a configuration or plumbing problem.
+    //
+    // Sysmem should only call this once.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once
+    //  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Gets the physical address and length of any secure heap whose physical
+    // range is configured via the TEE.
+    //
+    // Presently, these will be fixed physical addresses and lengths, with the
+    // location plumbed via the TEE.
+    //
+    // This is preferred over RegisterHeap() when there isn't any special
+    // heap-specific per-VMO setup or teardown required.
+    //
+    // The physical range must be secured/protected by the TEE before the
+    // securemem driver responds to this request with success.
+    //
+    // Sysmem should only call this once.  Returning zero heaps is not a
+    // failure.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once.
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::GetPhysicalSecureHeaps GetPhysicalSecureHeaps(zx::unowned_channel _client_end);
+
+    // Gets the physical address and length of any secure heap whose physical
+    // range is configured via the TEE.
+    //
+    // Presently, these will be fixed physical addresses and lengths, with the
+    // location plumbed via the TEE.
+    //
+    // This is preferred over RegisterHeap() when there isn't any special
+    // heap-specific per-VMO setup or teardown required.
+    //
+    // The physical range must be secured/protected by the TEE before the
+    // securemem driver responds to this request with success.
+    //
+    // Sysmem should only call this once.  Returning zero heaps is not a
+    // failure.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once.
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetPhysicalSecureHeaps GetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // This request from sysmem to the securemem driver lets the TEE know the
+    // physical memory address and length of any secure heap whose location is
+    // configured/established via sysmem.
+    //
+    // Only sysmem can call this because only sysmem is handed the client end
+    // of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    // securemem driver is the server end of this protocol.
+    //
+    // Presently, these physical ranges will be dynamically-allocated by sysmem
+    // early during boot.
+    //
+    // The heap ID is included in case that's relevant to the securemem driver,
+    // for more informative log messages, and for consistency with
+    // GetPhysicalSecureHeaps().
+    //
+    // The securemem driver must configure all the provided ranges as secure
+    // with the TEE before responding to this message with success.
+    //
+    // For heaps configured via sysmem, both the HeapType and heap location are
+    // configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    // securemem driver determines that the number of heaps or HeapType(s) are
+    // not what's supported by the securemem driver.  Typically these aspects
+    // are essentially fixed for a given device, so this error would typically
+    // imply a configuration or plumbing problem.
+    //
+    // Sysmem should only call this once.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once
+    //  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps);
+
+    // This request from sysmem to the securemem driver lets the TEE know the
+    // physical memory address and length of any secure heap whose location is
+    // configured/established via sysmem.
+    //
+    // Only sysmem can call this because only sysmem is handed the client end
+    // of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    // securemem driver is the server end of this protocol.
+    //
+    // Presently, these physical ranges will be dynamically-allocated by sysmem
+    // early during boot.
+    //
+    // The heap ID is included in case that's relevant to the securemem driver,
+    // for more informative log messages, and for consistency with
+    // GetPhysicalSecureHeaps().
+    //
+    // The securemem driver must configure all the provided ranges as secure
+    // with the TEE before responding to this message with success.
+    //
+    // For heaps configured via sysmem, both the HeapType and heap location are
+    // configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    // securemem driver determines that the number of heaps or HeapType(s) are
+    // not what's supported by the securemem driver.  Typically these aspects
+    // are essentially fixed for a given device, so this error would typically
+    // imply a configuration or plumbing problem.
+    //
+    // Sysmem should only call this once.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once
+    //  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Gets the physical address and length of any secure heap whose physical
+    // range is configured via the TEE.
+    //
+    // Presently, these will be fixed physical addresses and lengths, with the
+    // location plumbed via the TEE.
+    //
+    // This is preferred over RegisterHeap() when there isn't any special
+    // heap-specific per-VMO setup or teardown required.
+    //
+    // The physical range must be secured/protected by the TEE before the
+    // securemem driver responds to this request with success.
+    //
+    // Sysmem should only call this once.  Returning zero heaps is not a
+    // failure.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once.
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    static ::fidl::DecodeResult<GetPhysicalSecureHeapsResponse> GetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // This request from sysmem to the securemem driver lets the TEE know the
+    // physical memory address and length of any secure heap whose location is
+    // configured/established via sysmem.
+    //
+    // Only sysmem can call this because only sysmem is handed the client end
+    // of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    // securemem driver is the server end of this protocol.
+    //
+    // Presently, these physical ranges will be dynamically-allocated by sysmem
+    // early during boot.
+    //
+    // The heap ID is included in case that's relevant to the securemem driver,
+    // for more informative log messages, and for consistency with
+    // GetPhysicalSecureHeaps().
+    //
+    // The securemem driver must configure all the provided ranges as secure
+    // with the TEE before responding to this message with success.
+    //
+    // For heaps configured via sysmem, both the HeapType and heap location are
+    // configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
+    // securemem driver determines that the number of heaps or HeapType(s) are
+    // not what's supported by the securemem driver.  Typically these aspects
+    // are essentially fixed for a given device, so this error would typically
+    // imply a configuration or plumbing problem.
+    //
+    // Sysmem should only call this once.
+    //
+    // Errors:
+    //  * ZX_ERR_BAD_STATE - called more than once
+    //  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
+    //  * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    //    with TEE which doesn't generate zx_status_t errors).
+    //  * other errors are possible, such as from communication failures or
+    //    server propagation of zx_status_t failures
+    static ::fidl::DecodeResult<SetPhysicalSecureHeapsResponse> SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPhysicalSecureHeapsRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = SecureMem;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetPhysicalSecureHeapsCompleterBase : public _Base {
+     public:
+      void Reply(SecureMem_GetPhysicalSecureHeaps_Result result);
+      void Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result);
+      void Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetPhysicalSecureHeapsCompleter = ::fidl::Completer<GetPhysicalSecureHeapsCompleterBase>;
+
+    virtual void GetPhysicalSecureHeaps(GetPhysicalSecureHeapsCompleter::Sync _completer) = 0;
+
+    class SetPhysicalSecureHeapsCompleterBase : public _Base {
+     public:
+      void Reply(SecureMem_SetPhysicalSecureHeaps_Result result);
+      void Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result);
+      void Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetPhysicalSecureHeapsCompleter = ::fidl::Completer<SetPhysicalSecureHeapsCompleterBase>;
+
+    virtual void SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps, SetPhysicalSecureHeapsCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferMemoryConstraintsTable;
@@ -4726,11 +5534,70 @@ static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::BindSharedCollection
 static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest, buffer_collection_request) == 20);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response) == ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::ImagePlane> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImagePlane>);
 static_assert(offsetof(::llcpp::fuchsia::sysmem::ImagePlane, byte_offset) == 0);
 static_assert(offsetof(::llcpp::fuchsia::sysmem::ImagePlane, bytes_per_row) == 4);
 static_assert(sizeof(::llcpp::fuchsia::sysmem::ImagePlane) == ::llcpp::fuchsia::sysmem::ImagePlane::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::PhysicalSecureHeap> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::PhysicalSecureHeap>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PhysicalSecureHeap, heap) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PhysicalSecureHeap, physical_address) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PhysicalSecureHeap, size_bytes) == 16);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::PhysicalSecureHeap) == ::llcpp::fuchsia::sysmem::PhysicalSecureHeap::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::PhysicalSecureHeaps> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::PhysicalSecureHeaps>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps, heaps_count) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps, heaps) == 8);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps) == ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response, heaps) == 0);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response) == ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem::GetPhysicalSecureHeapsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::SecureMem::GetPhysicalSecureHeapsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem::GetPhysicalSecureHeapsResponse)
+    == ::llcpp::fuchsia::sysmem::SecureMem::GetPhysicalSecureHeapsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem::GetPhysicalSecureHeapsResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsRequest)
+    == ::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsRequest, heaps) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsResponse)
+    == ::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem::SetPhysicalSecureHeapsResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::BufferMemoryConstraints> : public std::true_type {};

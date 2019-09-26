@@ -117,6 +117,16 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
     return ZX_OK;
   }
 
+  zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection) {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
+  zx_status_t SysmemUnregisterSecureMem() {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
  private:
   sysmem_protocol_t proto_;
 };

@@ -16,4 +16,14 @@ protocol Sysmem {
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Heap.
     RegisterHeap(uint64 heap, handle<channel> heap_connection) -> (zx.status s);
+
+    /// Takes the client end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.SecureMem, which is a protocol that's specific to
+    /// sysmem<->securemem concerns.
+    RegisterSecureMem(handle<channel> secure_mem_connection) -> (zx.status s);
+
+    /// Informs sysmem that the channel previously passed to RegisterSecureMem()
+    /// will be closing soon, and that this channel closure should not be
+    /// considered an error.
+    UnregisterSecureMem() -> (zx.status s);
 };

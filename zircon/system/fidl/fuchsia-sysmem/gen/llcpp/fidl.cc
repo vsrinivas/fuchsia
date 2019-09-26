@@ -1060,6 +1060,367 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 }
 
 
+::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SecureMem_SetPhysicalSecureHeaps_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::~SecureMem_SetPhysicalSecureHeaps_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~SecureMem_SetPhysicalSecureHeaps_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result) == ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::PrimarySize);
+}
+
+
+SecureMem_SetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) SecureMem_SetPhysicalSecureHeaps_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SecureMem_GetPhysicalSecureHeaps_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::~SecureMem_GetPhysicalSecureHeaps_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~SecureMem_GetPhysicalSecureHeaps_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result) == ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::PrimarySize);
+}
+
+
+SecureMem_GetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) SecureMem_GetPhysicalSecureHeaps_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kSecureMem_GetPhysicalSecureHeaps_Ordinal = 0x60f3c45a00000000lu;
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kSecureMem_SetPhysicalSecureHeaps_Ordinal = 0x14b0c0000000000lu;
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+
+}  // namespace
+template <>
+SecureMem::ResultOf::GetPhysicalSecureHeaps_Impl<SecureMem::GetPhysicalSecureHeapsResponse>::GetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPhysicalSecureHeapsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetPhysicalSecureHeapsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsRequest));
+  ::fidl::DecodedMessage<GetPhysicalSecureHeapsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      SecureMem::InPlace::GetPhysicalSecureHeaps(std::move(_client_end), Super::response_buffer()));
+}
+
+SecureMem::ResultOf::GetPhysicalSecureHeaps SecureMem::SyncClient::GetPhysicalSecureHeaps() {
+  return ResultOf::GetPhysicalSecureHeaps(zx::unowned_channel(this->channel_));
+}
+
+SecureMem::ResultOf::GetPhysicalSecureHeaps SecureMem::Call::GetPhysicalSecureHeaps(zx::unowned_channel _client_end) {
+  return ResultOf::GetPhysicalSecureHeaps(std::move(_client_end));
+}
+
+template <>
+SecureMem::UnownedResultOf::GetPhysicalSecureHeaps_Impl<SecureMem::GetPhysicalSecureHeapsResponse>::GetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPhysicalSecureHeapsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetPhysicalSecureHeapsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetPhysicalSecureHeapsRequest));
+  ::fidl::DecodedMessage<GetPhysicalSecureHeapsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      SecureMem::InPlace::GetPhysicalSecureHeaps(std::move(_client_end), std::move(_response_buffer)));
+}
+
+SecureMem::UnownedResultOf::GetPhysicalSecureHeaps SecureMem::SyncClient::GetPhysicalSecureHeaps(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetPhysicalSecureHeaps(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+SecureMem::UnownedResultOf::GetPhysicalSecureHeaps SecureMem::Call::GetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetPhysicalSecureHeaps(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<SecureMem::GetPhysicalSecureHeapsResponse> SecureMem::InPlace::GetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetPhysicalSecureHeapsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetPhysicalSecureHeapsRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SecureMem::GetPhysicalSecureHeapsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetPhysicalSecureHeapsRequest, GetPhysicalSecureHeapsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SecureMem::GetPhysicalSecureHeapsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+SecureMem::ResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SetPhysicalSecureHeapsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetPhysicalSecureHeapsRequest*>(_write_bytes);
+  _request.heaps = std::move(heaps);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPhysicalSecureHeapsRequest));
+  ::fidl::DecodedMessage<SetPhysicalSecureHeapsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      SecureMem::InPlace::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps) {
+  return ResultOf::SetPhysicalSecureHeaps(zx::unowned_channel(this->channel_), std::move(heaps));
+}
+
+SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps) {
+  return ResultOf::SetPhysicalSecureHeaps(std::move(_client_end), std::move(heaps));
+}
+
+template <>
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SetPhysicalSecureHeapsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SetPhysicalSecureHeapsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SetPhysicalSecureHeapsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetPhysicalSecureHeapsRequest*>(_request_buffer.data());
+  _request.heaps = std::move(heaps);
+  _request_buffer.set_actual(sizeof(SetPhysicalSecureHeapsRequest));
+  ::fidl::DecodedMessage<SetPhysicalSecureHeapsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      SecureMem::InPlace::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetPhysicalSecureHeaps(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(heaps), std::move(_response_buffer));
+}
+
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_request_buffer), std::move(heaps), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<SecureMem::SetPhysicalSecureHeapsResponse> SecureMem::InPlace::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPhysicalSecureHeapsRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SecureMem::SetPhysicalSecureHeapsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<SetPhysicalSecureHeapsRequest, SetPhysicalSecureHeapsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SecureMem::SetPhysicalSecureHeapsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool SecureMem::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kSecureMem_GetPhysicalSecureHeaps_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetPhysicalSecureHeapsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetPhysicalSecureHeaps(
+        Interface::GetPhysicalSecureHeapsCompleter::Sync(txn));
+      return true;
+    }
+    case kSecureMem_SetPhysicalSecureHeaps_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<SetPhysicalSecureHeapsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetPhysicalSecureHeaps(std::move(message->heaps),
+        Interface::SetPhysicalSecureHeapsCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool SecureMem::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_GetPhysicalSecureHeaps_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_write_bytes);
+  _response._hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
+}
+
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result) {
+  if (_buffer.capacity() < GetPhysicalSecureHeapsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_buffer.data());
+  _response._hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(GetPhysicalSecureHeapsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+}
+
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_SetPhysicalSecureHeaps_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_write_bytes);
+  _response._hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPhysicalSecureHeapsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
+}
+
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result) {
+  if (_buffer.capacity() < SetPhysicalSecureHeapsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_buffer.data());
+  _response._hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(SetPhysicalSecureHeapsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+}
+
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 ::llcpp::fuchsia::sysmem::BufferSpec::BufferSpec() {
   tag_ = Tag::Invalid;
 }

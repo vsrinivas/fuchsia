@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.tee;
+
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol Tee {
+    /// Takes the server end of a FIDL connection that'll serve fuchsia.tee.Device.
+    ///
+    /// If the connection fails, |s| will be a failing status and tee_device_request and
+    /// service_provider (if valid) will both be closed.
+    ///
+    /// The service_provider can be ZX_HANDLE_INVALID if the connection won't be used for any
+    /// requests that'll result in filesystem requests from the TEE.  If not ZX_HANDLE_INVALID, the
+    /// service provider will be used in serving filesystem requests from the TEE.
+    Connect(handle<channel> tee_device_request, handle<channel> service_provider) -> (zx.status s);
+};
