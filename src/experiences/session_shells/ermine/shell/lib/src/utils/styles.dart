@@ -61,4 +61,10 @@ class ErmineStyle {
 
   /// Overview padding around shellements: Ask and Status.
   static const EdgeInsets kOverviewElementPadding = EdgeInsets.all(36);
+
+  /// Recents panel width.
+  static const double kRecentsItemWidth = 194;
+
+  /// Recents panel width.
+  static const double kRecentsBarWidth = kRecentsItemWidth;
 }

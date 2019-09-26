@@ -15,7 +15,7 @@ import 'package:ermine_library/src/widgets/ask/ask.dart';
 void main() {
   testWidgets('Create Ask Widget', (tester) async {
     final suggestionService = MockSuggestionService();
-    final widget = MaterialApp(home: Ask(suggestionService: suggestionService));
+    final widget = TestApp(child: Ask(suggestionService: suggestionService));
     await tester.pumpWidget(widget);
 
     final hintFinder = find.text('TYPE TO ASK');
@@ -24,7 +24,7 @@ void main() {
 
   testWidgets('Hide hint text on typing', (tester) async {
     final suggestionService = MockSuggestionService();
-    final widget = MaterialApp(home: Ask(suggestionService: suggestionService));
+    final widget = TestApp(child: Ask(suggestionService: suggestionService));
     await tester.pumpWidget(widget);
 
     final textFieldFinder = find.byType(TextField);
@@ -38,8 +38,8 @@ void main() {
   testWidgets('Displays suggestions', (tester) async {
     final suggestionService = MockSuggestionService();
     final key = GlobalKey<AskState>();
-    final widget = MaterialApp(
-      home: Ask(key: key, suggestionService: suggestionService),
+    final widget = TestApp(
+      child: Ask(key: key, suggestionService: suggestionService),
     );
     await tester.pumpWidget(widget);
 
@@ -56,6 +56,17 @@ void main() {
     final suggestionFinder = find.text('hi');
     expect(suggestionFinder, findsOneWidget);
   });
+}
+
+class TestApp extends StatelessWidget {
+  final Widget child;
+  const TestApp({this.child});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Material(child: child),
+    );
+  }
 }
 
 // Mock classes.

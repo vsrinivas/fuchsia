@@ -50,6 +50,7 @@ class AppModel {
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
+  ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   KeyboardShortcuts _keyboardShortcuts;
   StatusModel status;
   TopbarModel topbarModel;
@@ -105,6 +106,7 @@ class AppModel {
           'shortcuts': onKeyboard,
           'ask': onMeta,
           'overview': onOverview,
+          'recents': onRecents,
           'fullscreen': onFullscreen,
           'cancel': onCancel,
           'close': onClose,
@@ -175,6 +177,19 @@ class AppModel {
     overviewVisibility.value = !overviewVisibility.value;
   }
 
+  /// Toggles recents.
+  void onRecents() {
+    if (!hasStories) {
+      return;
+    }
+    if (recentsVisibility.value == false) {
+      // Close other system overlays.
+      onCancel();
+    }
+    // Toggle recents visibility.
+    recentsVisibility.value = !recentsVisibility.value;
+  }
+
   /// Toggles the Status menu on/off.
   void onStatus() {
     if (!hasStories) {
@@ -193,6 +208,7 @@ class AppModel {
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
+    recentsVisibility.value = false;
     overviewVisibility.value = !hasStories;
   }
 

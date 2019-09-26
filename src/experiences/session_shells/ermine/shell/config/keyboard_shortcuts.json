@@ -28,6 +28,14 @@
       "description": "Toggle Overview"
     }
   ],
+  "recents": [
+    {
+      "char": "r",
+      "modifier": "meta",
+      "chord": "Meta + r",
+      "description": "Toggle Recents"
+    }
+  ],
   "shortcuts": [
     {
       "char": "slash",

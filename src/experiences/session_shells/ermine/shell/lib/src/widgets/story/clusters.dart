@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 import 'cluster.dart';
 
 /// Defines a [PageView] to hold a [Cluster] widget per screen.
@@ -16,7 +17,11 @@ class Clusters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clustersModel = model.clustersModel;
-    final pageController = PageController();
+    final pageController = PageController(
+      initialPage: clustersModel.clusters.indexOf(
+        clustersModel.currentCluster.value,
+      ),
+    );
     clustersModel.currentCluster.addListener(() {
       if (pageController.hasClients) {
         int index =
@@ -45,18 +50,17 @@ class Clusters extends StatelessWidget {
         builder: (context, child) => Stack(
           children: <Widget>[
             Positioned.fill(
-              child: PageView.builder(
-                controller: pageController,
-                scrollDirection: Axis.horizontal,
-                itemCount: clustersModel.clusters.length,
-                onPageChanged: (page) {
-                  final cluster = clustersModel.clusters[page];
-                  clustersModel.currentCluster.value = cluster;
-                },
-                itemBuilder: (context, index) {
-                  final cluster = clustersModel.clusters[index];
-                  return Cluster(model: cluster);
-                },
+              child: Container(
+                color: ErmineStyle.kBackgroundColor,
+                child: PageView.builder(
+                  controller: pageController,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: clustersModel.clusters.length,
+                  itemBuilder: (context, index) {
+                    final cluster = clustersModel.clusters[index];
+                    return Cluster(model: cluster);
+                  },
+                ),
               ),
             ),
           ],

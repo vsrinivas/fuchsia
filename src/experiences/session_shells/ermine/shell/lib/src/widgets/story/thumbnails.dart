@@ -10,7 +10,7 @@ import '../../models/cluster_model.dart';
 import '../../utils/styles.dart';
 
 class Thumbnails extends StatelessWidget {
-  static const _kThumbnailMinWidth = 194.0;
+  static const _kThumbnailMinWidth = ErmineStyle.kRecentsItemWidth;
   static const _kThumbnailAspectRatio = 1;
   static const _kThumbnailOverviewPadding = 32.0;
 
@@ -30,33 +30,31 @@ class Thumbnails extends StatelessWidget {
       );
       return SingleChildScrollView(
         padding: EdgeInsets.all(padding / 2),
-        child: Container(
-          child: Wrap(
-            children: model.stories
-                .map((story) => GestureDetector(
+        child: Wrap(
+          children: model.stories
+              .map((story) => GestureDetector(
+                    child: Container(
+                      padding: EdgeInsets.all(padding / 2),
+                      width: itemSize.width,
+                      height: itemSize.height,
                       child: Container(
-                        padding: EdgeInsets.all(padding / 2),
-                        width: itemSize.width,
-                        height: itemSize.height,
-                        child: Container(
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: ErmineStyle.kOverlayBackgroundColor,
-                            border: Border.all(
-                              color: ErmineStyle.kOverlayBorderColor,
-                            ),
-                          ),
-                          child: Text(
-                            story.name,
-                            style: TextStyle(color: Colors.white),
+                        alignment: Alignment.center,
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: ErmineStyle.kOverlayBackgroundColor,
+                          border: Border.all(
+                            color: ErmineStyle.kOverlayBorderColor,
                           ),
                         ),
+                        child: Text(
+                          story.name,
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
-                      onTap: story.focus,
-                    ))
-                .toList(),
-          ),
+                    ),
+                    onTap: story.focus,
+                  ))
+              .toList(),
         ),
       );
     });
@@ -67,6 +65,10 @@ class Thumbnails extends StatelessWidget {
     int items,
     double padding = 0,
   }) {
+    if (!overview) {
+      return Size(
+          _kThumbnailMinWidth, _kThumbnailMinWidth / _kThumbnailAspectRatio);
+    }
     final columns = _isSquare(items) ? sqrt(items) : sqrt(items).ceil();
     double availableWidth = availableSize.width;
     double width = (availableWidth - (columns + 1) * padding) / columns;

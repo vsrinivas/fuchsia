@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 
 import '../../models/ask_model.dart';
-import '../../utils/elevations.dart';
 import '../../utils/styles.dart';
 import '../../utils/suggestions.dart';
 import '../../utils/utils.dart';
@@ -52,9 +51,8 @@ class AskState extends State<Ask> implements Inspectable {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Container(
       color: ErmineStyle.kBackgroundColor,
-      elevation: Elevations.systemOverlayElevation,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

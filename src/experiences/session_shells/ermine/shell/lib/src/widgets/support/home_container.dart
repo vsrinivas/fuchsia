@@ -7,13 +7,13 @@ import 'package:vector_math/vector_math_64.dart';
 
 import '../../models/app_model.dart';
 import '../../utils/styles.dart';
+import 'home.dart';
 
 /// Defines a widget to manage the fullscreen state of the [App] widget.
-class AppContainer extends StatelessWidget {
-  final Widget child;
+class HomeContainer extends StatelessWidget {
   final AppModel model;
 
-  const AppContainer({@required this.child, @required this.model});
+  const HomeContainer({@required this.model});
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +23,12 @@ class AppContainer extends StatelessWidget {
       animation: Listenable.merge([
         model.clustersModel.fullscreenStoryNotifier,
         model.peekNotifier,
+        model.recentsVisibility,
         dragOffset,
       ]),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        child: child,
+        child: Home(model: model),
         onVerticalDragDown: (details) =>
             _onDragDown(details, dragOffset, isDragging),
         onVerticalDragUpdate: (details) =>
@@ -42,6 +43,8 @@ class AppContainer extends StatelessWidget {
                 ErmineStyle.kStoryTitleHeight +
                 dragOffset.value
             : 0;
+        double left =
+            model.recentsVisibility.value ? ErmineStyle.kRecentsBarWidth : 0;
         final duration = isDragging.value
             ? Duration.zero
             : ErmineStyle.kScreenAnimationDuration;
@@ -49,7 +52,7 @@ class AppContainer extends StatelessWidget {
             ? Curves.linear
             : ErmineStyle.kScreenAnimationCurve;
         return AnimatedContainer(
-          transform: Matrix4.translation(Vector3(0, top, 0)),
+          transform: Matrix4.translation(Vector3(left, top, 0)),
           child: child,
           duration: duration,
           curve: curve,

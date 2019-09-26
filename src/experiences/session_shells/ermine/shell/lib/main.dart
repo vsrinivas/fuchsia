@@ -13,10 +13,7 @@ Future<void> main() async {
   setupLogger(name: 'ermine');
 
   final model = AppModel();
-  final app = MaterialApp(
-    home: App(model: model),
-    debugShowCheckedModeBanner: false,
-  );
+  final app = App(model: model);
 
   runApp(app);
 

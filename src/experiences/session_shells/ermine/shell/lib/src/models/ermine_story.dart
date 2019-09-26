@@ -85,8 +85,16 @@ class ErmineStory implements Story, StoryShell, StoryShellTransitional {
   StoryVisibilityState get visibilityState => visibilityStateNotifier.value;
 
   @override
-  set visibilityState(StoryVisibilityState value) =>
-      visibilityStateNotifier.value = value;
+  set visibilityState(StoryVisibilityState value) {
+    // We don't use modular's handling of immersive state because there is no
+    // way to set it using it's apis. Instead, we use the [fullscreen]
+    // accessors below to control visibility state.
+  }
+
+  bool get fullscreen => visibilityState == StoryVisibilityState.immersive;
+
+  set fullscreen(bool value) => visibilityStateNotifier.value =
+      value ? StoryVisibilityState.immersive : StoryVisibilityState.default$;
 
   bool get isImmersive => visibilityState == StoryVisibilityState.immersive;
 

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/elevations.dart';
 import '../../utils/styles.dart';
 import '../../widgets/ask/ask.dart';
 import '../../widgets/status/status.dart';
@@ -18,13 +19,7 @@ class OverviewContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-        animation: model.overviewVisibility,
-        builder: (context, child) {
-          return model.overviewVisibility.value
-              ? Overview(model: model)
-              : Offstage();
-        });
+    return Overview(model: model);
   }
 }
 
@@ -38,8 +33,9 @@ class Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Material(
       color: ErmineStyle.kBackgroundColor,
+      elevation: Elevations.systemOverlayElevation,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

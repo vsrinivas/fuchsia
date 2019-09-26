@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/elevations.dart';
 import '../../utils/styles.dart';
 import '../support/animation_driver.dart';
 import 'ask.dart';
@@ -26,10 +27,14 @@ class AskContainer extends StatelessWidget {
             ErmineStyle.kStoryTitleHeight;
     return AnimatedBuilder(
       animation: model.askVisibility,
-      child: Ask(
-        key: model.askKey,
-        suggestionService: model.suggestions,
-        onDismiss: () => model.askVisibility.value = false,
+      child: Material(
+        color: ErmineStyle.kBackgroundColor,
+        elevation: Elevations.systemOverlayElevation,
+        child: Ask(
+          key: model.askKey,
+          suggestionService: model.suggestions,
+          onDismiss: () => model.askVisibility.value = false,
+        ),
       ),
       builder: (context, child) => model.askVisibility.value
           ? Positioned(

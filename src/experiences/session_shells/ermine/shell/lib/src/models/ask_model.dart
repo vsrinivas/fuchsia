@@ -48,13 +48,7 @@ class AskModel extends ChangeNotifier {
   AskModel({
     @required SuggestionService suggestionService,
     this.onDismiss,
-  }) : _suggestionService = suggestionService {
-    // Request focus on our focusNode.
-    if (WidgetsBinding.instance != null) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => focusNode.requestFocus());
-    }
-  }
+  }) : _suggestionService = suggestionService;
 
   @override
   void dispose() {

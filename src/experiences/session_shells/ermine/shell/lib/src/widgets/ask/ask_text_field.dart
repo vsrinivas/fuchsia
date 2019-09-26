@@ -17,6 +17,8 @@ class AskTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => model.focusNode.requestFocus());
     return Stack(
       children: <Widget>[
         TextField(
@@ -47,7 +49,6 @@ class AskTextField extends StatelessWidget {
                 ),
               ),
           focusNode: model.focusNode,
-          autofocus: true,
           onChanged: model.query,
           onSubmitted: model.submit,
         ),

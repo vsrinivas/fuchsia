@@ -47,6 +47,19 @@ class Topbar extends StatelessWidget {
                   ),
                   onTap: model.showOverview,
                 ),
+                // Recents.
+                Button(
+                  child: Text('RECENTS'),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(
+                        color: ErmineStyle.kOverlayBorderColor,
+                        width: ErmineStyle.kOverlayBorderWidth,
+                      ),
+                    ),
+                  ),
+                  onTap: model.showRecents,
+                ),
 
                 Spacer(),
 

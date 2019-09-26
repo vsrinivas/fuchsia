@@ -7,15 +7,9 @@ import 'package:flutter/material.dart';
 import '../models/app_model.dart';
 import '../utils/styles.dart';
 
-import 'ask/ask_container.dart';
-import 'status/status_container.dart';
-import 'story/clusters.dart';
-import 'story/fullscreen_story.dart';
-import 'support/app_container.dart';
-import 'support/keyboard_help.dart';
+import 'support/home_container.dart';
 import 'support/overview.dart';
-import 'support/scrim.dart';
-import 'topbar/topbar.dart';
+import 'support/recents.dart';
 
 /// Builds the main display of this session shell.
 class App extends StatelessWidget {
@@ -29,52 +23,22 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ErmineStyle.kErmineTheme,
       home: Material(
-        color: ErmineStyle.kBackgroundColor,
-        child: AppContainer(
-          model: model,
+          color: ErmineStyle.kBackgroundColor,
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              Column(
-                children: <Widget>[
-                  // Topbar.
-                  Topbar(model: model.topbarModel),
+              // Recents.
+              RecentsContainer(model: model),
 
-                  // The rest.
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      overflow: Overflow.visible,
-                      children: <Widget>[
-                        // Story Clusters.
-                        Clusters(model: model),
-
-                        // Fullscreen story.
-                        FullscreenStory(model),
-
-                        // Scrim to dismiss system overlays.
-                        Scrim(model: model),
-
-                        // Keyboard shortcuts help.
-                        KeyboardHelp(model: model),
-
-                        // Ask.
-                        AskContainer(model: model),
-
-                        // Status.
-                        StatusContainer(model: model),
-                      ],
-                    ),
-                  ),
-                ],
+              // Overview or Home.
+              AnimatedBuilder(
+                animation: model.overviewVisibility,
+                builder: (context, _) => model.overviewVisibility.value
+                    ? OverviewContainer(model: model)
+                    : HomeContainer(model: model),
               ),
-
-              // Overview.
-              OverviewContainer(model: model),
             ],
-          ),
-        ),
-      ),
+          )),
     );
   }
 }

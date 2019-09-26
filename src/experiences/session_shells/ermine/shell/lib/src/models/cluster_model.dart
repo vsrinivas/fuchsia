@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart'
-    show StoryInfo, StoryController, StoryVisibilityState;
+    show StoryInfo, StoryController;
 import 'package:fuchsia_modular_flutter/session_shell.dart'
     show SessionShell, Story;
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
@@ -55,11 +55,9 @@ class ClustersModel extends ChangeNotifier {
     if (fullscreenStoryNotifier.value?.id == id) {
       return;
     }
-    fullscreenStoryNotifier.value?.visibilityState =
-        StoryVisibilityState.default$;
+    fullscreenStoryNotifier.value?.fullscreen = false;
 
-    fullscreenStoryNotifier.value = getStory(id)
-      ..visibilityState = StoryVisibilityState.immersive;
+    fullscreenStoryNotifier.value = getStory(id)..fullscreen = true;
   }
 
   /// Restore the story to non-fullscreen mode: it's visual state to DEFAULT.
@@ -67,8 +65,7 @@ class ClustersModel extends ChangeNotifier {
     if (fullscreenStoryNotifier.value?.id != id) {
       return;
     }
-    fullscreenStoryNotifier.value?.visibilityState =
-        StoryVisibilityState.default$;
+    fullscreenStoryNotifier.value?.fullscreen = false;
     fullscreenStoryNotifier.value = null;
   }
 
@@ -136,10 +133,16 @@ class ClustersModel extends ChangeNotifier {
   /// Called when any story attribute changes.
   void changeStory(Story story) {
     if (story != null) {
-      // If this story has focus, bring its cluster on screen.
       final storyCluster = _storyToCluster[story.id];
-      if (story.focused && storyCluster != currentCluster.value) {
-        currentCluster.value = storyCluster;
+      if (story.focused) {
+        // If this story has focus, bring its cluster on screen.
+        if (storyCluster != currentCluster.value) {
+          currentCluster.value = storyCluster;
+        }
+        // If there is another fullscreen story, restore it.
+        if (fullscreenStory != null && fullscreenStory != story) {
+          restore(fullscreenStory.id);
+        }
       }
       notifyListeners();
     }
