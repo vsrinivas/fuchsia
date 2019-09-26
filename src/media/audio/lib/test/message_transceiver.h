@@ -19,7 +19,7 @@ class MessageTransceiver {
   struct Message {
     Message() = default;
 
-    explicit Message(uint32_t byte_count, uint32_t handle_count = 0)
+    Message(uint32_t byte_count, uint32_t handle_count = 0)
         : bytes_(byte_count), handles_(handle_count) {}
 
     // Returns a T& overlaid on the message data.
