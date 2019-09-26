@@ -1764,7 +1764,7 @@ char* getcwd(char* buf, size_t size) {
 
   char* out = NULL;
   {
-    fbl::AutoLock(&fdio_cwd_lock);
+    fbl::AutoLock lock(&fdio_cwd_lock);
     size_t len = strlen(fdio_cwd_path) + 1;
     if (len < size) {
       memcpy(buf, fdio_cwd_path, len);

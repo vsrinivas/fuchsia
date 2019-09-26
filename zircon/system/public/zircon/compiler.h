@@ -98,6 +98,25 @@
   } while (0)
 #endif
 
+// C++17 onwards supports [[nodiscard]] on a constructor, warning if
+// a temporary object is created without a name. Such objects would be
+// immediately destroyed again, while the user's expectation might be
+// that it would last the scope.
+//
+// We could ideally just use [[nodiscard]] (or __WARN_UNUSED_RESULT)
+// directly, except GCC < 10.0 has a bug preventing it from being used
+// on constructors. __WARN_UNUSED_CONSTRUCTOR allows us to tag
+// constructors in supported compilers, and is simply ignored in older
+// compilers.
+#if defined(__cplusplus)
+// Clang and GCC versions >= 10.0 support [[nodiscard]] on constructors.
+#if __cplusplus >= 201703L && (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 10)))
+#define __WARN_UNUSED_CONSTRUCTOR [[nodiscard]]
+#else
+#define __WARN_UNUSED_CONSTRUCTOR
+#endif
+#endif
+
 // Publicly exposed thread annotation macros. These have a long and ugly name to
 // minimize the chance of collision with consumers of Zircon's public headers.
 #define __TA_CAPABILITY(x) __THREAD_ANNOTATION(__capability__(x))

@@ -17,7 +17,9 @@ namespace fbl {
 template <typename T>
 class __TA_SCOPED_CAPABILITY AutoLock {
  public:
-  explicit AutoLock(T* mutex) __TA_ACQUIRE(mutex) : mutex_(mutex) { mutex_->Acquire(); }
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoLock(T* mutex) __TA_ACQUIRE(mutex) : mutex_(mutex) {
+    mutex_->Acquire();
+  }
   ~AutoLock() __TA_RELEASE() { release(); }
 
   // early release the mutex before the object goes out of scope
@@ -41,7 +43,7 @@ class __TA_SCOPED_CAPABILITY AutoLock {
 template <>
 class __TA_SCOPED_CAPABILITY AutoLock<::fbl::NullLock> {
  public:
-  explicit AutoLock(::fbl::NullLock* mutex) __TA_ACQUIRE(mutex) {}
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoLock(::fbl::NullLock* mutex) __TA_ACQUIRE(mutex) {}
   ~AutoLock() __TA_RELEASE() {}
   void release() __TA_RELEASE() {}
   DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
@@ -52,7 +54,9 @@ class __TA_SCOPED_CAPABILITY AutoLock<::fbl::NullLock> {
 template <>
 class __TA_SCOPED_CAPABILITY AutoLock<mtx_t> {
  public:
-  explicit AutoLock(mtx_t* mutex) __TA_ACQUIRE(mutex) : mutex_(mutex) { mtx_lock(mutex_); }
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoLock(mtx_t* mutex) __TA_ACQUIRE(mutex) : mutex_(mutex) {
+    mtx_lock(mutex_);
+  }
   ~AutoLock() __TA_RELEASE() { release(); }
 
   void release() __TA_RELEASE() {
