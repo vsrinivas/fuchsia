@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func WriteTestData(t *testing.T, basePath string, stderrLines []string, stdoutLines []string) func() {
+func writeTestData(t *testing.T, basePath string, stderrLines []string, stdoutLines []string) func() {
 	stderrDataPath := basePath + ".stderr.testdata"
 	stdoutDataPath := basePath + ".stdout.testdata"
 
@@ -41,6 +41,17 @@ func WriteTestData(t *testing.T, basePath string, stderrLines []string, stdoutLi
 		os.Remove(stderrDataPath)
 		os.Remove(stdoutDataPath)
 	}
+}
+
+func setupTest(t *testing.T, stderrData, stdinData []string) (string, func()) {
+	myDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	fakeZedmonPath := path.Join(myDir, "fake_zedmon")
+	cleanup := writeTestData(t, fakeZedmonPath, stderrData, stdinData)
+	return fakeZedmonPath, cleanup
 }
 
 func runZedmon(t *testing.T, fakeZedmonPath string, expectError bool) (chan []byte, chan error) {
@@ -72,29 +83,36 @@ func runZedmon(t *testing.T, fakeZedmonPath string, expectError bool) (chan []by
 	return dataChannel, errorChannel
 }
 
-func TestSuccessfulZedmonInput(t *testing.T) {
-	myDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		t.Fatalf(err.Error())
+func expectErrorWithSubstring(t *testing.T, dataChannel chan []byte, errorChannel chan error, substring string) {
+	select {
+	case err := <-errorChannel:
+		if !strings.Contains(err.Error(), substring) {
+			t.Fatalf("Received wrong error (%v). Expected substring %s", err, substring)
+		}
+		break
+	case <-dataChannel:
+		t.Fatal("Shouldn't have received data")
+		return
 	}
+}
 
-	fakeZedmonPath := path.Join(myDir, "fake_zedmon")
-	cleanup := WriteTestData(
-		t, fakeZedmonPath,
+func TestSuccessfulZedmonInput(t *testing.T) {
+	fakeZedmonPath, cleanup := setupTest(
+		t,
 		[]string{
-			"2019/09/16 14:50:19 Time offset: 1568667086301265685ns ± 185703ns",
-			"2019/09/16 14:50:19 Starting report recording. Send ^C to stop.",
+			"2019/09/24 12:38:24 Time offset: 1569350976091349587ns ± 228725ns",
+			"2019/09/24 12:38:24 Starting report recording. Send ^C to stop.",
 		},
 		[]string{
-			"3533624760,0.0013324999663382187,13.716249693417922",
-			"3533625410,0.0012999999671592377,13.716249693417922",
-			"3533626710,0.0013199999666539952,13.718749693362042",
-			"3533629310,0.0013174999667171505,13.717499693389982",
-			"3533629959,0.0013124999668434612,13.718749693362042",
-			"3533630623,0.0012924999673487036,13.717499693389982",
-			"3533631273,0.0012874999674750143,13.717499693389982",
-			"3533631923,0.0012549999682960333,13.718749693362042",
-			"3533632573,0.0012799999676644802,13.722499693278223",
+			"2928214933,0.0016949999571806984,13.741249692859128,2.329141816160927",
+			"2928217533,0.0015974999596437556,13.721249693306163,2.191969632126188",
+			"2928218183,0.0015349999612226384,13.717499693389982,2.105636196807154",
+			"2928218833,0.0019349999511177884,13.67249969439581,2.6456286831657962",
+			"2928219483,0.0021124999466337613,13.696249693864956,2.8933327394082653",
+			"2928220134,0.0020224999489073525,13.726249693194404,2.7761339923689548",
+			"2928220784,0.0018799999525072053,13.727499693166465,2.580769934804266",
+			"2928221434,0.002049999948212644,13.727499693166465,2.814137428908907",
+			"2928222084,0.0022724999425918213,13.702499693725258,3.113893046336443",
 		})
 	defer cleanup()
 
@@ -119,14 +137,8 @@ func TestSuccessfulZedmonInput(t *testing.T) {
 }
 
 func TestWrongRecordLength(t *testing.T) {
-	myDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-
-	fakeZedmonPath := path.Join(myDir, "fake_zedmon")
-	cleanup := WriteTestData(
-		t, fakeZedmonPath,
+	fakeZedmonPath, cleanup := setupTest(
+		t,
 		[]string{
 			"2019/09/16 14:50:19 Time offset: 1568667086301265685ns ± 185703ns",
 			"2019/09/16 14:50:19 Starting report recording. Send ^C to stop.",
@@ -139,16 +151,69 @@ func TestWrongRecordLength(t *testing.T) {
 	defer cleanup()
 
 	dataChannel, errorChannel := runZedmon(t, fakeZedmonPath, true)
+	expectErrorWithSubstring(t, dataChannel, errorChannel, "record length")
+}
 
-	// We expect an error due to wrong record length.
-	select {
-	case err = <-errorChannel:
-		if !strings.Contains(err.Error(), "record length") {
-			t.Fatalf("Received wrong error: %v", err)
-		}
-		break
-	case <-dataChannel:
-		t.Fatal("Shouldn't have received data")
-		return
-	}
+func TestBadTimestamp(t *testing.T) {
+	fakeZedmonPath, cleanup := setupTest(
+		t,
+		[]string{
+			"2019/09/24 12:38:24 Time offset: 1569350976091349587ns ± 228725ns",
+			"2019/09/24 12:38:24 Starting report recording. Send ^C to stop.",
+		},
+		[]string{
+			"ABCDEF,0.0015349999612226384,13.717499693389982,2.105636196807154",
+		})
+	defer cleanup()
+
+	dataChannel, errorChannel := runZedmon(t, fakeZedmonPath, true)
+	expectErrorWithSubstring(t, dataChannel, errorChannel, "timestamp")
+}
+
+func TestBadShuntVoltageRecord(t *testing.T) {
+	fakeZedmonPath, cleanup := setupTest(
+		t,
+		[]string{
+			"2019/09/24 12:38:24 Time offset: 1569350976091349587ns ± 228725ns",
+			"2019/09/24 12:38:24 Starting report recording. Send ^C to stop.",
+		},
+		[]string{
+			"2928218183,ABCDEF,13.717499693389982,2.105636196807154",
+		})
+	defer cleanup()
+
+	dataChannel, errorChannel := runZedmon(t, fakeZedmonPath, true)
+	expectErrorWithSubstring(t, dataChannel, errorChannel, "shunt voltage")
+}
+
+func TestBadBusVoltageRecord(t *testing.T) {
+	fakeZedmonPath, cleanup := setupTest(
+		t,
+		[]string{
+			"2019/09/24 12:38:24 Time offset: 1569350976091349587ns ± 228725ns",
+			"2019/09/24 12:38:24 Starting report recording. Send ^C to stop.",
+		},
+		[]string{
+			"2928218183,0.0015349999612226384,ABCDEF,2.105636196807154",
+		})
+	defer cleanup()
+
+	dataChannel, errorChannel := runZedmon(t, fakeZedmonPath, true)
+	expectErrorWithSubstring(t, dataChannel, errorChannel, "bus voltage")
+}
+
+func TestBadPowerRecord(t *testing.T) {
+	fakeZedmonPath, cleanup := setupTest(
+		t,
+		[]string{
+			"2019/09/24 12:38:24 Time offset: 1569350976091349587ns ± 228725ns",
+			"2019/09/24 12:38:24 Starting report recording. Send ^C to stop.",
+		},
+		[]string{
+			"2928218183,0.0015349999612226384,13.717499693389982,ABCDEF",
+		})
+	defer cleanup()
+
+	dataChannel, errorChannel := runZedmon(t, fakeZedmonPath, true)
+	expectErrorWithSubstring(t, dataChannel, errorChannel, "power")
 }

@@ -60,7 +60,7 @@ type zCounterEvent struct {
 }
 
 type zTraceValue struct {
-	Voltage float32 `json:"voltage"`
+	Value float32 `json:"value"`
 }
 
 const zedmonPID = 2053461101 // "zedm" = 0x7a65546d = 2053461101.
@@ -95,18 +95,18 @@ func newZCompleteDurationEvent(name string, ts time.Time, dur time.Duration) zCo
 	}
 }
 
-func newZCounterEvents(ts time.Time, delta time.Duration, vShunt, vBus float32) []interface{} {
+func newZCounterEvents(ts time.Time, delta time.Duration, vShunt, vBus, power float32) []interface{} {
 	errStart := ts.Add(-delta / 2)
 	us := float64(ts.UnixNano()) / 1000
 	return []interface{}{
-		newZCompleteDurationEvent(fmt.Sprintf("shunt:%f;bus:%f", vShunt, vBus), errStart, delta),
+		newZCompleteDurationEvent(fmt.Sprintf("v_shunt:%f;v_bus:%f,power:%f", vShunt, vBus, power), errStart, delta),
 		zCounterEvent{
 			Type:      "C",
 			PID:       zedmonPID,
 			Name:      "Shunt voltage",
 			Timestamp: us,
 			Values: zTraceValue{
-				Voltage: vShunt,
+				Value: vShunt,
 			},
 		},
 		zCounterEvent{
@@ -115,7 +115,16 @@ func newZCounterEvents(ts time.Time, delta time.Duration, vShunt, vBus float32) 
 			Name:      "Bus voltage",
 			Timestamp: us,
 			Values: zTraceValue{
-				Voltage: vBus,
+				Value: vBus,
+			},
+		},
+		zCounterEvent{
+			Type:      "C",
+			PID:       zedmonPID,
+			Name:      "Power",
+			Timestamp: us,
+			Values: zTraceValue{
+				Value: power,
 			},
 		},
 	}
@@ -146,7 +155,7 @@ func (z *Zedmon) fail(err error) error {
 func (z *Zedmon) Run(fOffset, fDelta time.Duration, path string) (data chan []byte, errs chan error, started chan bool) {
 	data = make(chan []byte)
 	errs = make(chan error)
-	started = make(chan bool)
+	started = make(chan bool, 1)
 	go z.doRun(fOffset, fDelta, path, data, errs, started)
 	return data, errs, started
 }
@@ -181,7 +190,7 @@ func (z *Zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []b
 			errs <- z.fail(errors.New("Failed to parse CSV record"))
 			break
 		}
-		if len(strs) != 3 {
+		if len(strs) != 4 {
 			errs <- z.fail(errors.New("Unexpected CSV record length"))
 			break
 		}
@@ -192,20 +201,24 @@ func (z *Zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []b
 		}
 		vShunt, err := strconv.ParseFloat(strs[1], 64)
 		if err != nil {
-			errs <- z.fail(errors.New("Failed to parse voltage from CSV"))
+			errs <- z.fail(errors.New("Failed to parse shunt voltage from CSV"))
 			break
 		}
 		vBus, err := strconv.ParseFloat(strs[2], 64)
 		if err != nil {
-			errs <- z.fail(errors.New("Failed to parse voltage from CSV"))
+			errs <- z.fail(errors.New("Failed to parse bus voltage from CSV"))
 			break
 		}
-
+		power, err := strconv.ParseFloat(strs[3], 64)
+		if err != nil {
+			errs <- z.fail(errors.New("Failed to parse power from CSV"))
+			break
+		}
 		t := time.Unix(int64(ts/1000000), int64((ts%1000000)*1000)).Add(offset)
 		if t0 == (time.Time{}) {
 			t0 = t
 		}
-		events = append(events, newZCounterEvents(t, delta, float32(vShunt), float32(vBus))...)
+		events = append(events, newZCounterEvents(t, delta, float32(vShunt), float32(vBus), float32(power))...)
 	}
 	events[1] = newZCompleteDurationEvent("maxTimeSyncErr", t0, delta)
 
