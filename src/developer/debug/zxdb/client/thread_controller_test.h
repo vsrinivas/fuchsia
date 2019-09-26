@@ -19,8 +19,9 @@ class Thread;
 
 // This test harness automatically makes a process and a thread
 //
-// In the future we will probably want to add support for setting up a mock symbol system (this is
-// more involved).
+// Many tests can be written using this setup entirely. When symbols are needed they can be
+// injected into the MockModuleSymbols. If more elaborate symbol mocking is desired, a derived
+// class can override MakeModuleSymbols() and provide a custom implementation.
 class ThreadControllerTest : public RemoteAPITest {
  public:
   ThreadControllerTest();
@@ -33,15 +34,23 @@ class ThreadControllerTest : public RemoteAPITest {
 
   // Load address that a mock module with no symbols is loaded at. If a test needs an address into
   // an unsymbolized module, it should be between this value and kSymbolizedModuleAddress.
-  static const uint64_t kUnsymbolizedModuleAddress;
+  static constexpr uint64_t kUnsymbolizedModuleAddress = 0x4000000;
 
   // Load address that the mock module with symbols is loaded at. Addresses you want to support
   // symbol lookup for need to be larger than this.
-  static const uint64_t kSymbolizedModuleAddress;
+  static constexpr uint64_t kSymbolizedModuleAddress = 0x5000000;
 
-  // The mock module symbols. Addresses above kModuleAddress will be handled by this mock. Test code
-  // should inject the responses it wants into this mock.
+  // The mock module symbols. Addresses above kSymbolizedModuleAddress will be handled by this mock.
+  // Test code should inject the responses it wants into this mock. Derived classes can provide
+  // their own implementation by overriding MakeModuleSymbols().
   MockModuleSymbols* module_symbols() const { return module_symbols_.get(); }
+
+ protected:
+  // Makes the MockModuleSymbols object used for the symbolized module.
+  //
+  // Derived classes can also provide a derived MockModuleSymbols implementation to implement
+  // more complex custom behavior.
+  virtual fxl::RefPtr<MockModuleSymbols> MakeModuleSymbols();
 
  private:
   // Non-owning pointer to the injected fake process/thread.

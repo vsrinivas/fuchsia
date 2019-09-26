@@ -10,8 +10,8 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
-#include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -466,8 +466,7 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
       console->context().SetActiveFrameIdForThread(thread.get(), 0);
 
       // Tell the user where they are.
-      console->context().OutputThreadContext(thread.get(), debug_ipc::ExceptionType::kNone,
-                                             {});
+      console->context().OutputThreadContext(thread.get(), debug_ipc::ExceptionType::kNone, {});
     }
   });
 
@@ -734,8 +733,8 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
     Console* console = Console::get();
     if (show_source) {
       // Output the full source location.
-      console->context().OutputThreadContext(weak_thread.get(),
-                                             debug_ipc::ExceptionType::kNone, {});
+      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
+                                             {});
 
     } else {
       // Not current, just output the one-line description.
@@ -769,8 +768,8 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
 
     if (weak_thread) {
       // Thread is current, show current location.
-      console->context().OutputThreadContext(weak_thread.get(),
-                                             debug_ipc::ExceptionType::kNone, {});
+      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
+                                             {});
     }
   });
   return Err();
@@ -918,6 +917,10 @@ const char kStepHelp[] =
   Other threads in the process will be unchanged so will remain running or
   stopped.
 
+  If the thread ends up in a new function, that function's prologue will be
+  automatically skipped before the operation complets. An option to control
+  whether this happens can be added in the future if desired.
+
   See also "stepi".
 
 Stepping into specific functions
@@ -968,8 +971,8 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   };
 
   if (cmd.args().empty()) {
-    // Step over a single line.
-    auto controller = std::make_unique<StepThreadController>(StepMode::kSourceLine);
+    // Step for a single line.
+    auto controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
     controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {
