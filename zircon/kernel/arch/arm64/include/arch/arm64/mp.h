@@ -33,7 +33,7 @@ __BEGIN_CDECLS
 
 // TODO: add support for AFF2 and AFF3
 
-// Per cpu structure, pointed to by x18 while in kernel mode.
+// Per cpu structure, pointed to by a fixed register while in kernel mode.
 // Aligned on the maximum architectural cache line to avoid cache
 // line sharing between cpus.
 struct arm64_percpu {
@@ -51,10 +51,10 @@ void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
 void arch_register_mpid(uint cpu_id, uint64_t mpid);
 void arm64_init_percpu_early(void);
 
-// Use the x18 register to always point at the local cpu structure to allow fast access
+// Use the x15 register to always point at the local cpu structure to allow fast access
 // a per cpu structure.
 // Do not directly access fields of this structure
-register struct arm64_percpu* __arm64_percpu __asm("x18");
+register struct arm64_percpu* __arm64_percpu __asm("x15");
 
 static inline void arm64_write_percpu_ptr(struct arm64_percpu* percpu) { __arm64_percpu = percpu; }
 
@@ -66,12 +66,12 @@ static inline uint32_t arm64_read_percpu_u32(size_t offset) {
   // mark as volatile to force a read of the field to make sure
   // the compiler always emits a read when asked and does not cache
   // a copy between
-  __asm__ volatile("ldr %w[val], [x18, %[offset]]" : [ val ] "=r"(val) : [ offset ] "Ir"(offset));
+  __asm__ volatile("ldr %w[val], [x15, %[offset]]" : [ val ] "=r"(val) : [ offset ] "Ir"(offset));
   return val;
 }
 
 static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
-  __asm__("str %w[val], [x18, %[offset]]" ::[val] "r"(val), [ offset ] "Ir"(offset) : "memory");
+  __asm__("str %w[val], [x15, %[offset]]" ::[val] "r"(val), [ offset ] "Ir"(offset) : "memory");
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
