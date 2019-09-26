@@ -17,6 +17,7 @@ sdk://fidl/fuchsia.camera.common
 sdk://fidl/fuchsia.camera2
 sdk://fidl/fuchsia.camera2.hal
 sdk://fidl/fuchsia.castauth
+sdk://fidl/fuchsia.castconfig
 sdk://fidl/fuchsia.castsetup
 sdk://fidl/fuchsia.castsysteminfo
 sdk://fidl/fuchsia.cobalt
@@ -52,8 +53,8 @@ sdk://fidl/fuchsia.net.oldhttp
 sdk://fidl/fuchsia.netstack
 sdk://fidl/fuchsia.posix.socket
 sdk://fidl/fuchsia.process
-sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.scenic.scheduling
+sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.simplecamera
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sys.test
