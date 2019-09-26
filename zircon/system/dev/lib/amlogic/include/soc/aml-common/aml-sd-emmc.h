@@ -33,6 +33,7 @@ typedef struct {
   bool supports_dma;
   uint32_t min_freq;
   uint32_t max_freq;
+  bool version_3;
 
   struct {
     struct {

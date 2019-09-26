@@ -47,6 +47,7 @@ static aml_sd_emmc_config_t config = {
     // As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .min_freq = 400000,
     .max_freq = 120000000,
+    .version_3 = true,
     .clock_phases =
         {
             .init = {.core_phase = 3, .tx_phase = 0},

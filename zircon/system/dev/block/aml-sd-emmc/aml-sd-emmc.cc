@@ -159,10 +159,14 @@ uint32_t AmlSdEmmc::GetClkFreq(uint32_t clk_src) const {
   return AmlSdEmmcClock::kCtsOscinClkFreq;
 }
 
+zx_status_t AmlSdEmmc::WaitForInterrupt() {
+  zx::time timestamp;
+  return irq_.wait(&timestamp);
+}
+
 int AmlSdEmmc::IrqThread() {
   while (1) {
-    zx::time timestamp;
-    zx_status_t status = irq_.wait(&timestamp);
+    zx_status_t status = WaitForInterrupt();
     if (status == ZX_ERR_CANCELED) {
       return 0;
     } else if (status != ZX_OK) {
@@ -741,13 +745,7 @@ zx_status_t AmlSdEmmc::TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_patter
 
 bool AmlSdEmmc::TuningTestDelay(const uint8_t* blk_pattern, uint16_t blk_pattern_size,
                                 uint32_t adj_delay, uint32_t tuning_cmd_idx) {
-  AmlSdEmmcAdjust::Get()
-      .ReadFrom(&mmio_)
-      .set_adj_delay(adj_delay)
-      .set_adj_fixed(1)
-      .set_cali_rise(0)
-      .set_cali_enable(0)
-      .WriteTo(&mmio_);
+  SetAdjDelay(adj_delay);
   zx_status_t status = ZX_OK;
   size_t n;
   for (n = 0; n < AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS; n++) {
@@ -812,6 +810,16 @@ zx_status_t AmlSdEmmc::TuningCalculateBestWindow(const uint8_t* tuning_blk,
   return ZX_OK;
 }
 
+void AmlSdEmmc::SetAdjDelay(uint32_t adj_delay) {
+  if (board_config_.version_3) {
+    AmlSdEmmcAdjust::Get().ReadFrom(&mmio_).set_adj_delay(adj_delay).set_adj_fixed(1).WriteTo(
+        &mmio_);
+  } else {
+    AmlSdEmmcAdjustV2::Get().ReadFrom(&mmio_).set_adj_delay(adj_delay).set_adj_fixed(1).WriteTo(
+        &mmio_);
+  }
+}
+
 zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   const uint8_t* tuning_blk;
   uint16_t tuning_blk_size = 0;
@@ -872,13 +880,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     best_adj_delay = best_win_start + ((best_win_size - 1) / 2) + ((best_win_size - 1) % 2);
     best_adj_delay = best_adj_delay % clk_div;
   }
-  AmlSdEmmcAdjust::Get()
-      .ReadFrom(&mmio_)
-      .set_adj_delay(best_adj_delay)
-      .set_adj_fixed(1)
-      .set_cali_rise(0)
-      .set_cali_enable(0)
-      .WriteTo(&mmio_);
+  SetAdjDelay(best_adj_delay);
   return ZX_OK;
 }
 

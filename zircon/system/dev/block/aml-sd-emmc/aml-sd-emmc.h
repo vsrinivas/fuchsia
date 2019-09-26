@@ -28,14 +28,14 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
                      ddk::MmioPinnedBuffer pinned_mmio, aml_sd_emmc_config_t config,
                      zx::interrupt irq, const ddk::GpioProtocolClient& gpio)
       : AmlSdEmmcType(parent),
-        bti_(std::move(bti)),
         mmio_(std::move(mmio)),
+        bti_(std::move(bti)),
         pinned_mmio_(std::move(pinned_mmio)),
         reset_gpio_(gpio),
         irq_(std::move(irq)),
         board_config_(config) {}
 
-  ~AmlSdEmmc() {}
+  virtual ~AmlSdEmmc() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation
@@ -53,9 +53,20 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
+  // Visible for tests
+  zx_status_t Init();
+  void set_board_config(const aml_sd_emmc_config_t& board_config) { board_config_ = board_config; }
+
  protected:
   // Visible for tests
   zx_status_t Bind();
+
+  virtual zx_status_t WaitForInterrupt();
+
+  ddk::MmioBuffer mmio_;
+  fbl::Mutex mtx_;
+  // cur pending req
+  sdmmc_req_t* cur_req_ TA_GUARDED(mtx_) = nullptr;
 
  private:
   enum {
@@ -78,6 +89,8 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t TuningCalculateBestWindow(const uint8_t* tuning_blk, uint16_t tuning_blk_size,
                                         uint32_t cur_clk_div, int* best_start, uint32_t* best_size,
                                         uint32_t tuning_cmd_idx);
+  void SetAdjDelay(uint32_t adj_delay);
+
   void ConfigureDefaultRegs();
   void SetupCmdDesc(sdmmc_req_t* req, aml_sd_emmc_desc_t** out_desc);
   // Prepares the VMO and sets up the data descriptors
@@ -90,23 +103,18 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
                              aml_sd_emmc_desc_t** last_desc);
   zx_status_t FinishReq(sdmmc_req_t* req);
   int IrqThread();
-  zx_status_t Init();
 
   zx::bti bti_;
 
-  ddk::MmioBuffer mmio_;
   ddk::MmioPinnedBuffer pinned_mmio_;
   const ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
-  const aml_sd_emmc_config_t board_config_;
+  aml_sd_emmc_config_t board_config_;
 
   thrd_t irq_thread_ = {};
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
   sync_completion_t req_completion_;
-  fbl::Mutex mtx_;
-  // cur pending req
-  sdmmc_req_t* cur_req_ TA_GUARDED(mtx_);
   uint32_t max_freq_, min_freq_;
 };
 

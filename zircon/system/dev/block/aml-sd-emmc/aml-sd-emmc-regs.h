@@ -8,8 +8,10 @@
 #include <zircon/types.h>
 
 constexpr uint32_t kAmlSdEmmcClockOffset = 0x00;
+constexpr uint32_t kAmlSdEmmcDelayV2Offset = 0x04;
 constexpr uint32_t kAmlSdEmmcDelay1Offset = 0x04;
 constexpr uint32_t kAmlSdEmmcDelay2Offset = 0x08;
+constexpr uint32_t kAmlSdEmmcAdjustV2Offset = 0x08;
 constexpr uint32_t kAmlSdEmmcAdjustOffset = 0x0c;
 constexpr uint32_t kAmlSdEmmcCaloutOffset = 0x10;
 constexpr uint32_t kAmlSdEmmcCaloutV2Offset = 0x14;
@@ -181,6 +183,11 @@ class AmlSdEmmcCmdResp3 : public hwreg::RegisterBase<AmlSdEmmcCmdResp3, uint32_t
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcCmdResp3>(kAmlSdEmmcCmdResp3Offset); }
 };
 
+class AmlSdEmmcDelayV2 : public hwreg::RegisterBase<AmlSdEmmcDelayV2, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelayV2>(kAmlSdEmmcDelayV2Offset); }
+};
+
 class AmlSdEmmcDelay1 : public hwreg::RegisterBase<AmlSdEmmcDelay1, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay1>(kAmlSdEmmcDelay1Offset); }
@@ -263,6 +270,20 @@ class AmlSdEmmcStart : public hwreg::RegisterBase<AmlSdEmmcStart, uint32_t> {
 class AmlSdEmmcAdjust : public hwreg::RegisterBase<AmlSdEmmcAdjust, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcAdjust>(kAmlSdEmmcAdjustOffset); }
+  DEF_FIELD(11, 8, cali_sel);
+  DEF_BIT(12, cali_enable);
+  DEF_BIT(13, adj_fixed);
+  DEF_BIT(14, cali_rise);
+  DEF_BIT(15, ds_enable);
+  DEF_FIELD(21, 16, adj_delay);
+  DEF_BIT(22, adj_auto);
+};
+
+class AmlSdEmmcAdjustV2 : public hwreg::RegisterBase<AmlSdEmmcAdjustV2, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcAdjustV2>(kAmlSdEmmcAdjustV2Offset); }
+  DEF_FIELD(3, 0, dly_8);
+  DEF_FIELD(7, 4, dly_9);
   DEF_FIELD(11, 8, cali_sel);
   DEF_BIT(12, cali_enable);
   DEF_BIT(13, adj_fixed);

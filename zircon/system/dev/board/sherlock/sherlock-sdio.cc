@@ -74,6 +74,7 @@ constexpr aml_sd_emmc_config_t sd_emmc_config = {
     .supports_dma = false,
     .min_freq = 500'000,      // 500KHz
     .max_freq = 208'000'000,  // 208MHz
+    .version_3 = true,
     .clock_phases =
         {
             .init = {.core_phase = 3, .tx_phase = 0},

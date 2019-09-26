@@ -45,6 +45,7 @@ static aml_sd_emmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
     .max_freq = 120000000,
+    .version_3 = false,
     .clock_phases =
         {
             .init = {.core_phase = 2, .tx_phase = 0},
