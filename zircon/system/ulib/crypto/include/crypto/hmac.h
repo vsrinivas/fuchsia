@@ -16,7 +16,7 @@
 // |crypto::hmac| is a block-sized hash-bashed message authentication code.
 namespace crypto {
 
-class HMAC final {
+class __EXPORT HMAC final {
  public:
   enum Flags : uint16_t {
     ALLOW_WEAK_KEY = 0x0001,

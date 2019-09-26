@@ -19,7 +19,7 @@
 // call to |Secret::Randomize|.
 namespace crypto {
 
-class Secret final {
+class __EXPORT Secret final {
  public:
   Secret();
   ~Secret();

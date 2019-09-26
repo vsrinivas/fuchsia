@@ -19,6 +19,7 @@ namespace crypto {
 namespace digest {
 
 // Gets a pointer to the opaque crypto implementation of the digest algorithm.
+__EXPORT
 zx_status_t GetDigest(Algorithm digest, uintptr_t* out) {
   ZX_DEBUG_ASSERT(out);
   const EVP_MD* md;
@@ -41,6 +42,7 @@ zx_status_t GetDigest(Algorithm digest, uintptr_t* out) {
 }
 
 // Gets the minimum number of bytes needed for the digest produced by the given |version|.
+__EXPORT
 zx_status_t GetDigestLen(Algorithm digest, size_t* out) {
   zx_status_t rc;
 

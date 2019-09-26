@@ -20,7 +20,7 @@
 // used for at most 2^64 - 1 operations.
 namespace crypto {
 
-class AEAD final {
+class __EXPORT AEAD final {
  public:
   // Algorithm enumerates the supported secret key ciphers.
   enum Algorithm {

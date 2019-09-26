@@ -19,7 +19,7 @@
 // plain texts, meaning a given key and IV can be used for at most 2^64 - 1 operations.
 namespace crypto {
 
-class Cipher final {
+class __EXPORT Cipher final {
  public:
   // Algorithm enumerates the supported secret key ciphers.
   enum Algorithm {

@@ -18,7 +18,7 @@
 // |Bytes::Randomize|.
 namespace crypto {
 
-class Bytes final {
+class __EXPORT Bytes final {
  public:
   Bytes();
   ~Bytes();

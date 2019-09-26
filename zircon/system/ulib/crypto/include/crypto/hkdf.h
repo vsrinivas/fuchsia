@@ -21,7 +21,7 @@
 // |Init| and |Derive|.
 namespace crypto {
 
-class HKDF final {
+class __EXPORT HKDF final {
  public:
   enum Flags : uint16_t {
     ALLOW_WEAK_KEY = 0x0001,
