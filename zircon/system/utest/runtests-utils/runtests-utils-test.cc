@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
-#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <memory>
+#include <regex>
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
@@ -527,7 +527,6 @@ bool RunTestsWithArguments() {
   END_TEST;
 }
 
-/* This test is flaking and causing roller blocks. See fxb/37248
 bool RunTestsCreatesOutputFile() {
   BEGIN_TEST;
 
@@ -555,7 +554,7 @@ bool RunTestsCreatesOutputFile() {
   fclose(output_file);
 
   END_TEST;
-}*/
+}
 
 bool DiscoverAndRunTestsBasicPass() {
   BEGIN_TEST;
@@ -836,7 +835,7 @@ RUN_TEST(DiscoverTestsInListFileWithTrailingWhitespace)
 END_TEST_CASE(DiscoverTestsInListFile)
 
 BEGIN_TEST_CASE(RunTests)
-//RUN_TEST(RunTestsCreatesOutputFile)
+RUN_TEST(RunTestsCreatesOutputFile)
 RUN_TEST_MEDIUM(RunTestsWithVerbosity)
 RUN_TEST_MEDIUM(RunTestsWithArguments)
 END_TEST_CASE(RunTests)

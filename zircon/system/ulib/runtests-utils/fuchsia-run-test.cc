@@ -101,22 +101,22 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   uint64_t size;
   status = data.file_data.get_size(&size);
   if (status != ZX_OK) {
-      fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
-              name, data.sink_name.c_str(), zx_status_get_string(status));
-      return {};
+    fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n", name,
+            data.sink_name.c_str(), zx_status_get_string(status));
+    return {};
   }
 
   fzl::VmoMapper mapper;
   if (size > 0) {
     zx_status_t status = mapper.Map(data.file_data, 0, size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
-              name, data.sink_name.c_str(), zx_status_get_string(status));
+      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name,
+              data.sink_name.c_str(), zx_status_get_string(status));
       return {};
     }
   } else {
-    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
-            name, data.sink_name.c_str());
+    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n", name,
+            data.sink_name.c_str());
   }
 
   char filename[ZX_MAX_NAME_LEN];
@@ -238,8 +238,11 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   zx_status_t status;
   zx::channel svc_proxy_req;
   fbl::RefPtr<ServiceProxyDir> proxy_dir;
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
+  // This must be declared after the vfs so that its destructor gets called before the vfs
+  // destructor. We do this explicitly at the end of the function in the non-error case, but in
+  // error cases we just rely on the destructors to clean things up.
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<debugdata::DebugData> debug_data;
 
   // Export the root namespace.
