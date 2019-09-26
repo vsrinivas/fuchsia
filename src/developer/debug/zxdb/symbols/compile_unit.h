@@ -22,8 +22,8 @@ class CompileUnit final : public Symbol {
   const std::string& name() const { return name_; }
   void set_name(std::string name) { name_ = name; }
 
-  // Compilation units have a lot of other stuff which we currently have no
-  // need for. These can be added here as needed.
+  // Compilation units have a lot of other stuff which we currently have no need for. These can be
+  // added here as needed.
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);

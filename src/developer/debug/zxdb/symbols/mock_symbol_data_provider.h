@@ -25,9 +25,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   void set_bp(uint64_t bp) { bp_ = bp; }
   void set_cfa(uint64_t cfa) { cfa_ = cfa; }
 
-  // Adds the given canned result for the given register. Set synchronous if
-  // the register contents should be synchronously available, false if it
-  // should require a callback to retrieve.
+  // Adds the given canned result for the given register. Set synchronous if the register contents
+  // should be synchronously available, false if it should require a callback to retrieve.
   //
   // Any registers not set will be synchronously reported as unknown.
   void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint64_t value);

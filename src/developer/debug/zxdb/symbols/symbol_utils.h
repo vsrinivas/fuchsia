@@ -12,9 +12,8 @@
 
 namespace zxdb {
 
-// This helper function gets the scope for the symbol. This includes class and
-// namespace names, but does not include the name of the symbol itself. Use
-// Symbol::GetFullName() for that.
+// This helper function gets the scope for the symbol. This includes class and namespace names, but
+// does not include the name of the symbol itself. Use Symbol::GetFullName() for that.
 Identifier GetSymbolScopePrefix(const Symbol* symbol);
 
 }  // namespace zxdb

@@ -32,8 +32,7 @@ struct ModuleSymbolStatus {
   // Local file name with the symbols if the symbols were loaded.
   std::string symbol_file;
 
-  // Represents a handle to the actual symbols.
-  // nullptr if the symbols are not loaded.
+  // Represents a handle to the actual symbols. nullptr if the symbols are not loaded.
   LoadedModuleSymbols* symbols = nullptr;
 };
 

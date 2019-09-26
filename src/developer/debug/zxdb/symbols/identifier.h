@@ -32,13 +32,12 @@ class IdentifierComponent {
 
 // An identifier consisting of a sequence of opaque names.
 //
-// Code in the symbols directory must use this identifier type since no
-// assumptions can be made about what the compiler has generated in the symbol
-// file. Some symbols like lambdas can have compiler-internally-generated names
-// which are not parseable in the language of the compilation unit.
+// Code in the symbols directory must use this identifier type since no assumptions can be made
+// about what the compiler has generated in the symbol file. Some symbols like lambdas can have
+// compiler-internally-generated names which are not parseable in the language of the compilation
+// unit.
 //
-// See also "ParsedIdentifier" in the "expr" library which adds more parsing
-// when possible.
+// See also "ParsedIdentifier" in the "expr" library which adds more parsing when possible.
 using Identifier = IdentifierBase<IdentifierComponent>;
 
 }  // namespace zxdb

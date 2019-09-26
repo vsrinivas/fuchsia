@@ -29,8 +29,8 @@ class Binary;
 
 namespace zxdb {
 
-// This class loads the unstripped zxdb_symbol_test module with the
-// required LLDB classes for writing symbol testing.
+// This class loads the unstripped zxdb_symbol_test module with the required LLDB classes for
+// writing symbol testing.
 class TestSymbolModule {
  public:
   // These constants identify locations in the symbol test files.
@@ -54,23 +54,22 @@ class TestSymbolModule {
   TestSymbolModule();
   ~TestSymbolModule();
 
-  // Returns the name of the .so file used by this class for doing tests with
-  // it that involve different types of setup.
+  // Returns the name of the .so file used by this class for doing tests with it that involve
+  // different types of setup.
   static std::string GetTestFileName();
 
-  // Returns the checked in .so used for line testing. As the mapping changes
-  // between architectures, the file is compiled offline and remains the same.
+  // Returns the checked in .so used for line testing. As the mapping changes between architectures,
+  // the file is compiled offline and remains the same.
   static std::string GetCheckedInTestFileName();
 
   // Returns the Build ID for the checked in .so returned by GetCheckedInTestFileName.
   static std::string GetCheckedInTestFileBuildID();
 
-  // Returns a stripped version of the file returned by
-  // GetCheckedInTestFileName().
+  // Returns a stripped version of the file returned by GetCheckedInTestFileName().
   static std::string GetStrippedCheckedInTestFileName();
 
-  // Loads the test file. On failure, returns false and sets the given error
-  // message to be something helpful.
+  // Loads the test file. On failure, returns false and sets the given error message to be something
+  // helpful.
   bool Load(std::string* err_msg);
 
   // Loads a file at the given path. See Load().
@@ -82,9 +81,8 @@ class TestSymbolModule {
   llvm::DWARFContext* context() { return context_.get(); }
   llvm::DWARFUnitVector& compile_units() { return compile_units_; }
 
-  // Helper to convert symbol names to vectors of components without using the
-  // "expr" library. This just splits on "::" which handles most cases but
-  // not elaborate templates.
+  // Helper to convert symbol names to vectors of components without using the "expr" library. This
+  // just splits on "::" which handles most cases but not elaborate templates.
   static Identifier SplitName(std::string_view input);
 
  private:

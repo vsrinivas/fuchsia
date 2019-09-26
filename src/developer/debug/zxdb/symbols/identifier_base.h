@@ -16,14 +16,13 @@ namespace zxdb {
 // can still include class or namespace qualifications.
 enum class IdentifierQualification { kGlobal, kRelative };
 
-// Base class for identifiers that have different types of components.
-// Different languages might want to represent different aspects of an
-// identifier. This class encapsulates the core hierarchical part of an
-// identifier.
+// Base class for identifiers that have different types of components. Different languages might
+// want to represent different aspects of an identifier. This class encapsulates the core
+// hierarchical part of an identifier.
 //
-// Code in the symbols directory must use "Identifier" which contains opaque
-// strings as components. The "expr" library adds a "ParsedIdentifier" which
-// has more C++-aware parsing of template types. See those classes for more.
+// Code in the symbols directory must use "Identifier" which contains opaque strings as components.
+// The "expr" library adds a "ParsedIdentifier" which has more C++-aware parsing of template types.
+// See those classes for more.
 //
 // The ComponentType must be copyable and moveable and implement:
 //  - Construction from simple name:
@@ -40,15 +39,14 @@ class IdentifierBase {
 
   explicit IdentifierBase(Qualification qual = Qualification::kRelative) : qualification_(qual) {}
 
-  // Makes an identifier from a single component. Without the qualification
-  // means relative.
+  // Makes an identifier from a single component. Without the qualification means relative.
   explicit IdentifierBase(ComponentType comp)
       : qualification_(Qualification::kRelative), components_({std::move(comp)}) {}
   IdentifierBase(Qualification qual, ComponentType comp)
       : qualification_(qual), components_({std::move(comp)}) {}
 
-  // Construction of a relative identifier from a simple single-name string.
-  // This string is passed to the underlying component's constructor.
+  // Construction of a relative identifier from a simple single-name string. This string is passed
+  // to the underlying component's constructor.
   IdentifierBase(const std::string& name)
       : qualification_(Qualification::kRelative), components_({ComponentType(name)}) {}
 
@@ -79,11 +77,11 @@ class IdentifierBase {
   Qualification qualification() const { return qualification_; }
   void set_qualification(Qualification q) { qualification_ = q; }
 
-  // Returns a new identifier that's the scope of this one. The scope is
-  // everything but the last component. The qualification remains unchanged.
+  // Returns a new identifier that's the scope of this one. The scope is everything but the last
+  // component. The qualification remains unchanged.
   //
-  // If there is only one component, the resulting identifier will be empty
-  // (still leaving the qualification unchanged). Examples:
+  // If there is only one component, the resulting identifier will be empty (still leaving the
+  // qualification unchanged). Examples:
   //   "foo::bar<int>::baz"   -> "foo::bar<int>"
   //   "::foo::bar::baz" -> "::foo::bar"
   //   "foo"             -> ""
@@ -103,9 +101,9 @@ class IdentifierBase {
   // Returns a form for debugging where the parsing is more visible.
   std::string GetDebugName() const { return GetName(true); }
 
-  // Returns the separator string for components. This is currently always "::"
-  // but is exposed here as a getter to avoid hardcoding it everywhere and to
-  // allow us to do language-specific separators in the future.
+  // Returns the separator string for components. This is currently always "::" but is exposed here
+  // as a getter to avoid hardcoding it everywhere and to allow us to do language-specific
+  // separators in the future.
   const char* GetSeparator() const { return "::"; }
 
  private:

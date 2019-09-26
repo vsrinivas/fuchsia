@@ -30,18 +30,17 @@ struct ModuleSymbolStatus;
 struct ResolveOptions;
 class TargetSymbols;
 
-// Main client interface for querying process symbol information. This requires
-// a running process and returns real addresses. See also TargetSymbols.
+// Main client interface for querying process symbol information. This requires a running process
+// and returns real addresses. See also TargetSymbols.
 //
-// This class is a collection for modules. As such, it's not very useful to
-// mock. Instead, mock the ModuleSymbols and add them to this ProcessSymbols
-// class (see ProcessSymbolsTestSetup helper class).
+// This class is a collection for modules. As such, it's not very useful to mock. Instead, mock the
+// ModuleSymbols and add them to this ProcessSymbols class (see ProcessSymbolsTestSetup helper
+// class).
 class ProcessSymbols {
  public:
-  // A simple observer interface. This allows ProcessImpl to expose these
-  // in the ProcessObserver observer API. If the API here gets too much more
-  // complicated, it could be we want a separate public ProcessSymbolsObserver
-  // class that consumers need to register for explicitly.
+  // A simple observer interface. This allows ProcessImpl to expose these in the ProcessObserver
+  // observer API. If the API here gets too much more complicated, it could be we want a separate
+  // public ProcessSymbolsObserver class that consumers need to register for explicitly.
   //
   // See the corresponding functions in ProcessObserver for docs.
   class Notifications {
@@ -63,41 +62,38 @@ class ProcessSymbols {
   // Replaces all modules with the given list.
   void SetModules(const std::vector<debug_ipc::Module>& modules);
 
-  // Try to load the symbols for a given build ID again, presumably because we
-  // have downloaded them and now expect the index to hit.
+  // Try to load the symbols for a given build ID again, presumably because we have downloaded them
+  // and now expect the index to hit.
   void RetryLoadBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
-  // Appends the ModuleSymbols implementation to the current list (unlike
-  // SetModules which does a replacement). This is typically used to populate
-  // a ProcessSymbols with one or more MockModuleSymbols for testing purposes.
+  // Appends the ModuleSymbols implementation to the current list (unlike SetModules which does a
+  // replacement). This is typically used to populate a ProcessSymbols with one or more
+  // MockModuleSymbols for testing purposes.
   void InjectModuleForTesting(const std::string& name, const std::string& build_id,
                               std::unique_ptr<LoadedModuleSymbols> mod_sym);
 
   // Returns statistics on the currently-loaded modules.
   std::vector<ModuleSymbolStatus> GetStatus() const;
 
-  // Returns the information for all the modules that were loaded with
-  // symbol information.
+  // Returns the information for all the modules that were loaded with symbol information.
   std::vector<const LoadedModuleSymbols*> GetLoadedModuleSymbols() const;
 
-  // Converts the given InputLocation into one or more locations. The input
-  // can match zero, one, or many locations.
+  // Converts the given InputLocation into one or more locations. The input can match zero, one, or
+  // many locations.
   //
-  // If symbolize is true, the results will be symbolized, otherwise the
-  // output locations will be regular addresses (this will be slightly faster).
+  // If symbolize is true, the results will be symbolized, otherwise the output locations will be
+  // regular addresses (this will be slightly faster).
   std::vector<Location> ResolveInputLocation(
       const InputLocation& input_location, const ResolveOptions& options = ResolveOptions()) const;
 
-  // Computes the line that corresponds to the given address. Unlike
-  // ResolveInputLocation (which just returns the current source line), this
-  // returns the entire set of contiguous line table entries with code ranges
-  // with the same line as the given address.
+  // Computes the line that corresponds to the given address. Unlike ResolveInputLocation (which
+  // just returns the current source line), this returns the entire set of contiguous line table
+  // entries with code ranges with the same line as the given address.
   LineDetails LineDetailsForAddress(uint64_t address) const;
 
-  // Returns true if the code location is inside a module where there are
-  // symbols loaded. If we did something like index ELF exports, those wouldn't
-  // count. "Symbols loaded" here means there is real DWARF debugging
-  // information available.
+  // Returns true if the code location is inside a module where there are symbols loaded. If we did
+  // something like index ELF exports, those wouldn't count. "Symbols loaded" here means there is
+  // real DWARF debugging information available.
   bool HaveSymbolsLoadedForModuleAt(uint64_t address) const;
 
  private:
@@ -108,31 +104,28 @@ class ProcessSymbols {
 
     // MAY BE NULL if the symbols could not be loaded.
     //
-    // If this is ever extended to exist even if DWARF symbols can not be
-    // loaded (like we index ELF exports), be sure to update
-    // HaveSymbolsLoadedForModuleAt().
+    // If this is ever extended to exist even if DWARF symbols can not be loaded (like we index ELF
+    // exports), be sure to update HaveSymbolsLoadedForModuleAt().
     std::unique_ptr<LoadedModuleSymbols> symbols;
   };
 
   // Update the symbols in TargetSymbols to match the contents of modules_.
   void DoRefreshTargetSymbols();
 
-  // Creates the ModuleInfo structure, attempts to load the symbols, and
-  // updates the modules_ list for this process. *err will be filled with the
-  // success code of symbol loading (the function will save the ModuleInfo
-  // either way).
+  // Creates the ModuleInfo structure, attempts to load the symbols, and updates the modules_ list
+  // for this process. *err will be filled with the success code of symbol loading (the function
+  // will save the ModuleInfo either way).
   //
-  // This class issues no notifications, the caller needs to do that. Just
-  // because there's no error doesn't necessarily mean the symbols have been
-  // loaded, since some symbols might be expected to be not present.
+  // This class issues no notifications, the caller needs to do that. Just because there's no error
+  // doesn't necessarily mean the symbols have been loaded, since some symbols might be expected to
+  // be not present.
   ModuleInfo* SaveModuleInfo(const debug_ipc::Module& module, Err* symbol_load_err);
 
-  // Equality comparison for the two types of modules. This compares load
-  // address and build id.
+  // Equality comparison for the two types of modules. This compares load address and build id.
   static bool RefersToSameModule(const debug_ipc::Module& a, const ModuleInfo& b);
 
-  // Looks up the given address and returns the module it's part of. Returns
-  // null if the address is out-of-range.
+  // Looks up the given address and returns the module it's part of. Returns null if the address is
+  // out-of-range.
   const ModuleInfo* InfoForAddress(uint64_t address) const;
 
   Notifications* const notifications_;   // Non-owning.

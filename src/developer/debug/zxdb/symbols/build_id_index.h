@@ -15,12 +15,11 @@
 
 namespace zxdb {
 
-// This class maintains an index of build ID to local file path for files
-// that may have symbols in them.
+// This class maintains an index of build ID to local file path for files that may have symbols in
+// them.
 //
-// It can get files from different sources: an explicit ID mapping file, an
-// explicitly given elf file path, or a directory which it will scan for ELF
-// files and index.
+// It can get files from different sources: an explicit ID mapping file, an explicitly given elf
+// file path, or a directory which it will scan for ELF files and index.
 class BuildIDIndex {
  public:
   struct MapEntry {
@@ -42,27 +41,24 @@ class BuildIDIndex {
     information_callback_ = std::move(fn);
   }
 
-  // Returns the local file name for the given build ID, or the empty string
-  // if there is no match. The file type specifies whether we need the debug
-  // info, or the actual binary.
+  // Returns the local file name for the given build ID, or the empty string if there is no match.
+  // The file type specifies whether we need the debug info, or the actual binary.
   std::string FileForBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
-  // Manually inserts a mapping of a build ID to a file name. The file is
-  // probed for its build ID and type, and if not found or not a valid ELF
-  // file, it is ignored and we return false.
+  // Manually inserts a mapping of a build ID to a file name. The file is probed for its build ID
+  // and type, and if not found or not a valid ELF file, it is ignored and we return false.
   bool AddOneFile(const std::string& file_name);
 
   // Manually inserts a mapping of a build ID to a file name with the given type.
   void AddBuildIDMappingForTest(const std::string& build_id, const std::string& file_name,
                                 DebugSymbolFileType file_type);
 
-  // Adds an "ids.txt" file that maps build ID to file paths.
-  // Will verify that the path is already there and ignore it if so.
+  // Adds an "ids.txt" file that maps build ID to file paths. Will verify that the path is already
+  // there and ignore it if so.
   void AddBuildIDMappingFile(const std::string& id_file_name);
 
-  // Adds a file or directory to the symbol search index. If the path is a
-  // file this class will try to parse it as an ELF file and add it to the
-  // index if it is.
+  // Adds a file or directory to the symbol search index. If the path is a file this class will try
+  // to parse it as an ELF file and add it to the index if it is.
   //
   // If the path is a directory, all files in that directory will be indexed.
   //
@@ -80,9 +76,8 @@ class BuildIDIndex {
   // Clears all cached build IDs. They will be reloaded when required.
   void ClearCache();
 
-  // Parses a build ID mapping file (ids.txt). This is a separate static
-  // function for testing purposes. The results are added to the output.
-  // Returns the number of items loaded.
+  // Parses a build ID mapping file (ids.txt). This is a separate static function for testing
+  // purposes. The results are added to the output. Returns the number of items loaded.
   static int ParseIDs(const std::string& input, const std::filesystem::path& containing_dir,
                       IDMap* output);
 
@@ -104,10 +99,9 @@ class BuildIDIndex {
   // Adds all the mappings from the given file or directory to the index.
   void IndexOneSourcePath(const std::string& path);
 
-  // Indexes one ELF file and adds it to the index. Returns true if it was an
-  // ELF file and it was added to the index. If preserve is set to true, the
-  // indexing result will be cached in manual_mappings_, so it will remain
-  // across cache clears.
+  // Indexes one ELF file and adds it to the index. Returns true if it was an ELF file and it was
+  // added to the index. If preserve is set to true, the indexing result will be cached in
+  // manual_mappings_, so it will remain across cache clears.
   bool IndexOneSourceFile(const std::string& file_path, bool preserve = false);
 
   // Search the repo sources.
@@ -131,12 +125,12 @@ class BuildIDIndex {
   // Maintains the logs of how many symbols were indexed for each location.
   StatusList status_;
 
-  // Indicates if build_id_to_files_ is up-to-date. This is necessary to
-  // disambiguate whether an empty cache means "not scanned" or "nothing found".
+  // Indicates if build_id_to_files_ is up-to-date. This is necessary to disambiguate whether an
+  // empty cache means "not scanned" or "nothing found".
   bool cache_dirty_ = true;
 
-  // Manually-added build ID mappings. This is not cleared when the cache is
-  // cleared, and these are added to the mappings when the cache is rebuilt.
+  // Manually-added build ID mappings. This is not cleared when the cache is cleared, and these are
+  // added to the mappings when the cache is rebuilt.
   IDMap manual_mappings_;
 
   // Index of build IDs to local file paths.

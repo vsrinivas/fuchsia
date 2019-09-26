@@ -13,11 +13,10 @@ namespace zxdb {
 
 class SymbolContext;
 
-// Describes the location of a value. A value can be in different locations
-// depending on what the value of the IP is at which is represented as a series
-// of ranges. The location for the value within those ranges is described as
-// an opaque array of bytes (this is the DWARF expression which will evaluate
-// to the value).
+// Describes the location of a value. A value can be in different locations depending on what the
+// value of the IP is at which is represented as a series of ranges. The location for the value
+// within those ranges is described as an opaque array of bytes (this is the DWARF expression which
+// will evaluate to the value).
 //
 // In DWARF, simple variables that are always valid look like this:
 //   DW_AT_location (DW_OP_reg5 RDI)
@@ -29,8 +28,8 @@ class SymbolContext;
 class VariableLocation {
  public:
   struct Entry {
-    // These addresses are relative to the module that generated the symbol.
-    // A symbol context is required to compare to physical addresses.
+    // These addresses are relative to the module that generated the symbol. A symbol context is
+    // required to compare to physical addresses.
     //
     // These will be 0,0 for a range that's always valid.
     uint64_t begin = 0;  // First address.
@@ -39,15 +38,14 @@ class VariableLocation {
     // Returns whether this entry matches the given physical IP.
     bool InRange(const SymbolContext& symbol_context, uint64_t ip) const;
 
-    // The DWARF expression that evaluates to the result. Evaluate with the
-    // DwarfExprEval object.
+    // The DWARF expression that evaluates to the result. Evaluate with the DwarfExprEval object.
     std::vector<uint8_t> expression;
   };
 
   VariableLocation();
 
-  // Constructs a Location with a single location valid for all address ranges,
-  // with the program contained in the given buffer.
+  // Constructs a Location with a single location valid for all address ranges, with the program
+  // contained in the given buffer.
   VariableLocation(const uint8_t* data, size_t size);
 
   // Constructs with an extracted array of Entries.
@@ -60,13 +58,12 @@ class VariableLocation {
 
   const std::vector<Entry>& locations() const { return locations_; }
 
-  // Returns the Entry that corresponds to the given IP, or nullptr if none
-  // matched.
+  // Returns the Entry that corresponds to the given IP, or nullptr if none matched.
   const Entry* EntryForIP(const SymbolContext& symbol_context, uint64_t ip) const;
 
  private:
-  // The location list. The DWARF spec explicitly allows for ranges to overlap
-  // which means the value can be retrieved from either location.
+  // The location list. The DWARF spec explicitly allows for ranges to overlap which means the value
+  // can be retrieved from either location.
   std::vector<Entry> locations_;
 };
 
