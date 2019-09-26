@@ -166,10 +166,14 @@ where
     async fn get_app_access_token(
         &self,
         credential: String,
-        client_id: Option<String>,
+        mut client_id: Option<String>,
         scopes: Vec<String>,
     ) -> AuthProviderResult<AuthToken> {
-        if credential.is_empty() || client_id.as_ref().map(String::is_empty) == Some(true) {
+        // TODO(fxb/37188): Disallow use of Some(empty string)
+        if client_id.as_ref().map(String::is_empty) == Some(true) {
+            client_id.take();
+        }
+        if credential.is_empty() {
             return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
         }
 
@@ -797,6 +801,24 @@ mod tests {
                 expires_in: 3600,
             })
         );
+
+        // Accept empty string client_id as if it means default - see fxb/37188
+        let http_result = "{\"access_token\": \"test-access-token\", \"expires_in\": 3600}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let (result_status, result_token) = auth_provider
+            .get_app_access_token("credential", Some(""), &mut vec![].into_iter())
+            .await?;
+        assert_eq!(result_status, AuthProviderStatus::Ok);
+        assert_eq!(
+            result_token.unwrap(),
+            Box::new(AuthToken {
+                token_type: TokenType::AccessToken,
+                token: "test-access-token".to_string(),
+                expires_in: 3600,
+            })
+        );
+
         Ok(())
     }
 
