@@ -7,13 +7,13 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <type_traits>
+#include <utility>
+
 #include <lockdep/common.h>
 #include <lockdep/lock_class.h>
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
-
-#include <type_traits>
-#include <utility>
 
 namespace lockdep {
 
@@ -126,7 +126,8 @@ class __TA_SCOPED_CAPABILITY
   // resolution when the underlying lock type is not nestable.
   template <typename Lockable, typename... Args,
             typename = internal::EnableIfNotNestable<Lockable, LockType>>
-  Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
+  __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE(lock)
+      __TA_ACQUIRE(lock->capability())
       : validator_{lock->id()}, lock_{&lock->lock()}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
   }
@@ -135,8 +136,8 @@ class __TA_SCOPED_CAPABILITY
   // resolution when the underlying lock type is nestable.
   template <typename Lockable, typename... Args,
             typename = internal::EnableIfNestable<Lockable, LockType>>
-  Guard(Lockable* lock, uintptr_t order, Args&&... state_args) __TA_ACQUIRE(lock)
-      __TA_ACQUIRE(lock->capability())
+  __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
+      __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
       : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
 
   // Destructor that automatically releases the lock if not already released.
@@ -181,7 +182,7 @@ class __TA_SCOPED_CAPABILITY
   // Example:
   //  Guard<fbl::Mutex> guard{AdoptLock, std::move(rvalue_arugment)};
   //
-  Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE(other.lock_)
+  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE(other.lock_)
       : validator_{std::move(other.validator_)},
         lock_{other.lock_},
         state_{std::move(other.state_)} {
@@ -237,7 +238,8 @@ class __TA_SCOPED_CAPABILITY
   // Ordered lock constructor used by the nestable lock constructor above and
   // by GuardMultiple.
   template <typename Lockable, typename... Args>
-  Guard(OrderedLockTag, Lockable* lock, uintptr_t order, Args&&... state_args) __TA_ACQUIRE(lock)
+  __WARN_UNUSED_CONSTRUCTOR Guard(OrderedLockTag, Lockable* lock, uintptr_t order,
+                                  Args&&... state_args) __TA_ACQUIRE(lock)
       __TA_ACQUIRE(lock->capability())
       : validator_{lock->id(), order},
         lock_{&lock->lock()},
@@ -297,7 +299,7 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // resolution when the underlying lock type is not nestable.
   template <typename Lockable, typename... Args,
             typename = internal::EnableIfNotNestable<Lockable, LockType>>
-  Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
+  __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
       __TA_ACQUIRE_SHARED(lock->capability())
       : validator_{lock->id()}, lock_{&lock->lock()}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
@@ -307,8 +309,8 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // resolution when the underlying lock type is nestable.
   template <typename Lockable, typename... Args,
             typename = internal::EnableIfNestable<Lockable, LockType>>
-  Guard(Lockable* lock, uintptr_t order, Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
-      __TA_ACQUIRE_SHARED(lock->capability())
+  __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
+      __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
       : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
 
   // Destructor that automatically releases the lock if not already released.
@@ -351,7 +353,7 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // Example:
   //  Guard<fbl::Mutex> guard{AdoptLock, std::move(rvalue_arugment)};
   //
-  Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE_SHARED(other.lock_)
+  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE_SHARED(other.lock_)
       : validator_{std::move(other.validator_)},
         lock_{other.lock_},
         state_{std::move(other.state_)} {
@@ -407,8 +409,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // Ordered lock constructor used by the nestable lock constructor above and
   // by GuardMultiple.
   template <typename Lockable, typename... Args>
-  Guard(OrderedLockTag, Lockable* lock, uintptr_t order, Args&&... state_args)
-      __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
+  __WARN_UNUSED_CONSTRUCTOR Guard(OrderedLockTag, Lockable* lock, uintptr_t order,
+                                  Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
+      __TA_ACQUIRE_SHARED(lock->capability())
       : validator_{lock->id(), order},
         lock_{&lock->lock()},
         state_{std::forward<Args>(state_args)...} {

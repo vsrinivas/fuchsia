@@ -264,7 +264,7 @@ static void mp_unplug_trampoline(void) {
 // This should be called in a thread context
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
   DEBUG_ASSERT(!arch_ints_disabled());
-  Guard<Mutex>(&mp.hotplug_lock);
+  Guard<Mutex> lock(&mp.hotplug_lock);
 
   // Make sure all of the requested CPUs are offline
   if (cpu_mask & mp_get_online_mask()) {
@@ -372,7 +372,7 @@ cleanup_thread:
 // can |thread_forget| them.
 zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, thread_t** leaked_threads) {
   DEBUG_ASSERT(!arch_ints_disabled());
-  Guard<Mutex>(&mp.hotplug_lock);
+  Guard<Mutex> lock(&mp.hotplug_lock);
 
   // Make sure all of the requested CPUs are online
   if (cpu_mask & ~mp_get_online_mask()) {
