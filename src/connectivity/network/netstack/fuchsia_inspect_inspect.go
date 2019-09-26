@@ -14,6 +14,7 @@ import (
 	"app/context"
 
 	"fidl/fuchsia/inspect"
+
 	"github.com/google/netstack/tcpip"
 )
 
@@ -24,6 +25,14 @@ type statCounterInspectImpl struct {
 	name string
 	reflect.Value
 }
+
+// statCounter enables *tcpip.StatCounters and other types in this
+// package to be accessed via the same interface.
+type statCounter interface {
+	Value() uint64
+}
+
+var _ statCounter = (*tcpip.StatCounter)(nil)
 
 func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 	object := inspect.Object{
@@ -43,7 +52,7 @@ func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 			}
 		case reflect.Ptr:
 			var value inspect.MetricValue
-			value.SetUintValue(v.Field(i).Interface().(*tcpip.StatCounter).Value())
+			value.SetUintValue(v.Field(i).Interface().(statCounter).Value())
 			object.Metrics = append(object.Metrics, inspect.Metric{
 				Key:   field.Name,
 				Value: value,
@@ -120,7 +129,7 @@ func (v *statCounterInspectImpl) ForEach(fn func(string, context.Node)) {
 var _ context.File = (*statCounterFile)(nil)
 
 type statCounterFile struct {
-	*tcpip.StatCounter
+	statCounter
 }
 
 func (s *statCounterFile) GetBytes() []byte {
@@ -150,7 +159,7 @@ func (v *reflectNode) Get(name string) (context.Node, bool) {
 		case reflect.Ptr:
 			return &context.FileWrapper{
 				File: &context.FileWrapper{
-					File: &statCounterFile{StatCounter: v.Interface().(*tcpip.StatCounter)},
+					File: &statCounterFile{v.Interface().(statCounter)},
 				},
 			}, true
 		default:
@@ -178,7 +187,7 @@ func (v *reflectNode) ForEach(fn func(string, context.Node)) {
 			}
 		case reflect.Ptr:
 			fn(field.Name, &context.FileWrapper{
-				File: &statCounterFile{StatCounter: v.Interface().(*tcpip.StatCounter)},
+				File: &statCounterFile{v.Interface().(statCounter)},
 			})
 		default:
 			panic(fmt.Sprintf("unexpected field %+v", field))

@@ -127,7 +127,11 @@ func Main() {
 
 	const counters = "counters"
 
-	stats := reflect.ValueOf(stk.Stats())
+	var posixSocketProviderService socket.ProviderService
+
+	ns.stats.Stats = stk.Stats()
+	ns.stats.SocketCount = &bindingSetCounterStat{bindingSet: &posixSocketProviderService.BindingSet}
+	stats := reflect.ValueOf(ns.stats)
 	var inspectService inspect.InspectService
 	ctx.OutgoingService.AddObjects(counters, &context.DirectoryWrapper{
 		Directory: &context.DirectoryWrapper{
@@ -215,7 +219,6 @@ func Main() {
 		},
 	)
 
-	var posixSocketProviderService socket.ProviderService
 	ctx.OutgoingService.AddService(
 		socket.ProviderName,
 		&socket.ProviderStub{Impl: &providerImpl{ns: ns}},
