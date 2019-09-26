@@ -178,7 +178,8 @@ Entry WithoutEntryId(Entry e) {
 StorageTest::StorageTest() = default;
 
 StorageTest::StorageTest(GarbageCollectionPolicy gc_policy)
-    : ledger::TestWithEnvironment(gc_policy) {}
+    : ledger::TestWithEnvironment(
+          [gc_policy](ledger::EnvironmentBuilder* builder) { builder->SetGcPolicy(gc_policy); }) {}
 
 StorageTest::~StorageTest() = default;
 

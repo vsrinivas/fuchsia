@@ -15,20 +15,27 @@
 
 namespace ledger {
 
-TestWithEnvironment::TestWithEnvironment() : TestWithEnvironment(kTestingGarbageCollectionPolicy) {}
+TestWithEnvironment::TestWithEnvironment()
+    : TestWithEnvironment([](EnvironmentBuilder* builder) {}) {}
 
-TestWithEnvironment::TestWithEnvironment(storage::GarbageCollectionPolicy gc_policy)
+TestWithEnvironment::TestWithEnvironment(
+    fit::function<void(EnvironmentBuilder*)> builder_transformer)
     : io_loop_interface_(test_loop().StartNewLoop()),
-      environment_(
-          EnvironmentBuilder()
-              .SetAsync(dispatcher())
-              .SetIOAsync(io_loop_interface_->dispatcher())
-              .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(&test_loop()))
-              .SetStartupContext(component_context_provider_.context())
-              .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
-              .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
-              .SetGcPolicy(gc_policy)
-              .Build()) {}
+      environment_(MakeTestEnvironment(std::move(builder_transformer))) {}
+
+Environment TestWithEnvironment::MakeTestEnvironment(
+    fit::function<void(EnvironmentBuilder*)> builder_transformer) {
+  EnvironmentBuilder builder;
+  builder.SetAsync(dispatcher())
+      .SetIOAsync(io_loop_interface_->dispatcher())
+      .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(&test_loop()))
+      .SetStartupContext(component_context_provider_.context())
+      .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
+      .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
+      .SetGcPolicy(kTestingGarbageCollectionPolicy);
+  builder_transformer(&builder);
+  return builder.Build();
+}
 
 ::testing::AssertionResult TestWithEnvironment::RunInCoroutine(
     fit::function<void(coroutine::CoroutineHandler*)> run_test, zx::duration delay) {

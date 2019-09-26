@@ -193,6 +193,7 @@ source_set("unittests") {
     "blocking_callback_waiter_unittest.cc",
     "ledger_matcher_unittest.cc",
     "ledger_memory_usage_unittest.cc",
+    "test_with_environment_unittest.cc",
   ]
 
   deps = [
