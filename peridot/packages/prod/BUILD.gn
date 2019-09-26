@@ -5,89 +5,10 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("ledger") {
-  testonly = true
-  public_deps = [
-    "//src/ledger/bin",
-  ]
-}
-
-group("all") {
-  testonly = true
-  public_deps = [
-    "//peridot/packages/prod:basemgr_launcher",
-    "//peridot/packages/prod:clipboard_agent",
-    "//peridot/packages/prod:cloud_provider_firestore",
-    "//peridot/packages/prod:discover",
-    "//peridot/packages/prod:integration_testing",
-    "//peridot/packages/prod:ledger",
-    "//peridot/packages/prod:modular",
-    "//peridot/packages/prod:sessionctl",
-  ]
-}
-
-group("basemgr_launcher") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/basemgr_launcher",
-  ]
-}
-
-group("auto_login_base_shell") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/basemgr:auto_login_base_shell",
-  ]
-}
-
-group("dev_base_shell") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/basemgr:dev_base_shell",
-  ]
-}
-
-group("sessionctl") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/sessionctl",
-  ]
-}
-
-group("cloud_provider_firestore") {
-  testonly = true
-  public_deps = [
-    "//src/ledger/cloud_provider_firestore/bin",
-  ]
-}
-
-group("clipboard_agent") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/agents/clipboard:clipboard_agent",
-  ]
-}
-
+# WARNING: Known to topaz.
 group("integration_testing") {
   testonly = true
   public_deps = [
     "//src/modular/bundles:integration_testing",
-  ]
-}
-
-group("modular") {
-  testonly = true
-  public_deps = [
-    "//peridot/cloud/go/src/remote_module_resolver:host",
-    "//peridot/packages/prod:auto_login_base_shell",
-    "//src/modular/bin/basemgr",
-    "//src/modular/bin/sessionmgr",
-  ]
-}
-
-group("discover") {
-  testonly = true
-  public_deps = [
-    "//src/stories/bin/discovermgr",
   ]
 }

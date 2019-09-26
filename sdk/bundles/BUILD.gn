@@ -17,7 +17,7 @@ group("tools") {
     "//garnet/packages/prod:tiles",
     "//garnet/packages/products:devtools",
     "//garnet/packages/testing:run_test_component",
-    "//peridot/packages/prod:sessionctl",
+    "//src/modular/bin/sessionctl",
     "//src/chromium",
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/dart",

@@ -31,7 +31,7 @@ cache_package_labels += [
 ]
 
 universe_package_labels += [
-  "//peridot/packages/prod:cloud_provider_firestore",
+  "//src/ledger/cloud_provider_firestore/bin",
   "//src/modular/bundles:tools",
 ]
 

@@ -15,16 +15,19 @@ group("tools") {
   testonly = true
   public_deps = [
     ":testing",
-    "//peridot/packages/prod:basemgr_launcher",
-    "//peridot/packages/prod:sessionctl",
+    "//src/modular/bin/basemgr_launcher",
+    "//src/modular/bin/sessionctl",
   ]
 }
 
 group("framework") {
   testonly = true
   public_deps = [
-    "//peridot/packages/prod:ledger",
-    "//peridot/packages/prod:modular",
+    "//peridot/cloud/go/src/remote_module_resolver:host",
+    "//src/ledger/bin",
+    "//src/modular/bin/basemgr:auto_login_base_shell",
+    "//src/modular/bin/basemgr",
+    "//src/modular/bin/sessionmgr",
   ]
 }
 
@@ -33,7 +36,7 @@ group("framework_experimental") {
   testonly = true
   public_deps = [
     ":framework",
-    "//peridot/packages/prod:discover",
+    "//src/stories/bin/discovermgr",
   ]
 }
 
@@ -50,12 +53,15 @@ group("integration_testing") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:test_runner",
-    "//peridot/packages/prod:dev_base_shell",
-    "//peridot/packages/prod:discover",
-    "//peridot/packages/prod:modular",
+    "//peridot/cloud/go/src/remote_module_resolver:host",
+    "//src/modular/bin/basemgr:auto_login_base_shell",
+    "//src/modular/bin/basemgr:dev_base_shell",
+    "//src/modular/bin/basemgr",
     "//src/modular/bin/modular_test_harness",
     "//src/modular/bin/sessionmgr:dev_session_shell",
+    "//src/modular/bin/sessionmgr",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
+    "//src/stories/bin/discovermgr",
   ]
 }
 

@@ -13,20 +13,28 @@ group("all") {
     "//garnet/packages/examples:benchmark",
     "//garnet/tests/benchmarks:garnet_benchmarks",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
+    "//peridot/cloud/go/src/remote_module_resolver:host",
     "//peridot/examples/swap_cpp:swap_module1",
     "//peridot/examples/swap_cpp:swap_module2",
     "//peridot/examples/swap_cpp:swap_recipe",
     "//peridot/examples/todo_cpp:todo_cpp",
-    "//peridot/packages/prod:all",
-    "//peridot/packages/prod:ledger",
-    "//peridot/packages/prod:modular",
     "//peridot/packages/tests:all",
     "//peridot/tests/benchmarks:fuchsia_benchmarks",
+    "//src/ledger/bin",
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
+    "//src/ledger/cloud_provider_firestore/bin",
     "//src/ledger/cloud_provider_in_memory/bin",
     "//src/ledger/cloud_provider_memory_diff",
+    "//src/modular/bin/agents/clipboard:clipboard_agent",
+    "//src/modular/bin/basemgr_launcher",
+    "//src/modular/bin/basemgr:auto_login_base_shell",
+    "//src/modular/bin/basemgr",
     "//src/modular/bin/modular_test_harness",
+    "//src/modular/bin/sessionctl",
+    "//src/modular/bin/sessionmgr",
     "//src/modular/bin/voila",
+    "//src/modular/bundles:integration_testing",
+    "//src/stories/bin/discovermgr",
   ]
 }
 
@@ -35,7 +43,17 @@ group("peridot") {
   testonly = true
   public_deps = [
     "//garnet/packages:garnet",
-    "//peridot/packages/prod:all",
+    "//peridot/cloud/go/src/remote_module_resolver:host",
+    "//src/ledger/bin",
+    "//src/ledger/cloud_provider_firestore/bin",
+    "//src/modular/bin/agents/clipboard:clipboard_agent",
+    "//src/modular/bin/basemgr_launcher",
+    "//src/modular/bin/basemgr:auto_login_base_shell",
+    "//src/modular/bin/basemgr",
+    "//src/modular/bin/sessionctl",
+    "//src/modular/bin/sessionmgr",
+    "//src/modular/bundles:integration_testing",
+    "//src/stories/bin/discovermgr",
   ]
 }
 

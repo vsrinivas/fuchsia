@@ -17,14 +17,14 @@ group("re2") {
 group("ledger") {
   testonly = true
   public_deps = [
-    "//peridot/packages/prod:cloud_provider_firestore",
-    "//peridot/packages/prod:ledger",
     "//src/ledger:ledger_tests",
     "//src/ledger/bin:ledger_fuzzers",
+    "//src/ledger/bin",
     "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider",
+    "//src/ledger/cloud_provider_firestore/bin",
     "//src/ledger/cloud_provider_in_memory/bin",
-    "//src/ledger/cloud_provider_memory_diff",
     "//src/ledger/cloud_provider_memory_diff:cloud_provider_memory_diff_tests",
+    "//src/ledger/cloud_provider_memory_diff",
   ]
 }
 
@@ -75,8 +75,8 @@ group("modular_integration_tests") {
   public_deps = [
     ":modular_test_harness",
     "//garnet/packages/prod:test_runner",
-    "//peridot/packages/prod:integration_testing",
     "//src/modular/bin/basemgr:auto_login_base_shell_test",
+    "//src/modular/bundles:integration_testing",
     "//src/modular/tests/modular_config:test_config",
   ]
 }
@@ -100,7 +100,7 @@ group("modular_unittests") {
   testonly = true
   public_deps = [
     "//peridot/lib/sequential_futures:sequential_futures_tests",
-    "//peridot/packages/prod:ledger",
+    "//src/ledger/bin",
     "//src/modular/bin/agents/clipboard:clipboard_unittests",
     "//src/modular/bin/basemgr:basemgr_unittests",
     "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
