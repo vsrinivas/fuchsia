@@ -1,1 +1,2 @@
-per-file BUILD.gn = joshuaseaton@google.com,phosek@google.com
+per-file BUILD.gn = joshuaseaton@google.com
+per-file BUILD.gn = phosek@google.com
