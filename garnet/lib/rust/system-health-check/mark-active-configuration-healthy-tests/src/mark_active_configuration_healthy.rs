@@ -1,6 +1,6 @@
-use {fuchsia_async as fasync, system_health_check::mark_active_configuration_successful};
+use {fuchsia_async as fasync, system_health_check::set_active_configuration_healthy};
 
 #[fasync::run(1)]
 async fn main() {
-    mark_active_configuration_successful().await
+    set_active_configuration_healthy().await
 }

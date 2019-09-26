@@ -183,6 +183,12 @@ class PaverServiceTest : public zxtest::Test {
   // Spawn an isolated devmgr without a skip-block device.
   void SpawnIsolatedDevmgrBlock();
 
+  void WaitForSysconfig() {
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
+                                   "misc/nand-ctl/ram-nand-0/sysconfig/skip-block", &fd));
+  }
+
   void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out);
 
   static constexpr size_t kKilobyte = 1 << 10;
@@ -334,6 +340,7 @@ void ComputeCrc(abr::Data* data) {
 
 TEST_F(PaverServiceTest, QueryActiveConfigurationSlotB) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -346,6 +353,7 @@ TEST_F(PaverServiceTest, QueryActiveConfigurationSlotB) {
 
 TEST_F(PaverServiceTest, QueryActiveConfigurationSlotA) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 2;
   abr_data.slots[0].successful_boot = 1;
@@ -358,8 +366,53 @@ TEST_F(PaverServiceTest, QueryActiveConfigurationSlotA) {
   ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
 }
 
-TEST_F(PaverServiceTest, SetActiveConfiguration) {
+TEST_F(PaverServiceTest, QueryConfigurationStatusHealthy) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  abr::Data abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration::B);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().status,
+            ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
+}
+
+TEST_F(PaverServiceTest, QueryConfigurationStatusPending) {
+  SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[1].successful_boot = 0;
+  abr_data.slots[1].tries_remaining = 1;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration::B);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().status,
+            ::llcpp::fuchsia::paver::ConfigurationStatus::PENDING);
+}
+
+TEST_F(PaverServiceTest, QueryConfigurationStatusUnbootable) {
+  SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  abr::Data abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  auto result = client_->QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration::A);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().status,
+            ::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
+}
+
+TEST_F(PaverServiceTest, SetConfigurationActive) {
+  SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -369,15 +422,16 @@ TEST_F(PaverServiceTest, SetActiveConfiguration) {
   abr_data.slots[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  auto result = client_->SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration::A);
+  auto result = client_->SetConfigurationActive(::llcpp::fuchsia::paver::Configuration::A);
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   auto actual = GetAbr();
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetActiveConfigurationRollover) {
+TEST_F(PaverServiceTest, SetConfigurationActiveRollover) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].priority = abr::kMaxPriority;
   ComputeCrc(&abr_data);
@@ -389,15 +443,59 @@ TEST_F(PaverServiceTest, SetActiveConfigurationRollover) {
   abr_data.slots[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  auto result = client_->SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration::A);
+  auto result = client_->SetConfigurationActive(::llcpp::fuchsia::paver::Configuration::A);
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   auto actual = GetAbr();
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
+TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotA) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[0].priority = 2;
+  abr_data.slots[0].tries_remaining = 3;
+  abr_data.slots[0].successful_boot = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slots[0].priority = 0;
+  abr_data.slots[0].tries_remaining = 0;
+  abr_data.slots[0].successful_boot = 0;
+  ComputeCrc(&abr_data);
+
+  auto result = client_->SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration::A);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotB) {
+  SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[1].tries_remaining = 3;
+  abr_data.slots[1].successful_boot = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slots[1].priority = 0;
+  abr_data.slots[1].tries_remaining = 0;
+  abr_data.slots[1].successful_boot = 0;
+  ComputeCrc(&abr_data);
+
+  auto result = client_->SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration::B);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceTest, SetActiveConfigurationHealthy) {
+  SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -408,15 +506,16 @@ TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
   abr_data.slots[1].successful_boot = 1;
   ComputeCrc(&abr_data);
 
-  auto result = client_->MarkActiveConfigurationSuccessful();
+  auto result = client_->SetActiveConfigurationHealthy();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   auto actual = GetAbr();
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessfulBothPriorityZero) {
+TEST_F(PaverServiceTest, SetActiveConfigurationHealthyBothPriorityZero) {
   SpawnIsolatedDevmgr();
+  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -424,7 +523,7 @@ TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessfulBothPriorityZero) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  auto result = client_->MarkActiveConfigurationSuccessful();
+  auto result = client_->SetActiveConfigurationHealthy();
   ASSERT_OK(result.status());
   ASSERT_NE(result->status, ZX_OK);
 }

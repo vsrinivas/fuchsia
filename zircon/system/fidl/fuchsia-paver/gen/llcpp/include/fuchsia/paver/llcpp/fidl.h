@@ -27,6 +27,15 @@ namespace paver {
 struct ReadInfo;
 struct ReadResult;
 class PayloadStream;
+enum class ConfigurationStatus : uint32_t {
+  HEALTHY = 1u,
+  PENDING = 2u,
+  UNBOOTABLE = 3u,
+};
+
+
+struct Paver_QueryConfigurationStatus_Response;
+struct Paver_QueryConfigurationStatus_Result;
 enum class Configuration : uint32_t {
   A = 1u,
   B = 2u,
@@ -459,6 +468,113 @@ class PayloadStream final {
 
 
 
+struct Paver_QueryConfigurationStatus_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ConfigurationStatus status = {};
+};
+
+extern "C" const fidl_type_t fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
+
+struct Paver_QueryConfigurationStatus_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Paver_QueryConfigurationStatus_Result();
+  ~Paver_QueryConfigurationStatus_Result();
+
+  Paver_QueryConfigurationStatus_Result(Paver_QueryConfigurationStatus_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Paver_QueryConfigurationStatus_Result& operator=(Paver_QueryConfigurationStatus_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Paver_QueryConfigurationStatus_Result WithResponse(Paver_QueryConfigurationStatus_Response&& val) {
+    Paver_QueryConfigurationStatus_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  Paver_QueryConfigurationStatus_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Paver_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  Paver_QueryConfigurationStatus_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Paver_QueryConfigurationStatus_Result WithErr(int32_t&& val) {
+    Paver_QueryConfigurationStatus_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Paver_QueryConfigurationStatus_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    Paver_QueryConfigurationStatus_Response response_;
+    int32_t err_;
+  };
+};
+
+
+
 struct Paver_QueryActiveConfiguration_Response {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -564,9 +680,12 @@ struct Paver_QueryActiveConfiguration_Result {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
@@ -609,12 +728,12 @@ class Paver final {
   };
   using QueryActiveConfigurationRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetActiveConfigurationResponse final {
+  struct QueryConfigurationStatusResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t status;
+    Paver_QueryConfigurationStatus_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetActiveConfigurationResponseTable;
+    static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -622,27 +741,27 @@ class Paver final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  struct SetActiveConfigurationRequest final {
+  struct QueryConfigurationStatusRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetActiveConfigurationRequestTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = SetActiveConfigurationResponse;
+    using ResponseType = QueryConfigurationStatusResponse;
   };
 
-  struct MarkActiveConfigurationSuccessfulResponse final {
+  struct SetConfigurationActiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -650,7 +769,63 @@ class Paver final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using MarkActiveConfigurationSuccessfulRequest = ::fidl::AnyZeroArgMessage;
+  struct SetConfigurationActiveRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Configuration configuration;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationActiveRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SetConfigurationActiveResponse;
+  };
+
+  struct SetConfigurationUnbootableResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct SetConfigurationUnbootableRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Configuration configuration;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SetConfigurationUnbootableResponse;
+  };
+
+  struct SetActiveConfigurationHealthyResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using SetActiveConfigurationHealthyRequest = ::fidl::AnyZeroArgMessage;
 
   struct WriteAssetResponse final {
     FIDL_ALIGNDECL
@@ -873,13 +1048,13 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class SetActiveConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class QueryConfigurationStatus_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetActiveConfiguration_Impl(zx::unowned_channel _client_end, Configuration configuration);
-      ~SetActiveConfiguration_Impl() = default;
-      SetActiveConfiguration_Impl(SetActiveConfiguration_Impl&& other) = default;
-      SetActiveConfiguration_Impl& operator=(SetActiveConfiguration_Impl&& other) = default;
+      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      ~QueryConfigurationStatus_Impl() = default;
+      QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
+      QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -889,13 +1064,45 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class MarkActiveConfigurationSuccessful_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class SetConfigurationActive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      MarkActiveConfigurationSuccessful_Impl(zx::unowned_channel _client_end);
-      ~MarkActiveConfigurationSuccessful_Impl() = default;
-      MarkActiveConfigurationSuccessful_Impl(MarkActiveConfigurationSuccessful_Impl&& other) = default;
-      MarkActiveConfigurationSuccessful_Impl& operator=(MarkActiveConfigurationSuccessful_Impl&& other) = default;
+      SetConfigurationActive_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      ~SetConfigurationActive_Impl() = default;
+      SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
+      SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfigurationUnbootable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      ~SetConfigurationUnbootable_Impl() = default;
+      SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
+      SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetActiveConfigurationHealthy_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetActiveConfigurationHealthy_Impl(zx::unowned_channel _client_end);
+      ~SetActiveConfigurationHealthy_Impl() = default;
+      SetActiveConfigurationHealthy_Impl(SetActiveConfigurationHealthy_Impl&& other) = default;
+      SetActiveConfigurationHealthy_Impl& operator=(SetActiveConfigurationHealthy_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1019,8 +1226,10 @@ class Paver final {
 
    public:
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
-    using SetActiveConfiguration = SetActiveConfiguration_Impl<SetActiveConfigurationResponse>;
-    using MarkActiveConfigurationSuccessful = MarkActiveConfigurationSuccessful_Impl<MarkActiveConfigurationSuccessfulResponse>;
+    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
+    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
+    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
+    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1052,13 +1261,13 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class SetActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class QueryConfigurationStatus_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetActiveConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
-      ~SetActiveConfiguration_Impl() = default;
-      SetActiveConfiguration_Impl(SetActiveConfiguration_Impl&& other) = default;
-      SetActiveConfiguration_Impl& operator=(SetActiveConfiguration_Impl&& other) = default;
+      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~QueryConfigurationStatus_Impl() = default;
+      QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
+      QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1068,13 +1277,45 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class MarkActiveConfigurationSuccessful_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class SetConfigurationActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      MarkActiveConfigurationSuccessful_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~MarkActiveConfigurationSuccessful_Impl() = default;
-      MarkActiveConfigurationSuccessful_Impl(MarkActiveConfigurationSuccessful_Impl&& other) = default;
-      MarkActiveConfigurationSuccessful_Impl& operator=(MarkActiveConfigurationSuccessful_Impl&& other) = default;
+      SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~SetConfigurationActive_Impl() = default;
+      SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
+      SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfigurationUnbootable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~SetConfigurationUnbootable_Impl() = default;
+      SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
+      SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetActiveConfigurationHealthy_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetActiveConfigurationHealthy_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~SetActiveConfigurationHealthy_Impl() = default;
+      SetActiveConfigurationHealthy_Impl(SetActiveConfigurationHealthy_Impl&& other) = default;
+      SetActiveConfigurationHealthy_Impl& operator=(SetActiveConfigurationHealthy_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1198,8 +1439,10 @@ class Paver final {
 
    public:
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
-    using SetActiveConfiguration = SetActiveConfiguration_Impl<SetActiveConfigurationResponse>;
-    using MarkActiveConfigurationSuccessful = MarkActiveConfigurationSuccessful_Impl<MarkActiveConfigurationSuccessfulResponse>;
+    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
+    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
+    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
+    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1221,36 +1464,92 @@ class Paver final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Queries active configuration.
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
 
     // Queries active configuration.
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(::fidl::BytePart _response_buffer);
 
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetActiveConfiguration SetActiveConfiguration(Configuration configuration);
+    ResultOf::QueryConfigurationStatus QueryConfigurationStatus(Configuration configuration);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetConfigurationActive SetConfigurationActive(Configuration configuration);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetActiveConfiguration SetActiveConfiguration(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetConfigurationActive SetConfigurationActive(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(Configuration configuration);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful();
+    ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy();
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1384,36 +1683,92 @@ class Paver final {
    public:
 
     // Queries active configuration.
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(zx::unowned_channel _client_end);
 
     // Queries active configuration.
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetActiveConfiguration SetActiveConfiguration(zx::unowned_channel _client_end, Configuration configuration);
+    static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, Configuration configuration);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, Configuration configuration);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetActiveConfiguration SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, Configuration configuration);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end);
+    static ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(zx::unowned_channel _client_end);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1546,17 +1901,43 @@ class Paver final {
    public:
 
     // Queries active configuration.
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
+    // and we always boot from configuration A.
     static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<QueryConfigurationStatusResponse> QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    static ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer);
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<SetConfigurationActiveResponse> SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<SetConfigurationUnbootableResponse> SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
-    static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    static ::fidl::DecodeResult<SetActiveConfigurationHealthyResponse> SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1636,33 +2017,61 @@ class Paver final {
 
     virtual void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync _completer) = 0;
 
-    class SetActiveConfigurationCompleterBase : public _Base {
+    class QueryConfigurationStatusCompleterBase : public _Base {
      public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<SetActiveConfigurationResponse> params);
+      void Reply(Paver_QueryConfigurationStatus_Result result);
+      void Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result);
+      void Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using SetActiveConfigurationCompleter = ::fidl::Completer<SetActiveConfigurationCompleterBase>;
+    using QueryConfigurationStatusCompleter = ::fidl::Completer<QueryConfigurationStatusCompleterBase>;
 
-    virtual void SetActiveConfiguration(Configuration configuration, SetActiveConfigurationCompleter::Sync _completer) = 0;
+    virtual void QueryConfigurationStatus(Configuration configuration, QueryConfigurationStatusCompleter::Sync _completer) = 0;
 
-    class MarkActiveConfigurationSuccessfulCompleterBase : public _Base {
+    class SetConfigurationActiveCompleterBase : public _Base {
      public:
       void Reply(int32_t status);
       void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse> params);
+      void Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using MarkActiveConfigurationSuccessfulCompleter = ::fidl::Completer<MarkActiveConfigurationSuccessfulCompleterBase>;
+    using SetConfigurationActiveCompleter = ::fidl::Completer<SetConfigurationActiveCompleterBase>;
 
-    virtual void MarkActiveConfigurationSuccessful(MarkActiveConfigurationSuccessfulCompleter::Sync _completer) = 0;
+    virtual void SetConfigurationActive(Configuration configuration, SetConfigurationActiveCompleter::Sync _completer) = 0;
+
+    class SetConfigurationUnbootableCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetConfigurationUnbootableCompleter = ::fidl::Completer<SetConfigurationUnbootableCompleterBase>;
+
+    virtual void SetConfigurationUnbootable(Configuration configuration, SetConfigurationUnbootableCompleter::Sync _completer) = 0;
+
+    class SetActiveConfigurationHealthyCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetActiveConfigurationHealthyCompleter = ::fidl::Completer<SetActiveConfigurationHealthyCompleterBase>;
+
+    virtual void SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync _completer) = 0;
 
     class WriteAssetCompleterBase : public _Base {
      public:
@@ -1826,6 +2235,16 @@ static_assert(sizeof(::llcpp::fuchsia::paver::PayloadStream::ReadDataResponse)
 static_assert(offsetof(::llcpp::fuchsia::paver::PayloadStream::ReadDataResponse, result) == 16);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response, status) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response) == ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>);
 static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response, configuration) == 0);
@@ -1844,28 +2263,60 @@ static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationRes
 static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationRequest)
-    == ::llcpp::fuchsia::paver::Paver::SetActiveConfigurationRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationRequest, configuration) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest)
+    == ::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest, configuration) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationResponse)
-    == ::llcpp::fuchsia::paver::Paver::SetActiveConfigurationResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse)
+    == ::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse)
-    == ::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest)
+    == ::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest, configuration) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse)
+    == ::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest)
+    == ::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest, configuration) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse)
+    == ::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse)
+    == ::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteAssetRequest> : public std::true_type {};

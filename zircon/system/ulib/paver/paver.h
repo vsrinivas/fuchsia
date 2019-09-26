@@ -39,11 +39,17 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override;
 
-  void SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration configuration,
-                              SetActiveConfigurationCompleter::Sync completer) override;
+  void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
+                                QueryConfigurationStatusCompleter::Sync completer) override;
 
-  void MarkActiveConfigurationSuccessful(
-      MarkActiveConfigurationSuccessfulCompleter::Sync completer) override;
+  void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
+                              SetConfigurationActiveCompleter::Sync completer) override;
+
+  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
+                                  SetConfigurationUnbootableCompleter::Sync completer) override;
+
+  void SetActiveConfigurationHealthy(
+      SetActiveConfigurationHealthyCompleter::Sync completer) override;
 
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
   void set_svc_root(zx::channel svc_root) { svc_root_ = std::move(svc_root); }

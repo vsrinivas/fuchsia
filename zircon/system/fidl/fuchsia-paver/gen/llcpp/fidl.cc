@@ -322,6 +322,65 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
+::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Paver_QueryConfigurationStatus_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::~Paver_QueryConfigurationStatus_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Paver_QueryConfigurationStatus_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::MoveImpl_(Paver_QueryConfigurationStatus_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result) == ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::PrimarySize);
+}
+
+
+Paver_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Paver_QueryConfigurationStatus_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Paver_QueryActiveConfiguration_Result() {
   tag_ = Tag::Invalid;
 }
@@ -386,12 +445,19 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetActiveConfiguration_Ordinal = 0x2401537e00000000lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTable;
+constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_Ordinal = 0x268547aa00000000lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
+constexpr uint64_t kPaver_SetConfigurationActive_Ordinal = 0x942de4b00000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kPaver_SetConfigurationUnbootable_Ordinal = 0x52cf3c8200000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
@@ -485,125 +551,251 @@ Paver::UnownedResultOf::QueryActiveConfiguration Paver::Call::QueryActiveConfigu
 }
 
 template <>
-Paver::ResultOf::SetActiveConfiguration_Impl<Paver::SetActiveConfigurationResponse>::SetActiveConfiguration_Impl(zx::unowned_channel _client_end, Configuration configuration) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
+Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, SetActiveConfigurationRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_write_bytes);
+  memset(_write_bytes, 0, QueryConfigurationStatusRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<QueryConfigurationStatusRequest*>(_write_bytes);
   _request.configuration = std::move(configuration);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationRequest));
-  ::fidl::DecodedMessage<SetActiveConfigurationRequest> _decoded_request(std::move(_request_bytes));
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusRequest));
+  ::fidl::DecodedMessage<QueryConfigurationStatusRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::SetActiveConfiguration(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetActiveConfiguration Paver::SyncClient::SetActiveConfiguration(Configuration configuration) {
-  return ResultOf::SetActiveConfiguration(zx::unowned_channel(this->channel_), std::move(configuration));
+Paver::ResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(Configuration configuration) {
+  return ResultOf::QueryConfigurationStatus(zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::SetActiveConfiguration Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end, Configuration configuration) {
-  return ResultOf::SetActiveConfiguration(std::move(_client_end), std::move(configuration));
+Paver::ResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, Configuration configuration) {
+  return ResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::SetActiveConfiguration_Impl<Paver::SetActiveConfigurationResponse>::SetActiveConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < SetActiveConfigurationRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<SetActiveConfigurationResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < QueryConfigurationStatusRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<QueryConfigurationStatusResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, SetActiveConfigurationRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_request_buffer.data());
+  memset(_request_buffer.data(), 0, QueryConfigurationStatusRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<QueryConfigurationStatusRequest*>(_request_buffer.data());
   _request.configuration = std::move(configuration);
-  _request_buffer.set_actual(sizeof(SetActiveConfigurationRequest));
-  ::fidl::DecodedMessage<SetActiveConfigurationRequest> _decoded_request(std::move(_request_buffer));
+  _request_buffer.set_actual(sizeof(QueryConfigurationStatusRequest));
+  ::fidl::DecodedMessage<QueryConfigurationStatusRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::SetActiveConfiguration(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetActiveConfiguration Paver::SyncClient::SetActiveConfiguration(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetActiveConfiguration(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
+Paver::UnownedResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::QueryConfigurationStatus(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetActiveConfiguration Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetActiveConfiguration(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
+Paver::UnownedResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::InPlace::SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse> Paver::InPlace::QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetActiveConfigurationResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<SetActiveConfigurationRequest, SetActiveConfigurationResponse>(
+  auto _call_result = ::fidl::Call<QueryConfigurationStatusRequest, QueryConfigurationStatusResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetActiveConfigurationResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::MarkActiveConfigurationSuccessful_Impl<Paver::MarkActiveConfigurationSuccessfulResponse>::MarkActiveConfigurationSuccessful_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest, ::fidl::MessageDirection::kSending>();
+Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, MarkActiveConfigurationSuccessfulRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MarkActiveConfigurationSuccessfulRequest));
-  ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> _decoded_request(std::move(_request_bytes));
+  memset(_write_bytes, 0, SetConfigurationActiveRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetConfigurationActiveRequest*>(_write_bytes);
+  _request.configuration = std::move(configuration);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationActiveRequest));
+  ::fidl::DecodedMessage<SetConfigurationActiveRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::MarkActiveConfigurationSuccessful(std::move(_client_end), Super::response_buffer()));
+      Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::MarkActiveConfigurationSuccessful Paver::SyncClient::MarkActiveConfigurationSuccessful() {
-  return ResultOf::MarkActiveConfigurationSuccessful(zx::unowned_channel(this->channel_));
+Paver::ResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(Configuration configuration) {
+  return ResultOf::SetConfigurationActive(zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::MarkActiveConfigurationSuccessful Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end) {
-  return ResultOf::MarkActiveConfigurationSuccessful(std::move(_client_end));
+Paver::ResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, Configuration configuration) {
+  return ResultOf::SetConfigurationActive(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::MarkActiveConfigurationSuccessful_Impl<Paver::MarkActiveConfigurationSuccessfulResponse>::MarkActiveConfigurationSuccessful_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MarkActiveConfigurationSuccessfulRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, MarkActiveConfigurationSuccessfulRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(MarkActiveConfigurationSuccessfulRequest));
-  ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> _decoded_request(std::move(_request_buffer));
+Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SetConfigurationActiveRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SetConfigurationActiveResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SetConfigurationActiveRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetConfigurationActiveRequest*>(_request_buffer.data());
+  _request.configuration = std::move(configuration);
+  _request_buffer.set_actual(sizeof(SetConfigurationActiveRequest));
+  ::fidl::DecodedMessage<SetConfigurationActiveRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::MarkActiveConfigurationSuccessful(std::move(_client_end), std::move(_response_buffer)));
+      Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::MarkActiveConfigurationSuccessful Paver::SyncClient::MarkActiveConfigurationSuccessful(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MarkActiveConfigurationSuccessful(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+Paver::UnownedResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetConfigurationActive(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::MarkActiveConfigurationSuccessful Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MarkActiveConfigurationSuccessful(std::move(_client_end), std::move(_response_buffer));
+Paver::UnownedResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetConfigurationActive(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::InPlace::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(MarkActiveConfigurationSuccessfulRequest);
+::fidl::DecodeResult<Paver::SetConfigurationActiveResponse> Paver::InPlace::SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::SetConfigurationActiveResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<SetConfigurationActiveRequest, SetConfigurationActiveResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::SetConfigurationActiveResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SetConfigurationUnbootableRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetConfigurationUnbootableRequest*>(_write_bytes);
+  _request.configuration = std::move(configuration);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationUnbootableRequest));
+  ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Paver::ResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(Configuration configuration) {
+  return ResultOf::SetConfigurationUnbootable(zx::unowned_channel(this->channel_), std::move(configuration));
+}
+
+Paver::ResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, Configuration configuration) {
+  return ResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(configuration));
+}
+
+template <>
+Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SetConfigurationUnbootableRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SetConfigurationUnbootableResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SetConfigurationUnbootableRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetConfigurationUnbootableRequest*>(_request_buffer.data());
+  _request.configuration = std::move(configuration);
+  _request_buffer.set_actual(sizeof(SetConfigurationUnbootableRequest));
+  ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Paver::UnownedResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetConfigurationUnbootable(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
+}
+
+Paver::UnownedResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse> Paver::InPlace::SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<SetConfigurationUnbootableRequest, SetConfigurationUnbootableResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Paver::ResultOf::SetActiveConfigurationHealthy_Impl<Paver::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationHealthyRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SetActiveConfigurationHealthyRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationHealthyRequest));
+  ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Paver::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), Super::response_buffer()));
+}
+
+Paver::ResultOf::SetActiveConfigurationHealthy Paver::SyncClient::SetActiveConfigurationHealthy() {
+  return ResultOf::SetActiveConfigurationHealthy(zx::unowned_channel(this->channel_));
+}
+
+Paver::ResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConfigurationHealthy(zx::unowned_channel _client_end) {
+  return ResultOf::SetActiveConfigurationHealthy(std::move(_client_end));
+}
+
+template <>
+Paver::UnownedResultOf::SetActiveConfigurationHealthy_Impl<Paver::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SetActiveConfigurationHealthyRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, SetActiveConfigurationHealthyRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(SetActiveConfigurationHealthyRequest));
+  ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Paver::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::SyncClient::SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetActiveConfigurationHealthy(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetActiveConfigurationHealthy(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse> Paver::InPlace::SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(SetActiveConfigurationHealthyRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> params(std::move(_request_buffer));
+  ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<MarkActiveConfigurationSuccessfulRequest, MarkActiveConfigurationSuccessfulResponse>(
+  auto _call_result = ::fidl::Call<SetActiveConfigurationHealthyRequest, SetActiveConfigurationHealthyResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1081,27 +1273,51 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::QueryActiveConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_SetActiveConfiguration_Ordinal:
+    case kPaver_QueryConfigurationStatus_Ordinal:
     {
-      auto result = ::fidl::DecodeAs<SetActiveConfigurationRequest>(msg);
+      auto result = ::fidl::DecodeAs<QueryConfigurationStatusRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
       auto message = result.message.message();
-      impl->SetActiveConfiguration(std::move(message->configuration),
-        Interface::SetActiveConfigurationCompleter::Sync(txn));
+      impl->QueryConfigurationStatus(std::move(message->configuration),
+        Interface::QueryConfigurationStatusCompleter::Sync(txn));
       return true;
     }
-    case kPaver_MarkActiveConfigurationSuccessful_Ordinal:
+    case kPaver_SetConfigurationActive_Ordinal:
     {
-      auto result = ::fidl::DecodeAs<MarkActiveConfigurationSuccessfulRequest>(msg);
+      auto result = ::fidl::DecodeAs<SetConfigurationActiveRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->MarkActiveConfigurationSuccessful(
-        Interface::MarkActiveConfigurationSuccessfulCompleter::Sync(txn));
+      auto message = result.message.message();
+      impl->SetConfigurationActive(std::move(message->configuration),
+        Interface::SetConfigurationActiveCompleter::Sync(txn));
+      return true;
+    }
+    case kPaver_SetConfigurationUnbootable_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<SetConfigurationUnbootableRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetConfigurationUnbootable(std::move(message->configuration),
+        Interface::SetConfigurationUnbootableCompleter::Sync(txn));
+      return true;
+    }
+    case kPaver_SetActiveConfigurationHealthy_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<SetActiveConfigurationHealthyRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->SetActiveConfigurationHealthy(
+        Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
       return true;
     }
     case kPaver_WriteAsset_Ordinal:
@@ -1233,60 +1449,118 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
+void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(Paver_QueryConfigurationStatus_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetActiveConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationResponse>(std::move(_response_bytes)));
+  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < SetActiveConfigurationResponse::PrimarySize) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result) {
+  if (_buffer.capacity() < QueryConfigurationStatusResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SetActiveConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(SetActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationResponse>(std::move(_buffer)));
+  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationResponse> params) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse, ::fidl::MessageDirection::kSending>();
+void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<MarkActiveConfigurationSuccessfulResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
   _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MarkActiveConfigurationSuccessfulResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < MarkActiveConfigurationSuccessfulResponse::PrimarySize) {
+void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetConfigurationActiveResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<MarkActiveConfigurationSuccessfulResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
   _response.status = std::move(status);
-  _buffer.set_actual(sizeof(MarkActiveConfigurationSuccessfulResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(SetConfigurationActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse> params) {
+void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationUnbootableResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_response_bytes)));
+}
+
+void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetConfigurationUnbootableResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(SetConfigurationUnbootableResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_buffer)));
+}
+
+void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationHealthyResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationHealthyResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_response_bytes)));
+}
+
+void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetActiveConfigurationHealthyResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(SetActiveConfigurationHealthyResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_buffer)));
+}
+
+void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

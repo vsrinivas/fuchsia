@@ -108,7 +108,7 @@ async fn main() -> Result<(), Error> {
 
     futures.push(perform_fdr_if_necessary().boxed());
 
-    futures.push(check_and_mark_system_health().boxed());
+    futures.push(check_and_set_system_health().boxed());
 
     futures.collect::<()>().await;
 
@@ -131,13 +131,13 @@ async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(
     }
 }
 
-async fn check_and_mark_system_health() {
-    if let Err(err) = check_and_mark_system_health_impl().await {
+async fn check_and_set_system_health() {
+    if let Err(err) = check_and_set_system_health_impl().await {
         fx_log_err!("error during system health check: {}", err);
     }
 }
 
-async fn check_and_mark_system_health_impl() -> Result<(), Error> {
+async fn check_and_set_system_health_impl() -> Result<(), Error> {
     system_health_check::check_system_health().await?;
-    Ok(system_health_check::mark_active_configuration_successful().await)
+    Ok(system_health_check::set_active_configuration_healthy().await)
 }

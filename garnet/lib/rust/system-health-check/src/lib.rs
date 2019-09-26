@@ -8,4 +8,4 @@ mod mark;
 
 pub use check::check_system_health;
 pub use error::Error;
-pub use mark::mark_active_configuration_successful;
+pub use mark::set_active_configuration_healthy;

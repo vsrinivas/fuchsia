@@ -9,14 +9,14 @@ use {
 
 /// Inform the Paver service that Fuchsia booted successfully, so it marks the partition healthy
 /// and stops decrementing the boot counter.
-pub async fn mark_active_configuration_successful() {
-    if let Err(err) = mark_active_configuration_successful_impl().await {
+pub async fn set_active_configuration_healthy() {
+    if let Err(err) = set_active_configuration_healthy_impl().await {
         fx_log_err!("error marking active configuration successful: {}", err);
     }
 }
 
-async fn mark_active_configuration_successful_impl() -> Result<(), failure::Error> {
+async fn set_active_configuration_healthy_impl() -> Result<(), failure::Error> {
     let paver = connect_to_service::<PaverMarker>()?;
-    Status::ok(paver.mark_active_configuration_successful().await?)?;
+    Status::ok(paver.set_active_configuration_healthy().await?)?;
     Ok(())
 }

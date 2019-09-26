@@ -355,7 +355,7 @@ void Paver::WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync
   }
 
   std::unique_ptr<StreamReader> reader;
-  auto status = StreamReader::Create(std::move(payload_stream), &reader);
+  zx_status_t status = StreamReader::Create(std::move(payload_stream), &reader);
   if (status != ZX_OK) {
     ERROR("Unable to create stream.\n");
     completer.Reply(status);
@@ -622,13 +622,49 @@ void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync com
   completer.Reply(std::move(result));
 }
 
-void Paver::SetActiveConfiguration(Configuration configuration,
-                                   SetActiveConfigurationCompleter::Sync completer) {
+void Paver::QueryConfigurationStatus(Configuration configuration,
+                                     QueryConfigurationStatusCompleter::Sync completer) {
+  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
+  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
+    result.set_err(status);
+    completer.Reply(std::move(result));
+    return;
+  }
+  const abr::SlotData* slot;
+  switch (configuration) {
+    case Configuration::A:
+      slot = &abr_client_->Data().slots[0];
+      break;
+    case Configuration::B:
+      slot = &abr_client_->Data().slots[1];
+      break;
+    default:
+      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
+      result.set_err(ZX_ERR_INVALID_ARGS);
+      completer.Reply(std::move(result));
+      return;
+  }
+
+  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response;
+  if (!IsBootable(*slot)) {
+    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE;
+  } else if (slot->successful_boot == 0) {
+    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::PENDING;
+  } else {
+    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
+  }
+
+  result.set_response(response);
+  completer.Reply(std::move(result));
+}
+
+void Paver::SetConfigurationActive(Configuration configuration,
+                                   SetConfigurationActiveCompleter::Sync completer) {
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
     completer.Reply(status);
     return;
   }
-  auto data = abr_client_->Data();
+  abr::Data data = abr_client_->Data();
 
   abr::SlotData *primary, *secondary;
   switch (configuration) {
@@ -649,7 +685,7 @@ void Paver::SetActiveConfiguration(Configuration configuration,
     // 0 means unbootable, so we reset down to 1 to indicate lowest priority.
     secondary->priority = 1;
   }
-  primary->successful_boot = false;
+  primary->successful_boot = 0;
   primary->tries_remaining = abr::kMaxTriesRemaining;
   primary->priority = static_cast<uint8_t>(secondary->priority + 1);
 
@@ -662,8 +698,42 @@ void Paver::SetActiveConfiguration(Configuration configuration,
   completer.Reply(ZX_OK);
 }
 
-void Paver::MarkActiveConfigurationSuccessful(
-    MarkActiveConfigurationSuccessfulCompleter::Sync completer) {
+void Paver::SetConfigurationUnbootable(Configuration configuration,
+                                        SetConfigurationUnbootableCompleter::Sync completer) {
+  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
+    completer.Reply(status);
+    return;
+  }
+  auto data = abr_client_->Data();
+
+  abr::SlotData *slot;
+  switch (configuration) {
+    case Configuration::A:
+      slot = &data.slots[0];
+      break;
+    case Configuration::B:
+      slot = &data.slots[1];
+      break;
+    default:
+      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
+      completer.Reply(ZX_ERR_INVALID_ARGS);
+      return;
+  }
+  slot->successful_boot = 0;
+  slot->tries_remaining = 0;
+  slot->priority = 0;
+
+  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
+    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
+    completer.Reply(status);
+    return;
+  }
+
+  completer.Reply(ZX_OK);
+}
+
+void Paver::SetActiveConfigurationHealthy(
+    SetActiveConfigurationHealthyCompleter::Sync completer) {
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -690,7 +760,7 @@ void Paver::MarkActiveConfigurationSuccessful(
       ZX_ASSERT(false);
   }
   slot->tries_remaining = 0;
-  slot->successful_boot = true;
+  slot->successful_boot = 1;
 
   if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
     ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));

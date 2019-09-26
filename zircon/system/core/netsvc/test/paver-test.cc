@@ -42,8 +42,10 @@ namespace {
 enum class Command {
   kUnknown,
   kQueryActiveConfiguration,
-  kSetActiveConfiguration,
-  kMarkActiveConfigurationSuccessful,
+  kQueryConfigurationStatus,
+  kSetConfigurationActive,
+  kSetConfigurationUnbootable,
+  kSetActiveConfigurationHealthy,
   kWriteAsset,
   kWriteVolumes,
   kWriteBootloader,
@@ -66,15 +68,29 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     completer.Reply(std::move(result));
   }
 
-  void SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration configuration,
-                              SetActiveConfigurationCompleter::Sync completer) {
-    last_command_ = Command::kSetActiveConfiguration;
+  void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
+                                QueryConfigurationStatusCompleter::Sync completer) {
+    last_command_ = Command::kQueryConfigurationStatus;
+    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(std::move(result));
+  }
+
+  void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
+                              SetConfigurationActiveCompleter::Sync completer) {
+    last_command_ = Command::kSetConfigurationActive;
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void MarkActiveConfigurationSuccessful(
-      MarkActiveConfigurationSuccessfulCompleter::Sync completer) {
-    last_command_ = Command::kMarkActiveConfigurationSuccessful;
+  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
+                                   SetConfigurationUnbootableCompleter::Sync completer) {
+    last_command_ = Command::kSetConfigurationUnbootable;
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void SetActiveConfigurationHealthy(
+      SetActiveConfigurationHealthyCompleter::Sync completer) {
+    last_command_ = Command::kSetActiveConfigurationHealthy;
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 

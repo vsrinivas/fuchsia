@@ -107,7 +107,7 @@ impl MockPaver {
     async fn run_service(self: Arc<Self>, mut stream: PaverRequestStream) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
-                PaverRequest::MarkActiveConfigurationSuccessful { responder } => {
+                PaverRequest::SetActiveConfigurationHealthy { responder } => {
                     self.was_called_sender.unbounded_send(()).expect("mpsc send");
                     responder.send(self.response.clone().into_raw()).expect("send ok");
                 }
