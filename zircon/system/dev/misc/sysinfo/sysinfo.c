@@ -18,11 +18,8 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 
-#define ID_HJOBROOT 4
-
 typedef struct {
   zx_device_t* zxdev;
-  zx_handle_t root_job_svc;
   mtx_t lock;
   char board_name[ZBI_BOARD_NAME_LEN];
 } sysinfo_t;

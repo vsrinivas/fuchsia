@@ -57,14 +57,9 @@
 
 namespace {
 
-// Handle ID to use for the root job when spawning devhosts. This number must
-// match the value used in system/dev/misc/sysinfo/sysinfo.c.
-constexpr uint32_t kIdHJobRoot = 4;
-
 constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
-constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 
 // TODO(jocelyndang): this can be removed once we switch to using the unbind tasks.
 constexpr bool kUseUnbindTasks = false;
@@ -378,21 +373,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
     }
   }
 
-  // Give devhosts access to fuchsia.boot.RootJob, in order to implement the
-  // sysinfo driver. This should eventually be removed once we have a better
-  // way of passing around the services within sysinfo.
-  zx::channel root_job_svc, root_job_remote;
-  zx_status_t status = zx::channel::create(0, &root_job_svc, &root_job_remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect(kRootJobPath, root_job_remote.release());
-  if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: failed to connect to root job service: %d\n", status);
-    return status;
-  }
-
-  constexpr size_t kMaxActions = 6;
+  constexpr size_t kMaxActions = 5;
   fdio_spawn_action_t actions[kMaxActions];
   size_t actions_count = 0;
   actions[actions_count++] =
@@ -406,10 +387,6 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc},
   };
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, kIdHJobRoot), .handle = root_job_svc.release()},
-  };
   if (resource.is_valid()) {
     actions[actions_count++] = fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
@@ -418,7 +395,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
   }
 
   zx::channel loader_connection;
-  status = loader_connector(&loader_connection);
+  zx_status_t status = loader_connector(&loader_connection);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: failed to get devhost loader connection: %s\n",
         zx_status_get_string(status));
