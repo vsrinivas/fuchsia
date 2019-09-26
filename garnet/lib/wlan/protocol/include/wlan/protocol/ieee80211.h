@@ -158,6 +158,7 @@ static inline uint8_t* ieee80211_get_src_addr(struct ieee80211_frame_header* fh)
 
 // IEEE Std 802.11-2016, 9.4.2.1, Table 9-77
 enum ieee80211_assoc_tags {
+    IEEE80211_ASSOC_TAG_SSID = 0,
     IEEE80211_ASSOC_TAG_RATES = 1,
     IEEE80211_ASSOC_TAG_HT_CAPS = 45,
     IEEE80211_ASSOC_TAG_EXTENDED_RATES = 50,
