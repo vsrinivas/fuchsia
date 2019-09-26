@@ -8,6 +8,7 @@
 #include <fuchsia/update/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/result.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -18,6 +19,7 @@
 #include <lib/zx/process.h>
 #include <stdint.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <regex>
 
@@ -35,6 +37,7 @@ namespace feedback {
 namespace {
 
 using fuchsia::feedback::Attachment;
+using fuchsia::feedback::Data;
 using fuchsia::feedback::DataProvider_GetData_Result;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
@@ -165,34 +168,36 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
 
-  ASSERT_TRUE(out_result.is_response());
+  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
 
   // We cannot expect a particular value for each annotation or attachment because values might
   // depend on which device the test runs (e.g., board name) or what happened prior to running this
   // test (e.g., logs). But we should expect the keys to be present.
-  ASSERT_TRUE(out_result.response().data.has_annotations());
-  EXPECT_THAT(out_result.response().data.annotations(),
-              testing::UnorderedElementsAreArray({
-                  MatchesKey(kAnnotationBuildBoard),
-                  MatchesKey(kAnnotationBuildLatestCommitDate),
-                  MatchesKey(kAnnotationBuildProduct),
-                  MatchesKey(kAnnotationBuildVersion),
-                  MatchesKey(kAnnotationChannel),
-                  MatchesKey(kAnnotationDeviceBoardName),
-                  MatchesKey(kAnnotationDeviceUptime),
-              }));
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(), testing::UnorderedElementsAreArray({
+                                      MatchesKey(kAnnotationBuildBoard),
+                                      MatchesKey(kAnnotationBuildLatestCommitDate),
+                                      MatchesKey(kAnnotationBuildProduct),
+                                      MatchesKey(kAnnotationBuildVersion),
+                                      MatchesKey(kAnnotationChannel),
+                                      MatchesKey(kAnnotationDeviceBoardName),
+                                      MatchesKey(kAnnotationDeviceUptime),
+                                  }));
 
-  ASSERT_TRUE(out_result.response().data.has_attachments());
-  EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
-                                                            MatchesKey(kAttachmentAnnotations),
-                                                            MatchesKey(kAttachmentBuildSnapshot),
-                                                            MatchesKey(kAttachmentInspect),
-                                                            MatchesKey(kAttachmentLogKernel),
-                                                            MatchesKey(kAttachmentLogSystem),
-                                                        }));
+  ASSERT_TRUE(data.has_attachments());
+  EXPECT_THAT(data.attachments(), testing::UnorderedElementsAreArray({
+                                      MatchesKey(kAttachmentAnnotations),
+                                      MatchesKey(kAttachmentBuildSnapshot),
+                                      MatchesKey(kAttachmentInspect),
+                                      MatchesKey(kAttachmentLogKernel),
+                                      MatchesKey(kAttachmentLogSystem),
+                                  }));
 
-  ASSERT_TRUE(out_result.response().data.has_attachment_bundle());
-  const auto& attachment_bundle = out_result.response().data.attachment_bundle();
+  ASSERT_TRUE(data.has_attachment_bundle());
+  const auto& attachment_bundle = data.attachment_bundle();
   EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
   std::vector<Attachment> unpacked_attachments;
   ASSERT_TRUE(Unpack(attachment_bundle.value, &unpacked_attachments));

@@ -4,14 +4,13 @@
 
 #include "src/developer/feedback/bugreport/tests/stub_feedback_data_provider.h"
 
+#include <lib/fit/result.h>
+
 namespace feedback {
 
 void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
-  fuchsia::feedback::DataProvider_GetData_Result result;
-  fuchsia::feedback::DataProvider_GetData_Response response;
-  response.data.set_attachment_bundle(std::move(attachment_bundle_));
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  callback(fit::ok(
+      std::move(fuchsia::feedback::Data().set_attachment_bundle(std::move(attachment_bundle_)))));
 }
 
 }  // namespace feedback

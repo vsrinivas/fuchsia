@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 
+#include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/types.h>
@@ -34,18 +35,19 @@ void PrivacySettingsWatcher::Connect() {
 }
 
 void PrivacySettingsWatcher::Watch() {
-  privacy_settings_ptr_->Watch([this](fuchsia::settings::Privacy_Watch_Result result) {
-    if (result.is_err()) {
-      FX_LOGS(ERROR) << "Failed to obtain privacy settings: " << result.err();
-      Reset();
-    } else if (result.is_response()) {
-      privacy_settings_ = std::move(result.response().settings);
-      Update();
-    }
+  privacy_settings_ptr_->Watch(
+      [this](fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
+        if (result.is_error()) {
+          FX_LOGS(ERROR) << "Failed to obtain privacy settings: " << result.error();
+          Reset();
+        } else {
+          privacy_settings_ = result.take_value();
+          Update();
+        }
 
-    // We watch for the next update, following the hanging get pattern.
-    Watch();
-  });
+        // We watch for the next update, following the hanging get pattern.
+        Watch();
+      });
 }
 
 void PrivacySettingsWatcher::Reset() {

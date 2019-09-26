@@ -5,9 +5,11 @@
 #include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
 
 #include <fcntl.h>
+#include <lib/fit/result.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/types.h>
 
 #include <sstream>
 #include <string>
@@ -185,20 +187,19 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashType crash_type)
   report.set_specific_report(std::move(specific_report));
   report.set_attachments(std::move(attachments));
 
-  crash_reporter_->File(
-      std::move(report), [this](fuchsia::feedback::CrashReporter_File_Result result) {
-        if (!crash_reporting_done_.completer) {
-          return;
-        }
+  crash_reporter_->File(std::move(report), [this](fit::result<void, zx_status_t> result) {
+    if (!crash_reporting_done_.completer) {
+      return;
+    }
 
-        if (result.is_err()) {
-          FX_PLOGS(ERROR, result.err())
-              << "failed to file a crash report for crash extracted from reboot log";
-          crash_reporting_done_.completer.complete_error();
-        } else {
-          crash_reporting_done_.completer.complete_ok();
-        }
-      });
+    if (result.is_error()) {
+      FX_PLOGS(ERROR, result.error())
+          << "failed to file a crash report for crash extracted from reboot log";
+      crash_reporting_done_.completer.complete_error();
+    } else {
+      crash_reporting_done_.completer.complete_ok();
+    }
+  });
 
   return crash_reporting_done_.consumer.promise_or(fit::error());
 }

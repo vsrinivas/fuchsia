@@ -7,6 +7,7 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fit/result.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
@@ -17,6 +18,7 @@
 #include <lib/timekeeper/test_clock.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -44,13 +46,11 @@
 namespace feedback {
 namespace {
 
-using fuchsia::crash::Analyzer_OnManagedRuntimeException_Result;
 using fuchsia::crash::GenericException;
 using fuchsia::crash::ManagedRuntimeException;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
-using fuchsia::feedback::CrashReporter_File_Result;
 using fuchsia::feedback::GenericCrashReport;
 using fuchsia::feedback::NativeCrashReport;
 using fuchsia::feedback::RuntimeCrashReport;
@@ -205,9 +205,9 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one crash report.
-  CrashReporter_File_Result FileOneCrashReport(CrashReport report) {
-    CrashReporter_File_Result out_result;
-    agent_->File(std::move(report), [&out_result](CrashReporter_File_Result result) {
+  fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
+    fit::result<void, zx_status_t> out_result;
+    agent_->File(std::move(report), [&out_result](fit::result<void, zx_status_t> result) {
       out_result = std::move(result);
     });
     FXL_CHECK(RunLoopUntilIdle());
@@ -215,8 +215,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one crash report.
-  CrashReporter_File_Result FileOneCrashReport(const std::vector<Annotation>& annotations = {},
-                                               std::vector<Attachment> attachments = {}) {
+  fit::result<void, zx_status_t> FileOneCrashReport(const std::vector<Annotation>& annotations = {},
+                                                    std::vector<Attachment> attachments = {}) {
     CrashReport report;
     report.set_program_name(kProgramName);
     if (!annotations.empty()) {
@@ -233,7 +233,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   // |attachment| is useful to control the lower bound of the size of the report by controlling the
   // size of some of the attachment(s). This comes in handy when testing the database size limit
   // enforcement logic for instance.
-  CrashReporter_File_Result FileOneCrashReportWithSingleAttachment(
+  fit::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
       const std::string& attachment = kSingleAttachmentValue) {
     std::vector<Attachment> attachments;
     attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, attachment));
@@ -242,7 +242,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one generic crash report.
-  CrashReporter_File_Result FileOneGenericCrashReport(
+  fit::result<void, zx_status_t> FileOneGenericCrashReport(
       const std::optional<std::string>& crash_signature) {
     GenericCrashReport generic_report;
     if (crash_signature.has_value()) {
@@ -260,7 +260,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one native crash report.
-  CrashReporter_File_Result FileOneNativeCrashReport(std::optional<fuchsia::mem::Buffer> minidump) {
+  fit::result<void, zx_status_t> FileOneNativeCrashReport(
+      std::optional<fuchsia::mem::Buffer> minidump) {
     NativeCrashReport native_report;
     if (minidump.has_value()) {
       native_report.set_minidump(std::move(minidump.value()));
@@ -277,7 +278,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one Dart crash report.
-  CrashReporter_File_Result FileOneDartCrashReport(
+  fit::result<void, zx_status_t> FileOneDartCrashReport(
       const std::optional<std::string>& exception_type,
       const std::optional<std::string>& exception_message,
       std::optional<fuchsia::mem::Buffer> exception_stack_trace) {
@@ -351,21 +352,19 @@ TEST_F(CrashpadAgentTest, Succeed_OnLegacyDartException) {
   ManagedRuntimeException dart_exception;
   dart_exception.set_dart(std::move(exception));
 
-  Analyzer_OnManagedRuntimeException_Result out_result;
+  fit::result<void, zx_status_t> out_result;
   agent_->OnManagedRuntimeException(
       "component_url", std::move(dart_exception),
-      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
-        out_result = std::move(result);
-      });
+      [&out_result](fit::result<void, zx_status_t> result) { out_result = std::move(result); });
   ASSERT_TRUE(RunLoopUntilIdle());
 
-  EXPECT_TRUE(out_result.is_response());
+  EXPECT_TRUE(out_result.is_ok());
   CheckAttachments({"DartError"});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneCrashReport().is_response());
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachments();
 }
 
@@ -379,7 +378,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
                       BuildAnnotation("annotation.key"),
                   },
                   /*attachments=*/std::move(attachments))
-                  .is_response());
+                  .is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
@@ -388,19 +387,19 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
   CrashReport report;
   report.set_program_name(kProgramName);
   report.set_event_id("event-id");
-  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_response());
+  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
   CheckAttachments();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_response());
+  ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
   CheckAttachments();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneGenericCrashReport("signature").is_response());
+  ASSERT_TRUE(FileOneGenericCrashReport("signature").is_ok());
   CheckAttachments();
 }
 
@@ -408,13 +407,13 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
-  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_response());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
   CheckAttachments();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_response());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAttachments();
 }
 
@@ -424,23 +423,24 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
   fsl::VmoFromString("#0", &stack_trace);
   ASSERT_TRUE(
       FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
-          .is_response());
+          .is_ok());
   CheckAttachments({"DartError"});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_response());
+  ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
   CheckAttachments();
 }
 
 TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
   CrashReport report;
 
-  CrashReporter_File_Result out_result;
-  agent_->File(std::move(report),
-               [&out_result](CrashReporter_File_Result result) { out_result = std::move(result); });
-  ASSERT_TRUE(out_result.is_err());
+  fit::result<void, zx_status_t> out_result;
+  agent_->File(std::move(report), [&out_result](fit::result<void, zx_status_t> result) {
+    out_result = std::move(result);
+  });
+  ASSERT_TRUE(out_result.is_error());
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
@@ -460,7 +460,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                     /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
   // We generate a crash report.
-  EXPECT_TRUE(FileOneCrashReport().is_response());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
 
   // We check that all the attachments have been cleaned up.
   EXPECT_TRUE(GetAttachmentSubdirs().empty());
@@ -493,14 +493,14 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                     /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
   // We generate a first crash report.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_ok());
 
   // We check that only one set of attachments is there.
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
   ASSERT_EQ(attachment_subdirs.size(), 1u);
 
   // We generate a new crash report.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_ok());
 
   // We check that only one set of attachments is there.
   const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirs();
@@ -520,7 +520,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
   EXPECT_THAT(attachment_subdirs, ElementsAre(kCrashpadUUIDString));
 
   // We generate a crash report with its own attachment.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment("an attachment").is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment("an attachment").is_ok());
 
   // We check that only one set of attachments is present and different than the
   // prior set (the name of the directory is the local crash report ID).
@@ -565,7 +565,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
              /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout},
       std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
-  EXPECT_TRUE(FileOneCrashReport().is_err());
+  EXPECT_TRUE(FileOneCrashReport().is_error());
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
@@ -582,39 +582,39 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                     },
                     /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
 
-  EXPECT_TRUE(FileOneCrashReport().is_response());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   ResetFeedbackDataProvider(nullptr);
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_response());
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
-  CrashReporter_File_Result result = FileOneCrashReportWithSingleAttachment();
+  fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
   RunLoopFor(kFeedbackDataCollectionTimeout);
-  EXPECT_TRUE(result.is_response());
+  EXPECT_TRUE(result.is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
 
@@ -662,7 +662,7 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
-  EXPECT_TRUE(FileOneCrashReport().is_response());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
 
   EXPECT_THAT(
       InspectTree(),

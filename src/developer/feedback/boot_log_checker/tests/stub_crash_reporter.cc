@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 
+#include <lib/fit/result.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
@@ -21,22 +22,17 @@ void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback
 
   crash_signature_ = report.specific_report().generic().crash_signature();
 
-  fuchsia::feedback::CrashReporter_File_Result result;
   if (!fsl::StringFromVmo(report.attachments()[0].value, &reboot_log_)) {
     FX_LOGS(ERROR) << "error parsing feedback log VMO as string";
-    result.set_err(ZX_ERR_INTERNAL);
+    callback(fit::error(ZX_ERR_INTERNAL));
   } else {
-    fuchsia::feedback::CrashReporter_File_Response response;
-    result.set_response(response);
+    callback(fit::ok());
   }
-  callback(std::move(result));
 }
 
 void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
                                                FileCallback callback) {
-  fuchsia::feedback::CrashReporter_File_Result result;
-  result.set_err(ZX_ERR_INTERNAL);
-  callback(std::move(result));
+  callback(fit::error(ZX_ERR_INTERNAL));
 }
 
 }  // namespace feedback

@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 
+#include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
@@ -23,7 +24,7 @@
 namespace feedback {
 namespace {
 
-using fuchsia::settings::Privacy_Set_Result;
+using fuchsia::settings::Error;
 using fuchsia::settings::PrivacySettings;
 
 constexpr Settings::UploadPolicy kDisabled = Settings::UploadPolicy::DISABLED;
@@ -59,11 +60,11 @@ class PrivacySettingsWatcherTest : public gtest::TestLoopFixture,
   }
 
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
-    Privacy_Set_Result set_result;
+    fit::result<void, Error> set_result;
     fake_privacy_settings_->Set(
         MakePrivacySettings(user_data_sharing_consent),
-        [&set_result](Privacy_Set_Result result) { set_result = std::move(result); });
-    EXPECT_TRUE(set_result.is_response());
+        [&set_result](fit::result<void, Error> result) { set_result = std::move(result); });
+    EXPECT_TRUE(set_result.is_ok());
   }
 
   void SetInitialUploadPolicy(const Settings::UploadPolicy upload_policy) {

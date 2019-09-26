@@ -5,6 +5,7 @@
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -74,16 +75,16 @@ fit::promise<Data> FeedbackDataProvider::GetData(zx::duration timeout) {
     done_.completer.complete_error();
   });
 
-  data_provider_->GetData([this](fuchsia::feedback::DataProvider_GetData_Result out_result) {
+  data_provider_->GetData([this](fit::result<Data, zx_status_t> result) {
     if (!done_.completer) {
       return;
     }
 
-    if (out_result.is_err()) {
-      FX_PLOGS(WARNING, out_result.err()) << "Failed to fetch feedback data";
+    if (result.is_error()) {
+      FX_PLOGS(WARNING, result.error()) << "Failed to fetch feedback data";
       done_.completer.complete_error();
     } else {
-      done_.completer.complete_ok(std::move(out_result.response().data));
+      done_.completer.complete_ok(result.take_value());
     }
   });
 

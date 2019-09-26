@@ -5,6 +5,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -40,7 +41,6 @@ namespace {
 
 using crashpad::CrashReportDatabase;
 using fuchsia::feedback::CrashReport;
-using fuchsia::feedback::CrashReporter_File_Result;
 using fuchsia::feedback::Data;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
@@ -156,41 +156,25 @@ void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
   CrashReport report;
   report.set_program_name(std::move(component_url));
   report.set_specific_report(std::move(specific_report));
-  File(std::move(report), [callback = std::move(callback)](CrashReporter_File_Result result) {
-    fuchsia::crash::Analyzer_OnManagedRuntimeException_Result old_result;
-    if (result.is_err()) {
-      old_result.set_err(result.err());
-    } else if (result.is_response()) {
-      old_result.set_response({});
-    }
-    callback(std::move(old_result));
+  File(std::move(report), [callback = std::move(callback)](fit::result<void, zx_status_t> result) {
+    callback(std::move(result));
   });
 }
 
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
-    CrashReporter_File_Result result;
-    result.set_err(ZX_ERR_INVALID_ARGS);
-    callback(std::move(result));
+    callback(fit::error(ZX_ERR_INVALID_ARGS));
     return;
   }
 
   auto promise =
       File(std::move(report))
-          .and_then([] {
-            CrashReporter_File_Result result;
-            fuchsia::feedback::CrashReporter_File_Response response;
-            result.set_response(response);
-            return fit::ok(std::move(result));
-          })
           .or_else([] {
             FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
-            CrashReporter_File_Result result;
-            result.set_err(ZX_ERR_INTERNAL);
-            return fit::ok(std::move(result));
+            return fit::error(ZX_ERR_INTERNAL);
           })
-          .and_then([callback = std::move(callback), this](CrashReporter_File_Result& result) {
+          .then([callback = std::move(callback), this](fit::result<void, zx_status_t>& result) {
             callback(std::move(result));
             PruneDatabase();
             CleanDatabase();

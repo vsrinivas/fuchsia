@@ -7,10 +7,12 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/promise.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "src/developer/feedback/feedback_agent/annotations.h"
 #include "src/developer/feedback/feedback_agent/attachments.h"
@@ -24,8 +26,7 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::DataProvider_GetData_Response;
-using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
@@ -117,21 +118,20 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
   auto promise =
       fit::join_promises(std::move(annotations), std::move(attachments))
           .and_then(
-              [callback = std::move(callback)](
-                  std::tuple<fit::result<std::vector<Annotation>>,
-                             fit::result<std::vector<Attachment>>>& annotations_and_attachments) {
-                DataProvider_GetData_Response response;
+              [](std::tuple<fit::result<std::vector<Annotation>>,
+                            fit::result<std::vector<Attachment>>>& annotations_and_attachments) {
+                Data data;
 
                 auto& annotations = std::get<0>(annotations_and_attachments);
                 if (annotations.is_ok()) {
-                  response.data.set_annotations(annotations.take_value());
+                  data.set_annotations(annotations.take_value());
                 } else {
                   FX_LOGS(WARNING) << "Failed to retrieve any annotations";
                 }
 
                 auto& attachments = std::get<1>(annotations_and_attachments);
                 if (attachments.is_ok()) {
-                  response.data.set_attachments(attachments.take_value());
+                  data.set_attachments(attachments.take_value());
                 } else {
                   FX_LOGS(WARNING) << "Failed to retrieve any attachments";
                 }
@@ -139,27 +139,23 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
                 // We also add the annotations as a single extra attachment.
                 // This is useful for clients that surface the annotations differentily in the UI
                 // but still want all the annotations to be easily downloadable in one file.
-                if (response.data.has_annotations()) {
-                  AddAnnotationsAsExtraAttachment(response.data.annotations(),
-                                                  response.data.mutable_attachments());
+                if (data.has_annotations()) {
+                  AddAnnotationsAsExtraAttachment(data.annotations(), data.mutable_attachments());
                 }
 
                 // We bundle the attachments into a single attachment.
                 // This is useful for most clients that want to pass around a single bundle.
-                if (response.data.has_attachments()) {
+                if (data.has_attachments()) {
                   Attachment bundle;
-                  if (BundleAttachments(response.data.attachments(), &bundle)) {
-                    response.data.set_attachment_bundle(std::move(bundle));
+                  if (BundleAttachments(data.attachments(), &bundle)) {
+                    data.set_attachment_bundle(std::move(bundle));
                   }
                 }
 
-                DataProvider_GetData_Result result;
-                result.set_response(std::move(response));
-                callback(std::move(result));
+                return fit::ok(std::move(data));
               })
-          .or_else([callback = std::move(callback)] {
-            DataProvider_GetData_Result result;
-            result.set_err(ZX_ERR_INTERNAL);
+          .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
+          .then([callback = std::move(callback)](fit::result<Data, zx_status_t>& result) {
             callback(std::move(result));
           });
 

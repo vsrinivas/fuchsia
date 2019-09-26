@@ -7,6 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
@@ -19,6 +20,7 @@
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <set>
@@ -47,7 +49,6 @@ namespace {
 
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
-using fuchsia::feedback::DataProvider_GetData_Result;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
@@ -215,10 +216,10 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
     return out_response;
   }
 
-  DataProvider_GetData_Result GetData() {
-    DataProvider_GetData_Result out_result;
+  fit::result<Data, zx_status_t> GetData() {
+    fit::result<Data, zx_status_t> out_result;
     bool has_out_result = false;
-    data_provider_->GetData([&out_result, &has_out_result](DataProvider_GetData_Result result) {
+    data_provider_->GetData([&out_result, &has_out_result](fit::result<Data, zx_status_t> result) {
       out_result = std::move(result);
       has_out_result = true;
     });
@@ -388,36 +389,40 @@ TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCa
 }
 
 TEST_F(DataProviderImplTest, GetData_SmokeTest) {
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_ok());
 
   // There is not much we can assert here as no missing annotation nor attachment is fatal and we
   // cannot expect annotations or attachments to be present.
 
+  const Data& data = result.value();
+
   // If there are annotations, there should be at least one attachment.
-  if (result.response().data.has_annotations()) {
-    ASSERT_TRUE(result.response().data.has_attachments());
+  if (data.has_annotations()) {
+    ASSERT_TRUE(data.has_attachments());
   }
 
   // If there are attachments, there should be an attachment bundle with the same number of
   // attachments once unpacked.
-  if (result.response().data.has_attachments()) {
+  if (data.has_attachments()) {
     std::vector<Attachment> unpacked_attachments;
-    UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+    UnpackAttachmentBundle(data, &unpacked_attachments);
   }
 }
 
 TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
 
   // There should be an "annotations.json" attachment.
-  ASSERT_TRUE(result.response().data.has_attachments());
+  ASSERT_TRUE(data.has_attachments());
   bool found_annotations_attachment = false;
   std::string annotations_json;
-  for (const auto& attachment : result.response().data.attachments()) {
+  for (const auto& attachment : data.attachments()) {
     if (attachment.key.compare(kAttachmentAnnotations) != 0) {
       continue;
     }
@@ -472,7 +477,7 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
 
   // That same "annotations.json" attachment should be present in the attachment bundle.
   std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
               testing::Contains(MatchesAttachment(kAttachmentAnnotations, annotations_json)));
 }
@@ -486,18 +491,20 @@ TEST_F(DataProviderImplTest, GetData_SysLog) {
   });
   const std::string expected_syslog = "[15604.000][07559][07687][foo] INFO: log message\n";
 
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
 
   // There should be a "log.system.txt" attachment.
-  ASSERT_TRUE(result.response().data.has_attachments());
-  EXPECT_THAT(result.response().data.attachments(),
+  ASSERT_TRUE(data.has_attachments());
+  EXPECT_THAT(data.attachments(),
               testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
 
   // That same "log.system.txt" attachment should be present in the attachment bundle.
   std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
               testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
 }
@@ -526,15 +533,17 @@ constexpr char kInspectJsonSchema[] = R"({
 TEST_F(DataProviderImplTest, GetData_Inspect) {
   InjectInspectTestApp();
 
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
 
   // There should be an "inspect.json" attachment.
-  ASSERT_TRUE(result.response().data.has_attachments());
+  ASSERT_TRUE(data.has_attachments());
   bool found_inspect_attachment = false;
   std::string inspect_json;
-  for (const auto& attachment : result.response().data.attachments()) {
+  for (const auto& attachment : data.attachments()) {
     if (attachment.key.compare(kAttachmentInspect) != 0) {
       continue;
     }
@@ -582,7 +591,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
 
   // That same "inspect.json" attachment should be present in the attachment bundle.
   std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
               testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }
@@ -590,73 +599,86 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
 TEST_F(DataProviderImplTest, GetData_Channel) {
   ResetChannelProvider("my-channel");
 
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
-  ASSERT_TRUE(result.response().data.has_annotations());
-  EXPECT_THAT(result.response().data.annotations(),
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(),
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
 }
 
 TEST_F(DataProviderImplTest, GetData_Uptime) {
-  DataProvider_GetData_Result result = GetData();
+  fit::result<Data, zx_status_t> result = GetData();
 
-  ASSERT_TRUE(result.is_response());
-  ASSERT_TRUE(result.response().data.has_annotations());
-  EXPECT_THAT(result.response().data.annotations(),
-              testing::Contains(MatchesKey(kAnnotationDeviceUptime)));
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(), testing::Contains(MatchesKey(kAnnotationDeviceUptime)));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
   ResetDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
 
-  DataProvider_GetData_Result result = GetData();
-  ASSERT_TRUE(result.is_response());
-  EXPECT_FALSE(result.response().data.has_annotations());
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  EXPECT_FALSE(data.has_annotations());
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
   ResetDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
-  DataProvider_GetData_Result result = GetData();
-  ASSERT_TRUE(result.is_response());
-  EXPECT_TRUE(result.response().data.has_attachments());
-  ASSERT_EQ(result.response().data.attachments().size(), 1u);
-  EXPECT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  EXPECT_TRUE(data.has_attachments());
+  ASSERT_EQ(data.attachments().size(), 1u);
+  EXPECT_STREQ(data.attachments()[0].key.c_str(), kAttachmentAnnotations);
   std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
   ResetDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 
-  DataProvider_GetData_Result result = GetData();
-  ASSERT_TRUE(result.is_response());
-  EXPECT_FALSE(result.response().data.has_annotations());
-  EXPECT_FALSE(result.response().data.has_attachments());
-  EXPECT_FALSE(result.response().data.has_attachment_bundle());
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  EXPECT_FALSE(data.has_annotations());
+  EXPECT_FALSE(data.has_attachments());
+  EXPECT_FALSE(data.has_attachment_bundle());
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
   ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
 
-  DataProvider_GetData_Result result = GetData();
-  ASSERT_TRUE(result.is_response());
-  EXPECT_FALSE(result.response().data.has_annotations());
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  EXPECT_FALSE(data.has_annotations());
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
   ResetDataProvider(Config{kDefaultAnnotations,
                            /*attachment_allowlist=*/{"unknown.attachment"}});
 
-  DataProvider_GetData_Result result = GetData();
-  ASSERT_TRUE(result.is_response());
-  EXPECT_TRUE(result.response().data.has_attachments());
-  ASSERT_EQ(result.response().data.attachments().size(), 1u);
-  EXPECT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  EXPECT_TRUE(data.has_attachments());
+  ASSERT_EQ(data.attachments().size(), 1u);
+  EXPECT_STREQ(data.attachments()[0].key.c_str(), kAttachmentAnnotations);
   std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 

@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 
+#include <lib/fit/result.h>
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
 
@@ -17,8 +18,7 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::DataProvider_GetData_Response;
-using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::Data;
 
 Annotation BuildAnnotation(const std::string& key) {
   Annotation annotation;
@@ -45,34 +45,26 @@ Attachment BuildAttachment(const std::string& key) {
 }  // namespace
 
 void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
-  DataProvider_GetData_Result result;
-  DataProvider_GetData_Response response;
-  response.data.set_annotations(BuildAnnotations(annotation_keys_));
-  response.data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  Data data;
+  data.set_annotations(BuildAnnotations(annotation_keys_));
+  data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
+  callback(fit::ok(std::move(data)));
 }
 
 void StubFeedbackDataProviderReturnsNoAnnotation::GetData(GetDataCallback callback) {
-  DataProvider_GetData_Result result;
-  DataProvider_GetData_Response response;
-  response.data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  Data data;
+  data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
+  callback(fit::ok(std::move(data)));
 }
 
 void StubFeedbackDataProviderReturnsNoAttachment::GetData(GetDataCallback callback) {
-  DataProvider_GetData_Result result;
-  DataProvider_GetData_Response response;
-  response.data.set_annotations(BuildAnnotations(annotation_keys_));
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  Data data;
+  data.set_annotations(BuildAnnotations(annotation_keys_));
+  callback(fit::ok(std::move(data)));
 }
 
 void StubFeedbackDataProviderReturnsNoData::GetData(GetDataCallback callback) {
-  DataProvider_GetData_Result result;
-  result.set_err(ZX_ERR_INTERNAL);
-  callback(std::move(result));
+  callback(fit::error(ZX_ERR_INTERNAL));
 }
 
 void StubFeedbackDataProviderNeverReturning::GetData(GetDataCallback callback) {}

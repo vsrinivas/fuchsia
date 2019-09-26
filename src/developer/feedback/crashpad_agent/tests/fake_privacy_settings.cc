@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 
+#include <lib/fit/result.h>
+
 #include <memory>
 
 #include "fuchsia/settings/cpp/fidl.h"
@@ -22,30 +24,24 @@ void FakePrivacySettings::Watch(WatchCallback callback) {
     return;
   }
 
-  fuchsia::settings::Privacy_Watch_Response response;
-  settings_.Clone(&response.settings);
-  fuchsia::settings::Privacy_Watch_Result result;
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  fuchsia::settings::PrivacySettings settings;
+  settings_.Clone(&settings);
+  callback(fit::ok(std::move(settings)));
   first_call_ = false;
 }
 
 void FakePrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) {
   settings_ = std::move(settings);
-  fuchsia::settings::Privacy_Set_Result result;
-  result.set_response({});
-  callback(std::move(result));
+  callback(fit::ok());
 
   NotifyWatchers();
 }
 
 void FakePrivacySettings::NotifyWatchers() {
   for (const auto& watcher : watchers_) {
-    fuchsia::settings::Privacy_Watch_Response response;
-    settings_.Clone(&response.settings);
-    fuchsia::settings::Privacy_Watch_Result result;
-    result.set_response(std::move(response));
-    watcher(std::move(result));
+    fuchsia::settings::PrivacySettings settings;
+    settings_.Clone(&settings);
+    watcher(fit::ok(std::move(settings)));
   }
   watchers_.clear();
 }
