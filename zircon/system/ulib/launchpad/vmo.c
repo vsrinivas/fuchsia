@@ -10,6 +10,7 @@
 
 #include <launchpad/vmo.h>
 
+__EXPORT
 zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
   int fd = open(filename, O_RDONLY);
   if (fd < 0)

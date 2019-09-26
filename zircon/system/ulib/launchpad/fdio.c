@@ -30,6 +30,7 @@ static zx_status_t add_fdio(launchpad_t* lp, zx_handle_t* handle, uint32_t type,
   }
 }
 
+__EXPORT
 zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
   if (what & LP_CLONE_FDIO_NAMESPACE) {
     fdio_flat_namespace_t* flat;

@@ -78,12 +78,15 @@ static zx_status_t lp_error(launchpad_t* lp, zx_status_t error, const char* msg)
   return lp->error;
 }
 
+__EXPORT
 zx_status_t launchpad_get_status(launchpad_t* lp) { return lp->error; }
 
+__EXPORT
 void launchpad_abort(launchpad_t* lp, zx_status_t error, const char* msg) {
   lp_error(lp, (error < 0) ? error : ZX_ERR_INTERNAL, msg);
 }
 
+__EXPORT
 const char* launchpad_error_message(launchpad_t* lp) { return lp->errmsg; }
 
 #define HND_LOADER_COUNT 3
@@ -92,6 +95,7 @@ const char* launchpad_error_message(launchpad_t* lp) { return lp->errmsg; }
 // We always install the vmar handle as the second in the message.
 #define lp_vmar(lp) ((lp)->handles[1])
 
+__EXPORT
 void launchpad_destroy(launchpad_t* lp) {
   if (lp == &invalid_launchpad)
     return;
@@ -133,6 +137,7 @@ static zx_status_t launchpad_create_with_process(zx_handle_t proc, zx_handle_t v
 }
 
 // Create a new process and a launchpad that will set it up.
+__EXPORT
 zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job, zx_handle_t transferred_job,
                                        const char* name, launchpad_t** result) {
   uint32_t name_len = strlen(name);
@@ -158,6 +163,7 @@ zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job, zx_handle_t tra
   return lp->error;
 }
 
+__EXPORT
 zx_status_t launchpad_create(zx_handle_t job, const char* name, launchpad_t** result) {
   if (job == ZX_HANDLE_INVALID)
     job = zx_job_default();
@@ -166,8 +172,10 @@ zx_status_t launchpad_create(zx_handle_t job, const char* name, launchpad_t** re
   return launchpad_create_with_jobs(job, xjob, name, result);
 }
 
+__EXPORT
 zx_handle_t launchpad_get_process_handle(launchpad_t* lp) { return lp_proc(lp); }
 
+__EXPORT
 zx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp) { return lp_vmar(lp); }
 
 static zx_status_t build_stringtable(launchpad_t* lp, int count, const char* const* item,
@@ -203,6 +211,7 @@ static zx_status_t build_stringtable(launchpad_t* lp, int count, const char* con
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_set_args(launchpad_t* lp, int argc, const char* const* argv) {
   size_t total;
   char* buffer;
@@ -217,6 +226,7 @@ zx_status_t launchpad_set_args(launchpad_t* lp, int argc, const char* const* arg
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_set_nametable(launchpad_t* lp, size_t count, const char* const* names) {
   size_t total;
   char* buffer;
@@ -231,6 +241,7 @@ zx_status_t launchpad_set_nametable(launchpad_t* lp, size_t count, const char* c
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp) {
   uint32_t count = 0;
   if (envp != NULL) {
@@ -276,6 +287,7 @@ static zx_status_t more_handles(launchpad_t* lp, size_t n) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_add_handle(launchpad_t* lp, zx_handle_t h, uint32_t id) {
   if (h == ZX_HANDLE_INVALID)
     return lp_error(lp, ZX_ERR_BAD_HANDLE, "added invalid handle");
@@ -290,6 +302,7 @@ zx_status_t launchpad_add_handle(launchpad_t* lp, zx_handle_t h, uint32_t id) {
   return status;
 }
 
+__EXPORT
 zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n, const zx_handle_t h[],
                                   const uint32_t id[]) {
   zx_status_t status = more_handles(lp, n);
@@ -316,6 +329,7 @@ static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
     launchpad_set_stack_size(lp, elf_stack_size);
 }
 
+__EXPORT
 zx_status_t launchpad_elf_load_basic(launchpad_t* lp, zx_handle_t vmo) {
   if (vmo == ZX_HANDLE_INVALID)
     return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
@@ -342,6 +356,7 @@ done:
   return lp->error;
 }
 
+__EXPORT
 zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo, zx_vaddr_t* base,
                                      zx_vaddr_t* entry) {
   if (lp->error)
@@ -553,6 +568,7 @@ done:
   return lp->error;
 }
 
+__EXPORT
 zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo) {
   if (vmo == ZX_HANDLE_INVALID)
     return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
@@ -570,6 +586,7 @@ static zx_handle_t vdso_get_vmo(void) {
   return vdso_vmo;
 }
 
+__EXPORT
 zx_status_t launchpad_get_vdso_vmo(zx_handle_t* out) {
   vdso_lock();
   zx_status_t status = zx_handle_duplicate(vdso_get_vmo(), ZX_RIGHT_SAME_RIGHTS, out);
@@ -577,6 +594,7 @@ zx_status_t launchpad_get_vdso_vmo(zx_handle_t* out) {
   return status;
 }
 
+__EXPORT
 zx_handle_t launchpad_set_vdso_vmo(zx_handle_t new_vdso_vmo) {
   vdso_lock();
   zx_handle_t old = vdso_vmo;
@@ -585,6 +603,7 @@ zx_handle_t launchpad_set_vdso_vmo(zx_handle_t new_vdso_vmo) {
   return old;
 }
 
+__EXPORT
 zx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
   if (lp->error)
     return lp->error;
@@ -596,6 +615,7 @@ zx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
   return launchpad_add_handle(lp, vdso, PA_HND(PA_VMO_VDSO, 0));
 }
 
+__EXPORT
 zx_status_t launchpad_load_vdso(launchpad_t* lp, zx_handle_t vmo) {
   if (vmo != ZX_HANDLE_INVALID)
     return launchpad_elf_load_extra(lp, vmo, &lp->vdso_base, NULL);
@@ -606,6 +626,7 @@ zx_status_t launchpad_load_vdso(launchpad_t* lp, zx_handle_t vmo) {
   return status;
 }
 
+__EXPORT
 zx_status_t launchpad_get_entry_address(launchpad_t* lp, zx_vaddr_t* entry) {
   if (lp->entry == 0)
     return ZX_ERR_BAD_STATE;
@@ -613,6 +634,7 @@ zx_status_t launchpad_get_entry_address(launchpad_t* lp, zx_vaddr_t* entry) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_get_base_address(launchpad_t* lp, zx_vaddr_t* base) {
   if (lp->base == 0)
     return ZX_ERR_BAD_STATE;
@@ -620,6 +642,7 @@ zx_status_t launchpad_get_base_address(launchpad_t* lp, zx_vaddr_t* base) {
   return ZX_OK;
 }
 
+__EXPORT
 bool launchpad_send_loader_message(launchpad_t* lp, bool do_send) {
   bool result = lp->loader_message;
   if (!lp->error)
@@ -627,6 +650,7 @@ bool launchpad_send_loader_message(launchpad_t* lp, bool do_send) {
   return result;
 }
 
+__EXPORT
 zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc) {
   zx_handle_t result = lp->special_handles[HND_LDSVC_LOADER];
   lp->special_handles[HND_LDSVC_LOADER] = svc;
@@ -774,6 +798,7 @@ static zx_status_t send_loader_message(launchpad_t* lp, zx_handle_t first_thread
   return status;
 }
 
+__EXPORT
 size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
   size_t old_size = lp->stack_size;
   if (new_size >= (SIZE_MAX & -PAGE_SIZE)) {
@@ -1035,6 +1060,7 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_status_t status = launchpad_start(lp, &h);
@@ -1051,6 +1077,7 @@ zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg
   return status;
 }
 
+__EXPORT
 zx_status_t launchpad_ready_set(launchpad_t* lp, launchpad_start_data_t* data,
                                 const char** errmsg) {
   zx_status_t status = prepare_start(lp, data);
@@ -1060,12 +1087,14 @@ zx_status_t launchpad_ready_set(launchpad_t* lp, launchpad_start_data_t* data,
   return status;
 }
 
+__EXPORT
 zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo) {
   launchpad_elf_load(lp, vmo);
   launchpad_load_vdso(lp, ZX_HANDLE_INVALID);
   return launchpad_add_vdso_vmo(lp);
 }
 
+__EXPORT
 zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
   zx_handle_t vmo;
   zx_status_t status = launchpad_vmo_from_file(path, &vmo);
