@@ -80,12 +80,13 @@ class DisplayDevice : public FidlBacklight::Device::Interface {
   virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync completer) override;
   void SetStateNormalized(FidlBacklight::State state,
-                          SetStateNormalizedCompleter::Sync _completer) override;
-  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+                          SetStateNormalizedCompleter::Sync completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) override;
   void SetStateAbsolute(FidlBacklight::State state,
-                        SetStateAbsoluteCompleter::Sync _completer) override;
+                        SetStateAbsoluteCompleter::Sync completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
 
  protected:
   // Attempts to initialize the ddi.

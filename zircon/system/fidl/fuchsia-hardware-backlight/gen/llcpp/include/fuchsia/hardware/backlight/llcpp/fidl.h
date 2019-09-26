@@ -29,6 +29,8 @@ struct Device_SetStateNormalized_Response;
 struct Device_SetStateNormalized_Result;
 struct Device_SetStateAbsolute_Response;
 struct Device_SetStateAbsolute_Result;
+struct Device_GetMaxAbsoluteBrightness_Response;
+struct Device_GetMaxAbsoluteBrightness_Result;
 class Device;
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_StateTable;
@@ -480,12 +482,120 @@ struct Device_SetStateAbsolute_Result {
   };
 };
 
+
+
+struct Device_GetMaxAbsoluteBrightness_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  double max_brightness = {};
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+
+struct Device_GetMaxAbsoluteBrightness_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Device_GetMaxAbsoluteBrightness_Result();
+  ~Device_GetMaxAbsoluteBrightness_Result();
+
+  Device_GetMaxAbsoluteBrightness_Result(Device_GetMaxAbsoluteBrightness_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Device_GetMaxAbsoluteBrightness_Result& operator=(Device_GetMaxAbsoluteBrightness_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Device_GetMaxAbsoluteBrightness_Result WithResponse(Device_GetMaxAbsoluteBrightness_Response&& val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  Device_GetMaxAbsoluteBrightness_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Device_GetMaxAbsoluteBrightness_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  Device_GetMaxAbsoluteBrightness_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t&& val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    Device_GetMaxAbsoluteBrightness_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
 
 class Device final {
   Device() = delete;
@@ -577,6 +687,21 @@ class Device final {
     using ResponseType = SetStateAbsoluteResponse;
   };
 
+  struct GetMaxAbsoluteBrightnessResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Device_GetMaxAbsoluteBrightness_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetMaxAbsoluteBrightnessRequest = ::fidl::AnyZeroArgMessage;
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -646,12 +771,29 @@ class Device final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class GetMaxAbsoluteBrightness_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end);
+      ~GetMaxAbsoluteBrightness_Impl() = default;
+      GetMaxAbsoluteBrightness_Impl(GetMaxAbsoluteBrightness_Impl&& other) = default;
+      GetMaxAbsoluteBrightness_Impl& operator=(GetMaxAbsoluteBrightness_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using GetStateNormalized = GetStateNormalized_Impl<GetStateNormalizedResponse>;
     using SetStateNormalized = SetStateNormalized_Impl<SetStateNormalizedResponse>;
     using GetStateAbsolute = GetStateAbsolute_Impl<GetStateAbsoluteResponse>;
     using SetStateAbsolute = SetStateAbsolute_Impl<SetStateAbsoluteResponse>;
+    using GetMaxAbsoluteBrightness = GetMaxAbsoluteBrightness_Impl<GetMaxAbsoluteBrightnessResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -723,12 +865,29 @@ class Device final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class GetMaxAbsoluteBrightness_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetMaxAbsoluteBrightness_Impl() = default;
+      GetMaxAbsoluteBrightness_Impl(GetMaxAbsoluteBrightness_Impl&& other) = default;
+      GetMaxAbsoluteBrightness_Impl& operator=(GetMaxAbsoluteBrightness_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using GetStateNormalized = GetStateNormalized_Impl<GetStateNormalizedResponse>;
     using SetStateNormalized = SetStateNormalized_Impl<SetStateNormalizedResponse>;
     using GetStateAbsolute = GetStateAbsolute_Impl<GetStateAbsoluteResponse>;
     using SetStateAbsolute = SetStateAbsolute_Impl<SetStateAbsoluteResponse>;
+    using GetMaxAbsoluteBrightness = GetMaxAbsoluteBrightness_Impl<GetMaxAbsoluteBrightnessResponse>;
   };
 
   class SyncClient final {
@@ -778,6 +937,16 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetStateAbsolute SetStateAbsolute(::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
 
+    // Gets the maximum supported backlight brightness in nits, if known.
+    // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness();
+
+    // Gets the maximum supported backlight brightness in nits, if known.
+    // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -823,6 +992,16 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
 
+    // Gets the maximum supported backlight brightness in nits, if known.
+    // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(zx::unowned_channel _client_end);
+
+    // Gets the maximum supported backlight brightness in nits, if known.
+    // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -844,6 +1023,10 @@ class Device final {
 
     // Sets the current backlight brightness in nits
     static ::fidl::DecodeResult<SetStateAbsoluteResponse> SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer);
+
+    // Gets the maximum supported backlight brightness in nits, if known.
+    // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    static ::fidl::DecodeResult<GetMaxAbsoluteBrightnessResponse> GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -910,6 +1093,20 @@ class Device final {
     using SetStateAbsoluteCompleter = ::fidl::Completer<SetStateAbsoluteCompleterBase>;
 
     virtual void SetStateAbsolute(State state, SetStateAbsoluteCompleter::Sync _completer) = 0;
+
+    class GetMaxAbsoluteBrightnessCompleterBase : public _Base {
+     public:
+      void Reply(Device_GetMaxAbsoluteBrightness_Result result);
+      void Reply(::fidl::BytePart _buffer, Device_GetMaxAbsoluteBrightness_Result result);
+      void Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetMaxAbsoluteBrightnessCompleter = ::fidl::Completer<GetMaxAbsoluteBrightnessCompleterBase>;
+
+    virtual void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync _completer) = 0;
 
   };
 
@@ -988,6 +1185,16 @@ struct IsFidlType<::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response, max_brightness) == 0);
+static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response) == ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::backlight::Device::GetStateNormalizedResponse> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::backlight::Device::GetStateNormalizedResponse> : public std::true_type {};
@@ -1034,5 +1241,13 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::backlight::Device::SetStateAbso
 static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device::SetStateAbsoluteResponse)
     == ::llcpp::fuchsia::hardware::backlight::Device::SetStateAbsoluteResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device::SetStateAbsoluteResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::backlight::Device::GetMaxAbsoluteBrightnessResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::backlight::Device::GetMaxAbsoluteBrightnessResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device::GetMaxAbsoluteBrightnessResponse)
+    == ::llcpp::fuchsia::hardware::backlight::Device::GetMaxAbsoluteBrightnessResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device::GetMaxAbsoluteBrightnessResponse, result) == 16);
 
 }  // namespace fidl

@@ -63,12 +63,13 @@ class Sgm37603a : public DeviceType,
   zx_status_t SetBacklightState(bool power, double brightness);
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync completer) override;
   void SetStateNormalized(FidlBacklight::State state,
-                          SetStateNormalizedCompleter::Sync _completer) override;
-  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+                          SetStateNormalizedCompleter::Sync completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) override;
   void SetStateAbsolute(FidlBacklight::State state,
-                        SetStateAbsoluteCompleter::Sync _completer) override;
+                        SetStateAbsoluteCompleter::Sync completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
 
  private:
   ddk::I2cChannel i2c_;

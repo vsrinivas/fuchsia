@@ -261,7 +261,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
   pipe_->ApplyConfiguration(config);
 }
 
-void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
   zx_status_t status = ZX_OK;
   FidlBacklight::State state = {};
 
@@ -281,11 +281,11 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync _comple
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
 void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
-                                       SetStateNormalizedCompleter::Sync _completer) {
+                                       SetStateNormalizedCompleter::Sync completer) {
   zx_status_t status = ZX_OK;
 
   if (display_ref_ != nullptr) {
@@ -304,20 +304,26 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
-void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
   result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
 void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
-                                     SetStateAbsoluteCompleter::Sync _completer) {
+                                     SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
   result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
+}
+
+void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+  FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(std::move(result));
 }
 
 }  // namespace i915

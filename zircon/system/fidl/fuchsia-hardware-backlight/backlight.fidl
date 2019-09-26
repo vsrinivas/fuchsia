@@ -32,6 +32,7 @@ protocol Device {
     /// Sets the current backlight brightness in nits
     SetStateAbsolute(State state) -> () error zx.status;
 
-    // TODO(rashaeqbal): Add a call to query the supported brightness range,
-    // will be useful when we support brightness changes in nits.
+    /// Gets the maximum supported backlight brightness in nits, if known.
+    /// Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    GetMaxAbsoluteBrightness() -> (float64 max_brightness) error zx.status;
 };

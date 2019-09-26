@@ -7,6 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -40,12 +41,24 @@ constexpr device_component_t components[] = {
     {countof(i2c_component), i2c_component},
 };
 
+constexpr double max_brightness_nits = 250.0;
+
+constexpr pbus_metadata_t backlight_metadata[] = {
+    {
+        .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
+        .data_buffer = &max_brightness_nits,
+        .data_size = sizeof(max_brightness_nits),
+    },
+};
+
 constexpr pbus_dev_t backlight_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "backlight";
   dev.vid = PDEV_VID_TI;
   dev.pid = PDEV_PID_TI_LP8556;
   dev.did = PDEV_DID_TI_BACKLIGHT;
+  dev.metadata_list = backlight_metadata;
+  dev.metadata_count = countof(backlight_metadata);
   dev.mmio_list = backlight_mmios;
   dev.mmio_count = countof(backlight_mmios);
   return dev;

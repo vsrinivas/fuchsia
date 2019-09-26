@@ -245,6 +245,65 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::
 }
 
 
+::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Device_GetMaxAbsoluteBrightness_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::~Device_GetMaxAbsoluteBrightness_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Device_GetMaxAbsoluteBrightness_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result) == ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::PrimarySize);
+}
+
+
+Device_GetMaxAbsoluteBrightness_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Device_GetMaxAbsoluteBrightness_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -261,6 +320,9 @@ extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteRe
 constexpr uint64_t kDevice_SetStateAbsolute_Ordinal = 0x697f353e00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetMaxAbsoluteBrightness_Ordinal = 0x65fe16500000000lu;
+extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
 
 }  // namespace
 template <>
@@ -513,6 +575,68 @@ Device::UnownedResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(zx::uno
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Device::ResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxAbsoluteBrightnessRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetMaxAbsoluteBrightnessRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxAbsoluteBrightnessRequest));
+  ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Device::InPlace::GetMaxAbsoluteBrightness(std::move(_client_end), Super::response_buffer()));
+}
+
+Device::ResultOf::GetMaxAbsoluteBrightness Device::SyncClient::GetMaxAbsoluteBrightness() {
+  return ResultOf::GetMaxAbsoluteBrightness(zx::unowned_channel(this->channel_));
+}
+
+Device::ResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end) {
+  return ResultOf::GetMaxAbsoluteBrightness(std::move(_client_end));
+}
+
+template <>
+Device::UnownedResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetMaxAbsoluteBrightnessRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetMaxAbsoluteBrightnessRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetMaxAbsoluteBrightnessRequest));
+  ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Device::InPlace::GetMaxAbsoluteBrightness(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::SyncClient::GetMaxAbsoluteBrightness(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMaxAbsoluteBrightness(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMaxAbsoluteBrightness(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse> Device::InPlace::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetMaxAbsoluteBrightnessRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetMaxAbsoluteBrightnessRequest, GetMaxAbsoluteBrightnessResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -566,6 +690,17 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       auto message = result.message.message();
       impl->SetStateAbsolute(std::move(message->state),
         Interface::SetStateAbsoluteCompleter::Sync(txn));
+      return true;
+    }
+    case kDevice_GetMaxAbsoluteBrightness_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetMaxAbsoluteBrightnessRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetMaxAbsoluteBrightness(
+        Interface::GetMaxAbsoluteBrightnessCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -696,6 +831,35 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(Device_GetMaxAbsoluteBrightness_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxAbsoluteBrightnessResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_write_bytes);
+  _response._hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxAbsoluteBrightnessResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_response_bytes)));
+}
+
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::BytePart _buffer, Device_GetMaxAbsoluteBrightness_Result result) {
+  if (_buffer.capacity() < GetMaxAbsoluteBrightnessResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_buffer.data());
+  _response._hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(GetMaxAbsoluteBrightnessResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_buffer)));
+}
+
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

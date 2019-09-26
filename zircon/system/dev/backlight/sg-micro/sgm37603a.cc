@@ -110,7 +110,7 @@ zx_status_t Sgm37603a::DisableBacklight() {
   return ZX_OK;
 }
 
-void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
 
@@ -120,11 +120,11 @@ void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer)
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
 void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
-                                   SetStateNormalizedCompleter::Sync _completer) {
+                                   SetStateNormalizedCompleter::Sync completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
 
   FidlBacklight::Device_SetStateNormalized_Result result;
@@ -133,20 +133,26 @@ void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
-void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
   result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
 void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
-                                 SetStateAbsoluteCompleter::Sync _completer) {
+                                 SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
   result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
+}
+
+void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+  FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(std::move(result));
 }
 
 zx_status_t Sgm37603a::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

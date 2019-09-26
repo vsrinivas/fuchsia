@@ -9,6 +9,8 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/mmio/mmio.h>
 
+#include <optional>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <hw/reg.h>
@@ -87,13 +89,18 @@ class Lp8556Device : public DeviceType,
   bool GetDevicePower() { return power_; }
   uint8_t GetCfg2() { return cfg2_; }
 
+  void SetMaxAbsoluteBrightnessNits(double brightness_nits) {
+    max_absolute_brightness_nits_ = brightness_nits;
+  }
+
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) override;
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync completer) override;
   void SetStateNormalized(FidlBacklight::State state,
-                          SetStateNormalizedCompleter::Sync _completer) override;
-  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) override;
+                          SetStateNormalizedCompleter::Sync completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) override;
   void SetStateAbsolute(FidlBacklight::State state,
-                        SetStateAbsoluteCompleter::Sync _completer) override;
+                        SetStateAbsoluteCompleter::Sync completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
 
  private:
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
@@ -103,11 +110,10 @@ class Lp8556Device : public DeviceType,
 
   // brightness is set to maximum from bootloader if the persistent brightness sticky register is
   // not set.
-  // TODO(rashaeqbal): Once we also support brightness in nits, consider renaming this to accurately
-  // reflect normalized units.
   double brightness_ = 1.0;
   bool power_ = true;
   uint8_t cfg2_;
+  std::optional<double> max_absolute_brightness_nits_;
 };
 
 }  // namespace ti

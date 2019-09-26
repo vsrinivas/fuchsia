@@ -8,6 +8,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
@@ -83,7 +84,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   return ZX_OK;
 }
 
-void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync _completer) {
+void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
 
@@ -93,11 +94,11 @@ void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync _complet
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
 void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
-                                      SetStateNormalizedCompleter::Sync _completer) {
+                                      SetStateNormalizedCompleter::Sync completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
 
   FidlBacklight::Device_SetStateNormalized_Result result;
@@ -106,20 +107,56 @@ void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
   } else {
     result.set_err(status);
   }
-  _completer.Reply(std::move(result));
+  completer.Reply(std::move(result));
 }
 
-void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync _completer) {
+void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  if (!max_absolute_brightness_nits_.has_value()) {
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(std::move(result));
+    return;
+  }
+
+  FidlBacklight::State state = {};
+  auto status = GetBacklightState(&state.backlight_on, &state.brightness);
+  if (status == ZX_OK) {
+    state.brightness *= max_absolute_brightness_nits_.value();
+    result.set_response(FidlBacklight::Device_GetStateAbsolute_Response{.state = state});
+  } else {
+    result.set_err(status);
+  }
+  completer.Reply(std::move(result));
 }
 
 void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
-                                    SetStateAbsoluteCompleter::Sync _completer) {
+                                    SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
-  _completer.Reply(std::move(result));
+  if (!max_absolute_brightness_nits_.has_value()) {
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(std::move(result));
+    return;
+  }
+
+  auto status = SetBacklightState(state.backlight_on,
+                                  state.brightness / max_absolute_brightness_nits_.value());
+  if (status == ZX_OK) {
+    result.set_response(FidlBacklight::Device_SetStateAbsolute_Response{});
+  } else {
+    result.set_err(status);
+  }
+  completer.Reply(std::move(result));
+}
+
+void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+  FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
+  if (max_absolute_brightness_nits_.has_value()) {
+    result.set_response(FidlBacklight::Device_GetMaxAbsoluteBrightness_Response{
+        .max_brightness = max_absolute_brightness_nits_.value()});
+  } else {
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
+  }
+  completer.Reply(std::move(result));
 }
 
 zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -174,6 +211,13 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
                                                         *std::move(mmio));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  double brightness_nits = 0.0;
+  status = device_get_metadata(parent, DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
+                               &brightness_nits, sizeof(brightness_nits), &actual);
+  if (status == ZX_OK && actual == sizeof(brightness_nits)) {
+    dev->SetMaxAbsoluteBrightnessNits(brightness_nits);
   }
 
   status = dev->DdkAdd("ti-lp8556");

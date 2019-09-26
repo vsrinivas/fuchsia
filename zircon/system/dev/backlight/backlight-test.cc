@@ -7,6 +7,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 
+#include <array>
 #include <filesystem>
 #include <vector>
 
@@ -80,6 +81,17 @@ class BacklightDevice {
     return status;
   }
 
+  zx_status_t GetMaxAbsoluteBrightness(double* brightness) {
+    auto response = client_.GetMaxAbsoluteBrightness();
+    zx_status_t status = response.ok()
+                             ? (response->result.is_err() ? response->result.err() : ZX_OK)
+                             : response.status();
+    if (status == ZX_OK) {
+      *brightness = response->result.response().max_brightness;
+    }
+    return status;
+  }
+
  private:
   FidlBacklight::Device::SyncClient client_;
   double orig_brightness_;
@@ -108,57 +120,43 @@ class BacklightTest : public zxtest::Test {
 
   double Approx(double val) { return round(val * 100.0) / 100.0; }
 
-  void TestAllDevices() {
-    for (auto& dev : devices_) {
-      EXPECT_OK(dev->SetBrightnessNormalized(0));
+  void TestBrightnessNormalized(std::unique_ptr<BacklightDevice>& dev) {
+    std::array<double, 9> brightness_values = {0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25, 0.0};
+
+    double brightness;
+    for (auto brt : brightness_values) {
+      EXPECT_OK(dev->SetBrightnessNormalized(brt));
+      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
+      EXPECT_EQ(Approx(brightness), brt);
+      SleepIfDelayEnabled();
+    }
+  }
+
+  void TestBrightnessAbsolute(std::unique_ptr<BacklightDevice>& dev) {
+    double brightness, max_brightness;
+    auto status = dev->GetMaxAbsoluteBrightness(&max_brightness);
+
+    if (status == ZX_OK) {
+      EXPECT_GT(max_brightness, 0);
+      std::array<double, 9> brightness_values = {0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25, 0.0};
 
       double brightness;
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.25));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.25);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.5));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.5);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.75));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.75);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(1.0));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 1.0);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.75));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.75);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.5));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.5);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0.25));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0.25);
-      SleepIfDelayEnabled();
-
-      EXPECT_OK(dev->SetBrightnessNormalized(0));
-      EXPECT_OK(dev->GetBrightnessNormalized(&brightness));
-      EXPECT_EQ(Approx(brightness), 0);
-      SleepIfDelayEnabled();
-
+      for (auto brt : brightness_values) {
+        EXPECT_OK(dev->SetBrightnessAbsolute(brt * max_brightness));
+        EXPECT_OK(dev->GetBrightnessAbsolute(&brightness));
+        EXPECT_EQ(Approx(brightness), brt * max_brightness);
+        SleepIfDelayEnabled();
+      }
+    } else {
       EXPECT_EQ(dev->SetBrightnessAbsolute(0), ZX_ERR_NOT_SUPPORTED);
       EXPECT_EQ(dev->GetBrightnessAbsolute(&brightness), ZX_ERR_NOT_SUPPORTED);
+    }
+  }
+
+  void TestAllDevices() {
+    for (auto& dev : devices_) {
+      TestBrightnessNormalized(dev);
+      TestBrightnessAbsolute(dev);
     }
   }
 
