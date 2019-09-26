@@ -448,7 +448,6 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_TRUE(HandlesEq(a.handles.vmo_handle, b.handles.vmo_handle));
   EXPECT_TRUE(HandlesEq(a.handles.event_handle, b.handles.event_handle));
   EXPECT_TRUE(HandlesEq(a.handles.port_handle, b.handles.port_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.log_handle, b.handles.log_handle));
   EXPECT_TRUE(HandlesEq(a.handles.socket_handle, b.handles.socket_handle));
   EXPECT_TRUE(HandlesEq(a.handles.eventpair_handle, b.handles.eventpair_handle));
   EXPECT_TRUE(HandlesEq(a.handles.job_handle, b.handles.job_handle));
@@ -857,7 +856,6 @@ void InitializeStruct(Struct* s) {
   ASSERT_EQ(ZX_OK, zx::vmo::create(0u, 0u, &s->handles.vmo_handle));
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &s->handles.event_handle));
   ASSERT_EQ(ZX_OK, zx::port::create(0u, &s->handles.port_handle));
-  ASSERT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
 
   zx::socket socket1;
   ASSERT_EQ(ZX_OK, zx::socket::create(0u, &s->handles.socket_handle, &socket1));

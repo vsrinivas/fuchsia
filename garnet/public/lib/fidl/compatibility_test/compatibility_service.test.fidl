@@ -238,7 +238,6 @@ struct handles {
     handle<vmo> vmo_handle;
     handle<event> event_handle;
     handle<port> port_handle;
-    handle<debuglog> log_handle;
     handle<socket> socket_handle;
     handle<eventpair> eventpair_handle;
     handle<job> job_handle;
