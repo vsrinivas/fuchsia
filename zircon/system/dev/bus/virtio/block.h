@@ -66,7 +66,7 @@ class BlockDevice : public Device {
   void FlushPendingTxns();
   void CleanupPendingTxns();
 
-  zx_status_t QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes, uint64_t* pages,
+  zx_status_t QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes, zx_paddr_t* pages,
                        size_t pagecount, uint16_t* idx);
 
   void txn_complete(block_txn_t* txn, zx_status_t status);
