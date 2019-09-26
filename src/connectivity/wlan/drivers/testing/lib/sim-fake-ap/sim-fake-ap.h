@@ -63,6 +63,10 @@ class FakeAp : public StationIfc {
   void SetBssid(const common::MacAddr& bssid) { bssid_ = bssid; }
   void SetSsid(const wlan_ssid_t& ssid) { ssid_ = ssid; }
 
+  wlan_channel_t GetChannel() { return chan_; }
+  common::MacAddr GetBssid() { return bssid_; }
+  wlan_ssid_t GetSsid() { return ssid_; }
+
   // When this is not called, the default is open network.
   void SetSecurity(struct Security sec) { security_ = sec; }
 
