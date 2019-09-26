@@ -47,7 +47,7 @@ class Inspect {
   ///
   /// Returns null if there's no inspect information matching for those entries.
   /// Otherwise a parsed JSON as formated by
-  /// //garnet/public/lib/inspect_deprecated/query/json_formatter.cc is
+  /// //src/lib/inspect_deprecated/query/json_formatter.cc is
   /// returned.
   Future<dynamic> inspectRecursively(List<String> entries) async {
     final hubEntries = entries.join(' ');

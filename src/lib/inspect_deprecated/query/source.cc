@@ -4,15 +4,16 @@
 
 #include "source.h"
 
-#include <fbl/array.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <src/lib/files/file.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <stack>
+
+#include <fbl/array.h>
+#include <src/lib/files/file.h>
+#include <src/lib/fxl/strings/substitute.h>
 
 namespace inspect_deprecated {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_
-#define LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_
+#ifndef SRC_LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_
+#define SRC_LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -30,4 +30,4 @@ class TestFixture : public gtest::RealLoopFixture {
 };
 }  // namespace
 
-#endif  // LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_
+#endif  // SRC_LIB_INSPECT_DEPRECATED_QUERY_TESTS_FIXTURE_H_

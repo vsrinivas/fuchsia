@@ -5,14 +5,8 @@
 #ifndef LIB_INSPECT_DEPRECATED_QUERY_READ_H_
 #define LIB_INSPECT_DEPRECATED_QUERY_READ_H_
 
-#include "source.h"
+// Do not use this header directly, instead use src/lib/inspect_deprecated/query/read.h.
 
-namespace inspect_deprecated {
-
-// Consults the file system to interpret and open the given location, reading
-// it into a new Source.
-fit::promise<Source, std::string> ReadLocation(Location location, int depth = -1);
-
-}  // namespace inspect_deprecated
+#include "src/lib/inspect_deprecated/query/read.h"
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_READ_H_

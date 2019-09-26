@@ -4,6 +4,7 @@
 
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/inspect_deprecated/query/location.h>
+
 #include <src/lib/files/path.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/join_strings.h>

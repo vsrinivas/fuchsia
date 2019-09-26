@@ -2,70 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("query") {
-  sources = [
-    "discover.cc",
-    "discover.h",
-    "location.cc",
-    "location.h",
-    "read.cc",
-    "read.h",
-    "source.cc",
-    "source.h",
-  ]
-
-  deps = [
-    "//src/lib/files",
-    "//src/lib/fxl",
-  ]
-
+# Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:query.
+group("query") {
   public_deps = [
-    "//garnet/public/lib/inspect_deprecated:reader",
-    "//sdk/lib/vfs/cpp",
-    "//zircon/public/lib/fit",
+    "//src/lib/inspect_deprecated/query:query",
   ]
 }
 
-source_set("formatter") {
-  sources = [
-    "formatter.cc",
-    "formatter.h",
-  ]
-
+# Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:text_formatter.
+group("text_formatter") {
   public_deps = [
-    ":query",
-    "//garnet/public/lib/inspect_deprecated/health",
-    "//src/lib/files",
-    "//src/lib/fxl",
+    "//src/lib/inspect_deprecated/query:text_formatter",
   ]
 }
 
-source_set("text_formatter") {
-  sources = [
-    "text_formatter.cc",
-    "text_formatter.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fostr",
-  ]
-
+# Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:json_formatter.
+group("json_formatter") {
   public_deps = [
-    ":formatter",
-  ]
-}
-
-source_set("json_formatter") {
-  sources = [
-    "json_formatter.cc",
-    "json_formatter.h",
-  ]
-
-  configs += [ "//third_party/cobalt:cobalt_config" ]
-
-  public_deps = [
-    ":formatter",
-    "//third_party/cobalt/src/lib/crypto_util",
-    "//third_party/rapidjson",
+    "//src/lib/inspect_deprecated/query:json_formatter",
   ]
 }

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-#include <fbl/ref_ptr.h>
 #include <lib/inspect_deprecated/deprecated/exposed_object.h>
 
 #include <optional>
 #include <sstream>
 #include <string>
+
+#include <fbl/ref_ptr.h>
 
 namespace component {
 

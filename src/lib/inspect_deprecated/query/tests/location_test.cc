@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/inspect_deprecated/query/location.h>
-#include <src/lib/files/directory.h>
-#include <src/lib/files/path.h>
 
 #include <algorithm>
 #include <iterator>
+
+#include <src/lib/files/directory.h>
+#include <src/lib/files/path.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

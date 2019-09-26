@@ -9,7 +9,7 @@ source_set("health") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/inspect_deprecated",
+    "//src/lib/inspect_deprecated",
   ]
 
   public_configs = [ "//garnet/public:config" ]
