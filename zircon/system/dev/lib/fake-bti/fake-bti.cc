@@ -154,6 +154,7 @@ HandleTable gHandleTable;
 
 // Fake BTI API
 
+__EXPORT
 zx_status_t fake_bti_create(zx_handle_t* out) {
   fbl::RefPtr<Object> new_bti;
   zx_status_t status = Bti::Create(&new_bti);
@@ -163,6 +164,7 @@ zx_status_t fake_bti_create(zx_handle_t* out) {
   return gHandleTable.Add(std::move(new_bti), out);
 }
 
+__EXPORT
 void fake_bti_destroy(zx_handle_t h) {
   fbl::RefPtr<Object> obj;
   zx_status_t status = gHandleTable.Get(h, &obj);
@@ -176,6 +178,7 @@ void fake_bti_destroy(zx_handle_t h) {
 
 // Fake syscall implementations
 
+__EXPORT
 zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
                        uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx_handle_t* out) {
   fbl::RefPtr<Object> bti_obj;
@@ -268,6 +271,7 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
   return gHandleTable.Add(std::move(new_pmt), out);
 }
 
+__EXPORT
 zx_status_t zx_bti_release_quarantine(zx_handle_t handle) {
   fbl::RefPtr<Object> obj;
   zx_status_t status = gHandleTable.Get(handle, &obj);
@@ -276,6 +280,7 @@ zx_status_t zx_bti_release_quarantine(zx_handle_t handle) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t zx_pmt_unpin(zx_handle_t handle) {
   fbl::RefPtr<Object> obj;
   zx_status_t status = gHandleTable.Get(handle, &obj);
@@ -287,6 +292,7 @@ zx_status_t zx_pmt_unpin(zx_handle_t handle) {
   return ZX_OK;
 }
 
+__EXPORT
 zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                                size_t* actual_count, size_t* avail_count) {
   if (!HandleTable::IsValidFakeHandle(handle)) {
@@ -327,6 +333,7 @@ zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer,
 }
 
 // A fake version of zx_vmo_create_contiguous.  This version just creates a normal vmo.
+__EXPORT
 zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
                                      zx_handle_t* out) {
   if (size == 0) {
@@ -354,6 +361,7 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
 // Duplicates a fake handle, or if it is a real handle, calls the real
 // zx_handle_duplicate function.
 // |rights| is ignored for fake handles.
+__EXPORT
 zx_status_t zx_handle_duplicate(zx_handle_t handle_value, zx_rights_t rights, zx_handle_t* out) {
   if (HandleTable::IsValidFakeHandle(handle_value)) {
     fbl::RefPtr<Object> obj;
