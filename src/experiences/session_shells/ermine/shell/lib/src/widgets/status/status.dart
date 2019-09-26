@@ -38,12 +38,8 @@ class Status extends StatelessWidget {
       child: Column(
         children: <Widget>[
           _ManualStatusEntry(),
-          _StatusEntry(model.volume),
           _StatusEntry(model.brightness),
-          _StatusEntry(model.processes),
           _StatusEntry(model.memory),
-          _StatusEntry(model.cpu),
-          _StatusEntry(model.network),
         ],
       ),
     );
