@@ -21,6 +21,7 @@ SUBCOMMANDS:
     resolve    resolve a package
     rule       manage URL rewrite rules
     update     check for a system update and apply it if available
+    gc         trigger garbage collection of package cache
 ";
 
 const HELP_OPEN: &str = "\
@@ -151,6 +152,15 @@ USAGE:
     pkgctl update
 ";
 
+const HELP_GC: &str = "\
+The gc command allows you to trigger a manual garbage collection of the package cache.
+
+This deletes any cached packages that are not present in the static and dynamic index. Any blobs associated with these packages will be removed if they are not referenced by another component or package.
+
+USAGE:
+    pkgctl gc
+";
+
 #[derive(Debug, PartialEq)]
 pub enum Command {
     Resolve { pkg_url: String, selectors: Vec<String> },
@@ -158,6 +168,7 @@ pub enum Command {
     Repo(RepoCommand),
     Rule(RuleCommand),
     Update,
+    Gc,
 }
 
 #[derive(Debug, PartialEq)]
@@ -244,6 +255,7 @@ where
                 },
                 Some("open") => done!(HELP_OPEN),
                 Some("update") => done!(HELP_UPDATE),
+                Some("gc") => done!(HELP_GC),
                 Some(arg) => unrecognized!(arg),
             };
 
@@ -301,6 +313,10 @@ where
             None => Ok(Command::Update),
             Some(arg) => unrecognized!(arg),
         },
+        "gc" => match iter.next() {
+            None => Ok(Command::Gc),
+            Some(arg) => unrecognized!(arg),
+        },
         arg => unrecognized!(arg),
     }
 }
@@ -343,6 +359,7 @@ mod tests {
             &["help", "rule", "replace", "json"],
             &["help", "open"],
             &["help", "update"],
+            &["help", "gc"],
             &["repo", "add"],
             &["repo", "add", "-f", "foo"],
             &["repo", "add", "--file", "foo"],
@@ -357,6 +374,7 @@ mod tests {
             &["rule", "replace", "json", CONFIG_JSON],
             &["rule"],
             &["update"],
+            &["gc"],
         ];
 
         for case in cases {
@@ -380,6 +398,7 @@ mod tests {
         check(&["--help"], HELP);
         check(&["help"], HELP);
 
+        check(&["help", "gc"], HELP_GC);
         check(&["help", "update"], HELP_UPDATE);
         check(&["help", "open"], HELP_OPEN);
         check(&["help", "repo"], HELP_REPO);
@@ -503,6 +522,14 @@ mod tests {
     fn test_update() {
         match parse_args(["update"].iter().map(|a| *a)) {
             Ok(Command::Update) => {}
+            result => panic!("unexpected result {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_gc() {
+        match parse_args(["gc"].iter().map(|a| *a)) {
+            Ok(Command::Gc) => {}
             result => panic!("unexpected result {:?}", result),
         }
     }

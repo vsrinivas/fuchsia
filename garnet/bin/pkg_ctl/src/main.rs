@@ -212,6 +212,7 @@ fn main() -> Result<(), failure::Error> {
                     | fidl_update::CheckStartedResult::InProgress => Ok(()),
                 }
             }
+            Command::Gc => Err(format_err!("Command not yet implemented.")),
         }
     };
 
