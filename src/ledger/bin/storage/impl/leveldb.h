@@ -16,6 +16,12 @@
 
 namespace storage {
 
+// Implementation of Db based on LevelDb.
+//
+// Note that the underlying LevelDb has a synchronous API, however the API this class needs to
+// expose is asynchronous through coroutines. This class systematically suspends the current
+// coroutine when entering each public function and posts a task to the message loop to resume it,
+// so that the methods are effectively asynchronous.
 class LevelDb : public Db {
  public:
   explicit LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);

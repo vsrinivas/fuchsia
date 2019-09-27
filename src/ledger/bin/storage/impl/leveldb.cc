@@ -25,13 +25,15 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-// Yields the |handler| coroutine and checks it hasn't been interrupted once resumed.
-// In this file, this function is used to fake asynchronous calls to the underlying database, even
-// though LevelDb is a synchronous database.
+// Yields the |handler| coroutine, posts a task to resume it and checks that it hasn't been
+// interrupted in the meantime. In this file, this function is used to make otherwise synchronous
+// operations effectively asynchronous.
+//
 // To ensure that calls do not appear reordered to clients and that the strict-consistency
 // requirement of the |Db| interface is preserved, this function must be called consistently either
 // always before or always after all calls to the underlying LevelDb instance within each public
 // method.
+//
 // To make code using early returns more readable while enforcing this invariant, we decide to
 // always call it at the very begining of each public method.
 Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
