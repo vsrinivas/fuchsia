@@ -52,12 +52,13 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
 }
 
 static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  tracing::BufferingMode buffering_mode;
-  if (!tracing::GetBufferingMode(*spec.buffering_mode, &buffering_mode)) {
+  const tracing::BufferingModeSpec* mode_spec =
+      tracing::LookupBufferingMode(*spec.buffering_mode);
+  if (mode_spec == nullptr) {
     FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
     return false;
   }
-  return VerifyFullBuffer(test_output_file, buffering_mode, *spec.buffer_size_in_mb);
+  return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);
 }
 
 const IntegrationTest kFillBufferIntegrationTest = {

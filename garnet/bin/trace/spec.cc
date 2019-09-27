@@ -415,17 +415,19 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   return true;
 }
 
-bool GetBufferingMode(const std::string& buffering_mode_name, BufferingMode* out_mode) {
-  if (buffering_mode_name == "oneshot") {
-    *out_mode = BufferingMode::kOneshot;
-  } else if (buffering_mode_name == "circular") {
-    *out_mode = BufferingMode::kCircular;
-  } else if (buffering_mode_name == "streaming") {
-    *out_mode = BufferingMode::kStreaming;
-  } else {
-    return false;
+const BufferingModeSpec kBufferingModes[] = {
+    {"oneshot", BufferingMode::kOneshot},
+    {"circular", BufferingMode::kCircular},
+    {"streaming", BufferingMode::kStreaming}
+};
+
+const BufferingModeSpec* LookupBufferingMode(const std::string& name) {
+  for (const auto& mode : kBufferingModes) {
+    if (name == mode.name) {
+      return &mode;
+    }
   }
-  return true;
+  return nullptr;
 }
 
 }  // namespace tracing

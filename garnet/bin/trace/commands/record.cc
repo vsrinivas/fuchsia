@@ -56,15 +56,6 @@ const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
 const char kTestSuite[] = "test-suite";
 
-const struct {
-  const char* name;
-  controller::BufferingMode mode;
-} kBufferingModes[] = {
-    {"oneshot", controller::BufferingMode::ONESHOT},
-    {"circular", controller::BufferingMode::CIRCULAR},
-    {"streaming", controller::BufferingMode::STREAMING},
-};
-
 zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess) {
   FXL_DCHECK(args.size() > 0);
 
@@ -78,16 +69,6 @@ zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess)
                     subprocess->reset_and_get_address());
 }
 
-bool LookupBufferingMode(const std::string& mode_name, controller::BufferingMode* out_mode) {
-  for (const auto& mode : kBufferingModes) {
-    if (mode_name == mode.name) {
-      *out_mode = mode.mode;
-      return true;
-    }
-  }
-  return false;
-}
-
 void CheckCommandLineOverride(const char* name, bool present_in_spec) {
   if (present_in_spec) {
     FXL_LOG(WARNING) << "The " << name << " passed on the command line"
@@ -99,15 +80,6 @@ void CheckCommandLineOverride(const char* name, bool present_in_spec) {
 template <typename T>
 void CheckCommandLineOverride(const char* name, const T& object) {
   CheckCommandLineOverride(name, !!object);
-}
-
-bool CheckBufferSize(uint32_t megabytes) {
-  if (megabytes < kMinBufferSizeMegabytes || megabytes > kMaxBufferSizeMegabytes) {
-    FXL_LOG(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes << ","
-                   << kMaxBufferSizeMegabytes << ": " << megabytes;
-    return false;
-  }
-  return true;
 }
 
 }  // namespace
@@ -166,10 +138,12 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     if (spec.categories)
       categories = *spec.categories;
     if (spec.buffering_mode) {
-      if (!LookupBufferingMode(*spec.buffering_mode, &buffering_mode)) {
+      const BufferingModeSpec* mode_spec = LookupBufferingMode(*spec.buffering_mode);
+      if (mode_spec == nullptr) {
         FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: " << spec.buffering_mode;
         return false;
       }
+      buffering_mode = TranslateBufferingMode(mode_spec->mode);
     }
     if (spec.buffer_size_in_mb)
       buffer_size_megabytes = *spec.buffer_size_in_mb;
@@ -274,51 +248,28 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --buffer-size=<megabytes>
   if (command_line.HasOption(kBufferSize, &index)) {
-    uint32_t megabytes;
-    if (!fxl::StringToNumberWithError(command_line.options()[index].value, &megabytes)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferSize << ": "
-                     << command_line.options()[index].value;
+    if (!ParseBufferSize(command_line.options()[index].value, &buffer_size_megabytes)) {
       return false;
     }
-    if (!CheckBufferSize(megabytes)) {
-      return false;
-    }
-    buffer_size_megabytes = megabytes;
     CheckCommandLineOverride("buffer-size", spec.buffer_size_in_mb);
   }
 
   // --provider-buffer-size=<name:megabytes>
   if (command_line.HasOption(kProviderBufferSize)) {
     std::vector<fxl::StringView> args = command_line.GetOptionValues(kProviderBufferSize);
-    for (const auto& arg : args) {
-      size_t colon = arg.rfind(':');
-      if (colon == arg.npos) {
-        FXL_LOG(ERROR) << "Syntax error in " << kProviderBufferSize
-                       << ": should be provider-name:buffer_size_in_mb";
-        return false;
-      }
-      uint32_t megabytes;
-      if (!fxl::StringToNumberWithError(arg.substr(colon + 1), &megabytes)) {
-        FXL_LOG(ERROR) << "Failed to parse buffer size: " << arg;
-        return false;
-      }
-      if (!CheckBufferSize(megabytes)) {
-        return false;
-      }
-      // We can't verify the provider name here, all we can do is pass it on.
-      std::string name = arg.substr(0, colon).ToString();
-      provider_specs.emplace_back(ProviderSpec{name, megabytes});
-      CheckCommandLineOverride("provider-specs", spec.provider_specs);
+    if (!ParseProviderBufferSize(args, &provider_specs)) {
+      return false;
     }
+    CheckCommandLineOverride("provider-specs", spec.provider_specs);
   }
 
   // --buffering-mode=oneshot|circular|streaming
   if (command_line.HasOption(kBufferingMode, &index)) {
-    if (!LookupBufferingMode(command_line.options()[index].value, &buffering_mode)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode << ": "
-                     << command_line.options()[index].value;
+    BufferingMode mode;
+    if (!ParseBufferingMode(command_line.options()[index].value, &mode)) {
       return false;
     }
+    buffering_mode = TranslateBufferingMode(mode);
     CheckCommandLineOverride("buffering-mode", spec.buffering_mode);
   }
 
@@ -468,20 +419,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
   trace_options.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
   trace_options.set_buffering_mode(options_.buffering_mode);
-
-  // Uniquify the list, with later entries overriding earlier entries.
-  std::map<std::string, uint32_t> provider_specs;
-  for (const auto& it : options_.provider_specs) {
-    provider_specs[it.name] = it.buffer_size_in_mb;
-  }
-  std::vector<controller::ProviderSpec> uniquified_provider_specs;
-  for (const auto& it : provider_specs) {
-    controller::ProviderSpec spec;
-    spec.set_name(it.first);
-    spec.set_buffer_size_megabytes_hint(it.second);
-    uniquified_provider_specs.push_back(std::move(spec));
-  }
-  trace_options.set_provider_specs(std::move(uniquified_provider_specs));
+  trace_options.set_provider_specs(TranslateProviderSpecs(options_.provider_specs));
 
   tracer_->Start(
       std::move(trace_options), options_.binary, std::move(bytes_consumer),

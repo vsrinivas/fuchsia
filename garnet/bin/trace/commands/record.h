@@ -15,6 +15,7 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/lib/fxl/time/time_delta.h>
 
+#include "garnet/bin/trace/cmd_utils.h"
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
@@ -26,12 +27,6 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 namespace tracing {
-
-static constexpr uint32_t kDefaultDurationSeconds = 10;
-static constexpr uint32_t kDefaultBufferSizeMegabytes = 4;
-
-static constexpr char kDefaultOutputFileName[] = "/tmp/trace.json";
-static constexpr char kDefaultBinaryOutputFileName[] = "/tmp/trace.fxt";
 
 class RecordCommand : public CommandWithController {
  public:
@@ -50,7 +45,7 @@ class RecordCommand : public CommandWithController {
     std::optional<std::string> environment_name;
     uint32_t buffer_size_megabytes = kDefaultBufferSizeMegabytes;
     std::vector<ProviderSpec> provider_specs;
-    controller::BufferingMode buffering_mode = controller::BufferingMode::ONESHOT;
+    controller::BufferingMode buffering_mode = kDefaultBufferingMode;
     bool binary = false;
     bool compress = false;
     std::string output_file_name = kDefaultOutputFileName;

@@ -20,6 +20,8 @@ source_set("trace_app") {
   sources = [
     "app.cc",
     "app.h",
+    "cmd_utils.cc",
+    "cmd_utils.h",
     "command.cc",
     "command.h",
     "commands/list_categories.cc",

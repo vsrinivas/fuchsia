@@ -27,6 +27,20 @@ struct ProviderSpec {
   size_t buffer_size_in_mb;
 };
 
+enum class BufferingMode {
+  // Tracing stops when the buffer is full.
+  kOneshot,
+  // A circular buffer.
+  kCircular,
+  // Double buffering.
+  kStreaming,
+};
+
+struct BufferingModeSpec {
+  const char* name;
+  BufferingMode mode;
+};
+
 // Tracing specification.
 // Every member is a unique_ptr so that we can tell if the object was
 // present in the spec file.
@@ -69,17 +83,7 @@ struct Spec {
   std::unique_ptr<std::string> test_suite_name;
 };
 
-enum class BufferingMode {
-  // Tracing stops when the buffer is full.
-  kOneshot,
-  // A circular buffer.
-  kCircular,
-  // Double buffering.
-  kStreaming,
-};
-
-// Returns true on success.
-bool GetBufferingMode(const std::string& buffering_mode_name, BufferingMode* out_mode);
+const BufferingModeSpec* LookupBufferingMode(const std::string& name);
 
 bool DecodeSpec(const std::string& json, Spec* spec);
 
