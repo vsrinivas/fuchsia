@@ -27,8 +27,6 @@ group("tests") {
 }
 
 test_package("feedback_agent_tests") {
-  deprecated_shell = "//build"
-
   tests = [
     {
       name = "channel_ptr_unittest"

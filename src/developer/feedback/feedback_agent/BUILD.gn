@@ -8,8 +8,6 @@ import("//build/package.gni")
 # We use a template to keep the real and fake packages in sync.
 template("feedback_agent_package") {
   package(target_name) {
-    deprecated_shell = "//build"
-
     binaries = [
       {
         name = "feedback_agent"

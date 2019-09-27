@@ -20,7 +20,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell",
+            "hub",
             "isolated-temp",
             "vulkan"
         ],
