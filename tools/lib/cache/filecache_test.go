@@ -115,8 +115,11 @@ func (c *cacheFuzzer) checkRead(t *testing.T, readTime float64, filecache *FileC
 		atomic.AddUint64(&c.totalMisses, 1)
 		return
 	}
+	// Make sure we wait on this to close
+	c.wg.Add(1)
 	// Now hold on to the file for a random amount of time.
 	go func() {
+		defer c.wg.Done()
 		defer ref.Close()
 		sleepRand(readTime)
 		data, err := ioutil.ReadFile(ref.String())
@@ -183,6 +186,8 @@ func (c *cacheFuzzer) fuzzThread(t *testing.T, proc fuzzerProc, thread hammerThr
 			c.checkWrite(t, proc.cache)
 		}
 	}
+	// Note that checkRead can call c.wg.Add. It is safe for it to call Add as
+	// long as it proceeds this Done.
 	c.wg.Done()
 }
 
