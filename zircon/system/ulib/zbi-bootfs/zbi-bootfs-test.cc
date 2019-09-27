@@ -20,14 +20,11 @@
 
 namespace {
 
-constexpr char kGeneratedZbi[] = "generated.zbi";
-constexpr char kGeneratedZbiFilename[] = "payload_1";
+constexpr char kZstdZbi[] = "generated-zstd.zbi";
+constexpr char kZstdZbiFilename[] = "payload_1";
 
-constexpr char kZstdZbi[] = "zstd.zbi";
-constexpr char kZstdZbiFilename[] = "zstd_1";
-
-constexpr char kLz4fZbi[] = "lz4f.zbi";
-constexpr char kLz4fZbiFilename[] = "lz4f_2";
+constexpr char kLz4fZbi[] = "generated-lz4f.zbi";
+constexpr char kLz4fZbiFilename[] = "payload_2";
 
 static std::string ImagePath(std::string filename) {
   const char* root_dir = getenv("TEST_ROOT_DIR");
@@ -48,7 +45,7 @@ static void AssertHasContents(const zbi_bootfs::Entry& entry, const char* conten
 TEST(ZbiBootfsTestCase, InitSuccess) {
   zbi_bootfs::ZbiBootfsParser image;
   size_t byte_offset = 0;
-  const std::string input = ImagePath(kGeneratedZbi);
+  const std::string input = ImagePath(kZstdZbi);
 
   // Check good input
   zx::vmo vmo_out;
@@ -66,30 +63,13 @@ TEST(ZbiBootfsTestCase, InitBadInput) {
 
 TEST(ZbiBootfsTestCase, InitNotCalled) {
   zbi_bootfs::ZbiBootfsParser image;
-  const std::string input = ImagePath(kGeneratedZbi);
-  const char* filename = kGeneratedZbiFilename;
+  const std::string input = ImagePath(kZstdZbi);
+  const char* filename = kZstdZbiFilename;
 
   zbi_bootfs::Entry entry;
 
   // Unable to process without Init call. Assert bad state.
   ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(filename, &entry));
-}
-
-TEST(ZbiBootfsTestCase, ProcessGeneratedZbi) {
-  zbi_bootfs::ZbiBootfsParser image;
-  const std::string input = ImagePath(kGeneratedZbi);
-  const char* filename = kGeneratedZbiFilename;
-  size_t byte_offset = 0;
-
-  zbi_bootfs::Entry entry;
-
-  ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
-
-  // Check bootfs filename
-  // This will return a list of Bootfs entires, plus details of "filename" entry
-  ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
-
-  AssertHasContents(entry, "test 1");
 }
 
 TEST(ZbiBootfsTestCase, ProcessZstdZbi) {
@@ -106,7 +86,7 @@ TEST(ZbiBootfsTestCase, ProcessZstdZbi) {
   // This will return a list of Bootfs entires, plus details of "filename" entry
   ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
 
-  AssertHasContents(entry, "test 1\n");
+  AssertHasContents(entry, "test 1");
 }
 
 TEST(ZbiBootfsTestCase, ProcessLz4fZbi) {
@@ -123,13 +103,13 @@ TEST(ZbiBootfsTestCase, ProcessLz4fZbi) {
   // This will return a list of Bootfs entires, plus details of "filename" entry
   ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
 
-  AssertHasContents(entry, "test 2\n");
+  AssertHasContents(entry, "test 2");
 }
 
 TEST(ZbiBootfsTestCase, ProcessBadOffset) {
   zbi_bootfs::ZbiBootfsParser image;
-  const std::string input = ImagePath(kGeneratedZbi);
-  const char* filename = kGeneratedZbiFilename;
+  const std::string input = ImagePath(kZstdZbi);
+  const char* filename = kZstdZbiFilename;
   zbi_bootfs::Entry entry;
 
   // Check loading zbi with bad offset value and then try processing it
@@ -141,7 +121,7 @@ TEST(ZbiBootfsTestCase, ProcessBadOffset) {
 
 TEST(ZbiBootfsTestCase, ProcessBadFile) {
   zbi_bootfs::ZbiBootfsParser image;
-  const std::string input = ImagePath(kGeneratedZbi);
+  const std::string input = ImagePath(kZstdZbi);
   size_t byte_offset = 0;
   zbi_bootfs::Entry entry;
 

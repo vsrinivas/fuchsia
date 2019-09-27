@@ -48,59 +48,60 @@ test("zbi-bootfs-test") {
     "$zx/system/ulib/zxtest",
   ]
   data_deps = [
-    ":generated-zbi",
-    ":lz4f-zbi",
-    ":zstd-zbi",
+    ":generated-lz4f-zbi",
+    ":generated-zstd-zbi",
   ]
 }
 
-resource("generated-zbi") {
+resource("generated-lz4f-zbi") {
   sources = [
-    "$target_out_dir/generated.zbi",
+    "$target_out_dir/generated-lz4f.zbi",
   ]
   outputs = [
-    "testdata/zbi-bootfs/generated.zbi",
+    "testdata/zbi-bootfs/generated-lz4f.zbi",
   ]
   deps = [
-    ":generated",
+    ":generated-lz4f",
   ]
   testonly = true
 }
 
-# TODO(ashleycoleman): Use generated zbi instead of raw binaries after fxb/36181
-resource("lz4f-zbi") {
+resource("generated-zstd-zbi") {
   sources = [
-    "$zx/system/ulib/zbi-bootfs/test/resource/lz4f.zbi",
+    "$target_out_dir/generated-zstd.zbi",
   ]
   outputs = [
-    "testdata/zbi-bootfs/lz4f.zbi",
+    "testdata/zbi-bootfs/generated-zstd.zbi",
+  ]
+  deps = [
+    ":generated-zstd",
   ]
   testonly = true
 }
 
-resource("zstd-zbi") {
-  sources = [
-    "$zx/system/ulib/zbi-bootfs/test/resource/zstd.zbi",
-  ]
-  outputs = [
-    "testdata/zbi-bootfs/zstd.zbi",
-  ]
+# Generate zbi images for tests.
+zbi("generated-zstd") {
+  compress = "zstd"
   testonly = true
+  cpu = ""
+  deps = [
+    ":create-zbi-image",
+  ]
+}
+
+zbi("generated-lz4f") {
+  compress = "lz4f"
+  testonly = true
+  cpu = ""
+  deps = [
+    ":create-zbi-image",
+  ]
 }
 
 zbi_input("create-zbi-image") {
   testonly = true
   sources = [
     "$zx/system/ulib/zbi-bootfs/test/payload/",
-  ]
-}
-
-# This makes a zbi() to run tests.
-zbi("generated") {
-  testonly = true
-  cpu = ""
-  deps = [
-    ":create-zbi-image",
   ]
 }
 
