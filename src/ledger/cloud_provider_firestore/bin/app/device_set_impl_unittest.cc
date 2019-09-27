@@ -45,12 +45,12 @@ class DeviceSetImplTest : public gtest::TestLoopFixture, public cloud_provider::
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImplTest);
 };
 
-TEST_F(DeviceSetImplTest, EmptyWhenDisconnected) {
-  bool on_empty_called = false;
-  device_set_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+TEST_F(DeviceSetImplTest, DiscardableWhenDisconnected) {
+  bool on_discardable_called = false;
+  device_set_impl_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   device_set_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(DeviceSetImplTest, CheckFingerprintOk) {

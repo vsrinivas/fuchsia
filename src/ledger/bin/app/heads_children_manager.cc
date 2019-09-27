@@ -16,26 +16,27 @@
 
 namespace ledger {
 
-HeadsChildrenManager::HeadsChildrenManager(inspect_deprecated::Node* heads_node,
+HeadsChildrenManager::HeadsChildrenManager(async_dispatcher_t* dispatcher,
+                                           inspect_deprecated::Node* heads_node,
                                            InspectablePage* inspectable_page)
-    : heads_node_(heads_node), inspectable_page_(inspectable_page) {
-  token_manager_.set_on_empty([this] { CheckEmpty(); });
-  inspected_heads_.set_on_empty([this] { CheckEmpty(); });
+    : heads_node_(heads_node), inspectable_page_(inspectable_page), inspected_heads_(dispatcher) {
+  token_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
+  inspected_heads_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 HeadsChildrenManager::~HeadsChildrenManager() = default;
 
-void HeadsChildrenManager::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void HeadsChildrenManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
-bool HeadsChildrenManager::IsEmpty() {
-  return token_manager_.IsEmpty() && inspected_heads_.empty();
+bool HeadsChildrenManager::IsDiscardable() const {
+  return token_manager_.IsDiscardable() && inspected_heads_.IsDiscardable();
 }
 
-void HeadsChildrenManager::CheckEmpty() {
-  if (on_empty_callback_ && IsEmpty()) {
-    on_empty_callback_();
+void HeadsChildrenManager::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

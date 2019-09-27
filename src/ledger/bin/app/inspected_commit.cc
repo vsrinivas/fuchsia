@@ -22,7 +22,7 @@
 
 namespace ledger {
 
-InspectedCommit::InspectedCommit(inspect_deprecated::Node node,
+InspectedCommit::InspectedCommit(async_dispatcher_t* dispatcher, inspect_deprecated::Node node,
                                  std::unique_ptr<const storage::Commit> commit, ExpiringToken token,
                                  InspectablePage* inspectable_page)
     : node_(std::move(node)),
@@ -32,26 +32,32 @@ InspectedCommit::InspectedCommit(inspect_deprecated::Node node,
       parents_node_(node_.CreateChild(kParentsInspectPathComponent.ToString())),
       entries_node_(node_.CreateChild(kEntriesInspectPathComponent.ToString())),
       entries_children_manager_retainer_(entries_node_.SetChildrenManager(this)),
+      inspected_entry_containers_(dispatcher),
       ongoing_storage_accesses_(0),
       outstanding_detachers_(0),
       weak_factory_(this) {
   for (const storage::CommitIdView& parent_id : commit_->GetParentIds()) {
     parents_.emplace_back(parents_node_.CreateChild(CommitIdToDisplayName(parent_id.ToString())));
   }
-  inspected_entry_containers_.set_on_empty([this] { CheckEmpty(); });
+  inspected_entry_containers_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 InspectedCommit::~InspectedCommit() { entries_children_manager_retainer_.cancel(); }
 
-void InspectedCommit::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void InspectedCommit::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool InspectedCommit::IsDiscardable() const {
+  return outstanding_detachers_ == 0 && ongoing_storage_accesses_ == 0 &&
+         inspected_entry_containers_.empty();
 }
 
 fit::closure InspectedCommit::CreateDetacher() {
   outstanding_detachers_++;
   return [this] {
     outstanding_detachers_--;
-    CheckEmpty();
+    CheckDiscardable();
   };
 }
 
@@ -69,7 +75,7 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
           FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
           callback({});
           ongoing_storage_accesses_--;
-          CheckEmpty();
+          CheckDiscardable();
           return;
         }
         FXL_DCHECK(active_page_manager);
@@ -93,7 +99,7 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
                 callback(std::move(*key_display_names));
               }
               ongoing_storage_accesses_--;
-              CheckEmpty();
+              CheckDiscardable();
             };
         active_page_manager->GetEntries(
             *commit_, "", std::move(on_next),
@@ -151,10 +157,9 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
       }));
 }
 
-void InspectedCommit::CheckEmpty() {
-  if (on_empty_callback_ && outstanding_detachers_ == 0 && ongoing_storage_accesses_ == 0 &&
-      inspected_entry_containers_.empty()) {
-    on_empty_callback_();
+void InspectedCommit::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

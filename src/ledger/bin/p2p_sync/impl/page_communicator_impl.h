@@ -13,6 +13,7 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
@@ -35,9 +36,9 @@ class PageCommunicatorImpl : public PageCommunicator,
                              public storage::CommitWatcher,
                              public CommitBatch::Delegate {
  public:
-  PageCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
-                       storage::PageStorage* storage, storage::PageSyncClient* sync_client,
-                       std::string namespace_id, std::string page_id, DeviceMesh* mesh);
+  PageCommunicatorImpl(ledger::Environment* environment, storage::PageStorage* storage,
+                       storage::PageSyncClient* sync_client, std::string namespace_id,
+                       std::string page_id, DeviceMesh* mesh);
   ~PageCommunicatorImpl() override;
 
   void set_on_delete(fit::closure on_delete);

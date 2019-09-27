@@ -85,7 +85,11 @@ void BackgroundSyncManager::OnInternallyUnused(fxl::StringView ledger_name,
   OnExternallyUnused(ledger_name, page_id);
 }
 
-bool BackgroundSyncManager::IsEmpty() { return pending_operations_ == 0; }
+bool BackgroundSyncManager::IsDiscardable() const { return pending_operations_ == 0; }
+
+void BackgroundSyncManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
 
 void BackgroundSyncManager::HandlePageIfUnused(
     std::map<std::pair<std::string, storage::PageId>, int32_t>::iterator it) {
@@ -122,12 +126,12 @@ ExpiringToken BackgroundSyncManager::NewExpiringToken() {
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
     --pending_operations_;
     // We need to post a task here: Tokens expire while a coroutine is being executed, and if
-    // |on_empty_callback_| is executed directly, it might end up deleting the backgroundSyncManager
-    // object, which will delete the |coroutine_manager_|.
+    // |on_discardable_| is executed directly, it might end up deleting the
+    // backgroundSyncManager object, which will delete the |coroutine_manager_|.
     async::PostTask(environment_->dispatcher(),
                     callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-                      if (on_empty_callback_ && pending_operations_ == 0) {
-                        on_empty_callback_();
+                      if (on_discardable_ && pending_operations_ == 0) {
+                        on_discardable_();
                       }
                     }));
   }));

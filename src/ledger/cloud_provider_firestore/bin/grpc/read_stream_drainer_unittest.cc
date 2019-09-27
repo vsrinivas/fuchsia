@@ -4,8 +4,6 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/grpc/read_stream_drainer.h"
 
-#include <grpc++/grpc++.h>
-#include <grpc++/support/async_stream.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
@@ -14,6 +12,9 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+
+#include <grpc++/grpc++.h>
+#include <grpc++/support/async_stream.h>
 
 namespace cloud_provider_firestore {
 namespace {
@@ -56,7 +57,7 @@ class ReadStreamDrainerTest : public ::testing::Test {
     stream_ = stream.get();
     drainer_ = std::make_unique<ReadStreamDrainer<IntegerStream, int>>(std::move(context),
                                                                        std::move(stream));
-    drainer_->set_on_empty([this] { on_empty_calls_++; });
+    drainer_->SetOnDiscardable([this] { on_discardable_calls_++; });
   }
   ~ReadStreamDrainerTest() override = default;
 
@@ -64,7 +65,7 @@ class ReadStreamDrainerTest : public ::testing::Test {
   TestIntegerStream* stream_;
   std::unique_ptr<ReadStreamDrainer<IntegerStream, int>> drainer_;
 
-  int on_empty_calls_ = 0;
+  int on_discardable_calls_ = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadStreamDrainerTest);

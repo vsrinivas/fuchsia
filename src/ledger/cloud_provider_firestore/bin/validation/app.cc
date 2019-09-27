@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
       component_context.get(), &random, sync_params.api_key, sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(
-      component_context.get(), [&factory](auto request) {
+      loop.dispatcher(), component_context.get(), [&factory](auto request) {
         factory.MakeCloudProvider(cloud_provider_firestore::CloudProviderFactory::UserId::New(),
                                   std::move(request));
         // Return null because we do not create individual instances of a

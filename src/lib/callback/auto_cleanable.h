@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_CALLBACK_AUTO_CLEANABLE_H_
 #define SRC_LIB_CALLBACK_AUTO_CLEANABLE_H_
 
+#include <lib/async/default.h>
 #include <lib/fit/function.h>
 
 #include <functional>
@@ -12,13 +13,16 @@
 #include <unordered_set>
 #include <utility>
 
+#include "garnet/public/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/logging.h"
 
 namespace callback {
 
-// List that will delete its elements when they call their on_empty_callback.
+// List that will delete its elements when they call their on_discardable.
 // The elements must have a setter method:
-// |void set_on_empty(fit::closure on_empty)|.
+// |void SetOnDiscardable(fit::closure on_discardable)|
+// and another to check whether they can be discarded:
+// |bool IsDiscardable()|.
 template <typename V>
 class AutoCleanableSet {
  public:
@@ -60,11 +64,11 @@ class AutoCleanableSet {
     typename Set_::iterator base_;
   };
 
-  AutoCleanableSet() {}
+  AutoCleanableSet(async_dispatcher_t* dispatcher) : task_runner_(dispatcher) {}
+  AutoCleanableSet(const AutoCleanableSet<V>& other) = delete;
   ~AutoCleanableSet() {}
 
-  AutoCleanableSet(AutoCleanableSet&& other) noexcept = default;
-  AutoCleanableSet& operator=(AutoCleanableSet&& other) noexcept = default;
+  AutoCleanableSet<V>& operator=(const AutoCleanableSet<V>& other) = delete;
 
   // Capacity methods.
   size_t size() const { return set_.size(); }
@@ -80,10 +84,15 @@ class AutoCleanableSet {
     // hash. In this particular case, this is safe because this set uses
     // reference equality.
     V& item = const_cast<V&>(*(pair.first));
-    item.set_on_empty([this, &item] {
-      size_t erase_count = set_.erase(item);
-      FXL_DCHECK(erase_count == 1);
-      CheckEmpty();
+    item.SetOnDiscardable([this, &item] {
+      task_runner_.PostTask([this, &item] {
+        auto it = set_.find(item);
+        if (it == set_.end() || !it->IsDiscardable()) {
+          return;
+        }
+        set_.erase(it);
+        CheckDiscardable();
+      });
     });
     return item;
   }
@@ -92,27 +101,34 @@ class AutoCleanableSet {
 
   iterator end() { return iterator(set_.end()); }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
+
+  bool IsDiscardable() const { return empty(); }
 
  private:
   static bool Equals(const V& v1, const V& v2) { return v1 == v2; };
 
   static std::size_t Hash(const V& v1) { return &v1; };
 
-  void CheckEmpty() {
-    if (set_.empty() && on_empty_callback_)
-      on_empty_callback_();
+  void CheckDiscardable() {
+    if (IsDiscardable() && on_discardable_)
+      on_discardable_();
   }
 
   Set_ set_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
+
+  // Must be the last member of the class.
+  ScopedTaskRunner task_runner_;
 };
 
-// Map that will delete its elements when they call their on_empty_callback.
+// Map that will delete its elements when they call their on_discardable.
 // The elements must have a setter method:
-// |void set_on_empty(fit::closure)|.
+// |void SetOnDiscardable(fit::closure on_discardable)|
+// and another to check whether they can be discarded:
+// |bool IsDiscardable()|.
 template <typename K, typename V, typename Compare = std::less<K>>
 class AutoCleanableMap {
  public:
@@ -120,10 +136,11 @@ class AutoCleanableMap {
   using iterator = typename Map_::iterator;
   using const_iterator = typename Map_::const_iterator;
 
-  AutoCleanableMap() {}
+  AutoCleanableMap(async_dispatcher_t* dispatcher) : task_runner_(dispatcher) {}
+  AutoCleanableMap(const AutoCleanableMap<K, V, Compare>& other) = delete;
   ~AutoCleanableMap() {}
 
-  bool empty() const { return map_.empty(); }
+  AutoCleanableMap<K, V, Compare>& operator=(const AutoCleanableMap<K, V, Compare>& other) = delete;
 
   template <typename Key, typename... Args>
   std::pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
@@ -131,9 +148,14 @@ class AutoCleanableMap {
     if (result.second) {
       auto& key = result.first->first;
       auto& value = result.first->second;
-      value.set_on_empty([this, key]() {
-        map_.erase(key);
-        CheckEmpty();
+      value.SetOnDiscardable([this, key]() {
+        task_runner_.PostTask([this, key] {
+          auto it = map_.find(key);
+          if (it != map_.end() && it->second.IsDiscardable()) {
+            map_.erase(it);
+          }
+          CheckDiscardable();
+        });
       });
     }
     return result;
@@ -145,9 +167,15 @@ class AutoCleanableMap {
     if (result.second) {
       auto& key = result.first->first;
       auto& value = result.first->second;
-      value.set_on_empty([this, key]() {
-        map_.erase(key);
-        CheckEmpty();
+      value.SetOnDiscardable([this, key] {
+        task_runner_.PostTask([this, key] {
+          auto it = map_.find(key);
+          if (it == map_.end() || !it->second.IsDiscardable()) {
+            return;
+          }
+          map_.erase(it);
+          CheckDiscardable();
+        });
       });
     }
     return result;
@@ -155,7 +183,7 @@ class AutoCleanableMap {
 
   void erase(iterator pos) {
     map_.erase(pos);
-    CheckEmpty();
+    CheckDiscardable();
   }
 
   template <class KR>
@@ -176,22 +204,30 @@ class AutoCleanableMap {
 
   const_iterator end() const { return map_.end(); }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
 
+  bool IsDiscardable() const { return empty(); }
+
   size_t size() const { return map_.size(); }
+
+  bool empty() const { return map_.empty(); }
 
   void clear() { map_.clear(); }
 
  private:
-  void CheckEmpty() {
-    if (map_.empty() && on_empty_callback_)
-      on_empty_callback_();
+  void CheckDiscardable() {
+    if (IsDiscardable() && on_discardable_) {
+      on_discardable_();
+    }
   }
 
   Map_ map_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
+
+  // Must be the last member of the class.
+  ScopedTaskRunner task_runner_;
 };
 
 }  // namespace callback

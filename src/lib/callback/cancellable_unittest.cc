@@ -4,6 +4,7 @@
 
 #include "lib/callback/cancellable.h"
 
+#include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
@@ -88,6 +89,8 @@ TEST(AutoCancel, ResetArgument) {
 }
 
 TEST(CancellableContainer, CancelOnDestruction) {
+  async::TestLoop loop;
+
   auto cancellable1 = FakeCancellable::Create();
   auto cancellable2 = FakeCancellable::Create();
 
@@ -96,7 +99,7 @@ TEST(CancellableContainer, CancelOnDestruction) {
   EXPECT_EQ(0, cancellable2->nb_cancel);
   EXPECT_EQ(0, cancellable2->nb_set_on_done);
   {
-    CancellableContainer container;
+    CancellableContainer container(loop.dispatcher());
     container.emplace(cancellable1);
     container.emplace(cancellable2);
 
@@ -111,6 +114,8 @@ TEST(CancellableContainer, CancelOnDestruction) {
 }
 
 TEST(CancellableContainer, CancelOnReset) {
+  async::TestLoop loop;
+
   auto cancellable1 = FakeCancellable::Create();
   auto cancellable2 = FakeCancellable::Create();
 
@@ -119,10 +124,11 @@ TEST(CancellableContainer, CancelOnReset) {
   EXPECT_EQ(0, cancellable2->nb_cancel);
   EXPECT_EQ(0, cancellable2->nb_set_on_done);
 
-  CancellableContainer container;
+  CancellableContainer container(loop.dispatcher());
   container.emplace(cancellable1);
   container.emplace(cancellable2);
 
+  loop.RunUntilIdle();
   EXPECT_EQ(0, cancellable1->nb_cancel);
   EXPECT_EQ(1, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
@@ -130,25 +136,31 @@ TEST(CancellableContainer, CancelOnReset) {
 }
 
 TEST(CancellableContainer, ClearOnDone) {
+  async::TestLoop loop;
+
   bool destructed = false;
   auto cancellable1 = FakeCancellable::Create(&destructed);
   auto cancellable2 = FakeCancellable::Create();
 
+  loop.RunUntilIdle();
   EXPECT_EQ(0, cancellable1->nb_cancel);
   EXPECT_EQ(0, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
   EXPECT_EQ(0, cancellable2->nb_set_on_done);
   {
-    CancellableContainer container;
+    CancellableContainer container(loop.dispatcher());
     container.emplace(cancellable1);
     container.emplace(cancellable2);
 
+    loop.RunUntilIdle();
     EXPECT_EQ(0, cancellable1->nb_cancel);
     EXPECT_EQ(1, cancellable1->nb_set_on_done);
     EXPECT_EQ(0, cancellable2->nb_cancel);
     EXPECT_EQ(1, cancellable2->nb_set_on_done);
 
     cancellable1->Do();
+
+    loop.RunUntilIdle();
     EXPECT_EQ(0, cancellable1->nb_cancel);
     cancellable1 = nullptr;
     // Check that container doesn't keep a reference to cancellable1 once it is
@@ -156,35 +168,7 @@ TEST(CancellableContainer, ClearOnDone) {
     EXPECT_TRUE(destructed);
   }
 
-  EXPECT_EQ(1, cancellable2->nb_cancel);
-}
-
-TEST(CancellableContainer, Move) {
-  auto cancellable1 = FakeCancellable::Create();
-  auto cancellable2 = FakeCancellable::Create();
-
-  EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(0, cancellable1->nb_set_on_done);
-  EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(0, cancellable2->nb_set_on_done);
-
-  CancellableContainer container;
-  container.emplace(cancellable1);
-  container.emplace(cancellable2);
-  EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(1, cancellable1->nb_set_on_done);
-  EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(1, cancellable2->nb_set_on_done);
-
-  {
-    CancellableContainer moved = std::move(container);
-    EXPECT_EQ(0, cancellable1->nb_cancel);
-    EXPECT_EQ(1, cancellable1->nb_set_on_done);
-    EXPECT_EQ(0, cancellable2->nb_cancel);
-    EXPECT_EQ(1, cancellable2->nb_set_on_done);
-  }
-
-  EXPECT_EQ(1, cancellable1->nb_cancel);
+  loop.RunUntilIdle();
   EXPECT_EQ(1, cancellable2->nb_cancel);
 }
 

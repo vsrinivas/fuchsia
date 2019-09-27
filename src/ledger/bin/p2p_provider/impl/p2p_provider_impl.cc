@@ -46,9 +46,11 @@ std::unique_ptr<flatbuffers::FlatBufferBuilder> BuildBufferContainingHandshake(
 
 }  // namespace
 
-P2PProviderImpl::P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
+P2PProviderImpl::P2PProviderImpl(async_dispatcher_t* dispatcher,
+                                 fuchsia::overnet::OvernetPtr overnet,
                                  std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider)
-    : service_binding_(this),
+    : connections_(dispatcher),
+      service_binding_(this),
       overnet_(std::move(overnet)),
       user_id_provider_(std::move(user_id_provider)) {}
 

@@ -20,7 +20,7 @@ namespace {
 
 using PageDelegateTest = TestWithEnvironment;
 
-TEST_F(PageDelegateTest, OnEmptyInInit) {
+TEST_F(PageDelegateTest, OnDiscardableInInit) {
   auto page_id = storage::PageId(::fuchsia::ledger::PAGE_ID_SIZE, 'a');
   auto storage = std::make_unique<storage::fake::FakePageStorage>(&environment_, page_id);
   auto storage_ptr = storage.get();
@@ -38,13 +38,13 @@ TEST_F(PageDelegateTest, OnEmptyInInit) {
   auto page_impl =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id, page.NewRequest());
 
-  SyncWatcherSet watchers;
+  SyncWatcherSet watchers(environment_.dispatcher());
 
-  PageDelegate delegate(environment_.coroutine_service(), &active_page_manager, storage_ptr,
-                        merger_ptr, &watchers, std::move(page_impl));
+  PageDelegate delegate(&environment_, &active_page_manager, storage_ptr, merger_ptr, &watchers,
+                        std::move(page_impl));
 
-  bool on_empty_called;
-  delegate.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  delegate.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   // Setup is finished: let's unbind the page
   page.Unbind();
@@ -57,7 +57,7 @@ TEST_F(PageDelegateTest, OnEmptyInInit) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(on_done_called);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 }  // namespace

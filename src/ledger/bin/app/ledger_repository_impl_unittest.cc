@@ -313,8 +313,8 @@ TEST_F(LedgerRepositoryImplTest, Close) {
   repository_->BindRepository(ledger_repository_ptr1.NewRequest());
   repository_->BindRepository(ledger_repository_ptr2.NewRequest());
 
-  bool on_empty_called;
-  repository_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
@@ -331,14 +331,14 @@ TEST_F(LedgerRepositoryImplTest, Close) {
 
   ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"), ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   EXPECT_FALSE(ptr1_closed);
   EXPECT_FALSE(ptr2_closed);
   EXPECT_FALSE(ledger_closed);
 
   ledger_repository_ptr2->Close();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   EXPECT_FALSE(ptr1_closed);
   EXPECT_FALSE(ptr2_closed);
   EXPECT_FALSE(ledger_closed);
@@ -346,12 +346,12 @@ TEST_F(LedgerRepositoryImplTest, Close) {
   ledger_ptr.Unbind();
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
   EXPECT_FALSE(ptr1_closed);
   EXPECT_FALSE(ptr2_closed);
 
   // Delete the repository, as it would be done by LedgerRepositoryFactory when
-  // the |on_empty| callback is called.
+  // the |on_discardable| callback is called.
   repository_.reset();
   RunLoopUntilIdle();
   EXPECT_TRUE(ptr1_closed);
@@ -366,8 +366,8 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
 
   repository_->BindRepository(ledger_repository_ptr1.NewRequest());
 
-  bool on_empty_called;
-  repository_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
@@ -376,7 +376,7 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
 
   ledger_repository_ptr1->Close();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // The connection is not closed by LedgerRepositoryImpl, but by its holder.
   EXPECT_FALSE(ptr1_closed);
@@ -394,9 +394,8 @@ TEST_F(LedgerRepositoryImplTest, CloseWhenEmptyWithoutCallback) {
   EXPECT_EQ(status, Status::ILLEGAL_STATE);
 }
 
-
-// Verifies that the callback on closure is called, even if the on_empty_callback is not set.
-TEST_F(LedgerRepositoryImplTest, CloseWithoutOnEmptyCallback) {
+// Verifies that the callback on closure is called, even if the on_discardable is not set.
+TEST_F(LedgerRepositoryImplTest, CloseWithoutOnDiscardableCallback) {
   bool ptr1_closed;
   Status ptr1_closed_status;
 
@@ -406,7 +405,8 @@ TEST_F(LedgerRepositoryImplTest, CloseWithoutOnEmptyCallback) {
   EXPECT_TRUE(ptr1_closed);
 }
 
-// Verifies that the object remains alive is the no on_empty_callback nor close_callback are set.
+// Verifies that the object remains alive is the no on_discardable nor close_callback are
+// set.
 TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
   // Ensure the repository is not empty.
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
@@ -455,8 +455,8 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
 
   repository->BindRepository(ledger_repository_ptr1.NewRequest());
 
-  bool on_empty_called;
-  repository->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  repository->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
@@ -466,7 +466,7 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   // The call should not trigger destruction, as the initialization of PageUsageDb is not finished.
   ledger_repository_ptr1->Close();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   EXPECT_FALSE(ptr1_closed);
 }
 

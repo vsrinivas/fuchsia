@@ -47,7 +47,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
     auto context = std::make_unique<grpc::ClientContext>();
     stream_ = stream.get();
     call_ = std::make_unique<ListenCall>(this, std::move(context), std::move(stream));
-    call_->set_on_empty([this] { on_empty_calls_++; });
+    call_->SetOnDiscardable([this] { on_discardable_calls_++; });
   }
   ~ListenCallTest() override = default;
 
@@ -72,7 +72,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
   int on_finished_calls_ = 0;
   grpc::Status status_;
 
-  int on_empty_calls_ = 0;
+  int on_discardable_calls_ = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ListenCallTest);
@@ -85,8 +85,8 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
   // Simulate the connection response arriving.
   (*stream_->connect_tag)(true);
 
-  // Verify that on_empty was called.
-  EXPECT_EQ(1, on_empty_calls_);
+  // Verify that on_discardable was called.
+  EXPECT_EQ(1, on_discardable_calls_);
 
   // Verify that no client calls were made (because the handler was deleted at
   // the very beginning and no client calls should be made after it goes away).
@@ -114,8 +114,8 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
   handler.reset();
   (*stream_->read_tag)(false);
 
-  // Verify that on_empty was called.
-  EXPECT_EQ(1, on_empty_calls_);
+  // Verify that on_discardable was called.
+  EXPECT_EQ(1, on_discardable_calls_);
 
   // Verify that no further client calls were made after the handler is deleted.
   EXPECT_EQ(1, on_connected_calls_);
@@ -133,7 +133,7 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
 
   handler.reset();
   (*stream_->read_tag)(false);
-  EXPECT_EQ(1, on_empty_calls_);
+  EXPECT_EQ(1, on_discardable_calls_);
   EXPECT_EQ(1, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
   EXPECT_EQ(0, on_finished_calls_);
@@ -150,7 +150,7 @@ TEST_F(ListenCallTest, ReadAndDeleteHandler) {
 
   handler.reset();
   (*stream_->read_tag)(false);
-  EXPECT_EQ(1, on_empty_calls_);
+  EXPECT_EQ(1, on_discardable_calls_);
   EXPECT_EQ(1, on_connected_calls_);
   EXPECT_EQ(3, on_response_calls_);
   EXPECT_EQ(0, on_finished_calls_);
@@ -227,8 +227,8 @@ TEST_F(ListenCallTest, DeleteCallObjectBeforeHandler) {
   (*stream_->finish_tag)(true);
   EXPECT_EQ(1, on_finished_calls_);
 
-  // Verify that on_empty was called.
-  EXPECT_EQ(1, on_empty_calls_);
+  // Verify that on_discardable was called.
+  EXPECT_EQ(1, on_discardable_calls_);
 
   // Delete the call object.
   call_.reset();

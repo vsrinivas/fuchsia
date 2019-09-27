@@ -128,7 +128,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     fd_wait_ = std::make_unique<async::Wait>(
         fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED, 0,
         [](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-               const zx_packet_signal* signal) {
+           const zx_packet_signal* signal) {
           FXL_CHECK(false) << "Ledger file system has been closed while Ledger is running.";
         });
     zx_status_t status = fd_wait_->Begin(async_get_default_dispatcher());
@@ -141,9 +141,13 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   };
+
+  bool IsDiscardable() const {
+    return !fd_wait_->is_pending() || !ledger_repository_ || ledger_repository_->IsDiscardable();
+  }
 
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
@@ -176,9 +180,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
     requests_.clear();
     if (ledger_repository_) {
-      ledger_repository_->set_on_empty([this] { on_empty(); });
+      ledger_repository_->SetOnDiscardable([this] { OnDiscardable(); });
     } else {
-      on_empty();
+      OnDiscardable();
     }
   }
 
@@ -187,8 +191,10 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   void Detach(fit::closure callback) {
     if (ledger_repository_) {
       detached_handles_ = ledger_repository_->Unbind();
-      ledger_repository_->set_on_empty(std::move(callback));
-      ledger_repository_->Close([](Status status) { FXL_DCHECK(status == Status::OK); });
+      ledger_repository_->Close([callback = std::move(callback)](Status status) {
+        FXL_DCHECK(status == Status::OK);
+        callback();
+      });
     }
     for (auto& request : requests_) {
       detached_handles_.push_back(std::move(request.first));
@@ -200,9 +206,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   }
 
  private:
-  void on_empty() {
-    if (on_empty_callback_) {
-      on_empty_callback_();
+  void OnDiscardable() const {
+    if (on_discardable_) {
+      on_discardable_();
     }
   }
 
@@ -214,7 +220,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
                         fit::function<void(Status)>>>
       requests_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> detached_handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
@@ -252,6 +258,7 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     inspect_deprecated::Node inspect_node)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
+      repositories_(environment_->dispatcher()),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {}
 
@@ -303,7 +310,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(environment_, db.get());
   auto background_sync_manager = std::make_unique<BackgroundSyncManager>(environment_, db.get());
 
-  std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
+  std::unique_ptr<SyncWatcherSet> watchers =
+      std::make_unique<SyncWatcherSet>(environment_->dispatcher());
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
   if (cloud_provider || user_communicator_factory_) {
     user_sync = CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());

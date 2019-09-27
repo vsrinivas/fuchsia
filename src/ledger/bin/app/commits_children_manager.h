@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/async/dispatcher.h"
 #include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/inspected_commit.h"
 #include "src/ledger/bin/app/inspected_container.h"
@@ -23,23 +24,25 @@ namespace ledger {
 // An |inspect_deprecated::ChildrenManager| that exposes to Inspect the page's commits.
 class CommitsChildrenManager final : public inspect_deprecated::ChildrenManager {
  public:
-  explicit CommitsChildrenManager(inspect_deprecated::Node* commits_node,
+  explicit CommitsChildrenManager(async_dispatcher_t* dispatcher,
+                                  inspect_deprecated::Node* commits_node,
                                   InspectablePage* inspectable_page);
   ~CommitsChildrenManager() override;
 
-  void set_on_empty(fit::closure on_empty_callback);
-  bool IsEmpty();
+  void SetOnDiscardable(fit::closure on_discardable);
+  bool IsDiscardable() const;
 
  private:
   // inspect_deprecated::ChildrenManager
   void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
+  async_dispatcher_t* dispatcher_;
   inspect_deprecated::Node* commits_node_;
   InspectablePage* inspectable_page_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   callback::AutoCleanableMap<storage::CommitId, InspectedContainer<InspectedCommit>>
       inspected_commit_containers_;
 

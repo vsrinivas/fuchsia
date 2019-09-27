@@ -36,6 +36,9 @@ class MessageRelayBase {
   // Closes the channel.
   void CloseChannel();
 
+  // Returns whether the channel is closed.
+  bool IsClosed() const;
+
  protected:
   MessageRelayBase();
 

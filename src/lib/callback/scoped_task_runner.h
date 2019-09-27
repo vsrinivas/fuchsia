@@ -71,9 +71,8 @@ class SimpleTaskController : public TaskController {
 };
 
 // An object that wraps the posting logic of an |async_t|, but that is
-// neither copyable nor moveable and will generally not run any task after being
-// deleted, though edge case handling may differ between |Controller|
-// implementations.
+// not copyable and will generally not run any task after being deleted, though
+// edge case handling may differ between |Controller| implementations.
 //
 // This class is mostly thread-safe, though it must not go out of scope while
 // any of its methods are being called, and handling of edge cases varies
@@ -96,7 +95,13 @@ class ScopedTaskRunner {
                             async_dispatcher_t* dispatcher = async_get_default_dispatcher())
       : dispatcher_(dispatcher), controller_(std::make_shared<Controller>()) {}
 
+  ScopedTaskRunner(const ScopedTaskRunner&) = delete;
+  ScopedTaskRunner(ScopedTaskRunner&&);
+
   ~ScopedTaskRunner();
+
+  ScopedTaskRunner& operator=(const ScopedTaskRunner&) = delete;
+  ScopedTaskRunner& operator=(ScopedTaskRunner&&);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
@@ -160,12 +165,8 @@ class ScopedTaskRunner {
   }
 
  private:
-  async_dispatcher_t* const dispatcher_;
+  async_dispatcher_t* dispatcher_;
   std::shared_ptr<TaskController> controller_;
-
-  // The only thing preventing this from being movable is the const fields. If
-  // we ever need this to be movable, we can do it easily.
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedTaskRunner);
 };
 
 }  // namespace callback

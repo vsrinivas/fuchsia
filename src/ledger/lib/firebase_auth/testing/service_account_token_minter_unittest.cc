@@ -9,6 +9,7 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -28,8 +29,8 @@ class ServiceAccountTokenMinterTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenMinterTest()
       : network_wrapper_(dispatcher()),
-        token_minter_(&network_wrapper_, Credentials::Parse(kTestServiceAccountConfig), "user_id") {
-  }
+        token_minter_(dispatcher(), &network_wrapper_,
+                      Credentials::Parse(kTestServiceAccountConfig), "user_id") {}
 
  protected:
   bool GetFirebaseToken(std::string api_key,

@@ -251,7 +251,7 @@ class InspectedCommitTest : public TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectedCommitTest);
 };
 
-TEST_F(InspectedCommitTest, OnEmptyCalledNoChildrenManagement) {
+TEST_F(InspectedCommitTest, OnDiscardableCalledNoChildrenManagement) {
   std::set<storage::CommitId> parents = {
       storage::CommitId("00000000000000000000000000000001", storage::kCommitIdSize),
       storage::CommitId("00000000000000000000000000000002", storage::kCommitIdSize),
@@ -260,31 +260,43 @@ TEST_F(InspectedCommitTest, OnEmptyCalledNoChildrenManagement) {
   };
   storage::CommitId id =
       storage::CommitId("00000000000000000000000000000005", storage::kCommitIdSize);
-  bool on_empty_called;
+  bool on_discardable_called;
 
   std::unique_ptr<storage::IdAndParentIdsCommit> commit =
       std::make_unique<storage::IdAndParentIdsCommit>(id, parents);
   inspect_deprecated::Node commit_node = attachment_node_.CreateChild(CommitIdToDisplayName(id));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit = InspectedCommit(std::move(commit_node), std::move(commit),
-                                                     ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node), std::move(commit), ExpiringToken(), &inspectable_page);
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+
   fit::closure detacher = inspected_commit.CreateDetacher();
-  EXPECT_FALSE(on_empty_called);
-  detacher();
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  detacher();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_discardable_called);
+
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+
   fit::closure first_detacher = inspected_commit.CreateDetacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
+
   fit::closure second_detacher = inspected_commit.CreateDetacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
+
   first_detacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
+
   second_detacher();
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, GetNames) {
@@ -305,21 +317,21 @@ TEST_F(InspectedCommitTest, GetNames) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, UnorderedElementsAreArray(key_display_names));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, ConcurrentGetNames) {
@@ -343,15 +355,15 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<std::set<std::string>> nameses{concurrency};
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
@@ -361,7 +373,7 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
   for (const auto& names : nameses) {
     EXPECT_THAT(names, UnorderedElementsAreArray(key_display_names));
   }
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, Attach) {
@@ -381,14 +393,14 @@ TEST_F(InspectedCommitTest, Attach) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   fit::closure detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("one"),
@@ -396,10 +408,11 @@ TEST_F(InspectedCommitTest, Attach) {
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   detacher();
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, AttachAbsentEntry) {
@@ -415,14 +428,14 @@ TEST_F(InspectedCommitTest, AttachAbsentEntry) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   fit::closure detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("three"),
@@ -430,13 +443,13 @@ TEST_F(InspectedCommitTest, AttachAbsentEntry) {
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, ConcurrentAttach) {
@@ -469,14 +482,14 @@ TEST_F(InspectedCommitTest, ConcurrentAttach) {
                                              test_loop().dispatcher()};
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
-  bool on_empty_called;
+  bool on_discardable_called;
 
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(attachment_choices[index],
@@ -488,13 +501,14 @@ TEST_F(InspectedCommitTest, ConcurrentAttach) {
 
   // We expect that the InspectedCommit under test becomes empty when the last detacher is called.
   for (const auto& detacher : detachers) {
-    EXPECT_FALSE(on_empty_called);
+    EXPECT_FALSE(on_discardable_called);
     detacher();
+    RunLoopUntilIdle();
   }
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(InspectedCommitTest, OnEmptyCalledSomeChildrenManagement) {
+TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
   std::map<std::string, std::vector<uint8_t>> entries = {{"one", {1}}, {"two", {2}}};
   std::set<std::string> key_display_names;
   for (const auto& [key, unused_value] : entries) {
@@ -511,16 +525,16 @@ TEST_F(InspectedCommitTest, OnEmptyCalledSomeChildrenManagement) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   fit::closure first_commit_detacher = inspected_commit.CreateDetacher();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   fit::closure one_entry_detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("one"),
@@ -528,9 +542,9 @@ TEST_F(InspectedCommitTest, OnEmptyCalledSomeChildrenManagement) {
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(one_entry_detacher);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   fit::closure second_commit_detacher = inspected_commit.CreateDetacher();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   fit::closure two_entry_detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("two"),
@@ -538,15 +552,19 @@ TEST_F(InspectedCommitTest, OnEmptyCalledSomeChildrenManagement) {
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(two_entry_detacher);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   first_commit_detacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
   one_entry_detacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
   second_commit_detacher();
-  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_discardable_called);
   two_entry_detacher();
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
@@ -555,21 +573,21 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
@@ -586,21 +604,21 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, AttachInvalidName) {
@@ -609,15 +627,15 @@ TEST_F(InspectedCommitTest, AttachInvalidName) {
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach("This string is not a valid key display name",
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
@@ -626,13 +644,13 @@ TEST_F(InspectedCommitTest, AttachInvalidName) {
   EXPECT_TRUE(detacher);
   // The InspectedCommit under test did not surrender program control during the call to Attach so
   // it never needed to check its emptiness after regaining program control.
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&callback_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&callback_called));
   detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, AttachErrorGettingActivePageManager) {
@@ -641,28 +659,28 @@ TEST_F(InspectedCommitTest, AttachErrorGettingActivePageManager) {
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("my happy fun key"),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, AttachErrorGettingEntry) {
@@ -679,28 +697,28 @@ TEST_F(InspectedCommitTest, AttachErrorGettingEntry) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("your happy fun key"),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 }
 
 TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
@@ -712,15 +730,15 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(KeyToDisplayName("my happy fun key"),
@@ -729,15 +747,15 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
   EXPECT_THAT(detachers, Each(IsTrue()));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // The returned detachers are callable but have no discernible effect.
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (const fit::closure& detacher : detachers) {
     detacher();
-    EXPECT_FALSE(on_empty_called);
+    EXPECT_FALSE(on_discardable_called);
     RunLoopUntilIdle();
-    EXPECT_FALSE(on_empty_called);
+    EXPECT_FALSE(on_discardable_called);
   }
 }
 
@@ -781,15 +799,15 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingEntry) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   InspectedCommit inspected_commit =
-      InspectedCommit(std::move(commit_node),
+      InspectedCommit(dispatcher(), std::move(commit_node),
                       std::make_unique<storage::IdAndParentIdsCommit>(
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(attachment_choices[index],
@@ -803,15 +821,16 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingEntry) {
   // know that it is guaranteed that all |InspectedCommit::Attach| calls failed to attach a node and
   // the |InspectedCommit| is guaranteed to have become empty.
   // TODO(https://github.com/google/googletest/issues/2445): Change this to
-  // EXPECT_THAT(successful_storage_call_count < 2, IMPLIES(on_empty_called));
-  EXPECT_TRUE(2 <= successful_storage_call_count || on_empty_called);
+  // EXPECT_THAT(successful_storage_call_count < 2, IMPLIES(on_discardable_called));
+  EXPECT_TRUE(2 <= successful_storage_call_count || on_discardable_called);
   // We expect that the InspectedCommit under test is empty after the last detacher is called.
   // Depending on the randomness with which this test ran it may be empty earlier (it may be empty
   // right now!) but it is only guaranteed to be empty after the last detacher is called.
   for (const auto& detacher : detachers) {
     detacher();
   }
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_discardable_called);
 }
 
 }  // namespace

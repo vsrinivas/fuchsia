@@ -4,7 +4,6 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/device_set_impl.h"
 
-#include <google/firestore/v1beta1/firestore.pb.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
@@ -15,6 +14,8 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_view.h"
+
+#include <google/firestore/v1beta1/firestore.pb.h>
 
 namespace cloud_provider_firestore {
 
@@ -69,13 +70,20 @@ DeviceSetImpl::DeviceSetImpl(std::string user_path, CredentialsProvider* credent
 
   // The class shuts down when the client connection is disconnected.
   binding_.set_error_handler([this](zx_status_t status) {
-    if (on_empty_) {
-      on_empty_();
+    binding_.Unbind();
+    if (on_discardable_) {
+      on_discardable_();
     }
   });
 }
 
 DeviceSetImpl::~DeviceSetImpl() = default;
+
+void DeviceSetImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool DeviceSetImpl::IsDiscardable() const { return !binding_.is_bound(); }
 
 void DeviceSetImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

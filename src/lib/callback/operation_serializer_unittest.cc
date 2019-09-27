@@ -41,7 +41,7 @@ TEST(OperationSerializer, ExecutionIsInOrder) {
     // Executing operation i unblocks the following one.
     if (i != N - 1) {
       EXPECT_TRUE(called[i + 1]);
-      EXPECT_FALSE(operation_serializer.empty());
+      EXPECT_FALSE(operation_serializer.IsDiscardable());
     }
     // But, until the operation (i+1) is executed, all following ones are still
     // blocked.
@@ -49,7 +49,7 @@ TEST(OperationSerializer, ExecutionIsInOrder) {
       EXPECT_FALSE(called[j]);
     }
   }
-  EXPECT_TRUE(operation_serializer.empty());
+  EXPECT_TRUE(operation_serializer.IsDiscardable());
 }
 
 TEST(OperationSerializer, DontContinueAfterDestruction) {
@@ -71,7 +71,7 @@ TEST(OperationSerializer, DontContinueAfterDestruction) {
 
     // Since the first operation is not yet executed, the second one is also
     // blocked.
-    EXPECT_FALSE(operation_serializer.empty());
+    EXPECT_FALSE(operation_serializer.IsDiscardable());
     EXPECT_FALSE(called_1);
     EXPECT_FALSE(called_2);
   }

@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_H_
 
-#include <google/firestore/v1beta1/firestore.grpc.pb.h>
-#include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -18,6 +16,9 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+
+#include <google/firestore/v1beta1/firestore.grpc.pb.h>
+#include <grpc++/grpc++.h>
 
 namespace cloud_provider_firestore {
 
@@ -32,7 +33,9 @@ class ListenCall {
              std::unique_ptr<ListenStream> stream);
   ~ListenCall();
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   void Write(google::firestore::v1beta1::ListenRequest request);
 
@@ -47,9 +50,7 @@ class ListenCall {
 
   void HandleFinished(grpc::Status status);
 
-  bool IsEmpty();
-
-  bool CheckEmpty();
+  bool CheckDiscardable();
 
   // Pointer to the client of the call. It is unset when the call handler is
   // deleted.
@@ -65,7 +66,7 @@ class ListenCall {
   StreamReader<ListenStream, google::firestore::v1beta1::ListenResponse> stream_reader_;
   StreamWriter<ListenStream, google::firestore::v1beta1::ListenRequest> stream_writer_;
 
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   bool connected_ = false;
   bool finish_requested_ = false;

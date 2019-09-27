@@ -9,12 +9,13 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <trace/event.h>
 #include <zircon/errors.h>
 
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <trace/event.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/active_page_manager.h"
@@ -26,14 +27,13 @@
 
 namespace ledger {
 
-PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
-                           ActivePageManager* manager, storage::PageStorage* storage,
-                           MergeResolver* merge_resolver, SyncWatcherSet* watchers,
-                           std::unique_ptr<PageImpl> page_impl)
+PageDelegate::PageDelegate(Environment* environment, ActivePageManager* manager,
+                           storage::PageStorage* storage, MergeResolver* merge_resolver,
+                           SyncWatcherSet* watchers, std::unique_ptr<PageImpl> page_impl)
     : manager_(manager),
       storage_(storage),
       merge_resolver_(merge_resolver),
-      branch_tracker_(coroutine_service, manager, storage),
+      branch_tracker_(environment, manager, storage),
       watcher_set_(watchers),
       page_impl_(std::move(page_impl)),
       weak_factory_(this) {
@@ -44,8 +44,8 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
                                               callback(Status::OK);
                                             });
   });
-  branch_tracker_.set_on_empty([this] { CheckEmpty(); });
-  operation_serializer_.set_on_empty([this] { CheckEmpty(); });
+  branch_tracker_.SetOnDiscardable([this] { CheckDiscardable(); });
+  operation_serializer_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 PageDelegate::~PageDelegate() = default;
@@ -57,8 +57,17 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
     return;
   }
   page_impl_->SetPageDelegate(this);
-  CheckEmpty();
+  CheckDiscardable();
   on_done(Status::OK);
+}
+
+void PageDelegate::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool PageDelegate::IsDiscardable() const {
+  return page_impl_->IsDiscardable() && branch_tracker_.IsDiscardable() &&
+         operation_serializer_.IsDiscardable();
 }
 
 void PageDelegate::GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
@@ -300,10 +309,9 @@ void PageDelegate::CommitJournal(
                           });
 }
 
-void PageDelegate::CheckEmpty() {
-  if (on_empty_callback_ && page_impl_->IsEmpty() && branch_tracker_.IsEmpty() &&
-      operation_serializer_.empty()) {
-    on_empty_callback_();
+void PageDelegate::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

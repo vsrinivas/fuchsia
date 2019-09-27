@@ -5,11 +5,12 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 
-#include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include <string>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -31,9 +32,11 @@ class RemoteConnection {
   // Disconnects.
   void Disconnect();
 
-  // |on_empty| will be called when this connection is no longer valid, either
+  // |on_discardable| will be called when this connection is no longer valid, either
   // because we disconnected or because the other side disconnected.
-  void set_on_empty(fit::closure on_empty);
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   // |on_close| will be called when the other side closes the connection.
   void set_on_close(fit::closure on_close);
@@ -49,7 +52,7 @@ class RemoteConnection {
 
   ledger::fidl_helpers::MessageRelay message_relay_;
 
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
   fit::closure on_close_;
   fit::function<void(std::vector<uint8_t>)> on_message_;
 };

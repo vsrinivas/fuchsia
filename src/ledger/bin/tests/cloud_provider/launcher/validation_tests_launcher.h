@@ -25,7 +25,7 @@ class ValidationTestsLauncher {
   // It may return a component controller: when the cloud provider instance is
   // not used anymore (ie. the other end of the interface request is closed),
   // the component controller is closed, which terminates the cloud provider.
-  ValidationTestsLauncher(sys::ComponentContext* component_context,
+  ValidationTestsLauncher(async_dispatcher_t* dispatcher, sys::ComponentContext* component_context,
                           fit::function<fuchsia::sys::ComponentControllerPtr(
                               fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
                               factory);
@@ -46,13 +46,14 @@ class ValidationTestsLauncher {
                        fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request,
                        fuchsia::sys::ComponentControllerPtr controller);
     ~CloudProviderProxy();
-    void set_on_empty(fit::closure on_empty);
+    void SetOnDiscardable(fit::closure on_discardable);
+    bool IsDiscardable() const;
 
    private:
     fidl::Binding<fuchsia::ledger::cloud::CloudProvider> binding_;
     fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied_;
     fuchsia::sys::ComponentControllerPtr controller_;
-    fit::closure on_empty_;
+    fit::closure on_discardable_;
   };
 
   sys::ComponentContext* const component_context_;

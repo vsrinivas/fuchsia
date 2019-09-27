@@ -19,10 +19,12 @@ namespace ledger {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  explicit FakePageCloud(InjectNetworkError inject_network_error);
+  explicit FakePageCloud(async_dispatcher_t* dispatcher, InjectNetworkError inject_network_error);
   ~FakePageCloud() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  bool IsDiscardable() const;
+
+  void SetOnDiscardable(fit::closure on_discardable);
 
   void Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
 
@@ -47,7 +49,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   std::map<uint64_t, size_t> remaining_errors_to_inject_;
 
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   std::vector<cloud_provider::CommitPackEntry> commits_;
   std::map<std::string, std::string> objects_;

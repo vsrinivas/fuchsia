@@ -52,6 +52,8 @@ void MessageRelayBase::CloseChannel() {
   OnChannelClosed();
 }
 
+bool MessageRelayBase::IsClosed() const { return static_cast<bool>(channel_); }
+
 void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
   while (channel_) {

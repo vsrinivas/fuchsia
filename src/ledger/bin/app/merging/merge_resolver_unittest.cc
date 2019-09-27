@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 
-#include <string>
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+
+#include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -344,7 +344,7 @@ TEST_F(MergeResolverTest, Empty) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(QuitLoopClosure());
+  resolver.SetOnDiscardable(QuitLoopClosure());
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -352,7 +352,7 @@ TEST_F(MergeResolverTest, Empty) {
   EXPECT_EQ(commits.size(), 2u);
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
 
   commits.clear();
   status = page_storage_->GetHeadCommits(&commits);
@@ -393,7 +393,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   strategy_ptr->callback(Status::OK);
   strategy_ptr->callback = nullptr;
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
 }
 
 TEST_F(MergeResolverTest, LastOneWins) {
@@ -420,11 +420,11 @@ TEST_F(MergeResolverTest, LastOneWins) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(callback::SetWhenCalled(&called));
+  resolver.SetOnDiscardable(callback::SetWhenCalled(&called));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
 
   commits.clear();
   status = page_storage_->GetHeadCommits(&commits);
@@ -468,11 +468,11 @@ TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(callback::SetWhenCalled(&called));
+  resolver.SetOnDiscardable(callback::SetWhenCalled(&called));
 
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
   commits.clear();
   status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(status, Status::OK);
@@ -502,9 +502,9 @@ TEST_F(MergeResolverTest, None) {
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  resolver.set_on_empty(QuitLoopClosure());
+  resolver.SetOnDiscardable(QuitLoopClosure());
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
   commits.clear();
   status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(status, Status::OK);
@@ -529,7 +529,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   bool called;
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  resolver.set_on_empty(callback::SetWhenCalled(&called));
+  resolver.SetOnDiscardable(callback::SetWhenCalled(&called));
   resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
   async::PostTask(dispatcher(), [&resolver] {
     resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
@@ -538,7 +538,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
   commits.clear();
   status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(status, Status::OK);
@@ -554,17 +554,17 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
 TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   storage::fake::FakePageStorage page_storage(&environment_, "page_id");
 
-  bool on_empty_called;
+  bool on_discardable_called;
   auto backoff = std::make_unique<backoff::TestBackoff>();
   auto backoff_ptr = backoff.get();
   MergeResolver resolver([] {}, &environment_, &page_storage, std::move(backoff));
-  resolver.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  resolver.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   auto strategy = std::make_unique<RecordingTestStrategy>();
   strategy->SetOnMerge(QuitLoopClosure());
   resolver.SetMergeStrategy(std::move(strategy));
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 
   page_storage.SetDropCommitNotifications(true);
 
@@ -613,7 +613,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(MakeQuitTaskOnce());
+  resolver.SetOnDiscardable(MakeQuitTaskOnce());
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -624,7 +624,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
 
   size_t callback_calls = 0;
   auto conflicts_resolved_callback = [&resolver, &callback_calls]() {
-    EXPECT_TRUE(resolver.IsEmpty());
+    EXPECT_TRUE(resolver.IsDiscardable());
     callback_calls++;
   };
   ConflictResolutionWaitStatus wait_status;
@@ -633,7 +633,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
 
   // Check that the callback was called 2 times.
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
   EXPECT_EQ(callback_calls, 2u);
   EXPECT_EQ(wait_status, ConflictResolutionWaitStatus::CONFLICTS_RESOLVED);
 
@@ -646,7 +646,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   CreateCommit(commits[0]->GetId(), AddKeyValueToJournal("foo", "baw"));
   CreateCommit(commits[0]->GetId(), AddKeyValueToJournal("foo", "bat"));
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
 
   // Check that callback wasn't called (callback queue cleared after all the
   // callbacks in it were called).
@@ -660,11 +660,11 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(MakeQuitTaskOnce());
+  resolver.SetOnDiscardable(MakeQuitTaskOnce());
 
   size_t callback_calls = 0;
   auto conflicts_resolved_callback = [&resolver, &callback_calls]() {
-    EXPECT_TRUE(resolver.IsEmpty());
+    EXPECT_TRUE(resolver.IsDiscardable());
     callback_calls++;
   };
   ConflictResolutionWaitStatus wait_status;
@@ -672,7 +672,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
 
   // Check that the callback was called 1 times.
   RunLoopUntilIdle();
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(resolver.IsDiscardable());
   EXPECT_EQ(callback_calls, 1u);
   EXPECT_EQ(wait_status, ConflictResolutionWaitStatus::NO_CONFLICTS);
 }

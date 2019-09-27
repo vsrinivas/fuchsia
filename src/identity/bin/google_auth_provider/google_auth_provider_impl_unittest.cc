@@ -40,14 +40,14 @@ class GoogleAuthProviderImplTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(GoogleAuthProviderImplTest, EmptyWhenClientDisconnected) {
-  bool on_empty_called = false;
-  google_auth_provider_impl_.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
+  bool on_discardable_called = false;
+  google_auth_provider_impl_.SetOnDiscardable([this, &on_discardable_called] {
+    on_discardable_called = true;
     QuitLoop();
   });
   auth_provider_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(GoogleAuthProviderImplTest, GetAppAccessTokenSuccess) {

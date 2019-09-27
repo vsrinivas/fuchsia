@@ -89,14 +89,14 @@ class FakeDelegate : public CommitBatch::Delegate {
 class CommitBatchTest : public gtest::TestLoopFixture {
  public:
   CommitBatchTest() : batch_(MakeP2PClientId(1u), &delegate_, &storage_) {
-    batch_.set_on_empty(callback::SetWhenCalled(&on_empty_called_));
+    batch_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called_));
   }
   ~CommitBatchTest() override = default;
 
  protected:
   FakePageStorage storage_;
   FakeDelegate delegate_;
-  bool on_empty_called_ = false;
+  bool on_discardable_called_ = false;
   p2p_provider::P2PClientId device_ = MakeP2PClientId(1u);
   CommitBatch batch_;
 };
@@ -104,25 +104,25 @@ class CommitBatchTest : public gtest::TestLoopFixture {
 TEST_F(CommitBatchTest, MarkAsReadyAndAddCommit) {
   batch_.MarkPeerReady();
   EXPECT_THAT(storage_.commits_from_sync_, IsEmpty());
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
 
   batch_.AddToBatch(MakeCommits({{"id", "data"}}));
   EXPECT_THAT(storage_.commits_from_sync_,
               ElementsAre(ElementsAre(MatchesCommitIdAndBytes("id", "data"))));
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 TEST_F(CommitBatchTest, AddCommitAndMarkAsReady) {
   batch_.AddToBatch(MakeCommits({{"id", "data"}}));
   EXPECT_THAT(storage_.commits_from_sync_, IsEmpty());
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
 
   batch_.MarkPeerReady();
   EXPECT_THAT(storage_.commits_from_sync_,
               ElementsAre(ElementsAre(MatchesCommitIdAndBytes("id", "data"))));
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 TEST_F(CommitBatchTest, RequestMissingParents) {
@@ -132,12 +132,12 @@ TEST_F(CommitBatchTest, RequestMissingParents) {
   EXPECT_THAT(storage_.commits_from_sync_, IsEmpty());
   EXPECT_THAT(delegate_.requested_commits_,
               ElementsAre(Pair(device_, ElementsAre("parent1", "parent2"))));
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
 
   // Add the requested commits.
   batch_.AddToBatch(MakeCommits({{"parent1", "data1"}, {"parent2", "data2"}}));
   ASSERT_THAT(storage_.commits_from_sync_, SizeIs(1));
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 
   auto& commits = storage_.commits_from_sync_[0];
   // We added all three commits.
@@ -167,11 +167,11 @@ TEST_F(CommitBatchTest, RequestOnlyOnce) {
   batch_.AddToBatch(MakeCommits({{"parent1", "dataA"}}));
   EXPECT_THAT(storage_.commits_from_sync_, IsEmpty());
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
   batch_.AddToBatch(MakeCommits({{"parent2", "dataB"}}));
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
   ASSERT_THAT(storage_.commits_from_sync_, SizeIs(1));
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 
   auto& commits = storage_.commits_from_sync_[0];
   // We added the two parents in any order, then the two child commits in any order.
@@ -204,7 +204,7 @@ TEST_F(CommitBatchTest, ParentThenChild) {
                                       MatchesCommitIdAndBytes("id1", "data1"),
                                       MatchesCommitIdAndBytes("id2", "data2"))));
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 // Tests that we don't behave unresonably in case of a cycle.
@@ -217,17 +217,17 @@ TEST_F(CommitBatchTest, CommitCycle) {
   EXPECT_THAT(delegate_.requested_commits_, ElementsAre(Pair(device_, ElementsAre("id0"))));
   delegate_.requested_commits_.clear();
 
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
   batch_.AddToBatch(MakeCommits({{"id0", "data0"}}));
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 // Check that the batch is aborted if we cannot list the parents.
 TEST_F(CommitBatchTest, EmptyOnListMissingFailure) {
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
   storage_.status_to_return_ = ledger::Status::INTERNAL_ERROR;
   batch_.AddToBatch(MakeCommits({{"id1", "data1"}}));
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 // Check that the batch is aborted if we cannot add the commits.
@@ -235,13 +235,13 @@ TEST_F(CommitBatchTest, EmptyOnAddCommitsFailure) {
   batch_.AddToBatch(MakeCommits({{"id", "data"}}));
   EXPECT_THAT(storage_.commits_from_sync_, IsEmpty());
   EXPECT_THAT(delegate_.requested_commits_, IsEmpty());
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
 
   // ListMissingParents has already been called, but not AddCommitsFromSync.
-  EXPECT_FALSE(on_empty_called_);
+  EXPECT_FALSE(on_discardable_called_);
   storage_.status_to_return_ = ledger::Status::INTERNAL_ERROR;
   batch_.MarkPeerReady();
-  EXPECT_TRUE(on_empty_called_);
+  EXPECT_TRUE(on_discardable_called_);
 }
 
 }  // namespace

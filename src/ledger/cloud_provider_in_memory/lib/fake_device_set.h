@@ -23,8 +23,6 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
                 CloudEraseFromWatcher cloud_erase_from_watcher);
   ~FakeDeviceSet() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
-
  private:
   void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
@@ -40,8 +38,6 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
   const CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
 
   const CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
-
-  fit::closure on_empty_;
 
   std::set<std::string> fingerprints_;
 

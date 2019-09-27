@@ -10,7 +10,9 @@
 
 #include <memory>
 
+#include "lib/async/dispatcher.h"
 #include "src/ledger/bin/app/page_snapshot_impl.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -26,13 +28,13 @@ class ActivePageManager;
 // have the same parent, the first one to be received will be tracked.
 class BranchTracker : public storage::CommitWatcher {
  public:
-  BranchTracker(coroutine::CoroutineService* coroutine_service, ActivePageManager* manager,
+  BranchTracker(Environment* environment, ActivePageManager* manager,
                 storage::PageStorage* storage);
   ~BranchTracker() override;
 
   Status Init();
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
 
   // Returns the head commit of the currently tracked branch.
   std::unique_ptr<const storage::Commit> GetBranchHead();
@@ -57,7 +59,7 @@ class BranchTracker : public storage::CommitWatcher {
   void StopTransaction(std::unique_ptr<const storage::Commit> commit);
 
   // Returns true if there are no watchers registered.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
  private:
   class PageWatcherContainer;
@@ -66,13 +68,13 @@ class BranchTracker : public storage::CommitWatcher {
   void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,
                     storage::ChangeSource source) override;
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   coroutine::CoroutineService* coroutine_service_;
   ActivePageManager* manager_;
   storage::PageStorage* storage_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   bool transaction_in_progress_;
   std::unique_ptr<const storage::Commit> current_commit_;

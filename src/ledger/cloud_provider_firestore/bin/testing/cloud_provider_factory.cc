@@ -60,13 +60,18 @@ class CloudProviderFactory::TokenManagerContainer {
             dispatcher,
             std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>()),
             [this] { return component_context_->svc()->Connect<http::HttpService>(); }),
-        token_manager_(&network_wrapper_, std::move(credentials), std::move(user_id)),
+        token_manager_(dispatcher, &network_wrapper_, std::move(credentials), std::move(user_id)),
         binding_(&token_manager_, std::move(request)) {}
 
-  void set_on_empty(fit::closure on_empty) {
+  void SetOnDiscardable(fit::closure on_discardable) {
     binding_.set_error_handler(
-        [on_empty = std::move(on_empty)](zx_status_t status) { on_empty(); });
+        [this, on_discardable = std::move(on_discardable)](zx_status_t status) {
+          binding_.Unbind();
+          on_discardable();
+        });
   }
+
+  bool IsDiscardable() const { return !binding_.is_bound(); }
 
  private:
   sys::ComponentContext* const component_context_;
@@ -84,7 +89,8 @@ CloudProviderFactory::CloudProviderFactory(
       random_(random),
       api_key_(std::move(api_key)),
       credentials_(std::move(credentials)),
-      services_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+      services_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      token_managers_(services_loop_.dispatcher()) {
   FXL_DCHECK(component_context);
   FXL_DCHECK(!api_key_.empty());
 }

@@ -75,10 +75,15 @@ class FakePageCloud::WatcherContainer {
 
   bool WaitingForWatcherAck() { return waiting_for_watcher_ack_; }
 
-  void set_on_empty(fit::closure on_empty) {
+  void SetOnDiscardable(fit::closure on_discardable) {
     watcher_.set_error_handler(
-        [on_empty = std::move(on_empty)](zx_status_t status) { on_empty(); });
+        [this, on_discardable = std::move(on_discardable)](zx_status_t status) {
+          watcher_.Unbind();
+          on_discardable();
+        });
   }
+
+  bool IsDiscardable() const { return !watcher_.is_bound(); }
 
  private:
   cloud_provider::PageCloudWatcherPtr watcher_;
@@ -117,16 +122,24 @@ void FakePageCloud::WatcherContainer::SendCommits(
                          });
 }
 
-FakePageCloud::FakePageCloud(InjectNetworkError inject_network_error)
-    : inject_network_error_(inject_network_error) {
+FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher,
+                             InjectNetworkError inject_network_error)
+    : inject_network_error_(inject_network_error), containers_(dispatcher) {
   bindings_.set_empty_set_handler([this] {
-    if (on_empty_) {
-      on_empty_();
+    bindings_.CloseAll();
+    if (on_discardable_) {
+      on_discardable_();
     }
   });
 }
 
 FakePageCloud::~FakePageCloud() = default;
+
+bool FakePageCloud::IsDiscardable() const { return bindings_.size() == 0; }
+
+void FakePageCloud::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
 
 void FakePageCloud::Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
   bindings_.AddBinding(this, std::move(request));

@@ -327,43 +327,43 @@ TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
 TEST_F(PageEvictionManagerTest, IsEmpty) {
   std::string ledger_name = "ledger";
   storage::PageId page = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
 
-  page_eviction_manager_.set_on_empty([&] { on_empty_called = true; });
+  page_eviction_manager_.SetOnDiscardable([&] { on_discardable_called = true; });
 
-  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_TRUE(page_eviction_manager_.IsDiscardable());
+  EXPECT_FALSE(on_discardable_called);
 
   // PageEvictionManagerImpl should be empty if there is no pending operation on: MarkPageOpened,
   // MarkPageClosed, or TryEvictPages.
-  on_empty_called = false;
+  on_discardable_called = false;
   page_eviction_manager_.MarkPageOpened(ledger_name, page);
-  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(page_eviction_manager_.IsDiscardable());
+  EXPECT_FALSE(on_discardable_called);
   RunLoopUntilIdle();
-  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(page_eviction_manager_.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 
-  on_empty_called = false;
+  on_discardable_called = false;
   page_eviction_manager_.MarkPageClosed(ledger_name, page);
-  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(page_eviction_manager_.IsDiscardable());
+  EXPECT_FALSE(on_discardable_called);
   RunLoopUntilIdle();
-  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(page_eviction_manager_.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 
   bool called;
   Status status;
-  on_empty_called = false;
+  on_discardable_called = false;
   page_eviction_manager_.TryEvictPages(
       policy_.get(), callback::Capture(callback::SetWhenCalled(&called), &status));
-  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(page_eviction_manager_.IsDiscardable());
+  EXPECT_FALSE(on_discardable_called);
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
-  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(page_eviction_manager_.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(PageEvictionManagerTest, TryEvictPage) {

@@ -54,10 +54,9 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
-  bool empty() const;
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request);
 
@@ -95,7 +94,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   // given |ledger_name|.
   Status GetLedgerManager(convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager);
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   DetachedPath GetPathFor(fxl::StringView ledger_name);
 
@@ -119,7 +118,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<BackgroundSyncManager> background_sync_manager_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 

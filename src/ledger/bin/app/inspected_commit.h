@@ -13,6 +13,7 @@
 #include <set>
 #include <vector>
 
+#include "lib/async/dispatcher.h"
 #include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/inspected_container.h"
 #include "src/ledger/bin/app/inspected_entry.h"
@@ -26,12 +27,14 @@ namespace ledger {
 // |inspect_deprecated::ChildrenManager| type.
 class InspectedCommit final : public inspect_deprecated::ChildrenManager {
  public:
-  explicit InspectedCommit(inspect_deprecated::Node node,
+  explicit InspectedCommit(async_dispatcher_t* dispatcher, inspect_deprecated::Node node,
                            std::unique_ptr<const storage::Commit> commit, ExpiringToken token,
                            InspectablePage* inspectable_page);
   ~InspectedCommit() override;
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   fit::closure CreateDetacher();
 
@@ -40,7 +43,7 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   inspect_deprecated::Node node_;
   InspectablePage* inspectable_page_;
@@ -56,7 +59,7 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   fit::deferred_callback entries_children_manager_retainer_;
   callback::AutoCleanableMap<std::string, InspectedContainer<InspectedEntry>>
       inspected_entry_containers_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   // TODO(nathaniel): Replace this integer with a weak_ptr-less-in-this-case TokenManager.
   int64_t ongoing_storage_accesses_;
   // TODO(nathaniel): Replace this integer with a weak_ptr-less-in-this-case TokenManager.

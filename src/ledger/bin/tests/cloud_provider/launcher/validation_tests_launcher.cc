@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/optional.h>
 
+#include "lib/async/dispatcher.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {
@@ -24,27 +25,31 @@ ValidationTestsLauncher::CloudProviderProxy::CloudProviderProxy(
       proxied_(std::move(proxied)),
       controller_(std::move(controller)) {
   binding_.set_error_handler([this](zx_status_t status) {
-    if (on_empty_)
-      on_empty_();
+    if (on_discardable_)
+      on_discardable_();
   });
   proxied_.set_error_handler([this](zx_status_t status) {
-    if (on_empty_)
-      on_empty_();
+    if (on_discardable_)
+      on_discardable_();
   });
 }
 
 ValidationTestsLauncher::CloudProviderProxy::~CloudProviderProxy() = default;
 
-void ValidationTestsLauncher::CloudProviderProxy::set_on_empty(fit::closure on_empty) {
-  on_empty_ = std::move(on_empty);
+void ValidationTestsLauncher::CloudProviderProxy::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool ValidationTestsLauncher::CloudProviderProxy::IsDiscardable() const {
+  return !binding_.is_bound() || !proxied_.is_bound();
 }
 
 ValidationTestsLauncher::ValidationTestsLauncher(
-    sys::ComponentContext* component_context,
+    async_dispatcher_t* dispatcher, sys::ComponentContext* component_context,
     fit::function<fuchsia::sys::ComponentControllerPtr(
         fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
         factory)
-    : component_context_(component_context), factory_(std::move(factory)) {
+    : component_context_(component_context), factory_(std::move(factory)), proxies_(dispatcher) {
   service_directory_provider_.AddService<fuchsia::ledger::cloud::CloudProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request) {
         fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied;

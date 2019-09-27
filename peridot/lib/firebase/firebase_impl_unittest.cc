@@ -4,9 +4,6 @@
 
 #include "peridot/lib/firebase/firebase_impl.h"
 
-#include <memory>
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -14,6 +11,10 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
+
+#include <memory>
+#include <utility>
+
 #include <rapidjson/document.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
@@ -26,8 +27,9 @@ namespace {
 class FirebaseImplTest : public gtest::TestLoopFixture, public WatchClient {
  public:
   FirebaseImplTest()
-      : fake_network_wrapper_(dispatcher()),
-        firebase_(&fake_network_wrapper_, "example", "pre/fix") {}
+      : gtest::TestLoopFixture(),
+        fake_network_wrapper_(dispatcher()),
+        firebase_(dispatcher(), &fake_network_wrapper_, "example", "pre/fix") {}
   ~FirebaseImplTest() override {}
 
  protected:

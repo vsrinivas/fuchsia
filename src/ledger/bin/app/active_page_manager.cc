@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
@@ -88,14 +89,17 @@ ActivePageManager::ActivePageManager(Environment* environment,
       page_sync_(std::move(page_sync)),
       merge_resolver_(std::move(merge_resolver)),
       sync_timeout_(sync_timeout),
+      snapshots_(environment->dispatcher()),
+      page_delegates_(environment->dispatcher()),
+      watchers_(environment->dispatcher()),
       ongoing_page_storage_uses_(0),
       task_runner_(environment->dispatcher()) {
-  page_delegates_.set_on_empty([this] { CheckEmpty(); });
-  snapshots_.set_on_empty([this] { CheckEmpty(); });
+  page_delegates_.SetOnDiscardable([this] { CheckDiscardable(); });
+  snapshots_.SetOnDiscardable([this] { CheckDiscardable(); });
 
   if (page_sync_) {
     page_sync_->SetSyncWatcher(&watchers_);
-    page_sync_->SetOnIdle([this] { CheckEmpty(); });
+    page_sync_->SetOnIdle([this] { CheckDiscardable(); });
     page_sync_->SetOnBacklogDownloaded([this] { OnSyncBacklogDownloaded(); });
     page_sync_->Start();
     if (state == ActivePageManager::PageStorageState::NEEDS_SYNC) {
@@ -117,7 +121,7 @@ ActivePageManager::ActivePageManager(Environment* environment,
   } else {
     sync_backlog_downloaded_ = true;
   }
-  merge_resolver_->set_on_empty([this] { CheckEmpty(); });
+  merge_resolver_->SetOnDiscardable([this] { CheckDiscardable(); });
   merge_resolver_->SetActivePageManager(this);
 }
 
@@ -136,8 +140,8 @@ void ActivePageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
     return;
   }
   page_delegates_
-      .emplace(environment_->coroutine_service(), this, page_storage_.get(), merge_resolver_.get(),
-               &watchers_, std::move(page_impl))
+      .emplace(environment_, this, page_storage_.get(), merge_resolver_.get(), &watchers_,
+               std::move(page_impl))
       // Note that if the page connection is already cut at this point, |Init()|
       // will delete the newly created PageDelegate.
       .Init(std::move(traced_on_done));
@@ -232,7 +236,7 @@ void ActivePageManager::GetCommits(
             Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
           callback(status, std::move(commits));
           ongoing_page_storage_uses_--;
-          CheckEmpty();
+          CheckDiscardable();
         },
         page_storage_.get());
   }
@@ -247,7 +251,7 @@ void ActivePageManager::GetCommit(
                      storage::Status status, std::unique_ptr<const storage::Commit> commit) {
         callback(status, std::move(commit));
         ongoing_page_storage_uses_--;
-        CheckEmpty();
+        CheckDiscardable();
       });
 }
 
@@ -259,7 +263,7 @@ void ActivePageManager::GetEntries(const storage::Commit& commit, std::string mi
                                    [this, on_done = std::move(on_done)](Status status) {
                                      on_done(status);
                                      ongoing_page_storage_uses_--;
-                                     CheckEmpty();
+                                     CheckDiscardable();
                                    });
 }
 
@@ -273,7 +277,7 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
         if (status != storage::Status::OK) {
           ongoing_page_storage_uses_--;
           callback(status, std::vector<uint8_t>{});
-          CheckEmpty();
+          CheckDiscardable();
           return;
         }
 
@@ -284,7 +288,7 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
                                        ongoing_page_storage_uses_--;
                                        if (status != storage::Status::OK) {
                                          callback(status, std::vector<uint8_t>{});
-                                         CheckEmpty();
+                                         CheckDiscardable();
                                          return;
                                        }
                                        std::vector<uint8_t> value{};
@@ -292,24 +296,28 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
                                          FXL_LOG(ERROR) << "VMO of size " << sized_vmo.size()
                                                         << " not converted to vector<uint8_t>.";
                                          callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
-                                         CheckEmpty();
+                                         CheckDiscardable();
                                          return;
                                        }
                                        callback(Status::OK, std::move(value));
-                                       CheckEmpty();
+                                       CheckDiscardable();
                                      });
       });
 }
 
-bool ActivePageManager::IsEmpty() {
-  return page_delegates_.empty() && snapshots_.empty() && page_impls_.empty() &&
-         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle()) &&
+bool ActivePageManager::IsDiscardable() const {
+  return page_delegates_.IsDiscardable() && snapshots_.IsDiscardable() && page_impls_.empty() &&
+         merge_resolver_->IsDiscardable() && (!page_sync_ || page_sync_->IsIdle()) &&
          ongoing_page_storage_uses_ == 0;
 }
 
-void ActivePageManager::CheckEmpty() {
-  if (on_empty_callback_ && IsEmpty()) {
-    on_empty_callback_();
+void ActivePageManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+void ActivePageManager::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

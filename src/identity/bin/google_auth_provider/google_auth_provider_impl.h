@@ -43,7 +43,9 @@ class GoogleAuthProviderImpl : fuchsia::web::NavigationEventListener,
 
   ~GoogleAuthProviderImpl() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
  private:
   // |AuthProvider|
@@ -148,7 +150,7 @@ class GoogleAuthProviderImpl : fuchsia::web::NavigationEventListener,
   fidl::Binding<fuchsia::auth::AuthProvider> binding_;
   callback::CancellableContainer requests_;
 
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GoogleAuthProviderImpl);
 };

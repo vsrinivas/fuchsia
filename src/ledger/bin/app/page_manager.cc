@@ -50,16 +50,16 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
       ledger_merge_manager_(ledger_merge_manager),
       inspect_node_(std::move(inspect_node)),
       heads_node_(inspect_node_.CreateChild(kHeadsInspectPathComponent.ToString())),
-      heads_children_manager_(&heads_node_, this),
+      heads_children_manager_(environment_->dispatcher(), &heads_node_, this),
       heads_children_manager_retainer_(heads_node_.SetChildrenManager(&heads_children_manager_)),
       commits_node_(inspect_node_.CreateChild(kCommitsInspectPathComponent.ToString())),
-      commits_children_manager_(&commits_node_, this),
+      commits_children_manager_(environment_->dispatcher(), &commits_node_, this),
       commits_children_manager_retainer_(
           commits_node_.SetChildrenManager(&commits_children_manager_)),
       weak_factory_(this) {
-  page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
-  heads_children_manager_.set_on_empty([this] { CheckEmpty(); });
-  commits_children_manager_.set_on_empty([this] { CheckEmpty(); });
+  page_availability_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
+  heads_children_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
+  commits_children_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 PageManager::~PageManager() {
@@ -72,7 +72,7 @@ fit::closure PageManager::CreateDetacher() {
   return [this]() {
     outstanding_detachers_--;
     FXL_DCHECK(outstanding_detachers_ >= 0);
-    CheckEmpty();
+    CheckDiscardable();
   };
 }
 
@@ -153,6 +153,17 @@ void PageManager::NewInspection(fit::function<void(storage::Status status, Expir
   active_page_manager_container_->NewInternalRequest(std::move(callback));
 }
 
+void PageManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool PageManager::IsDiscardable() const {
+  return (!active_page_manager_container_ || active_page_manager_container_->IsDiscardable()) &&
+         outstanding_operations_ == 0 && page_availability_manager_.IsDiscardable() &&
+         outstanding_detachers_ == 0 && heads_children_manager_.IsDiscardable() &&
+         commits_children_manager_.IsDiscardable();
+}
+
 void PageManager::StartPageSync() {
   // If the active page manager container is open, just return as the sync should have been already
   // triggered.
@@ -230,9 +241,9 @@ ActivePageManagerContainer* PageManager::CreateActivePageManagerContainer() {
   FXL_DCHECK(!active_page_manager_container_);
   auto& active_page_manager_container = active_page_manager_container_.emplace(
       environment_, ledger_name_, page_id_, page_usage_listeners_);
-  active_page_manager_container_->set_on_empty([this]() {
+  active_page_manager_container_->SetOnDiscardable([this]() {
     active_page_manager_container_.reset();
-    CheckEmpty();
+    CheckDiscardable();
   });
   return &active_page_manager_container;
 }
@@ -339,7 +350,7 @@ fit::function<bool()> PageManager::NewPageTracker() {
       return false;
     }
     outstanding_operations_--;
-    auto check_empty_on_return = fit::defer([this] { CheckEmpty(); });
+    auto check_empty_on_return = fit::defer([this] { CheckDiscardable(); });
 
     // Erase operation_id, if found, from the vector - operation_id may not be present in the vector
     // if the vector was cleared (as happens during a call to GetPage) between when the operation
@@ -356,13 +367,9 @@ fit::function<bool()> PageManager::NewPageTracker() {
 
 void PageManager::MaybeMarkPageOpened() { was_opened_.clear(); }
 
-void PageManager::CheckEmpty() {
-  if (on_empty_callback_ &&
-      (!active_page_manager_container_ || active_page_manager_container_->IsEmpty()) &&
-      outstanding_operations_ == 0 && page_availability_manager_.IsEmpty() &&
-      outstanding_detachers_ == 0 && heads_children_manager_.IsEmpty() &&
-      commits_children_manager_.IsEmpty()) {
-    on_empty_callback_();
+void PageManager::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

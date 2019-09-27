@@ -133,11 +133,11 @@ MergeResolver::~MergeResolver() {
   on_destroyed_();
 }
 
-void MergeResolver::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void MergeResolver::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
-bool MergeResolver::IsEmpty() { return !merge_in_progress_; }
+bool MergeResolver::IsDiscardable() const { return !merge_in_progress_; }
 
 bool MergeResolver::HasUnfinishedMerges() {
   return merge_in_progress_ || check_conflicts_in_progress_ || check_conflicts_task_count_ != 0 ||
@@ -217,14 +217,14 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
       no_conflict_callbacks_.clear();
       has_merged_ = false;
     }
-    if (on_empty_callback_) {
-      on_empty_callback_();
+    if (on_discardable_) {
+      on_discardable_();
     }
     return;
   }
   if (!strategy_) {
-    if (on_empty_callback_) {
-      on_empty_callback_();
+    if (on_discardable_) {
+      on_discardable_();
     }
     return;
   }
@@ -239,7 +239,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      std::unique_ptr<const storage::Commit> head2) {
   auto cleanup = fit::defer(task_runner_.MakeScoped([this, delayed_status] {
     // |merge_in_progress_| must be reset before calling
-    // |on_empty_callback_|.
+    // |on_discardable_|.
     merge_in_progress_ = false;
 
     if (has_next_strategy_) {
@@ -248,10 +248,10 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       has_next_strategy_ = false;
     }
     PostCheckConflicts(delayed_status);
-    // Call on_empty_callback_ at the very end as it might delete the
+    // Call on_discardable_ at the very end as it might delete the
     // resolver.
-    if (on_empty_callback_) {
-      on_empty_callback_();
+    if (on_discardable_) {
+      on_discardable_();
     }
   }));
   uint64_t id = TRACE_NONCE();
@@ -275,8 +275,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       merge_in_progress_ = false;
       // We don't want to continue merging if nobody is interested
       // (all clients disconnected).
-      if (on_empty_callback_) {
-        on_empty_callback_();
+      if (on_discardable_) {
+        on_discardable_();
       }
       return;
     }

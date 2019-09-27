@@ -31,6 +31,7 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 using storage::MatchesCommitIdAndBytes;
@@ -353,25 +354,13 @@ void ConnectToDevice(PageCommunicatorImpl* page_communicator, p2p_provider::P2PC
       }));
 }
 
-class PageCommunicatorImplTest : public gtest::TestLoopFixture {
- public:
-  PageCommunicatorImplTest() = default;
-  ~PageCommunicatorImplTest() override = default;
-
- protected:
-  void SetUp() override { ::testing::Test::SetUp(); }
-
-  coroutine::CoroutineServiceImpl coroutine_service_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageCommunicatorImplTest);
-};
+using PageCommunicatorImplTest = ledger::TestWithEnvironment;
 
 TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
   FakeDeviceMesh mesh;
   mesh.devices_.emplace(MakeP2PClientId(2u));
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
 
   EXPECT_TRUE(mesh.messages_.empty());
@@ -401,7 +390,7 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
 TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -433,7 +422,7 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
 TEST_F(PageCommunicatorImplTest, SendHeadOnWatchStartRequest) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -487,7 +476,7 @@ class FakePageStorageWithTwoHeads : public FakePageStorage {
 TEST_F(PageCommunicatorImplTest, DontSendMultipleHeadsOnWatchStartRequest) {
   FakeDeviceMesh mesh;
   FakePageStorageWithTwoHeads storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -500,7 +489,7 @@ TEST_F(PageCommunicatorImplTest, DontSendMultipleHeadsOnWatchStartRequest) {
 TEST_F(PageCommunicatorImplTest, GetObject) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -544,7 +533,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
 TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -571,7 +560,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
   storage.SetPiece(MakeObjectIdentifier("object_digest"), "some data");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -623,7 +612,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
   storage.SetPiece(MakeObjectIdentifier("object_digest"), "some data", true);
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -670,7 +659,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -713,7 +702,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -755,7 +744,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -796,7 +785,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -848,7 +837,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -898,7 +887,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
 TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -950,16 +939,16 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
 TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   FakeDeviceMesh mesh;
   FakePageStorage storage_1(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator_1(&coroutine_service_, &storage_1, &storage_1, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_1(&environment_, &storage_1, &storage_1, "ledger", "page",
+                                           &mesh);
   page_communicator_1.Start();
 
   ConnectToDevice(&page_communicator_1, MakeP2PClientId(2u), "ledger", "page");
 
   FakePageStorage storage_2(dispatcher(), "page");
   storage_2.generation_and_missing_parents_["id 2"] = {1, {"id 1"}};
-  PageCommunicatorImpl page_communicator_2(&coroutine_service_, &storage_2, &storage_2, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_2(&environment_, &storage_2, &storage_2, "ledger", "page",
+                                           &mesh);
   page_communicator_2.Start();
   ConnectToDevice(&page_communicator_2, MakeP2PClientId(1u), "ledger", "page");
   RunLoopUntilIdle();
@@ -1018,7 +1007,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1089,7 +1078,7 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
   FakePageStorage storage(dispatcher(), "page");
   const storage::Commit& commit_1 = storage.AddCommit("commit1", "data1");
 
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1141,13 +1130,13 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   FakeDeviceMesh mesh;
   FakePageStorage storage_1(dispatcher(), "page");
   storage_1.AddCommit("id 0", "data 0");
-  PageCommunicatorImpl page_communicator_1(&coroutine_service_, &storage_1, &storage_1, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_1(&environment_, &storage_1, &storage_1, "ledger", "page",
+                                           &mesh);
   page_communicator_1.Start();
 
   FakePageStorage storage_2(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator_2(&coroutine_service_, &storage_2, &storage_2, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_2(&environment_, &storage_2, &storage_2, "ledger", "page",
+                                           &mesh);
   storage_2.generation_and_missing_parents_["id 1"] = {1, {"id 0"}};
   storage_2.generation_and_missing_parents_["id 2"] = {2, {"id 1"}};
   page_communicator_2.Start();
@@ -1264,7 +1253,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchDelayedUntilPeerReady) {
   // Device 2 is already present.
   mesh.devices_.insert(MakeP2PClientId(2u));
   FakePageStorageDelayingMarkSyncedToPeer storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
   // We send a watch request to device 2.
@@ -1374,7 +1363,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchDelayedUntilPeerReady) {
 TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1406,7 +1395,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
 TEST_F(PageCommunicatorImplTest, OnNewCommitsRemoveDevice) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1434,7 +1423,7 @@ TEST_F(PageCommunicatorImplTest, OnNewCommitsRemoveDevice) {
 TEST_F(PageCommunicatorImplTest, DestructionRemoveDevice) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1456,7 +1445,7 @@ TEST_F(PageCommunicatorImplTest, DestructionRemoveDevice) {
 TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 
@@ -1487,7 +1476,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
 TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
+  PageCommunicatorImpl page_communicator(&environment_, &storage, &storage, "ledger", "page",
                                          &mesh);
   page_communicator.Start();
 

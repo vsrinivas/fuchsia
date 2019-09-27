@@ -39,7 +39,9 @@ class CommitBatch {
   // Registers a callback to be called when the batch processing is completed,
   // either through success or an unrecoverable error. Part of the
   // callback::AutoCleanable* client API.
-  void set_on_empty(fit::closure on_empty);
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   // Adds the provided commits to this batch.
   // This method will attempt to add the whole batch to |PageStorage|, and may
@@ -68,7 +70,9 @@ class CommitBatch {
 
   // The set of missing commits that have been requested from the peer.
   std::set<storage::CommitId> requested_commits_;
-  fit::closure on_empty_;
+
+  bool discardable_ = false;
+  fit::closure on_discardable_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<CommitBatch> weak_factory_;

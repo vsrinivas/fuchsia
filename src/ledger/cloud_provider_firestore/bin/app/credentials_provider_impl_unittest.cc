@@ -4,10 +4,11 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider_impl.h"
 
-#include <gtest/gtest.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <gtest/gtest.h>
 
 #include "src/ledger/lib/firebase_auth/testing/test_firebase_auth.h"
 
@@ -20,7 +21,8 @@ class CredentialsProviderImplTest : public gtest::TestLoopFixture {
   CredentialsProviderImplTest() {
     auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
     firebase_auth_ = firebase_auth.get();
-    credentials_provider_ = std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));
+    credentials_provider_ =
+        std::make_unique<CredentialsProviderImpl>(dispatcher(), std::move(firebase_auth));
   }
 
  protected:

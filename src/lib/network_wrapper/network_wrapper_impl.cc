@@ -25,8 +25,9 @@ class NetworkWrapperImpl::RunningRequest {
       : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {
-    FXL_DCHECK(on_empty_callback_);
-    on_empty_callback_();
+    FXL_DCHECK(on_discardable_);
+    discardable_ = true;
+    on_discardable_();
   }
 
   // Set the network service to use. This will start (or restart) the request.
@@ -41,18 +42,21 @@ class NetworkWrapperImpl::RunningRequest {
   void set_callback(fit::function<void(http::URLResponse)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [this, callback = std::move(callback)](http::URLResponse response) mutable {
-      FXL_DCHECK(on_empty_callback_);
+      FXL_DCHECK(on_discardable_);
       if (destruction_sentinel_.DestructedWhile(
               [callback = std::move(callback), &response] { callback(std::move(response)); })) {
         return;
       }
-      on_empty_callback_();
+      discardable_ = true;
+      on_discardable_();
     };
   }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
+
+  bool IsDiscardable() const { return discardable_; }
 
  private:
   void Start() {
@@ -137,7 +141,8 @@ class NetworkWrapperImpl::RunningRequest {
 
   fit::function<http::URLRequest()> request_factory_;
   fit::function<void(http::URLResponse)> callback_;
-  fit::closure on_empty_callback_;
+  bool discardable_ = false;
+  fit::closure on_discardable_;
   std::string next_url_;
   uint32_t redirect_count_;
   http::HttpService* http_service_;
@@ -150,6 +155,7 @@ NetworkWrapperImpl::NetworkWrapperImpl(async_dispatcher_t* dispatcher,
                                        fit::function<http::HttpServicePtr()> http_service_factory)
     : backoff_(std::move(backoff)),
       http_service_factory_(std::move(http_service_factory)),
+      running_requests_(dispatcher),
       task_runner_(dispatcher) {}
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}

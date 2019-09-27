@@ -34,7 +34,7 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
                                   std::string service_name, zx::channel channel) = 0;
   };
 
-  explicit FakeOvernet(uint64_t self_id, Delegate* delegate);
+  explicit FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate);
   ~FakeOvernet() override {}
 
   // Connects to the service provider of this (virtual) host
@@ -45,14 +45,15 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
    public:
     explicit ServiceProviderHolder(fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider>);
 
-    void set_on_empty(fit::closure on_empty);
+    void SetOnDiscardable(fit::closure on_discardable);
+    bool IsDiscardable() const;
 
     fuchsia::overnet::ServiceProvider* operator->() const;
     fuchsia::overnet::ServiceProvider& operator*() const;
 
    private:
     fuchsia::overnet::ServiceProviderPtr ptr_;
-    fit::closure on_empty_;
+    fit::closure on_discardable_;
   };
 
   // Overnet implementation:

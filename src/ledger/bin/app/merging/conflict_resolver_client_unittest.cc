@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <string>
-
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
+
+#include <memory>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
@@ -43,7 +43,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, page_storage_, std::make_unique<backoff::TestBackoff>());
     resolver->SetMergeStrategy(nullptr);
-    resolver->set_on_empty(QuitLoopClosure());
+    resolver->SetOnDiscardable(QuitLoopClosure());
     merge_resolver_ = resolver.get();
 
     active_page_manager_ = std::make_unique<ActivePageManager>(
@@ -158,7 +158,7 @@ TEST_F(ConflictResolverClientTest, Error) {
 
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(merge_resolver_->IsEmpty());
+  EXPECT_FALSE(merge_resolver_->IsDiscardable());
   EXPECT_EQ(conflict_resolver_impl.requests.size(), 1u);
 
   // Create a bogus conflict resolution.
@@ -193,7 +193,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
 
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(merge_resolver_->IsEmpty());
+  EXPECT_FALSE(merge_resolver_->IsDiscardable());
   EXPECT_EQ(conflict_resolver_impl.requests.size(), 1u);
 
   conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNonConflictingEntries();
@@ -252,7 +252,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
 
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(merge_resolver_->IsEmpty());
+  EXPECT_FALSE(merge_resolver_->IsDiscardable());
   EXPECT_EQ(conflict_resolver_impl.requests.size(), 1u);
 
   std::vector<MergedValue> merged_values;

@@ -24,7 +24,7 @@ using ::testing::IsEmpty;
 
 class OvernetFactoryTest : public gtest::TestLoopFixture {
  public:
-  OvernetFactoryTest() = default;
+  OvernetFactoryTest() : factory_(dispatcher()) {}
   ~OvernetFactoryTest() override = default;
 
  protected:
@@ -36,7 +36,7 @@ class OvernetFactoryTest : public gtest::TestLoopFixture {
 
 // Verifies that the host list is correct for one host with the workaround.
 TEST_F(OvernetFactoryTest, HostList_OneHost_Workaround) {
-  OvernetFactory factory(true);
+  OvernetFactory factory(dispatcher(), true);
   fuchsia::overnet::OvernetPtr overnet1;
   factory.AddBinding(1u, overnet1.NewRequest());
 
@@ -75,8 +75,7 @@ TEST_F(OvernetFactoryTest, HostList_OneHost) {
 
   EXPECT_TRUE(called);
   EXPECT_NE(0u, version);
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(host_list.size(), 1u);
+  ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 
   called = false;
@@ -115,8 +114,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(host_list.size(), 2u);
+  ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
@@ -126,19 +124,18 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(host_list.size(), 2u);
+  ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
   overnet2.Unbind();
+  RunLoopUntilIdle();
 
   overnet1->ListPeers(
       new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(host_list.size(), 1u);
+  ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 }
 
@@ -172,8 +169,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(host_list.size(), 2u);
+  ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
@@ -187,8 +183,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(host_list.size(), 1u);
+  ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 }
 
@@ -219,8 +214,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Callback) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(host_list.size(), 2u);
+  ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
@@ -239,8 +233,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Callback) {
   EXPECT_TRUE(called);
   EXPECT_FALSE(called2);
 
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(host_list.size(), 1u);
+  ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 }
 
@@ -288,8 +281,7 @@ TEST_F(OvernetFactoryTest, ServiceProvider) {
   RunLoopUntilIdle();
 
   // Verifies that we have received the connection from host2 to host1.
-  ASSERT_GE(1u, relays_host1.size());
-  EXPECT_EQ(relays_host1.size(), 1u);
+  ASSERT_EQ(relays_host1.size(), 1u);
 
   // Sets up MessageRelays to abstract sending messages through channels.
   bool called_host1 = false;

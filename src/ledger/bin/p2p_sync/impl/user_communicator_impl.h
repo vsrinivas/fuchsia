@@ -13,6 +13,7 @@
 #include <string>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
@@ -29,8 +30,8 @@ class UserCommunicatorImpl : public UserCommunicator,
                              public DeviceMesh,
                              public p2p_provider::P2PProvider::Client {
  public:
-  explicit UserCommunicatorImpl(std::unique_ptr<p2p_provider::P2PProvider> provider,
-                                coroutine::CoroutineService* coroutine_service);
+  explicit UserCommunicatorImpl(ledger::Environment* environment,
+                                std::unique_ptr<p2p_provider::P2PProvider> provider);
   ~UserCommunicatorImpl() override;
 
   // UserCommunicator:
@@ -54,8 +55,8 @@ class UserCommunicatorImpl : public UserCommunicator,
 
   bool started_ = false;
 
+  ledger::Environment* const environment_;
   std::unique_ptr<p2p_provider::P2PProvider> p2p_provider_;
-  coroutine::CoroutineService* const coroutine_service_;
 };
 
 }  // namespace p2p_sync

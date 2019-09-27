@@ -114,16 +114,23 @@ class Element final : public inspect_deprecated::ChildrenManager {
         children_manager_retainer_(inspect_node_.SetChildrenManager(this)),
         user_serving_retention_(0),
         inspect_retention_(0),
+        children_(test_loop->dispatcher()),
         weak_factory_(this) {
-    children_.set_on_empty([this]() { CheckEmpty(); });
+    children_.SetOnDiscardable([this]() { CheckDiscardable(); });
   }
 
   ~Element() override {
-    children_.set_on_empty([]() {});
+    children_.SetOnDiscardable([]() {});
   };
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  bool IsDiscardable() const {
+    FXL_DCHECK(0 <= user_serving_retention_);
+    FXL_DCHECK(0 <= inspect_retention_);
+    return user_serving_retention_ == 0 && inspect_retention_ == 0 && children_.empty();
+  }
+
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
 
   void GetNames(fit::function<void(std::set<std::string>)> callback) override {
@@ -225,7 +232,7 @@ class Element final : public inspect_deprecated::ChildrenManager {
     return [this, weak_this]() {
       if (weak_this) {
         user_serving_retention_--;
-        CheckEmpty();
+        CheckDiscardable();
       }
     };
   }
@@ -250,16 +257,13 @@ class Element final : public inspect_deprecated::ChildrenManager {
     inspect_retention_++;
     return [this]() {
       inspect_retention_--;
-      CheckEmpty();
+      CheckDiscardable();
     };
   }
 
-  void CheckEmpty() {
-    FXL_DCHECK(0 <= user_serving_retention_);
-    FXL_DCHECK(0 <= inspect_retention_);
-    if (user_serving_retention_ == 0 && inspect_retention_ == 0 && children_.empty() &&
-        on_empty_callback_) {
-      on_empty_callback_();
+  void CheckDiscardable() {
+    if (IsDiscardable() && on_discardable_) {
+      on_discardable_();
     }
   }
 
@@ -269,7 +273,7 @@ class Element final : public inspect_deprecated::ChildrenManager {
   inspect_deprecated::Node inspect_node_;
   fit::deferred_callback children_manager_retainer_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   int64_t user_serving_retention_;
   int64_t inspect_retention_;
   callback::AutoCleanableMap<std::string, Element> children_;
@@ -299,7 +303,8 @@ class Application final {
       : loop_(loop),
         random_(random),
         application_inspect_node_(application_inspect_node),
-        table_(TableFromTableDescription(table_description)){};
+        table_(TableFromTableDescription(table_description)),
+        elements_(loop_->dispatcher()){};
 
   // The "user interface" of the application, this method is called by the test
   // when the test is acting as the application's user. If the element for

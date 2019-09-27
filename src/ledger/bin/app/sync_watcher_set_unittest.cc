@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/app/sync_watcher_set.h"
 
-#include <algorithm>
-#include <string>
-
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <algorithm>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/macros.h"
@@ -49,7 +49,7 @@ class SyncWatcherImpl : public SyncWatcher {
 };
 
 TEST_F(SyncWatcherSetTest, OneWatcher) {
-  SyncWatcherSet watcher_set;
+  SyncWatcherSet watcher_set(dispatcher());
   SyncWatcherPtr watcher_ptr;
 
   SyncWatcherImpl impl(watcher_ptr.NewRequest());
@@ -76,7 +76,7 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
 }
 
 TEST_F(SyncWatcherSetTest, TwoWatchers) {
-  SyncWatcherSet watcher_set;
+  SyncWatcherSet watcher_set(dispatcher());
 
   SyncWatcherPtr watcher_ptr1;
   SyncWatcherImpl impl1(watcher_ptr1.NewRequest());

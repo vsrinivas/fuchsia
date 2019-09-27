@@ -82,13 +82,20 @@ PageCloudImpl::PageCloudImpl(std::string page_path, rng::Random* random,
       weak_ptr_factory_(this) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_error_handler([this](zx_status_t status) {
-    if (on_empty_) {
-      on_empty_();
+    binding_.Unbind();
+    if (on_discardable_) {
+      on_discardable_();
     }
   });
 }
 
 PageCloudImpl::~PageCloudImpl() = default;
+
+void PageCloudImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool PageCloudImpl::IsDiscardable() const { return binding_.is_bound(); }
 
 void PageCloudImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

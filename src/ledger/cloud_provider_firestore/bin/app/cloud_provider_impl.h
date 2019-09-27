@@ -23,22 +23,24 @@ namespace cloud_provider_firestore {
 
 // Implementation of cloud_provider::CloudProvider.
 //
-// If the |on_empty| callback is set, it is called when the client connection is
+// If the |on_discardable| callback is set, it is called when the client connection is
 // closed.
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
-  CloudProviderImpl(rng::Random* random, std::string user_id,
+  CloudProviderImpl(async_dispatcher_t* dispatcher, rng::Random* random, std::string user_id,
                     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
                     std::unique_ptr<FirestoreService> firestore_service,
                     fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable);
 
-  // Shuts the class down and calls the on_empty callback, if set.
+  bool IsDiscardable() const;
+
+  // Shuts the class down and calls the on_discardable callback, if set.
   //
-  // It is only valid to delete the class after the on_empty callback is called.
-  void ShutDownAndReportEmpty();
+  // It is only valid to delete the class after the on_discardable callback is called.
+  void ShutDownAndReportDiscardable();
 
  private:
   void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
@@ -66,7 +68,8 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   std::unique_ptr<CredentialsProvider> credentials_provider_;
   std::unique_ptr<FirestoreService> firestore_service_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
+  bool discardable_ = false;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
   callback::AutoCleanableSet<PageCloudImpl> page_clouds_;

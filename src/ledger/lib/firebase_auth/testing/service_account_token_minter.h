@@ -30,7 +30,8 @@ class ServiceAccountTokenMinter {
     std::string email;
     std::string error_msg;
   };
-  ServiceAccountTokenMinter(network_wrapper::NetworkWrapper* network_wrapper,
+  ServiceAccountTokenMinter(async_dispatcher_t* dispatcher,
+                            network_wrapper::NetworkWrapper* network_wrapper,
                             std::unique_ptr<Credentials> credentials, std::string user_id);
 
   ~ServiceAccountTokenMinter();

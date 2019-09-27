@@ -4,6 +4,7 @@
 
 #include "lib/callback/auto_cleanable.h"
 
+#include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
@@ -15,23 +16,29 @@ namespace {
 class Cleanable {
  public:
   explicit Cleanable(int id = 0) : id(id) {}
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
 
-  void Clean() const {
-    if (on_empty_callback_)
-      on_empty_callback_();
+  bool IsDiscardable() const { return cleaned; }
+
+  void Clean() {
+    cleaned = true;
+    if (on_discardable_)
+      on_discardable_();
   }
 
   int id;
+  bool cleaned = false;
 
  private:
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 };
 
-TEST(AutoCleanableSet, ClearsOnEmpty) {
-  AutoCleanableSet<Cleanable> set;
+TEST(AutoCleanableSet, ClearsOnDiscardable) {
+  async::TestLoop loop;
+
+  AutoCleanableSet<Cleanable> set(loop.dispatcher());
   EXPECT_TRUE(set.empty());
   EXPECT_EQ(0UL, set.size());
 
@@ -42,16 +49,22 @@ TEST(AutoCleanableSet, ClearsOnEmpty) {
   EXPECT_EQ(2UL, set.size());
 
   p1.Clean();
+
+  loop.RunUntilIdle();
   EXPECT_FALSE(set.empty());
   EXPECT_EQ(1UL, set.size());
 
   p2.Clean();
+
+  loop.RunUntilIdle();
   EXPECT_TRUE(set.empty());
   EXPECT_EQ(0UL, set.size());
 }
 
 TEST(AutoCleanableSet, Iterator) {
-  AutoCleanableSet<Cleanable> set;
+  async::TestLoop loop;
+
+  AutoCleanableSet<Cleanable> set(loop.dispatcher());
   EXPECT_TRUE(set.empty());
 
   auto& p1 = set.emplace(1);
@@ -61,6 +74,7 @@ TEST(AutoCleanableSet, Iterator) {
   EXPECT_FALSE(set.empty());
   EXPECT_EQ(4UL, set.size());
   p2.Clean();
+  loop.RunUntilIdle();
 
   AutoCleanableSet<Cleanable>::iterator it = set.begin();
   std::unordered_set<int> expected_ids{p1.id, p3.id, p4.id};
@@ -84,22 +98,27 @@ TEST(AutoCleanableSet, Iterator) {
   EXPECT_EQ(set.end(), it);
 }
 
-TEST(AutoCleanableSet, CallsOnEmpty) {
-  AutoCleanableSet<Cleanable> set;
-  bool empty_called = false;
-  set.set_on_empty([&empty_called] { empty_called = true; });
+TEST(AutoCleanableSet, CallsOnDiscardable) {
+  async::TestLoop loop;
 
-  EXPECT_FALSE(empty_called);
+  AutoCleanableSet<Cleanable> set(loop.dispatcher());
+  bool discardable_called = false;
+  set.SetOnDiscardable([&discardable_called] { discardable_called = true; });
+
+  EXPECT_FALSE(discardable_called);
 
   auto& p1 = set.emplace();
-  EXPECT_FALSE(empty_called);
+  EXPECT_FALSE(discardable_called);
 
   p1.Clean();
-  EXPECT_TRUE(empty_called);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(discardable_called);
 }
 
-TEST(AutoCleanableMap, ClearsOnEmpty) {
-  AutoCleanableMap<int, Cleanable> map;
+TEST(AutoCleanableMap, ClearsOnDiscardable) {
+  async::TestLoop loop;
+
+  AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
   EXPECT_TRUE(map.empty());
 
   auto& p1 =
@@ -112,30 +131,37 @@ TEST(AutoCleanableMap, ClearsOnEmpty) {
   EXPECT_FALSE(map.empty());
 
   p1.Clean();
+  loop.RunUntilIdle();
   EXPECT_FALSE(map.empty());
 
   p2.Clean();
+  loop.RunUntilIdle();
   EXPECT_TRUE(map.empty());
 }
 
-TEST(AutoCleanableMap, CallsOnEmpty) {
-  AutoCleanableMap<int, Cleanable> map;
-  bool empty_called = false;
-  map.set_on_empty([&empty_called] { empty_called = true; });
+TEST(AutoCleanableMap, CallsOnDiscardable) {
+  async::TestLoop loop;
 
-  EXPECT_FALSE(empty_called);
+  AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
+  bool discardable_called = false;
+  map.SetOnDiscardable([&discardable_called] { discardable_called = true; });
+
+  EXPECT_FALSE(discardable_called);
 
   auto& p1 =
       map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
           .first->second;
-  EXPECT_FALSE(empty_called);
+  EXPECT_FALSE(discardable_called);
 
   p1.Clean();
-  EXPECT_TRUE(empty_called);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(discardable_called);
 }
 
 TEST(AutoCleanableMap, GetSize) {
-  AutoCleanableMap<int, Cleanable> map;
+  async::TestLoop loop;
+
+  AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
 
   EXPECT_EQ(0u, map.size());
 
@@ -157,11 +183,14 @@ TEST(AutoCleanableMap, GetSize) {
   p1.Clean();
   p2.Clean();
   p3.Clean();
+  loop.RunUntilIdle();
   EXPECT_EQ(0u, map.size());
 }
 
 TEST(AutoCleanableMap, GetBegin) {
-  AutoCleanableMap<int, Cleanable> map;
+  async::TestLoop loop;
+
+  AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
 
   const auto& p1 =
       map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
@@ -178,22 +207,28 @@ TEST(AutoCleanableMap, GetBegin) {
   EXPECT_NE(it1, p2);
 
   p1->second.Clean();
+  loop.RunUntilIdle();
 
   EXPECT_EQ(map.begin(), p2);
 
   p2->second.Clean();
+  loop.RunUntilIdle();
 
   EXPECT_EQ(map.begin(), map.end());
 }
 
 TEST(AutoCleanableMap, ConstIteration) {
-  const AutoCleanableMap<int, Cleanable> map;
+  async::TestLoop loop;
+
+  const AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
   for (__UNUSED const auto& [key, value] : map) {
   }
 }
 
 TEST(AutoCleanableMap, Clear) {
-  AutoCleanableMap<int, Cleanable> map;
+  async::TestLoop loop;
+
+  AutoCleanableMap<int, Cleanable> map(loop.dispatcher());
   map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple());
   map.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
   map.emplace(std::piecewise_construct, std::forward_as_tuple(2), std::forward_as_tuple());

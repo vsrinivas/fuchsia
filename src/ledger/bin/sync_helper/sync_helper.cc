@@ -8,6 +8,14 @@ namespace ledger {
 
 SyncHelper::SyncHelper() : current_sync_point_(0), weak_ptr_factory_(this) {}
 
+void SyncHelper::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool SyncHelper::IsDiscardable() const {
+  return in_flight_operation_counts_per_sync_point_.empty();
+}
+
 void SyncHelper::RegisterSynchronizationCallback(fit::function<void()> callback) {
   if (in_flight_operation_counts_per_sync_point_.empty()) {
     callback();
@@ -29,8 +37,8 @@ void SyncHelper::CallSynchronizationCallbacks() {
       sync_callback_per_sync_points_.erase(sync_point_it);
     }
   }
-  if (empty() && on_empty_callback_) {
-    on_empty_callback_();
+  if (IsDiscardable() && on_discardable_) {
+    on_discardable_();
   }
 }
 

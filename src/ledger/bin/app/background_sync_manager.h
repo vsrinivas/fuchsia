@@ -39,11 +39,9 @@ class BackgroundSyncManager : public PageUsageListener {
   void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
   // Returns true, if there are no pending operations.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
 
  private:
   // If there are no active internal or external connections to the page, tries to start
@@ -69,7 +67,7 @@ class BackgroundSyncManager : public PageUsageListener {
 
   coroutine::CoroutineManager coroutine_manager_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   // Holds information about the state of pages that are currently open by internal or external
   // connections. Entries are removed if there are no active connections.

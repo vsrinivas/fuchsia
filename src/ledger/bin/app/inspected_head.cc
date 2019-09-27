@@ -16,17 +16,19 @@ InspectedHead::InspectedHead(inspect_deprecated::Node node)
 
 InspectedHead::~InspectedHead() = default;
 
-void InspectedHead::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void InspectedHead::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
+
+bool InspectedHead::IsDiscardable() const { return outstanding_detachers_ == 0; }
 
 fit::closure InspectedHead::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
     FXL_DCHECK(outstanding_detachers_ > 0);
     outstanding_detachers_--;
-    if (on_empty_callback_ && outstanding_detachers_ == 0) {
-      on_empty_callback_();
+    if (IsDiscardable() && on_discardable_) {
+      on_discardable_();
     }
   };
 }

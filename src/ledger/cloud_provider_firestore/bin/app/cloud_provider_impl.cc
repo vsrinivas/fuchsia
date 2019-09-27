@@ -59,7 +59,8 @@ std::string GetPagePath(fxl::StringView namespace_path, fxl::StringView page_id)
       {namespace_path, kSeparator, kPageCollection, kSeparator, encoded_page_id});
 }
 
-CloudProviderImpl::CloudProviderImpl(rng::Random* random, std::string user_id,
+CloudProviderImpl::CloudProviderImpl(async_dispatcher_t* dispatcher, rng::Random* random,
+                                     std::string user_id,
                                      std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
                                      std::unique_ptr<FirestoreService> firestore_service,
                                      fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
@@ -67,30 +68,40 @@ CloudProviderImpl::CloudProviderImpl(rng::Random* random, std::string user_id,
       user_id_(std::move(user_id)),
       firestore_service_(std::move(firestore_service)),
       binding_(this, std::move(request)),
+      device_sets_(dispatcher),
+      page_clouds_(dispatcher),
       weak_ptr_factory_(this) {
   // The class shuts down when the client connection is disconnected.
-  binding_.set_error_handler([this](zx_status_t status) { ShutDownAndReportEmpty(); });
+  binding_.set_error_handler([this](zx_status_t status) { ShutDownAndReportDiscardable(); });
   // The class also shuts down when the auth provider is disconnected.
   firebase_auth->set_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "
                    << "shutting down the cloud provider.";
-    ShutDownAndReportEmpty();
+    ShutDownAndReportDiscardable();
   });
 
-  credentials_provider_ = std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));
+  credentials_provider_ =
+      std::make_unique<CredentialsProviderImpl>(dispatcher, std::move(firebase_auth));
 }
 
 CloudProviderImpl::~CloudProviderImpl() = default;
 
-void CloudProviderImpl::ShutDownAndReportEmpty() {
+void CloudProviderImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool CloudProviderImpl::IsDiscardable() const { return discardable_; };
+
+void CloudProviderImpl::ShutDownAndReportDiscardable() {
   if (binding_.is_bound()) {
     binding_.Unbind();
   }
 
   fit::closure shut_down = [this] {
     firestore_service_->ShutDown([this] {
-      if (on_empty_) {
-        on_empty_();
+      discardable_ = true;
+      if (on_discardable_) {
+        on_discardable_();
       }
     });
   };
@@ -100,7 +111,7 @@ void CloudProviderImpl::ShutDownAndReportEmpty() {
     return;
   }
 
-  pending_placeholder_requests_.set_on_empty(std::move(shut_down));
+  pending_placeholder_requests_.SetOnDiscardable(std::move(shut_down));
 }
 
 void CloudProviderImpl::ScopedGetCredentials(

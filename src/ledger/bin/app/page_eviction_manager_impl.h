@@ -32,9 +32,9 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
   void SetDelegate(PageEvictionManager::Delegate* delegate);
 
   // PageEvictionManager:
-  void set_on_empty(fit::closure on_empty_callback) override;
+  void SetOnDiscardable(fit::closure on_discardable) override;
 
-  bool IsEmpty() override;
+  bool IsDiscardable() const override;
 
   void TryEvictPages(PageEvictionPolicy* policy, fit::function<void(Status)> callback) override;
 
@@ -76,7 +76,7 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
 
   Environment* environment_;
   // A closure to be called every time all pending operations are completed.
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   ssize_t pending_operations_ = 0;
   PageEvictionManager::Delegate* delegate_ = nullptr;
   PageUsageDb* db_;

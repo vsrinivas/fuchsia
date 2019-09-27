@@ -4,6 +4,7 @@
 
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_manager.h"
 
+#include "lib/async/dispatcher.h"
 #include "src/lib/fxl/logging.h"
 
 namespace service_account {
@@ -28,9 +29,10 @@ fuchsia::auth::Status ConvertStatus(ServiceAccountTokenMinter::Status status) {
 }  // namespace
 
 ServiceAccountTokenManager::ServiceAccountTokenManager(
-    network_wrapper::NetworkWrapper* network_wrapper, std::unique_ptr<Credentials> credentials,
-    std::string user_id)
-    : service_account_token_minter_(network_wrapper, std::move(credentials), std::move(user_id)) {}
+    async_dispatcher_t* dispatcher, network_wrapper::NetworkWrapper* network_wrapper,
+    std::unique_ptr<Credentials> credentials, std::string user_id)
+    : service_account_token_minter_(dispatcher, network_wrapper, std::move(credentials),
+                                    std::move(user_id)) {}
 
 ServiceAccountTokenManager::~ServiceAccountTokenManager() = default;
 

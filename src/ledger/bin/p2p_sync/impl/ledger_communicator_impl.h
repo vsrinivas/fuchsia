@@ -10,6 +10,7 @@
 #import <map>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
@@ -24,7 +25,7 @@ class PageCommunicatorImpl;
 // Ledger-level P2P communicator.
 class LedgerCommunicatorImpl : public LedgerCommunicator {
  public:
-  LedgerCommunicatorImpl(coroutine::CoroutineService* coroutine_service, std::string namespace_id,
+  LedgerCommunicatorImpl(ledger::Environment* environment, std::string namespace_id,
                          DeviceMesh* mesh);
   ~LedgerCommunicatorImpl() override;
 
@@ -50,7 +51,7 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
   std::map<std::string, PageCommunicatorImpl*, convert::StringViewComparator> pages_;
 
   fit::closure on_delete_;
-  coroutine::CoroutineService* const coroutine_service_;
+  ledger::Environment* environment_;
   const std::string namespace_id_;
   DeviceMesh* const mesh_;
 };

@@ -5,17 +5,19 @@
 #ifndef PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 #define PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
+#include <lib/fit/function.h>
+#include <lib/network_wrapper/network_wrapper.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/cancellable.h>
-#include <lib/fit/function.h>
-#include <lib/network_wrapper/network_wrapper.h>
 #include <rapidjson/document.h>
 
+#include "lib/async/dispatcher.h"
 #include "peridot/lib/firebase/event_stream.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
@@ -33,8 +35,8 @@ class FirebaseImpl : public Firebase {
   // |prefix| is a url prefix against which all requests will be made, without a
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
-  FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper, const std::string& db_id,
-               const std::string& prefix);
+  FirebaseImpl(async_dispatcher_t* dispatcher, network_wrapper::NetworkWrapper* network_wrapper,
+               const std::string& db_id, const std::string& prefix);
   ~FirebaseImpl() override;
 
   // Firebase:

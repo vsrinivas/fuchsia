@@ -24,34 +24,37 @@ class LedgerMergeManager::ConflictResolverFactoryPtrContainer {
   explicit ConflictResolverFactoryPtrContainer(
       fidl::InterfaceHandle<ConflictResolverFactory> factory)
       : ptr_(factory.Bind()) {
-    ptr_.set_error_handler([this](zx_status_t status) { OnEmpty(); });
+    ptr_.set_error_handler([this](zx_status_t status) { OnDiscardable(); });
   }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
+
+  bool IsDiscardable() const { return !ptr_.is_bound(); }
 
   // Returns the pointer and disappear from the AutoCleanableMap
   ConflictResolverFactoryPtr TakePtr() {
     ConflictResolverFactoryPtr ptr = std::move(ptr_);
     ptr.set_error_handler(nullptr);
     // Deletes |this|
-    OnEmpty();
+    OnDiscardable();
     return ptr;
   }
 
  private:
   // Deletes the object when in an AutoCleanableMap
-  void OnEmpty() {
-    if (on_empty_callback_)
-      on_empty_callback_();
+  void OnDiscardable() {
+    if (on_discardable_)
+      on_discardable_();
   }
 
   ConflictResolverFactoryPtr ptr_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 };
 
-LedgerMergeManager::LedgerMergeManager(Environment* environment) : environment_(environment) {}
+LedgerMergeManager::LedgerMergeManager(Environment* environment)
+    : environment_(environment), conflict_resolver_factories_(environment->dispatcher()) {}
 
 LedgerMergeManager::~LedgerMergeManager() = default;
 

@@ -121,17 +121,17 @@ TEST(SyncHelper, StoreConstWrappedOperation) {
   EXPECT_TRUE(called);
 }
 
-TEST(SyncHelper, OnEmptyCallback) {
+TEST(SyncHelper, OnDiscardableCallback) {
   SyncHelper sync_helper;
-  bool on_empty_called;
-  sync_helper.set_on_empty(callback::SetWhenCalled(&on_empty_called));
-  EXPECT_TRUE(sync_helper.empty());
+  bool on_discardable_called;
+  sync_helper.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  EXPECT_TRUE(sync_helper.IsDiscardable());
   const auto operation = sync_helper.WrapOperation([] {});
-  EXPECT_FALSE(on_empty_called);
-  EXPECT_FALSE(sync_helper.empty());
+  EXPECT_FALSE(on_discardable_called);
+  EXPECT_FALSE(sync_helper.IsDiscardable());
   operation();
-  EXPECT_TRUE(on_empty_called);
-  EXPECT_TRUE(sync_helper.empty());
+  EXPECT_TRUE(on_discardable_called);
+  EXPECT_TRUE(sync_helper.IsDiscardable());
 }
 
 TEST(SyncHelper, SyncWithDeletedOperation) {
@@ -144,14 +144,14 @@ TEST(SyncHelper, SyncWithDeletedOperation) {
   EXPECT_TRUE(called);
 }
 
-TEST(SyncHelper, OnEmptyWithDeletedOperation) {
+TEST(SyncHelper, OnDiscardableWithDeletedOperation) {
   SyncHelper sync_helper;
-  bool on_empty_called;
-  sync_helper.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  sync_helper.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   fit::closure operation = sync_helper.WrapOperation([] {});
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
   operation = nullptr;
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 }  // namespace

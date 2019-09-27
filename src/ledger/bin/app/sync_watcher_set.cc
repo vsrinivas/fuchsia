@@ -60,12 +60,16 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
     SendIfPending();
   }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    if (on_empty_callback) {
-      watcher_.set_error_handler(
-          [callback = std::move(on_empty_callback)](zx_status_t status) { callback(); });
+  void SetOnDiscardable(fit::closure on_discardable) {
+    if (on_discardable) {
+      watcher_.set_error_handler([this, callback = std::move(on_discardable)](zx_status_t status) {
+        watcher_.Unbind();
+        callback();
+      });
     }
   }
+
+  bool IsDiscardable() const { return !watcher_.is_bound(); }
 
  private:
   void SendIfPending() {
@@ -99,7 +103,7 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherContainer);
 };
 
-SyncWatcherSet::SyncWatcherSet() = default;
+SyncWatcherSet::SyncWatcherSet(async_dispatcher_t* dispatcher) : watchers_(dispatcher) {}
 
 SyncWatcherSet::~SyncWatcherSet() = default;
 

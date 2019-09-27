@@ -24,16 +24,16 @@ class BoundInterface {
 
   void Bind(fidl::InterfaceRequest<Interface> request) { binding_.Bind(std::move(request)); }
 
-  void set_on_empty(fit::closure on_empty_callback) {
+  void SetOnDiscardable(fit::closure on_discardable) {
     binding_.set_error_handler(
-        [this, on_empty_callback = std::move(on_empty_callback)](zx_status_t status) {
+        [this, on_discardable = std::move(on_discardable)](zx_status_t status) {
           binding_.Unbind();
-          if (on_empty_callback)
-            on_empty_callback();
+          if (on_discardable)
+            on_discardable();
         });
   }
 
-  bool is_bound() { return binding_.is_bound(); }
+  bool IsDiscardable() const { return !binding_.is_bound(); }
 
   Impl* impl() { return &impl_; }
 

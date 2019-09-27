@@ -22,26 +22,57 @@ template <typename ResponseType>
 using SingleResponseReader = grpc::ClientAsyncResponseReader<ResponseType>;
 
 template <typename ResponseType>
-struct SingleResponseCall {
-  void set_on_empty(fit::closure on_empty) { this->on_empty = std::move(on_empty); }
+class SingleResponseCall {
+ public:
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
+  }
+
+  bool IsDiscardable() const { return discardable_; }
+
+  void Done() {
+    discardable_ = true;
+    if (on_discardable_) {
+      on_discardable_();
+    }
+  }
 
   // Context used to make the remote call.
-  grpc::ClientContext context;
+  grpc::ClientContext& context() { return context_; }
 
   // Reader used to retrieve the result of the remote call.
-  std::unique_ptr<SingleResponseReader<ResponseType>> response_reader;
+  std::unique_ptr<SingleResponseReader<ResponseType>>& response_reader() {
+    return response_reader_;
+  }
 
   // Response of the remote call.
-  ResponseType response;
+  ResponseType& response() { return response_; }
 
   // Response status of the remote call.
-  grpc::Status status;
+  grpc::Status& status() { return status_; }
 
   // Callback to be called upon completing the remote call.
-  fit::function<void(bool)> on_complete;
+  fit::function<void(bool)>& on_complete() { return on_complete_; }
+
+ private:
+  // Context used to make the remote call.
+  grpc::ClientContext context_;
+
+  // Reader used to retrieve the result of the remote call.
+  std::unique_ptr<SingleResponseReader<ResponseType>> response_reader_;
+
+  // Response of the remote call.
+  ResponseType response_;
+
+  // Response status of the remote call.
+  grpc::Status status_;
+
+  // Callback to be called upon completing the remote call.
+  fit::function<void(bool)> on_complete_;
 
   // Callback to be called when the call object can be deleted.
-  fit::closure on_empty;
+  fit::closure on_discardable_;
+  bool discardable_ = false;
 };
 
 using DocumentResponseCall = SingleResponseCall<google::firestore::v1beta1::Document>;

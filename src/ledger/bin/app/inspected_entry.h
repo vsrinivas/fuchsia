@@ -20,14 +20,16 @@ class InspectedEntry final {
   explicit InspectedEntry(inspect_deprecated::Node node, std::vector<uint8_t> value);
   ~InspectedEntry();
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   fit::closure CreateDetacher();
 
  private:
   inspect_deprecated::Node node_;
   inspect_deprecated::ByteVectorProperty value_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   // TODO(nathaniel): This integer should be replaced with a (weak-pointer-less in this case)
   // TokenManager.
   int64_t outstanding_detachers_;

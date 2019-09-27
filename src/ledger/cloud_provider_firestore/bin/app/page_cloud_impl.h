@@ -32,7 +32,9 @@ class PageCloudImpl : public cloud_provider::PageCloud, public ListenCallClient 
                          fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
  private:
   void ScopedGetCredentials(fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
@@ -78,7 +80,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, public ListenCallClient 
   FirestoreService* const firestore_service_;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   // Watcher set by the client.
   cloud_provider::PageCloudWatcherPtr watcher_;

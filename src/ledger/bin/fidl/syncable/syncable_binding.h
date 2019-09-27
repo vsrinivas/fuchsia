@@ -35,16 +35,16 @@ namespace ledger {
 //
 // This class exposes the following features:
 // - Access to the methods of the underlying bindings.
-// - Implement the |set_on_empty| method to be usable with AutoCleanableSet.
+// - Implement the |SetOnDiscardable| method to be usable with AutoCleanableSet.
 template <typename D>
 class SyncableBinding {
  public:
   explicit SyncableBinding(D* delegate) : impl_(delegate, this), binding_(&impl_) {
     binding_.set_error_handler([this](zx_status_t status) {
       binding_error_status_ = status;
-      CheckEmpty();
+      CheckDiscardable();
     });
-    sync_helper_.set_on_empty([this] { CheckEmpty(); });
+    sync_helper_.SetOnDiscardable([this] { CheckDiscardable(); });
   }
 
   SyncableBinding(D* delegate, fidl::InterfaceRequest<typename D::FidlInterface> request,
@@ -53,13 +53,16 @@ class SyncableBinding {
     binding_.Bind(std::move(request), dispatcher);
   }
 
-  void set_on_empty(fit::closure on_empty) {
-    error_handler_ = [on_empty = std::move(on_empty)](zx_status_t /*status*/) { on_empty(); };
+  void SetOnDiscardable(fit::closure on_discardable) {
+    error_handler_ = [on_discardable = std::move(on_discardable)](zx_status_t /*status*/) {
+      on_discardable();
+    };
   }
   void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
     error_handler_ = std::move(error_handler);
   }
-  bool empty() { return !binding_.is_bound() && sync_helper_.empty(); }
+  bool IsDiscardable() const { return !is_bound(); }
+  bool is_bound() const { return binding_.is_bound() || !sync_helper_.IsDiscardable(); };
 
   fidl::InterfaceRequest<typename D::FidlInterface> Unbind() { return binding_.Unbind(); }
   fidl::InterfaceHandle<typename D::FidlInterface> NewBinding(
@@ -104,8 +107,8 @@ class SyncableBinding {
     return WrapOperation(function_name, fit::closure([] {}));
   }
 
-  void CheckEmpty() {
-    if (empty() && error_handler_) {
+  void CheckDiscardable() {
+    if (IsDiscardable() && error_handler_) {
       error_handler_(binding_error_status_);
     }
   }

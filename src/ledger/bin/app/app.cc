@@ -79,7 +79,8 @@ class App : public ledger_internal::LedgerController {
         trace_provider_(loop_.dispatcher()),
         component_context_(sys::ComponentContext::Create()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics, loop_.dispatcher(),
-                                    component_context_.get())) {
+                                    component_context_.get())),
+        factory_bindings_(loop_.dispatcher()) {
     FXL_DCHECK(component_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);

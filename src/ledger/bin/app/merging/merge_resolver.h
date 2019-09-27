@@ -30,11 +30,11 @@ class MergeResolver : public storage::CommitWatcher {
                 std::unique_ptr<backoff::Backoff> backoff);
   ~MergeResolver() override;
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
 
   // Returns true if no merge is currently in progress. Note that returning
   // true, does not mean that there are no pending conflicts.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
   // Returns true if a merge is pending or in progress. A merge is pending when
   // a merge is currently processed (|IsEmpty| returns false), but also when
@@ -142,7 +142,7 @@ class MergeResolver : public storage::CommitWatcher {
   bool check_conflicts_in_progress_ = false;
   bool in_delay_ = false;
   std::unique_ptr<MergeCandidates> merge_candidates_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   fit::closure on_destroyed_;
   std::vector<fit::function<void(ConflictResolutionWaitStatus)>> no_conflict_callbacks_;
 

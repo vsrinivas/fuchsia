@@ -46,23 +46,33 @@ LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
       ledger_sync_(std::move(ledger_sync)),
       ledger_impl_(environment_, this),
       merge_manager_(environment_),
+      bindings_(environment->dispatcher()),
+      page_managers_(environment_->dispatcher()),
       page_usage_listeners_(std::move(page_usage_listeners)),
       inspect_node_(std::move(inspect_node)),
       pages_node_(inspect_node_.CreateChild(kPagesInspectPathComponent.ToString())),
       children_manager_retainer_(pages_node_.SetChildrenManager(this)),
       weak_factory_(this) {
-  bindings_.set_on_empty([this] { CheckEmpty(); });
-  page_managers_.set_on_empty([this] { CheckEmpty(); });
+  bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
+  page_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 LedgerManager::~LedgerManager() = default;
+
+void LedgerManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool LedgerManager::IsDiscardable() const {
+  return bindings_.size() == 0 && page_managers_.empty() && outstanding_detachers_ == 0;
+}
 
 fit::closure LedgerManager::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
     outstanding_detachers_--;
     FXL_DCHECK(outstanding_detachers_ >= 0);
-    CheckEmpty();
+    CheckDiscardable();
   };
 }
 
@@ -136,10 +146,9 @@ PageManager* LedgerManager::GetOrCreatePageManager(convert::ExtendedStringView p
   return &ret.first->second;
 }
 
-void LedgerManager::CheckEmpty() {
-  if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty() &&
-      outstanding_detachers_ == 0) {
-    on_empty_callback_();
+void LedgerManager::CheckDiscardable() {
+  if (IsDiscardable() && on_discardable_) {
+    on_discardable_();
   }
 }
 

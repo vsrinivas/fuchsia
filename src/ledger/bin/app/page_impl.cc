@@ -38,7 +38,7 @@ PageImpl::PageImpl(async_dispatcher_t* dispatcher, storage::PageIdView page_id,
                    fidl::InterfaceRequest<Page> request)
     : binding_(this) {
   convert::ToArray(page_id, &page_id_.id);
-  binding_.set_on_empty([this] {
+  binding_.SetOnDiscardable([this] {
     binding_.Unbind();
     if (on_binding_unbound_callback_) {
       on_binding_unbound_callback_();
@@ -53,7 +53,7 @@ void PageImpl::SetPageDelegate(PageDelegate* page_delegate) {
   task_runner_.PostTask([this, page_delegate] { delaying_facade_.SetTargetObject(page_delegate); });
 }
 
-bool PageImpl::IsEmpty() { return binding_.empty(); }
+bool PageImpl::IsDiscardable() const { return binding_.IsDiscardable(); }
 
 void PageImpl::set_on_binding_unbound(fit::closure on_binding_unbound_callback) {
   on_binding_unbound_callback_ = std::move(on_binding_unbound_callback);

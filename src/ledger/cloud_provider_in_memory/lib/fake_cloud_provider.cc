@@ -8,7 +8,7 @@
 
 namespace ledger {
 
-FakeCloudProvider::Builder::Builder() = default;
+FakeCloudProvider::Builder::Builder(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 FakeCloudProvider::Builder::~Builder() = default;
 
@@ -35,10 +35,13 @@ std::unique_ptr<FakeCloudProvider> FakeCloudProvider::Builder::Build() {
 }
 
 FakeCloudProvider::FakeCloudProvider(const Builder& builder)
-    : device_set_(builder.cloud_erase_on_check_, builder.cloud_erase_from_watcher_),
+    : dispatcher_(builder.dispatcher_),
+      device_set_(builder.cloud_erase_on_check_, builder.cloud_erase_from_watcher_),
+      page_clouds_(builder.dispatcher_),
       inject_network_error_(builder.inject_network_error_) {}
 
-FakeCloudProvider::FakeCloudProvider() : FakeCloudProvider(Builder()) {}
+FakeCloudProvider::FakeCloudProvider(async_dispatcher_t* dispatcher)
+    : FakeCloudProvider(Builder(dispatcher)) {}
 
 FakeCloudProvider::~FakeCloudProvider() = default;
 
@@ -60,7 +63,7 @@ void FakeCloudProvider::GetPageCloud(std::vector<uint8_t> app_id, std::vector<ui
   }
 
   auto ret = page_clouds_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
-                                  std::forward_as_tuple(inject_network_error_));
+                                  std::forward_as_tuple(dispatcher_, inject_network_error_));
   ret.first->second.Bind(std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }

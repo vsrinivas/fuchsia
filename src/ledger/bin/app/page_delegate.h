@@ -35,22 +35,22 @@ class ActivePageManager;
 // PageDelegate owns PageImpl and BranchTracker. It makes sure that
 // all operations in progress will terminate, even if the Page is no longer
 // connected. When the page connection is closed and BranchTracker is also
-// empty, the client is notified through |on_empty_callback| (registered by
-// |set_on_empty()|).
+// empty, the client is notified through |on_discardable| (registered by
+// |SetOnDiscardable()|).
 class PageDelegate {
  public:
-  PageDelegate(coroutine::CoroutineService* coroutine_service, ActivePageManager* manager,
-               storage::PageStorage* storage, MergeResolver* merge_resolver,
-               SyncWatcherSet* watchers, std::unique_ptr<PageImpl> page_impl);
+  PageDelegate(Environment* environment, ActivePageManager* manager, storage::PageStorage* storage,
+               MergeResolver* merge_resolver, SyncWatcherSet* watchers,
+               std::unique_ptr<PageImpl> page_impl);
   ~PageDelegate();
 
-  // Initializes this PageDelegate. |Init| may call the |on_empty| callback if
+  // Initializes this PageDelegate. |Init| may call the |on_discardable| callback if
   // the Page connection is already cut.
   void Init(fit::function<void(Status)> on_done);
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
   // From Page interface, called by PageImpl:
 
@@ -101,7 +101,7 @@ class PageDelegate {
   void CommitJournal(std::unique_ptr<storage::Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   ActivePageManager* manager_;
   storage::PageStorage* storage_;
@@ -109,7 +109,7 @@ class PageDelegate {
 
   BranchTracker branch_tracker_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer operation_serializer_;

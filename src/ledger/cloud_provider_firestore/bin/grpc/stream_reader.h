@@ -5,12 +5,13 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_READER_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_READER_H_
 
-#include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
 
 #include <functional>
 
 #include "src/lib/fxl/logging.h"
+
+#include <grpc++/grpc++.h>
 
 namespace cloud_provider_firestore {
 
@@ -36,7 +37,7 @@ class StreamReader {
     FXL_DCHECK(!read_is_pending_);
   }
 
-  bool IsEmpty() const { return !read_is_pending_; }
+  bool IsDiscardable() const { return !read_is_pending_; }
 
   // Sets a callback which is called when a read operation fails.
   //

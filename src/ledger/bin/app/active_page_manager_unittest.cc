@@ -353,16 +353,16 @@ class ActivePageManagerTest : public TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerTest);
 };
 
-TEST_F(ActivePageManagerTest, OnEmptyCallback) {
-  bool on_empty_called = false;
+TEST_F(ActivePageManagerTest, OnDiscardableCallback) {
+  bool on_discardable_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   DrainLoop();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   bool called;
   Status status;
@@ -388,10 +388,10 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
   page1.Unbind();
   page2.Unbind();
   DrainLoop();
-  EXPECT_TRUE(on_empty_called);
-  EXPECT_TRUE(active_page_manager.IsEmpty());
+  EXPECT_TRUE(on_discardable_called);
+  EXPECT_TRUE(active_page_manager.IsDiscardable());
 
-  on_empty_called = false;
+  on_discardable_called = false;
   PagePtr page3;
   auto page_impl3 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page3.NewRequest());
@@ -400,22 +400,22 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
-  EXPECT_FALSE(active_page_manager.IsEmpty());
+  EXPECT_FALSE(active_page_manager.IsDiscardable());
 
   page3.Unbind();
   DrainLoop();
-  EXPECT_TRUE(on_empty_called);
-  EXPECT_TRUE(active_page_manager.IsEmpty());
+  EXPECT_TRUE(on_discardable_called);
+  EXPECT_TRUE(active_page_manager.IsDiscardable());
 
-  on_empty_called = false;
+  on_discardable_called = false;
   PageSnapshotPtr snapshot;
   active_page_manager.BindPageSnapshot(std::make_unique<const storage::CommitEmptyImpl>(),
                                        snapshot.NewRequest(), "");
   DrainLoop();
-  EXPECT_FALSE(active_page_manager.IsEmpty());
+  EXPECT_FALSE(active_page_manager.IsDiscardable());
   snapshot.Unbind();
   DrainLoop();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
@@ -444,18 +444,18 @@ TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
   EXPECT_TRUE(page_closed);
 }
 
-TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
-  bool on_empty_called = false;
+TEST_F(ActivePageManagerTest, OnDiscardableCallbackWithWatcher) {
+  bool on_discardable_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   DrainLoop();
-  // PageManager is empty, but on_empty should not have be called, yet.
-  EXPECT_FALSE(on_empty_called);
-  EXPECT_TRUE(active_page_manager.IsEmpty());
+  // PageManager is discardable, but the callback should not have be called, yet.
+  EXPECT_FALSE(on_discardable_called);
+  EXPECT_TRUE(active_page_manager.IsDiscardable());
 
   bool called;
   Status internal_status;
@@ -488,13 +488,13 @@ TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
   page2.Unbind();
   snapshot.Unbind();
   DrainLoop();
-  EXPECT_FALSE(active_page_manager.IsEmpty());
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(active_page_manager.IsDiscardable());
+  EXPECT_FALSE(on_discardable_called);
 
   watcher_request.TakeChannel();
   DrainLoop();
-  EXPECT_TRUE(active_page_manager.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(active_page_manager.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
@@ -610,13 +610,13 @@ TEST_F(ActivePageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
   bool called;
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&called));
 
   async::PostTask(dispatcher(), [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
 
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_TRUE(active_page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsDiscardable());
 }
 
 TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
@@ -707,7 +707,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFu
   bool callback_called;
   Status status;
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
       std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
@@ -715,7 +715,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFu
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
@@ -727,7 +727,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFu
   for (const auto& [commit_id, parents] : graph) {
     EXPECT_THAT(commits, Contains(Pointee(storage::MatchesCommit(commit_id, parents))));
   }
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
@@ -770,7 +770,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPa
   bool callback_called;
   Status status;
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
       std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
@@ -778,7 +778,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPa
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
@@ -790,7 +790,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPa
   for (const auto& [commit_id, parents] : graph) {
     EXPECT_THAT(commits, Contains(Pointee(storage::MatchesCommit(commit_id, parents))));
   }
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCommitsInternalError) {
@@ -839,7 +839,7 @@ TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCom
   bool callback_called;
   Status status;
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
       std::make_unique<IdsAndParentIdsPageStorage>(graph, std::get<0>(GetParam()),
                                                    environment_.dispatcher());
@@ -849,7 +849,7 @@ TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCom
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
@@ -863,7 +863,7 @@ TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCom
   // If |successful_storage_call_count| was zero, |active_page_manager|'s call to its page storage's
   // GetHeads method failed, |active_page_manager| never became non-empty (or surrendered program
   // control), and |active_page_manager| thus never needed to check its emptiness.
-  EXPECT_THAT(on_empty_called, Eq(bool(successful_storage_call_count)));
+  EXPECT_THAT(on_discardable_called, Eq(bool(successful_storage_call_count)));
 }
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
@@ -873,7 +873,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   bool callback_called;
   Status status;
   std::unique_ptr<const storage::Commit> commit;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
       std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
@@ -881,7 +881,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommit(
       storage::kFirstPageCommitId.ToString(),
@@ -891,7 +891,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
   EXPECT_THAT(commit, Pointee(storage::MatchesCommit(storage::kFirstPageCommitId.ToString(), {})));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) {
@@ -901,7 +901,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) 
   bool callback_called;
   Status status;
   std::unique_ptr<const storage::Commit> commit;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
       std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
@@ -910,7 +910,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommit(
       storage::kFirstPageCommitId.ToString(),
@@ -920,7 +920,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
   // We don't assert anything about |commit| (except the bare minimum: that it is safe to destroy).
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
@@ -931,7 +931,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   bool callback_called;
   Status status;
   std::vector<storage::Entry> storage_entries{};
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
       entries, std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
       std::get<3>(GetParam()), test_loop().dispatcher());
@@ -940,7 +940,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
       storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "",
@@ -956,14 +956,14 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   for (const auto& [key, unused_value] : entries) {
     EXPECT_THAT(storage_entries, Contains(Field("key", &storage::Entry::key, key)));
   }
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
   bool callback_called;
   Status status;
   std::vector<storage::Entry> storage_entries{};
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
       std::map<std::string, std::vector<uint8_t>>{}, std::get<0>(GetParam()),
       std::get<1>(GetParam()), std::get<2>(GetParam()), std::get<3>(GetParam()),
@@ -974,7 +974,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
       storage::IdAndParentIdsCommit(storage::kFirstPageCommitId.ToString(), {}), "",
@@ -986,7 +986,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
@@ -1002,7 +1002,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
   size_t callbacks_called{0};
   std::vector<Status> statuses{};
   std::map<std::string, std::vector<uint8_t>> emitted_entries{};
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
       entries, std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
       std::get<3>(GetParam()), test_loop().dispatcher());
@@ -1011,7 +1011,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   for (const auto& [key, _] : entries) {
     active_page_manager.GetValue(
@@ -1027,14 +1027,14 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
   ASSERT_EQ(callbacks_called, entries.size());
   EXPECT_THAT(statuses, Each(Eq(Status::OK)));
   EXPECT_EQ(emitted_entries, entries);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
   bool callback_called;
   Status status;
   std::vector<uint8_t> value;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
       std::map<std::string, std::vector<uint8_t>>{}, std::get<0>(GetParam()),
       std::get<1>(GetParam()), std::get<2>(GetParam()), std::get<3>(GetParam()),
@@ -1045,7 +1045,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
       storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "my happy fun key",
@@ -1054,7 +1054,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
@@ -1062,7 +1062,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
   bool callback_called;
   Status status;
   std::vector<uint8_t> value;
-  bool on_empty_called = false;
+  bool on_discardable_called = false;
   std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
       std::map<std::string, std::vector<uint8_t>>{{key, std::vector<uint8_t>{7}}},
       std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
@@ -1073,7 +1073,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
       storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, key,
@@ -1082,7 +1082,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 INSTANTIATE_TEST_SUITE_P(ActivePageManagerTest, IdsAndParentIdsPageStorageActivePageManagerTest,

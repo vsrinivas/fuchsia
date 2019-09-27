@@ -30,19 +30,19 @@ class PageAvailabilityManager {
   void OnPageAvailable(fit::closure on_page_available);
 
   // Checks whether the page is available.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
 
  private:
-  // Checks if the object is empty; if it is empty and on_empty callback_ is
-  // set, calls on_empty_callback_.
-  void CheckEmpty();
+  // Checks if the object is empty; if it is empty and on_discardable_
+  // is set, calls on_discardable_.
+  void CheckDiscardable();
 
   // Stores the pending callbacks while the page is busy.
   std::optional<std::vector<fit::closure>> on_available_callbacks_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 };
 
 }  // namespace ledger

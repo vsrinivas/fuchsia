@@ -23,19 +23,19 @@ class TokenManager {
   TokenManager();
   ~TokenManager();
 
-  // Sets the on_empty callback, to be called every time this object becomes
+  // Sets the on_discardable callback, to be called every time this object becomes
   // empty.
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
 
   ExpiringToken CreateToken();
 
   // Checks and returns whether there are no active external or internal
   // requests.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
  private:
-  ssize_t outstanding_token_count;
-  fit::closure on_empty_callback_;
+  ssize_t outstanding_token_count_;
+  fit::closure on_discardable_;
   // Must be the last member.
   fxl::WeakPtrFactory<TokenManager> weak_factory_;
 

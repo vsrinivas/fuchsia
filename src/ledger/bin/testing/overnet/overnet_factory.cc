@@ -7,62 +7,58 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 
+#include "lib/async/dispatcher.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 class OvernetFactory::Holder {
  public:
-  Holder(FakeOvernet::Delegate* delegate, fidl::InterfaceRequest<fuchsia::overnet::Overnet> request,
-         uint64_t device_name, fit::closure on_disconnect);
+  Holder(async_dispatcher_t* dispatcher, FakeOvernet::Delegate* delegate,
+         fidl::InterfaceRequest<fuchsia::overnet::Overnet> request, uint64_t device_name,
+         fit::closure on_disconnect);
+  ~Holder();
 
-  void set_on_empty(fit::closure on_empty);
+  void SetOnDiscardable(fit::closure on_discardable);
+  bool IsDiscardable() const;
 
   FakeOvernet* impl();
 
  private:
-  void OnEmpty();
-
   fidl_helpers::BoundInterface<fuchsia::overnet::Overnet, FakeOvernet> interface_;
-  fit::closure on_empty_;
   fit::closure on_disconnect_;
 };
 
-OvernetFactory::Holder::Holder(FakeOvernet::Delegate* delegate,
+OvernetFactory::Holder::Holder(async_dispatcher_t* dispatcher, FakeOvernet::Delegate* delegate,
                                fidl::InterfaceRequest<fuchsia::overnet::Overnet> request,
                                uint64_t device_id, fit::closure on_disconnect)
-    : interface_(std::move(request), device_id, delegate),
-      on_disconnect_(std::move(on_disconnect)) {
-  interface_.set_on_empty([this] { OnEmpty(); });
-}
+    : interface_(std::move(request), dispatcher, device_id, delegate),
+      on_disconnect_(std::move(on_disconnect)) {}
 
-void OvernetFactory::Holder::set_on_empty(fit::closure on_empty) {
-  on_empty_ = std::move(on_empty);
-}
-
-FakeOvernet* OvernetFactory::Holder::impl() { return interface_.impl(); }
-
-void OvernetFactory::Holder::OnEmpty() {
-  // We need to deregister ourselves from the list of active devices (call
-  // |on_empty_|) before updating the pending host list callbacks (call
-  // |on_disconnect_|). As |on_empty_| destroys |this|, we move |on_disconnect_|
-  // locally to be able to call it later.
-  auto on_disconnect = std::move(on_disconnect_);
-  if (on_empty_) {
-    on_empty_();
-  }
-  if (on_disconnect) {
+OvernetFactory::Holder::~Holder() {
+  if (on_disconnect_) {
+    auto on_disconnect = std::move(on_disconnect_);
     on_disconnect();
   }
 }
 
-OvernetFactory::OvernetFactory(bool return_one_host_list)
-    : return_one_host_list_(return_one_host_list) {}
+void OvernetFactory::Holder::SetOnDiscardable(fit::closure on_discardable) {
+  interface_.SetOnDiscardable(std::move(on_discardable));
+}
+
+bool OvernetFactory::Holder::IsDiscardable() const { return interface_.IsDiscardable(); }
+
+FakeOvernet* OvernetFactory::Holder::impl() { return interface_.impl(); }
+
+OvernetFactory::OvernetFactory(async_dispatcher_t* dispatcher, bool return_one_host_list)
+    : dispatcher_(dispatcher),
+      return_one_host_list_(return_one_host_list),
+      net_connectors_(dispatcher) {}
 
 OvernetFactory::~OvernetFactory() = default;
 
 void OvernetFactory::AddBinding(uint64_t node_id,
                                 fidl::InterfaceRequest<fuchsia::overnet::Overnet> request) {
-  net_connectors_.try_emplace(node_id, this, std::move(request), node_id,
+  net_connectors_.try_emplace(node_id, dispatcher_, this, std::move(request), node_id,
                               [this] { UpdatedHostList(); });
   UpdatedHostList();
 }

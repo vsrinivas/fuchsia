@@ -99,14 +99,12 @@ class ActivePageManager {
                 fit::function<void(Status, std::vector<uint8_t>)> callback);
 
   // Returns true if this |ActivePageManager| is not currently active in any way and can be deleted.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
 
  private:
-  void CheckEmpty();
+  void CheckDiscardable();
   void OnSyncBacklogDownloaded();
 
   Environment* const environment_;
@@ -119,7 +117,7 @@ class ActivePageManager {
                                    SyncableBinding<fuchsia::ledger::PageSnapshotSyncableDelegate>>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> page_delegates_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   bool sync_backlog_downloaded_ = false;
   std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>> page_impls_;

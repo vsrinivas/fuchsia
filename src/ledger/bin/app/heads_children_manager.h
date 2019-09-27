@@ -22,23 +22,24 @@ namespace ledger {
 // heads.
 class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
  public:
-  explicit HeadsChildrenManager(inspect_deprecated::Node* heads_node,
+  explicit HeadsChildrenManager(async_dispatcher_t* dispatcher,
+                                inspect_deprecated::Node* heads_node,
                                 InspectablePage* inspectable_page);
   ~HeadsChildrenManager() override;
 
-  void set_on_empty(fit::closure on_empty_callback);
-  bool IsEmpty();
+  void SetOnDiscardable(fit::closure on_discardable);
+  bool IsDiscardable() const;
 
  private:
   // inspect_deprecated::ChildrenManager
   void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   inspect_deprecated::Node* heads_node_;
   InspectablePage* inspectable_page_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
   TokenManager token_manager_;
   callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
 

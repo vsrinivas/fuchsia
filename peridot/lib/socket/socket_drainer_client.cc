@@ -4,15 +4,21 @@
 
 #include "peridot/lib/socket/socket_drainer_client.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
+
+#include <utility>
 
 namespace socket {
 
 SocketDrainerClient::SocketDrainerClient() : drainer_(this) {}
 
 SocketDrainerClient::~SocketDrainerClient() {}
+
+void SocketDrainerClient::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool SocketDrainerClient::IsDiscardable() const { return discardable_; }
 
 void SocketDrainerClient::Start(zx::socket source, fit::function<void(std::string)> callback) {
   callback_ = std::move(callback);
@@ -27,8 +33,9 @@ void SocketDrainerClient::OnDataComplete() {
   if (destruction_sentinel_.DestructedWhile([this] { callback_(data_); })) {
     return;
   }
-  if (on_empty_callback_) {
-    on_empty_callback_();
+  discardable_ = true;
+  if (on_discardable_) {
+    on_discardable_();
   }
 }
 

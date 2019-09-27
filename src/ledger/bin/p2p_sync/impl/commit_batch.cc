@@ -19,7 +19,11 @@ CommitBatch::CommitBatch(p2p_provider::P2PClientId device, Delegate* delegate,
                          storage::PageStorage* storage)
     : device_(std::move(device)), delegate_(delegate), storage_(storage), weak_factory_(this) {}
 
-void CommitBatch::set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+void CommitBatch::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool CommitBatch::IsDiscardable() const { return discardable_; }
 
 void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits) {
   // Ask the storage for the generation and missing parents of the new commits.
@@ -51,8 +55,8 @@ void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes>
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "Error while getting commit parents and generations, aborting batch: "
                          << status;
-          if (on_empty_) {
-            on_empty_();
+          if (on_discardable_) {
+            on_discardable_();
           }
           return;
         }
@@ -122,8 +126,9 @@ void CommitBatch::AddCommits() {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
         }
-        if (on_empty_) {
-          on_empty_();
+        discardable_ = true;
+        if (on_discardable_) {
+          on_discardable_();
         }
       }));
 }

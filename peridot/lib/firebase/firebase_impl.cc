@@ -4,12 +4,13 @@
 
 #include "peridot/lib/firebase/firebase_impl.h"
 
+#include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+
 #include <memory>
 #include <sstream>
 #include <utility>
 
-#include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/ascii.h>
 #include <src/lib/fxl/strings/join_strings.h>
@@ -72,9 +73,13 @@ struct FirebaseImpl::WatchData {
 FirebaseImpl::WatchData::WatchData() {}
 FirebaseImpl::WatchData::~WatchData() {}
 
-FirebaseImpl::FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
+FirebaseImpl::FirebaseImpl(async_dispatcher_t* dispatcher,
+                           network_wrapper::NetworkWrapper* network_wrapper,
                            const std::string& db_id, const std::string& prefix)
-    : network_wrapper_(network_wrapper), api_url_(BuildApiUrl(db_id, prefix)) {
+    : network_wrapper_(network_wrapper),
+      api_url_(BuildApiUrl(db_id, prefix)),
+      requests_(dispatcher),
+      drainers_(dispatcher) {
   FXL_DCHECK(network_wrapper_);
 }
 

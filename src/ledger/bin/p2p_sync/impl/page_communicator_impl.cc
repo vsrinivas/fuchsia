@@ -34,7 +34,11 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
  public:
   PendingObjectRequestHolder() = default;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
+  }
+
+  bool IsDiscardable() const { return !requests_.empty(); }
 
   // Registers this additional callback for the request.
   void AddCallback(
@@ -65,8 +69,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         callback(ledger::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
                  storage::IsObjectSynced::NO, nullptr);
       }
-      if (on_empty_) {
-        on_empty_();
+      if (on_discardable_) {
+        on_discardable_();
       }
       return;
     }
@@ -85,8 +89,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
           storage::DataSource::DataChunk::Create(convert::ToString(object->data()->bytes()));
       callback(ledger::Status::OK, storage::ChangeSource::P2P, is_object_synced, std::move(chunk));
     }
-    if (on_empty_) {
-      on_empty_();
+    if (on_discardable_) {
+      on_discardable_();
     }
   }
 
@@ -98,7 +102,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   // We might be able to get rid of this list and just use a counter (or even
   // nothing at all) once we have a timeout on requests.
   std::set<p2p_provider::P2PClientId> requests_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 };
 
 // ObjectResponseHolder holds temporary data we collect in order to build
@@ -114,12 +118,14 @@ struct PageCommunicatorImpl::ObjectResponseHolder {
       : identifier(std::move(identifier)) {}
 };
 
-PageCommunicatorImpl::PageCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
+PageCommunicatorImpl::PageCommunicatorImpl(ledger::Environment* environment,
                                            storage::PageStorage* storage,
                                            storage::PageSyncClient* sync_client,
                                            std::string namespace_id, std::string page_id,
                                            DeviceMesh* mesh)
-    : coroutine_manager_(coroutine_service),
+    : pending_object_requests_(environment->dispatcher()),
+      pending_commit_batches_(environment->dispatcher()),
+      coroutine_manager_(environment->coroutine_service()),
       namespace_id_(std::move(namespace_id)),
       page_id_(std::move(page_id)),
       mesh_(mesh),

@@ -253,7 +253,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
-  auto cloud_provider = ledger::FakeCloudProvider::Builder()
+  auto cloud_provider = ledger::FakeCloudProvider::Builder(dispatcher())
                             .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
                             .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
@@ -311,7 +311,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
-  auto cloud_provider = ledger::FakeCloudProvider::Builder()
+  auto cloud_provider = ledger::FakeCloudProvider::Builder(dispatcher())
                             .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES)
                             .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
@@ -351,7 +351,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  ledger::FakeCloudProvider cloud_provider;
+  ledger::FakeCloudProvider cloud_provider(dispatcher());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
@@ -397,7 +397,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  ledger::FakeCloudProvider cloud_provider;
+  ledger::FakeCloudProvider cloud_provider(dispatcher());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),

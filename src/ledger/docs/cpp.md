@@ -73,10 +73,10 @@ a single util within the [fit] library under `//zircon/system/ulib/fit`).
 *   [auto_cleanable.h] provides two container types which “automatically” manage
     deleting elements from them: AutoCleanableMap and AutoCleanableSet.
     “Automatic” here means that all elements stored in the containers are given
-    an “OnEmpty” callback (via a `void set_on_empty(fit::closure on_empty)`
-    method that they must implement) – when this callback is called, they are
-    deleted from the parent container. Useful for building hierarchical
-    collections of objects.
+    an “OnDiscardable” callback (via a
+    `void SetOnDiscardable(fit::closure on_discardable)` method that they must
+    implement) – when this callback is called, they are deleted from the parent
+    container. Useful for building hierarchical collections of objects.
     *   TODO: add a file-level comment in this header
 *   [managed_container.h] – TODO: what is it for?
 

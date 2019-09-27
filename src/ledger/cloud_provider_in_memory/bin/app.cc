@@ -19,13 +19,14 @@ namespace {
 
 class App {
  public:
-  explicit App() : component_context_(sys::ComponentContext::Create()) {
+  explicit App(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher), component_context_(sys::ComponentContext::Create()) {
     FXL_DCHECK(component_context_);
   }
   ~App() = default;
 
   bool Start() {
-    cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>();
+    cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>(dispatcher_);
 
     component_context_->outgoing()->AddPublicService<CloudProvider>(
         [this](fidl::InterfaceRequest<CloudProvider> request) {
@@ -36,6 +37,7 @@ class App {
   }
 
  private:
+  async_dispatcher_t* dispatcher_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<ledger::FakeCloudProvider> cloud_provider_impl_;
   fidl::BindingSet<CloudProvider> cloud_provider_bindings_;
@@ -46,7 +48,7 @@ class App {
 int Main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  App app;
+  App app(loop.dispatcher());
   int return_code = 0;
   async::PostTask(loop.dispatcher(), [&return_code, &app, &loop] {
     if (!app.Start()) {

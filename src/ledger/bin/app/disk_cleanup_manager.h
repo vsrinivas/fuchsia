@@ -22,11 +22,11 @@ class DiskCleanupManager {
   virtual ~DiskCleanupManager() {}
 
   // Sets the callback to be called every time the DiskCleanupManager is empty.
-  virtual void set_on_empty(fit::closure on_empty_callback) = 0;
+  virtual void SetOnDiscardable(fit::closure on_discardable) = 0;
 
   // Returns whether the DiskCleanupManager is empty, i.e. whether there are no
   // pending operations.
-  virtual bool IsEmpty() = 0;
+  virtual bool IsDiscardable() const = 0;
 
   // Tries to free up disk space.
   virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;

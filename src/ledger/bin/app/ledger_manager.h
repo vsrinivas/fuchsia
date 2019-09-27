@@ -87,14 +87,13 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
+  bool IsDiscardable() const;
 
   // Registers "interest" in this LedgerManager for which this LedgerManager
   // will remain non-empty and returns a closure that when called will
   // deregister the "interest" in this LedgerManager (and potentially cause this
-  // LedgerManager's on_empty_callback_ to be called).
+  // LedgerManager's on_discardable_ to be called).
   fit::closure CreateDetacher();
 
  private:
@@ -106,10 +105,10 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12323): This
   // method's return value should be an interest-indication "retainer" object
   // that when deleted indicates to the got-or-created |PageManager| that it
-  // should check its emptiness and possibly call its on_empty_callback.
+  // should check its emptiness and possibly call its on_discardable.
   PageManager* GetOrCreatePageManager(convert::ExtendedStringView page_id);
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   Environment* const environment_;
   std::string ledger_name_;
@@ -135,7 +134,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   callback::AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator>
       page_managers_;
   std::vector<PageUsageListener*> page_usage_listeners_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   // The static Inspect object maintaining in Inspect a representation of this
   // LedgerManager.

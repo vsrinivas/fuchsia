@@ -36,8 +36,8 @@ class BranchTracker::PageWatcherContainer {
         handler_->Resume(coroutine::ContinuationStatus::INTERRUPTED);
       }
       FXL_DCHECK(!handler_);
-      if (on_empty_callback_) {
-        on_empty_callback_();
+      if (on_discardable_) {
+        on_discardable_();
       }
     });
   }
@@ -52,9 +52,11 @@ class BranchTracker::PageWatcherContainer {
     FXL_DCHECK(!handler_);
   }
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
   }
+
+  bool IsDiscardable() const { return !interface_.is_bound(); }
 
   void UpdateCommit(std::unique_ptr<const storage::Commit> commit) {
     current_commit_ = std::move(commit);
@@ -226,7 +228,7 @@ class BranchTracker::PageWatcherContainer {
   }
 
   fit::closure on_drained_ = nullptr;
-  fit::closure on_empty_callback_ = nullptr;
+  fit::closure on_discardable_ = nullptr;
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
@@ -243,15 +245,16 @@ class BranchTracker::PageWatcherContainer {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherContainer);
 };
 
-BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
-                             ActivePageManager* manager, storage::PageStorage* storage)
-    : coroutine_service_(coroutine_service),
+BranchTracker::BranchTracker(Environment* environment, ActivePageManager* manager,
+                             storage::PageStorage* storage)
+    : coroutine_service_(environment->coroutine_service()),
       manager_(manager),
       storage_(storage),
+      watchers_(environment->dispatcher()),
       transaction_in_progress_(false),
       current_commit_(nullptr),
       weak_factory_(this) {
-  watchers_.set_on_empty([this] { CheckEmpty(); });
+  watchers_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
@@ -269,8 +272,8 @@ Status BranchTracker::Init() {
   return Status::OK;
 }
 
-void BranchTracker::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void BranchTracker::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
 std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
@@ -345,11 +348,11 @@ void BranchTracker::RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
                     std::move(base_commit), std::move(key_prefix));
 }
 
-bool BranchTracker::IsEmpty() { return watchers_.empty(); }
+bool BranchTracker::IsDiscardable() const { return watchers_.empty(); }
 
-void BranchTracker::CheckEmpty() {
-  if (on_empty_callback_ && IsEmpty()) {
-    on_empty_callback_();
+void BranchTracker::CheckDiscardable() {
+  if (on_discardable_ && IsDiscardable()) {
+    on_discardable_();
   }
 }
 

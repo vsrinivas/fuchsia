@@ -40,7 +40,7 @@ namespace p2p_provider {
 // device also sends an handshake to confirm the connection.
 class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProvider {
  public:
-  P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
+  P2PProviderImpl(async_dispatcher_t* dispatcher, fuchsia::overnet::OvernetPtr overnet,
                   std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider);
   ~P2PProviderImpl() override;
 

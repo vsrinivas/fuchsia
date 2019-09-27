@@ -22,7 +22,11 @@ void SimpleTaskController::RunTask(fit::closure task) {
 ScopedTaskRunner::ScopedTaskRunner(async_dispatcher_t* dispatcher)
     : ScopedTaskRunner(SimpleTaskController::Type{}, dispatcher) {}
 
+ScopedTaskRunner::ScopedTaskRunner(ScopedTaskRunner&&) = default;
+
 ScopedTaskRunner::~ScopedTaskRunner() { ShutDown(); }
+
+ScopedTaskRunner& ScopedTaskRunner::operator=(ScopedTaskRunner&&) = default;
 
 void ScopedTaskRunner::ShutDown() { controller_->ShutDown(); }
 

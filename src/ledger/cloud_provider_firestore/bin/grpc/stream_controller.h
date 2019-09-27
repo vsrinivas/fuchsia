@@ -5,12 +5,13 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_CONTROLLER_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_CONTROLLER_H_
 
-#include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
 
 #include <functional>
 
 #include "src/lib/fxl/logging.h"
+
+#include <grpc++/grpc++.h>
 
 namespace cloud_provider_firestore {
 
@@ -28,10 +29,10 @@ class StreamController {
   ~StreamController() {
     // The class cannot go away while completion queue operations are pending,
     // as they reference member function objects as operation tags.
-    FXL_DCHECK(IsEmpty());
+    FXL_DCHECK(IsDiscardable());
   }
 
-  bool IsEmpty() const { return !pending_finish_call_ && !pending_start_call_; }
+  bool IsDiscardable() const { return !pending_finish_call_ && !pending_start_call_; }
 
   // Attempts to start the stream.
   void StartCall(fit::function<void(bool)> callback) {

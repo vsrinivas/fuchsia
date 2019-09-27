@@ -9,6 +9,7 @@
 
 #include <map>
 
+#include "lib/async/dispatcher.h"
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 #include "src/lib/fxl/macros.h"
 
@@ -30,7 +31,8 @@ using fuchsia::auth::AuthenticationUIContext;
 // LoadCredentials() method to initialize this class.
 class ServiceAccountTokenManager : public fuchsia::auth::TokenManager {
  public:
-  ServiceAccountTokenManager(network_wrapper::NetworkWrapper* network_wrapper,
+  ServiceAccountTokenManager(async_dispatcher_t* dispatcher,
+                             network_wrapper::NetworkWrapper* network_wrapper,
                              std::unique_ptr<Credentials> credentials, std::string user_id);
   ~ServiceAccountTokenManager() override;
 

@@ -78,22 +78,24 @@ class OperationSerializer {
 
   // Returns true if there are no more operations in the queue or false
   // otherwise.
-  bool empty() { return queued_operations_.empty(); }
+  bool IsDiscardable() const { return queued_operations_.empty(); }
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable) {
+    on_discardable_ = std::move(on_discardable);
+  }
 
  private:
   void UpdateOperationsAndCallNext() {
     queued_operations_.pop();
     if (!queued_operations_.empty()) {
       queued_operations_.front()();
-    } else if (on_empty_) {
-      on_empty_();
+    } else if (on_discardable_) {
+      on_discardable_();
     }
   }
 
   std::queue<fit::closure> queued_operations_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<OperationSerializer> weak_factory_;

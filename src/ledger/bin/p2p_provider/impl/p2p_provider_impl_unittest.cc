@@ -73,14 +73,14 @@ std::ostream& operator<<(std::ostream& os, const RecordingClient::Message& m) {
 
 class P2PProviderImplTest : public gtest::TestLoopFixture {
  public:
-  P2PProviderImplTest() = default;
-  ~P2PProviderImplTest() override = default;
+  P2PProviderImplTest() : overnet_factory_(dispatcher()) {}
 
   std::unique_ptr<P2PProvider> GetProvider(uint64_t host_id, std::string user_name) {
     fuchsia::overnet::OvernetPtr overnet;
     overnet_factory_.AddBinding(host_id, overnet.NewRequest());
     return std::make_unique<p2p_provider::P2PProviderImpl>(
-        std::move(overnet), std::make_unique<StaticUserIdProvider>(std::move(user_name)));
+        dispatcher(), std::move(overnet),
+        std::make_unique<StaticUserIdProvider>(std::move(user_name)));
   }
 
  protected:
@@ -242,7 +242,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
   fuchsia::overnet::OvernetPtr overnet_ptr_0;
   MockOvernet overnet_impl_0(overnet_ptr_0.NewRequest());
   auto p2p_provider_0 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      std::move(overnet_ptr_0), std::make_unique<StaticUserIdProvider>("user"));
+      dispatcher(), std::move(overnet_ptr_0), std::make_unique<StaticUserIdProvider>("user"));
 
   RecordingClient client1;
   p2p_provider_0->Start(&client1);
@@ -273,7 +273,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
   fuchsia::overnet::OvernetPtr overnet_ptr_1;
   MockOvernet overnet_impl_1(overnet_ptr_1.NewRequest());
   auto p2p_provider_1 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      std::move(overnet_ptr_1), std::make_unique<StaticUserIdProvider>("user"));
+      dispatcher(), std::move(overnet_ptr_1), std::make_unique<StaticUserIdProvider>("user"));
 
   RecordingClient client2;
   p2p_provider_1->Start(&client2);

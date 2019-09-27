@@ -35,8 +35,8 @@ std::shared_ptr<grpc::CallCredentials> MakeCredentials(std::string token) {
 }  // namespace
 
 CredentialsProviderImpl::CredentialsProviderImpl(
-    std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth)
-    : firebase_auth_(std::move(firebase_auth)) {}
+    async_dispatcher_t* dispatcher, std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth)
+    : firebase_auth_(std::move(firebase_auth)), auth_token_requests_(dispatcher) {}
 
 CredentialsProviderImpl::~CredentialsProviderImpl() = default;
 

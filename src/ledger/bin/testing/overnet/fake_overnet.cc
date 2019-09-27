@@ -6,16 +6,20 @@
 
 #include <fuchsia/overnet/cpp/fidl.h>
 
+#include "lib/async/dispatcher.h"
+
 namespace ledger {
 
 FakeOvernet::ServiceProviderHolder::ServiceProviderHolder(
     fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> handle)
     : ptr_(handle.Bind()) {}
 
-void FakeOvernet::ServiceProviderHolder::set_on_empty(fit::closure on_empty) {
+void FakeOvernet::ServiceProviderHolder::SetOnDiscardable(fit::closure on_discardable) {
   ptr_.set_error_handler(
-      [on_empty = std::move(on_empty)](zx_status_t /* status */) { on_empty(); });
+      [on_discardable = std::move(on_discardable)](zx_status_t /* status */) { on_discardable(); });
 }
+
+bool FakeOvernet::ServiceProviderHolder::IsDiscardable() const { return ptr_.is_bound(); }
 
 fuchsia::overnet::ServiceProvider* FakeOvernet::ServiceProviderHolder::operator->() const {
   return ptr_.get();
@@ -25,8 +29,8 @@ fuchsia::overnet::ServiceProvider& FakeOvernet::ServiceProviderHolder::operator*
   return *ptr_.get();
 }
 
-FakeOvernet::FakeOvernet(uint64_t self_id, Delegate* delegate)
-    : self_id_(self_id), delegate_(delegate) {}
+FakeOvernet::FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate)
+    : self_id_(self_id), delegate_(delegate), service_providers_(dispatcher) {}
 
 void FakeOvernet::GetService(std::string service_name, zx::channel chan) {
   auto it = service_providers_.find(service_name);

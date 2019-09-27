@@ -29,9 +29,9 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
     on_OnInternallyUnused_callback_ = std::move(on_OnInternallyUnused_callback);
   }
 
-  void set_on_empty(fit::closure on_empty_callback) override {}
+  void SetOnDiscardable(fit::closure on_discardable) override {}
 
-  bool IsEmpty() override { return true; }
+  bool IsDiscardable() const override { return true; }
 
   void TryCleanUp(fit::function<void(Status)> callback) override {
     // Do not call the callback directly.

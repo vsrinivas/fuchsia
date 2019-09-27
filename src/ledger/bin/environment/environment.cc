@@ -104,7 +104,6 @@ EnvironmentBuilder& EnvironmentBuilder::SetCoroutineService(
   return *this;
 }
 
-// public
 EnvironmentBuilder& EnvironmentBuilder::SetBackoffFactory(
     Environment::BackoffFactory backoff_factory) {
   backoff_factory_ = std::move(backoff_factory);

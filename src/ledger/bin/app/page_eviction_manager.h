@@ -67,11 +67,11 @@ class PageEvictionManager {
   virtual ~PageEvictionManager() {}
 
   // Sets the callback to be called every time the PageEvictionManager is empty.
-  virtual void set_on_empty(fit::closure on_empty_callback) = 0;
+  virtual void SetOnDiscardable(fit::closure on_discardable) = 0;
 
   // Returns whether the PageEvictionManager is empty, i.e. whether there are no
   // pending operations.
-  virtual bool IsEmpty() = 0;
+  virtual bool IsDiscardable() const = 0;
 
   // Tries to evict from the local storage the least recently used page among
   // those that are not currectly in use and can be evicted. Returns |IO_ERROR|

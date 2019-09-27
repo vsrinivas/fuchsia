@@ -4,12 +4,13 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/factory_impl.h"
 
-#include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service_impl.h"
 #include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 #include "src/lib/fxl/logging.h"
+
+#include <grpc++/grpc++.h>
 
 namespace cloud_provider_firestore {
 
@@ -39,7 +40,9 @@ FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
     : dispatcher_(dispatcher),
       random_(random),
       component_context_(component_context),
-      cobalt_client_name_(std::move(cobalt_client_name)) {}
+      cobalt_client_name_(std::move(cobalt_client_name)),
+      token_requests_(dispatcher),
+      providers_(dispatcher) {}
 
 FactoryImpl::~FactoryImpl() = default;
 
@@ -49,9 +52,9 @@ void FactoryImpl::ShutDown(fit::closure callback) {
     return;
   }
 
-  providers_.set_on_empty(std::move(callback));
+  providers_.SetOnDiscardable(std::move(callback));
   for (auto& cloud_provider : providers_) {
-    cloud_provider.ShutDownAndReportEmpty();
+    cloud_provider.ShutDownAndReportDiscardable();
   }
 }
 
@@ -86,8 +89,8 @@ void FactoryImpl::GetFirebaseCloudProvider(
         auto firestore_service =
             std::make_unique<FirestoreServiceImpl>(config.server_id, dispatcher_, MakeChannel());
 
-        providers_.emplace(random_, user_id, std::move(firebase_auth), std::move(firestore_service),
-                           std::move(cloud_provider_request));
+        providers_.emplace(dispatcher_, random_, user_id, std::move(firebase_auth),
+                           std::move(firestore_service), std::move(cloud_provider_request));
         callback(cloud_provider::Status::OK);
       });
   token_requests_.emplace(token_request);

@@ -26,8 +26,8 @@ class CloudProviderImplTest : public gtest::TestLoopFixture {
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
-        &random_, "some user id", std::move(firebase_auth), std::move(firestore_service),
-        cloud_provider_.NewRequest());
+        dispatcher(), &random_, "some user id", std::move(firebase_auth),
+        std::move(firestore_service), cloud_provider_.NewRequest());
   }
   ~CloudProviderImplTest() override = default;
 
@@ -43,35 +43,37 @@ class CloudProviderImplTest : public gtest::TestLoopFixture {
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
 };
 
-TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
-  bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty([&on_empty_called] { on_empty_called = true; });
+TEST_F(CloudProviderImplTest, DiscardableWhenClientDisconnected) {
+  bool on_discardable_called = false;
+  cloud_provider_impl_->SetOnDiscardable(
+      [&on_discardable_called] { on_discardable_called = true; });
   EXPECT_FALSE(firestore_service_->shutdown_callback);
   cloud_provider_.Unbind();
   RunLoopUntilIdle();
 
-  // Verify that shutdown was started, but on_empty wasn't called yet.
+  // Verify that shutdown was started, but on_discardable wasn't called yet.
   EXPECT_TRUE(firestore_service_->shutdown_callback);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
-  // Verify that on_empty is called when the shutdown callback is executed.
+  // Verify that on_discardable is called when the shutdown callback is executed.
   firestore_service_->shutdown_callback();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
-  bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty([&on_empty_called] { on_empty_called = true; });
+TEST_F(CloudProviderImplTest, DiscardableWhenFirebaseAuthDisconnected) {
+  bool on_discardable_called = false;
+  cloud_provider_impl_->SetOnDiscardable(
+      [&on_discardable_called] { on_discardable_called = true; });
   firebase_auth_->TriggerConnectionErrorHandler();
   RunLoopUntilIdle();
 
-  // Verify that shutdown was started, but on_empty wasn't called yet.
+  // Verify that shutdown was started, but on_discardable wasn't called yet.
   EXPECT_TRUE(firestore_service_->shutdown_callback);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
-  // Verify that on_empty is called when the shutdown callback is executed.
+  // Verify that on_discardable is called when the shutdown callback is executed.
   firestore_service_->shutdown_callback();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(CloudProviderImplTest, GetDeviceSet) {

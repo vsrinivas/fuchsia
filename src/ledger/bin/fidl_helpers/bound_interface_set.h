@@ -24,7 +24,9 @@ class BoundInterfaceSet {
 
   void CloseAll() { binding_.CloseAll(); }
 
-  void set_on_empty(fit::closure on_empty) { binding_.set_empty_set_handler(std::move(on_empty)); }
+  void SetOnDiscardable(fit::closure on_discardable) {
+    binding_.set_empty_set_handler(std::move(on_discardable));
+  }
 
   bool is_bound() { return binding_.is_bound(); }
 

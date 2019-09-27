@@ -25,8 +25,8 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
   void SetPageEvictionDelegate(PageEvictionManager::Delegate* delegate);
 
   // DiskCleanupManager:
-  void set_on_empty(fit::closure on_empty_callback) override;
-  bool IsEmpty() override;
+  void SetOnDiscardable(fit::closure on_discardable) override;
+  bool IsDiscardable() const override;
   void TryCleanUp(fit::function<void(Status)> callback) override;
 
   // PageUsageListener:

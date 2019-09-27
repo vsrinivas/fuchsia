@@ -181,47 +181,47 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   EXPECT_TRUE(ledger_closed);
 }
 
-TEST_F(LedgerManagerTest, OnEmptyCalled) {
-  bool on_empty_called;
-  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+TEST_F(LedgerManagerTest, OnDiscardableCalled) {
+  bool on_discardable_called;
+  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   ledger_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(LedgerManagerTest, OnEmptyCalledWhenLastDetacherCalled) {
-  bool on_empty_called;
-  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+TEST_F(LedgerManagerTest, OnDiscardableCalledWhenLastDetacherCalled) {
+  bool on_discardable_called;
+  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   auto first_detacher = ledger_manager_->CreateDetacher();
   auto second_detacher = ledger_manager_->CreateDetacher();
 
   ledger_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   first_detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   auto third_detacher = ledger_manager_->CreateDetacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   second_detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   third_detacher();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 // Verifies that the LedgerManager does not call its callback while a page is
 // being deleted.
 TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
-  bool on_empty_called;
-  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  bool on_discardable_called;
+  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   PageId id = RandomId(environment_);
   bool delete_page_called;
@@ -232,7 +232,7 @@ TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
   // Empty the Ledger manager.
   ledger_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   // Complete the deletion successfully.
   ASSERT_TRUE(storage_ptr->delete_page_storage_callback);
@@ -241,7 +241,7 @@ TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
 
   EXPECT_TRUE(delete_page_called);
   EXPECT_EQ(delete_page_status, Status::OK);
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 // Cloud should never be queried.

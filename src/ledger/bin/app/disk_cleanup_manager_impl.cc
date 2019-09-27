@@ -17,11 +17,13 @@ void DiskCleanupManagerImpl::SetPageEvictionDelegate(PageEvictionManager::Delega
   page_eviction_manager_.SetDelegate(delegate);
 }
 
-void DiskCleanupManagerImpl::set_on_empty(fit::closure on_empty_callback) {
-  page_eviction_manager_.set_on_empty(std::move(on_empty_callback));
+void DiskCleanupManagerImpl::SetOnDiscardable(fit::closure on_discardable) {
+  page_eviction_manager_.SetOnDiscardable(std::move(on_discardable));
 }
 
-bool DiskCleanupManagerImpl::IsEmpty() { return page_eviction_manager_.IsEmpty(); }
+bool DiskCleanupManagerImpl::IsDiscardable() const {
+  return page_eviction_manager_.IsDiscardable();
+}
 
 void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
   page_eviction_manager_.TryEvictPages(policy_.get(), std::move(callback));

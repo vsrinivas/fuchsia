@@ -28,7 +28,8 @@ int main(int argc, char** argv) {
   fuchsia::sys::LauncherPtr component_launcher;
   component_context->svc()->Connect(component_launcher.NewRequest());
   cloud_provider::ValidationTestsLauncher launcher(
-      component_context.get(), [component_launcher = std::move(component_launcher)](auto request) {
+      loop.dispatcher(), component_context.get(),
+      [component_launcher = std::move(component_launcher)](auto request) {
         fuchsia::sys::LaunchInfo launch_info;
         launch_info.url = kCloudProviderUrl.ToString();
         auto cloud_provider_services =

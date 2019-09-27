@@ -7,6 +7,8 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
+#include <time.h>
+
 #include <openssl/bio.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
@@ -15,7 +17,6 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <time.h>
 
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/base64url/base64url.h"
@@ -98,11 +99,12 @@ ServiceAccountTokenMinter::GetTokenResponse ServiceAccountTokenMinter::GetSucces
 }
 
 ServiceAccountTokenMinter::ServiceAccountTokenMinter(
-    network_wrapper::NetworkWrapper* network_wrapper, std::unique_ptr<Credentials> credentials,
-    std::string user_id)
+    async_dispatcher_t* dispatcher, network_wrapper::NetworkWrapper* network_wrapper,
+    std::unique_ptr<Credentials> credentials, std::string user_id)
     : network_wrapper_(network_wrapper),
       credentials_(std::move(credentials)),
-      user_id_(std::move(user_id)) {}
+      user_id_(std::move(user_id)),
+      in_progress_requests_(dispatcher) {}
 
 ServiceAccountTokenMinter::~ServiceAccountTokenMinter() {
   for (const auto& pair : in_progress_callbacks_) {
@@ -144,7 +146,8 @@ void ServiceAccountTokenMinter::GetFirebaseToken(fidl::StringPtr firebase_api_ke
   in_progress_callbacks_[firebase_api_key.value_or("")].push_back(std::move(callback));
 
   in_progress_requests_.emplace(network_wrapper_->Request(
-      [this, firebase_api_key = firebase_api_key.value_or(""), custom_token = std::move(custom_token)] {
+      [this, firebase_api_key = firebase_api_key.value_or(""),
+       custom_token = std::move(custom_token)] {
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
       [this, firebase_api_key = firebase_api_key.value_or("")](http::URLResponse response) {
@@ -274,7 +277,8 @@ std::string ServiceAccountTokenMinter::GetIdentityRequestBody(const std::string&
 void ServiceAccountTokenMinter::HandleIdentityResponse(const std::string& api_key,
                                                        http::URLResponse response) {
   if (response.error) {
-    ResolveCallbacks(api_key, GetErrorResponse(Status::NETWORK_ERROR, response.error->description.value_or("")));
+    ResolveCallbacks(
+        api_key, GetErrorResponse(Status::NETWORK_ERROR, response.error->description.value_or("")));
     return;
   }
 

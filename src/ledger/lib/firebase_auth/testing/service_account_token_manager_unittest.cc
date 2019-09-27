@@ -9,6 +9,7 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -28,8 +29,8 @@ class ServiceAccountTokenManagerTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenManagerTest()
       : network_wrapper_(dispatcher()),
-        token_manager_(&network_wrapper_, Credentials::Parse(kTestServiceAccountConfig),
-                       "user_id") {}
+        token_manager_(dispatcher(), &network_wrapper_,
+                       Credentials::Parse(kTestServiceAccountConfig), "user_id") {}
 
  protected:
   bool GetToken(std::string api_key, fuchsia::auth::FirebaseTokenPtr* token,

@@ -23,7 +23,7 @@ namespace cloud_provider_firestore {
 
 // Implementation of cloud_provider::DeviceSet.
 //
-// If the |on_empty| callback is set, it is called when the client connection is
+// If the |on_discardable| callback is set, it is called when the client connection is
 // closed.
 class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
  public:
@@ -32,7 +32,9 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
  private:
   void ScopedGetCredentials(fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
@@ -65,7 +67,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   FirestoreService* const firestore_service_;
 
   fidl::Binding<cloud_provider::DeviceSet> binding_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   // Watcher set by the client.
   cloud_provider::DeviceSetWatcherPtr watcher_;

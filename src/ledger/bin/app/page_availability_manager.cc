@@ -24,7 +24,7 @@ void PageAvailabilityManager::MarkPageAvailable() {
     page_callback();
   }
   on_available_callbacks_ = std::nullopt;
-  CheckEmpty();
+  CheckDiscardable();
 }
 
 void PageAvailabilityManager::OnPageAvailable(fit::closure on_page_available) {
@@ -35,15 +35,15 @@ void PageAvailabilityManager::OnPageAvailable(fit::closure on_page_available) {
   }
 }
 
-void PageAvailabilityManager::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void PageAvailabilityManager::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
-bool PageAvailabilityManager::IsEmpty() { return !on_available_callbacks_; }
+bool PageAvailabilityManager::IsDiscardable() const { return !on_available_callbacks_; }
 
-void PageAvailabilityManager::CheckEmpty() {
-  if (IsEmpty() && on_empty_callback_) {
-    on_empty_callback_();
+void PageAvailabilityManager::CheckDiscardable() {
+  if (IsDiscardable() && on_discardable_) {
+    on_discardable_();
   }
 }
 

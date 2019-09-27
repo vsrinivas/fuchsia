@@ -5,7 +5,6 @@
 #include "src/ledger/cloud_provider_firestore/bin/app/page_cloud_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <google/protobuf/util/time_util.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
@@ -16,6 +15,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <iterator>
+
+#include <google/protobuf/util/time_util.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -86,12 +87,12 @@ class PageCloudImplTest : public gtest::TestLoopFixture {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImplTest);
 };
 
-TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
-  bool on_empty_called = false;
-  page_cloud_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+TEST_F(PageCloudImplTest, DiscardableWhenDisconnected) {
+  bool on_discardable_called = false;
+  page_cloud_impl_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   page_cloud_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_F(PageCloudImplTest, AddCommits) {

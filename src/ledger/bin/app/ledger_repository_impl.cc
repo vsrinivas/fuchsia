@@ -40,12 +40,14 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::vector<PageUsageListener*> page_usage_listeners, inspect_deprecated::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
+      bindings_(environment->dispatcher()),
       db_factory_(std::move(db_factory)),
       db_(std::move(db)),
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
       page_usage_listeners_(std::move(page_usage_listeners)),
+      ledger_managers_(environment_->dispatcher()),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       background_sync_manager_(std::move(background_sync_manager)),
       coroutine_manager_(environment_->coroutine_service()),
@@ -54,17 +56,17 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
           inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
       ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())),
       weak_factory_(this) {
-  bindings_.set_on_empty([this] { CheckEmpty(); });
-  ledger_managers_.set_on_empty([this] { CheckEmpty(); });
-  disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
-  background_sync_manager_->set_on_empty([this] { CheckEmpty(); });
+  bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
+  ledger_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
+  disk_cleanup_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
+  background_sync_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
   // The callback that is to be called once the initialization of this PageUsageDb is completed.
   // The destructor may be called while a coroutine that is responsable for the PageusageDb
   // initialization is executed, so we need to wait until the operation is done and then signal
   // about its completion.
   fit::function<void(Status)> callback([this](Status status) {
     if (status != Status::INTERRUPTED) {
-      CheckEmpty();
+      CheckDiscardable();
     }
   });
   coroutine_manager_.StartCoroutine(std::move(callback),
@@ -77,7 +79,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {
   for (auto& binding : bindings_) {
-    // |Close()| does not call |binding|'s |on_empty| callback, so |binding| is
+    // |Close()| does not call |binding|'s |on_discardable| callback, so |binding| is
     // not destroyed after this call. This would be a memory leak if we were not
     // in |LedgerRepositoryImpl| destructor: as we are in the destructor,
     // |bindings| will be destroyed at the end of this method, and no leak will
@@ -86,10 +88,14 @@ LedgerRepositoryImpl::~LedgerRepositoryImpl() {
   }
 }
 
-bool LedgerRepositoryImpl::empty() const {
-  return ledger_managers_.empty() && (closing_ || bindings_.empty()) &&
-         (!disk_cleanup_manager_ || disk_cleanup_manager_->IsEmpty()) &&
-         (!background_sync_manager_ || background_sync_manager_->IsEmpty());
+void LedgerRepositoryImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool LedgerRepositoryImpl::IsDiscardable() const {
+  return ledger_managers_.IsDiscardable() && (closing_ || bindings_.IsDiscardable()) &&
+         (!disk_cleanup_manager_ || disk_cleanup_manager_->IsDiscardable()) &&
+         (!background_sync_manager_ || background_sync_manager_->IsDiscardable());
 }
 
 void LedgerRepositoryImpl::BindRepository(
@@ -294,8 +300,8 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
   callback(Status::OK);
 }
 
-void LedgerRepositoryImpl::CheckEmpty() {
-  if (!empty()) {
+void LedgerRepositoryImpl::CheckDiscardable() {
+  if (!IsDiscardable()) {
     return;
   }
 
@@ -314,14 +320,14 @@ void LedgerRepositoryImpl::CheckEmpty() {
     db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
       closed_ = true;
 
+      if (on_discardable_) {
+        on_discardable_();
+      }
+
       auto callbacks = std::move(close_callbacks_);
       close_callbacks_.clear();
       for (auto& callback : callbacks) {
         callback(Status::OK);
-      }
-
-      if (on_empty_callback_) {
-        on_empty_callback_();
       }
     }));
   }
@@ -363,7 +369,7 @@ void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
   }
   close_callbacks_.push_back(std::move(callback));
   closing_ = true;
-  CheckEmpty();
+  CheckDiscardable();
 }
 
 }  // namespace ledger

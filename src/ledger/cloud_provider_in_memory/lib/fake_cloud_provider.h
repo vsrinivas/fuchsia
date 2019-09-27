@@ -21,7 +21,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
   class Builder {
    public:
-    Builder();
+    Builder(async_dispatcher_t* dispatcher);
     ~Builder();
 
     Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
@@ -33,12 +33,13 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
    private:
     friend FakeCloudProvider;
 
+    async_dispatcher_t* dispatcher_;
     InjectNetworkError inject_network_error_ = InjectNetworkError::NO;
     CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
     CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
   };
 
-  FakeCloudProvider();
+  explicit FakeCloudProvider(async_dispatcher_t* dispatcher);
   explicit FakeCloudProvider(const Builder& builder);
   ~FakeCloudProvider() override;
 
@@ -49,6 +50,8 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
   void GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
                     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
                     GetPageCloudCallback callback) override;
+
+  async_dispatcher_t* dispatcher_;
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet> device_set_;
 

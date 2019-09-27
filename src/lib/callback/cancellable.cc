@@ -36,17 +36,20 @@ void AutoCancel::Reset(fxl::RefPtr<Cancellable> cancellable) {
     cancellable_->SetOnDone([this] { OnDone(); });
 }
 
-void AutoCancel::set_on_empty(fit::closure callback) {
-  FXL_DCHECK(!on_empty_);
-  on_empty_ = std::move(callback);
+void AutoCancel::SetOnDiscardable(fit::closure callback) {
+  FXL_DCHECK(!on_discardable_);
+  on_discardable_ = std::move(callback);
   if (cancellable_->IsDone()) {
     OnDone();
   }
 }
 
+bool AutoCancel::IsDiscardable() const { return !cancellable_ || cancellable_->IsDone(); }
+
 void AutoCancel::OnDone() {
-  if (on_empty_) {
-    on_empty_();
+  if (on_discardable_) {
+    on_discardable_();
   }
 }
+
 }  // namespace callback

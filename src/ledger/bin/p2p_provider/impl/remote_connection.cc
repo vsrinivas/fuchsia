@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/p2p_provider/impl/remote_connection.h"
 
-#include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
@@ -33,12 +34,16 @@ void RemoteConnection::Disconnect() {
   message_relay_.SetChannelClosedCallback(nullptr);
   message_relay_.CloseChannel();
 
-  if (on_empty_) {
-    on_empty_();
+  if (on_discardable_) {
+    on_discardable_();
   }
 }
 
-void RemoteConnection::set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+void RemoteConnection::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool RemoteConnection::IsDiscardable() const { return message_relay_.IsClosed(); }
 
 void RemoteConnection::set_on_close(fit::closure on_close) { on_close_ = std::move(on_close); }
 
@@ -50,9 +55,9 @@ void RemoteConnection::OnChannelClosed() {
   if (on_close_) {
     on_close_();
   }
-  if (on_empty_) {
-    auto on_empty = std::move(on_empty_);
-    on_empty();
+  if (on_discardable_) {
+    auto on_discardable = std::move(on_discardable_);
+    on_discardable();
   }
 }
 

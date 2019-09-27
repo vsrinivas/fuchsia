@@ -1352,9 +1352,9 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
   DrainLoop();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ConflictResolutionWaitStatus::NO_CONFLICTS);
-  EXPECT_TRUE(resolver_->IsEmpty());
+  EXPECT_TRUE(resolver_->IsDiscardable());
 
-  // Special case: no changes from the previous call; event OnEmpty is not
+  // Special case: no changes from the previous call; event OnDiscardable is not
   // triggered, but WaitForConflictResolution should return right away, as there
   // are no pending merges.
   page_ptr_->WaitForConflictResolution(
@@ -1362,7 +1362,7 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
   DrainLoop();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ConflictResolutionWaitStatus::NO_CONFLICTS);
-  EXPECT_TRUE(resolver_->IsEmpty());
+  EXPECT_TRUE(resolver_->IsDiscardable());
 }
 
 }  // namespace

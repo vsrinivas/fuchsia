@@ -30,7 +30,7 @@ class ActivePageManagerContainer {
                              std::vector<PageUsageListener*> page_usage_listeners);
   ~ActivePageManagerContainer();
 
-  void set_on_empty(fit::closure on_empty_callback);
+  void SetOnDiscardable(fit::closure on_discardable);
 
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a ActivePageManager is available or an error occurs.
@@ -47,25 +47,23 @@ class ActivePageManagerContainer {
   bool PageConnectionIsOpen();
 
   // Checks whether this container is empty.
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
  private:
   // If |has_external_requests_| is true when called, calls the |OnExternallyUnused| method of each
-  // |PageUsageListener| in |page_usage_listeners_|. If |conditionally_check_empty| is true, calls
-  // |CheckEmpty| after calling the |PageUsageListeners| only if |has_external_requests_| was true
-  // when called, otherwise always calls |CheckEmpty| after (possibly) calling the
-  // |PageUsageListeners|. Any given call to a |PageUsageListener|'s |OnExternallyUnused| method may
-  // result in this |ActivePageManagerContainer| being deleted.
-  void OnExternallyUnused(bool conditionally_check_empty);
+  // |PageUsageListener| in |page_usage_listeners_|. Any given call to a
+  // |PageUsageListener|'s |OnExternallyUnused| method may result in this
+  // |ActivePageManagerContainer| being deleted.
+  void OnExternallyUnused();
 
   // Calls the |OnInternallyUnused| method of each |PageUsageListener| in |page_usage_listeners_|
-  // and then calls |CheckEmpty|. Any given call to a |PageUsageListener|'s |OnInternallyUnused|
-  // method may result in this |ActivePageManagerContainer| being deleted.
+  // and then calls |CheckDiscardable|. Any given call to a |PageUsageListener|'s
+  // |OnInternallyUnused| method may result in this |ActivePageManagerContainer| being deleted.
   void OnInternallyUnused();
 
-  // Checks whether this container is empty, and calls the |on_empty_callback_|
+  // Checks whether this container is empty, and calls the |on_discardable_|
   // if it is.
-  void CheckEmpty();
+  void CheckDiscardable();
 
   Environment* const environment_;
 
@@ -94,7 +92,7 @@ class ActivePageManagerContainer {
   std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>> page_impls_;
   std::vector<fit::function<void(Status, ExpiringToken, ActivePageManager*)>>
       internal_request_callbacks_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<ActivePageManagerContainer> weak_factory_;

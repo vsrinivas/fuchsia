@@ -29,14 +29,12 @@ class SyncHelper {
   SyncHelper(const SyncHelper&) = delete;
   SyncHelper& operator=(const SyncHelper&) = delete;
 
-  // Sets the callback to be called every time the SyncHelper is empty.
-  // SyncHelper is empty when no operation is currently in progress.
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  // Sets the callback to be called every time the SyncHelper is discardable.
+  // SyncHelper is discardable when no operation is currently in progress.
+  void SetOnDiscardable(fit::closure on_discardable);
 
   // Returns whether there is currently no running operation.
-  bool empty() { return in_flight_operation_counts_per_sync_point_.empty(); }
+  bool IsDiscardable() const;
 
   // Registers a synchronization callback. |callback| will be called when all
   // operation wrapped by |WrapOperation| before the call to
@@ -94,7 +92,7 @@ class SyncHelper {
   // The number of operation in progress for each timestamp.
   std::map<int64_t, int64_t> in_flight_operation_counts_per_sync_point_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   // This must be the last member.
   fxl::WeakPtrFactory<SyncHelper> weak_ptr_factory_;

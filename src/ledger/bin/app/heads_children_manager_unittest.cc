@@ -195,17 +195,17 @@ TEST_P(SynchronyHeadsChildrenManagerTest, GetNames) {
                                              test_loop().dispatcher()};
   bool callback_called;
   std::set<std::string> names;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
       ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, UnorderedElementsAre(CommitIdToDisplayName(one), CommitIdToDisplayName(two),
                                           CommitIdToDisplayName(three)));
-  EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNames) {
@@ -232,10 +232,10 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNames) {
                                              std::get<1>(GetParam()), test_loop().dispatcher()};
   size_t callbacks_called = 0;
   std::vector<std::set<std::string>> nameses(concurrency);
-  size_t on_empty_calls = 0;
+  size_t on_discardable_calls = 0;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty([&on_empty_calls] { on_empty_calls++; });
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
         ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
@@ -247,15 +247,15 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNames) {
                                         CommitIdToDisplayName(three))));
   switch (std::get<1>(GetParam())) {
     case Synchrony::ASYNCHRONOUS:
-      EXPECT_EQ(on_empty_calls, 1u);
+      EXPECT_EQ(on_discardable_calls, 1u);
       break;
     case Synchrony::SYNCHRONOUS:
       // We may have made the calls concurrently (all before a call to |RunLoopUntilIdle|), but if
       // the |NewInspection| method of the |InspectablePage| used by the |HeadsChildrenManager|
       // under test executes its calls synchronously, the |HeadsChildrenManager| under test will
       // dither between emptiness and nonemptiness.
-      EXPECT_THAT(on_empty_calls, Ge(1u));
-      EXPECT_THAT(on_empty_calls, Le(concurrency));
+      EXPECT_THAT(on_discardable_calls, Ge(1u));
+      EXPECT_THAT(on_discardable_calls, Le(concurrency));
       break;
   }
 }
@@ -283,21 +283,22 @@ TEST_P(SynchronyHeadsChildrenManagerTest, Attach) {
                                              test_loop().dispatcher()};
   bool callback_called;
   fit::closure detacher;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
       ->Attach(CommitIdToDisplayName(two),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   detacher();
-  EXPECT_TRUE(heads_children_manager.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(heads_children_manager.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
@@ -333,10 +334,10 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
                                              std::get<1>(GetParam()), test_loop().dispatcher()};
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
         ->Attach(CommitIdToDisplayName(attachment_choices[index]),
@@ -347,11 +348,12 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
   EXPECT_THAT(detachers, Each(IsTrue()));
 
   for (const auto& detacher : detachers) {
-    EXPECT_FALSE(on_empty_called);
+    EXPECT_FALSE(on_discardable_called);
     detacher();
   }
-  EXPECT_TRUE(heads_children_manager.IsEmpty());
-  EXPECT_TRUE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(heads_children_manager.IsDiscardable());
+  EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingActivePageManager) {
@@ -372,10 +374,10 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingActi
                                              test_loop().dispatcher()};
   size_t callbacks_called = 0;
   std::vector<std::set<std::string>> nameses(concurrency);
-  size_t on_empty_calls = 0;
+  size_t on_discardable_calls = 0;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty([&on_empty_calls] { on_empty_calls++; });
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
         ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
@@ -385,15 +387,15 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingActi
   EXPECT_THAT(nameses, Each(IsEmpty()));
   switch (std::get<1>(GetParam())) {
     case Synchrony::ASYNCHRONOUS:
-      EXPECT_EQ(on_empty_calls, 1u);
+      EXPECT_EQ(on_discardable_calls, 1u);
       break;
     case Synchrony::SYNCHRONOUS:
       // We may have made the calls concurrently (all before a call to |RunLoopUntilIdle|), but if
       // the |NewInspection| method of the |InspectablePage| used by the |HeadsChildrenManager|
       // under test executes its calls synchronously, the |HeadsChildrenManager| under test will
       // dither between emptiness and nonemptiness.
-      EXPECT_THAT(on_empty_calls, Ge(1u));
-      EXPECT_THAT(on_empty_calls, Le(concurrency));
+      EXPECT_THAT(on_discardable_calls, Ge(1u));
+      EXPECT_THAT(on_discardable_calls, Le(concurrency));
       break;
   }
 }
@@ -423,10 +425,10 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingComm
                                              std::get<1>(GetParam()), test_loop().dispatcher()};
   size_t callbacks_called = 0;
   std::vector<std::set<std::string>> nameses(concurrency);
-  size_t on_empty_calls = 0;
+  size_t on_discardable_calls = 0;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty([&on_empty_calls] { on_empty_calls++; });
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
         ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
@@ -436,15 +438,15 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingComm
   EXPECT_THAT(nameses, Each(IsEmpty()));
   switch (std::get<1>(GetParam())) {
     case Synchrony::ASYNCHRONOUS:
-      EXPECT_EQ(on_empty_calls, 1u);
+      EXPECT_EQ(on_discardable_calls, 1u);
       break;
     case Synchrony::SYNCHRONOUS:
       // We may have made the calls concurrently (all before a call to |RunLoopUntilIdle|), but if
       // the |NewInspection| method of the |InspectablePage| used by the |HeadsChildrenManager|
       // under test executes its calls synchronously, the |HeadsChildrenManager| under test will
       // dither between emptiness and nonemptiness.
-      EXPECT_THAT(on_empty_calls, Ge(1u));
-      EXPECT_THAT(on_empty_calls, Le(concurrency));
+      EXPECT_THAT(on_discardable_calls, Ge(1u));
+      EXPECT_THAT(on_discardable_calls, Le(concurrency));
       break;
   }
 }
@@ -455,10 +457,10 @@ TEST_F(HeadsChildrenManagerTest, AttachInvalidName) {
   DummyInspectablePage inspectable_page{};
   bool callback_called;
   fit::closure detacher;
-  bool on_empty_called;
+  bool on_discardable_called;
 
-  HeadsChildrenManager heads_children_manager{&heads_node, &inspectable_page};
-  heads_children_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
+  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
       ->Attach("Definitely not the display string of a commit ID",
@@ -467,13 +469,13 @@ TEST_F(HeadsChildrenManagerTest, AttachInvalidName) {
   EXPECT_TRUE(detacher);
   // The HeadsChildrenManager under test did not surrender program control during the call to
   // Attach so it never needed to check its emptiness after regaining program control.
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  heads_children_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(on_discardable_called);
 }
 
 INSTANTIATE_TEST_SUITE_P(HeadsChildrenManagerTest, SynchronyHeadsChildrenManagerTest,

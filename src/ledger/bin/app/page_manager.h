@@ -38,7 +38,7 @@ namespace ledger {
 // tears down the storage.
 //
 // When a PageManager becomes empty, client is notified through
-// |on_empty_callback|.
+// |on_discardable|.
 class PageManager : InspectablePage {
  public:
   PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
@@ -76,7 +76,7 @@ class PageManager : InspectablePage {
   // Registers "interest" in this |PageManager| for which this |PageManager|
   // will remain non-empty and returns a closure that when called will
   // deregister the "interest" in this |PageManager| (and potentially cause this
-  // |PageManager|'s on_empty_callback_ to be called).
+  // |PageManager|'s on_discardable_ to be called).
   fit::closure CreateDetacher();
 
   // InspectablePage:
@@ -84,9 +84,9 @@ class PageManager : InspectablePage {
                                         ActivePageManager* active_page_manager)>
                          callback) override;
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
  private:
   using PageTracker = fit::function<bool()>;
@@ -127,7 +127,7 @@ class PageManager : InspectablePage {
   // as opened. See also |was_opened_|.
   void MaybeMarkPageOpened();
 
-  void CheckEmpty();
+  void CheckDiscardable();
 
   Environment* const environment_;
   const std::string ledger_name_;
@@ -137,7 +137,7 @@ class PageManager : InspectablePage {
   sync_coordinator::LedgerSync* ledger_sync_;
   LedgerMergeManager* ledger_merge_manager_;
 
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
 
   PageAvailabilityManager page_availability_manager_;
 

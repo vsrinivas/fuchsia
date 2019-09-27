@@ -223,10 +223,9 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                                                                         std::move(request));
                                          }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
-        std::make_unique<p2p_provider::P2PProviderImpl>(std::move(overnet),
-                                                        std::move(user_id_provider));
-    return std::make_unique<p2p_sync::UserCommunicatorImpl>(std::move(provider),
-                                                            environment_.coroutine_service());
+        std::make_unique<p2p_provider::P2PProviderImpl>(
+            environment_.dispatcher(), std::move(overnet), std::move(user_id_provider));
+    return std::make_unique<p2p_sync::UserCommunicatorImpl>(&environment_, std::move(provider));
   }
 
  private:
@@ -254,6 +253,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
       : loop_controller_(&loop_),
         random_(loop_.initial_state()),
         services_loop_(loop_controller_.StartNewLoop()),
+        overnet_factory_(services_loop_->dispatcher()),
         enable_sync_(enable_sync),
         enable_p2p_mesh_(enable_p2p_mesh) {
     async_test_subloop_t* cloud_subloop =
@@ -390,7 +390,8 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
     }
   }
 
-  if (sync_state != EnableSynchronization::SYNC_ONLY && sync_state != EnableSynchronization::CLOUD_SYNC_ONLY) {
+  if (sync_state != EnableSynchronization::SYNC_ONLY &&
+      sync_state != EnableSynchronization::CLOUD_SYNC_ONLY) {
     for (const auto& builder : static_offline_builders) {
       builders.push_back(builder.get());
     }

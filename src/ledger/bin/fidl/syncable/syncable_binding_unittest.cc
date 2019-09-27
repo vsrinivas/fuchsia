@@ -240,9 +240,9 @@ TEST_F(SyncableTest, NotEmptyResponseSync) {
   EXPECT_TRUE(sync_called);
 }
 
-TEST_F(SyncableTest, OnEmpty) {
+TEST_F(SyncableTest, OnDiscardable) {
   bool called;
-  binding_.set_on_empty(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   ptr_.Unbind();
@@ -250,10 +250,10 @@ TEST_F(SyncableTest, OnEmpty) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(SyncableTest, OnEmptyWithRunningOperation) {
+TEST_F(SyncableTest, OnDiscardableWithRunningOperation) {
   impl_.delay_callback() = true;
   bool called;
-  binding_.set_on_empty(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -264,10 +264,10 @@ TEST_F(SyncableTest, OnEmptyWithRunningOperation) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(SyncableTest, OnEmptyAfterError) {
+TEST_F(SyncableTest, OnDiscardableAfterError) {
   impl_.status_to_return() = Status::IO_ERROR;
   bool called;
-  binding_.set_on_empty(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

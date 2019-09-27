@@ -43,16 +43,14 @@ template <typename ResponseType>
 void MakeCall(SingleResponseCall<ResponseType>* call,
               std::unique_ptr<SingleResponseReader<ResponseType>> response_reader,
               typename ResponseVariant<ResponseType>::CallbackType callback) {
-  call->response_reader = std::move(response_reader);
+  call->response_reader() = std::move(response_reader);
 
-  call->on_complete = [call, callback = std::move(callback)](bool ok) {
-    ResponseVariant<ResponseType>::Call(std::move(callback), std::move(call->status),
-                                        std::move(call->response));
-    if (call->on_empty) {
-      call->on_empty();
-    }
+  call->on_complete() = [call, callback = std::move(callback)](bool ok) {
+    ResponseVariant<ResponseType>::Call(std::move(callback), std::move(call->status()),
+                                        std::move(call->response()));
+    call->Done();
   };
-  call->response_reader->Finish(&call->response, &call->status, &call->on_complete);
+  call->response_reader()->Finish(&call->response(), &call->status(), &call->on_complete());
 }
 
 }  // namespace
@@ -78,7 +76,13 @@ FirestoreServiceImpl::FirestoreServiceImpl(std::string server_id, async_dispatch
       database_path_("projects/" + server_id_ + "/databases/(default)"),
       root_path_(database_path_ + "/documents"),
       dispatcher_(dispatcher),
-      firestore_(google::firestore::v1beta1::Firestore::NewStub(channel)) {
+      firestore_(google::firestore::v1beta1::Firestore::NewStub(channel)),
+      document_response_calls_(dispatcher),
+      commit_response_calls_(dispatcher),
+      list_documents_response_calls_(dispatcher),
+      empty_response_calls_(dispatcher),
+      run_query_calls_(dispatcher),
+      listen_calls_(dispatcher) {
   polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
 
@@ -90,8 +94,8 @@ void FirestoreServiceImpl::GetDocument(
     fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
-  SetUpContext(&call.context, call_credentials);
-  auto response_reader = firestore_->AsyncGetDocument(&call.context, request, &cq_);
+  SetUpContext(&call.context(), call_credentials);
+  auto response_reader = firestore_->AsyncGetDocument(&call.context(), request, &cq_);
   MakeCall<google::firestore::v1beta1::Document>(&call, std::move(response_reader),
                                                  std::move(callback));
 }
@@ -102,8 +106,8 @@ void FirestoreServiceImpl::ListDocuments(
     fit::function<void(grpc::Status, google::firestore::v1beta1::ListDocumentsResponse)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
-  SetUpContext(&call.context, call_credentials);
-  auto response_reader = firestore_->AsyncListDocuments(&call.context, request, &cq_);
+  SetUpContext(&call.context(), call_credentials);
+  auto response_reader = firestore_->AsyncListDocuments(&call.context(), request, &cq_);
   MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(&call, std::move(response_reader),
                                                               std::move(callback));
 }
@@ -114,8 +118,8 @@ void FirestoreServiceImpl::CreateDocument(
     fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
-  SetUpContext(&call.context, call_credentials);
-  auto response_reader = firestore_->AsyncCreateDocument(&call.context, request, &cq_);
+  SetUpContext(&call.context(), call_credentials);
+  auto response_reader = firestore_->AsyncCreateDocument(&call.context(), request, &cq_);
 
   MakeCall<google::firestore::v1beta1::Document>(&call, std::move(response_reader),
                                                  std::move(callback));
@@ -126,8 +130,8 @@ void FirestoreServiceImpl::DeleteDocument(google::firestore::v1beta1::DeleteDocu
                                           fit::function<void(grpc::Status)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   EmptyResponseCall& call = empty_response_calls_.emplace();
-  SetUpContext(&call.context, call_credentials);
-  auto response_reader = firestore_->AsyncDeleteDocument(&call.context, request, &cq_);
+  SetUpContext(&call.context(), call_credentials);
+  auto response_reader = firestore_->AsyncDeleteDocument(&call.context(), request, &cq_);
 
   MakeCall<google::protobuf::Empty>(&call, std::move(response_reader), std::move(callback));
 }
@@ -138,8 +142,8 @@ void FirestoreServiceImpl::Commit(
     fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   CommitResponseCall& call = commit_response_calls_.emplace();
-  SetUpContext(&call.context, call_credentials);
-  auto response_reader = firestore_->AsyncCommit(&call.context, request, &cq_);
+  SetUpContext(&call.context(), call_credentials);
+  auto response_reader = firestore_->AsyncCommit(&call.context(), request, &cq_);
 
   MakeCall<google::firestore::v1beta1::CommitResponse>(&call, std::move(response_reader),
                                                        std::move(callback));

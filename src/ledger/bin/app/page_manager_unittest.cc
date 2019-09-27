@@ -114,13 +114,13 @@ class StubConflictResolverFactory : public ConflictResolverFactory {
   fidl::Binding<ConflictResolverFactory> binding_;
 };
 
-TEST_F(PageManagerTest, OnEmptyCalled) {
+TEST_F(PageManagerTest, OnDiscardableCalled) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -129,28 +129,28 @@ TEST_F(PageManagerTest, OnEmptyCalled) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fit::closure detacher = page_manager_->CreateDetacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   detacher();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledWhenHeadDetacherCalled) {
+TEST_F(PageManagerTest, OnDiscardableCalledWhenHeadDetacherCalled) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -159,15 +159,15 @@ TEST_F(PageManagerTest, OnEmptyCalledWhenHeadDetacherCalled) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fit::closure page_detacher = page_manager_->CreateDetacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -181,25 +181,25 @@ TEST_F(PageManagerTest, OnEmptyCalledWhenHeadDetacherCalled) {
 
   page_detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page_node.Unbind();
   heads_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   head_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledWhenCommitDetacherCalled) {
+TEST_F(PageManagerTest, OnDiscardableCalledWhenCommitDetacherCalled) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -208,15 +208,15 @@ TEST_F(PageManagerTest, OnEmptyCalledWhenCommitDetacherCalled) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fit::closure page_detacher = page_manager_->CreateDetacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -231,25 +231,25 @@ TEST_F(PageManagerTest, OnEmptyCalledWhenCommitDetacherCalled) {
 
   page_detacher();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page_node.Unbind();
   commits_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   commit_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndLaterThanPageBinding) {
+TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -258,14 +258,14 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndLaterThanPageBinding) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -290,16 +290,16 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndLaterThanPageBinding) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   head_node.Unbind();
   commit_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // Why didn't we have to unbind page_node, heads_node, or commits_node?
   //
@@ -315,13 +315,13 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndLaterThanPageBinding) {
   // system, page_node is also bound.
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndPageBindingLater) {
+TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -330,14 +330,14 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndPageBindingLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -362,20 +362,20 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndPageBindingLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   heads_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   commit_node.Unbind();
   head_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // Why didn't we have to unbind page_node, heads_node, or commits_node?
   //
@@ -391,13 +391,13 @@ TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndPageBindingLater) {
   // system, page_node is also bound.
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
+TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndInspectLater) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -406,14 +406,14 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
@@ -421,7 +421,7 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -442,12 +442,12 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   head_node.Unbind();
   commit_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // Why didn't we have to unbind page_node, heads_node, or commits_node?
   //
@@ -463,13 +463,13 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
   // system, page_node is also bound.
 }
 
-TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndLaterThanInspect) {
+TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndLaterThanInspect) {
   bool get_page_callback_called;
   Status get_page_status;
-  bool on_empty_callback_called;
+  bool on_discardable_called;
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
   page_manager_->GetPage(
@@ -478,14 +478,14 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndLaterThanInspect) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->set_on_empty(
-      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+  page_manager_->SetOnDiscardable(
+      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
@@ -493,7 +493,7 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndLaterThanInspect) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
   EXPECT_TRUE(
@@ -515,11 +515,11 @@ TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndLaterThanInspect) {
   commit_node.Unbind();
   head_node.Unbind();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_empty_callback_called);
+  EXPECT_FALSE(on_discardable_called);
 
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_empty_callback_called);
+  EXPECT_TRUE(on_discardable_called);
 
   // Why didn't we have to unbind page_node, heads_node, or commits_node?
   //

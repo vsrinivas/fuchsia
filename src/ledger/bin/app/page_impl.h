@@ -29,7 +29,7 @@ class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
 
   void SetPageDelegate(PageDelegate* page_delegate);
 
-  bool IsEmpty();
+  bool IsDiscardable() const;
 
   void set_on_binding_unbound(fit::closure on_binding_unbound_callback);
 

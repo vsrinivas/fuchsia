@@ -22,17 +22,19 @@ InspectedEntry::InspectedEntry(inspect_deprecated::Node node, std::vector<uint8_
 
 InspectedEntry::~InspectedEntry() = default;
 
-void InspectedEntry::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void InspectedEntry::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
+
+bool InspectedEntry::IsDiscardable() const { return outstanding_detachers_ == 0; }
 
 fit::closure InspectedEntry::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
     FXL_DCHECK(outstanding_detachers_ > 0);
     outstanding_detachers_--;
-    if (on_empty_callback_ && outstanding_detachers_ == 0) {
-      on_empty_callback_();
+    if (on_discardable_ && IsDiscardable()) {
+      on_discardable_();
     }
   };
 }

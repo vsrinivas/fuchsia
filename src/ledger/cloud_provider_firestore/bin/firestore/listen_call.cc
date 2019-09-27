@@ -46,7 +46,7 @@ ListenCall::ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientCon
   // Configure reading from the stream.
   stream_reader_.SetOnError([this] { FinishIfNeeded(); });
   stream_reader_.SetOnMessage([this](google::firestore::v1beta1::ListenResponse response) {
-    if (CheckEmpty()) {
+    if (CheckDiscardable()) {
       return;
     }
 
@@ -59,7 +59,7 @@ ListenCall::ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientCon
 
   // Configure writing to the stream.
   stream_writer_.SetOnError([this] { FinishIfNeeded(); });
-  stream_writer_.SetOnSuccess([this] { CheckEmpty(); });
+  stream_writer_.SetOnSuccess([this] { CheckDiscardable(); });
 
   // Finally, start the stream.
   stream_controller_.StartCall([this](bool ok) {
@@ -69,7 +69,7 @@ ListenCall::ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientCon
       return;
     }
 
-    if (CheckEmpty()) {
+    if (CheckDiscardable()) {
       return;
     }
 
@@ -81,7 +81,7 @@ ListenCall::ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientCon
   });
 }
 
-ListenCall::~ListenCall() { FXL_DCHECK(IsEmpty()); }
+ListenCall::~ListenCall() { FXL_DCHECK(IsDiscardable()); }
 
 void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
   // It's only valid to perform a write after the connection was established,
@@ -97,7 +97,7 @@ void ListenCall::OnHandlerGone() {
   client_ = nullptr;
 
   context_->TryCancel();
-  CheckEmpty();
+  CheckDiscardable();
 }
 
 std::unique_ptr<ListenCallHandler> ListenCall::MakeHandler() {
@@ -110,7 +110,7 @@ void ListenCall::FinishIfNeeded() {
     return;
   }
 
-  CheckEmpty();
+  CheckDiscardable();
 }
 
 void ListenCall::Finish() {
@@ -119,7 +119,7 @@ void ListenCall::Finish() {
 
   stream_controller_.Finish([this](bool ok, grpc::Status status) {
     if (!client_) {
-      CheckEmpty();
+      CheckDiscardable();
       return;
     }
 
@@ -139,21 +139,25 @@ void ListenCall::HandleFinished(grpc::Status status) {
     // No client notifications can be delivered after |OnFinished|.
     client_ = nullptr;
   }
-  CheckEmpty();
+  CheckDiscardable();
 }
 
-bool ListenCall::IsEmpty() {
-  return client_ == nullptr && stream_controller_.IsEmpty() && stream_reader_.IsEmpty() &&
-         stream_writer_.IsEmpty();
+void ListenCall::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
-bool ListenCall::CheckEmpty() {
-  if (!IsEmpty()) {
+bool ListenCall::IsDiscardable() const {
+  return client_ == nullptr && stream_controller_.IsDiscardable() &&
+         stream_reader_.IsDiscardable() && stream_writer_.IsDiscardable();
+}
+
+bool ListenCall::CheckDiscardable() {
+  if (!IsDiscardable()) {
     return false;
   }
 
-  if (on_empty_) {
-    on_empty_();
+  if (on_discardable_) {
+    on_discardable_();
   }
   return true;
 }

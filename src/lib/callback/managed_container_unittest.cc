@@ -64,10 +64,10 @@ TEST(ManagedContainer, DoNotCrashIfManagerDeleted) {
   // Nothing bad should happen
 }
 
-TEST(ManagedContainer, OnEmpty) {
+TEST(ManagedContainer, OnDiscardable) {
   ManagedContainer managed_container;
   bool called = false;
-  managed_container.set_on_empty(SetWhenCalled(&called));
+  managed_container.SetOnDiscardable(SetWhenCalled(&called));
   auto item1 = managed_container.Manage(true);
   auto item2 = managed_container.Manage(true);
   item1.reset();

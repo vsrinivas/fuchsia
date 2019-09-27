@@ -22,6 +22,7 @@
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/lib/fxl/macros.h"
 
@@ -64,10 +65,9 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
   std::string user_id_;
 };
 
-class UserCommunicatorImplTest : public gtest::TestLoopFixture {
+class UserCommunicatorImplTest : public ledger::TestWithEnvironment {
  public:
-  UserCommunicatorImplTest() = default;
-  ~UserCommunicatorImplTest() override = default;
+  UserCommunicatorImplTest() : overnet_factory_(dispatcher()) {}
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(uint64_t node_id,
                                                         std::string user_name = "user") {
@@ -75,17 +75,15 @@ class UserCommunicatorImplTest : public gtest::TestLoopFixture {
     overnet_factory_.AddBinding(node_id, overnet.NewRequest());
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
-            std::move(overnet), std::make_unique<FakeUserIdProvider>(std::move(user_name)));
-    return std::make_unique<UserCommunicatorImpl>(std::move(provider), &coroutine_service_);
+            dispatcher(), std::move(overnet),
+            std::make_unique<FakeUserIdProvider>(std::move(user_name)));
+    return std::make_unique<UserCommunicatorImpl>(&environment_, std::move(provider));
   }
 
  protected:
-  void SetUp() override { ::testing::Test::SetUp(); }
-
   ledger::OvernetFactory overnet_factory_;
 
  private:
-  coroutine::CoroutineServiceImpl coroutine_service_;
   FXL_DISALLOW_COPY_AND_ASSIGN(UserCommunicatorImplTest);
 };
 

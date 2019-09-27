@@ -5,13 +5,14 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
 
+#include <lib/callback/destruction_sentinel.h>
+#include <lib/fit/function.h>
+#include <lib/fsl/socket/socket_drainer.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 
-#include <lib/callback/destruction_sentinel.h>
-#include <lib/fit/function.h>
-#include <lib/fsl/socket/socket_drainer.h>
 #include <src/lib/fxl/macros.h>
 
 namespace socket {
@@ -24,9 +25,9 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
 
   void Start(zx::socket source, fit::function<void(std::string)> callback);
 
-  void set_on_empty(fit::closure on_empty_callback) {
-    on_empty_callback_ = std::move(on_empty_callback);
-  }
+  void SetOnDiscardable(fit::closure on_discardable);
+
+  bool IsDiscardable() const;
 
  private:
   void OnDataAvailable(const void* data, size_t num_bytes) override;
@@ -36,7 +37,8 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
   fit::function<void(std::string)> callback_;
   std::string data_;
   fsl::SocketDrainer drainer_;
-  fit::closure on_empty_callback_;
+  fit::closure on_discardable_;
+  bool discardable_ = false;
   callback::DestructionSentinel destruction_sentinel_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);

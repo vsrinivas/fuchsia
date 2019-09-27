@@ -56,15 +56,18 @@ class AutoCancel {
   // Cancels any wrapped |Cancellable|s and starts wrapping |cancellable|.
   void Reset(fxl::RefPtr<Cancellable> cancellable = nullptr);
 
-  // The client can call the |set_on_empty| method once. |callback| will then be
+  // The client can call the |SetOnDiscardable| method once. |callback| will then be
   // executed when the underlying |Cancellable| finishes.
-  void set_on_empty(fit::closure callback);
+  void SetOnDiscardable(fit::closure callback);
+
+  // Returns whether the autocancel is discardable.
+  bool IsDiscardable() const;
 
  private:
   void OnDone();
 
   fxl::RefPtr<Cancellable> cancellable_;
-  fit::closure on_empty_;
+  fit::closure on_discardable_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
 };

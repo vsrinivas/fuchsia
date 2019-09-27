@@ -54,11 +54,11 @@ void PageEvictionManagerImpl::SetDelegate(PageEvictionManager::Delegate* delegat
   delegate_ = delegate;
 }
 
-void PageEvictionManagerImpl::set_on_empty(fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
+void PageEvictionManagerImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
 }
 
-bool PageEvictionManagerImpl::IsEmpty() { return pending_operations_ == 0; }
+bool PageEvictionManagerImpl::IsDiscardable() const { return pending_operations_ == 0; }
 
 void PageEvictionManagerImpl::TryEvictPages(PageEvictionPolicy* policy,
                                             fit::function<void(Status)> callback) {
@@ -242,13 +242,13 @@ ExpiringToken PageEvictionManagerImpl::NewExpiringToken() {
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
     --pending_operations_;
     // We need to post a task here: Tokens expire while a coroutine is being
-    // executed, and if |on_empty_callback_| is executed directly, it might end
+    // executed, and if |on_discardable_| is executed directly, it might end
     // up deleting the PageEvictionManagerImpl object, which will delete the
     // |coroutine_manager_|.
     async::PostTask(environment_->dispatcher(),
                     callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-                      if (on_empty_callback_ && pending_operations_ == 0) {
-                        on_empty_callback_();
+                      if (on_discardable_ && pending_operations_ == 0) {
+                        on_discardable_();
                       }
                     }));
   }));

@@ -13,7 +13,8 @@ FactoryImpl::FactoryImpl(async_dispatcher_t* main_dispatcher, sys::ComponentCont
     : main_dispatcher_(main_dispatcher),
       context_(context),
       network_wrapper_(network_wrapper),
-      settings_(std::move(settings)) {
+      settings_(std::move(settings)),
+      providers_(main_dispatcher) {
   FXL_DCHECK(context_);
   FXL_DCHECK(network_wrapper_);
 }

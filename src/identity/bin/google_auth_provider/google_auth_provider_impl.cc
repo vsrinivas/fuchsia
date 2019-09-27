@@ -125,19 +125,26 @@ GoogleAuthProviderImpl::GoogleAuthProviderImpl(
       context_(context),
       network_wrapper_(network_wrapper),
       settings_(std::move(settings)),
-      binding_(this, std::move(request)) {
+      binding_(this, std::move(request)),
+      requests_(main_dispatcher) {
   FXL_DCHECK(main_dispatcher_);
   FXL_DCHECK(network_wrapper_);
 
   // The class shuts down when the client connection is disconnected.
   binding_.set_error_handler([this](zx_status_t status) {
-    if (on_empty_) {
-      on_empty_();
+    if (on_discardable_) {
+      on_discardable_();
     }
   });
 }
 
 GoogleAuthProviderImpl::~GoogleAuthProviderImpl() {}
+
+void GoogleAuthProviderImpl::SetOnDiscardable(fit::closure on_discardable) {
+  on_discardable_ = std::move(on_discardable);
+}
+
+bool GoogleAuthProviderImpl::IsDiscardable() const { return !binding_.is_bound(); }
 
 void GoogleAuthProviderImpl::GetPersistentCredential(
     fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context, fidl::StringPtr user_profile_id,
@@ -232,8 +239,9 @@ void GoogleAuthProviderImpl::GetAppIdToken(std::string credential, fidl::StringP
   }
 
   auto request = OAuthRequestBuilder(kGoogleOAuthTokenEndpoint, "POST")
-                     .SetUrlEncodedBody("refresh_token=" + credential + "&client_id=" +
-                                        GetClientId(audience.value_or("")) + "&grant_type=refresh_token");
+                     .SetUrlEncodedBody("refresh_token=" + credential +
+                                        "&client_id=" + GetClientId(audience.value_or("")) +
+                                        "&grant_type=refresh_token");
 
   auto request_factory = [request = std::move(request)] { return request.Build(); };
   Request(std::move(request_factory), [callback = std::move(callback)](http::URLResponse response) {
