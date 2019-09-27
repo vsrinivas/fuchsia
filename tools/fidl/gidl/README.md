@@ -24,7 +24,7 @@ product configuration and `x64` architecture:
 
 To re-generate all of GIDL's conformance tests:
 
-    fx build tools/gidl
+    fx build tools/fidl/gidl
     fx exec $FUCHSIA_DIR/tools/fidl/gidl-conformance-suite/regen.sh
 
 After generating the conformance tests, you must run them to validate that the

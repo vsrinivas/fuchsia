@@ -7,7 +7,7 @@ if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
   exit 1
 fi
 
-readonly GOROOT="${FUCHSIA_BUILD_DIR}/tools/goroot"
+readonly GOROOT="${FUCHSIA_BUILD_DIR}/host-tools/goroot"
 if [[ ! -d "${GOROOT}" ]]; then
     echo "error: you must build Go before running this command"
     echo "run \"fx build third_party/go:go_runtime\""
@@ -38,7 +38,7 @@ if [ ! -x "${FIDLGEN_DART}" ]; then
     exit 1
 fi
 
-readonly GIDL="${FUCHSIA_BUILD_DIR}/tools/gidl"
+readonly GIDL="${FUCHSIA_BUILD_DIR}/host-tools/gidl"
 if [ ! -x "${GIDL}" ]; then
     echo "error: gidl missing; did you build?" 1>&2
     exit 1
