@@ -29,6 +29,7 @@ struct sysconfig_sync_client {
   std::optional<sysconfig::SyncClient> cpp_client;
 };
 
+__EXPORT
 zx_status_t sysconfig_sync_client_create(int devfs_root, sysconfig_sync_client_t** out_client) {
   auto client = std::make_unique<sysconfig_sync_client_t>();
 
@@ -43,8 +44,10 @@ zx_status_t sysconfig_sync_client_create(int devfs_root, sysconfig_sync_client_t
   return ZX_OK;
 }
 
+__EXPORT
 void sysconfig_sync_client_free(sysconfig_sync_client_t* client) { delete client; }
 
+__EXPORT
 zx_status_t sysconfig_write_partition(sysconfig_sync_client_t* client,
                                       sysconfig_partition_t partition, zx_handle_t vmo,
                                       zx_off_t vmo_offset) {
@@ -52,6 +55,7 @@ zx_status_t sysconfig_write_partition(sysconfig_sync_client_t* client,
                                             vmo_offset);
 }
 
+__EXPORT
 zx_status_t sysconfig_read_partition(sysconfig_sync_client_t* client,
                                      sysconfig_partition_t partition, zx_handle_t vmo,
                                      zx_off_t vmo_offset) {
@@ -59,6 +63,7 @@ zx_status_t sysconfig_read_partition(sysconfig_sync_client_t* client,
                                             vmo_offset);
 }
 
+__EXPORT
 size_t sysconfig_get_partition_size(sysconfig_sync_client_t* client,
                                     sysconfig_partition_t partition) {
   return client->cpp_client->GetPartitionSize(Translate(partition));

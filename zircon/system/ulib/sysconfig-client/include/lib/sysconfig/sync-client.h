@@ -20,7 +20,7 @@ namespace sysconfig {
 //
 // The class takes into account differences that may appear in partition layout between various
 // device's sysconfig partitions.
-class SyncClient {
+class __EXPORT SyncClient {
  public:
   // The sub partitions of the sysconfig partition.
   enum class PartitionType {
