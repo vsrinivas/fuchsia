@@ -2238,71 +2238,82 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
 
   Guard<fbl::Mutex> guard{&lock_};
 
-  // are we uncached? abort in this case
-  if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Test if in range. If we block on a page request, then it's possible for the
-  // size to change. If that happens, then any out-of-bounds reads will be caught
-  // by GetPageLocked.
   uint64_t end_offset;
-  if (add_overflow(offset, len, &end_offset) || end_offset > size_) {
+  if (add_overflow(offset, len, &end_offset)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // Walk the list of pages and do the read/write. This is performed in
-  // a loop to deal with blocking on asynchronous page requests.
+  // Declare a lambda that will check any object properties we require to be true. We place these
+  // in a lambda so that we can perform them any time the lock is dropped.
+  auto check = [this, &end_offset]() -> zx_status_t {
+    AssertHeld(lock_);
+    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+      return ZX_ERR_BAD_STATE;
+    }
+    if (end_offset > size_) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    return ZX_OK;
+  };
+
+  // Perform initial check.
+  if (zx_status_t status = check(); status != ZX_OK) {
+    return status;
+  }
+
+  // Track our two offsets.
   uint64_t src_offset = offset;
   size_t dest_offset = 0;
-  PageRequest page_request;
-  bool need_retry = false;
-  do {
-    if (need_retry) {
-      // If we looped because of an asynchronous page request, block on it
-      // outside the lock and then resume reading/writing.
-      zx_status_t status;
+  while (len > 0) {
+    const size_t page_offset = src_offset % PAGE_SIZE;
+    const size_t tocopy = fbl::min(PAGE_SIZE - page_offset, len);
+
+    // fault in the page
+    PageRequest page_request;
+    paddr_t pa;
+    zx_status_t status =
+        GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr,
+                      &page_request, nullptr, &pa);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      // Must block on asynchronous page requests whilst not holding the lock.
       guard.CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
       if (status != ZX_OK) {
         return status;
       }
-      need_retry = false;
-    }
-
-    while (len > 0) {
-      size_t page_offset = src_offset % PAGE_SIZE;
-      size_t tocopy = fbl::min(PAGE_SIZE - page_offset, len);
-
-      // fault in the page
-      paddr_t pa;
-      auto status =
-          GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr,
-                        &page_request, nullptr, &pa);
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        need_retry = true;
-        break;
-      } else if (status != ZX_OK) {
-        return status;
-      }
-
-      // compute the kernel mapping of this page
-      uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_physmap(pa));
-
-      // call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
-      // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
-      // As the copyfunc is allowed to drop the lock we must always go back around the loop even
-      // if we don't advance the copy location in order to re-establish the invariants.
-      auto err = copyfunc(page_ptr + page_offset, dest_offset, tocopy, &guard);
-      if (err == ZX_OK) {
-        // Advance the copy location
-        src_offset += tocopy;
-        dest_offset += tocopy;
-        len -= tocopy;
-      } else if (err != ZX_ERR_SHOULD_WAIT) {
-        return err;
+      // Recheck properties and if all is good go back to the top of the loop to attempt to fault in
+      // the page again.
+      status = check();
+      if (status == ZX_OK) {
+        continue;
       }
     }
-  } while (need_retry);
+    if (status != ZX_OK) {
+      return status;
+    }
+    // Compute the kernel mapping of this page.
+    uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_physmap(pa));
+
+    // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
+    // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
+    status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, &guard);
+
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      // Recheck properties. If all is good we cannot simply retry the copy as the underlying page
+      // could have changed, so we retry the loop from the top.
+      status = check();
+      if (status == ZX_OK) {
+        continue;
+      }
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Advance the copy location.
+    src_offset += tocopy;
+    dest_offset += tocopy;
+    len -= tocopy;
+  }
 
   return ZX_OK;
 }
