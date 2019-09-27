@@ -36,7 +36,7 @@ log = { version = "0.4.4", features = ["std"] }
 matches = "0.1.8"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
-parking_lot = "0.7.1"
+parking_lot = "0.9"
 paste = "0.1"
 percent-encoding = "2.1"
 pest = "2.1"

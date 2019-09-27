@@ -1,10 +1,33 @@
 #![cfg_attr(not(any(test, feature = "use_std")), no_std)]
+#![doc(html_root_url = "https://docs.rs/scopeguard/1/")]
 
 //! A scope guard will run a given closure when it goes out of scope,
 //! even if the code between panics.
 //! (as long as panic doesn't abort)
 //!
 //! # Examples
+//!
+//! ## Hello World
+//!
+//! This example creates a scope guard with an example function:
+//!
+//! ```
+//! extern crate scopeguard;
+//!
+//! fn f() {
+//!     let _guard = scopeguard::guard((), |_| {
+//!         println!("Hello Scope Exit!");
+//!     });
+//!
+//!     // rest of the code here.
+//!
+//!     // Here, at the end of `_guard`'s scope, the guard's closure is called.
+//!     // It is also called if we exit this scope through unwinding instead.
+//! }
+//! # fn main() {
+//! #    f();
+//! # }
+//! ```
 //!
 //! ## `defer!`
 //!
@@ -51,8 +74,16 @@
 //! ```
 //! extern crate scopeguard;
 //! 
-//! use std::fs::File;
+//! use std::fs::*;
 //! use std::io::{self, Write};
+//! # // Mock file so that we don't actually write a file
+//! # struct MockFile;
+//! # impl MockFile {
+//! #     fn create(_s: &str) -> io::Result<Self> { Ok(MockFile) }
+//! #     fn write_all(&self, _b: &[u8]) -> io::Result<()> { Ok(()) }
+//! #     fn sync_all(&self) -> io::Result<()> { Ok(()) }
+//! # }
+//! # use self::MockFile as File;
 //! 
 //! fn try_main() -> io::Result<()> {
 //!     let f = File::create("newfile.txt")?;
@@ -61,7 +92,7 @@
 //!         let _ = f.sync_all();
 //!     });
 //!     // Access the file through the scope guard itself
-//!     file.write(b"test me\n").map(|_| ())
+//!     file.write_all(b"test me\n").map(|_| ())
 //! }
 //!
 //! fn main() {
@@ -143,19 +174,30 @@
 //! ```
 //!
 //!
-//! # Crate features:
+//! # Crate Features
 //!
 //! - `use_std`
-//!   + Enabled by default. Enables the `OnUnwind` strategy.
+//!   + Enabled by default. Enables the `OnUnwind` and `OnSuccess` strategies.
 //!   + Disable to use `no_std`.
+//!
+//! # Rust Version
+//!
+//! This version of the crate requires Rust 1.20 or later.
+//!
+//! The scopeguard 1.x release series will use a carefully considered version
+//! upgrade policy, where in a later 1.x version, we will raise the minimum
+//! required Rust version.
 
 #[cfg(not(any(test, feature = "use_std")))]
 extern crate core as std;
 
 use std::fmt;
 use std::marker::PhantomData;
+use std::mem::{self, ManuallyDrop};
 use std::ops::{Deref, DerefMut};
+use std::ptr;
 
+/// Controls in which cases the associated code should be run
 pub trait Strategy {
     /// Return `true` if the guard’s associated code should run
     /// (in the context where this method is called).
@@ -182,8 +224,7 @@ pub enum OnUnwind {}
 /// Requires crate feature `use_std`.
 #[cfg(feature = "use_std")]
 #[derive(Debug)]
-#[cfg(test)]
-enum OnSuccess {}
+pub enum OnSuccess {}
 
 impl Strategy for Always {
     #[inline(always)]
@@ -192,14 +233,13 @@ impl Strategy for Always {
 
 #[cfg(feature = "use_std")]
 impl Strategy for OnUnwind {
-    #[inline(always)]
+    #[inline]
     fn should_run() -> bool { std::thread::panicking() }
 }
 
 #[cfg(feature = "use_std")]
-#[cfg(test)]
 impl Strategy for OnSuccess {
-    #[inline(always)]
+    #[inline]
     fn should_run() -> bool { !std::thread::panicking() }
 }
 
@@ -211,7 +251,7 @@ impl Strategy for OnSuccess {
 #[macro_export]
 macro_rules! defer {
     ($e:expr) => {
-        let _guard = $crate::guard((), |_| $e);
+        let _guard = $crate::guard((), |()| $e);
     }
 }
 
@@ -222,10 +262,11 @@ macro_rules! defer {
 /// be a whole block.
 ///
 /// Requires crate feature `use_std`.
-#[cfg(test)]
+#[cfg(feature = "use_std")]
+#[macro_export]
 macro_rules! defer_on_success {
     ($e:expr) => {
-        let _guard = $crate::guard_on_success((), |_| $e);
+        let _guard = $crate::guard_on_success((), |()| $e);
     }
 }
 
@@ -236,10 +277,11 @@ macro_rules! defer_on_success {
 /// be a whole block.
 ///
 /// Requires crate feature `use_std`.
+#[cfg(feature = "use_std")]
 #[macro_export]
 macro_rules! defer_on_unwind {
     ($e:expr) => {
-        let _guard = $crate::guard_on_unwind((), |_| $e);
+        let _guard = $crate::guard_on_unwind((), |()| $e);
     }
 }
 
@@ -253,19 +295,20 @@ macro_rules! defer_on_unwind {
 /// The `S` parameter for [`Strategy`](Strategy.t.html) determines if
 /// the closure actually runs.
 ///
-/// The guard's closure will be called with a mut ref to the held value
-/// in the destructor. It's called only once.
+/// The guard's closure will be called with the held value in the destructor.
 ///
 /// The `ScopeGuard` implements `Deref` so that you can access the inner value.
-pub struct ScopeGuard<T, F, S: Strategy = Always>
-    where F: FnMut(&mut T)
+pub struct ScopeGuard<T, F, S = Always>
+    where F: FnOnce(T),
+          S: Strategy,
 {
-    __dropfn: F,
-    __value: T,
-    strategy: PhantomData<S>,
+    value: ManuallyDrop<T>,
+    dropfn: ManuallyDrop<F>,
+    strategy: PhantomData<fn(S) -> S>,
 }
+
 impl<T, F, S> ScopeGuard<T, F, S>
-    where F: FnMut(&mut T),
+    where F: FnOnce(T),
           S: Strategy,
 {
     /// Create a `ScopeGuard` that owns `v` (accessible through deref) and calls
@@ -275,9 +318,46 @@ impl<T, F, S> ScopeGuard<T, F, S>
     #[inline]
     pub fn with_strategy(v: T, dropfn: F) -> ScopeGuard<T, F, S> {
         ScopeGuard {
-            __value: v,
-            __dropfn: dropfn,
+            value: ManuallyDrop::new(v),
+            dropfn: ManuallyDrop::new(dropfn),
             strategy: PhantomData,
+        }
+    }
+
+    /// “Defuse” the guard and extract the value without calling the closure.
+    ///
+    /// ```
+    /// extern crate scopeguard;
+    /// use scopeguard::{guard, ScopeGuard};
+    ///
+    /// fn conditional() -> bool { true }
+    ///
+    /// fn main() {
+    ///     let mut guard = guard(Vec::new(), |mut v| v.clear());
+    ///     guard.push(1);
+    ///     
+    ///     if conditional() {
+    ///         // a condition maybe makes us decide to
+    ///         // “defuse” the guard and get back its inner parts
+    ///         let value = ScopeGuard::into_inner(guard);
+    ///     } else {
+    ///         // guard still exists in this branch
+    ///     }
+    /// }
+    /// ```
+    #[inline]
+    pub fn into_inner(guard: Self) -> T {
+        // Cannot pattern match out of Drop-implementing types, so
+        // ptr::read the value and forget the guard.
+        unsafe {
+            let value = ptr::read(&*guard.value);
+            // read the closure so that it is dropped, and assign it to a local
+            // variable to ensure that it is only dropped after the guard has
+            // been forgotten. (In case the Drop impl of the closure, or that
+            // of any consumed captured variable, panics).
+            let _dropfn = ptr::read(&*guard.dropfn);
+            mem::forget(guard);
+            value
         }
     }
 }
@@ -286,7 +366,7 @@ impl<T, F, S> ScopeGuard<T, F, S>
 /// Create a new `ScopeGuard` owning `v` and with deferred closure `dropfn`.
 #[inline]
 pub fn guard<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, Always>
-    where F: FnMut(&mut T)
+    where F: FnOnce(T)
 {
     ScopeGuard::with_strategy(v, dropfn)
 }
@@ -295,10 +375,9 @@ pub fn guard<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, Always>
 ///
 /// Requires crate feature `use_std`.
 #[cfg(feature = "use_std")]
-#[cfg(test)]
 #[inline]
-fn guard_on_success<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, OnSuccess>
-    where F: FnMut(&mut T)
+pub fn guard_on_success<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, OnSuccess>
+    where F: FnOnce(T)
 {
     ScopeGuard::with_strategy(v, dropfn)
 }
@@ -306,56 +385,97 @@ fn guard_on_success<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, OnSuccess>
 /// Create a new `ScopeGuard` owning `v` and with deferred closure `dropfn`.
 ///
 /// Requires crate feature `use_std`.
+///
+/// ## Examples
+///
+/// For performance reasons, or to emulate “only run guard on unwind” in
+/// no-std environments, we can also use the default guard and simply manually
+/// defuse it at the end of scope like the following example. (The performance
+/// reason would be if the [`OnUnwind`]'s call to [std::thread::panicking()] is
+/// an issue.)
+///
+/// ```
+/// extern crate scopeguard;
+/// 
+/// use scopeguard::ScopeGuard;
+/// # fn main() {
+/// {
+///     let guard = scopeguard::guard((), |_| { });
+///
+///     // rest of the code here
+///     
+///     // we reached the end of scope without unwinding - defuse it
+///     ScopeGuard::into_inner(guard);
+/// }
+/// # }
+/// ```
 #[cfg(feature = "use_std")]
 #[inline]
 pub fn guard_on_unwind<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, OnUnwind>
-    where F: FnMut(&mut T)
+    where F: FnOnce(T)
 {
     ScopeGuard::with_strategy(v, dropfn)
 }
 
-impl<T, F, S: Strategy> Deref for ScopeGuard<T, F, S>
-    where F: FnMut(&mut T)
+// ScopeGuard can be Sync even if F isn't because the closure is
+// not accessible from references.
+// The guard does not store any instance of S, so it is also irellevant.
+unsafe impl<T, F, S> Sync for ScopeGuard<T, F, S>
+    where T: Sync,
+          F: FnOnce(T),
+          S: Strategy
+{ }
+
+impl<T, F, S> Deref for ScopeGuard<T, F, S>
+    where F: FnOnce(T),
+          S: Strategy
 {
     type Target = T;
     fn deref(&self) -> &T {
-        &self.__value
+        &*self.value
     }
-
 }
 
-impl<T, F, S: Strategy> DerefMut for ScopeGuard<T, F, S>
-    where F: FnMut(&mut T)
+impl<T, F, S> DerefMut for ScopeGuard<T, F, S>
+    where F: FnOnce(T),
+          S: Strategy
 {
     fn deref_mut(&mut self) -> &mut T {
-        &mut self.__value
+        &mut*self.value
     }
 }
 
-impl<T, F, S: Strategy> Drop for ScopeGuard<T, F, S>
-    where F: FnMut(&mut T)
+impl<T, F, S> Drop for ScopeGuard<T, F, S>
+    where F: FnOnce(T),
+          S: Strategy
 {
     fn drop(&mut self) {
+        // This is OK because the fields are `ManuallyDrop`s
+        // which will not be dropped by the compiler.
+        let (value, dropfn) = unsafe {
+            (ptr::read(&*self.value), ptr::read(&*self.dropfn))
+        };
         if S::should_run() {
-            (self.__dropfn)(&mut self.__value)
+            dropfn(value);
         }
     }
 }
 
 impl<T, F, S> fmt::Debug for ScopeGuard<T, F, S>
     where T: fmt::Debug,
-          F: FnMut(&mut T),
-          S: Strategy + fmt::Debug,
+          F: FnOnce(T),
+          S: Strategy
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("ScopeGuard")
-         .field("value", &self.__value)
+        f.debug_struct(stringify!(ScopeGuard))
+         .field("value", &*self.value)
          .finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::cell::Cell;
     use std::panic::catch_unwind;
     use std::panic::AssertUnwindSafe;
@@ -367,6 +487,7 @@ mod tests {
         assert_eq!(drops.get(), 0);
     }
 
+    #[cfg(feature = "use_std")]
     #[test]
     fn test_defer_success_1() {
         let drops = Cell::new(0);
@@ -377,6 +498,7 @@ mod tests {
         assert_eq!(drops.get(), 1);
     }
 
+    #[cfg(feature = "use_std")]
     #[test]
     fn test_defer_success_2() {
         let drops = Cell::new(0);
@@ -387,6 +509,7 @@ mod tests {
         assert_eq!(drops.get(), 0);
     }
 
+    #[cfg(feature = "use_std")]
     #[test]
     fn test_defer_unwind_1() {
         let drops = Cell::new(0);
@@ -398,6 +521,7 @@ mod tests {
         assert_eq!(drops.get(), 1);
     }
 
+    #[cfg(feature = "use_std")]
     #[test]
     fn test_defer_unwind_2() {
         let drops = Cell::new(0);
@@ -405,5 +529,50 @@ mod tests {
             defer_on_unwind!(drops.set(1));
         }
         assert_eq!(drops.get(), 0);
+    }
+
+    #[test]
+    fn test_only_dropped_by_closure_when_run() {
+        let value_drops = Cell::new(0);
+        let value = guard((), |()| value_drops.set(1 + value_drops.get()));
+        let closure_drops = Cell::new(0);
+        let guard = guard(value, |_| closure_drops.set(1 + closure_drops.get()));
+        assert_eq!(value_drops.get(), 0);
+        assert_eq!(closure_drops.get(), 0);
+        drop(guard);
+        assert_eq!(value_drops.get(), 1);
+        assert_eq!(closure_drops.get(), 1);
+    }
+
+    #[cfg(feature = "use_std")]
+    #[test]
+    fn test_dropped_once_when_not_run() {
+        let value_drops = Cell::new(0);
+        let value = guard((), |()| value_drops.set(1 + value_drops.get()));
+        let captured_drops = Cell::new(0);
+        let captured = guard((), |()| captured_drops.set(1 + captured_drops.get()));
+        let closure_drops = Cell::new(0);
+        let guard = guard_on_unwind(value, |value| {
+            drop(value);
+            drop(captured);
+            closure_drops.set(1 + closure_drops.get())
+        });
+        assert_eq!(value_drops.get(), 0);
+        assert_eq!(captured_drops.get(), 0);
+        assert_eq!(closure_drops.get(), 0);
+        drop(guard);
+        assert_eq!(value_drops.get(), 1);
+        assert_eq!(captured_drops.get(), 1);
+        assert_eq!(closure_drops.get(), 0);
+    }
+
+    #[test]
+    fn test_into_inner() {
+        let dropped = Cell::new(false);
+        let value = guard(42, |_| dropped.set(true));
+        let guard = guard(value, |_| dropped.set(true));
+        let inner = ScopeGuard::into_inner(guard);
+        assert_eq!(dropped.get(), false);
+        assert_eq!(*inner, 42);
     }
 }

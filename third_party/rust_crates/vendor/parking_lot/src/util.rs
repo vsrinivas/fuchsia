@@ -22,22 +22,21 @@ impl<T> UncheckedOptionExt<T> for Option<T> {
     }
 }
 
-// Equivalent to intrinsics::unreachable() in release mode
+// hint::unreachable_unchecked() in release mode
 #[inline]
 unsafe fn unreachable() -> ! {
     if cfg!(debug_assertions) {
         unreachable!();
     } else {
-        enum Void {}
-        match *(1 as *const Void) {}
+        core::hint::unreachable_unchecked()
     }
 }
 
 #[inline]
 pub fn to_deadline(timeout: Duration) -> Option<Instant> {
-    #[cfg(feature = "nightly")]
+    #[cfg(has_checked_instant)]
     let deadline = Instant::now().checked_add(timeout);
-    #[cfg(not(feature = "nightly"))]
+    #[cfg(not(has_checked_instant))]
     let deadline = Some(Instant::now() + timeout);
 
     deadline

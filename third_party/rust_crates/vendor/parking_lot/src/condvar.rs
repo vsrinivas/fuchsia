@@ -5,15 +5,16 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use deadlock;
+use crate::mutex::MutexGuard;
+use crate::raw_mutex::{RawMutex, TOKEN_HANDOFF, TOKEN_NORMAL};
+use crate::{deadlock, util};
+use core::{
+    fmt, ptr,
+    sync::atomic::{AtomicPtr, Ordering},
+};
 use lock_api::RawMutex as RawMutexTrait;
-use mutex::MutexGuard;
 use parking_lot_core::{self, ParkResult, RequeueOp, UnparkResult, DEFAULT_PARK_TOKEN};
-use raw_mutex::{RawMutex, TOKEN_HANDOFF, TOKEN_NORMAL};
-use std::sync::atomic::{AtomicPtr, Ordering};
 use std::time::{Duration, Instant};
-use std::{fmt, ptr};
-use util;
 
 /// A type indicating whether a timed wait on a condition variable returned
 /// due to a time out or not.
@@ -88,22 +89,9 @@ pub struct Condvar {
 impl Condvar {
     /// Creates a new condition variable which is ready to be waited on and
     /// notified.
-    #[cfg(feature = "nightly")]
     #[inline]
     pub const fn new() -> Condvar {
-        Condvar {
-            state: AtomicPtr::new(ptr::null_mut()),
-        }
-    }
-
-    /// Creates a new condition variable which is ready to be waited on and
-    /// notified.
-    #[cfg(not(feature = "nightly"))]
-    #[inline]
-    pub fn new() -> Condvar {
-        Condvar {
-            state: AtomicPtr::new(ptr::null_mut()),
-        }
+        Condvar { state: AtomicPtr::new(ptr::null_mut()) }
     }
 
     /// Wakes up one blocked thread on this condvar.
@@ -141,7 +129,6 @@ impl Condvar {
     }
 
     #[cold]
-    #[inline(never)]
     fn notify_one_slow(&self, mutex: *mut RawMutex) -> bool {
         unsafe {
             // Unpark one thread and requeue the rest onto the mutex
@@ -203,7 +190,6 @@ impl Condvar {
     }
 
     #[cold]
-    #[inline(never)]
     fn notify_all_slow(&self, mutex: *mut RawMutex) -> usize {
         unsafe {
             // Unpark one thread and requeue the rest onto the mutex
@@ -263,7 +249,7 @@ impl Condvar {
     /// This function will panic if another thread is waiting on the `Condvar`
     /// with a different `Mutex` object.
     #[inline]
-    pub fn wait<T: ?Sized>(&self, mutex_guard: &mut MutexGuard<T>) {
+    pub fn wait<T: ?Sized>(&self, mutex_guard: &mut MutexGuard<'_, T>) {
         self.wait_until_internal(unsafe { MutexGuard::mutex(mutex_guard).raw() }, None);
     }
 
@@ -293,13 +279,10 @@ impl Condvar {
     #[inline]
     pub fn wait_until<T: ?Sized>(
         &self,
-        mutex_guard: &mut MutexGuard<T>,
+        mutex_guard: &mut MutexGuard<'_, T>,
         timeout: Instant,
     ) -> WaitTimeoutResult {
-        self.wait_until_internal(
-            unsafe { MutexGuard::mutex(mutex_guard).raw() },
-            Some(timeout),
-        )
+        self.wait_until_internal(unsafe { MutexGuard::mutex(mutex_guard).raw() }, Some(timeout))
     }
 
     // This is a non-generic function to reduce the monomorphization cost of
@@ -397,7 +380,7 @@ impl Condvar {
     #[inline]
     pub fn wait_for<T: ?Sized>(
         &self,
-        mutex_guard: &mut MutexGuard<T>,
+        mutex_guard: &mut MutexGuard<'_, T>,
         timeout: Duration,
     ) -> WaitTimeoutResult {
         let deadline = util::to_deadline(timeout);
@@ -413,18 +396,18 @@ impl Default for Condvar {
 }
 
 impl fmt::Debug for Condvar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.pad("Condvar { .. }")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{Condvar, Mutex, MutexGuard};
     use std::sync::mpsc::channel;
     use std::sync::Arc;
     use std::thread;
     use std::time::{Duration, Instant};
-    use {Condvar, Mutex};
 
     #[test]
     fn smoke() {
@@ -590,10 +573,8 @@ mod tests {
             let _g = m2.lock();
             c2.notify_one();
         });
-        let timeout_res = c.wait_until(
-            &mut g,
-            Instant::now() + Duration::from_millis(u32::max_value() as u64),
-        );
+        let timeout_res =
+            c.wait_until(&mut g, Instant::now() + Duration::from_millis(u32::max_value() as u64));
         assert!(!timeout_res.timed_out());
         drop(g);
     }
@@ -668,10 +649,35 @@ mod tests {
         let mut g = m.lock();
         while !c.notify_one() {
             // Wait for the thread to get into wait()
-            ::MutexGuard::bump(&mut g);
+            MutexGuard::bump(&mut g);
         }
         // The thread should have been requeued to the mutex, which we wake up now.
         drop(g);
         t.join().unwrap();
+    }
+
+    #[test]
+    fn test_issue_129() {
+        let locks = Arc::new((Mutex::new(()), Condvar::new()));
+
+        let (tx, rx) = channel();
+        for _ in 0..4 {
+            let locks = locks.clone();
+            let tx = tx.clone();
+            thread::spawn(move || {
+                let mut guard = locks.0.lock();
+                locks.1.wait(&mut guard);
+                locks.1.wait_for(&mut guard, Duration::from_millis(1));
+                locks.1.notify_one();
+                tx.send(()).unwrap();
+            });
+        }
+
+        thread::sleep(Duration::from_millis(100));
+        locks.1.notify_one();
+
+        for _ in 0..4 {
+            assert_eq!(rx.recv_timeout(Duration::from_millis(500)), Ok(()));
+        }
     }
 }
