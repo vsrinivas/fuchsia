@@ -102,22 +102,22 @@ source_set("core") {
   deps = [
     ":debug",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/public/lib/ddk",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
   public_deps = [
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
 
     # TODO: we should try to refactor Device so this isn't required outside of the :sim target
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
@@ -153,19 +153,19 @@ source_set("sdio") {
   ]
   deps = [
     ":debug",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
+    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/public",
   ]
   public_deps = [
     ":core",
     ":firmware",
     ":linuxisms",
+    "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.sdio",
-    "//zircon/public/lib/ddk",
   ]
 }
 
@@ -223,31 +223,31 @@ source_set("driver_test") {
 if (internal_access) {
   # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
   if (board_name == "astro") {
-   copy("brcmfmac-firmware-copy") {
-     sources = [
-       "firmware/brcmfmac43455-sdio.bin",
-       "firmware/brcmfmac43455-sdio.txt",
-     ]
-     outputs = [
-       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
-     ]
-   }
+    copy("brcmfmac-firmware-copy") {
+      sources = [
+        "firmware/brcmfmac43455-sdio.bin",
+        "firmware/brcmfmac43455-sdio.txt",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+      ]
+    }
   } else {
-   copy("brcmfmac-firmware-copy") {
-     sources = [
-       "firmware/brcmfmac43242a.bin",
-       "firmware/brcmfmac43455-sdio.bin",
-       "firmware/brcmfmac43455-sdio.txt",
-       "firmware/brcmfmac4356-pcie.bin",
-       "firmware/brcmfmac4356-sdio.bin",
-       "firmware/brcmfmac4356-sdio.txt",
-       "firmware/brcmfmac4359-sdio.bin",
-       "firmware/brcmfmac4359-sdio.txt",
-     ]
-     outputs = [
-       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
-     ]
-   }
+    copy("brcmfmac-firmware-copy") {
+      sources = [
+        "firmware/brcmfmac43242a.bin",
+        "firmware/brcmfmac43455-sdio.bin",
+        "firmware/brcmfmac43455-sdio.txt",
+        "firmware/brcmfmac4356-pcie.bin",
+        "firmware/brcmfmac4356-sdio.bin",
+        "firmware/brcmfmac4356-sdio.txt",
+        "firmware/brcmfmac4359-sdio.bin",
+        "firmware/brcmfmac4359-sdio.txt",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+      ]
+    }
   }
 }
 
