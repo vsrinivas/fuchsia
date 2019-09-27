@@ -4,11 +4,11 @@
 
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, is_hash, is_name};
+use percent_encoding::{self, percent_decode};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
 use std::fmt;
 use std::str;
-use url::percent_encoding::percent_decode;
 use url::{Host, Url};
 
 /// Decoded representation of a fuchsia-pkg URL.
@@ -199,14 +199,7 @@ impl fmt::Display for PkgUrl {
         }
 
         if let Some(ref resource) = self.resource {
-            write!(
-                f,
-                "#{}",
-                url::percent_encoding::utf8_percent_encode(
-                    resource,
-                    url::percent_encoding::DEFAULT_ENCODE_SET
-                )
-            )?;
+            write!(f, "#{}", percent_encoding::utf8_percent_encode(resource, crate::FRAGMENT))?;
         }
 
         Ok(())
@@ -752,9 +745,9 @@ mod tests {
                 "fuchsia.com".to_string(),
                 "/fonts".to_string(),
                 None,
-                "foo#bar".to_string(),
+                "foo<>bar".to_string(),
             ).unwrap(),
-            formatted = "fuchsia-pkg://fuchsia.com/fonts#foo%23bar",
+            formatted = "fuchsia-pkg://fuchsia.com/fonts#foo%3C%3Ebar",
         }
     }
 

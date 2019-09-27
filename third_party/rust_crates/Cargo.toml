@@ -38,6 +38,7 @@ memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 parking_lot = "0.7.1"
 paste = "0.1"
+percent-encoding = "2.1"
 pest = "2.1"
 pest_derive = "2.1"
 png = "0.14" # saved for future use

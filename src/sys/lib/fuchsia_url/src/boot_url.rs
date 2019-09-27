@@ -4,8 +4,8 @@
 
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, is_name};
+use percent_encoding::percent_decode;
 use std::fmt;
-use url::percent_encoding::percent_decode;
 use url::Url;
 
 /// Decoded representation of a fuchsia-boot URL.
@@ -99,14 +99,7 @@ impl fmt::Display for BootUrl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "fuchsia-boot://{}", self.path)?;
         if let Some(ref resource) = self.resource {
-            write!(
-                f,
-                "#{}",
-                url::percent_encoding::utf8_percent_encode(
-                    resource,
-                    url::percent_encoding::DEFAULT_ENCODE_SET
-                )
-            )?;
+            write!(f, "#{}", percent_encoding::utf8_percent_encode(resource, crate::FRAGMENT))?;
         }
 
         Ok(())

@@ -261,6 +261,11 @@
             "package_name": "paste"
         },
         {
+            "crate_name": "percent_encoding",
+            "crate_type": "lib",
+            "package_name": "percent-encoding"
+        },
+        {
             "crate_name": "pest",
             "crate_type": "lib",
             "package_name": "pest"
@@ -651,6 +656,11 @@
             "crate_name": "paste",
             "crate_type": "lib",
             "package_name": "paste"
+        },
+        {
+            "crate_name": "percent_encoding",
+            "crate_type": "lib",
+            "package_name": "percent-encoding"
         },
         {
             "crate_name": "pest",
