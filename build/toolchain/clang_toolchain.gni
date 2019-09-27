@@ -98,8 +98,9 @@ template("clang_toolchain") {
         strip = "xcrun strip -Sx"
       } else {
         strip = "${prefix}/llvm-objcopy"
-        buildidtool = rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
-                                  root_build_dir)
+        buildidtool = rebase_path(
+                "//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
+                root_build_dir)
       }
     }
 
@@ -572,11 +573,18 @@ set_defaults("clang_toolchain_suite") {
 }
 
 template("clang_host_toolchain_suite") {
-  not_needed([ "invoker" ])
   clang_toolchain_suite(target_name) {
-    toolchain_cpu = host_cpu
-    toolchain_os = host_os
-
+    forward_variables_from(invoker,
+                           [
+                             "toolchain_os",
+                             "toolchain_cpu",
+                           ])
+    if (!defined(toolchain_cpu)) {
+      toolchain_cpu = host_cpu
+    }
+    if (!defined(toolchain_os)) {
+      toolchain_os = host_os
+    }
     with_shared = false
     use_strip = true
   }

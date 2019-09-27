@@ -19,7 +19,11 @@ pool("link") {
   depth = concurrent_link_jobs
 }
 
-clang_host_toolchain_suite("host_${host_cpu}") {
+clang_host_toolchain_suite("host_x64") {
+  toolchain_cpu = "x64"
+}
+clang_host_toolchain_suite("host_arm64") {
+  toolchain_cpu = "arm64"
 }
 
 clang_toolchain_suite("linux_x64") {
