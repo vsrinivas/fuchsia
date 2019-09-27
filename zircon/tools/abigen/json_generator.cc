@@ -81,7 +81,14 @@ bool JsonGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     os << "          \"type\": \"" << arg.type << "\",\n";
 
     // Array spec.
-    os << "          \"is_array\": " << (arg.arr_spec ? "true" : "false") << ",\n";
+    os << "          \"is_array\": " << (arg.arr_spec ? "true" : "false") << "\n";
+
+    // The .json output is currently only used by the syscall documentation updater, and it doesn't
+    // use the array counts nor the argument attributes. Because there's slight differences (e.g.
+    // kazoo would list all out parameters with OUT, whereas abigen only outputs the ones that are
+    // explicitly tagged as OUT in the syscalls.abigen, we temporarily disable this part of the
+    // output, so that kazoo and abigen's output is identical.
+#if 0
     if (arg.arr_spec) {
       if (arg.arr_spec->count) {
         os << "          \"array_count\": " << arg.arr_spec->count << ",\n";
@@ -109,6 +116,7 @@ bool JsonGenerator::syscall(std::ofstream& os, const Syscall& sc) {
       os << "\n";
     }
     os << "          ]\n";
+#endif
     os << "        }";
   });
   if (has_args) {

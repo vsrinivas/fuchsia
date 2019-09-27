@@ -234,6 +234,7 @@ class Syscall {
   bool is_noreturn() const { return is_noreturn_; }
   const Struct& request() const { return request_; }
   const Struct& response() const { return response_; }
+  const std::vector<std::string>& rights_specs() const { return rights_specs_; }
 
   bool HasAttribute(const char* attrib_name) const;
   std::string GetAttribute(const char* attrib_name) const;
@@ -256,6 +257,7 @@ class Syscall {
   std::map<std::string, std::string> attributes_;
   Struct request_;
   Struct response_;
+  std::vector<std::string> rights_specs_;
 
   // request_ and response_ mapped to C/Kernel-style call style.
   Type kernel_return_type_;

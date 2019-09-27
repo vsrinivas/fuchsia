@@ -59,11 +59,34 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
   }
   for (const auto& attrib : method["maybe_attributes"].GetArray()) {
     if (attrib.GetObject()["name"].Get<std::string>() == "Doc") {
-      return fxl::TrimString(fxl::StringView(attrib.GetObject()["value"].GetString()), " \t\n")
-          .ToString();
+      return attrib.GetObject()["value"].GetString();
     }
   }
   return std::string();
+}
+
+constexpr char kRightsPrefix[] = " Rights: ";
+
+std::string GetShortDescriptionFromDocAttribute(const std::string& full_doc_attribute) {
+  auto lines = fxl::SplitStringCopy(fxl::StringView(full_doc_attribute), "\n", fxl::kKeepWhitespace,
+                                    fxl::kSplitWantAll);
+  if (lines.size() < 1 || lines[0].substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
+    return std::string();
+  }
+  return fxl::TrimString(lines[0], " \t\n").ToString();
+}
+
+std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_doc_attribute) {
+  auto lines = fxl::SplitStringCopy(fxl::StringView(full_doc_attribute), "\n", fxl::kKeepWhitespace,
+                                    fxl::kSplitWantAll);
+  std::vector<std::string> ret;
+  for (const auto& line : lines) {
+    if (line.substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
+      ret.push_back(line.substr(strlen(kRightsPrefix)));
+    }
+  }
+
+  return ret;
 }
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
@@ -221,33 +244,35 @@ bool Syscall::MapRequestResponseToKernelAbi() {
 
   // Similarly for the outputs, but turning buffers into outparams, and with special handling for
   // the C return value.
-  if (response_.members().size() == 0) {
+  size_t start_at;
+  if (response_.members().size() == 0 || !response_.members()[0].type().IsSimpleType()) {
     kernel_return_type_ = Type(TypeVoid{});
+    start_at = 0;
   } else {
     kernel_return_type_ = response_.members()[0].type();
-    FXL_CHECK(kernel_return_type_.IsSimpleType());
-    for (size_t i = 1; i < response_.members().size(); ++i) {
-      const StructMember& m = response_.members()[i];
-      const Type& type = m.type();
-      if (type.IsVector()) {
-        // TODO(syscall-fidl-transition): These vector types aren't marked as non-optional in
-        // abigen, but generally they probably are.
-        Type pointer_to_subtype(
-            TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
-            Constness::kMutable, Optionality::kOutputOptional);
-        kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
-        auto [size_name, is_u32] = get_vector_size_name(m);
-        kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
-      } else if (type.IsString()) {
-        kernel_arguments_.emplace_back(
-            m.name(),
-            Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional));
-        kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
-      } else {
-        // Everything else becomes a T* (to make it an out parameter).
-        kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
-                                                      output_optionality(type.optionality())));
-      }
+    start_at = 1;
+  }
+  for (size_t i = start_at; i < response_.members().size(); ++i) {
+    const StructMember& m = response_.members()[i];
+    const Type& type = m.type();
+    if (type.IsVector()) {
+      // TODO(syscall-fidl-transition): These vector types aren't marked as non-optional in
+      // abigen, but generally they probably are.
+      Type pointer_to_subtype(
+          TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
+          Constness::kMutable, Optionality::kOutputOptional);
+      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
+      auto [size_name, is_u32] = get_vector_size_name(m);
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
+    } else if (type.IsString()) {
+      kernel_arguments_.emplace_back(
+          m.name(),
+          Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional));
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+    } else {
+      // Everything else becomes a T* (to make it an out parameter).
+      kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
+                                                    output_optionality(type.optionality())));
     }
   }
 
@@ -436,7 +461,9 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
       syscall->name_ =
           category + (category.empty() ? "" : "_") + CamelToSnake(method["name"].GetString());
       syscall->is_noreturn_ = !method["has_response"].GetBool();
-      syscall->short_description_ = GetDocAttribute(method);
+      const auto doc_attribute = GetDocAttribute(method);
+      syscall->short_description_ = GetShortDescriptionFromDocAttribute(doc_attribute);
+      syscall->rights_specs_ = GetRightsSpecsFromDocAttribute(doc_attribute);
       if (method.HasMember("maybe_attributes")) {
         for (const auto& attrib : method["maybe_attributes"].GetArray()) {
           syscall->attributes_[attrib["name"].GetString()] = attrib["value"].GetString();
@@ -509,6 +536,8 @@ bool SyscallLibraryLoader::MakeSyscallOrderMatchOldDeclarationOrder(SyscallLibra
       "ticks_per_second",
       "deadline_after",
       "clock_adjust",
+      "ticks_get_via_kernel",
+      "clock_get_monotonic_via_kernel",
       "system_get_dcache_line_size",
       "system_get_num_cpus",
       "system_get_version",

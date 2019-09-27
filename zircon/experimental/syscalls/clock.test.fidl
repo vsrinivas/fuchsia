@@ -20,8 +20,17 @@ protocol Clock {
     Get(clock clock_id) -> (status status, time out);
 
     /// Acquire the current monotonic time.
+    [Vdsocall]
     GetMonotonic() -> (time time);
 
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     Adjust(handle<resource> handle, clock clock_id, int64 offset) -> (status status);
+
+    // Read clock monotonic, but demand that the read be performed using a
+    // syscall, instead of a vdso call.
+    //
+    // See the notes for ticks_get_via_kernel; this is not a syscall meant
+    // to be used by application code.
+    [Internal]
+    GetMonotonicViaKernel() -> (time time);
 };

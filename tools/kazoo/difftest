@@ -27,6 +27,7 @@ out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
 out/default/host_x64/exe.unstripped/kazoo \
   --arm-asm=/tmp/arm-asm.S \
   --category=/tmp/syscall-category.inc \
+  --json=/tmp/definitions.json \
   --kernel-branches=/tmp/kernel-branches.S \
   --kernel-header=/tmp/kernel-header.h \
   --kernel-wrappers=/tmp/kernel-wrappers.inc \
@@ -53,6 +54,11 @@ compare "arm-asm" \
 compare "category" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/lib/userabi/zircon/syscall-category.inc" \
         "/tmp/syscall-category.inc"
+
+# No comments in .json, so no copyright to skip, so just diff inline instead.
+echo "------ json ------"
+diff "out/default.zircon/user.vdso-x64-clang.shlib/gen/kernel/syscalls/zircon/definitions.json" \
+     "/tmp/definitions.json"
 
 compare "kernel-branches" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \

@@ -15,7 +15,7 @@ protocol Cprng {
 
     /// Draw from the kernel's CPRNG.
     [Vdsocall]
-    Draw(mutable_vector_void buffer) -> ();
+    Draw() -> (vector_void buffer);
 
     /// Add entropy to the kernel CPRNG.
     AddEntropy(vector_void buffer) -> (status status);

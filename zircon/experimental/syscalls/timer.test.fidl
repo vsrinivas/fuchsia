@@ -14,10 +14,10 @@ protocol Timer {
     Create(uint32 options, clock clock_id) -> (status status, handle<timer> out);
 
     /// Start a timer.
-    [In0="handle<timer>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
     Set(handle<timer> handle, time deadline, duration slack) -> (status status);
 
     /// Cancel a timer.
-    [In0="handle<timer>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
     Cancel(handle<timer> handle) -> (status status);
 };

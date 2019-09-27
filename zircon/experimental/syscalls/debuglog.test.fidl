@@ -11,12 +11,12 @@ library zz;
 [Transport="Syscall"]
 protocol Debuglog {
     // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     Create(handle<resource> resource, uint32 options) -> (status status, handle<debuglog> out);
 
-    [In0="handle<debuglog>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
     Write(handle<debuglog> handle, uint32 options, vector_void buffer) -> (status status);
 
-    [In0="handle<debuglog>:rights=READ"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
     Read(handle<debuglog> handle, uint32 options) -> (status status, vector_void buffer);
 };

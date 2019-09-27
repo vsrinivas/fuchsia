@@ -135,16 +135,15 @@ protocol Port {
     Create(uint32 options) -> (status status, handle<port> out);
 
     /// Queue a packet to a port.
-    [In0="handle<port>:rights=WRITE",
-     In1="box<PortPacket>"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
     Queue(handle<port> handle, PortPacket packet) -> (status status);
 
     /// Wait for a packet arrival in a port.
-    [Blocking,
-     In0="handle<port>:rights=READ"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
+    [Blocking]
     Wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
 
     /// Cancels async port notifications on an object.
-    [In0="handle<port>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
     Cancel(handle<port> handle, handle source, uint64 key) -> (status status);
 };

@@ -12,11 +12,11 @@ library zz;
 protocol Job {
     // TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new job.
-    [In0="handle<job>:rights=MANAGE_JOB"]
+    /// Rights: parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.
     Create(handle<job> parent_job, uint32 options) -> (status status, handle<job> out);
 
     /// Set job security and resource policies.
-    [In0="handle<job>:rights=SET_POLICY"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.
     SetPolicy(handle<job> handle, uint32 options, uint32 topic, vector_void_u32size policy) ->
         (status status);
 };

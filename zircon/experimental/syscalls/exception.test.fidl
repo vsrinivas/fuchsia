@@ -11,8 +11,10 @@ library zz;
 [Transport="Syscall"]
 protocol Exception {
     /// Create a handle for the exception's thread.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
     GetThread(handle<exception> handle) -> (status status, handle<thread> out);
 
     /// Create a handle for the exception's process.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
     GetProcess(handle<exception> handle) -> (status status, handle<process> out);
 };

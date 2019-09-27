@@ -40,7 +40,7 @@ struct ProfileInfo {
 [Transport="Syscall"]
 protocol Profile {
     /// Create a scheduler profile.
-    [In0="handle<job>:rights=MANAGE_PROCESS"]
+    /// Rights: root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
     Create(handle<job> root_job, uint32 options, ProfileInfo profile) ->
         (status status, handle<profile> out);
 };

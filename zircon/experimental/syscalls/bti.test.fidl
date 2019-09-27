@@ -11,11 +11,17 @@ library zz;
 [Transport="Syscall"]
 protocol Bti {
     /// Create a new bus transaction initiator.
+    /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
+    // TODO(ZX-2967): This is an unusual rights spec.
     Create(handle<iommu> iommu, uint32 options, uint64 bti_id) -> (status status, handle<bti> out);
 
     /// Pin pages and grant devices access to them.
-    [In0="handle<bti>:rights=MAP",
-     In2="handle<vmo>:rights=MAP"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
+    /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
+    /// Rights: If options & ZX_BTI_PERM_READ, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    /// Rights: If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    /// Rights: If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    // READ is intentional in the EXECUTE condition.
     Pin(handle<bti> handle,
         uint32 options,
         handle<vmo> vmo,
@@ -24,6 +30,6 @@ protocol Bti {
         (status status, vector_paddr addrs, handle<pmt> pmt);
 
     /// Releases all quarantined PMTs.
-    [In0="handle<bti>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE.
     ReleaseQuarantine(handle<bti> handle) -> (status status);
 };

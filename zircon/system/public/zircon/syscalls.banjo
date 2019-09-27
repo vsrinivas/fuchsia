@@ -84,8 +84,8 @@ protocol Api {
     ticks_get() -> (zx.ticks ticks);
 
     /// Read the number of high-precision timer ticks in a second.
-    [vdsocall,
-     const]
+    [const,
+     vdsocall]
     ticks_per_second() -> (zx.ticks ticks);
 
     /// Convert a time relative to now to an absolute deadline.
@@ -120,13 +120,13 @@ protocol Api {
     //
     //
 
-    [vdsocall,
-     const]
+    [const,
+     vdsocall]
     system_get_dcache_line_size() -> (uint32 size);
 
     /// Get number of logical processors on the system.
-    [vdsocall,
-     const]
+    [const,
+     vdsocall]
     system_get_num_cpus() -> (uint32 count);
 
     /// Get version string for system.
@@ -828,8 +828,8 @@ protocol Api {
         (zx.status status);
 
     /// Write to futex, wake futex, close handle, exit.
-    [vdsocall,
-     noreturn,
+    [noreturn,
+     vdsocall,
      argtype="value_ptr IN"]
     futex_wake_handle_close_thread_exit(array<zx_futex_t>:1 value_ptr,
                                         uint32 wake_count,

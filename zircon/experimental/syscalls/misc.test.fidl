@@ -15,6 +15,7 @@ library zz;
  NoProtocolPrefix]
 protocol Misc {
     /// High resolution sleep.
+    /// Rights: None.
     [Blocking]
     Nanosleep(time deadline) -> (status status);
 
@@ -23,8 +24,8 @@ protocol Misc {
     TicksGet() -> (ticks ticks);
 
     /// Read the number of high-precision timer ticks in a second.
-    [Vdsocall,
-     Const]
+    [Const,
+     Vdsocall]
     TicksPerSecond() -> (ticks ticks);
 
     /// Convert a time relative to now to an absolute deadline.
@@ -39,11 +40,21 @@ protocol Misc {
         (status status);
 
     /// Write to futex, wake futex, close handle, exit.
-    [Vdsocall,
-     Noreturn,
-     In0="box<Futex>"]
+    [Noreturn,
+     Vdsocall]
     FutexWakeHandleCloseThreadExit(const_futexptr value_ptr,
                                    uint32 wake_count,
                                    int32 new_value,
                                    handle close_handle);
+
+    // Read the number of high-precision timer ticks since boot, but demand
+    // that the read be performed using a syscall, instead of a vdso call.
+    //
+    // Note that this is an internal syscall, not meant to be used by
+    // application code.  By default, the vdso version of this syscall will do
+    // the proper thing, either directly reading from the hardware register
+    // backing the tick counter, or by making a syscall if the register is not
+    // accessible from user mode code (for whatever reason).
+    [Internal]
+    TicksGetViaKernel() -> (ticks ticks);
 };

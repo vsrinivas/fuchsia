@@ -10,9 +10,9 @@ library zz;
 
 [Transport="Syscall"]
 protocol Ioports {
-    [In0="handle<resource>:kind=IOPORT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
     Request(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
 
-    [In0="handle<resource>:kind=IOPORT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
     Release(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
 };

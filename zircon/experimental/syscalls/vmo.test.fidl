@@ -21,15 +21,15 @@ protocol Vmo {
     // buffer_size have the same underlying type, so moving them will be
     // error-prone.
     /// Read bytes from the VMO.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     [Blocking,
-     In0="handle<vmo>:rights=READ",
      ArgReorder="handle,buffer,offset,buffer_size"]
     Read(handle<vmo> handle, uint64 offset) -> (status status, vector_void buffer);
 
     // TODO(scottmg): Same problem as Read() above.
     /// Write bytes to the VMO.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     [Blocking,
-     In0="handle<vmo>:rights=WRITE",
      ArgReorder="handle,buffer,offset,buffer_size"]
     Write(handle<vmo> handle, vector_void buffer, uint64 offset) -> (status status);
 
@@ -38,10 +38,16 @@ protocol Vmo {
     GetSize(handle<vmo> handle) -> (status status, uint64 size);
 
     /// Resize a VMO object.
-    [In0="handle<vmo>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     SetSize(handle<vmo> handle, uint64 size) -> (status status);
 
     /// Perform an operation on a range of a VMO.
+    /// Rights: If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    /// Rights: If op is ZX_VMO_OP_DECOMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    /// Rights: If op is ZX_VMO_OP_CACHE_SYNC, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    /// Rights: If op is ZX_VMO_OP_CACHE_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     [Blocking]
     OpRange(handle<vmo> handle,
             uint32 op,
@@ -51,27 +57,28 @@ protocol Vmo {
         (status status);
 
     /// Create a child of a VM Object.
-    [In0="handle<vmo>:rights=DUPLICATE,READ"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
     CreateChild(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
         (status status, handle<vmo> out);
 
     /// Set the caching policy for pages held by a VMO.
-    [In0="handle<vmo>:rights=MAP"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
     SetCachePolicy(handle<vmo> handle, uint32 cache_policy) -> (status status);
 
     // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
     /// Add execute rights to a VMO.
-    [In1="handle<resource>:kind=VMEX"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
+    /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.
     ReplaceAsExecutable(handle<vmo> handle, handle<resource> vmex) ->
         (status status, handle<vmo> out);
 
-    [In0="handle<bti>:rights=MAP"]
+    /// Rights: bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
     CreateContiguous(handle<bti> bti, usize size, uint32 alignment_log2) ->
         (status status, handle<vmo> out);
 
     /// Create a VM object referring to a specific contiguous range of physical memory.
-    [In0="handle<resource>:kind=MMIO"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_MMIO.
     CreatePhysical(handle<resource> resource, paddr paddr, usize size) ->
         (status status, handle<vmo> out);
 };

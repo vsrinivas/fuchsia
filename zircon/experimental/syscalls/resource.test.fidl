@@ -11,7 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Resource {
     /// Create a resource object.
-    [In0="handle<resource>:rights=WRITE"]
+    /// Rights: parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.
     Create(handle<resource> parent_rsrc,
            uint32 options,
            uint64 base,

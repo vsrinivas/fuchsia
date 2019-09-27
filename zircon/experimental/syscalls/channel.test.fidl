@@ -46,8 +46,8 @@ protocol Channel {
     Create(uint32 options) -> (status status, handle out0, handle out1);
 
     /// Read a message from a channel.
-    [In0="handle:rights=READ",
-     ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
+    [ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     Read(handle<channel> handle,
          uint32 options) ->
         (status status,
@@ -57,8 +57,8 @@ protocol Channel {
          optional_uint32 actual_handles);
 
     /// Read a message from a channel.
-    [In0="handle:rights=READ",
-     ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
+    [ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     ReadEtc(handle<channel> handle,
             uint32 options) ->
         (status status,
@@ -68,8 +68,8 @@ protocol Channel {
          optional_uint32 actual_handles);
 
     /// Write a message to a channel.
-    [In0="handle:rights=WRITE"]
-    // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
+    /// Rights: Every entry of handles must have ZX_RIGHT_TRANSFER.
     Write(handle<channel> handle,
           uint32 options,
           vector_void_u32size bytes,
@@ -77,17 +77,17 @@ protocol Channel {
         (status status);
 
     /// Write a message to a channel.
-    [In0="handle:rights=WRITE"]
-    // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
+    /// Rights: Every entry of handles must have ZX_RIGHT_TRANSFER.
     WriteEtc(handle<channel> handle,
              uint32 options,
              vector_void_u32size bytes,
              mutable_vector_HandleDisposition_u32size handles) ->
         (status status);
 
-    [Internal,
-     In0="handle:rights=READ,WRITE"]
-    // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
+    [Internal]
     CallNoretry(handle<channel> handle, uint32 options, time deadline, ChannelCallArgs args) ->
         (status status, uint32 actual_bytes, uint32 actual_handles);
 
@@ -96,9 +96,10 @@ protocol Channel {
         (status status, uint32 actual_bytes, uint32 actual_handles);
 
     /// Send a message to a channel and await a reply.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
     [Blocking,
-     Vdsocall,
-     In0="handle<channel>:rights=READ,WRITE"]
+     Vdsocall]
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
     Call(handle handle, uint32 options, time deadline, ChannelCallArgs args) ->
         (status status, uint32 actual_bytes, uint32 actual_handles);

@@ -10,6 +10,6 @@ library zz;
 
 [Transport="Syscall"]
 protocol Pc {
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     FirmwareTables(handle<resource> handle) -> (status status, paddr acpi_rsdp, paddr smbios);
 };

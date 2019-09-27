@@ -16,6 +16,7 @@ namespace {
 struct CommandLineOptions {
   std::optional<std::string> arm_asm;
   std::optional<std::string> category;
+  std::optional<std::string> json;
   std::optional<std::string> kernel_branches;
   std::optional<std::string> kernel_header;
   std::optional<std::string> kernel_wrappers;
@@ -42,6 +43,9 @@ constexpr const char kArmAsmHelp[] = R"(  --arm-asm=FILENAME
 
 constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
     The output name for the .inc categories file.)";
+
+constexpr const char kJsonHelp[] = R"(  --json=FILENAME
+    The output name for the .json syscall definitions.)";
 
 constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
     The output name for the .S file used for kernel syscall dispatch.)";
@@ -82,6 +86,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("arm-asm", 0, kArmAsmHelp, &CommandLineOptions::arm_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
+  parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
@@ -137,6 +142,7 @@ int main(int argc, const char* argv[]) {
   } backends[] = {
       {&options.arm_asm, AsmOutput},
       {&options.category, CategoryOutput},
+      {&options.json, JsonOutput},
       {&options.kernel_branches, KernelBranchesOutput},
       {&options.kernel_header, KernelHeaderOutput},
       {&options.kernel_wrappers, KernelWrappersOutput},

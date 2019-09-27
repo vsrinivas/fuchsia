@@ -15,6 +15,9 @@ using VmOption = uint32;
 [Transport="Syscall"]
 protocol Vmar {
     /// Allocate a new subregion.
+    /// Rights: If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
+    /// Rights: If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
+    /// Rights: If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
     Allocate(handle<vmar> parent_vmar, VmOption options, uint64 offset, uint64 size) ->
         (status status, handle<vmar> child_vmar, vaddr child_addr);
 
@@ -24,6 +27,8 @@ protocol Vmar {
 
     // TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
     /// Add a memory mapping.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_VMAR.
+    /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
     Map(handle<vmar> handle, VmOption options, uint64 vmar_offset,
         handle<vmo> vmo, uint64 vmo_offset,
         uint64 len) ->
@@ -34,5 +39,8 @@ protocol Vmar {
     Unmap(handle<vmo> handle, vaddr addr, uint64 len) -> (status status);
 
     /// Set protection of virtual memory pages.
+    /// Rights: If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
+    /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
+    /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
     Protect(handle<vmo> handle, VmOption options, vaddr addr, uint64 len) -> (status status);
 };

@@ -163,6 +163,32 @@ std::string GetCKernelModeName(const Type& type) {
   return CNameImpl(type);
 }
 
+JsonTypeNameData GetJsonName(const Type& type) {
+  JsonTypeNameData ret;
+  if (type.IsPointer()) {
+    ret.name = GetCUserModeName(type.DataAsPointer().pointed_to_type());
+    ret.is_pointer = true;
+    if (type.constness() == Constness::kConst) {
+      ret.attribute = "IN";
+    } else if (type.constness() == Constness::kMutable) {
+      if (type.optionality() == Optionality::kInputArgument) {
+        ret.attribute = "INOUT";
+      } else if (type.optionality() == Optionality::kOutputNonOptional) {
+        ret.attribute = "OUT";
+      } else if (type.optionality() == Optionality::kOutputOptional) {
+        ret.attribute = "optional";
+      }
+    }
+
+    if (ret.name == "void") {
+      ret.name = "any";
+    }
+  } else {
+    ret.name = GetCUserModeName(type);
+  }
+  return ret;
+}
+
 void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
                     Writer* writer, SignatureNewlineStyle newline_style,
                     std::vector<std::string>* non_nulls) {

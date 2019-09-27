@@ -15,13 +15,12 @@ protocol Fifo {
         (status status, handle<fifo> out0, handle<fifo> out1);
 
     /// Read data from a fifo.
-    [In0="handle<fifo>:rights=READ"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.
     Read(handle<fifo> handle, usize elem_size) ->
         (status status, vector_void data, optional_usize actual_count);
 
-    // Note: Same as above regarding |data|.
     /// Write data to a fifo.
-    [In0="handle<fifo>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.
     Write(handle<fifo> handle, usize elem_size, const_voidptr data, usize count) ->
         (status status, optional_usize actual_count);
 };

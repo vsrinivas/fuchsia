@@ -27,11 +27,11 @@ struct SystemPowerctlArg {
 
 [Transport="Syscall"]
 protocol System {
-    [Vdsocall, Const]
+    [Const, Vdsocall]
     GetDcacheLineSize() -> (uint32 size);
 
     /// Get number of logical processors on the system.
-    [Vdsocall, Const]
+    [Const, Vdsocall]
     GetNumCpus() -> (uint32 count);
 
     /// Get version string for system.
@@ -48,19 +48,20 @@ protocol System {
     GetFeatures(uint32 kind) -> (status status, uint32 features);
 
     /// Retrieve a handle to a system event.
+    /// Rights: None.
     GetEvent(handle<job> root_job, uint32 kind) -> (status status, handle<event> event);
 
     /// Soft reboot the system with a new kernel and bootimage.
-    [In0="handle<resource>:kind=ROOT",
-     In1="handle<vmo>:rights=READ",
-     In2="handle<vmo>:rights=READ"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    /// Rights: bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     Mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo) ->
         (status status);
 
     /// Return a ZBI containing ZBI entries necessary to boot this system.
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     MexecPayloadGet(handle<resource> resource) -> (status status, vector_void buffer);
 
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     Powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg) -> (status status);
 };

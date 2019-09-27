@@ -35,6 +35,5 @@ protocol Smc {
     // TODO(ZX-2967): handle No rights required?
     // TODO(scottmg): No handle type?
     /// Make Secure Monitor Call (SMC) from user space.
-    [In1="box<SmcParameters>"]
     Call(handle handle, SmcParameters parameters) -> (status status, SmcResult out_smc_result);
 };

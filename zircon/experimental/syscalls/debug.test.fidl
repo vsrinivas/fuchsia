@@ -10,11 +10,11 @@ library zz;
 
 [Transport="Syscall"]
 protocol Debug {
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     Read(handle<resource> handle) -> (status status, string buffer, usize actual);
 
     Write(string buffer) -> (status status);
 
-    [In0="handle<resource>:kind=ROOT"]
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     SendCommand(handle<resource> resource, string buffer) -> (status status);
 };

@@ -14,16 +14,16 @@ protocol Socket {
     Create(uint32 options) -> (status status, handle out0, handle out1);
 
     /// Write data to a socket.
-    [In0="handle<socket>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
     Write(handle<socket> handle, uint32 options, vector_void buffer) ->
         (status status, optional_usize actual);
 
     /// Read data from a socket.
-    [In0="handle<socket>:rights=READ"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
     Read(handle<socket> handle, uint32 options) ->
         (status status, vector_void buffer, optional_usize actual);
 
     /// Prevent reading or writing.
-    [In0="handle<socket>:rights=WRITE"]
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
     Shutdown(handle<socket> handle, uint32 options) -> (status status);
 };
