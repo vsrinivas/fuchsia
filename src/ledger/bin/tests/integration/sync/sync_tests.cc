@@ -34,13 +34,16 @@ class SyncIntegrationTest : public IntegrationTest {
   }
 };
 
-// Verifies that a new page entry is correctly synchronized between two Ledger
-// app instances.
+using SyncIntegrationCloudTest = SyncIntegrationTest;
+
+// Verifies that a new page entry is correctly synchronized between two Ledger app instances.
 //
-// In this test the app instances connect to the cloud one after the other: the
-// first instance uploads data to the cloud and shuts down, and only after that
-// the second instance is created and connected.
-TEST_P(SyncIntegrationTest, SerialConnection) {
+// In this test the app instances connect to the cloud one after the other: the first instance
+// uploads data to the cloud and shuts down, and only after that the second instance is created and
+// connected.
+//
+// This cannot work with P2P only: the two Ledger instances are not running simulateously.
+TEST_P(SyncIntegrationCloudTest, SerialConnection) {
   PageId page_id;
 
   // Create the first instance and write the page entry.
@@ -96,27 +99,26 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
-  auto page2_state_watcher = WatchPageSyncState(&page2);
-  // Wait until the sync on the second device is idle and record the number of
-  // state updates.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
-  int page2_initial_state_change_count = page2_state_watcher->state_change_count;
+
+  // Set a watcher on page2 so we are notified when page1's changes are downloaded.
+  auto snpashot_waiter = NewWaiter();
+  PageSnapshotPtr snapshot;
+  PageWatcherPtr watcher_ptr;
+  TestPageWatcher watcher(watcher_ptr.NewRequest(), snpashot_waiter->GetCallback());
+  page2->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
+
+  auto sync_waiter = NewWaiter();
+  page2->Sync(sync_waiter->GetCallback());
+  ASSERT_TRUE(sync_waiter->RunUntilCalled());
 
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"));
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
 
-  // Note that we cannot just wait for the sync to become idle on the second
-  // instance, as it might still be idle upon the first check because the device
-  // hasn't yet received the remote notification about new commits. This is why
-  // we also check that another state change notification was delivered.
-  EXPECT_TRUE(RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
-    return page2_state_watcher->state_change_count > page2_initial_state_change_count &&
-           page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-  }));
+  // Wait until page 2 sees some changes.
+  ASSERT_TRUE(snpashot_waiter->RunUntilCalled());
 
-  PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   loop_waiter = NewWaiter();
@@ -127,6 +129,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   EXPECT_THAT(result, MatchesString("World"));
 
   // Verify that the sync states of page2 eventually become idle.
+  auto page2_state_watcher = WatchPageSyncState(&page2);
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
@@ -153,8 +156,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   PageSnapshotPtr snapshot;
   PageWatcherPtr watcher_ptr;
   TestPageWatcher page2_watcher(watcher_ptr.NewRequest(), []() {});
-  page2->GetSnapshot(snapshot.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page2->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
 
   DataGenerator generator = DataGenerator(GetRandom());
 
@@ -233,8 +235,7 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   PageSnapshotPtr snapshot;
   PageWatcherPtr watcher_ptr;
   TestPageWatcher watcher(watcher_ptr.NewRequest(), loop_waiter->GetCallback());
-  page2->GetSnapshot(snapshot.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page2->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
   auto sync_waiter = NewWaiter();
   page2->Sync(sync_waiter->GetCallback());
   ASSERT_TRUE(sync_waiter->RunUntilCalled());
@@ -252,6 +253,11 @@ INSTANTIATE_TEST_SUITE_P(
     SyncIntegrationTest, SyncIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY)),
     PrintLedgerAppInstanceFactoryBuilder());
+
+INSTANTIATE_TEST_SUITE_P(SyncIntegrationCloudTest, SyncIntegrationCloudTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(
+                             EnableSynchronization::CLOUD_SYNC_ONLY)),
+                         PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace
 }  // namespace ledger

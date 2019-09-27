@@ -186,6 +186,8 @@ bool PageSyncImpl::IsIdle() {
 void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   if (cloud_sync_) {
     cloud_sync_->GetCloudSync()->SetOnBacklogDownloaded(std::move(on_backlog_downloaded));
+  } else {
+    on_backlog_downloaded();
   }
 }
 

@@ -305,13 +305,13 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect_ptr.NewRequest();
 
   std::unique_ptr<LedgerAppInstanceImpl> result;
+  std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
+  if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
+    user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
+        &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
+        app_instance_counter_);
+  }
   if (enable_sync_ == EnableSync::YES) {
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
-    if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
-      user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-          &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
-          app_instance_counter_);
-    }
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
         std::move(repository_factory_request), std::move(repository_factory_ptr),
@@ -320,8 +320,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   } else {
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
-        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr, nullptr,
-        std::move(inspect_request), std::move(inspect_ptr));
+        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr,
+        std::move(user_communicator_factory), std::move(inspect_request), std::move(inspect_ptr));
   }
   app_instance_counter_++;
   return result;
@@ -362,24 +362,24 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
     EnableSynchronization sync_state) {
   static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_sync_builders;
   static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_offline_builders;
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_p2p_only_builders;
   static std::once_flag flag;
 
   auto static_sync_builders_ptr = &static_sync_builders;
   auto static_offline_builders_ptr = &static_offline_builders;
-  std::call_once(flag, [&static_sync_builders_ptr, &static_offline_builders_ptr] {
+  auto static_p2p_only_builders_ptr = &static_p2p_only_builders;
+  std::call_once(flag, [&static_sync_builders_ptr, &static_offline_builders_ptr,
+                        &static_p2p_only_builders_ptr] {
     for (auto inject_error : {InjectNetworkError::NO, InjectNetworkError::YES}) {
       for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
-        if (enable_p2p == EnableP2PMesh::YES && inject_error != InjectNetworkError::YES) {
-          // Only enable p2p when cloud has errors. This helps ensure our tests
-          // are fast enough for the CQ.
-          continue;
-        }
         static_sync_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
             EnableSync::YES, inject_error, enable_p2p));
       }
     }
     static_offline_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
         EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::NO));
+    static_p2p_only_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
+        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::YES));
   });
 
   std::vector<const LedgerAppInstanceFactoryBuilder*> builders;
@@ -390,8 +390,15 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
     }
   }
 
-  if (sync_state != EnableSynchronization::SYNC_ONLY) {
+  if (sync_state != EnableSynchronization::SYNC_ONLY && sync_state != EnableSynchronization::CLOUD_SYNC_ONLY) {
     for (const auto& builder : static_offline_builders) {
+      builders.push_back(builder.get());
+    }
+  }
+
+  if (sync_state == EnableSynchronization::SYNC_ONLY ||
+      sync_state == EnableSynchronization::SYNC_OR_OFFLINE) {
+    for (const auto& builder : static_p2p_only_builders) {
       builders.push_back(builder.get());
     }
   }

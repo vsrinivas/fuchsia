@@ -34,7 +34,6 @@ class LedgerAppInstanceFactoryBuilder {
 
   // Prints the factory builder parameters.
   virtual std::string TestSuffix() const = 0;
-
 };
 
 // Base class for client tests.
@@ -95,11 +94,16 @@ class LedgerAppInstanceFactory {
   virtual rng::Random* GetRandom() = 0;
 };
 
-// Whether tests should only be performed with synchronization enabled, or whether
+// Whether tests should only be performed with cloud synchronization enabled, or whether P2P and
 // offline/disconnected cases should be considered too.
 enum class EnableSynchronization {
+  // Cloud sync should be available.
+  CLOUD_SYNC_ONLY,
+  // Cloud or P2P sync should be available.
   SYNC_ONLY,
+  // This should be tested without sync.
   OFFLINE_ONLY,
+  // Offline cases should be considered.
   SYNC_OR_OFFLINE,
 };
 

@@ -26,7 +26,9 @@ void UserSyncImpl::Start() {
 }
 void UserSyncImpl::SetWatcher(SyncStateWatcher* watcher) {
   watcher_ = std::make_unique<SyncWatcherConverter>(watcher);
-  cloud_sync_->SetSyncWatcher(watcher_.get());
+  if (cloud_sync_) {
+    cloud_sync_->SetSyncWatcher(watcher_.get());
+  }
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(

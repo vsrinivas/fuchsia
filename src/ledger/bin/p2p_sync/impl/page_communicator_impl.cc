@@ -209,7 +209,7 @@ void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
   FXL_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
-      MarkSyncedToPeer([this, source = source](ledger::Status status) {
+      MarkSyncedToPeer([this, source](ledger::Status status) {
         if (status != ledger::Status::OK) {
           // If we fail to mark the page storage as synced to a peer, we
           // might end up in a situation of deleting from disk a partially

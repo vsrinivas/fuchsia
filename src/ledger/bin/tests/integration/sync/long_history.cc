@@ -10,6 +10,7 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
+#include "src/ledger/bin/tests/integration/test_page_watcher.h"
 
 namespace ledger {
 namespace {
@@ -41,11 +42,14 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
     page1->Put(convert::ToArray("iteration"), convert::ToArray(std::to_string(i)));
   }
   // Wait until the commits are uploaded.
+  auto waiter = NewWaiter();
+  page1->Sync(waiter->GetCallback());
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
 
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
-  auto waiter = NewWaiter();
+  waiter = NewWaiter();
   page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
@@ -53,15 +57,28 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   // data.
   auto instance2 = NewLedgerAppInstance();
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
-  auto page2_state_watcher = WatchPageSyncState(&page2);
-  ASSERT_TRUE(page2_state_watcher);
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
-
+  // Wait until we get up-to-date data: read a snapshot. If it already has a key "iteration", we are
+  // done. Otherwise, wait until its watcher signals a change.
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
+  PageWatcherPtr watcher_ptr;
+  auto snapshot_waiter = NewWaiter();
+  TestPageWatcher watcher(watcher_ptr.NewRequest(), snapshot_waiter->GetCallback());
+  page2->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
+  snapshot->GetInline(convert::ToArray("iteration"),
+                      callback::Capture(waiter->GetCallback(), &result));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  if (result.is_err()) {
+    // The key is not present yet, wait for an event on the watcher.
+    EXPECT_EQ(result.err(), Error::KEY_NOT_FOUND);
+    ASSERT_TRUE(snapshot_waiter->RunUntilCalled());
+  }
+
+  page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
+
+  waiter = NewWaiter();
   snapshot->GetInline(convert::ToArray("iteration"),
                       callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -70,6 +87,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
 
   // Verify that the sync state of the second page connection eventually becomes
   // idle.
+  auto page2_state_watcher = WatchPageSyncState(&page2);
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
