@@ -8,8 +8,8 @@
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
 
+#include <map>
 #include <string>
-#include <vector>
 
 #include "src/lib/fxl/logging.h"
 
@@ -20,19 +20,12 @@ using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 
-Annotation BuildAnnotation(const std::string& key) {
-  Annotation annotation;
-  annotation.key = key;
-  annotation.value = "unused";
-  return annotation;
-}
-
-std::vector<Annotation> BuildAnnotations(const std::vector<std::string>& annotation_keys) {
-  std::vector<Annotation> annotations;
-  for (const auto& key : annotation_keys) {
-    annotations.push_back(BuildAnnotation(key));
+std::vector<Annotation> BuildAnnotations(const std::map<std::string, std::string>& annotations) {
+  std::vector<Annotation> ret_annotations;
+  for (const auto& [key, value] : annotations) {
+    ret_annotations.push_back({key, value});
   }
-  return annotations;
+  return ret_annotations;
 }
 
 Attachment BuildAttachment(const std::string& key) {
@@ -46,7 +39,7 @@ Attachment BuildAttachment(const std::string& key) {
 
 void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
   Data data;
-  data.set_annotations(BuildAnnotations(annotation_keys_));
+  data.set_annotations(BuildAnnotations(annotations_));
   data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
   callback(fit::ok(std::move(data)));
 }
@@ -59,7 +52,7 @@ void StubFeedbackDataProviderReturnsNoAnnotation::GetData(GetDataCallback callba
 
 void StubFeedbackDataProviderReturnsNoAttachment::GetData(GetDataCallback callback) {
   Data data;
-  data.set_annotations(BuildAnnotations(annotation_keys_));
+  data.set_annotations(BuildAnnotations(annotations_));
   callback(fit::ok(std::move(data)));
 }
 

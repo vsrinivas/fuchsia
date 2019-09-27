@@ -24,10 +24,11 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
 // Extracts the attachments from a fuchsia.feedback.CrashReport if present and upsert them into
 // |crashpad_report|.
 //
-// In the case of a native crash report, it also upserts the minidump.
+// In the case of a native crash report, it also upserts the minidump and sets |has_minidump|.
 // In the case of a Dart crash report, it also upserts the exception stack trace.
 void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
-                        crashpad::CrashReportDatabase::NewReport* crashpad_report);
+                        crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                        bool* has_minidump);
 
 }  // namespace feedback
 

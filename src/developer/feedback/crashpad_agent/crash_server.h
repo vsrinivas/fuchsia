@@ -5,11 +5,11 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASH_SERVER_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASH_SERVER_H_
 
+#include <map>
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "third_party/crashpad/util/net/http_body.h"
-#include "third_party/crashpad/util/net/http_headers.h"
+#include "third_party/crashpad/util/file/file_reader.h"
 
 namespace feedback {
 
@@ -19,13 +19,13 @@ class CrashServer {
   explicit CrashServer(const std::string& url);
   virtual ~CrashServer() {}
 
-  // Makes the HTTP request using the |headers| and the |stream| to generate the HTTP body.
+  // Makes the HTTP request using the |annotations| and |attachments|.
   //
   // Returns whether the request was successful, defined as returning a HTTP status code in the
   // range [200-203]. In case of success, |server_report_id| is set to the crash report id on the
   // server.
-  virtual bool MakeRequest(const crashpad::HTTPHeaders& headers,
-                           std::unique_ptr<crashpad::HTTPBodyStream> stream,
+  virtual bool MakeRequest(const std::map<std::string, std::string>& annotations,
+                           const std::map<std::string, crashpad::FileReader*>& attachments,
                            std::string* server_report_id);
 
  private:

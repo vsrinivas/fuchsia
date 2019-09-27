@@ -11,8 +11,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <stdlib.h>
 
+#include <map>
 #include <memory>
-#include <vector>
 
 #include "src/lib/fxl/logging.h"
 
@@ -23,12 +23,16 @@ namespace feedback {
 class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
  public:
   StubFeedbackDataProvider()
-      : StubFeedbackDataProvider(/*annotation_keys=*/{"unused.annotation.1", "unused.annotation.2"},
-                                 "attachment.bundle.key") {}
+      : StubFeedbackDataProvider(/*annotations=*/
+                                 {
+                                     {"feedback.annotation.1.key", "feedback.annotation.1.value"},
+                                     {"feedback.annotation.2.key", "feedback.annotation.2.value"},
+                                 },
+                                 "feedback.attachment.bundle.key") {}
 
-  StubFeedbackDataProvider(const std::vector<std::string>& annotation_keys,
+  StubFeedbackDataProvider(const std::map<std::string, std::string>& annotations,
                            const std::string& attachment_bundle_key)
-      : annotation_keys_(annotation_keys), attachment_bundle_key_(attachment_bundle_key) {}
+      : annotations_(annotations), attachment_bundle_key_(attachment_bundle_key) {}
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
@@ -48,11 +52,12 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   uint64_t total_num_bindings() { return total_num_bindings_; }
   size_t current_num_bindings() { return bindings_.size(); }
 
+  const std::map<std::string, std::string>& annotations() { return annotations_; }
   bool has_attachment_bundle_key() { return !attachment_bundle_key_.empty(); }
   const std::string& attachment_bundle_key() { return attachment_bundle_key_; }
 
  protected:
-  const std::vector<std::string> annotation_keys_;
+  const std::map<std::string, std::string> annotations_;
   const std::string attachment_bundle_key_;
 
  private:
@@ -63,7 +68,7 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
 class StubFeedbackDataProviderReturnsNoAnnotation : public StubFeedbackDataProvider {
  public:
   StubFeedbackDataProviderReturnsNoAnnotation()
-      : StubFeedbackDataProvider(/*annotation_keys=*/{}, "attachment.bundle.key") {}
+      : StubFeedbackDataProvider(/*annotations=*/{}, "feedback.attachment.bundle.key") {}
 
   void GetData(GetDataCallback callback) override;
 };
@@ -72,7 +77,11 @@ class StubFeedbackDataProviderReturnsNoAttachment : public StubFeedbackDataProvi
  public:
   StubFeedbackDataProviderReturnsNoAttachment()
       : StubFeedbackDataProvider(
-            /*annotation_keys=*/{"unused.annotation.1", "unused.annotation.2"},
+            /*annotations=*/
+            {
+                {"feedback.annotation.1.key", "feedback.annotation.1.value"},
+                {"feedback.annotation.2.key", "feedback.annotation.2.value"},
+            },
             /*attachment_bundle_key=*/"") {}
 
   void GetData(GetDataCallback callback) override;
@@ -82,7 +91,7 @@ class StubFeedbackDataProviderReturnsNoData : public StubFeedbackDataProvider {
  public:
   StubFeedbackDataProviderReturnsNoData()
       : StubFeedbackDataProvider(
-            /*annotation_keys=*/{},
+            /*annotations=*/{},
             /*attachment_bundle_key=*/"") {}
 
   void GetData(GetDataCallback callback) override;
@@ -92,7 +101,7 @@ class StubFeedbackDataProviderNeverReturning : public StubFeedbackDataProvider {
  public:
   StubFeedbackDataProviderNeverReturning()
       : StubFeedbackDataProvider(
-            /*annotation_keys=*/{},
+            /*annotations=*/{},
             /*attachment_bundle_key=*/"") {}
 
   void GetData(GetDataCallback callback) override;

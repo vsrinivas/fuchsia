@@ -30,11 +30,6 @@
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/util/misc/metrics.h"
 #include "third_party/crashpad/util/misc/uuid.h"
-#include "third_party/crashpad/util/net/http_body.h"
-#include "third_party/crashpad/util/net/http_headers.h"
-#include "third_party/crashpad/util/net/http_multipart_builder.h"
-#include "third_party/crashpad/util/net/http_transport.h"
-#include "third_party/crashpad/util/net/url.h"
 
 namespace feedback {
 namespace {
@@ -204,7 +199,8 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 
         const std::map<std::string, std::string> annotations =
             BuildAnnotations(report, feedback_data);
-        BuildAttachments(report, feedback_data, crashpad_report.get());
+        bool has_minidump = false;
+        BuildAttachments(report, feedback_data, crashpad_report.get(), &has_minidump);
 
         // Finish new local crash report.
         crashpad::UUID local_report_id;
@@ -217,7 +213,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 
         inspect_manager_->AddReport(report.program_name(), local_report_id.ToString());
 
-        if (!UploadReport(local_report_id, annotations)) {
+        if (!UploadReport(local_report_id, annotations, has_minidump)) {
           return fit::error();
         }
         return fit::ok();
@@ -225,7 +221,8 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 }
 
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
-                                 const std::map<std::string, std::string>& annotations) {
+                                 const std::map<std::string, std::string>& annotations,
+                                 const bool has_minidump) {
   if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
                   << local_report_id.ToString() << ", available under "
@@ -250,25 +247,13 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     return false;
   }
 
-  // We have to build the MIME multipart message ourselves as all the public Crashpad helpers are
-  // asynchronous and we won't be able to know the upload status nor the server report ID.
-  crashpad::HTTPMultipartBuilder http_multipart_builder;
-  http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& kv : annotations) {
-    http_multipart_builder.SetFormData(kv.first, kv.second);
+  std::map<std::string, crashpad::FileReader*> attachments = report->GetAttachments();
+  if (has_minidump) {
+    attachments["uploadFileMinidump"] = report->Reader();
   }
-  for (const auto& kv : report->GetAttachments()) {
-    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
-                                             "application/octet-stream");
-  }
-  http_multipart_builder.SetFileAttachment("uploadFileMinidump", report->uuid.ToString() + ".dmp",
-                                           report->Reader(), "application/octet-stream");
-  crashpad::HTTPHeaders content_headers;
-  http_multipart_builder.PopulateContentHeaders(&content_headers);
 
   std::string server_report_id;
-  if (!crash_server_->MakeRequest(content_headers, http_multipart_builder.GetBodyStream(),
-                                  &server_report_id)) {
+  if (!crash_server_->MakeRequest(annotations, attachments, &server_report_id)) {
     FX_LOGS(ERROR) << "error uploading local crash report, ID " << local_report_id.ToString();
     // Destruct the report to release the lockfile.
     report.reset();

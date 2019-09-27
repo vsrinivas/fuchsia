@@ -5,11 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_
 
+#include <map>
 #include <string>
 
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "third_party/crashpad/util/net/http_body.h"
-#include "third_party/crashpad/util/net/http_headers.h"
 
 namespace feedback {
 
@@ -21,12 +20,17 @@ class StubCrashServer : public CrashServer {
   StubCrashServer(bool request_return_value)
       : CrashServer(kStubCrashServerUrl), request_return_value_(request_return_value) {}
 
-  bool MakeRequest(const crashpad::HTTPHeaders& headers,
-                   std::unique_ptr<crashpad::HTTPBodyStream> stream,
+  bool MakeRequest(const std::map<std::string, std::string>& annotations,
+                   const std::map<std::string, crashpad::FileReader*>& attachments,
                    std::string* server_report_id) override;
+
+  const std::map<std::string, std::string>& annotations() { return annotations_; }
 
  private:
   const bool request_return_value_;
+
+  std::string stream_;
+  std::map<std::string, std::string> annotations_;
 };
 
 }  // namespace feedback

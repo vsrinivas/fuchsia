@@ -24,12 +24,13 @@ void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
 
 void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
-                      crashpad::CrashReportDatabase::NewReport* crashpad_report) {
+                      crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                      bool* has_minidump) {
   // Feedback attachments common to all crash reports.
   AddFeedbackAttachments(crashpad_report, feedback_data);
 
   // Optional attachments filled by the client.
-  ExtractAttachments(report, crashpad_report);
+  ExtractAttachments(report, crashpad_report, has_minidump);
 }
 
 }  // namespace feedback

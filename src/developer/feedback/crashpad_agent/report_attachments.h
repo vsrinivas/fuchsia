@@ -18,9 +18,12 @@ namespace feedback {
 //   |feedback_data|.attachment_bundle().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
+//
+// |has_minidump| indicates whether we wrote a minidump in |crashpad_report|.
 void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
-                      crashpad::CrashReportDatabase::NewReport* crashpad_report);
+                      crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                      bool* has_minidump);
 
 }  // namespace feedback
 

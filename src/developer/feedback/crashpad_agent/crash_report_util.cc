@@ -76,7 +76,8 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
 }
 
 void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
-                        crashpad::CrashReportDatabase::NewReport* crashpad_report) {
+                        crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                        bool* has_minidump) {
   // Default attachments common to all crash reports.
   if (report.has_attachments()) {
     for (const auto& attachment : report.attachments()) {
@@ -92,6 +93,8 @@ void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
     if (native_report.has_minidump()) {
       if (!WriteVMO(native_report.minidump(), crashpad_report->Writer())) {
         FX_LOGS(WARNING) << "error attaching minidump to Crashpad report";
+      } else {
+        *has_minidump = true;
       }
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
