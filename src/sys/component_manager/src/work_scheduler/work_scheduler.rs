@@ -22,6 +22,10 @@ lazy_static! {
         "/svc/fuchsia.sys2.Worker".try_into().unwrap();
     pub static ref WORK_SCHEDULER_CAPABILITY_PATH: CapabilityPath =
         "/svc/fuchsia.sys2.WorkScheduler".try_into().unwrap();
+    pub static ref WORK_SCHEDULER_CONTROL_CAPABILITY_PATH: CapabilityPath =
+        "/svc/fuchsia.sys2.WorkSchedulerControl".try_into().unwrap();
+    pub static ref ROOT_WORK_SCHEDULER: Arc<Mutex<WorkScheduler>> =
+        Arc::new(Mutex::new(WorkScheduler::new()));
 }
 
 /// `WorkItem` is a single item in the ordered-by-deadline collection maintained by `WorkScheduler`.
@@ -167,14 +171,14 @@ impl WorkScheduler {
         Ok(())
     }
 
-    pub async fn get_batch_period(&self) -> Result<zx::Duration, fsys::Error> {
+    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
         let state = self.state.lock().await;
-        Ok(zx::Duration::from_nanos(state.period))
+        Ok(state.period)
     }
 
-    pub async fn set_batch_period(&mut self, period: zx::Duration) -> Result<(), fsys::Error> {
+    pub async fn set_batch_period(&mut self, period: i64) -> Result<(), fsys::Error> {
         let mut state = self.state.lock().await;
-        state.period = period.into_nanos();
+        state.period = period;
         Ok(())
     }
 
@@ -196,6 +200,31 @@ impl WorkScheduler {
             }
             _ => Ok(capability),
         }
+    }
+
+    pub async fn serve_root_work_scheduler_control(
+        mut stream: fsys::WorkSchedulerControlRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
+                    let root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
+                    let mut result = root_work_scheduler.get_batch_period().await;
+                    responder.send(&mut result)?;
+                }
+                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
+                    responder,
+                    batch_period,
+                    ..
+                } => {
+                    let mut root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
+                    let mut result = root_work_scheduler.set_batch_period(batch_period).await;
+                    responder.send(&mut result)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
@@ -245,7 +274,7 @@ impl RouteFrameworkCapabilityHook for WorkScheduler {
 
 /// `Capability` to invoke `WorkScheduler` FIDL API bound to a particular `WorkScheduler` object and
 /// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
-/// observe the same `Works` collection.
+/// observe the same collection of `WorkItem` objects.
 struct WorkSchedulerCapability {
     abs_moniker: AbsoluteMoniker,
     work_scheduler: WorkScheduler,
@@ -503,11 +532,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn work_scheduler_batch_period() {
         let mut work_scheduler = WorkScheduler::new();
-        assert_eq!(
-            Ok(zx::Duration::from_nanos(std::i64::MAX)),
-            work_scheduler.get_batch_period().await
-        );
-        assert_eq!(Ok(()), work_scheduler.set_batch_period(zx::Duration::from_nanos(SECOND)).await);
-        assert_eq!(Ok(zx::Duration::from_nanos(SECOND)), work_scheduler.get_batch_period().await)
+        assert_eq!(Ok(std::i64::MAX), work_scheduler.get_batch_period().await);
+        assert_eq!(Ok(()), work_scheduler.set_batch_period(SECOND).await);
+        assert_eq!(Ok(SECOND), work_scheduler.get_batch_period().await)
     }
 }

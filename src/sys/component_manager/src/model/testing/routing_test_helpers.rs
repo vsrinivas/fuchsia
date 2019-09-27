@@ -22,7 +22,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_vfs_pseudo_fs::{
         directory, directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
     },
@@ -87,14 +87,19 @@ impl RoutingTest {
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
     ) -> Self {
-        RoutingTest::new_with_hooks(root_component, components, vec![]).await
+        RoutingTest::new_with_hooks(root_component, components, vec![], default_builtin_service_fs)
+            .await
     }
 
-    pub async fn new_with_hooks(
+    pub async fn new_with_hooks<F>(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
         additional_hooks: Vec<Hook>,
-    ) -> Self {
+        builtin_service_fs: F,
+    ) -> Self
+    where
+        F: Fn() -> ServiceFs<ServiceObj<'static, ()>>,
+    {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
@@ -110,21 +115,8 @@ impl RoutingTest {
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
-        let mut builtin_service_fs = ServiceFs::new();
-        builtin_service_fs.add_fidl_service_at(
-            "builtin.Echo",
-            move |mut stream: EchoRequestStream| {
-                fasync::spawn(async move {
-                    while let Some(EchoRequest::EchoString { value, responder }) =
-                        stream.try_next().await.unwrap()
-                    {
-                        responder.send(value.as_ref().map(|s| &**s)).unwrap();
-                    }
-                });
-            },
-        );
         let builtin_services =
-            startup::BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs))
+            startup::BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs()))
                 .unwrap();
 
         let namespaces = runner.namespaces.clone();
@@ -452,6 +444,20 @@ impl RoutingTest {
     pub fn resolved_url(component_name: &str) -> String {
         format!("test:///{}_resolved", component_name)
     }
+}
+
+pub fn default_builtin_service_fs() -> ServiceFs<ServiceObj<'static, ()>> {
+    let mut builtin_service_fs = ServiceFs::new();
+    builtin_service_fs.add_fidl_service_at("builtin.Echo", move |mut stream: EchoRequestStream| {
+        fasync::spawn(async move {
+            while let Some(EchoRequest::EchoString { value, responder }) =
+                stream.try_next().await.unwrap()
+            {
+                responder.send(value.as_ref().map(|s| &**s)).unwrap();
+            }
+        });
+    });
+    builtin_service_fs
 }
 
 /// Contains functions to use capabilities in routing tests.
