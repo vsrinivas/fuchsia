@@ -399,15 +399,16 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
     return thrd_success;
   };
 
-  int rc = thrd_create_with_name(&worker_thread_, worker_thread, this, "i2c-hid-worker-thread");
-  if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-
   status = DdkAdd("i2c-hid", DEVICE_ADD_INVISIBLE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c-hid: could not add device: %d\n", status);
     return status;
+  }
+
+  int rc = thrd_create_with_name(&worker_thread_, worker_thread, this, "i2c-hid-worker-thread");
+  if (rc != thrd_success) {
+    DdkRemove();
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;
