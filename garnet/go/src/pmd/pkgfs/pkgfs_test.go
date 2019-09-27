@@ -266,6 +266,25 @@ func pkgfsStat(path string) (os.FileInfo, error) {
 	return f.Stat()
 }
 
+func TestExecutability(t *testing.T) {
+	// packages/static-package/0/meta/contents should not be openable
+	// executable, because meta/* is never executable
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0777)
+	if f != nil || err == nil {
+		t.Fatal(err)
+	}
+
+	// packages/static-package/0/a should be openable executable, because
+	// files from packages are executable.
+	path = "packages/static-package/0/a"
+	f, err = pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+}
+
 func TestListContainsStatic(t *testing.T) {
 	//names, err := filepath.Glob(filepath.Join(pkgfsMount, "packages", "*", "*"))
 	f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0", os.O_RDONLY|syscall.O_DIRECTORY, 0777)

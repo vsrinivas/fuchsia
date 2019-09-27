@@ -174,7 +174,7 @@ func (d *directoryWrapper) ListInterfaces() ([]string, error) {
 }
 
 func (d *directoryWrapper) Describe() (io.NodeInfo, error) {
-	var info io.NodeInfo;
+	var info io.NodeInfo
 	info.SetDirectory(io.DirectoryObject{})
 	return info, nil
 }
@@ -619,7 +619,7 @@ func fileTypeToFIDL(t fs.FileType) uint32 {
 	}
 }
 
-const alignedFlags = uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable)
+const alignedFlags = uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsRightExecutable)
 
 func openFlagsToFIDL(f fs.OpenFlags) (arg uint32, mode uint32) {
 	arg = uint32(f) & alignedFlags

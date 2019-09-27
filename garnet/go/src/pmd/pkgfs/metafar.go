@@ -130,6 +130,11 @@ func (d *metaFarDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
 func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 
+	// Nothing in the meta directory is ever executable.
+	if flags.Execute() {
+		return nil, nil, nil, fs.ErrNotSupported
+	}
+
 	if name == "" {
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
 			return newMetaFile(d.blob, d.fs, flags), nil, nil, nil

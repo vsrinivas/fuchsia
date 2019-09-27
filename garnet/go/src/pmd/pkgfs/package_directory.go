@@ -18,11 +18,16 @@ import (
 	"fuchsia.googlesource.com/pm/pkg"
 )
 
+type packagedItem struct {
+	blobId     string
+	executable bool
+}
+
 type packageDir struct {
 	unsupportedDirectory
 	fs         *Filesystem
 	merkleroot string
-	contents   map[string]string
+	contents   map[string]packagedItem
 
 	// if this packagedir is a subdirectory, then this is the prefix name
 	subdir *string
@@ -45,6 +50,12 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 	}
 
 	return newPackageDirFromBlob(merkleroot, filesystem)
+}
+
+func isExecutablePath(path string) bool {
+	// TODO(fxb/37328): try limiting this to just lib/, bin/, and test/
+	// prefixes?  Or put explicit bits for each file in the manifest.
+	return true
 }
 
 // Initialize a package directory server interface from a package meta.far
@@ -85,7 +96,7 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 		unsupportedDirectory: unsupportedDirectory("package:" + blob),
 		merkleroot:           blob,
 		fs:                   filesystem,
-		contents:             map[string]string{},
+		contents:             map[string]packagedItem{},
 	}
 
 	lines := bytes.Split(buf, []byte("\n"))
@@ -100,19 +111,29 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 			log.Printf("pkgfs: bad contents line: %v", line)
 			continue
 		}
-		pd.contents[string(parts[0])] = string(parts[1])
+		path := string(parts[0])
+		pd.contents[path] = packagedItem{
+			blobId:     string(parts[1]),
+			executable: isExecutablePath(path),
+		}
 	}
 	if err != nil {
 		return nil, goErrToFSErr(err)
 	}
 
-	pd.contents["meta"] = blob
+	pd.contents["meta"] = packagedItem{
+		blobId:     blob,
+		executable: false,
+	}
 	for _, name := range fr.List() {
 		if !strings.HasPrefix(name, "meta/") {
 			log.Printf("package:%s illegal file in meta.far: %q", pd.merkleroot, name)
 			continue
 		}
-		pd.contents[name] = name
+		pd.contents[name] = packagedItem{
+			blobId:     name,
+			executable: false,
+		}
 	}
 
 	return &pd, nil
@@ -132,7 +153,7 @@ func (d *packageDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
 
 func (d *packageDir) getBlobFor(path string) (string, bool) {
 	root, ok := d.contents[path]
-	return root, ok
+	return root.blobId, ok
 }
 
 func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
@@ -152,20 +173,23 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 	if name == "meta" {
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
-			mff := newMetaFile(d.contents[name], d.fs, flags)
+			mff := newMetaFile(d.contents[name].blobId, d.fs, flags)
 			return mff, nil, nil, nil
 		}
-		mfd := newMetaFarDir(d.contents[name], d.fs)
+		mfd := newMetaFarDir(d.contents[name].blobId, d.fs)
 		return nil, mfd, nil, nil
 	}
 
 	if strings.HasPrefix(name, "meta/") {
-		mfd := newMetaFarDir(d.contents["meta"], d.fs)
+		mfd := newMetaFarDir(d.contents["meta"].blobId, d.fs)
 		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}
 
 	if root, ok := d.contents[name]; ok {
-		return nil, nil, &fs.Remote{Channel: d.fs.blobfs.Channel(), Path: root, Flags: flags}, nil
+		if flags.Execute() && !root.executable {
+			return nil, nil, nil, fs.ErrPermission
+		}
+		return nil, nil, &fs.Remote{Channel: d.fs.blobfs.Channel(), Path: root.blobId, Flags: flags}, nil
 	}
 
 	dirname := name + "/"
@@ -232,7 +256,7 @@ func (d *packageDir) Blobs() []string {
 		if strings.HasPrefix(path, "meta/") {
 			continue
 		}
-		blobs = append(blobs, blob)
+		blobs = append(blobs, blob.blobId)
 	}
 	return blobs
 }

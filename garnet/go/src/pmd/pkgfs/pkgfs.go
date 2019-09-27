@@ -274,7 +274,7 @@ func (fs *Filesystem) GC() error {
 	allPackageBlobs := fs.index.AllPackageBlobs()
 	// access the meta FAR blob of the system package
 	if pd, ok := fs.root.dir("system").(*packageDir); ok {
-		allPackageBlobs = append(allPackageBlobs, pd.contents["meta"])
+		allPackageBlobs = append(allPackageBlobs, pd.contents["meta"].blobId)
 	} else {
 		return fmt.Errorf("GC: gc aborted, system directory is of unknown type")
 	}
@@ -338,7 +338,7 @@ func (fs *Filesystem) ValidateStaticIndex() (map[string]struct{}, map[string]str
 	missing := make(map[string]struct{})
 	staticPkgs := fs.static.StaticPackageBlobs()
 	if pd, ok := fs.root.dir("system").(*packageDir); ok {
-		staticPkgs = append(staticPkgs, pd.contents["meta"])
+		staticPkgs = append(staticPkgs, pd.contents["meta"].blobId)
 	}
 
 	for _, pkgRoot := range staticPkgs {

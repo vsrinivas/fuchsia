@@ -86,10 +86,13 @@ const (
 	OpenFlagRead OpenFlags = 1 << iota
 	// OpenFlagWrite indicates the file should be opened with write permissions
 	OpenFlagWrite
-
+	// OpenFlagAdmin indicates the connection can mount/unmount the filesystem
+	OpenFlagAdmin
+	// OpenFlagExecute indicates that the file should be opened executably mapable.
+	OpenFlagExecute
 	// OpenFlagCreate indicates the file should be created if it does not exist (only valid with
 	// "write")
-	OpenFlagCreate OpenFlags = 1 << (iota + 14)
+	OpenFlagCreate OpenFlags = 1 << (iota + 12)
 	// OpenFlagExclusive indicates that the operation should fail if it already exists (only valid
 	// with "create")
 	OpenFlagExclusive
@@ -118,6 +121,16 @@ func (f OpenFlags) Read() bool {
 // Write returns if the Write permission is active
 func (f OpenFlags) Write() bool {
 	return f&OpenFlagWrite != 0
+}
+
+// Admin returns if the Admin permission is active
+func (f OpenFlags) Admin() bool {
+	return f&OpenFlagAdmin != 0
+}
+
+// Execute returns if the Execute permission is active
+func (f OpenFlags) Execute() bool {
+	return f&OpenFlagExecute != 0
 }
 
 // Append returns if the Append permission is active
