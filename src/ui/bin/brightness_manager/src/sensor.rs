@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::{fs, io};
 
+use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use failure::{self, bail, Error, ResultExt};
 use fidl_fuchsia_hardware_input::{
@@ -28,7 +29,7 @@ pub struct AmbientLightInputRpt {
 
 /// Opens the sensor's device file.
 /// Tries all the input devices until the one with the correct signature is found.
-pub async fn open_sensor() -> Result<SensorProxy, Error> {
+async fn open_sensor() -> Result<SensorProxy, Error> {
     let input_devices_directory = "/dev/class/input";
     let path = Path::new(input_devices_directory);
     let entries = fs::read_dir(path)?;
@@ -49,7 +50,7 @@ pub async fn open_sensor() -> Result<SensorProxy, Error> {
 }
 
 /// Reads the sensor's HID record and decodes it.
-pub async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error> {
+async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error> {
     let report = sensor.get_report(ReportType::Input, 1).await?;
     let report = report.1;
     if report.len() < 11 {
@@ -73,4 +74,31 @@ fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
     fdio::service_connect(path, server.into_channel())
         .context("Failed to connect built-in service")?;
     Ok(proxy)
+}
+
+pub struct Sensor {
+    proxy: SensorProxy,
+}
+
+impl Sensor {
+    pub async fn new() -> Sensor {
+        let proxy = open_sensor().await.unwrap();
+        Sensor { proxy }
+    }
+
+    async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
+        read_sensor(&self.proxy).await
+    }
+}
+
+#[async_trait]
+pub trait SensorControl: Send {
+    async fn read(&self) -> Result<AmbientLightInputRpt, Error>;
+}
+
+#[async_trait]
+impl SensorControl for Sensor {
+    async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
+        self.read().await
+    }
 }

@@ -10,7 +10,6 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 
 // Include Brightness Control FIDL bindings
-use fidl_fuchsia_hardware_input::DeviceProxy as SensorProxy;
 use fidl_fuchsia_ui_brightness::{
     ControlRequest as BrightnessControlRequest, ControlRequestStream,
 };
@@ -21,6 +20,7 @@ use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, DurationNum};
 
 use backlight::{Backlight, BacklightControl};
+use sensor::{Sensor, SensorControl};
 
 mod backlight;
 mod sensor;
@@ -37,7 +37,7 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
     // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
     // that you can ensure it continues serving clients correctly."
     let backlight = Backlight::new()?;
-    let sensor = sensor::open_sensor().await?;
+    let sensor = Sensor::new().await;
 
     let backlight = Arc::new(Mutex::new(backlight));
     let sensor = Arc::new(Mutex::new(sensor));
@@ -109,7 +109,7 @@ fn convert_from_old_backlight_value(value: u16) -> f32 {
 /// Runs the main auto-brightness code.
 /// This task monitors its running boolean and terminates if it goes false.
 fn start_auto_brightness_task(
-    sensor: Arc<Mutex<SensorProxy>>,
+    sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
@@ -122,9 +122,7 @@ fn start_auto_brightness_task(
                         // Get the sensor reading in its own mutex block
                         let sensor = sensor.lock().await;
                         // TODO(kpt) Do we need a Mutex if sensor is only read?
-                        let report = sensor::read_sensor(&sensor)
-                            .await
-                            .expect("Could not read from the sensor");
+                        let report = sensor.read().await.expect("Could not read from the sensor");
                         report.illuminance
                     };
                     let nits = brightness_curve_lux_to_nits(lux);
