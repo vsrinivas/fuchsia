@@ -19,9 +19,10 @@ type MockTarget struct {
 }
 
 // NewMockTarget returns a new mock target with the given nodename.
-func NewMockTarget(ctx context.Context, nodename string) (*MockTarget, error) {
+func NewMockTarget(ctx context.Context, nodename string, serial io.ReadWriteCloser) (*MockTarget, error) {
 	return &MockTarget{
 		nodename: nodename,
+		serial:   serial,
 	}, nil
 }
 
@@ -53,6 +54,9 @@ func (t *MockTarget) Start(ctx context.Context, images build.Images, args []stri
 
 // Restart restarts the target.
 func (t *MockTarget) Restart(ctx context.Context) error {
+	if t.serial != nil {
+		defer t.serial.Close()
+	}
 	return nil
 }
 

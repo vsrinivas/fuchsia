@@ -198,8 +198,9 @@ type targetSetup struct {
 }
 
 type logWriter struct {
-	name string
-	file io.ReadWriteCloser
+	name   string
+	file   io.ReadWriteCloser
+	target Target
 }
 
 func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targets []Target) *targetSetup {
@@ -222,8 +223,9 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 				break
 			}
 			syslogs = append(syslogs, &logWriter{
-				name: syslogFile,
-				file: syslog,
+				name:   syslogFile,
+				file:   syslog,
+				target: t,
 			})
 		}
 
@@ -240,8 +242,9 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 					break
 				}
 				serialLogs = append(serialLogs, &logWriter{
-					name: serialLogFile,
-					file: serialLog,
+					name:   serialLogFile,
+					file:   serialLog,
+					target: t,
 				})
 
 				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
@@ -251,7 +254,7 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 					logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
 				}
 
-				go func(t Target) {
+				go func(t Target, serialLog io.ReadWriteCloser) {
 					for {
 						_, err := io.Copy(serialLog, t.Serial())
 						if err != nil && err != io.EOF {
@@ -259,7 +262,7 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 							return
 						}
 					}
-				}(t)
+				}(t, serialLog)
 				zirconArgs = append(zirconArgs, "kernel.bypass-debuglog=true")
 			}
 			// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
@@ -327,6 +330,17 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 }
 
 func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetSetup, args []string) error {
+	for _, log := range targetSetup.syslogs {
+		defer log.file.Close()
+	}
+	for _, log := range targetSetup.serialLogs {
+		defer func(log *logWriter) {
+			if err := log.target.Serial().Close(); err == nil {
+				logger.Errorf(ctx, "serial output not closed yet.")
+			}
+			log.file.Close()
+		}(log)
+	}
 	for _, t := range targetSetup.targets {
 		defer func(t Target) {
 			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
@@ -336,12 +350,6 @@ func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetS
 		}(t)
 	}
 
-	for _, log := range targetSetup.syslogs {
-		defer log.file.Close()
-	}
-	for _, log := range targetSetup.serialLogs {
-		defer log.file.Close()
-	}
 	if targetSetup.err != nil {
 		return targetSetup.err
 	}

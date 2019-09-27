@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -25,6 +28,7 @@ func TestExecute(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 		syslogPath := filepath.Join(tmpDir, "syslog.txt")
+		serialLogPath := filepath.Join(tmpDir, "serial.txt")
 
 		// create empty script to pass as cmd to run.
 		scriptPath := filepath.Join(tmpDir, "test_script.sh")
@@ -33,14 +37,32 @@ func TestExecute(t *testing.T) {
 		}
 
 		cmd := &RunCommand{
-			syslogFile: syslogPath,
-			netboot:    true,
-			timeout:    time.Second * 5,
+			syslogFile:    syslogPath,
+			netboot:       true,
+			timeout:       time.Second * 5,
+			serialLogFile: serialLogPath,
 		}
-		ctx := context.Background()
+		loggerOutFile := filepath.Join(tmpDir, "logger_out.txt")
+		loggerOut, err := os.Create(loggerOutFile)
+		if err != nil {
+			t.Fatalf("failed to create log file: %v", err)
+		}
+
+		serialName := filepath.Join(tmpDir, "real_serial.txt")
+		serialWriter, err := os.Create(serialName)
+		if err != nil {
+			t.Fatalf("failed to create mock serial writer: %v", err)
+		}
+		defer serialWriter.Close()
+		testLogger := logger.NewLogger(logger.DebugLevel, color.NewColor(color.ColorAuto), loggerOut, loggerOut, "botanist ")
+		ctx := logger.WithLogger(context.Background(), testLogger)
 		var targets []Target
 		for i := 0; i < 2; i++ {
-			target, err := target.NewMockTarget(ctx, fmt.Sprintf("mock-target-%d", i+1))
+			var serial io.ReadWriteCloser
+			if i == 0 {
+				serial = serialWriter
+			}
+			target, err := target.NewMockTarget(ctx, fmt.Sprintf("mock-target-%d", i+1), serial)
 			if err != nil {
 				t.Fatalf("failed to create new target: %v", err)
 			}
@@ -65,9 +87,14 @@ func TestExecute(t *testing.T) {
 				t.Fatalf("File is open: %v", err)
 			}
 		}
-		// Logs are not empty since we wrote to it when checking to see if they were open.
-		if err = checkEmptyLogs(ctx, append(targetSetup.syslogs, targetSetup.serialLogs...)); err != nil {
+
+		loggerOut.Close()
+		log, err := ioutil.ReadFile(loggerOutFile)
+		if err != nil {
 			t.Fatalf("%v", err)
+		}
+		if strings.Contains(string(log), "serial output not closed yet") {
+			t.Fatalf("Failed to close syslog/serial logs after stopping the target.")
 		}
 	})
 
@@ -91,7 +118,7 @@ func TestExecute(t *testing.T) {
 			timeout:    time.Second * 5,
 		}
 		ctx := context.Background()
-		target, err := target.NewMockTarget(ctx, "mock-target")
+		target, err := target.NewMockTarget(ctx, "mock-target", nil)
 		if err != nil {
 			t.Fatalf("failed to create new target: %v", err)
 		}
