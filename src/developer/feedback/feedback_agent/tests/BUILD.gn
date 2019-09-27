@@ -35,7 +35,11 @@ test_package("feedback_agent_tests") {
       name = "data_provider_unittest"
     },
     {
+      # Binary name on the host. We prefix it with "data_provider" to reduce collisions.
       name = "data_provider_config_unittest"
+
+      # Component and binary name on the target. Confined to the package so no risk of collisions.
+      dest = "config_unittest"
     },
     {
       name = "kernel_log_ptr_integration_test"
@@ -81,31 +85,31 @@ test_package("feedback_agent_tests") {
       dest = "checkerboard_100.png"
     },
 
-    # needed for data_provider_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid.json"
       dest = "valid_config.json"
     },
 
-    # needed for data_provider_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid_empty_list.json"
       dest = "valid_config_empty_list.json"
     },
 
-    # needed for data_provider_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_duplicated_attachment_key.json"
       dest = "bad_schema_duplicated_attachment_key_config.json"
     },
 
-    # needed for data_provider_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_spurious_field.json"
       dest = "bad_schema_spurious_field_config.json"
     },
 
-    # needed for data_provider_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_missing_required_field.json"
       dest = "bad_schema_missing_required_field_config.json"

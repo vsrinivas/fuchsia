@@ -33,31 +33,38 @@ test_package("crashpad_agent_tests") {
       environments = basic_envs
     },
     {
+      # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_config_unittest"
-      environments = basic_envs
+
+      # Component and binary name on the target. Confined to the package so no risk of collisions.
+      dest = "config_unittest"
     },
     {
       name = "crashpad_agent_integration_test"
       environments = basic_envs
     },
     {
-      # Syntax is somewhat confusing, but the intent is to re-use the same underlying test binary,
-      # defined by |name|, but with a different cmx, defined by |dest|, that injects the fake
-      # package.
+      # Binary name on the host. Shared across all integration test components.
       name = "crashpad_agent_integration_test"
+
+      # Component and binary name on the target. Specific to each integration test component.
       dest = "crashpad_agent_integration_test_valid_override_config"
       environments = basic_envs
     },
     {
-      # Syntax is somewhat confusing, but the intent is to re-use the same underlying test binary,
-      # defined by |name|, but with a different cmx, defined by |dest|, that injects the fake
-      # package.
+      # Binary name on the host. Shared across all integration test components.
       name = "crashpad_agent_integration_test"
+
+      # Component and binary name on the target. Specific to each integration test component.
       dest = "crashpad_agent_integration_test_invalid_override_config"
       environments = basic_envs
     },
     {
+      # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_inspect_manager_unittest"
+
+      # Component and binary name on the target. Confined to the package so no risk of collisions.
+      dest = "inspect_manager_unittest"
     },
     {
       name = "privacy_settings_ptr_unittest"
@@ -65,55 +72,55 @@ test_package("crashpad_agent_tests") {
   ]
 
   resources = [
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid_upload_disabled.json"
       dest = "valid_config_upload_disabled.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid_upload_enabled.json"
       dest = "valid_config_upload_enabled.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid_upload_read_from_privacy_settings.json"
       dest = "valid_config_upload_read_from_privacy_settings.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/valid_upload_disabled_spurious_server.json"
       dest = "valid_config_upload_disabled_spurious_server.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_spurious_field.json"
       dest = "bad_schema_spurious_field_config.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_missing_required_field.json"
       dest = "bad_schema_missing_required_field_config.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_missing_server_upload_enabled.json"
       dest = "bad_schema_missing_server_upload_enabled_config.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json"
       dest = "bad_schema_missing_server_upload_read_from_privacy_settings_config.json"
     },
 
-    # needed for crashpad_config_unittest
+    # needed for config_unittest
     {
       path = "configs/bad_schema_invalid_upload_policy.json"
       dest = "bad_schema_invalid_upload_policy_config.json"
