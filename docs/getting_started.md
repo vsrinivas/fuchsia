@@ -42,13 +42,12 @@ and then return to this document.
 
 Note: A quick overview of the basic build-and-pave workflow can be found [here](development/workflows/build_and_pave_quickstart.md).
 
-### Build
 
 If you added `.jiri_root/bin` to your path as part of getting the source code,
 the `fx` command should already be in your path. If not, the command is also
 available as `scripts/fx`.
 
-```
+```sh
 fx set core.x64 --with //bundles:kitchen_sink
 fx build
 ```
@@ -56,45 +55,54 @@ fx build
 The first command selects the build configuration you wish to build and
 generates the build system itself in an output directory (e.g., `out/x64`).
 Fuchsia can ephemerally download [packages](development/build/boards_and_products.md) over the network;
-here we use the `--available` flag to make the necessary packages covered in this guide
-available for download.
+here we use the `--with` flag to include the bundle named `kitchen_sink` which is an idiom in
+english meaning "practically everything". As you become more focused in your development, you will
+probably use different `fx set` options to minimize build times.
 
-The second command actually executes the build, transforming the source code in
+The second command, `fx build` actually executes the build, transforming the source code in
 build products. If you modify the source tree, you can do an incremental build
 by re-running the `fx build` command alone. `fx -i build` starts a watcher
 and automatically builds whenever a file is changed.
 
-Alternatively, you can use the [underlying build system directly](development/build/README.md).
+See the [underlying build system](development/build/README.md) for more details.
 
-#### [optional] Customize Build Environment
+### _Optional:_ Customize Build Environment
 
 By default you will get a x64 debug build. You can skip this section unless
 you want something else.
 
 Run `fx set` to see a list of build options. Some examples:
 
-```
+```sh
 fx set workstation.x64     # x64 debug build
 fx set core.arm64          # arm64 debug build
 fx set core.x64 --release  # x64 release build
 ```
 
-#### [optional] Accelerate builds with `ccache` and `goma`
+{% dynamic if user.is_googler %}
+### Accelerate the build with goma
 
-`ccache` accelerates builds by caching artifacts from previous builds. `ccache`
-is enabled automatically if the `CCACHE_DIR` environment variable is set and
-refers to a directory that exists.
-
-[Googlers only: `goma` accelerates builds by distributing compilation across
+`goma` accelerates builds by distributing compilation across
 many machines.  If you have `goma` installed in `~/goma`, it is used by default.
-It is also used by default in preference to `ccache`.]
+
+If goma cannot be found, `ccache` is used if available.
+
+It is also used by default in preference to `ccache`.
+
+To disable using goma, pass `--no-goma` to `fx set`.
+
+{% dynamic endif %}
+
+### _Optional:_ Accelerate the build with ccache
+[`ccache`](https://ccache.dev/){: .external} accelerates builds by caching artifacts
+from previous builds. `ccache` is enabled automatically if the `CCACHE_DIR` environment
+variable is set and refers to a directory that exists.
 
 To override the default behaviors, pass flags to `fx set`:
 
-```
+```sh
 --ccache     # force use of ccache even if goma is available
 --no-ccache  # disable use of ccache
---no-goma    # disable use of goma
 ```
 
 ## Boot Fuchsia
@@ -117,7 +125,7 @@ Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 The `fx run` command will launch Zircon within QEMU, using the locally built
 disk image:
 
-```
+```sh
 fx run
 ```
 
@@ -144,10 +152,9 @@ support. Only the Zircon UI renders.
 
 To enable graphics under QEMU, add the `-g` flag to `fx run`:
 
-```
+```sh
 fx run -g
 ```
-
 
 #### Enabling Network
 
@@ -156,7 +163,7 @@ virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
 
-```
+```sh
 fx run -N -u scripts/start-dhcp-server.sh
 ```
 
@@ -168,8 +175,8 @@ configure the IPv4 interface and routing.
 In a separate shell, start the development update server, if it isn't already
 running:
 
-```
-fx serve -v
+```sh
+fx serve
 ```
 
 Boot Fuchsia with networking. This can be done either in QEMU via the `-N` flag,
@@ -178,13 +185,13 @@ When Fuchsia has booted and displays the "$" shell prompt, you can run programs!
 
 For example, to receive deep wisdom, run:
 
-```
+```sh
 fortune
 ```
 
 To shutdown or reboot Fuchsia, use the `dm` command:
 
-```
+```sh
 dm help
 dm shutdown
 ```
@@ -200,14 +207,14 @@ Make a change to the rolldice binary in `examples/rolldice/src/main.rs`.
 
 Re-build and push the rolldice package to a running Fuchsia device with:
 
-```
+```sh
 fx build-push rolldice
 ```
 
 From a shell prompt on the Fuchsia device, run the updated rolldice component
 with:
 
-```
+```sh
 rolldice
 ```
 
@@ -232,7 +239,7 @@ Most graphical components in Fuchsia use the [Scenic](/garnet/bin/ui/) system
 compositor. You can launch such components, commonly found in `/system/apps`,
 like this:
 
-```
+```sh
 present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
 ```
 
@@ -252,16 +259,16 @@ you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/te
 ## Running tests
 
 Compiled test binaries are cached in pkgfs like other components, and are referenced by a URI.
-You can run a test by invoking it in the terminal. E.g.
+You can run a test by invoking it in the terminal. For example:
 
-```
+```sh
 run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_unittests.cmx
 ```
 
 If you want to leave Fuchsia running and recompile and re-run a test, run
 Fuchsia with networking enabled in one terminal, then in another terminal, run:
 
-```
+```sh
 fx run-test <test name> [<test args>]
 ```
 
