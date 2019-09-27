@@ -52,7 +52,7 @@ Note, one needs to get OSRB approval first _before_ uploading a CL for review.
    command.  This would be part of the `fx build` you are expected to run in the
    previous step.
 1. Identify all the crates to be brought
-   (see the diff in //third_party/rust_crates/vendor/).
+   (see the diff in `//third_party/rust_crates/vendor/`).
    Do not submit the CL for code review. Get OSRB approval first.
    If there are any files in the source repository that are not included when
    vendored, make a note of that for the OSRB reviewer. For example, font files
@@ -61,6 +61,19 @@ Note, one needs to get OSRB approval first _before_ uploading a CL for review.
    do this part for you.
 1. After the OSRB approval, upload the change for review to Gerrit.
 1. Get code-review+2, merge the change into [third_party/rust_crates][3p-crates].
+
+## Steps to update a third-party crate
+
+Updating is very similar to adding a crate.
+1. Start by bumping bumping the version number of the crate in
+   [`third_party/rust_crates/Cargo.toml`](3p-cargo-toml] and rerunning
+   `fx update-rustc-third-party as above.
+1. Identify all new library dependencies brought in
+   (see the diff in `//third_party/rust_crates/vendor/`).
+   Again, do not submit the CL for code review until you've received OSRB
+   approval for any new dependencies added.
+1. After OSRB approval, upload the change for review to Gerrit and merge as
+   above.
 
 ## Adding a new mirror
 
