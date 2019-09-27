@@ -219,7 +219,7 @@ mod tests {
 
     use super::*;
 
-    type Verifier = FnOnce(&Manifest) -> bool;
+    type Verifier = dyn FnOnce(&Manifest) -> bool;
 
     macro_rules! test_merge {
         (
