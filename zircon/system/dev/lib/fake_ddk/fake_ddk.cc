@@ -167,6 +167,7 @@ zx_off_t Bind::DeviceGetSize(zx_device_t* device) {
 
 }  // namespace fake_ddk
 
+__EXPORT
 zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                                    zx_device_t** out) {
   if (!fake_ddk::Bind::Instance()) {
@@ -175,6 +176,7 @@ zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device
   return fake_ddk::Bind::Instance()->DeviceAdd(drv, parent, args, out);
 }
 
+__EXPORT
 zx_status_t device_remove(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return ZX_OK;
@@ -182,6 +184,7 @@ zx_status_t device_remove(zx_device_t* device) {
   return fake_ddk::Bind::Instance()->DeviceRemove(device);
 }
 
+__EXPORT
 zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* data,
                                 size_t length) {
   if (!fake_ddk::Bind::Instance()) {
@@ -190,6 +193,7 @@ zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* 
   return fake_ddk::Bind::Instance()->DeviceAddMetadata(device, type, data, length);
 }
 
+__EXPORT
 void device_make_visible(zx_device_t* device) {
   if (fake_ddk::Bind::Instance()) {
     fake_ddk::Bind::Instance()->DeviceMakeVisible(device);
@@ -197,6 +201,7 @@ void device_make_visible(zx_device_t* device) {
   return;
 }
 
+__EXPORT
 zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
   if (!fake_ddk::Bind::Instance()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -204,6 +209,7 @@ zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, vo
   return fake_ddk::Bind::Instance()->DeviceGetProtocol(device, proto_id, protocol);
 }
 
+__EXPORT
 const char* device_get_name(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return nullptr;
@@ -211,6 +217,7 @@ const char* device_get_name(zx_device_t* device) {
   return fake_ddk::Bind::Instance()->DeviceGetName(device);
 }
 
+__EXPORT
 zx_off_t device_get_size(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return 0;
@@ -218,6 +225,7 @@ zx_off_t device_get_size(zx_device_t* device) {
   return fake_ddk::Bind::Instance()->DeviceGetSize(device);
 }
 
+__EXPORT
 zx_status_t device_get_metadata(zx_device_t* device, uint32_t type, void* buf, size_t buflen,
                                 size_t* actual) {
   if (!fake_ddk::Bind::Instance()) {
@@ -226,6 +234,7 @@ zx_status_t device_get_metadata(zx_device_t* device, uint32_t type, void* buf, s
   return fake_ddk::Bind::Instance()->DeviceGetMetadata(device, type, buf, buflen, actual);
 }
 
+__EXPORT
 zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t* out_size) {
   if (!fake_ddk::Bind::Instance()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -233,6 +242,7 @@ zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t*
   return fake_ddk::Bind::Instance()->DeviceGetMetadataSize(device, type, out_size);
 }
 
+__EXPORT
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
   // This is currently a no-op.
 }
@@ -244,6 +254,7 @@ extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
   va_end(args);
 }
 
+__EXPORT
 __WEAK zx_driver_rec __zircon_driver_rec__ = {
     .ops = {},
     .driver = {},
