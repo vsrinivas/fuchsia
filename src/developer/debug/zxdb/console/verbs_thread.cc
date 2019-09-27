@@ -445,14 +445,9 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().size() != 1)
     return Err("The 'jump' command requires one argument for the location.");
 
-  InputLocation input_location;
-  err = ParseInputLocation(cmd.frame(), cmd.args()[0], &input_location);
-  if (err.has_error())
-    return err;
-
   Location location;
-  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(), input_location, true,
-                                   &location);
+  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(), cmd.frame(),
+                                   cmd.args()[0], true, &location);
   if (err.has_error())
     return err;
 
@@ -1284,16 +1279,16 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
   // implicit information from the current frame (which requires the thread be stopped). But when
   // doing a process-wide one, don't require a currently stopped thread unless it's required to
   // compute the location.
-  InputLocation location;
+  std::vector<InputLocation> locations;
   if (cmd.args().empty()) {
     // No args means use the current location.
     if (!cmd.frame()) {
       return Err(ErrType::kInput, "There isn't a current frame to take the location from.");
     }
-    location = InputLocation(cmd.frame()->GetAddress());
+    locations.emplace_back(cmd.frame()->GetAddress());
   } else if (cmd.args().size() == 1) {
-    // One arg = normal location (ParseInputLocation can handle null frames).
-    Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &location);
+    // One arg = normal location (this function can handle null frames).
+    Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &locations);
     if (err.has_error())
       return err;
   } else {
@@ -1313,14 +1308,14 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
     err = AssertRunningTarget(context, "until", cmd.target());
     if (err.has_error())
       return err;
-    cmd.target()->GetProcess()->ContinueUntil(location, callback);
+    cmd.target()->GetProcess()->ContinueUntil(locations, callback);
   } else {
     // Thread-specific.
     err = AssertStoppedThreadWithFrameCommand(context, cmd, "until");
     if (err.has_error())
       return err;
 
-    auto controller = std::make_unique<UntilThreadController>(location);
+    auto controller = std::make_unique<UntilThreadController>(std::move(locations));
     cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
       if (err.has_error())
         Console::get()->Output(err);

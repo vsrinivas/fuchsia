@@ -56,7 +56,8 @@ void MockProcess::Pause(fit::callback<void()> on_paused) {
 
 void MockProcess::Continue() {}
 
-void MockProcess::ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) {
+void MockProcess::ContinueUntil(std::vector<InputLocation> location,
+                                fit::callback<void(const Err&)> cb) {
   MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 

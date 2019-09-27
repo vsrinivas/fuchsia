@@ -32,18 +32,17 @@ class UntilThreadController : public ThreadController {
     kRunUntilEqualOrOlderFrame
   };
 
-  // Runs a thread until the given location. The location will only be matched
-  // if the stack base pointer position of the location is greater than end_sp
-  // this means that the stack has grown up to a higher frame. When end_bp is
-  // 0, every stack pointer will be larger and it will always trigger.
-  // Supporting the stack pointer allows this class to be used for stack-aware
-  // options (as a subset of "finish" for example).
-  explicit UntilThreadController(InputLocation location);
+  // Runs a thread until the given location. The location will only be matched if the stack base
+  // pointer position of the location is greater than end_sp this means that the stack has grown up
+  // to a higher frame. When end_bp is 0, every stack pointer will be larger and it will always
+  // trigger. Supporting the stack pointer allows this class to be used for stack-aware options (as
+  // a subset of "finish" for example).
+  explicit UntilThreadController(std::vector<InputLocation> locations);
 
-  // Runs to the given location until the current frame compares to the given
-  // frame according to the given comparator. This allows stepping backward in
-  // the call stack.
-  UntilThreadController(InputLocation location, FrameFingerprint newest_frame, FrameComparison cmp);
+  // Runs to the given location until the current frame compares to the given frame according to the
+  // given comparator. This allows stepping backward in the call stack.
+  UntilThreadController(std::vector<InputLocation> locations, FrameFingerprint newest_frame,
+                        FrameComparison cmp);
 
   ~UntilThreadController() override;
 
@@ -62,7 +61,7 @@ class UntilThreadController : public ThreadController {
   // callback from thread initialization.
   void OnBreakpointSet(const Err& err, fit::callback<void(const Err&)> cb);
 
-  InputLocation location_;
+  std::vector<InputLocation> locations_;
 
   // Indicates the frame. This frame is compared to the current one according
   // to the comparison_ function.

@@ -162,6 +162,7 @@ source_set("test_support") {
     "mock_remote_api.h",
     "mock_target.cc",
     "mock_target.h",
+    "mock_thread.h",
     "remote_api_test.cc",
     "remote_api_test.h",
     "test_thread_observer.cc",

@@ -141,7 +141,8 @@ void ProcessImpl::Continue() {
     thread->Continue();
 }
 
-void ProcessImpl::ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) {
+void ProcessImpl::ContinueUntil(std::vector<InputLocation> locations,
+                                fit::callback<void(const Err&)> cb) {
   cb(
       Err("Process-wide 'Until' is temporarily closed for construction. "
           "Please try again in a few days."));

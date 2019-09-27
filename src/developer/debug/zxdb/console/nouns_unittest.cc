@@ -51,8 +51,7 @@ TEST_F(NounsTest, BreakpointList) {
   BreakpointSettings in;
   in.enabled = false;
   in.scope = BreakpointSettings::Scope::kSystem;
-  in.location.type = InputLocation::Type::kSymbol;
-  in.location.symbol = Identifier(IdentifierComponent("Foo"));
+  in.locations.emplace_back(Identifier(IdentifierComponent("Foo")));
   bp->SetSettings(in, [](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 

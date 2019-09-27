@@ -7,10 +7,12 @@
 #include <inttypes.h>
 
 #include <algorithm>
+#include <limits>
 
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -26,7 +28,52 @@
 
 namespace zxdb {
 
-Err ParseInputLocation(const Frame* frame, const std::string& input, InputLocation* location) {
+namespace {
+
+// Searches the current object ("this") in the frame for local matches of the given identifier.
+//
+// If there is no current object or there are no matches, returns an empty vector.
+//
+// Otherwise returns tall matches with fully-qualified names.
+std::vector<ParsedIdentifier> GetIdentifierMatchesOnThis(const Frame* frame,
+                                                         const ParsedIdentifier& ident) {
+  if (!frame)
+    return {};
+
+  const Location& loc = frame->GetLocation();
+  if (!loc.symbol())
+    return {};
+  const CodeBlock* code_block = loc.symbol().Get()->AsCodeBlock();
+  if (!code_block)
+    return {};
+
+  FindNameContext find_context(frame->GetThread()->GetProcess()->GetSymbols(), loc.symbol_context(),
+                               code_block);
+
+  // Currently location matching matches only functions. We may need to broaden this in the
+  // future as the needs of callers require.
+  FindNameOptions find_options(FindNameOptions::kNoKinds);
+  find_options.find_functions = true;
+  find_options.max_results = std::numeric_limits<size_t>::max();  // Want everything
+
+  std::vector<FoundName> found_local;
+  FindMemberOnThis(find_context, find_options, ident, &found_local);
+
+  std::vector<ParsedIdentifier> result;
+  for (const auto& found : found_local) {
+    ParsedIdentifier parsed_ident = found.GetName();
+    if (!parsed_ident.empty()) {
+      // This empty name check is paranoid in case the symbols are declaring weird things.
+      result.push_back(std::move(parsed_ident));
+    }
+  }
+  return result;
+}
+
+}  // namespace
+
+Err ParseGlobalInputLocation(const Frame* frame, const std::string& input,
+                             InputLocation* location) {
   if (input.empty())
     return Err("Passed empty location.");
 
@@ -98,16 +145,56 @@ Err ParseInputLocation(const Frame* frame, const std::string& input, InputLocati
   return Err();
 }
 
+Err ParseLocalInputLocation(const Frame* frame, const std::string& input,
+                            std::vector<InputLocation>* locations) {
+  locations->clear();
+
+  InputLocation global;
+  if (Err err = ParseGlobalInputLocation(frame, input, &global); err.has_error())
+    return err;
+
+  if (frame && global.type == InputLocation::Type::kSymbol) {
+    // See if there are matches on the current class. It is not necessary to do a full lexical
+    // search beyond the local class because unqualified names will match any namespace in
+    // ResolveInputLocations(). That will catch all other instances of the symbol.
+    for (const auto& matched_ident :
+         GetIdentifierMatchesOnThis(frame, ToParsedIdentifier(global.symbol))) {
+      Identifier ident = ToIdentifier(matched_ident);
+      if (ident != global.symbol)  // Don't add duplicates, the global will always be added.
+        locations->emplace_back(std::move(ident));
+    }
+  }
+
+  // The global one always goes last so the most specific ones come first.
+  locations->push_back(std::move(global));
+  return Err();
+}
+
 Err ResolveInputLocations(const ProcessSymbols* process_symbols,
                           const InputLocation& input_location, bool symbolize,
                           std::vector<Location>* locations) {
+  return ResolveInputLocations(process_symbols, std::vector<InputLocation>{input_location},
+                               symbolize, locations);
+}
+
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const std::vector<InputLocation>& input_locations, bool symbolize,
+                          std::vector<Location>* locations) {
   ResolveOptions options;
   options.symbolize = symbolize;
-  *locations = process_symbols->ResolveInputLocation(input_location, options);
+
+  locations->clear();
+  for (const auto& input : input_locations) {
+    auto resolved = process_symbols->ResolveInputLocation(input, options);
+    locations->insert(locations->end(), resolved.begin(), resolved.end());
+  }
 
   if (locations->empty()) {
-    return Err("Nothing matching this %s was found.",
-               InputLocation::TypeToString(input_location.type));
+    if (input_locations.size() == 1) {
+      return Err("Nothing matching this %s was found.",
+                 InputLocation::TypeToString(input_locations[0].type));
+    }
+    return Err("Nothing matching this location was found.");
   }
   return Err();
 }
@@ -115,11 +202,17 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols,
 Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* optional_frame,
                           const std::string& input, bool symbolize,
                           std::vector<Location>* locations) {
-  InputLocation input_location;
-  Err err = ParseInputLocation(optional_frame, input, &input_location);
-  if (err.has_error())
+  std::vector<InputLocation> input_locations;
+  if (Err err = ParseLocalInputLocation(optional_frame, input, &input_locations); err.has_error())
     return err;
-  return ResolveInputLocations(process_symbols, input_location, symbolize, locations);
+  return ResolveInputLocations(process_symbols, input_locations, symbolize, locations);
+}
+
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
+                               const InputLocation& input_location, bool symbolize,
+                               Location* location) {
+  return ResolveUniqueInputLocation(process_symbols, std::vector<InputLocation>{input_location},
+                                    symbolize, location);
 }
 
 // This implementation isn't great, it doesn't always show the best disambiguations for the given
@@ -133,7 +226,7 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* op
 // Instead, if the input is a file name and there is only one result where the file name matches
 // exactly, we should pick it.
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
-                               const InputLocation& input_location, bool symbolize,
+                               const std::vector<InputLocation>& input_location, bool symbolize,
                                Location* location) {
   std::vector<Location> locations;
   Err err = ResolveInputLocations(process_symbols, input_location, symbolize, &locations);
@@ -180,11 +273,10 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
 
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols, const Frame* optional_frame,
                                const std::string& input, bool symbolize, Location* location) {
-  InputLocation input_location;
-  Err err = ParseInputLocation(optional_frame, input, &input_location);
-  if (err.has_error())
+  std::vector<InputLocation> input_locations;
+  if (Err err = ParseLocalInputLocation(optional_frame, input, &input_locations); err.has_error())
     return err;
-  return ResolveUniqueInputLocation(process_symbols, input_location, symbolize, location);
+  return ResolveUniqueInputLocation(process_symbols, input_locations, symbolize, location);
 }
 
 void CompleteInputLocation(const Command& command, const std::string& prefix,

@@ -147,12 +147,12 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoi
       // otherwise. Sometimes the file/line might not be what they want, though.
       const Location& frame_loc = cmd.frame()->GetLocation();
       if (frame_loc.has_symbols())
-        settings.location = InputLocation(frame_loc.file_line());
+        settings.locations.emplace_back(frame_loc.file_line());
       else
-        settings.location = InputLocation(cmd.frame()->GetAddress());
+        settings.locations.emplace_back(cmd.frame()->GetAddress());
     }
   } else if (cmd.args().size() == 1u) {
-    Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
+    Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &settings.locations);
     if (err.has_error())
       return err;
   } else {
@@ -160,14 +160,17 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoi
                "Expecting only one arg for the location.\n"
                "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
   }
+  FXL_DCHECK(!settings.locations.empty());  // Should have filled something in.
 
   // Scope.
+  //
+  // Note the location types will all be the same if there are multiple.
   if (cmd.HasNoun(Noun::kThread)) {
     settings.scope = BreakpointSettings::Scope::kThread;
     settings.scope_thread = cmd.thread();
     settings.scope_target = cmd.target();
   } else if (cmd.HasNoun(Noun::kProcess) ||
-             settings.location.type == InputLocation::Type::kAddress) {
+             settings.locations[0].type == InputLocation::Type::kAddress) {
     settings.scope = BreakpointSettings::Scope::kTarget;
     settings.scope_thread = nullptr;
     settings.scope_target = cmd.target();

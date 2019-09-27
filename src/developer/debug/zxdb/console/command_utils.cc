@@ -261,7 +261,7 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
   const char* type = BreakpointTypeToString(settings.type);
-  OutputBuffer location = FormatInputLocation(settings.location);
+  OutputBuffer location = FormatInputLocations(settings.locations);
 
   OutputBuffer result("Breakpoint ");
   result.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
@@ -288,6 +288,23 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
   }
   FXL_NOTREACHED();
   return OutputBuffer();
+}
+
+OutputBuffer FormatInputLocations(const std::vector<InputLocation>& locations) {
+  if (locations.empty())
+    return OutputBuffer(Syntax::kComment, "<no location>");
+
+  // Comma-separate if there are multiples.
+  bool first_location = true;
+  OutputBuffer result;
+  for (const auto& loc : locations) {
+    if (!first_location)
+      result.Append(", ");
+    else
+      first_location = false;
+    result.Append(FormatInputLocation(loc));
+  }
+  return result;
 }
 
 OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {

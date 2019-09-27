@@ -197,7 +197,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   constexpr uint64_t kAddress = 0x12345678;
   BreakpointSettings bp_settings;
   bp_settings.enabled = true;
-  bp_settings.location = InputLocation(kAddress);
+  bp_settings.locations.emplace_back(kAddress);
   SyncSetSettings(bp_internal, bp_settings);
 
   // Should have gotten the breakpoint registering itself.
@@ -250,7 +250,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   constexpr uint64_t kAddress = 0x12345678;
   BreakpointSettings settings;
   settings.enabled = true;
-  settings.location = InputLocation(kAddress);
+  settings.locations.emplace_back(kAddress);
   settings.one_shot = true;
   SyncSetSettings(bp, settings);
 

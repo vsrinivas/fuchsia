@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <string>
+#include <vector>
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
@@ -52,8 +53,9 @@ struct BreakpointSettings {
   Target* scope_target = nullptr;  // Valid when scope == kTarget or kThread.
   Thread* scope_thread = nullptr;  // Valid when scope == kThread.
 
-  // Where the breakpoint is set.
-  InputLocation location;
+  // Where the breakpoint is set. This supports more than one location because a user input might
+  // expand to multiple symbols depending on the context. In many cases there will only be one.
+  std::vector<InputLocation> locations;
 
   StopMode stop_mode = StopMode::kAll;
 

@@ -113,7 +113,8 @@ void FinishPhysicalFrameThreadController::InitWithFingerprint(FrameFingerprint f
     return;  // Previous stack frame is null, just continue.
 
   until_controller_ = std::make_unique<UntilThreadController>(
-      InputLocation(to_addr), fingerprint, UntilThreadController::kRunUntilOlderFrame);
+      std::vector<InputLocation>{InputLocation(to_addr)}, fingerprint,
+      UntilThreadController::kRunUntilOlderFrame);
 
   // Give the "until" controller a dummy callback and execute the callback
   // ASAP. The until controller executes the callback once it knows that the

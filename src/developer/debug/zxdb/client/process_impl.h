@@ -45,7 +45,8 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void SyncThreads(fit::callback<void()> callback) override;
   void Pause(fit::callback<void()> on_paused) override;
   void Continue() override;
-  void ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) override;
+  void ContinueUntil(std::vector<InputLocation> location,
+                     fit::callback<void(const Err&)> cb) override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   void ReadMemory(uint64_t address, uint32_t size,
                   fit::callback<void(const Err&, MemoryDump)> callback) override;

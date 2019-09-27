@@ -228,27 +228,31 @@ Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
 Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols* process_symbols,
                       const Frame* frame, const std::string& arg, FileLine* file_line) {
   // One arg = normal location (ParseInputLocation can handle null frames).
-  InputLocation input_location;
-  Err err = ParseInputLocation(frame, arg, &input_location);
-  if (err.has_error())
+  std::vector<InputLocation> input_locations;
+  if (Err err = ParseLocalInputLocation(frame, arg, &input_locations); err.has_error())
     return err;
+  FXL_DCHECK(!input_locations.empty());
 
-  // When a file/line is given, we don't actually want to look up the symbol
-  // information, just match file names. Then we can find the requested line
-  // in the file regardless of whether there's a symbol for it.
-  if (input_location.type == InputLocation::Type::kLine)
-    return CanonicalizeFile(target_symbols, input_location.line, file_line);
+  // When a file/line is given, we don't actually want to look up the symbol information, just match
+  // file names. Then we can find the requested line in the file regardless of whether there's a
+  // symbol for it.
+  //
+  // We can assume file name inputs will only resolve to one InputLocation. Multiple outputs only
+  // happens for symbolic names.
+  if (input_locations.size() == 1u && input_locations[0].type == InputLocation::Type::kLine)
+    return CanonicalizeFile(target_symbols, input_locations[0].line, file_line);
 
-  // Address lookups require a running process, everything else can be done
-  // without a process as long as the symbols are loaded (the Target has them).
-  std::vector<Location> locations;
-  if (input_location.type == InputLocation::Type::kAddress) {
-    if (!process_symbols)
-      return Err("Looking up an address requires a running process.");
-    locations = process_symbols->ResolveInputLocation(input_location, ResolveOptions());
-  } else {
-    locations = target_symbols->ResolveInputLocation(input_location, ResolveOptions());
+  if (!process_symbols) {
+    // This could be enhanced to support listing when there is no running process but there are
+    // symbols loaded (the TargetSymbols) should have file names and such). This isn't a big
+    // use-case currently and it requires different resolution machinery, so skip for now.
+    return Err("Can't list without a currently running process.");
   }
+
+  std::vector<Location> locations;
+  if (Err err = ResolveInputLocations(process_symbols, input_locations, true, &locations);
+      err.has_error())
+    return err;
 
   // Inlined functions might resolve to many locations, but only one file/line,
   // or there could be multiple file name matches. Find the unique ones.
@@ -264,12 +268,13 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
     if (!locations.empty())
       return Err("The match(es) for this had no line information.");
 
-    switch (input_location.type) {
+    // The type won't vary if there are different input locations that were resolved.
+    switch (input_locations[0].type) {
       case InputLocation::Type::kLine:
-        return Err("There are no files matching \"%s\".", input_location.line.file().c_str());
+        return Err("There are no files matching \"%s\".", input_locations[0].line.file().c_str());
       case InputLocation::Type::kSymbol:
         return Err("There are no symbols matching \"%s\".",
-                   FormatInputLocation(input_location).AsString().c_str());
+                   FormatInputLocation(input_locations[0]).AsString().c_str());
       case InputLocation::Type::kAddress:
       case InputLocation::Type::kNone:
       default:

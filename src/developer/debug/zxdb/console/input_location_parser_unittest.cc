@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
 #include "src/developer/debug/zxdb/client/mock_target.h"
+#include "src/developer/debug/zxdb/client/mock_thread.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -15,25 +16,40 @@
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
 
-TEST(InputLocationParser, Parse) {
+namespace {
+
+class InputLocationParserTest : public testing::Test {
+ public:
+  void SetUp() override { mock_module_symbols_ = symbols_.InjectMockModule(); }
+
+ protected:
+  ProcessSymbolsTestSetup symbols_;
+  MockModuleSymbols* mock_module_symbols_ = nullptr;
+  SymbolContext symbol_context_ = SymbolContext(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+};
+
+}  // namespace
+
+TEST_F(InputLocationParserTest, ParseGlobal) {
   InputLocation location;
 
   SymbolContext relative_context = SymbolContext::ForRelativeAddresses();
 
   // Valid symbol (including colons).
-  Err err = ParseInputLocation(nullptr, "Foo::Bar", &location);
+  Err err = ParseGlobalInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kSymbol, location.type);
   EXPECT_EQ(R"("Foo"; ::"Bar")", location.symbol.GetDebugName());
 
   // Valid file/line.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "foo/bar.cc:123", &location);
+  err = ParseGlobalInputLocation(nullptr, "foo/bar.cc:123", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kLine, location.type);
   EXPECT_EQ("foo/bar.cc", location.line.file());
@@ -41,38 +57,38 @@ TEST(InputLocationParser, Parse) {
 
   // Invalid file/line.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "foo/bar.cc:123x", &location);
+  err = ParseGlobalInputLocation(nullptr, "foo/bar.cc:123x", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid hex address with *.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "*0x12345f", &location);
+  err = ParseGlobalInputLocation(nullptr, "*0x12345f", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kAddress, location.type);
   EXPECT_EQ(0x12345fu, location.address);
 
   // Valid hex address without a *.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "0x12345f", &location);
+  err = ParseGlobalInputLocation(nullptr, "0x12345f", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kAddress, location.type);
   EXPECT_EQ(0x12345fu, location.address);
 
   // Decimal number with "*" override should be an address.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "*21", &location);
+  err = ParseGlobalInputLocation(nullptr, "*21", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kAddress, location.type);
   EXPECT_EQ(21u, location.address);
 
   // Invalid address.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "*2134x", &location);
+  err = ParseGlobalInputLocation(nullptr, "*2134x", &location);
   EXPECT_TRUE(err.has_error());
 
   // Line number with no Frame for context.
   location = InputLocation();
-  err = ParseInputLocation(nullptr, "21", &location);
+  err = ParseGlobalInputLocation(nullptr, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
@@ -80,7 +96,7 @@ TEST(InputLocationParser, Parse) {
                           Location(0x1234, FileLine(), 0, relative_context, LazySymbol()),
                           0x12345678);
   location = InputLocation();
-  err = ParseInputLocation(&frame_no_file, "21", &location);
+  err = ParseGlobalInputLocation(&frame_no_file, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid implicit file name.
@@ -89,31 +105,24 @@ TEST(InputLocationParser, Parse) {
                         Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()),
                         0x12345678);
   location = InputLocation();
-  err = ParseInputLocation(&frame_valid, "21", &location);
+  err = ParseGlobalInputLocation(&frame_valid, "21", &location);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(file, location.line.file());
   EXPECT_EQ(21, location.line.line());
 }
 
-TEST(InputLocation, ResolveInputLocation) {
-  ProcessSymbolsTestSetup symbols;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-
-  constexpr uint64_t kModuleLoadAddress = 0x10000;
-  SymbolContext symbol_context(kModuleLoadAddress);
-  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, module_symbols);
-
+TEST_F(InputLocationParserTest, ResolveInputLocation) {
   // Resolve to nothing.
   Location output;
-  Err err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
+  Err err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Nothing matching this symbol was found.", err.msg());
 
-  Location expected(0x12345678, FileLine("file.cc", 12), 0, symbol_context);
+  Location expected(0x12345678, FileLine("file.cc", 12), 0, symbol_context_);
 
   // Resolve to one location (success) case.
-  module_symbols->AddSymbolLocations("Foo", {expected});
-  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
+  mock_module_symbols_->AddSymbolLocations("Foo", {expected});
+  err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(expected.address(), output.address());
 
@@ -123,13 +132,13 @@ TEST(InputLocation, ResolveInputLocation) {
   for (int i = 0; i < 15; i++) {
     // The address and line numbers count up for each match.
     expected_locations.emplace_back(0x12345000 + i, FileLine("file.cc", 100 + i), 0,
-                                    symbol_context);
+                                    symbol_context_);
   }
-  module_symbols->AddSymbolLocations("Foo", expected_locations);
+  mock_module_symbols_->AddSymbolLocations("Foo", expected_locations);
 
   // Resolve to all of them.
   std::vector<Location> output_locations;
-  err = ResolveInputLocations(&symbols.process(), nullptr, "Foo", false, &output_locations);
+  err = ResolveInputLocations(&symbols_.process(), nullptr, "Foo", false, &output_locations);
   EXPECT_FALSE(err.has_error());
 
   // The result should be the same as the input but not symbolized (we
@@ -142,7 +151,7 @@ TEST(InputLocation, ResolveInputLocation) {
 
   // Try to resolve one of them. Since there are many this will fail. We requested no symbolization
   // but the error message should still be symbolized.
-  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
+  err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:
  • file.cc:100 = 0x12345000
@@ -160,33 +169,93 @@ TEST(InputLocation, ResolveInputLocation) {
             err.msg());
 }
 
+// Tests that ParseLocalInputLocation() finds matches on the local object for symbolic names.
+TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
+  auto& root = mock_module_symbols_->index().root();
+
+  const char kFunctionName[] = "Foo";
+
+  // The no-context case should just return the input symbol.
+  std::vector<InputLocation> results;
+  Err err = ParseLocalInputLocation(nullptr, kFunctionName, &results);
+  ASSERT_TRUE(err.ok());
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
+  EXPECT_EQ(R"("Foo")", results[0].symbol.GetDebugName());
+
+  // Make a class.
+  const char kClassName[] = "MyClass";
+  auto my_class = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  my_class->set_assigned_name(kClassName);
+  TestIndexedSymbol indexed_class(mock_module_symbols_, &root, kClassName, my_class);
+
+  // Function inside the class.
+  auto foo_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  foo_func->set_parent(my_class);
+  foo_func->set_assigned_name(kFunctionName);
+  constexpr uint64_t kFunctionBegin = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1000;
+  foo_func->set_code_ranges(AddressRanges(AddressRange(kFunctionBegin, kFunctionBegin + 0x10)));
+  TestIndexedSymbol indexed_func(mock_module_symbols_, indexed_class.index_node, kFunctionName,
+                                 foo_func);
+
+  // Make a "this" pointer for the function pointing back to the class.
+  auto my_class_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, my_class);
+  auto this_var =
+      fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "this", my_class_ptr, VariableLocation());
+  foo_func->set_object_pointer(this_var);
+
+  // Process/thread setup.
+  Session session;
+  MockProcess process(&session);
+  process.set_symbols(&symbols_.process());
+  MockThread thread(&process);
+
+  // The location points to the first address of the function.
+  Location location(kFunctionBegin, FileLine(), 0, symbol_context_, foo_func);
+  MockFrame frame(&session, &thread, location, 0x1000);
+
+  // A new search should return the more specific version in the class, plus the global one.
+  err = ParseLocalInputLocation(&frame, kFunctionName, &results);
+  ASSERT_TRUE(err.ok());
+  ASSERT_EQ(2u, results.size());
+  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
+  EXPECT_EQ(R"("MyClass"; ::"Foo")", results[0].symbol.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kSymbol, results[1].type);
+  EXPECT_EQ(R"("Foo")", results[1].symbol.GetDebugName());
+
+  // A fully qualified function name ("::Foo") should not match the current class and only the
+  // global version should be returned.
+  results.clear();
+  err = ParseLocalInputLocation(&frame, std::string("::") + kFunctionName, &results);
+  ASSERT_TRUE(err.ok());
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
+  EXPECT_EQ(R"(::"Foo")", results[0].symbol.GetDebugName());
+}
+
 // Most of the prefix searching is tested by the FindName tests. This just tests the integration of
 // that with the InputLocation completion.
-TEST(InputLocation, CompleteInputLocation) {
-  ProcessSymbolsTestSetup symbols;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  constexpr uint64_t kLoadAddress = 0x1000;
-  symbols.InjectModule("mod", "1234", kLoadAddress, module_symbols);
-  auto& root = module_symbols->index().root();  // Root of the index.
+TEST_F(InputLocationParserTest, CompleteInputLocation) {
+  auto& root = mock_module_symbols_->index().root();
 
   // Global function.
   const char kGlobalName[] = "aGlobalFunction";
   auto global_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   global_func->set_assigned_name(kGlobalName);
-  TestIndexedSymbol indexed_global(module_symbols.get(), &root, kGlobalName, global_func);
+  TestIndexedSymbol indexed_global(mock_module_symbols_, &root, kGlobalName, global_func);
 
   // Namespace
   const char kNsName[] = "aNamespace";
   auto ns = fxl::MakeRefCounted<Namespace>();
   ns->set_assigned_name(kNsName);
-  TestIndexedSymbol indexed_ns(module_symbols.get(), &root, kNsName, ns);
+  TestIndexedSymbol indexed_ns(mock_module_symbols_, &root, kNsName, ns);
 
   // Class inside the namespace.
   const char kClassName[] = "Class";
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_parent(ns);
   global_type->set_assigned_name(kClassName);
-  TestIndexedSymbol indexed_type(module_symbols.get(), indexed_ns.index_node, kClassName,
+  TestIndexedSymbol indexed_type(mock_module_symbols_, indexed_ns.index_node, kClassName,
                                  global_type);
 
   // Function inside the class.
@@ -194,16 +263,16 @@ TEST(InputLocation, CompleteInputLocation) {
   auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   member_func->set_assigned_name(kMemberName);
   member_func->set_parent(global_type);
-  TestIndexedSymbol indexed_member(module_symbols.get(), indexed_type.index_node, kMemberName,
+  TestIndexedSymbol indexed_member(mock_module_symbols_, indexed_type.index_node, kMemberName,
                                    member_func);
 
   // TODO(brettw) make a test setup helper for a whole session / target / process / thread / frame +
   // symbols.
   Session session;
   MockTarget target(&session);
-  target.set_symbols(&symbols.target());
+  target.set_symbols(&symbols_.target());
   MockProcess process(&session);
-  process.set_symbols(&symbols.process());
+  process.set_symbols(&symbols_.process());
 
   Location loc;
   MockFrame frame(&session, nullptr, loc, 0);

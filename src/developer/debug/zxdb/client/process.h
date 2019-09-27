@@ -124,7 +124,8 @@ class Process : public ClientObject {
   // The callback does NOT mean the step has completed, but rather the setup
   // for the function was successful. Symbols and breakpoint setup can cause
   // asynchronous failures.
-  virtual void ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) = 0;
+  virtual void ContinueUntil(std::vector<InputLocation> locations,
+                             fit::callback<void(const Err&)> cb) = 0;
 
   // Returns the SymbolDataProvider that can be used to evaluate symbols
   // in the context of this process. This will not have any frame information

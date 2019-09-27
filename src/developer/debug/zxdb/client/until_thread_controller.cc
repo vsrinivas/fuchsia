@@ -16,13 +16,13 @@
 
 namespace zxdb {
 
-UntilThreadController::UntilThreadController(InputLocation location)
-    : ThreadController(), location_(std::move(location)), weak_factory_(this) {}
+UntilThreadController::UntilThreadController(std::vector<InputLocation> locations)
+    : ThreadController(), locations_(std::move(locations)), weak_factory_(this) {}
 
-UntilThreadController::UntilThreadController(InputLocation location, FrameFingerprint newest_frame,
-                                             FrameComparison cmp)
+UntilThreadController::UntilThreadController(std::vector<InputLocation> locations,
+                                             FrameFingerprint newest_frame, FrameComparison cmp)
     : ThreadController(),
-      location_(std::move(location)),
+      locations_(std::move(locations)),
       threshold_frame_(newest_frame),
       comparison_(cmp),
       weak_factory_(this) {}
@@ -39,7 +39,7 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
   settings.scope = BreakpointSettings::Scope::kThread;
   settings.scope_target = GetTarget();
   settings.scope_thread = thread;
-  settings.location = std::move(location_);
+  settings.locations = std::move(locations_);
 
   // Frame-tied triggers can't be one-shot because we need to check the stack
   // every time it triggers. In the non-frame case the one-shot breakpoint will

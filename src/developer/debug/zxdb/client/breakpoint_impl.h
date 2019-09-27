@@ -91,6 +91,9 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   // Returns the options for converting this breakpoint's input location to addresses,
   ResolveOptions GetResolveOptions() const;
 
+  // Returns true if all input locations for this breakpoint are addesses.
+  bool AllLocationsAddresses() const;
+
   bool is_internal_;
 
   // ID used to refer to this in the backend.

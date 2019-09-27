@@ -158,6 +158,25 @@ TEST(CommandUtils, FormatIdentifier) {
       FormatIdentifier(ident, true).GetDebugString());
 }
 
+TEST(CommandUtils, FormatInputLocation) {
+  EXPECT_EQ("<no location>", FormatInputLocation(InputLocation()).AsString());
+  EXPECT_EQ("0x123456", FormatInputLocation(InputLocation(0x123456)).AsString());
+  EXPECT_EQ("file.cc:34", FormatInputLocation(InputLocation(FileLine("file.cc", 34))).AsString());
+  EXPECT_EQ("Foo",
+            FormatInputLocation(InputLocation(Identifier(IdentifierComponent("Foo")))).AsString());
+}
+
+TEST(CommandUtils, FormatInputLocations) {
+  std::vector<InputLocation> input;
+  EXPECT_EQ("<no location>", FormatInputLocations(input).AsString());
+
+  input.emplace_back(Identifier(IdentifierComponent("Foo")));
+  EXPECT_EQ("Foo", FormatInputLocations(input).AsString());
+
+  input.emplace_back(Identifier(IdentifierComponent("Bar")));
+  EXPECT_EQ("Foo, Bar", FormatInputLocations(input).AsString());
+}
+
 TEST(CommandUtils, FormatLocation) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 

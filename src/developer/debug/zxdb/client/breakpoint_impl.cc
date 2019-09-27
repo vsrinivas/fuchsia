@@ -171,8 +171,15 @@ void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
 void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
   // Should only get this notification for relevant processes.
   FXL_DCHECK(CouldApplyToProcess(process));
-  if (procs_[process].AddLocations(
-          this, process, module->ResolveInputLocation(settings_.location, GetResolveOptions())))
+
+  ResolveOptions options = GetResolveOptions();
+  bool needs_sync = false;
+  for (const auto& loc : settings_.locations) {
+    needs_sync |=
+        procs_[process].AddLocations(this, process, module->ResolveInputLocation(loc, options));
+  }
+
+  if (needs_sync)
     SyncBackend();
 }
 
@@ -211,9 +218,9 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
   // with this process.
   bool send_update = found->second.HasEnabledLocation();
 
-  // When the process exits, disable breakpoints that are address-based since
-  // the addresses will normally change when a process is loaded.
-  if (settings_.location.type == InputLocation::Type::kAddress) {
+  // When the process exits, disable breakpoints that are entirely address-based since the addresses
+  // will normally change when a process is loaded.
+  if (AllLocationsAddresses()) {
     // Should only have one process for address-based breakpoints.
     FXL_DCHECK(procs_.size() == 1u);
     FXL_DCHECK(process->GetTarget() == settings_.scope_target);
@@ -376,9 +383,11 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
   record.locs.clear();
 
   // Resolve addresses.
-  changed |= record.AddLocations(
-      this, process,
-      process->GetSymbols()->ResolveInputLocation(settings_.location, GetResolveOptions()));
+  ResolveOptions options = GetResolveOptions();
+  for (const auto& loc : settings_.locations) {
+    changed |= record.AddLocations(this, process,
+                                   process->GetSymbols()->ResolveInputLocation(loc, options));
+  }
   return changed;
 }
 
@@ -386,7 +395,7 @@ ResolveOptions BreakpointImpl::GetResolveOptions() const {
   ResolveOptions options;
   // We don't need the result to be symbolized unless required by skip_function_prologue.
 
-  if (settings_.location.type == InputLocation::Type::kAddress) {
+  if (AllLocationsAddresses()) {
     // Only need addresses. Don't try to skip function prologues when the user gives an address or
     // the address might move.
     options.symbolize = false;
@@ -405,6 +414,12 @@ ResolveOptions BreakpointImpl::GetResolveOptions() const {
   }
 
   return options;
+}
+
+bool BreakpointImpl::AllLocationsAddresses() const {
+  return !settings_.locations.empty() &&
+         std::all_of(settings_.locations.begin(), settings_.locations.end(),
+                     [](const auto& loc) { return loc.type == InputLocation::Type::kAddress; });
 }
 
 }  // namespace zxdb

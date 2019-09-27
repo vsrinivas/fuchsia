@@ -87,6 +87,7 @@ std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint);
 
 OutputBuffer FormatInputLocation(const InputLocation& location);
+OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);
 
 // Formats the given string as an identifier, with any template annotations
 // dimmed. If bold_last is set, the last identifier component will be bolded.

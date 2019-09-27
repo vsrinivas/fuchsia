@@ -558,7 +558,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     row.emplace_back(BreakpointStopToString(settings.stop_mode));
     row.emplace_back(BreakpointEnabledToString(settings.enabled));
     row.emplace_back(BreakpointTypeToString(settings.type));
-    row.push_back(FormatInputLocation(settings.location));
+    row.push_back(FormatInputLocations(settings.locations));
 
     if (include_locations) {
       for (const auto& loc : pair.second->GetLocations()) {
