@@ -612,7 +612,7 @@ void CadenceHpnfc::DdkRelease() { delete this; }
 }  // namespace rawnand
 
 static zx_driver_ops_t cadence_hpnfc_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = rawnand::CadenceHpnfc::Create;
   return ops;

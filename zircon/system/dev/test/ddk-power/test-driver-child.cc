@@ -127,7 +127,7 @@ zx_status_t TestPowerDriverChild::Create(void* ctx, zx_device_t* device) {
 }
 
 static zx_driver_ops_t test_power_child_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = TestPowerDriverChild::Create;
   return ops;

@@ -484,7 +484,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
 }
 
 static zx_driver_ops_t hid_driver_ops = []() {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = hid_bind;
   return ops;

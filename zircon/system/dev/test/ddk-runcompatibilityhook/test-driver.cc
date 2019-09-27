@@ -66,7 +66,7 @@ zx_status_t test_compatibility_hook_bind(void* ctx, zx_device_t* device) {
 }
 
 static zx_driver_ops_t test_compatibility_hook_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = test_compatibility_hook_bind;
   return ops;

@@ -329,7 +329,7 @@ zx_status_t Max98373::ReadReg(uint16_t reg, uint8_t* value) {
 zx_status_t max98373_bind(void* ctx, zx_device_t* parent) { return Max98373::Create(parent); }
 
 static zx_driver_ops_t driver_ops = []() {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = max98373_bind;
   return ops;

@@ -188,7 +188,7 @@ zx_status_t input_report_bind(void* ctx, zx_device_t* parent) {
 }
 
 static zx_driver_ops_t input_report_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = input_report_bind;
   return ops;

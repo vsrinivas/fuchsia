@@ -58,7 +58,7 @@ zx_status_t TestCompatibilityHookDriverChild::Create(void* ctx, zx_device_t* dev
 }
 
 static zx_driver_ops_t test_compatibility_hook_child_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = TestCompatibilityHookDriverChild::Create;
   return ops;

@@ -237,7 +237,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
 }
 
 static zx_driver_ops_t driver_ops = []() {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = AmlSpi::Create;
   return ops;

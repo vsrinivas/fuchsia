@@ -213,7 +213,7 @@ zx_status_t ssd1306_bind(void* ctx, zx_device_t* device) {
 }
 
 static zx_driver_ops_t ssd1306_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops;
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = ssd1306_bind;
   return ops;
