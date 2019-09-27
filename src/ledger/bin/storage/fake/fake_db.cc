@@ -92,9 +92,10 @@ class PrefixIterator
  public:
   PrefixIterator(const std::map<std::string, std::string>& key_value_store,
                  convert::ExtendedStringView prefix)
-      : prefix_(prefix.ToString()),
-        it_(key_value_store.lower_bound(prefix_)),
-        end_(key_value_store.end()) {
+      : key_value_store_(key_value_store),
+        prefix_(prefix.ToString()),
+        it_(key_value_store_.lower_bound(prefix_)),
+        end_(key_value_store_.end()) {
     UpdateCurrentElement();
   }
 
@@ -136,6 +137,8 @@ class PrefixIterator
     }
   }
 
+  // Snapshot of the database at the time of creation of the iterator.
+  const std::map<std::string, std::string> key_value_store_;
   std::string prefix_;
   std::optional<std::pair<convert::ExtendedStringView, convert::ExtendedStringView>> current_;
   std::map<std::string, std::string>::const_iterator it_;
