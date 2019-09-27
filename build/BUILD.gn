@@ -1,7 +1,15 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-#
+
+# The tests listed in this target will be built by the default build.
+group("tests") {
+  testonly = true
+
+  deps = [
+    "sdk:tests",
+  ]
+}
 
 group("deprecated_misc_storage_allowlist") {
   #  ________  _________  ________  ________

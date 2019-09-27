@@ -301,8 +301,10 @@ def main():
 
     # Wait for build jobs to complete
     stdout, stderr = depfile_job.communicate()
-    if depfile_job.returncode != 0:
+    if stdout or stderr:
         print(stdout + stderr)
+    if depfile_job.returncode != 0:
+        print("Depfile command failed: %s" % " ".join(depfile_args))
         return depfile_job.returncode
     fix_depfile(args.depfile, os.getcwd(), args.output_file)
 
@@ -310,6 +312,7 @@ def main():
     if stdout or stderr:
         print(stdout + stderr)
     if build_job.returncode != 0:
+        print("Build command failed: %s" % " ".join(build_args))
         return build_job.returncode
 
 if __name__ == '__main__':

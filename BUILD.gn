@@ -158,6 +158,7 @@ testonly = true
 group("default") {
   deps = [
     ":build_time_checks",
+    "//build:tests",
     "//build/images:packages",
     "//sdk",
   ]
@@ -231,8 +232,8 @@ generated_file("tests") {
   data_keys = [ "test_spec" ]
   output_conversion = "json"
   deps = [
+    "//build:tests",
     "//build/images:packages",
-    "//sdk",
   ]
 }
 
