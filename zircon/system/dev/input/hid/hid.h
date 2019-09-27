@@ -62,6 +62,7 @@ class HidDevice : public HidDeviceType,
   input_report_size_t GetMaxInputReportSize();
   input_report_size_t GetReportSizeById(input_report_id_t id, ReportType type);
   BootProtocol GetBootProtocol();
+  hid_info_t GetHidInfo() { return info_; }
 
   ddk::HidbusProtocolClient* GetHidbusProtocol() { return &hidbus_; }
 

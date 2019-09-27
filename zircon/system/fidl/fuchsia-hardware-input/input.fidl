@@ -25,49 +25,64 @@ enum ReportType : uint8 {
     FEATURE = 3;
 };
 
+/// DeviceIds lets a clients determine the vendor and product id for a device.
+/// If the device is real HID device, then the id information
+/// will come from the device itself. Mock HID devices may assign the
+/// ids in the driver. If the mock HID driver does not assign ids, zeros
+/// will be used instead.
+struct DeviceIds {
+    uint32 vendor_id;
+    uint32 product_id;
+    uint32 version;
+};
+
 [Layout = "Simple"]
 protocol Device {
-    // Get the HID boot interface protocol this device supports
+    /// Get the HID boot interface protocol this device supports
     GetBootProtocol() -> (BootProtocol protocol);
 
-    // Get the size of the report descriptor
+    /// Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    /// If it is a mock HID decice, the IDs will either be 0's or user defined.
+    GetDeviceIds() -> (DeviceIds ids);
+
+    /// Get the size of the report descriptor
     GetReportDescSize() -> (uint16 size);
 
-    // Get the report descriptor
+    /// Get the report descriptor
     GetReportDesc() -> (vector<uint8>:MAX_DESC_LEN desc);
 
-    // Get the number of reports in the report descriptor
+    /// Get the number of reports in the report descriptor
     GetNumReports() -> (uint16 count);
 
-    // Get the report ids that are used in the report descriptor
+    /// Get the report ids that are used in the report descriptor
     GetReportIds() -> (vector<ReportId>:MAX_REPORT_IDS ids);
 
-    // Get the size of a single report for the given (type, id) pair.
+    /// Get the size of a single report for the given (type, id) pair.
     GetReportSize(ReportType type, ReportId id) -> (zx.status status, uint16 size);
 
-    // Get the maximum size of a single input report.
+    /// Get the maximum size of a single input report.
     GetMaxInputReportSize() -> (uint16 size);
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
-    // This is the interface that is supposed to be used for continuous polling.
-    // Multiple reports can be returned from this API at a time, it is up to the client
-    // to do the parsing of the reports with the correct sizes and offset.
-    // It is guaranteed that only whole reports will be sent.
-    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
-    // wait on the event from |GetReportsEvent|.
+    /// Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    /// This is the interface that is supposed to be used for continuous polling.
+    /// Multiple reports can be returned from this API at a time, it is up to the client
+    /// to do the parsing of the reports with the correct sizes and offset.
+    /// It is guaranteed that only whole reports will be sent.
+    /// If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    /// wait on the event from |GetReportsEvent|.
     GetReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    /// Receive an event that will be signalled when there are reports in the
+    /// Device's report FIFO.
     GetReportsEvent() -> (zx.status status, handle<event> event);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
-    // to be used for continuous polling of the reports.
+    /// Get a single report of the given (type, id) pair.  This interface is not intended
+    /// to be used for continuous polling of the reports.
     GetReport(ReportType type, ReportId id) -> (zx.status status, vector<uint8>:MAX_REPORT_LEN report);
 
-    // Set a single report of the given (type, id) pair.
+    /// Set a single report of the given (type, id) pair.
     SetReport(ReportType type, ReportId id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status status);
 
-    // Set the trace ID that is used for HID report flow events.
+    /// Set the trace ID that is used for HID report flow events.
     SetTraceId(uint32 id);
 };

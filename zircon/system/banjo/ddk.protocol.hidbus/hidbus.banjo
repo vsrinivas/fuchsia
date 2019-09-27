@@ -37,6 +37,10 @@ struct HidInfo {
     uint8 dev_num;
     HidDeviceClass device_class;
     bool boot_device;
+
+    uint32 vendor_id;
+    uint32 product_id;
+    uint32 version;
 };
 
 [Layout = "ddk-interface"]

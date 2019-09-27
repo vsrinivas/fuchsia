@@ -38,6 +38,11 @@
 
 namespace i2c_hid {
 
+// Ids were chosen arbitrarily.
+static constexpr uint16_t kHidVendorId = 0xabcd;
+static constexpr uint16_t kHidProductId = 0xdcba;
+static constexpr uint16_t kHidVersion = 0x0123;
+
 class FakeI2cHid : public fake_i2c::FakeI2c {
  public:
   // Sets the report descriptor. Must be called before binding the driver because
@@ -127,6 +132,9 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
     hiddesc.wDataRegister = kDataRegister;
     hiddesc.wMaxInputLength = kMaxInputLength;
     hiddesc.wReportDescRegister = kReportDescRegister;
+    hiddesc.wVendorID = htole16(kHidVendorId);
+    hiddesc.wProductID = htole16(kHidProductId);
+    hiddesc.wVersionID = htole16(kHidVersion);
     return hiddesc;
   }();
   zx_status_t hiddesc_status_ = ZX_OK;
@@ -171,6 +179,19 @@ class I2cHidTest : public zxtest::Test {
 
 TEST_F(I2cHidTest, HidTestBind) { ASSERT_OK(device_->Bind(channel_)); }
 
+TEST_F(I2cHidTest, HidTestQuery) {
+  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
+
+  StartHidBus();
+
+  hid_info_t info = {};
+  ASSERT_OK(device_->HidbusQuery(0, &info));
+  ASSERT_EQ(kHidVendorId, info.vendor_id);
+  ASSERT_EQ(kHidProductId, info.product_id);
+  ASSERT_EQ(kHidVersion, info.version);
+}
+
 TEST_F(I2cHidTest, HidTestReadReportDesc) {
   uint8_t returned_report_desc[HID_MAX_DESC_LEN];
   size_t returned_report_desc_len;
@@ -183,9 +204,8 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
   fake_i2c_hid_.SetReportDescriptor(report_desc);
   ASSERT_OK(device_->Bind(channel_));
 
-  ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
-                                         returned_report_desc, sizeof(returned_report_desc),
-                                         &returned_report_desc_len));
+  ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, returned_report_desc,
+                                         sizeof(returned_report_desc), &returned_report_desc_len));
   ASSERT_EQ(returned_report_desc_len, report_desc.size());
   for (size_t i = 0; i < returned_report_desc_len; i++) {
     ASSERT_EQ(returned_report_desc[i], report_desc[i]);

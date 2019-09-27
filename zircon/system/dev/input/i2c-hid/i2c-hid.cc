@@ -64,6 +64,10 @@ zx_status_t I2cHidbus::HidbusQuery(uint32_t options, hid_info_t* info) {
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
   info->boot_device = false;
+
+  info->vendor_id = hiddesc_.wVendorID;
+  info->product_id = hiddesc_.wProductID;
+  info->version = hiddesc_.wVersionID;
   return ZX_OK;
 }
 
@@ -98,9 +102,8 @@ zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, voi
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  zx_status_t status =
-      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(uint16_t),
-                         static_cast<uint8_t*>(out_data_buffer), desc_len);
+  zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(uint16_t),
+                                          static_cast<uint8_t*>(out_data_buffer), desc_len);
   if (status < 0) {
     zxlogf(ERROR, "i2c-hid: could not read HID report descriptor from reg 0x%04x: %d\n", desc_reg,
            status);

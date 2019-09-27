@@ -52,6 +52,7 @@ class HidInstance : public HidInstanceDeviceType,
   zx_status_t DdkClose(uint32_t flags);
 
   void GetBootProtocol(GetBootProtocolCompleter::Sync _completer) override;
+  void GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) override;
   void GetReportDescSize(GetReportDescSizeCompleter::Sync _completer) override;
   void GetReportDesc(GetReportDescCompleter::Sync _completer) override;
   void GetNumReports(GetNumReportsCompleter::Sync _completer) override;

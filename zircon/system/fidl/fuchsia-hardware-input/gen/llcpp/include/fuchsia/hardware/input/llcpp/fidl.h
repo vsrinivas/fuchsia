@@ -28,6 +28,7 @@ enum class ReportType : uint8_t {
 };
 
 
+struct DeviceIds;
 enum class BootProtocol : uint32_t {
   NONE = 0u,
   KBD = 1u,
@@ -45,7 +46,29 @@ constexpr uint16_t MAX_REPORT_DATA = 8192u;
 
 constexpr uint16_t MAX_DESC_LEN = 8192u;
 
+
+
+// DeviceIds lets a clients determine the vendor and product id for a device.
+// If the device is real HID device, then the id information
+// will come from the device itself. Mock HID devices may assign the
+// ids in the driver. If the mock HID driver does not assign ids, zeros
+// will be used instead.
+struct DeviceIds {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 12;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint32_t vendor_id = {};
+
+  uint32_t product_id = {};
+
+  uint32_t version = {};
+};
+
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
@@ -79,6 +102,21 @@ class Device final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using GetBootProtocolRequest = ::fidl::AnyZeroArgMessage;
+
+  struct GetDeviceIdsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    DeviceIds ids;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetDeviceIdsRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetReportDescSizeResponse final {
     FIDL_ALIGNDECL
@@ -313,6 +351,22 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetDeviceIds_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceIds_Impl(zx::unowned_channel _client_end);
+      ~GetDeviceIds_Impl() = default;
+      GetDeviceIds_Impl(GetDeviceIds_Impl&& other) = default;
+      GetDeviceIds_Impl& operator=(GetDeviceIds_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class GetReportDescSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -486,6 +540,7 @@ class Device final {
 
    public:
     using GetBootProtocol = GetBootProtocol_Impl<GetBootProtocolResponse>;
+    using GetDeviceIds = GetDeviceIds_Impl<GetDeviceIdsResponse>;
     using GetReportDescSize = GetReportDescSize_Impl<GetReportDescSizeResponse>;
     using GetReportDesc = GetReportDesc_Impl<GetReportDescResponse>;
     using GetNumReports = GetNumReports_Impl<GetNumReportsResponse>;
@@ -512,6 +567,22 @@ class Device final {
       ~GetBootProtocol_Impl() = default;
       GetBootProtocol_Impl(GetBootProtocol_Impl&& other) = default;
       GetBootProtocol_Impl& operator=(GetBootProtocol_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetDeviceIds_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceIds_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDeviceIds_Impl() = default;
+      GetDeviceIds_Impl(GetDeviceIds_Impl&& other) = default;
+      GetDeviceIds_Impl& operator=(GetDeviceIds_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -694,6 +765,7 @@ class Device final {
 
    public:
     using GetBootProtocol = GetBootProtocol_Impl<GetBootProtocolResponse>;
+    using GetDeviceIds = GetDeviceIds_Impl<GetDeviceIdsResponse>;
     using GetReportDescSize = GetReportDescSize_Impl<GetReportDescSizeResponse>;
     using GetReportDesc = GetReportDesc_Impl<GetReportDescResponse>;
     using GetNumReports = GetNumReports_Impl<GetNumReportsResponse>;
@@ -718,75 +790,125 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Get the HID boot interface protocol this device supports
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetBootProtocol GetBootProtocol();
 
+    // Get the HID boot interface protocol this device supports
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetBootProtocol GetBootProtocol(::fidl::BytePart _response_buffer);
 
+    // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    // If it is a mock HID decice, the IDs will either be 0's or user defined.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetDeviceIds GetDeviceIds();
+
+    // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    // If it is a mock HID decice, the IDs will either be 0's or user defined.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDeviceIds GetDeviceIds(::fidl::BytePart _response_buffer);
+
+    // Get the size of the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetReportDescSize GetReportDescSize();
 
+    // Get the size of the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportDescSize GetReportDescSize(::fidl::BytePart _response_buffer);
 
+    // Get the report descriptor
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetReportDesc GetReportDesc();
 
+    // Get the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportDesc GetReportDesc(::fidl::BytePart _response_buffer);
 
+    // Get the number of reports in the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetNumReports GetNumReports();
 
+    // Get the number of reports in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetNumReports GetNumReports(::fidl::BytePart _response_buffer);
 
+    // Get the report ids that are used in the report descriptor
     // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetReportIds GetReportIds();
 
+    // Get the report ids that are used in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportIds GetReportIds(::fidl::BytePart _response_buffer);
 
+    // Get the size of a single report for the given (type, id) pair.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetReportSize GetReportSize(ReportType type, uint8_t id);
 
+    // Get the size of a single report for the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportSize GetReportSize(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
+    // Get the maximum size of a single input report.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetMaxInputReportSize GetMaxInputReportSize();
 
+    // Get the maximum size of a single input report.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetMaxInputReportSize GetMaxInputReportSize(::fidl::BytePart _response_buffer);
 
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetReports GetReports();
 
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReports GetReports(::fidl::BytePart _response_buffer);
 
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetReportsEvent GetReportsEvent();
 
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportsEvent GetReportsEvent(::fidl::BytePart _response_buffer);
 
+    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetReport GetReport(ReportType type, uint8_t id);
 
+    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReport GetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
+    // Set a single report of the given (type, id) pair.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::SetReport SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
 
+    // Set a single report of the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetReport SetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
 
+    // Set the trace ID that is used for HID report flow events.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetTraceId SetTraceId(uint32_t id);
 
+    // Set the trace ID that is used for HID report flow events.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetTraceId SetTraceId(::fidl::BytePart _request_buffer, uint32_t id);
 
@@ -799,75 +921,125 @@ class Device final {
     Call() = delete;
    public:
 
+    // Get the HID boot interface protocol this device supports
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetBootProtocol GetBootProtocol(zx::unowned_channel _client_end);
 
+    // Get the HID boot interface protocol this device supports
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetBootProtocol GetBootProtocol(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    // If it is a mock HID decice, the IDs will either be 0's or user defined.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetDeviceIds GetDeviceIds(zx::unowned_channel _client_end);
+
+    // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    // If it is a mock HID decice, the IDs will either be 0's or user defined.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDeviceIds GetDeviceIds(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Get the size of the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetReportDescSize GetReportDescSize(zx::unowned_channel _client_end);
 
+    // Get the size of the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportDescSize GetReportDescSize(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get the report descriptor
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetReportDesc GetReportDesc(zx::unowned_channel _client_end);
 
+    // Get the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportDesc GetReportDesc(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get the number of reports in the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetNumReports GetNumReports(zx::unowned_channel _client_end);
 
+    // Get the number of reports in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetNumReports GetNumReports(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get the report ids that are used in the report descriptor
     // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetReportIds GetReportIds(zx::unowned_channel _client_end);
 
+    // Get the report ids that are used in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportIds GetReportIds(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get the size of a single report for the given (type, id) pair.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ReportType type, uint8_t id);
 
+    // Get the size of a single report for the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
+    // Get the maximum size of a single input report.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetMaxInputReportSize GetMaxInputReportSize(zx::unowned_channel _client_end);
 
+    // Get the maximum size of a single input report.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetMaxInputReportSize GetMaxInputReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetReports GetReports(zx::unowned_channel _client_end);
 
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReports GetReports(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetReportsEvent GetReportsEvent(zx::unowned_channel _client_end);
 
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportsEvent GetReportsEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetReport GetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id);
 
+    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
+    // Set a single report of the given (type, id) pair.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::SetReport SetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
 
+    // Set a single report of the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
 
+    // Set the trace ID that is used for HID report flow events.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetTraceId SetTraceId(zx::unowned_channel _client_end, uint32_t id);
 
+    // Set the trace ID that is used for HID report flow events.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetTraceId SetTraceId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id);
 
@@ -879,28 +1051,52 @@ class Device final {
     InPlace() = delete;
    public:
 
+    // Get the HID boot interface protocol this device supports
     static ::fidl::DecodeResult<GetBootProtocolResponse> GetBootProtocol(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
+    // If it is a mock HID decice, the IDs will either be 0's or user defined.
+    static ::fidl::DecodeResult<GetDeviceIdsResponse> GetDeviceIds(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Get the size of the report descriptor
     static ::fidl::DecodeResult<GetReportDescSizeResponse> GetReportDescSize(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get the report descriptor
     static ::fidl::DecodeResult<GetReportDescResponse> GetReportDesc(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get the number of reports in the report descriptor
     static ::fidl::DecodeResult<GetNumReportsResponse> GetNumReports(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get the report ids that are used in the report descriptor
     static ::fidl::DecodeResult<GetReportIdsResponse> GetReportIds(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get the size of a single report for the given (type, id) pair.
     static ::fidl::DecodeResult<GetReportSizeResponse> GetReportSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportSizeRequest> params, ::fidl::BytePart response_buffer);
 
+    // Get the maximum size of a single input report.
     static ::fidl::DecodeResult<GetMaxInputReportSizeResponse> GetMaxInputReportSize(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
     static ::fidl::DecodeResult<GetReportsResponse> GetReports(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
     static ::fidl::DecodeResult<GetReportsEventResponse> GetReportsEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // to be used for continuous polling of the reports.
     static ::fidl::DecodeResult<GetReportResponse> GetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportRequest> params, ::fidl::BytePart response_buffer);
 
+    // Set a single report of the given (type, id) pair.
     static ::fidl::DecodeResult<SetReportResponse> SetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetReportRequest> params, ::fidl::BytePart response_buffer);
 
+    // Set the trace ID that is used for HID report flow events.
     static ::fidl::internal::StatusAndError SetTraceId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTraceIdRequest> params);
 
   };
@@ -926,6 +1122,20 @@ class Device final {
     using GetBootProtocolCompleter = ::fidl::Completer<GetBootProtocolCompleterBase>;
 
     virtual void GetBootProtocol(GetBootProtocolCompleter::Sync _completer) = 0;
+
+    class GetDeviceIdsCompleterBase : public _Base {
+     public:
+      void Reply(DeviceIds ids);
+      void Reply(::fidl::BytePart _buffer, DeviceIds ids);
+      void Reply(::fidl::DecodedMessage<GetDeviceIdsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetDeviceIdsCompleter = ::fidl::Completer<GetDeviceIdsCompleterBase>;
+
+    virtual void GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) = 0;
 
     class GetReportDescSizeCompleterBase : public _Base {
      public:
@@ -1101,12 +1311,28 @@ class Device final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::input::DeviceIds> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::input::DeviceIds>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::DeviceIds, vendor_id) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::DeviceIds, product_id) == 4);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::DeviceIds, version) == 8);
+static_assert(sizeof(::llcpp::fuchsia::hardware::input::DeviceIds) == ::llcpp::fuchsia::hardware::input::DeviceIds::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::GetBootProtocolResponse> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::input::Device::GetBootProtocolResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::input::Device::GetBootProtocolResponse)
     == ::llcpp::fuchsia::hardware::input::Device::GetBootProtocolResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::GetBootProtocolResponse, protocol) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::GetDeviceIdsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::input::Device::GetDeviceIdsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::input::Device::GetDeviceIdsResponse)
+    == ::llcpp::fuchsia::hardware::input::Device::GetDeviceIdsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::GetDeviceIdsResponse, ids) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::GetReportDescSizeResponse> : public std::true_type {};

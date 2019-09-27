@@ -195,6 +195,43 @@ TEST_F(HidDeviceTest, LifeTimeTest) {
   ASSERT_OK(device_->Bind(client_));
 }
 
+TEST_F(HidDeviceTest, TestQuery) {
+  // Ids were chosen arbitrarily.
+  constexpr uint16_t kVendorId = 0xacbd;
+  constexpr uint16_t kProductId = 0xdcba;
+  constexpr uint16_t kVersion = 0x1234;
+
+  SetupBootMouseDevice();
+  hid_info_t info = {};
+  info.device_class = HID_DEVICE_CLASS_POINTER;
+  info.boot_device = true;
+  info.vendor_id = kVendorId;
+  info.product_id = kProductId;
+  info.version = kVersion;
+  fake_hidbus_.SetHidInfo(info);
+
+  ASSERT_OK(device_->Bind(client_));
+
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  auto result = sync_client.GetDeviceIds();
+  ASSERT_OK(result.status());
+  llcpp::fuchsia::hardware::input::DeviceIds ids = result.Unwrap()->ids;
+
+  ASSERT_EQ(kVendorId, ids.vendor_id);
+  ASSERT_EQ(kProductId, ids.product_id);
+  ASSERT_EQ(kVersion, ids.version);
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
 TEST_F(HidDeviceTest, BootMouseSendReport) {
   SetupBootMouseDevice();
   uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};

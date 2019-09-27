@@ -176,6 +176,16 @@ void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync _completer) {
   _completer.Reply(base_->GetBootProtocol());
 }
 
+void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) {
+  hid_info_t info = base_->GetHidInfo();
+  ::llcpp::fuchsia::hardware::input::DeviceIds ids = {};
+  ids.vendor_id = info.vendor_id;
+  ids.product_id = info.product_id;
+  ids.version = info.version;
+
+  _completer.Reply(ids);
+}
+
 void HidInstance::GetReportDescSize(GetReportDescSizeCompleter::Sync _completer) {
   _completer.Reply(static_cast<uint16_t>(base_->GetReportDescLen()));
 }

@@ -6,24 +6,24 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/input/c/fidl.h>
+#include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <limits.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/input/c/fidl.h>
-#include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
@@ -181,6 +181,24 @@ static zx_status_t get_report_desc(const fzl::FdioCaller& caller, const char* na
   print_report_descriptor(buf.get(), report_desc_len);
   mtx_unlock(&print_lock);
   return status;
+}
+
+static zx_status_t print_device_ids(const fzl::FdioCaller& caller, const char* name) {
+  fuchsia_hardware_input_DeviceIds ids = {};
+  zx_status_t status = fuchsia_hardware_input_DeviceGetDeviceIds(caller.borrow_channel(), &ids);
+  if (status != ZX_OK) {
+    lprintf("hid: could not get device ids from %s (status=%d)\n", name, status);
+    return status;
+  }
+
+  mtx_lock(&print_lock);
+  printf("hid device ids:\n");
+  printf("  vendor_id:  0x%08x\n", ids.vendor_id);
+  printf("  product_id: 0x%08x\n", ids.product_id);
+  printf("  version:    0x%08x\n", ids.version);
+  mtx_unlock(&print_lock);
+
+  return ZX_OK;
 }
 
 static zx_status_t get_num_reports(const fzl::FdioCaller& caller, const char* name,
@@ -567,7 +585,12 @@ int parse(int argc, const char** argv) {
   }
 
   fzl::FdioCaller caller{fbl::unique_fd(fd)};
-  zx_status_t status = parse_rpt_descriptor(caller, argv[0]);
+  zx_status_t status = print_device_ids(caller, argv[0]);
+  if (status != ZX_OK) {
+    return static_cast<int>(status);
+  }
+
+  status = parse_rpt_descriptor(caller, argv[0]);
   return static_cast<int>(status);
 }
 
