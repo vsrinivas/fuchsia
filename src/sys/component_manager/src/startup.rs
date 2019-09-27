@@ -106,7 +106,9 @@ impl Arguments {
             "Usage: {} [options] <root-component-url>\n\
              Options:\n\
              --use-builtin-process-launcher   Provide and use a built-in implementation of\n\
-             fuchsia.process.Launcher",
+             fuchsia.process.Launcher\n\
+             --use-builtin-vmex Provide and use a built-in implementation of\n\
+             fuchsia.security.resource.Vmex",
             std::env::args().next().unwrap_or("component_manager".to_string())
         )
     }
