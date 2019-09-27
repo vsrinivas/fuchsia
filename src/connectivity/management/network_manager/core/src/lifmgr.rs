@@ -126,12 +126,17 @@ impl LIF {
         Ok(())
     }
 
-    /// Updates this interface's address and increments the version.
+    //TODO(dpradilla): This should not be here and is incorrect. Talk to Ajrun to undestand why he put
+    // it here and find the proper way to do this.
+    /// Updates this interface's address and increments the version it there was a change.
     pub fn update_with_address(
         &mut self,
         addr: Option<LifIpAddr>,
         enabled: bool,
     ) -> error::Result<()> {
+        if addr == self.properties.address && enabled == self.properties.enabled {
+            return Ok(());
+        }
         self.set_properties(
             self.id.version + 1,
             LIFProperties { dhcp: self.properties.dhcp, address: addr, enabled: enabled },
@@ -431,9 +436,9 @@ mod tests {
     fn test_new_lif() {
         let pm = create_ports();
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(3)], 0, None);
-        assert!(d.is_ok());
+        d.unwrap();
         let d = LIF::new(3, LIFType::LAN, "name", PortId::from(0), vec![PortId::from(1)], 0, None);
-        assert!(d.is_ok());
+        d.unwrap();
         let d = LIF::new(
             3,
             LIFType::LAN,
@@ -443,7 +448,7 @@ mod tests {
             0,
             None,
         );
-        assert!(d.is_ok());
+        d.unwrap();
     }
     #[test]
     fn test_new_lif_wrong_number_ports() {
@@ -500,6 +505,65 @@ mod tests {
             None,
         );
         assert!(d.is_ok());
+    }
+
+    #[test]
+    fn test_update_with_address() {
+        let pm = create_ports();
+        let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(3)], 0, None);
+        assert!(d.is_ok());
+        let wan = d.unwrap();
+        assert_eq!(wan.id.version(), 3);
+        let d = LIF::new(3, LIFType::LAN, "name", PortId::from(0), vec![PortId::from(1)], 0, None);
+        assert!(d.is_ok());
+        let mut lan = d.unwrap();
+        assert_eq!(lan.id.version(), 3);
+        assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
+        //TODO(dpradilla) ask arjun why creation defaults to admin enabled
+        assert_eq!(lan.properties.enabled, true, "interface should be admin disabled");
+        assert_eq!(lan.properties.address, None, "no address configured");
+
+        lan.update_with_address(None, true).expect("update_with_address should not fail");
+
+        // Nothing should have changed.
+        assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
+        assert_eq!(lan.properties.enabled, true, "interface should be admin down");
+        assert_eq!(lan.properties.address, None, "no address configured");
+        assert_eq!(lan.id.version(), 3);
+
+        lan.update_with_address(None, false).expect("update_with_address should not fail");
+
+        // Only enable and version should change
+        assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
+        assert_eq!(lan.properties.enabled, false, "interface should be admin down");
+        assert_eq!(lan.properties.address, None, "no address configured");
+        assert_eq!(lan.id.version(), 4);
+
+        lan.update_with_address(
+            Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+            true,
+        )
+        .expect("update_with_address should not fail");
+
+        // Only enable and version should change
+        assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
+        assert_eq!(lan.properties.enabled, true, "interface should be admin down");
+        assert_eq!(
+            lan.properties.address,
+            Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+            "no address configured"
+        );
+        assert_eq!(lan.id.version(), 5);
+
+        // Nothing should have changed.
+        assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
+        assert_eq!(lan.properties.enabled, true, "interface should be admin down");
+        assert_eq!(
+            lan.properties.address,
+            Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+            "no address configured"
+        );
+        assert_eq!(lan.id.version(), 5);
     }
 
     #[test]
