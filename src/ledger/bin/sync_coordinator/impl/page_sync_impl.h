@@ -41,8 +41,8 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
 
   // PageSync:
   void Start() override;
-  void SetOnIdle(fit::closure on_idle) override;
-  bool IsIdle() override;
+  void SetOnPaused(fit::closure on_paused) override;
+  bool IsPaused() override;
   void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 

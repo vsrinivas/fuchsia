@@ -21,12 +21,10 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
-// PageDownload handles all the download operations (commits and objects) for a
-// page.
+// PageDownload handles all the download operations (commits and objects) for a page.
 class PageDownload : public cloud_provider::PageCloudWatcher, public storage::PageSyncDelegate {
  public:
-  // Delegate ensuring coordination between PageDownload and the class that owns
-  // it.
+  // Delegate ensuring coordination between PageDownload and the class that owns it.
   class Delegate {
    public:
     // Report that the download state changed.
@@ -41,11 +39,13 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
 
   ~PageDownload() override;
 
-  // Downloads the initial backlog of remote commits, and sets up the remote
-  // watcher upon success.
+  // Downloads the initial backlog of remote commits, and sets up the remote watcher upon success.
   void StartDownload();
 
-  // Returns if PageDownload is idle.
+  // Returns if PageDownload is paused (idle or in backoff).
+  bool IsPaused();
+
+  // Returns if PageDownload is idle (all remote commits downloaded).
   bool IsIdle();
 
  private:

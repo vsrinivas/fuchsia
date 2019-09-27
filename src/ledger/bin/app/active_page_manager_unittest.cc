@@ -317,7 +317,7 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
     this->on_backlog_downloaded_callback = std::move(on_backlog_downloaded_callback);
   }
 
-  void SetOnIdle(fit::closure on_idle) override { this->on_idle = std::move(on_idle); }
+  void SetOnPaused(fit::closure on_paused) override { this->on_paused = std::move(on_paused); }
 
   void SetSyncWatcher(sync_coordinator::SyncStateWatcher* watcher) override {
     this->watcher = watcher;
@@ -326,7 +326,7 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   bool start_called = false;
   sync_coordinator::SyncStateWatcher* watcher = nullptr;
   fit::closure on_backlog_downloaded_callback;
-  fit::closure on_idle;
+  fit::closure on_paused;
 };
 
 class ActivePageManagerTest : public TestWithEnvironment {
@@ -612,7 +612,7 @@ TEST_F(ActivePageManagerTest, ExitWhenSyncFinishes) {
   bool called;
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&called));
 
-  async::PostTask(dispatcher(), [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
+  async::PostTask(dispatcher(), [fake_page_sync_ptr] { fake_page_sync_ptr->on_paused(); });
 
   DrainLoop();
   EXPECT_TRUE(called);

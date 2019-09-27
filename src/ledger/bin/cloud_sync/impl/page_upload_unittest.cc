@@ -90,12 +90,12 @@ class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegat
 TEST_F(PageUploadTest, UploadBacklog) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
 
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
@@ -117,25 +117,25 @@ TEST_F(PageUploadTest, UploadBacklog) {
 TEST_F(PageUploadTest, UploadBacklogOnlyOnSingleHead) {
   // Verify that two local commits are not uploaded when there is two local
   // heads.
-  bool upload_is_idle = false;
+  bool upload_is_paused = false;
   storage_.head_count = 2;
   storage_.NewCommit("id0", "content0");
   storage_.NewCommit("id1", "content1");
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
 
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
   EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
 
   // Add a new commit and reduce the number of heads to 1.
-  upload_is_idle = false;
+  upload_is_paused = false;
   storage_.head_count = 1;
   auto commit = storage_.NewCommit("id2", "content2");
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   // Verify that all local commits were uploaded.
   ASSERT_EQ(page_cloud_.received_commits.size(), 3u);
@@ -183,11 +183,11 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
 
   is_download_idle_ = true;
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
@@ -208,12 +208,12 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
 // watcher are uploaded to PageCloudHandler, with the exception of commits that
 // themselves come from sync.
 TEST_F(PageUploadTest, UploadNewCommits) {
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   auto commit1 = storage_.NewCommit("id1", "content1");
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
@@ -226,7 +226,7 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
 
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
@@ -246,22 +246,22 @@ TEST_F(PageUploadTest, UploadNewCommits) {
 // Verifies that new commits being added to storage are only uploaded while
 // there is only a single head.
 TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   // Add a new commit when there's only one head and verify that it is
   // uploaded.
   storage_.head_count = 1;
   auto commit0 = storage_.NewCommit("id0", "content0");
   storage_.watcher_->OnNewCommits(commit0->AsList(), storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(page_upload_->IsIdle());
+  EXPECT_FALSE(page_upload_->IsPaused());
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
   ASSERT_EQ(page_cloud_.received_commits.size(), 1u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
   EXPECT_EQ(page_cloud_.received_commits[0].id(),
@@ -277,8 +277,8 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   auto commit1 = storage_.NewCommit("id1", "content1");
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
   ASSERT_EQ(page_cloud_.received_commits.size(), 0u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 0u);
 
@@ -287,9 +287,9 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   storage_.head_count = 1;
   auto commit2 = storage_.NewCommit("id2", "content2");
   storage_.watcher_->OnNewCommits(commit2->AsList(), storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(page_upload_->IsIdle());
+  EXPECT_FALSE(page_upload_->IsPaused());
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
   EXPECT_EQ(page_cloud_.received_commits[0].id(),
@@ -307,17 +307,17 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
 // Verifies that existing commits are uploaded before the new ones.
 TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   storage_.NewCommit("id1", "content1");
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   auto commit = storage_.NewCommit("id2", "content2");
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
   ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
@@ -337,10 +337,10 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
 // Verifies that failing uploads are retried.
 TEST_F(PageUploadTest, RetryUpload) {
   page_upload_->StartOrRestartUpload();
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
   SetOnNewStateCallback(nullptr);
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
@@ -376,17 +376,17 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
   RunLoopUntilIdle();
   EXPECT_EQ(page_cloud_.received_commits.size(), 2u);
   EXPECT_EQ(on_idle_calls, 1);
-  EXPECT_TRUE(page_upload_->IsIdle());
+  EXPECT_TRUE(page_upload_->IsPaused());
 
   // Notify about a new commit to upload and verify that the idle callback was
   // called again on completion.
   auto commit3 = storage_.NewCommit("id3", "content3");
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(page_upload_->IsIdle());
+  EXPECT_FALSE(page_upload_->IsPaused());
   RunLoopUntilIdle();
   EXPECT_EQ(page_cloud_.received_commits.size(), 3u);
   EXPECT_EQ(on_idle_calls, 2);
-  EXPECT_TRUE(page_upload_->IsIdle());
+  EXPECT_TRUE(page_upload_->IsPaused());
 }
 
 // Verifies that if listing the original commits to be uploaded fails, the
@@ -409,17 +409,17 @@ TEST_F(PageUploadTest, FailToListCommits) {
 
 // Verifies that already synced commits are not re-uploaded.
 TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   auto commit = std::make_unique<TestCommit>("id", "content");
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
+  ASSERT_TRUE(upload_is_paused);
 
   // Commit is already synced.
   ASSERT_EQ(page_cloud_.received_commits.size(), 0u);
@@ -428,17 +428,17 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
 // Verifies that commits that are received between the first upload and the
 // retry are not sent.
 TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] {
-    upload_is_idle = page_upload_->IsIdle();
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] {
+    upload_is_paused = page_upload_->IsPaused();
     if (states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
       QuitLoop();
     }
   });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
 
@@ -459,9 +459,11 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   storage_.unsynced_commits_to_return.clear();
 
   RunLoopFor(kHalfBackoffInterval);
-  ASSERT_FALSE(upload_is_idle);
+  EXPECT_EQ(states_.back(), UploadSyncState::UPLOAD_TEMPORARY_ERROR);
+  EXPECT_TRUE(upload_is_paused);
   RunLoopFor(kBackoffInterval);
-  ASSERT_TRUE(upload_is_idle);
+  EXPECT_EQ(states_.back(), UploadSyncState::UPLOAD_IDLE);
+  EXPECT_TRUE(upload_is_paused);
 
   // Verify that no calls were made to attempt to upload the commit.
   EXPECT_EQ(page_cloud_.add_commits_calls, 0u);
@@ -469,12 +471,12 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
 // Verifies that concurrent new commit notifications do not crash PageUpload.
 TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
-  bool upload_is_idle = false;
-  SetOnNewStateCallback([this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  bool upload_is_paused = false;
+  SetOnNewStateCallback([this, &upload_is_paused] { upload_is_paused = page_upload_->IsPaused(); });
   page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
-  ASSERT_TRUE(upload_is_idle);
-  upload_is_idle = false;
+  ASSERT_TRUE(upload_is_paused);
+  upload_is_paused = false;
 
   storage_.head_count = 2;
   auto commit0 = storage_.NewCommit("id0", "content0");

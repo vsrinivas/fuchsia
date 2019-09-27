@@ -274,12 +274,15 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   RunLoopUntilIdle();
   EXPECT_GE(5u, page_cloud_.get_commits_calls);
   EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_TRUE(page_download_->IsPaused());
+  EXPECT_FALSE(page_download_->IsIdle());
 
   SetOnNewStateCallback([] {});
   page_cloud_.status_to_return = cloud_provider::Status::OK;
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("42"));
   RunLoopFor(kTestBackoffInterval);
+  EXPECT_TRUE(page_download_->IsPaused());
   EXPECT_TRUE(page_download_->IsIdle());
 
   EXPECT_EQ(storage_.received_commits.size(), 1u);

@@ -27,14 +27,16 @@ class FakeLedgerSync::FakePageSync : public PageSync {
     if (watcher_) {
       watcher_->Notify({});
     }
-    if (on_idle_) {
-      on_idle_();
+    if (on_paused_) {
+      on_paused_();
     }
   }
 
-  void SetOnIdle(fit::closure on_idle_callback) override { on_idle_ = std::move(on_idle_callback); }
+  void SetOnPaused(fit::closure on_paused_callback) override {
+    on_paused_ = std::move(on_paused_callback);
+  }
 
-  bool IsIdle() override { return true; }
+  bool IsPaused() override { return true; }
 
   // For this fake, downloads complete immediately, so the on_backlog_downloaded_callback is called
   // right away to avoid waiting for a timeout before fetching the page.
@@ -50,7 +52,7 @@ class FakeLedgerSync::FakePageSync : public PageSync {
   }
 
  private:
-  fit::closure on_idle_;
+  fit::closure on_paused_;
   fit::closure on_backlog_downloaded_;
   bool started_ = false;
   storage::PageId page_id_;

@@ -99,7 +99,7 @@ ActivePageManager::ActivePageManager(Environment* environment,
 
   if (page_sync_) {
     page_sync_->SetSyncWatcher(&watchers_);
-    page_sync_->SetOnIdle([this] { CheckDiscardable(); });
+    page_sync_->SetOnPaused([this] { CheckDiscardable(); });
     page_sync_->SetOnBacklogDownloaded([this] { OnSyncBacklogDownloaded(); });
     page_sync_->Start();
     if (state == ActivePageManager::PageStorageState::NEEDS_SYNC) {
@@ -307,7 +307,7 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
 
 bool ActivePageManager::IsDiscardable() const {
   return page_delegates_.IsDiscardable() && snapshots_.IsDiscardable() && page_impls_.empty() &&
-         merge_resolver_->IsDiscardable() && (!page_sync_ || page_sync_->IsIdle()) &&
+         merge_resolver_->IsDiscardable() && (!page_sync_ || page_sync_->IsPaused()) &&
          ongoing_page_storage_uses_ == 0;
 }
 

@@ -197,20 +197,20 @@ void PageUpload::SetState(UploadSyncState new_state) {
   task_runner_->PostTask([this] { delegate_->SetUploadState(external_state_); });
 }
 
-bool PageUpload::IsIdle() {
+bool PageUpload::IsPaused() {
   switch (external_state_) {
     case UPLOAD_NOT_STARTED:
     case UPLOAD_IDLE:
     // Note: this is considered idle because the reason for being blocked is
     // external to the class - there's nothing to do on our side.
     case UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
+    case UPLOAD_WAIT_REMOTE_DOWNLOAD:
     case UPLOAD_PERMANENT_ERROR:
+    case UPLOAD_TEMPORARY_ERROR:
       return true;
       break;
     case UPLOAD_SETUP:
     case UPLOAD_PENDING:
-    case UPLOAD_WAIT_REMOTE_DOWNLOAD:
-    case UPLOAD_TEMPORARY_ERROR:
     case UPLOAD_IN_PROGRESS:
       return false;
       break;

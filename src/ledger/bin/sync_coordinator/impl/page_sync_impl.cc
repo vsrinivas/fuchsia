@@ -169,16 +169,16 @@ void PageSyncImpl::Start() {
   }
 }
 
-void PageSyncImpl::SetOnIdle(fit::closure on_idle) {
+void PageSyncImpl::SetOnPaused(fit::closure on_paused) {
   // Only handle cloud sync for now.
   if (cloud_sync_) {
-    cloud_sync_->GetCloudSync()->SetOnIdle(std::move(on_idle));
+    cloud_sync_->GetCloudSync()->SetOnPaused(std::move(on_paused));
   }
 }
 
-bool PageSyncImpl::IsIdle() {
+bool PageSyncImpl::IsPaused() {
   if (cloud_sync_) {
-    return cloud_sync_->GetCloudSync()->IsIdle();
+    return cloud_sync_->GetCloudSync()->IsPaused();
   }
   return true;
 }

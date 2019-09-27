@@ -64,8 +64,8 @@ class PageUpload : public storage::CommitWatcher {
   // stopped due to a remote download in progress.
   void StartOrRestartUpload();
 
-  // Returns true if PageUpload is idle.
-  bool IsIdle();
+  // Returns true if PageUpload is paused.
+  bool IsPaused();
 
  private:
   // storage::CommitWatcher:

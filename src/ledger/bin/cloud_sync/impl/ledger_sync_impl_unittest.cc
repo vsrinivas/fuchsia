@@ -70,7 +70,7 @@ TEST_F(LedgerSyncImplTest, CreatePageSync) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, storage::Status::OK);
   EXPECT_TRUE(page_sync);
-  EXPECT_TRUE(page_sync->IsIdle());
+  EXPECT_TRUE(page_sync->IsPaused());
   ASSERT_EQ(cloud_provider_.page_ids_requested.size(), 1u);
   // Page id must be obfuscated in the cloud.
   EXPECT_NE(cloud_provider_.page_ids_requested[0u], page_storage->page_id_to_return);

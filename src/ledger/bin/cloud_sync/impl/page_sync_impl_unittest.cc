@@ -121,7 +121,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   auto id1 = AddLocalCommit("content1")->id;
   auto id2 = AddLocalCommit("content2")->id;
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -154,7 +154,7 @@ TEST_F(PageSyncImplTest, PageWatcher) {
   auto id1 = AddLocalCommit("content1")->id;
   auto id2 = AddLocalCommit("content2")->id;
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
   page_sync_->SetSyncWatcher(&watcher);
   StartPageSync();
 
@@ -177,7 +177,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
   StartPageSync();
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -217,7 +217,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
     backlog_downloaded_called = true;
   });
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -251,7 +251,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
     });
   });
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
 
   StartPageSync();
   RunLoopUntilIdle();
@@ -273,44 +273,61 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
   EXPECT_EQ(storage_.commits_marked_as_synced.count(id2), 1u);
 }
 
-// Verifies that the on idle callback is called when there is no pending upload
-// tasks.
-TEST_F(PageSyncImplTest, UploadIdleCallback) {
-  int on_idle_calls = 0;
+// Verifies that the on paused callback is called when there is no pending upload tasks.
+TEST_F(PageSyncImplTest, UploadPausedCallback) {
+  int on_paused_calls = 0;
 
   auto id1 = AddLocalCommit("content1")->id;
   auto id2 = AddLocalCommit("content2")->id;
 
-  page_sync_->SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  page_sync_->SetOnPaused([&on_paused_calls] { on_paused_calls++; });
   StartPageSync();
 
-  // Verify that the idle callback is called once both commits are uploaded.
+  // Verify that the paused callback is called once both commits are uploaded.
   RunLoopUntilIdle();
   EXPECT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(on_idle_calls, 1);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_EQ(on_paused_calls, 1);
+  EXPECT_TRUE(page_sync_->IsPaused());
 
-  // Notify about a new commit to upload and verify that the idle callback was
-  // called again on completion.
+  // Notify about a new commit to upload and verify that the paused callback was called again on
+  // completion.
   auto commit3 = AddLocalCommit("content3");
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(page_sync_->IsIdle());
+  EXPECT_FALSE(page_sync_->IsPaused());
   RunLoopUntilIdle();
   EXPECT_EQ(page_cloud_.received_commits.size(), 3u);
-  EXPECT_EQ(on_idle_calls, 2);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_EQ(on_paused_calls, 2);
+  EXPECT_TRUE(page_sync_->IsPaused());
 }
 
-// Verifies that a failure to persist the remote commit stops syncing remote
-// commits and calls the error callback.
+TEST_F(PageSyncImplTest, PausedOnUploadTemporaryError) {
+  page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
+  int on_paused_calls = 0;
+
+  auto id1 = AddLocalCommit("content1")->id;
+  auto id2 = AddLocalCommit("content2")->id;
+
+  page_sync_->SetOnPaused([&on_paused_calls] { on_paused_calls++; });
+  StartPageSync();
+
+  // Verify that the paused callback is called.
+  RunLoopUntilIdle();
+  EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
+  EXPECT_EQ(on_paused_calls, 1);
+  EXPECT_TRUE(page_sync_->IsPaused());
+  EXPECT_EQ(state_watcher_->states.back().upload, UPLOAD_TEMPORARY_ERROR);
+}
+
+// Verifies that a failure to persist the remote commit stops syncing remote commits and calls the
+// error callback.
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
-  bool on_idle_called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&on_idle_called));
+  bool on_paused_called;
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&on_paused_called));
   int error_callback_calls = 0;
   page_sync_->SetOnUnrecoverableError([&error_callback_calls] { error_callback_calls++; });
   StartPageSync();
   RunLoopUntilIdle();
-  ASSERT_TRUE(on_idle_called);
+  ASSERT_TRUE(on_paused_called);
   ASSERT_TRUE(page_cloud_.set_watcher.is_bound());
 
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1"});
@@ -319,42 +336,57 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   EXPECT_EQ(error_callback_calls, 0);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
 
-  on_idle_called = false;
+  on_paused_called = false;
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_idle_called);
+  EXPECT_TRUE(on_paused_called);
   EXPECT_FALSE(page_cloud_.set_watcher.is_bound());
   EXPECT_EQ(error_callback_calls, 1);
 }
 
-// Verifies that the on idle callback is called when there is no download in
-// progress.
+// Verifies that the on paused callback is called when there is no download in progress.
 TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
-  int on_idle_calls = 0;
-  page_sync_->SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  int on_paused_calls = 0;
+  page_sync_->SetOnPaused([&on_paused_calls] { on_paused_calls++; });
   StartPageSync();
-  EXPECT_EQ(on_idle_calls, 0);
-  EXPECT_FALSE(page_sync_->IsIdle());
+  EXPECT_EQ(on_paused_calls, 0);
+  EXPECT_FALSE(page_sync_->IsPaused());
 
-  // Run the message loop and verify that the sync is idle after all remote
-  // commits are added to storage.
+  // Run the message loop and verify that the sync is paused after all remote commits are added to
+  // storage.
   RunLoopUntilIdle();
-  EXPECT_EQ(on_idle_calls, 1);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_EQ(on_paused_calls, 1);
+  EXPECT_TRUE(page_sync_->IsPaused());
   EXPECT_EQ(storage_.received_commits.size(), 2u);
 
-  // Notify about a new commit to download and verify that the idle callback was
-  // called again on completion.
+  // Notify about a new commit to download and verify that the paused callback was called again on
+  // completion.
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content3"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
   RunLoopUntilIdle();
   EXPECT_EQ(storage_.received_commits.size(), 3u);
-  EXPECT_EQ(on_idle_calls, 2);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_EQ(on_paused_calls, 2);
+  EXPECT_TRUE(page_sync_->IsPaused());
+}
+
+TEST_F(PageSyncImplTest, PausedOnDownloadTemporaryError) {
+  page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
+  int on_paused_calls = 0;
+
+  page_sync_->SetOnPaused([&on_paused_calls] { on_paused_calls++; });
+  StartPageSync();
+
+  // Verify that the paused callback is called.
+  RunLoopUntilIdle();
+  EXPECT_EQ(page_cloud_.get_commits_calls, 1u);
+  EXPECT_EQ(on_paused_calls, 1);
+  EXPECT_TRUE(page_sync_->IsPaused());
+  EXPECT_EQ(state_watcher_->states.back().download, DOWNLOAD_TEMPORARY_ERROR);
+  EXPECT_EQ(state_watcher_->states.back().upload, UPLOAD_WAIT_REMOTE_DOWNLOAD);
 }
 
 // Verifies that uploads are paused until EnableUpload is called.
@@ -362,7 +394,7 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
   AddLocalCommit("content1");
   AddLocalCommit("content2");
   bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
 
   StartPageSync(UploadStatus::DISABLED);
   RunLoopUntilIdle();
@@ -404,11 +436,11 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
   RunLoopUntilIdle();
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_TRUE(page_sync_->IsPaused());
 
   // No additional calls.
   EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_TRUE(page_sync_->IsPaused());
 }
 
 TEST_F(PageSyncImplTest, UnrecoverableError) {
@@ -424,7 +456,7 @@ TEST_F(PageSyncImplTest, UnrecoverableError) {
   EXPECT_EQ(on_error_calls, 1);
 }
 
-// Test that when both OnIdle and OnUnrecoverableError attempt to delete PageSync, only one is
+// Test that when both OnPaused and OnUnrecoverableError attempt to delete PageSync, only one is
 // triggered.
 TEST_F(PageSyncImplTest, AvoidDoubleDeleteOnDownloadError) {
   bool ready_to_delete = false;
@@ -434,7 +466,7 @@ TEST_F(PageSyncImplTest, AvoidDoubleDeleteOnDownloadError) {
       page_sync_.reset();
     }
   };
-  page_sync_->SetOnIdle(delete_callback);
+  page_sync_->SetOnPaused(delete_callback);
   page_sync_->SetOnUnrecoverableError(delete_callback);
   StartPageSync();
   RunLoopUntilIdle();
@@ -452,7 +484,7 @@ TEST_F(PageSyncImplTest, AvoidDoubleDeleteOnUploadError) {
       page_sync_.reset();
     }
   };
-  page_sync_->SetOnIdle(delete_callback);
+  page_sync_->SetOnPaused(delete_callback);
   page_sync_->SetOnUnrecoverableError(delete_callback);
   StartPageSync();
   RunLoopUntilIdle();

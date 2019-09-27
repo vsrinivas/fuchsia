@@ -12,9 +12,9 @@ namespace sync_coordinator {
 
 void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) { FXL_NOTIMPLEMENTED(); }
+void PageSyncEmptyImpl::SetOnPaused(fit::closure /*on_paused_callback*/) { FXL_NOTIMPLEMENTED(); }
 
-bool PageSyncEmptyImpl::IsIdle() {
+bool PageSyncEmptyImpl::IsPaused() {
   FXL_NOTIMPLEMENTED();
   return true;
 }

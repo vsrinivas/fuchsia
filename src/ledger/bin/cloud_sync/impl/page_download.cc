@@ -47,7 +47,6 @@ DownloadSyncState GetMergedState(DownloadSyncState commit_state, int current_get
 // before insertions at this key. We sort by key because this is expected by
 // |storage::btree::ApplyChangesFromCloud|.
 bool NormalizeDiff(std::vector<storage::EntryChange>* changes) {
-
   auto compare_by_entryid = [](const storage::Entry& lhs, const storage::Entry& rhs) {
     return lhs.entry_id < rhs.entry_id;
   };
@@ -196,6 +195,10 @@ void PageDownload::StartDownload() {
                   }
                 });
       }));
+}
+
+bool PageDownload::IsPaused() {
+  return IsIdle() || GetMergedState(commit_state_, current_get_calls_) == DOWNLOAD_TEMPORARY_ERROR;
 }
 
 bool PageDownload::IsIdle() {

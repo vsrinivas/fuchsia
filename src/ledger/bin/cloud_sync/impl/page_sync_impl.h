@@ -77,9 +77,9 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   // PageSync:
   void Start() override;
 
-  void SetOnIdle(fit::closure on_idle) override;
+  void SetOnPaused(fit::closure on_paused) override;
 
-  bool IsIdle() override;
+  bool IsPaused() override;
 
   void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) override;
 
@@ -94,13 +94,12 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   void SetUploadState(UploadSyncState next_upload_state) override;
   bool IsDownloadIdle() override;
 
-
  private:
   // This may destruct the object.
   void HandleError();
 
   // This may destruct the object.
-  void CheckIdle();
+  void CheckPaused();
 
   // This may destruct the object.
   void NotifyStateWatcher();
@@ -115,7 +114,7 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   std::unique_ptr<PageDownload> page_download_;
   std::unique_ptr<PageUpload> page_upload_;
 
-  fit::closure on_idle_;
+  fit::closure on_paused_;
   fit::closure on_backlog_downloaded_;
   fit::closure on_unrecoverable_error_;
   // Ensures that each instance is started only once.

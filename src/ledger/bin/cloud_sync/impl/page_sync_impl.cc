@@ -73,13 +73,13 @@ void PageSyncImpl::Start() {
   }
 }
 
-void PageSyncImpl::SetOnIdle(fit::closure on_idle) {
-  FXL_DCHECK(!on_idle_);
+void PageSyncImpl::SetOnPaused(fit::closure on_paused) {
+  FXL_DCHECK(!on_paused_);
   FXL_DCHECK(!started_);
-  on_idle_ = std::move(on_idle);
+  on_paused_ = std::move(on_paused);
 }
 
-bool PageSyncImpl::IsIdle() { return page_upload_->IsIdle() && page_download_->IsIdle(); }
+bool PageSyncImpl::IsPaused() { return page_upload_->IsPaused() && page_download_->IsPaused(); }
 
 void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   FXL_DCHECK(!on_backlog_downloaded_);
@@ -112,11 +112,11 @@ void PageSyncImpl::HandleError() {
 }
 
 // This may destruct the object.
-void PageSyncImpl::CheckIdle() {
-  if (IsIdle()) {
-    if (on_idle_) {
+void PageSyncImpl::CheckPaused() {
+  if (IsPaused()) {
+    if (on_paused_) {
       // This may destruct the object.
-      on_idle_();
+      on_paused_();
     }
   }
 }
@@ -129,7 +129,7 @@ void PageSyncImpl::NotifyStateWatcher() {
   if (page_watcher_) {
     page_watcher_->Notify(download_state_, upload_state_);
   }
-  CheckIdle();
+  CheckPaused();
 }
 
 void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {

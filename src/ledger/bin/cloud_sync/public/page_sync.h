@@ -28,15 +28,15 @@ class PageSync {
   // the client doesn't need to call Start() again.
   virtual void Start() = 0;
 
-  // Sets a callback that will be called after Start() every time when PageSync
-  // becomes idle, that is: finished uploading all unsynced local artifacts to
-  // the cloud and not downloading any remote artifacts. Can be set at most once
-  // and only before calling Start().
-  virtual void SetOnIdle(fit::closure on_idle) = 0;
+  // Sets a callback that will be called after Start() every time when PageSync becomes paused, that
+  // is: finished uploading all unsynced local artifacts to the cloud and not downloading any remote
+  // artifacts, or backing off after a temporary error. Can be set at most once and only before
+  // calling Start().
+  virtual void SetOnPaused(fit::closure on_paused) = 0;
 
-  // Returns true iff PageSync is idle, that is with no pending upload or
-  // download work.
-  virtual bool IsIdle() = 0;
+  // Returns true iff PageSync is paused, that is with no pending upload or
+  // download work, or backing off.
+  virtual bool IsPaused() = 0;
 
   // Sets a callback that will be called at most once after Start(), when all
   // remote commits added to the cloud between the last sync and starting the
