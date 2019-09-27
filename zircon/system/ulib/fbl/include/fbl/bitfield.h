@@ -1,0 +1,103 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef FBL_BITFIELD_H_
+#define FBL_BITFIELD_H_
+
+#include <type_traits>
+#include <zircon/assert.h>
+
+namespace fbl {
+
+// This file contains safe wrappers for numeric bitfields. You can read or
+// write to the members which in the general case is undefined behavior.
+// However, the standard carves a special exception for types that are
+// standard-layout as long they share a common initial sequence which is
+// defined (C++11) as:
+//  "Two standard-layout structs share a common initial sequence
+//   if corresponding members have layout-compatible types and both
+//   are bit-fields with the same width for a sequence of one or more
+//   initial members"
+//
+// You can use this code without macros. To do so the code should look
+// something like this:
+//
+//      union MyClass {
+//          uint32_t full_value = initial_value;    // optional
+//          fbl::BitFieldMember<uint32_t, 0, 3> member1;
+//          fbl::BitFieldMember<uint32_t, 3, 2> member1;
+//          ...
+//          fbl::BitFieldMember<uint32_t, p,q> memberN;
+//      };
+//
+//  All the members should be one 'T' type and the union should not
+//  include any other object.
+//
+//  The Macros simply remove the risk of accidentialy violating the rules
+//  at the price of ugly looking code:
+//
+//      BITFIELD_DEF_START(MyClass, uint32_t)
+//          BITFIELD_MEMBER(member1, 0, 3);
+//          BITFIELD_MEMBER(member2, 4, 2);
+//          ...
+//          BITFIELD_MEMBER(memberN, p, q);
+//      BITFIELD_DEF_END();
+//
+//   The usage is simple. It behaves as a set of unsigned integers with
+//   reduced ranges that are packed efficiently:
+//
+//   MyClass options_(initial_opts);
+//   ....
+//   options_.member1 = 5u;
+//   options_.member2 = 3u;
+//   ....
+//   if (options_.member1 < 4u) { ..}
+//   ....
+//   uint32_t copy = options_;
+//
+
+template <typename T, size_t Offset, size_t BitCount>
+class BitFieldMember {
+public:
+    static_assert(std::is_unsigned<T>::value, "bitfield type must be unsigned");
+    static_assert(Offset + BitCount <= (sizeof(T) * 8u), "offset or count is too large");
+
+    static constexpr T Maximum = (T(1) << BitCount) - 1;
+    static constexpr T Mask = Maximum << Offset;
+
+    constexpr T maximum() const { return Maximum; }
+
+    constexpr operator T() const {
+        return (value_ >> Offset) & Maximum;
+    }
+
+    constexpr BitFieldMember& operator=(T new_value) {
+        ZX_DEBUG_ASSERT(new_value <= Maximum);
+        value_ = (value_ & ~Mask) | (new_value << Offset);
+        return *this;
+    }
+
+private:
+    T value_;
+};
+
+#define FBL_BITFIELD_DEF_START(Typename, T) \
+    union Typename { \
+        using ValueType = T; \
+        ValueType value; \
+        constexpr explicit Typename(T v = 0) : value(v) {} \
+        constexpr Typename& operator=(T v) { value = v; return *this; } \
+        constexpr operator T&() { return value; } \
+        constexpr operator T() const { return value; } \
+
+#define FBL_BITFIELD_MEMBER(MemberName, offset, bits) \
+        fbl::BitFieldMember<ValueType, offset, bits> MemberName
+
+#define FBL_BITFIELD_DEF_END() \
+    }
+
+}
+
+
+#endif  // FBL_BITFIELD_H_

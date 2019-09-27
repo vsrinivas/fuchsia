@@ -15,6 +15,7 @@ test("fbl") {
     "algorithm_tests.cc",
     "array_tests.cc",
     "auto_call_tests.cc",
+    "bitfield_tests.cc",
     "forward_tests.cc",
     "function_tests.cc",
     "intrusive_container_tests.cc",
@@ -40,7 +41,8 @@ test("fbl") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/unittest",    # TODO: convert to zxtest.
+    "$zx/system/ulib/zxtest",
   ]
 
   if (is_fuchsia) {
