@@ -17,17 +17,34 @@ namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 }  // namespace
 
-zx_status_t BlockPartitionClient::GetBlockSize(size_t* out_size) {
-  if (!block_size_) {
+zx_status_t BlockPartitionClient::ReadBlockInfo() {
+  if (!block_info_) {
     auto result = partition_.GetInfo();
     zx_status_t status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       ERROR("Failed to get partition info with status: %d\n", status);
       return status;
     }
-    block_size_ = result->info->block_size;
+    block_info_ = *result->info;
   }
-  *out_size = *block_size_;
+  return ZX_OK;
+}
+
+zx_status_t BlockPartitionClient::GetBlockSize(size_t* out_size) {
+  zx_status_t status = ReadBlockInfo();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_size = block_info_->block_size;
+  return ZX_OK;
+}
+
+zx_status_t BlockPartitionClient::GetPartitionSize(size_t* out_size) {
+  zx_status_t status = ReadBlockInfo();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_size = block_info_->block_size * block_info_->block_count;
   return ZX_OK;
 }
 
@@ -101,7 +118,7 @@ zx_status_t BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   request.vmoid = vmoid;
   request.opcode = BLOCKIO_READ;
 
-  const uint64_t length = size / *block_size_;
+  const uint64_t length = size / block_info_->block_size;
   if (length > UINT32_MAX) {
     ERROR("Error reading partition data: Too large\n");
     return ZX_ERR_OUT_OF_RANGE;
@@ -130,7 +147,7 @@ zx_status_t BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   request.vmoid = vmoid;
   request.opcode = BLOCKIO_WRITE;
 
-  uint64_t length = vmo_size / *block_size_;
+  uint64_t length = vmo_size / block_info_->block_size;
   if (length > UINT32_MAX) {
     ERROR("Error writing partition data: Too large\n");
     return ZX_ERR_OUT_OF_RANGE;
@@ -174,17 +191,34 @@ fbl::unique_fd BlockPartitionClient::block_fd() {
   return fbl::unique_fd(block_fd);
 }
 
-zx_status_t SkipBlockPartitionClient::GetBlockSize(size_t* out_size) {
-  if (!block_size_) {
+zx_status_t SkipBlockPartitionClient::ReadPartitionInfo() {
+  if (!partition_info_) {
     auto result = partition_.GetPartitionInfo();
       zx_status_t status = result.ok() ? result->status : result.status();
       if (status != ZX_OK) {
       ERROR("Failed to get partition info with status: %d\n", status);
       return status;
     }
-    block_size_ = static_cast<uint32_t>(result->partition_info.block_size_bytes);
+    partition_info_ = result->partition_info;
   }
-  *out_size = *block_size_;
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockPartitionClient::GetBlockSize(size_t* out_size) {
+  zx_status_t status = ReadPartitionInfo();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_size = static_cast<size_t>(partition_info_->block_size_bytes);
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockPartitionClient::GetPartitionSize(size_t* out_size) {
+  zx_status_t status = ReadPartitionInfo();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_size = partition_info_->block_size_bytes * partition_info_->partition_block_count;
   return ZX_OK;
 }
 
@@ -251,6 +285,11 @@ zx_status_t SkipBlockPartitionClient::Flush() { return ZX_OK; }
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }
 
 zx_status_t SysconfigPartitionClient::GetBlockSize(size_t* out_size) {
+  *out_size =  client_.GetPartitionSize(partition_);
+  return ZX_OK;
+}
+
+zx_status_t SysconfigPartitionClient::GetPartitionSize(size_t* out_size) {
   *out_size =  client_.GetPartitionSize(partition_);
   return ZX_OK;
 }

@@ -17,6 +17,9 @@ namespace paver {
 
 class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
  public:
+  void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                 ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) override;
+
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync completer) override;

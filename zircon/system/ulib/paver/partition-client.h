@@ -23,6 +23,9 @@ class PartitionClient {
   // Returns the block size which the vmo provided to read/write should be aligned to.
   virtual zx_status_t GetBlockSize(size_t* out_size) = 0;
 
+  // Returns the partition size.
+  virtual zx_status_t GetPartitionSize(size_t* out_size) = 0;
+
   // Reads the specified size from the partition into |vmo|. |size| must be aligned to the block
   // size returned in `GetBlockSize`.
   virtual zx_status_t Read(const zx::vmo& vmo, size_t size) = 0;
@@ -46,6 +49,7 @@ class BlockPartitionClient final : public PartitionClient {
   explicit BlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
   zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;
@@ -61,10 +65,11 @@ class BlockPartitionClient final : public PartitionClient {
   zx_status_t Setup(const zx::vmo& vmo, vmoid_t* out_vmoid);
   zx_status_t RegisterFastBlockIo();
   zx_status_t RegisterVmo(const zx::vmo& vmo, vmoid_t* out_vmoid);
+  zx_status_t ReadBlockInfo();
 
   ::llcpp::fuchsia::hardware::block::Block::SyncClient partition_;
   std::optional<block_client::Client> client_;
-  std::optional<size_t> block_size_;
+  std::optional<::llcpp::fuchsia::hardware::block::BlockInfo> block_info_;
 };
 
 class SkipBlockPartitionClient final : public PartitionClient {
@@ -72,6 +77,7 @@ class SkipBlockPartitionClient final : public PartitionClient {
   explicit SkipBlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
   zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;
@@ -84,8 +90,10 @@ class SkipBlockPartitionClient final : public PartitionClient {
   SkipBlockPartitionClient& operator=(SkipBlockPartitionClient&&) = delete;
 
  private:
+  zx_status_t ReadPartitionInfo();
+
   ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient partition_;
-  std::optional<size_t> block_size_;
+  std::optional<::llcpp::fuchsia::hardware::skipblock::PartitionInfo> partition_info_;
 };
 
 // Specialized client for talking to sub-partitions of the sysconfig partition.
@@ -96,6 +104,7 @@ class SysconfigPartitionClient final : public PartitionClient {
       : client_(std::move(client)), partition_(partition) {}
 
   zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;

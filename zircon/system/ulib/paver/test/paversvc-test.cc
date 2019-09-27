@@ -178,20 +178,84 @@ class PaverServiceTest : public zxtest::Test {
   ~PaverServiceTest();
 
  protected:
-  void SpawnIsolatedDevmgr();
+  void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out);
 
-  // Spawn an isolated devmgr without a skip-block device.
-  void SpawnIsolatedDevmgrBlock();
+  static constexpr size_t kKilobyte = 1 << 10;
+
+  void ValidateWritten(const ::llcpp::fuchsia::mem::Buffer& buf, size_t num_pages) {
+    ASSERT_GE(buf.size, num_pages * kPageSize);
+    fzl::VmoMapper mapper;
+    ASSERT_OK(mapper.Map(buf.vmo, 0, fbl::round_up(num_pages * kPageSize, ZX_PAGE_SIZE),
+                         ZX_VM_PERM_READ));
+    const uint8_t* start = reinterpret_cast<uint8_t*>(mapper.start());
+    for (size_t i = 0; i < num_pages * kPageSize; i++) {
+      ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
+    }
+  }
+
+  void* provider_ctx_ = nullptr;
+  std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> client_;
+  async::Loop loop_;
+  // The paver makes synchronous calls into /svc, so it must run in a seperate loop to not
+  // deadlock.
+  async::Loop loop2_;
+  FakeSvc fake_svc_;
+};
+
+PaverServiceTest::PaverServiceTest()
+    : loop_(&kAsyncLoopConfigAttachToCurrentThread),
+      loop2_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      fake_svc_(loop2_.dispatcher()) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  client_.emplace(std::move(client));
+
+  ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
+
+  ASSERT_OK(paver_get_service_provider()->ops->connect(
+      provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name, server.release()));
+  loop_.StartThread("paver-svc-test-loop");
+  loop2_.StartThread("paver-svc-test-loop-2");
+}
+
+PaverServiceTest::~PaverServiceTest() {
+  loop_.Shutdown();
+  loop2_.Shutdown();
+  paver_get_service_provider()->ops->release(provider_ctx_);
+  provider_ctx_ = nullptr;
+}
+
+void PaverServiceTest::CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
+  zx::vmo vmo;
+  fzl::VmoMapper mapper;
+  const size_t size = kPageSize * num_pages;
+  ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+  memset(mapper.start(), 0x4a, mapper.size());
+  out->vmo = std::move(vmo);
+  out->size = size;
+}
+
+class PaverServiceSkipBlockTest : public PaverServiceTest {
+ public:
+  PaverServiceSkipBlockTest() {
+    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr());
+    ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+  }
+
+ protected:
+  void SpawnIsolatedDevmgr() {
+    ASSERT_EQ(device_.get(), nullptr);
+    SkipBlockDevice::Create(kNandInfo, &device_);
+    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
+    static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
+  }
 
   void WaitForSysconfig() {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
                                    "misc/nand-ctl/ram-nand-0/sysconfig/skip-block", &fd));
   }
-
-  void CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out);
-
-  static constexpr size_t kKilobyte = 1 << 10;
 
   void SetAbr(const abr::Data& data) {
     auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
@@ -204,6 +268,8 @@ class PaverServiceTest : public zxtest::Test {
                 (60 * kKilobyte);
     return *reinterpret_cast<abr::Data*>(buf);
   }
+
+  using PaverServiceTest::ValidateWritten;
 
   void ValidateWritten(uint32_t block, size_t num_blocks) {
     const uint8_t* start =
@@ -243,70 +309,9 @@ class PaverServiceTest : public zxtest::Test {
     memset(start, data, kPageSize * num_pages);
   }
 
-  void* provider_ctx_ = nullptr;
+
   fbl::unique_ptr<SkipBlockDevice> device_;
-  IsolatedDevmgr devmgr_;
-  std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> client_;
-  async::Loop loop_;
-  // The paver makes synchronous calls into /svc, so it must run in a seperate loop to not
-  // deadlock.
-  async::Loop loop2_;
-  FakeSvc fake_svc_;
 };
-
-PaverServiceTest::PaverServiceTest()
-    : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-      loop2_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      fake_svc_(loop2_.dispatcher()) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  client_.emplace(std::move(client));
-
-  ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
-
-  ASSERT_OK(paver_get_service_provider()->ops->connect(
-      provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name, server.release()));
-  loop_.StartThread("paver-svc-test-loop");
-  loop2_.StartThread("paver-svc-test-loop-2");
-}
-
-PaverServiceTest::~PaverServiceTest() {
-  loop_.Shutdown();
-  loop2_.Shutdown();
-  paver_get_service_provider()->ops->release(provider_ctx_);
-  provider_ctx_ = nullptr;
-}
-
-void PaverServiceTest::SpawnIsolatedDevmgr() {
-  ASSERT_EQ(device_.get(), nullptr);
-  SkipBlockDevice::Create(kNandInfo, &device_);
-  static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
-  static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
-}
-
-void PaverServiceTest::SpawnIsolatedDevmgrBlock() {
-  devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
-  args.driver_search_paths.push_back("/boot/driver");
-  args.disable_block_watcher = true;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
-
-  fbl::unique_fd fd;
-  ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
-  static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
-  static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
-}
-
-void PaverServiceTest::CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
-  zx::vmo vmo;
-  fzl::VmoMapper mapper;
-  const size_t size = kPageSize * num_pages;
-  ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
-  memset(mapper.start(), 0x4a, mapper.size());
-  out->vmo = std::move(vmo);
-  out->size = size;
-}
 
 constexpr abr::Data kAbrData = {
     .magic = {'\0', 'A', 'B', '0'},
@@ -338,9 +343,7 @@ void ComputeCrc(abr::Data* data) {
       crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
 }
 
-TEST_F(PaverServiceTest, QueryActiveConfigurationSlotB) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -351,9 +354,7 @@ TEST_F(PaverServiceTest, QueryActiveConfigurationSlotB) {
   ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
 }
 
-TEST_F(PaverServiceTest, QueryActiveConfigurationSlotA) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 2;
   abr_data.slots[0].successful_boot = 1;
@@ -366,9 +367,7 @@ TEST_F(PaverServiceTest, QueryActiveConfigurationSlotA) {
   ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
 }
 
-TEST_F(PaverServiceTest, QueryConfigurationStatusHealthy) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -380,9 +379,7 @@ TEST_F(PaverServiceTest, QueryConfigurationStatusHealthy) {
             ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
 }
 
-TEST_F(PaverServiceTest, QueryConfigurationStatusPending) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].successful_boot = 0;
   abr_data.slots[1].tries_remaining = 1;
@@ -396,9 +393,7 @@ TEST_F(PaverServiceTest, QueryConfigurationStatusPending) {
             ::llcpp::fuchsia::paver::ConfigurationStatus::PENDING);
 }
 
-TEST_F(PaverServiceTest, QueryConfigurationStatusUnbootable) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -410,9 +405,7 @@ TEST_F(PaverServiceTest, QueryConfigurationStatusUnbootable) {
             ::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
 }
 
-TEST_F(PaverServiceTest, SetConfigurationActive) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -429,9 +422,7 @@ TEST_F(PaverServiceTest, SetConfigurationActive) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetConfigurationActiveRollover) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].priority = abr::kMaxPriority;
   ComputeCrc(&abr_data);
@@ -450,9 +441,7 @@ TEST_F(PaverServiceTest, SetConfigurationActiveRollover) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotA) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 2;
   abr_data.slots[0].tries_remaining = 3;
@@ -472,9 +461,7 @@ TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotA) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotB) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -493,9 +480,7 @@ TEST_F(PaverServiceTest, SetConfigurationUnbootableSlotB) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetActiveConfigurationHealthy) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -513,9 +498,7 @@ TEST_F(PaverServiceTest, SetActiveConfigurationHealthy) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceTest, SetActiveConfigurationHealthyBothPriorityZero) {
-  SpawnIsolatedDevmgr();
-  ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero) {
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -528,8 +511,7 @@ TEST_F(PaverServiceTest, SetActiveConfigurationHealthyBothPriorityZero) {
   ASSERT_NE(result->status, ZX_OK);
 }
 
-TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
@@ -540,8 +522,7 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
   ValidateUnwritten(10, 4);
 }
 
-TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
@@ -553,8 +534,7 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
   ValidateUnwritten(12, 2);
 }
 
-TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
@@ -565,8 +545,7 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
   ValidateWritten(12, 2);
 }
 
-TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
@@ -577,8 +556,7 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
   ValidateWrittenPages(14 * kPagesPerBlock + 32, 32);
 }
 
-TEST_F(PaverServiceTest, WriteAssetVbMetaConfigB) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
@@ -589,8 +567,7 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigB) {
   ValidateWrittenPages(14 * kPagesPerBlock + 64, 32);
 }
 
-TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
@@ -601,8 +578,7 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
   ValidateWrittenPages(14 * kPagesPerBlock + 96, 32);
 }
 
-TEST_F(PaverServiceTest, WriteAssetTwice) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
   auto result = client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
@@ -620,8 +596,61 @@ TEST_F(PaverServiceTest, WriteAssetTwice) {
   ValidateUnwritten(10, 4);
 }
 
-TEST_F(PaverServiceTest, WriteBootloader) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
+  WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
+  WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::B,
+                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
+  WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
+                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
+  WriteData(14 * kPagesPerBlock + 32, 32, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 32);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
+  WriteData(14 * kPagesPerBlock + 64, 32, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::B,
+                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 32);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
+  WriteData(14 * kPagesPerBlock + 96, 32, 0x4a);
+  auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
+                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().asset, 32);
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = client_->WriteBootloader(std::move(payload));
@@ -633,8 +662,7 @@ TEST_F(PaverServiceTest, WriteBootloader) {
 // We prefill the bootloader partition with the expected data, leaving the last block as 0xFF.
 // Normally the last page would be overwritten with 0s, but because the actual payload is identical,
 // we don't actually pave the image, so the extra page stays as 0xFF.
-TEST_F(PaverServiceTest, WriteBootloaderNotAligned) {
-  SpawnIsolatedDevmgr();
+TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   payload.size = 4 * kPagesPerBlock - 1;
@@ -647,25 +675,47 @@ TEST_F(PaverServiceTest, WriteBootloaderNotAligned) {
   ValidateUnwrittenPages(8 * kPagesPerBlock - 1, 1);
 }
 
-TEST_F(PaverServiceTest, WriteDataFile) {
+TEST_F(PaverServiceSkipBlockTest, WriteDataFile) {
   // TODO(ZX-4007): Figure out a way to test this.
 }
 
-TEST_F(PaverServiceTest, WriteVolumes) {
+TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
   // TODO(ZX-4007): Figure out a way to test this.
 }
 
-TEST_F(PaverServiceTest, WipeVolumes) {
+TEST_F(PaverServiceSkipBlockTest, WipeVolumes) {
   // TODO(ZX-4007): Figure out a way to test this.
 }
 
 // TODO(34771): Re-enable once bug in GPT is fixed.
 #if 0
+class PaverServiceBlockTest : public PaverServiceTest {
+ public:
+  PaverServiceBlockTest() {
+    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr());
+  }
+
+ protected:
+  void SpawnIsolatedDevmgr() {
+    devmgr_launcher::Args args;
+    args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = true;
+    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
+    static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
+  }
+
+  IsolatedDevmgr devmgr_;
+};
+
 #if defined(__x86_64__)
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
-TEST_F(PaverServiceTest, InitializePartitionTables) {
-  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
   fbl::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
@@ -679,8 +729,7 @@ TEST_F(PaverServiceTest, InitializePartitionTables) {
   ASSERT_OK(result.value().status);
 }
 
-TEST_F(PaverServiceTest, InitializePartitionTablesMultipleDevices) {
-  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
   fbl::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
@@ -696,8 +745,7 @@ TEST_F(PaverServiceTest, InitializePartitionTablesMultipleDevices) {
   ASSERT_OK(result.value().status);
 }
 
-TEST_F(PaverServiceTest, WipePartitionTables) {
-  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+TEST_F(PaverServiceBlockTest, WipePartitionTables) {
   fbl::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,

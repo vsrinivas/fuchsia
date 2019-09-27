@@ -440,6 +440,65 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable
 }
 
 
+::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Paver_ReadAsset_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::paver::Paver_ReadAsset_Result::~Paver_ReadAsset_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Paver_ReadAsset_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::MoveImpl_(Paver_ReadAsset_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result) == ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::PrimarySize);
+}
+
+
+Paver_ReadAsset_Response& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Paver_ReadAsset_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -458,6 +517,9 @@ extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRespon
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kPaver_ReadAsset_Ordinal = 0x4b8e09f500000000lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
@@ -796,6 +858,71 @@ Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConf
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ReadAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReadAssetRequest*>(_write_bytes);
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetRequest));
+  ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Paver::ResultOf::ReadAsset Paver::SyncClient::ReadAsset(Configuration configuration, Asset asset) {
+  return ResultOf::ReadAsset(zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset));
+}
+
+Paver::ResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset) {
+  return ResultOf::ReadAsset(std::move(_client_end), std::move(configuration), std::move(asset));
+}
+
+template <>
+Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < ReadAssetRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<ReadAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, ReadAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReadAssetRequest*>(_request_buffer.data());
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  _request_buffer.set_actual(sizeof(ReadAssetRequest));
+  ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Paver::UnownedResultOf::ReadAsset Paver::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadAsset(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
+}
+
+Paver::UnownedResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Paver::ReadAssetResponse> Paver::InPlace::ReadAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_ReadAsset_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::ReadAssetResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ReadAssetRequest, ReadAssetResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Paver::ReadAssetResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1320,6 +1447,18 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
       return true;
     }
+    case kPaver_ReadAsset_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<ReadAssetRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ReadAsset(std::move(message->configuration), std::move(message->asset),
+        Interface::ReadAssetCompleter::Sync(txn));
+      return true;
+    }
     case kPaver_WriteAsset_Ordinal:
     {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
@@ -1561,6 +1700,35 @@ void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl:
 void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Paver::Interface::ReadAssetCompleterBase::Reply(Paver_ReadAsset_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
+  _response._hdr.ordinal = kPaver_ReadAsset_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
+}
+
+void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result) {
+  if (_buffer.capacity() < ReadAssetResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_buffer.data());
+  _response._hdr.ordinal = kPaver_ReadAsset_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(ReadAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
+}
+
+void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kPaver_ReadAsset_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

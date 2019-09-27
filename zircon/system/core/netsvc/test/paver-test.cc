@@ -46,6 +46,7 @@ enum class Command {
   kSetConfigurationActive,
   kSetConfigurationUnbootable,
   kSetActiveConfigurationHealthy,
+  kReadAsset,
   kWriteAsset,
   kWriteVolumes,
   kWriteBootloader,
@@ -92,6 +93,14 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
       SetActiveConfigurationHealthyCompleter::Sync completer) {
     last_command_ = Command::kSetActiveConfigurationHealthy;
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                 ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
+    last_command_ = Command::kReadAsset;
+    ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(std::move(result));
   }
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,

@@ -51,6 +51,8 @@ enum class Asset : uint32_t {
 };
 
 
+struct Paver_ReadAsset_Response;
+struct Paver_ReadAsset_Result;
 class Paver;
 
 
@@ -680,12 +682,120 @@ struct Paver_QueryActiveConfiguration_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_paver_Paver_ReadAsset_ResponseTable;
+
+struct Paver_ReadAsset_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_ReadAsset_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::mem::Buffer asset = {};
+};
+
+extern "C" const fidl_type_t fuchsia_paver_Paver_ReadAsset_ResultTable;
+
+struct Paver_ReadAsset_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Paver_ReadAsset_Result();
+  ~Paver_ReadAsset_Result();
+
+  Paver_ReadAsset_Result(Paver_ReadAsset_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Paver_ReadAsset_Result& operator=(Paver_ReadAsset_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Paver_ReadAsset_Result WithResponse(Paver_ReadAsset_Response&& val) {
+    Paver_ReadAsset_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  Paver_ReadAsset_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Paver_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  Paver_ReadAsset_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Paver_ReadAsset_Result WithErr(int32_t&& val) {
+    Paver_ReadAsset_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_ReadAsset_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Paver_ReadAsset_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    Paver_ReadAsset_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
@@ -826,6 +936,35 @@ class Paver final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using SetActiveConfigurationHealthyRequest = ::fidl::AnyZeroArgMessage;
+
+  struct ReadAssetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Paver_ReadAsset_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverReadAssetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ReadAssetRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Configuration configuration;
+    Asset asset;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ReadAssetResponse;
+  };
 
   struct WriteAssetResponse final {
     FIDL_ALIGNDECL
@@ -1112,6 +1251,22 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class ReadAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ReadAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset);
+      ~ReadAsset_Impl() = default;
+      ReadAsset_Impl(ReadAsset_Impl&& other) = default;
+      ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class WriteAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1230,6 +1385,7 @@ class Paver final {
     using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
     using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
     using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
+    using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1316,6 +1472,22 @@ class Paver final {
       ~SetActiveConfigurationHealthy_Impl() = default;
       SetActiveConfigurationHealthy_Impl(SetActiveConfigurationHealthy_Impl&& other) = default;
       SetActiveConfigurationHealthy_Impl& operator=(SetActiveConfigurationHealthy_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class ReadAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
+      ~ReadAsset_Impl() = default;
+      ReadAsset_Impl(ReadAsset_Impl&& other) = default;
+      ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1443,6 +1615,7 @@ class Paver final {
     using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
     using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
     using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
+    using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1550,6 +1723,16 @@ class Paver final {
     // If the configuration is already marked healthy, no action is taken.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer);
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ReadAsset ReadAsset(Configuration configuration, Asset asset);
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ReadAsset ReadAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1770,6 +1953,16 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset);
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
+
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
     // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
@@ -1939,6 +2132,10 @@ class Paver final {
     // If the configuration is already marked healthy, no action is taken.
     static ::fidl::DecodeResult<SetActiveConfigurationHealthyResponse> SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    static ::fidl::DecodeResult<ReadAssetResponse> ReadAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer);
+
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
     // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
@@ -2072,6 +2269,20 @@ class Paver final {
     using SetActiveConfigurationHealthyCompleter = ::fidl::Completer<SetActiveConfigurationHealthyCompleterBase>;
 
     virtual void SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync _completer) = 0;
+
+    class ReadAssetCompleterBase : public _Base {
+     public:
+      void Reply(Paver_ReadAsset_Result result);
+      void Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result);
+      void Reply(::fidl::DecodedMessage<ReadAssetResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ReadAssetCompleter = ::fidl::Completer<ReadAssetCompleterBase>;
+
+    virtual void ReadAsset(Configuration configuration, Asset asset, ReadAssetCompleter::Sync _completer) = 0;
 
     class WriteAssetCompleterBase : public _Base {
      public:
@@ -2255,6 +2466,16 @@ struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver_ReadAsset_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_ReadAsset_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Response, asset) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver_ReadAsset_Response) == ::llcpp::fuchsia::paver::Paver_ReadAsset_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver_ReadAsset_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_ReadAsset_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse> : public std::true_type {};
@@ -2317,6 +2538,23 @@ struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealt
 static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse)
     == ::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::ReadAssetRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::ReadAssetRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest)
+    == ::llcpp::fuchsia::paver::Paver::ReadAssetRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest, configuration) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest, asset) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::ReadAssetResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::ReadAssetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::ReadAssetResponse)
+    == ::llcpp::fuchsia::paver::Paver::ReadAssetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteAssetRequest> : public std::true_type {};

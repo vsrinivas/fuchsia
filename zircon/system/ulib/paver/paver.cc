@@ -204,6 +204,43 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
   return ZX_OK;
 }
 
+// Reads an image from disk into a vmo.
+zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partition_type,
+                          zx::vmo* out_vmo, size_t* out_vmo_size) {
+  LOG("Reading partition.\n");
+
+  std::unique_ptr<PartitionClient> partition;
+  if (zx_status_t status = partitioner.FindPartition(partition_type, &partition); status != ZX_OK) {
+    ERROR("Coud not find \"%s\" Partition on device: %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
+    return status;
+  }
+
+  uint64_t partition_size;
+  if (zx_status_t status = partition->GetPartitionSize(&partition_size); status != ZX_OK) {
+    ERROR("Error getting partition size: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  zx::vmo vmo;
+  if (zx_status_t status = zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo);
+      status != ZX_OK) {
+    ERROR("Error creating vmo: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (zx_status_t status = partition->Read(vmo, static_cast<size_t>(partition_size));
+      status != ZX_OK) {
+    ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  *out_vmo = std::move(vmo);
+  *out_vmo_size = static_cast<size_t>(partition_size);
+  LOG("Completed successfully\n");
+  return ZX_OK;
+}
+
 // Paves an image onto the disk.
 zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
                           size_t payload_size, Partition partition_type) {
@@ -337,6 +374,25 @@ bool Paver::InitializePartitioner(zx::channel block_device,
     }
   }
   return true;
+}
+
+void Paver::ReadAsset(Configuration configuration, Asset asset,
+                      ReadAssetCompleter::Sync completer) {
+  ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
+  if (!InitializePartitioner(&partitioner_)) {
+    result.set_err(ZX_ERR_BAD_STATE);
+    completer.Reply(std::move(result));
+    return;
+  }
+  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response response;
+  zx_status_t status = PartitionRead(*partitioner_, PartitionType(configuration, asset),
+                                     &response.asset.vmo, &response.asset.size);
+  if (status != ZX_OK) {
+    result.set_err(status);
+  } else {
+    result.set_response(std::move(response));
+  }
+  completer.Reply(std::move(result));
 }
 
 void Paver::WriteAsset(Configuration configuration, Asset asset,
