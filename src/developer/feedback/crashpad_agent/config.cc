@@ -106,12 +106,12 @@ bool ParseCrashServerConfig(const JsonObject& obj, CrashServerConfig* config) {
   bool should_expect_url = true;
 
   const std::string upload_policy = obj[kCrashServerUploadPolicyKey].GetString();
-  if (upload_policy.compare("disabled") == 0) {
+  if (upload_policy == "disabled") {
     local_config.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
     should_expect_url = false;
-  } else if (upload_policy.compare("enabled") == 0) {
+  } else if (upload_policy == "enabled") {
     local_config.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
-  } else if (upload_policy.compare("read_from_privacy_settings") == 0) {
+  } else if (upload_policy == "read_from_privacy_settings") {
     local_config.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
   } else {
     // This should not be possible as we have checked the config against the schema.

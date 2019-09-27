@@ -423,7 +423,7 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
   bool found_annotations_attachment = false;
   std::string annotations_json;
   for (const auto& attachment : data.attachments()) {
-    if (attachment.key.compare(kAttachmentAnnotations) != 0) {
+    if (attachment.key != kAttachmentAnnotations) {
       continue;
     }
     found_annotations_attachment = true;
@@ -544,7 +544,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
   bool found_inspect_attachment = false;
   std::string inspect_json;
   for (const auto& attachment : data.attachments()) {
-    if (attachment.key.compare(kAttachmentInspect) != 0) {
+    if (attachment.key != kAttachmentInspect) {
       continue;
     }
     found_inspect_attachment = true;

@@ -31,7 +31,7 @@ bool DoAttachmentMatch(const fuchsia::feedback::Attachment& actual, const std::s
     return false;
   }
 
-  if (actual_value.compare(expected_value) != 0) {
+  if (actual_value != expected_value) {
     *result_listener << "Expected value " << expected_value << ", got " << actual_value;
     return false;
   }
@@ -48,7 +48,7 @@ bool DoAnnotationMatch(const fuchsia::feedback::Annotation& actual, const std::s
     return false;
   }
 
-  if (actual.value.compare(expected_value) != 0) {
+  if (actual.value != expected_value) {
     *result_listener << "Expected value " << expected_value << ", got " << actual.value;
     return false;
   }
@@ -65,7 +65,7 @@ bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual, const std::string& 
     return false;
   }
 
-  if (actual_value.compare(expected) != 0) {
+  if (actual_value != expected) {
     return false;
   }
 

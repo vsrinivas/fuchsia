@@ -44,11 +44,11 @@ bool ExtractCrashType(const std::string& reboot_log, CrashType* crash_type) {
     return false;
   }
 
-  if (first_line.compare("ZIRCON KERNEL PANIC") == 0) {
+  if (first_line == "ZIRCON KERNEL PANIC") {
     *crash_type = CrashType::KERNEL_PANIC;
     return true;
   }
-  if (first_line.compare("ZIRCON OOM") == 0) {
+  if (first_line == "ZIRCON OOM") {
     *crash_type = CrashType::OOM;
     return true;
   }
