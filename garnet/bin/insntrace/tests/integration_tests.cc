@@ -32,7 +32,8 @@ const char* const kResultFileList[] = {
     "/tmp/ptout.ptlist",
 };
 
-TEST(Insntrace, TraceProgram) {
+// TODO(35374): Flakey
+TEST(Insntrace, DISABLED_TraceProgram) {
   zx::job job;
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
