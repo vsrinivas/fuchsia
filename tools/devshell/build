@@ -5,7 +5,7 @@
 
 ### Run Ninja to build Fuchsia
 
-## usage: fx build [-SWITCH...] [zircon/TARGET | TARGET ...]
+## usage: fx build [--log FILENAME] [-SWITCH...] [zircon/TARGET | TARGET ...]
 ##
 ## This runs Ninja, usually twice: once for Zircon and once for Fuchsia.
 ## With no explicit targets, Zircon Ninja builds its default targets and
@@ -15,41 +15,47 @@
 ## For each other `TARGET` argument, `TARGET` is passed to Fuchsia Ninja.
 ## If all the target arguments are `zircon/TARGET`, Fuchsia Ninja is not run.
 ##
-## Switch arguments are passed through to Ninja (same switches for both).
+## optional arguments:
+##   --log LOGFILE    Print debug information to LOGFILE. Please attach the
+##                    resulting file when reporting bugs.
+##
+## Other arguments are passed through to Ninja (same switches for both Zircon
+## and Fuchsia).
 ## Run `fx build -h` to see Ninja argument details.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-function run-ninja {
-  local continue_on_error=false
-  for (( i=1; i<=$#; i++)); do
-    j=$((i+1))
-    if [ "${!i}" = "-k" ] && [ "${!j}" = "0" ]; then
-      continue_on_error=true
-    fi
-  done
-  # Use a subshell because fx-cmd-locked locks until exit, not function return.
-  if [ "$continue_on_error" = false ]; then
-    (fx-run-ninja "$PREBUILT_NINJA" "$@") || exit
-  else
-    local status
-    (fx-run-ninja "$PREBUILT_NINJA" "$@")
-    status=$?
-    if [ "${status}" -ne 0 ]; then
-      fx-warn "Build outputs may be inconsistent and may remain so; a clean build is recommended."
-    fi
-    return "${status}"
-  fi
-}
-
 function main {
   local switches=() zircon_targets=() fuchsia_targets=()
-  while [ $# -gt 0 ]; do
+  local log_file is_logging continue_on_error
+  is_logging=false
+  continue_on_error=false
+  while [[ $# -gt 0 ]]; do
     case "$1" in
+      --log)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        log_file="$2"
+        if [[ -f "${log_file}" ]]; then
+          fx-error "File \"${log_file}\" exists."
+          return 1
+        fi
+       # if ! touch "${log_file}"; then
+       #   fx-error "Cannot create logfile \"${log_file}\""
+       #   return 1
+       # fi
+        is_logging=true
+        shift
+        ;;
       # These Ninja switches take an argument.
       -[Cfjkldtw])
         switches+=("$1" "$2")
+        if [[ "$1" = "-k" && "$2" -eq 0 ]]; then
+          continue_on_error=true
+        fi
         shift
         ;;
       -*)
@@ -65,6 +71,30 @@ function main {
     shift
   done
 
+  if [[ "${is_logging}" = true ]]; then
+    # log file header with relevant environment information
+    {
+      TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+      echo "Build initiated at ${TIMESTAMP}"
+      echo
+      echo "------ GIT QUICK INFO ------"
+      echo "$ git status"
+      git --git-dir="${FUCHSIA_DIR}/.git" status
+      echo
+      echo "$ git rev-parse JIRI_HEAD"
+      git --git-dir="${FUCHSIA_DIR}/.git" rev-parse JIRI_HEAD
+      echo
+      echo "------ CONTENTS OF args.gn ------"
+      echo "$ cat ${FUCHSIA_BUILD_DIR}/args.gn"
+      echo
+      cat "${FUCHSIA_BUILD_DIR}/args.gn"
+      echo
+    } >> "${log_file}" 2>&1
+
+    # tee stdout and stderr to log_file
+    exec > >(tee -a "${log_file}") 2>&1
+  fi
+
   # A change to any of these might mean things are now done differently enough
   # that ninja's automatic re-gen rule might not be triggered or might not work
   # properly if it is triggered.  So preemptively force a re-gen if that seems
@@ -75,40 +105,68 @@ function main {
                      )
   local mine
   for mine in "${landmines[@]}"; do
-    if [ "$mine" -nt "${ZIRCON_BUILDROOT}/build.ninja" -o \
-         "$mine" -nt "${FUCHSIA_BUILD_DIR}/build.ninja" ]; then
+    if [[ "$mine" -nt "${ZIRCON_BUILDROOT}/build.ninja" || \
+         "$mine" -nt "${FUCHSIA_BUILD_DIR}/build.ninja" ]]; then
+      if [[ "${is_logging}" = true ]]; then
+        echo -e "\\n------ RUNNING gn gen ------"
+      fi
       echo >&2 "Re-running gn gen first ($mine changed)"
       fx-gen || return
       break
     fi
   done
 
-  if [ ! -d "$ZIRCON_BUILDROOT" ]; then
+  if [[ ! -d "$ZIRCON_BUILDROOT" ]]; then
+    if [[ "${is_logging}" = true ]]; then
+      echo -e "\\n------ RUNNING gn gen ------"
+    fi
     echo >&2 "Re-running gn gen first (missing $ZIRCON_BUILDROOT)"
     fx-gen || return
   fi
 
   # Build requested Zircon targets.
   # Add default if building any Fuchsia targets.
-  if [ ${#fuchsia_targets[@]} -ne 0 ]; then
+  if [[ ${#fuchsia_targets[@]} -ne 0 ]]; then
     zircon_targets+=(default)
   fi
   local status
-  run-ninja -C "${ZIRCON_BUILDROOT}" "${switches[@]}" "${zircon_targets[@]}"
+
+  if [[ "${is_logging}" = true ]]; then
+    echo -e "\\n------ RUNNING ninja ------"
+  fi
+
+  (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${ZIRCON_BUILDROOT}" \
+    "${switches[@]}" "${zircon_targets[@]}")
   status=$?
+  if [[ "${status}" -ne 0 && "$continue_on_error" = false ]]; then
+    exit-with-message
+  fi
 
   # If there were explicit Zircon targets and no other explicit targets,
   # the Zircon run was enough by itself.  Otherwise Zircon default is
   # a prerequisite for any Fuchsia target (including implicit default).
-  if [ ${#fuchsia_targets[@]} -ne 0 -o ${#zircon_targets[@]} -eq 0 ]; then
-    run-ninja -C "${FUCHSIA_BUILD_DIR}" "${switches[@]}" "${fuchsia_targets[@]}"
+  if [[ ${#fuchsia_targets[@]} -ne 0 || ${#zircon_targets[@]} -eq 0 ]]; then
+    if [[ "${status}" -ne 0 ]]; then
+      fx-warn "Build outputs may be inconsistent and may remain so; a clean build is recommended."
+    fi
+    (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
+      "${switches[@]}" "${fuchsia_targets[@]}")
     fuchsia_status=$?
-    if [ "${status}" -eq 0 ]; then
+    if [[ "${status}" -eq 0 ]]; then
       status="${fuchsia_status}"
     fi
   fi
 
-  return "${status}"
+  exit-with-message
+}
+
+function exit-with-message {
+  if [[ "${is_logging}" = true ]]; then
+    fx-warn "Debug log saved to ${log_file}. Please attach this file when reporting a bug"
+  elif [[ "${status}" -ne 0 ]]; then
+    echo >&2 "Hint: run \`fx build\` with the option \`--log LOGFILE\` to generate a debug log if you are reporting a bug."
+  fi
+  exit "${status}"
 }
 
 main "$@"

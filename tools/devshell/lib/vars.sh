@@ -361,17 +361,23 @@ function fx-exit-on-failure {
 }
 
 # Massage a ninja command line to add default -j and/or -l switches.
-# Note this takes the ninja command itself as first argument.
-# This can be used both to run ninja directly or to run a wrapper script.
+# Arguments:
+#    print_full_cmd   if true, prints the full ninja command line before
+#                     executing it
+#    ninja command    the ninja command itself. This can be used both to run
+#                     ninja directly or to run a wrapper script.
 function fx-run-ninja {
   # Separate the command from the arguments so we can prepend default -j/-l
   # switch arguments.  They need to come before the user's arguments in case
   # those include -- or something else that makes following arguments not be
   # handled as normal switches.
+  local print_full_cmd="$1"
+  shift
   local cmd="$1"
   shift
 
   local args=()
+  local full_cmdline
   local have_load=false
   local have_jobs=false
   while [[ $# -gt 0 ]]; do
@@ -420,11 +426,17 @@ function fx-run-ninja {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
   # empty.
-  fx-try-locked env -i TERM="${TERM}" PATH="${PATH}" \
+  full_cmdline=(env -i "TERM=\"${TERM}\"" "PATH=\"${PATH}\"" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
-    "$cmd" "${args[@]}"
+    "$cmd" "${args[@]}")
+
+  if [[ "${print_full_cmd}" = true ]]; then
+    echo "${full_cmdline[@]}"
+    echo
+  fi
+  fx-try-locked "${full_cmdline[@]}"
 }
 
 function fx-zbi {
