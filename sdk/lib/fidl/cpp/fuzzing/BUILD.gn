@@ -9,6 +9,7 @@ import("//build/test/test_package.gni")
 source_set("fuzzing") {
   testonly = true
   sources = [
+    "fuzzer.h",
     "traits.h",
   ]
   public_deps = [

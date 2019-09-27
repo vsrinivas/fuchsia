@@ -51,9 +51,13 @@ template("fidl") {
   if (defined(invoker.excluded_checks)) {
     not_needed(invoker, [ "excluded_checks" ])
   }
+  if (defined(invoker.fuzzers)) {
+    not_needed(invoker, [ "fuzzers" ])
+  }
 
-  assert(!defined(invoker.deps), "All FIDL dependencies are inherently " +
-      "public, use 'public_deps' instead of 'deps'.")
+  assert(!defined(invoker.deps),
+         "All FIDL dependencies are inherently " +
+             "public, use 'public_deps' instead of 'deps'.")
 
   # TODO(ZX-3365): Hack for - compat names during soft transition.
   # Remove whole conditional block when final conversion to . names is done.
@@ -209,13 +213,6 @@ template("fidl") {
           fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
           fidlgen_generator = "cpp"
           output_stem = "cpp/fidl"
-          additional_public_deps = hlcpp_public_deps
-        },
-        {
-          target_suffix = "libfuzzer"
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
-          fidlgen_generator = "libfuzzer"
-          output_stem = "cpp/libfuzzer"
           additional_public_deps = hlcpp_public_deps
         },
       ]

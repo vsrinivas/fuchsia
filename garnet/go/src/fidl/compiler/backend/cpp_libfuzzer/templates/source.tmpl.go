@@ -10,6 +10,140 @@ const Source = `
 
 #include <{{ .PrimaryHeader }}>
 
-// This file is a placeholder for the compilation unit defined for the libfuzzer fidl_cpp generator.
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/fuzzing/fuzzer.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/zx/channel.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <stdio.h>
+
+using namespace ::fuzzing;
+
+{{- $ifaces := Interfaces .Decls }}
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+  static ::async::Loop* loop = nullptr;
+
+  if (loop == nullptr) {
+    printf("Starting client async loop\n");
+    loop = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+  }
+
+  // Must fuzz some interface; first two bytes used to select protocol and method.
+  if (size < 2) {
+    printf("Early exit: Input too small: %zu\n", size);
+    return 0;
+  }
+  size -= 2;
+
+  uint8_t iface_selector = data[0];
+  uint8_t iface_selection = iface_selector % {{ len $ifaces }};
+
+  printf("Starting fuzzer with %zu bytes of data\n", size);
+
+  // Hardcode mutually-exclusive if blocks that selects exactly one interface.
+  zx_status_t status;
+{{- range $ifaceIdx, $iface := $ifaces }}{{ if len $iface.Methods }}
+  if (iface_selection == {{ $ifaceIdx }}) {
+#if !defined(PROTOCOL_{{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }})
+    // Selected interface from FIDL file that is not part of this fuzzer.
+    printf("Early exit: Chose disabled protocol: {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr<{{ $iface.Namespace }}::{{ $iface.Name }}> iface;
+
+    printf("Starting {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }} service\n");
+    ::fidl::fuzzing::Fuzzer<{{ $iface.Namespace }}::{{ $iface.Name }}> fuzzer(loop->dispatcher());
+    if ((status = fuzzer.Init()) != ZX_OK) {
+      printf("Early exit: fuzzer.Init returned bad status: %d\n", status);
+      return 0;
+    }
+
+    if ((status = fuzzer.BindService()) != ZX_OK) {
+      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status);
+      return 0;
+    }
+
+    if ((status = fuzzer.BindClient(&iface, loop->dispatcher())) != ZX_OK) {
+      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status);
+      return 0;
+    }
+
+    FuzzInput src(data, size);
+
+    uint8_t method_selector = data[1];
+    uint8_t method_selection = method_selector % {{ len $iface.Methods }};
+
+  {{- range $methodIdx, $method := .Methods }}
+    if (method_selection == {{ $methodIdx }}) {
+#if !(ALL_METHODS || defined(METHOD_{{ $method.Name }}))
+      // Selected method from interface that is not part of this fuzzer.
+      printf("Early exit: Chose disabled method: {{ $method.Name }}\n");
+      return 0;
+#else
+      const size_t min_size = {{ range $paramIdx, $param := $method.Request }}
+        {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.Decl }}>()
+      {{- end }};
+
+      // Must have enough bytes for input.
+      if (size < min_size) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+        return 0;
+      }
+
+      const size_t slack_size = size - min_size;
+      const size_t slack_size_per_param = slack_size / {{ len $method.Request }};
+
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+
+      size_t param_size;
+  {{- range $method.Request }}
+      param_size = MinSize<{{ .Type.Decl }}>() + slack_size_per_param;
+      printf("Allocating %zu bytes for {{ .Type.Decl }} {{ .Name }}\n", param_size);
+      {{ .Type.Decl }} {{ .Name }} = Allocate<{{ .Type.Decl }}>{}(&src, &param_size);
+  {{- end }}
+
+      printf("Invoking method {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}.{{ $method.Name }}\n");
+      iface->{{ $method.Name }}({{ range $paramIdx, $param := $method.Request }}
+          {{- if $paramIdx }}, {{ end -}}
+          std::move({{ $param.Name }})
+        {{- end }}
+        {{- if len $method.Response}}
+          {{- if len $method.Request }}, {{ end -}}
+          [signaller = fuzzer.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.Response }}
+            {{- if $paramIdx }}, {{ end -}}
+            {{ $param.Type.Decl }} {{ $param.Name }}
+          {{- end }}) {
+        printf("Invoked {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}.{{ $method.Name }}\n");
+        zx_status_t  status = signaller.SignalCallback();
+        if (status != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        }
+      }
+      {{- end }});
+#endif
+    }
+{{- end }}
+
+    loop->RunUntilIdle();
+
+    if ((status = fuzzer.WaitForCallback()) != ZX_OK) {
+      printf("fuzzer.WaitForCallback returned bad status: %d\n", status);
+    }
+
+    iface.Unbind();
+#endif
+  }
+{{- end }}{{ end }}
+
+  printf("Fuzzer stopped!\n");
+
+  return 0;
+}
 {{ end }}
 `

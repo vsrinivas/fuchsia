@@ -49,8 +49,6 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${cpp_source_name}.golden",
       "${llcpp_header_name}.golden",
       "${llcpp_source_name}.golden",
-      "${libfuzzer_header_name}.golden",
-      "${libfuzzer_source_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
       "${syzkaller_name}.golden",
@@ -82,14 +80,30 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
 
-    echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}, and ${libfuzzer_source_name}"
-    ${FIDLGEN} \
-        -generators libfuzzer \
-        -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}" \
-        -include-base "${GOLDENS_DIR}"
-    mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${libfuzzer_header_name}.golden"
-    mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${libfuzzer_source_name}.golden"
+    # libfuzzer expects at least one protocol definition or it will fail.
+    # Add sources that contain a protocol. Remove libfuzzer golden files from a source that (no
+    # longer) contains a golden file.
+    if grep -q '^protocol ' "${src_path}"; then
+        GOLDENS+=(
+            "${libfuzzer_header_name}.golden",
+            "${libfuzzer_source_name}.golden",
+        )
+        echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}, and ${libfuzzer_source_name}"
+        ${FIDLGEN} \
+            -generators libfuzzer \
+            -json "${GOLDENS_DIR}/${json_name}" \
+            -output-base "${GOLDENS_DIR}/${json_name}" \
+            -include-base "${GOLDENS_DIR}"
+        mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${libfuzzer_header_name}.golden"
+        mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${libfuzzer_source_name}.golden"
+    else
+        if [[ -f "${GOLDENS_DIR}/${libfuzzer_header_name}.golden" ]]; then
+            rm "${GOLDENS_DIR}/${libfuzzer_header_name}.golden"
+        fi
+        if [[ -f "${GOLDENS_DIR}/${libfuzzer_source_name}.golden" ]]; then
+            rm "${GOLDENS_DIR}/${libfuzzer_source_name}.golden"
+        fi
+    fi
 
     echo "  go: ${json_name} > ${go_impl_name}"
     ${FIDLGEN} \

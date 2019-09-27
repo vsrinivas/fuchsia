@@ -42,10 +42,27 @@ template("fidl_cpp_codegen") {
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
+  generation_visibility = [ ":$main_target_name" ]
+  if (defined(invoker.fuzzers)) {
+    foreach(fuzzer, invoker.fuzzers) {
+      assert(
+          defined(fuzzer.protocol),
+          "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
+
+      protocol_suffix = string_replace(fuzzer.protocol, ".", "_")
+      if (defined(fuzzer.methods)) {
+        foreach(method, fuzzer.methods) {
+          protocol_suffix = "${protocol_suffix}_${method}"
+        }
+      }
+      generation_visibility += [ ":${main_target_name}_${protocol_suffix}" ]
+    }
+  }
+
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [ ":$main_target_name" ]
+    visibility = generation_visibility
 
     tool = invoker.fidlgen_tool
 
@@ -165,6 +182,7 @@ template("fidl_cpp_library") {
   source_set(main_target_name) {
     forward_variables_from(invoker,
                            [
+                             "defines",
                              "testonly",
                              "visibility",
                            ])
@@ -227,6 +245,19 @@ template("fidl_cpp") {
       }
     }
 
+    if (defined(invoker.fuzzers)) {
+      lib_name = "${target_name}_libfuzzer"
+
+      fidl_cpp_codegen(lib_name) {
+        forward_variables_from(invoker, "*")
+        name = library_name
+        fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
+        generator = "libfuzzer"
+        generated_source_base = "cpp/libfuzzer"
+        root_target = target_name
+      }
+    }
+
     foreach(generator_settings, invoker.llcpp_generators) {
       if (defined(generator_settings.target_suffix)) {
         lib_name = "${target_name}_${generator_settings.target_suffix}"
@@ -276,6 +307,56 @@ template("fidl_cpp") {
         generated_source_base = generator_settings.output_stem
         root_target = target_name
         additional_public_deps = generator_settings.additional_public_deps
+      }
+    }
+
+    if (defined(invoker.fuzzers)) {
+      lib_public_deps = [
+        "//zircon/public/lib/async-default",
+        "//zircon/public/lib/async-loop-cpp",
+        "//zircon/public/lib/async-loop-default",
+      ]
+      if (is_fuchsia) {
+        lib_public_deps += [ "//sdk/lib/fidl/cpp" ]
+      } else {
+        lib_public_deps += [ "//sdk/lib/fidl/cpp:cpp_base" ]
+      }
+
+      foreach(fuzzer, invoker.fuzzers) {
+        assert(
+            defined(fuzzer.protocol),
+            "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
+
+        protocol_suffix = string_replace(fuzzer.protocol, ".", "_")
+        library_defines = [ "PROTOCOL_${protocol_suffix}" ]
+        if (defined(invoker.defines)) {
+          library_defines += invoker.defines
+        }
+        if (defined(fuzzer.methods)) {
+          foreach(method, fuzzer.methods) {
+            library_defines += [ "METHOD_${method}" ]
+          }
+        } else {
+          library_defines += [ "ALL_METHODS" ]
+        }
+
+        library_public_deps = []
+        if (defined(invoker.public_deps)) {
+          library_public_deps += invoker.public_deps
+        }
+
+        target_suffix = "_libfuzzer_${protocol_suffix}"
+        lib_name = "${target_name}${target_suffix}"
+
+        fidl_cpp_library(lib_name) {
+          forward_variables_from(invoker, "*")
+          name = library_name
+          generator = "libfuzzer"
+          generated_source_base = "cpp/libfuzzer"
+          root_target = target_name
+          additional_public_deps = lib_public_deps
+          defines = library_defines
+        }
       }
     }
   }

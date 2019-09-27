@@ -5,6 +5,7 @@
 package cpp_libfuzzer
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,6 +26,15 @@ func NewFidlGenerator() *FidlGenerator {
 		"Kinds": func() interface{} { return ir.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 		"NEq":   func(a interface{}, b interface{}) bool { return a != b },
+		"DoubleColonToUnderscore": func(s string) string {
+			s2 := strings.ReplaceAll(s, "::", "_")
+			// Drop any leading "::" => "_".
+			if len(s2) > 0 && s2[0] == '_' {
+				return s2[1:]
+			}
+			return s2
+		},
+		"Interfaces": interfaces,
 	})
 
 	template.Must(tmpls.Parse(templates.Bits))
@@ -46,13 +56,24 @@ func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
-// GenerateSource generates the placeholder C++ source file for the libfuzzer fidl_cpp build target.
+// GenerateSource generates the C++ fuzzer implementation protocols in the FIDL file.
 func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+	if len(fidl.Interfaces) == 0 {
+		return fmt.Errorf("No interfaces in FIDL library: %s", string(fidl.Name))
+	}
+	mthdCount := 0
+	for _, iface := range fidl.Interfaces {
+		mthdCount += len(iface.Methods)
+	}
+	if mthdCount == 0 {
+		return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
+	}
+
 	tree := ir.Compile(fidl)
 	prepareTree(fidl.Name, &tree)
 
@@ -91,4 +112,14 @@ func prepareTree(name types.EncodedLibraryIdentifier, tree *ir.Root) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
 	tree.PrimaryHeader = pkgPath + "/cpp/libfuzzer.h"
 	tree.Headers = []string{pkgPath + "/cpp/fidl.h"}
+}
+
+func interfaces(decls []ir.Decl) []*ir.Interface {
+	ifaces := make([]*ir.Interface, 0, len(decls))
+	for _, decl := range decls {
+		if iface, ok := decl.(*ir.Interface); ok {
+			ifaces = append(ifaces, iface)
+		}
+	}
+	return ifaces
 }
