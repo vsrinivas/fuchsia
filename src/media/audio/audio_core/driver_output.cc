@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/driver_output.h"
 
+#include <lib/async/cpp/time.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 
@@ -126,7 +127,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   }
 
   FXL_DCHECK(driver_ring_buffer() != nullptr);
-  auto uptime = zx::clock::get_monotonic().get();
+  auto uptime = async::Now(mix_domain().dispatcher()).get();
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   const auto& cm2frames = cm2rd_pos.rate();
   const auto& rb = *driver_ring_buffer();
@@ -247,7 +248,7 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
 
   if (VERBOSE_TIMING_DEBUG) {
     const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
-    auto now = zx::clock::get_monotonic();
+    auto now = async::Now(mix_domain().dispatcher());
     int64_t output_frames_consumed = cm2rd_pos.Apply(now.get());
     int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_end = playback_lead_start + job.buf_frames;

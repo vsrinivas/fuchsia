@@ -87,6 +87,16 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // Device info used during device enumeration and add-notifications.
   void GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const;
 
+  // Gives derived classes a chance to set up hardware, then sets up the machinery needed for
+  // scheduling processing tasks and schedules the first processing callback immediately in order
+  // to get the process running.
+  fit::promise<void, zx_status_t> Startup();
+
+  // Makes  certain that the shutdown process has started, synchronizes with processing tasks which
+  // were executing at the time, then finishes the shutdown by unlinking from all renderers and
+  // capturers and cleaning up all resources.
+  fit::promise<void> Shutdown();
+
  protected:
   friend class fbl::RefPtr<AudioDevice>;
 
@@ -219,18 +229,6 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   friend class AudioDeviceManager;
   friend class AudioDriver;
   friend struct PendingInitListTraits;
-
-  // Called from the AudioDeviceManager after an output has been created.
-  // Gives derived classes a chance to set up hardware, then sets up the
-  // machinery needed for scheduling processing tasks and schedules the first
-  // processing callback immediately in order to get the process running.
-  fit::promise<void, zx_status_t> Startup();
-
-  // Called from the AudioDeviceManager on the main message loop thread.  Makes
-  // certain that the shutdown process has started, synchronizes with processing
-  // tasks which were executing at the time, then finishes the shutdown by
-  // unlinking from all renderers/capturers and cleaning up all resources.
-  fit::promise<void> Shutdown();
 
   // Called from the AudioDeviceManager when it moves an audio device from its
   // "pending init" set over to its "active" set .

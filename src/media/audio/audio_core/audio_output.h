@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 #include <lib/media/cpp/timeline_function.h>
 
 #include "src/lib/fxl/time/time_point.h"
@@ -62,7 +63,9 @@ class AudioOutput : public AudioDevice {
   }
 
   void SetNextSchedDelay(const fxl::TimeDelta& next_sched_delay) {
-    SetNextSchedTime(fxl::TimePoint::Now() + next_sched_delay);
+    auto now = fxl::TimePoint::FromEpochDelta(
+        fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
+    SetNextSchedTime(now + next_sched_delay);
   }
 
   virtual bool StartMixJob(MixJob* job, fxl::TimePoint process_start)

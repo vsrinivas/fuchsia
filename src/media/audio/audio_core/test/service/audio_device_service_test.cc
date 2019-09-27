@@ -24,7 +24,7 @@ void AudioDeviceServiceTest::SetUp() {
   zx_status_t status = zx::channel::create(0u, &local_channel, &remote_channel);
   EXPECT_EQ(ZX_OK, status);
 
-  driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(local_channel));
+  driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(local_channel), dispatcher());
   ASSERT_NE(driver_, nullptr);
   driver_->set_device_manufacturer(kManufacturer);
   driver_->set_device_product(kProduct);

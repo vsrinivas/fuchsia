@@ -4,11 +4,9 @@
 
 #include "src/media/audio/lib/test/message_transceiver.h"
 
-#include <lib/async/default.h>
-
 namespace media::audio::test {
 
-MessageTransceiver::MessageTransceiver(){};
+MessageTransceiver::MessageTransceiver(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 MessageTransceiver::~MessageTransceiver() { Close(); };
 
@@ -25,7 +23,7 @@ zx_status_t MessageTransceiver::Init(zx::channel channel,
   write_wait_.set_object(channel_.get());
   write_wait_.set_trigger(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_PEER_CLOSED);
 
-  return read_wait_.Begin(async_get_default_dispatcher());
+  return read_wait_.Begin(dispatcher_);
 }
 
 void MessageTransceiver::Close() {
@@ -44,7 +42,7 @@ zx_status_t MessageTransceiver::SendMessage(Message message) {
   outbound_messages_.push(std::move(message));
 
   if (channel_ && !write_wait_.is_pending()) {
-    WriteChannelMessages(async_get_default_dispatcher(), &write_wait_, ZX_OK, nullptr);
+    WriteChannelMessages(dispatcher_, &write_wait_, ZX_OK, nullptr);
   }
 
   return ZX_OK;

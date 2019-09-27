@@ -23,7 +23,8 @@ static constexpr fxl::TimeDelta kMaxTrimPeriod = fxl::TimeDelta::FromMillisecond
 
 AudioOutput::AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
     : AudioDevice(Type::Output, threading_model, registry) {
-  next_sched_time_ = fxl::TimePoint::Now();
+  next_sched_time_ = fxl::TimePoint::FromEpochDelta(
+      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
   next_sched_time_known_ = true;
   source_link_refs_.reserve(16u);
 }
@@ -31,7 +32,8 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, ObjectRegistry* regist
 void AudioOutput::Process() {
   TRACE_DURATION("audio", "AudioOutput::Process");
   bool mixed = false;
-  fxl::TimePoint now = fxl::TimePoint::Now();
+  fxl::TimePoint now = fxl::TimePoint::FromEpochDelta(
+      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
 
   // At this point, we should always know when our implementation would like to be called to do some
   // mixing work next. If we do not know, then we should have already shut down.
@@ -487,7 +489,9 @@ bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer
   // our transformation, no need for us to do so here.
   FXL_DCHECK(info);
 
-  int64_t local_now_ticks = (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
+  auto now = fxl::TimePoint::FromEpochDelta(
+      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
+  int64_t local_now_ticks = (now - fxl::TimePoint()).ToNanoseconds();
 
   // RateControlBase guarantees that the transformation into the media timeline is never singular.
   // If a forward transformation fails it must be because of overflow, which should be impossible

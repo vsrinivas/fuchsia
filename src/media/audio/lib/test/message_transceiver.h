@@ -43,7 +43,7 @@ class MessageTransceiver {
   using IncomingMessageCallback = fit::function<void(Message)>;
   using ErrorCallback = fit::function<void(zx_status_t)>;
 
-  MessageTransceiver();
+  MessageTransceiver(async_dispatcher_t* dispatcher);
 
   ~MessageTransceiver();
 
@@ -65,6 +65,7 @@ class MessageTransceiver {
   void WriteChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status, const zx_packet_signal_t* signal);
 
+  async_dispatcher_t* dispatcher_;
   zx::channel channel_;
   IncomingMessageCallback incoming_message_callback_;
   ErrorCallback error_callback_;

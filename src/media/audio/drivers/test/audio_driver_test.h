@@ -100,8 +100,8 @@ class AudioDriverTest : public TestFixture {
   bool ring_buffer_channel_ready_ = false;
   bool ring_buffer_ready_ = false;
 
-  MessageTransceiver stream_transceiver_;
-  MessageTransceiver ring_buffer_transceiver_;
+  MessageTransceiver stream_transceiver_{dispatcher()};
+  MessageTransceiver ring_buffer_transceiver_{dispatcher()};
 
   zx_txid_t unique_id_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
   zx_txid_t manufacturer_string_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;

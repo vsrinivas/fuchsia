@@ -5,10 +5,14 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_DRIVER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_DRIVER_H_
 
+#include <lib/async/cpp/time.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
 
 #include <cstring>
+#include <optional>
 
 #include "src/media/audio/audio_core/object_registry.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
@@ -17,7 +21,15 @@ namespace media::audio::testing {
 
 class FakeAudioDriver {
  public:
-  FakeAudioDriver(zx::channel channel);
+  FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher);
+
+  fzl::VmoMapper CreateRingBuffer(size_t size);
+
+  struct SelectedFormat {
+    uint32_t frames_per_second;
+    audio_sample_format_t sample_format;
+    uint16_t channels;
+  };
 
   void set_stream_unique_id(const audio_stream_unique_id_t& uid) {
     std::memcpy(uid_.data, uid.data, sizeof(uid.data));
@@ -35,6 +47,16 @@ class FakeAudioDriver {
   void set_formats(std::vector<audio_stream_format_range_t> formats) {
     formats_ = std::move(formats);
   }
+  void set_plugged(bool plugged) { plugged_ = plugged; }
+
+  // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
+  bool is_running() const { return is_running_; }
+
+  // The 'selected format' for the driver, chosen with a |AUDIO_STREAM_CMD_SET_FORMAT| command.
+  //
+  // The returned optional will be empty if no |AUDIO_STREAM_CMD_SET_FORMAT| command has been
+  // received.
+  std::optional<SelectedFormat> selected_format() const { return selected_format_; }
 
  private:
   void OnInboundStreamMessage(test::MessageTransceiver::Message message);
@@ -44,6 +66,7 @@ class FakeAudioDriver {
   void HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t& request);
   void HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request);
   void HandleCommandSetFormat(const audio_stream_cmd_set_format_req_t& request);
+  void HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request);
 
   void OnInboundRingBufferMessage(test::MessageTransceiver::Message message);
   void OnInboundRingBufferError(zx_status_t status);
@@ -69,7 +92,17 @@ class FakeAudioDriver {
       .max_channels = 2,
       .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
   }};
+  size_t ring_buffer_size_;
+  zx::vmo ring_buffer_;
 
+  uint32_t fifo_depth_ = 0;
+  bool plugged_ = true;
+
+  std::optional<SelectedFormat> selected_format_;
+
+  bool is_running_ = false;
+
+  async_dispatcher_t* dispatcher_;
   test::MessageTransceiver stream_transceiver_;
   test::MessageTransceiver ring_buffer_transceiver_;
 };

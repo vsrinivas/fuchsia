@@ -235,6 +235,7 @@ executable("unittest_bin") {
     "audio_link_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",
     "command_line_options_unittest.cc",
+    "driver_output_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "reporter_unittest.cc",

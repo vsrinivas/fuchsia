@@ -4,15 +4,29 @@
 
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 
+#include <audio-proto-utils/format-utils.h>
 #include <gtest/gtest.h>
 
 namespace media::audio::testing {
 
-FakeAudioDriver::FakeAudioDriver(zx::channel channel) {
+FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher),
+      stream_transceiver_(dispatcher),
+      ring_buffer_transceiver_(dispatcher) {
   zx_status_t status = stream_transceiver_.Init(
       std::move(channel), fit::bind_member(this, &FakeAudioDriver::OnInboundStreamMessage),
       fit::bind_member(this, &FakeAudioDriver::OnInboundStreamError));
   FXL_CHECK(status == ZX_OK);
+}
+
+fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {
+  FXL_CHECK(!ring_buffer_) << "Calling CreateRingBuffer multiple times is not supported";
+
+  ring_buffer_size_ = size;
+  fzl::VmoMapper mapper;
+  mapper.CreateAndMap(ring_buffer_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                      &ring_buffer_);
+  return mapper;
 }
 
 void FakeAudioDriver::OnInboundStreamError(zx_status_t status) {}
@@ -34,6 +48,9 @@ void FakeAudioDriver::OnInboundStreamMessage(test::MessageTransceiver::Message m
       break;
     case AUDIO_STREAM_CMD_GET_STRING:
       HandleCommandGetString(message.BytesAs<audio_stream_cmd_get_string_req_t>());
+      break;
+    case AUDIO_STREAM_CMD_PLUG_DETECT:
+      HandleCommandPlugDetect(message.BytesAs<audio_stream_cmd_plug_detect_req_t>());
       break;
     default:
       EXPECT_TRUE(false) << "Unrecognized header.cmd value " << header.cmd;
@@ -136,9 +153,30 @@ void FakeAudioDriver::HandleCommandSetFormat(const audio_stream_cmd_set_format_r
   EXPECT_EQ(ZX_OK, status);
 
   response_message.handles_.clear();
-  response_message.handles_.push_back(std::move(remote_channel.get()));
+  response_message.handles_.push_back(remote_channel.release());
 
   status = stream_transceiver_.SendMessage(response_message);
+  EXPECT_EQ(ZX_OK, status);
+
+  selected_format_ = {
+      .frames_per_second = request.frames_per_second,
+      .sample_format = request.sample_format,
+      .channels = request.channels,
+  };
+}
+
+void FakeAudioDriver::HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request) {
+  test::MessageTransceiver::Message response_message;
+  auto& response = response_message.ResizeBytesAs<audio_stream_cmd_plug_detect_resp_t>();
+  response.hdr.transaction_id = request.hdr.transaction_id;
+  response.hdr.cmd = request.hdr.cmd;
+
+  // For now we represent a hardwired device. We should make it possible to test pluggable devices,
+  // however.
+  response.flags = AUDIO_PDNF_HARDWIRED;
+  response.plug_state_time = 0;
+
+  zx_status_t status = stream_transceiver_.SendMessage(response_message);
   EXPECT_EQ(ZX_OK, status);
 }
 
@@ -171,20 +209,74 @@ void FakeAudioDriver::HandleCommandGetFifoDepth(audio_rb_cmd_get_fifo_depth_req_
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
   response.result = ZX_OK;
-  response.fifo_depth = 0;
+  response.fifo_depth = fifo_depth_;
 
   zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& request) {}
+void FakeAudioDriver::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& request) {
+  test::MessageTransceiver::Message response_message;
+  auto& response = response_message.ResizeBytesAs<audio_rb_cmd_get_buffer_resp_t>();
+  response.hdr.transaction_id = request.hdr.transaction_id;
+  response.hdr.cmd = request.hdr.cmd;
+
+  // This should be true since it's set as part of creating the channel that's carrying these
+  // messages.
+  FXL_CHECK(selected_format_);
+
+  if (!ring_buffer_) {
+    // If we haven't created a ring buffer, we'll just drop this request.
+    return;
+  }
+  FXL_CHECK(ring_buffer_);
+
+  // Dup our ring buffer VMO to send over the channel.
+  zx::vmo dup;
+  FXL_CHECK(ring_buffer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK);
+
+  // Compute the buffer size in frames.
+  auto frame_size =
+      ::audio::utils::ComputeFrameSize(selected_format_->channels, selected_format_->sample_format);
+  auto ring_buffer_frames = ring_buffer_size_ / frame_size;
+
+  response.result = ZX_OK;
+  response.num_ring_buffer_frames = ring_buffer_frames;
+  response_message.handles_.push_back(dup.release());
+
+  zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
+  EXPECT_EQ(ZX_OK, status);
+}
 
 void FakeAudioDriver::HandleCommandStart(audio_rb_cmd_start_req_t& request) {
-  ASSERT_TRUE(false) << "Unexpected START command received";
+  test::MessageTransceiver::Message response_message;
+  auto& response = response_message.ResizeBytesAs<audio_rb_cmd_start_resp_t>();
+  response.hdr.transaction_id = request.hdr.transaction_id;
+  response.hdr.cmd = request.hdr.cmd;
+  if (!is_running_) {
+    response.result = ZX_OK;
+    response.start_time = async::Now(dispatcher_).get();
+    is_running_ = true;
+  } else {
+    response.result = ZX_ERR_BAD_STATE;
+  }
+  zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
+  EXPECT_EQ(ZX_OK, status);
 }
 
 void FakeAudioDriver::HandleCommandStop(audio_rb_cmd_stop_req_t& request) {
-  ASSERT_TRUE(false) << "Unexpected STOP command received";
+  test::MessageTransceiver::Message response_message;
+  auto& response = response_message.ResizeBytesAs<audio_rb_cmd_stop_resp_t>();
+  response.hdr.transaction_id = request.hdr.transaction_id;
+  response.hdr.cmd = request.hdr.cmd;
+  if (is_running_) {
+    response.result = ZX_OK;
+    is_running_ = false;
+  } else {
+    response.result = ZX_ERR_BAD_STATE;
+  }
+  zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
+  EXPECT_EQ(ZX_OK, status);
 }
 
 }  // namespace media::audio::testing
