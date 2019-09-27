@@ -12,6 +12,7 @@ use {
         process_launcher::ProcessLauncherService,
         system_controller,
         vmex::VmexService,
+        work_scheduler::work_scheduler::WorkScheduler,
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
@@ -19,7 +20,7 @@ use {
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_process::LauncherMarker,
     fidl_fuchsia_security_resource::VmexMarker,
-    fidl_fuchsia_sys2::SystemControllerMarker,
+    fidl_fuchsia_sys2::{SystemControllerMarker, WorkSchedulerControlMarker},
     fuchsia_async as fasync,
     fuchsia_component::{
         client,
@@ -246,6 +247,15 @@ impl BuiltinRootServices {
             });
         }
 
+        available.insert(WorkSchedulerControlMarker::NAME.to_string());
+        fs.add_fidl_service(move |stream| {
+            fasync::spawn(
+                WorkScheduler::serve_root_work_scheduler_control(stream).unwrap_or_else(|e| {
+                    panic!("Error while serving work scheduler control: {}", e)
+                }),
+            )
+        });
+
         // TODO (fxb/35949) instead of embedding SystemController, model it as a hook
         available.insert(SystemControllerMarker::NAME.to_string());
         fs.add_fidl_service(move |stream| {
@@ -395,6 +405,19 @@ mod tests {
         let vmex = builtin.connect_to_service::<VmexMarker>()?;
         let vmex_resource = vmex.get().await?;
         assert_ne!(vmex_resource.raw_handle(), sys::ZX_HANDLE_INVALID);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_builtin_work_scheduler_control_service() -> Result<(), Error> {
+        let args = Arguments { ..Default::default() };
+        let builtin = BuiltinRootServices::new(&args)?;
+
+        let work_scheduler_control = builtin.connect_to_service::<WorkSchedulerControlMarker>()?;
+        let result = work_scheduler_control.get_batch_period().await;
+        result
+            .expect("failed to use WorkSchedulerControl service")
+            .expect("WorkSchedulerControl.GetBatchPeriod() yielded error");
         Ok(())
     }
 
