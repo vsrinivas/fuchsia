@@ -23,7 +23,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth_account::{
     AccountRequest, AccountRequestStream, AuthListenerMarker, Lifetime, PersonaMarker, Status,
 };
-use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
+use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
@@ -369,7 +369,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{AccountMarker, AccountProxy};
-    use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
+    use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
 

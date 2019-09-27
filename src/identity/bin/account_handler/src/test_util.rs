@@ -9,10 +9,10 @@ use crate::common::AccountLifetime;
 use account_common::{LocalAccountId, LocalPersonaId};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::AppConfig;
-use fidl_fuchsia_auth_account_internal::{
+use fidl_fuchsia_identity_account::Error;
+use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequest, AccountHandlerContextRequestStream,
 };
-use fidl_fuchsia_identity_account::Error;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use lazy_static::lazy_static;
@@ -129,10 +129,7 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
         assert_eq!(
-            proxy
-                .get_auth_provider("dummy_auth_provider", ap_server_end)
-                .await
-                .unwrap(),
+            proxy.get_auth_provider("dummy_auth_provider", ap_server_end).await.unwrap(),
             Err(Error::Internal)
         );
     }

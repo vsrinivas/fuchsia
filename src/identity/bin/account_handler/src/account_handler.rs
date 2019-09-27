@@ -10,11 +10,11 @@ use failure::{format_err, ResultExt as _};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{AccountMarker, Status};
-use fidl_fuchsia_auth_account_internal::{
+use fidl_fuchsia_identity_account::Error;
+use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
     AccountHandlerControlRequestStream,
 };
-use fidl_fuchsia_identity_account::Error;
 use fuchsia_inspect::{Inspector, Node, Property};
 use futures::prelude::*;
 use identity_common::TaskGroupError;
@@ -273,9 +273,7 @@ mod tests {
     use crate::test_util::*;
     use account_common::FidlLocalAccountId;
     use fidl::endpoints::create_endpoints;
-    use fidl_fuchsia_auth_account_internal::{
-        AccountHandlerControlMarker, AccountHandlerControlProxy,
-    };
+    use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
     use fuchsia_async as fasync;
     use fuchsia_inspect::testing::AnyProperty;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
@@ -518,10 +516,7 @@ mod tests {
                     let account_proxy = account_client_end.into_proxy().unwrap();
 
                     // Simple check that non-force account removal returns error due to not implemented.
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_OFF).await?,
-                        Err(Error::Internal)
-                    );
+                    assert_eq!(proxy.remove_account(FORCE_REMOVE_OFF).await?, Err(Error::Internal));
 
                     // Make sure remove_account() can make progress with an open channel.
                     proxy.remove_account(FORCE_REMOVE_ON).await??;

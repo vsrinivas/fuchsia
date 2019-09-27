@@ -7,7 +7,7 @@ use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountRe
 use failure::{format_err, ResultExt};
 use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_auth_account::{Lifetime, Status};
-use fidl_fuchsia_auth_account_internal::{
+use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequestStream, AccountHandlerControlMarker,
     AccountHandlerControlProxy,
 };
@@ -107,7 +107,9 @@ impl AccountHandlerConnection {
         let request_stream = AccountHandlerContextRequestStream::from_channel(server_async_chan);
         let context_clone = Arc::clone(&context);
         fasync::spawn(async move {
-            context_clone.handle_requests_from_stream(request_stream).await
+            context_clone
+                .handle_requests_from_stream(request_stream)
+                .await
                 .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
         });
         Ok(ClientEnd::new(client_chan))
@@ -123,8 +125,9 @@ impl AccountHandlerConnection {
         let context_client_end = Self::spawn_context_channel(context)?;
         match connection
             .proxy
-            .load_account(context_client_end, account_id.clone().as_mut().into()).await
-        .account_manager_status(Status::IoError)?
+            .load_account(context_client_end, account_id.clone().as_mut().into())
+            .await
+            .account_manager_status(Status::IoError)?
         {
             Ok(()) => Ok(connection),
             Err(err) => Err(Into::<AccountManagerError>::into(err)
@@ -144,8 +147,9 @@ impl AccountHandlerConnection {
 
         match connection
             .proxy()
-            .create_account(context_client_end, account_id.clone().as_mut().into()).await
-        .account_manager_status(Status::IoError)?
+            .create_account(context_client_end, account_id.clone().as_mut().into())
+            .await
+            .account_manager_status(Status::IoError)?
         {
             Ok(()) => {
                 // TODO(jsankey): Longer term, local ID may need to be related to the global ID

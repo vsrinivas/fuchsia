@@ -211,7 +211,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
-    use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
+    use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use std::path::PathBuf;

@@ -5,7 +5,7 @@
 use failure::format_err;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{AuthProviderMarker, Status};
-use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
+use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use futures::future::{ready as fready, FutureObj};
 use token_manager::TokenManagerError;
 
@@ -63,7 +63,7 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
 mod tests {
     use super::*;
     use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
-    use fidl_fuchsia_auth_account_internal::{
+    use fidl_fuchsia_identity_internal::{
         AccountHandlerContextMarker, AccountHandlerContextRequest,
     };
     use fuchsia_async as fasync;
