@@ -37,4 +37,12 @@ AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
              (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
+const VolumeCurve& AudioLink::volume_curve() const {
+  if (volume_curve_.has_value()) {
+    return volume_curve_.value();
+  }
+
+  return VolumeCurve::Default();
+}
+
 }  // namespace media::audio

@@ -123,11 +123,11 @@ std::optional<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   }
 
   rapidjson::Document doc2;
-  parse_res = doc2.Parse(kAudioPolicySchema.c_str());
+  parse_res = doc2.Parse(kAudioPolicySchema);
   if (parse_res.IsError()) {
     FXL_LOG(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
-                   << kAudioPolicySchema.c_str() + parse_res.Offset();
+                   << kAudioPolicySchema + parse_res.Offset();
     return std::nullopt;
   }
 

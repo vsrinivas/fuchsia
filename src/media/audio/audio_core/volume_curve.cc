@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/config_loader.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 
@@ -17,13 +18,15 @@ namespace media::audio {
 
 namespace {
 
-constexpr float kDefaultGainForMinVolume = -60.0;
+constexpr char kDefaultCurveFilename[] = "/config/data/default_volume_curve.json";
 
-const VolumeCurve kDefaultCurve = VolumeCurve::DefaultForMinGain(kDefaultGainForMinVolume);
+const auto kDefaultCurve =
+    ConfigLoader::LoadVolumeCurveFromDisk(kDefaultCurveFilename)
+        .value_or(VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume));
 
 }  // namespace
 
-const VolumeCurve& VolumeCurve::Default() { return kDefaultCurve; }
+const VolumeCurve& VolumeCurve::Default() { return {kDefaultCurve}; }
 
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);

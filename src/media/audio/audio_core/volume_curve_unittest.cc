@@ -106,18 +106,6 @@ TEST(VolumeCurveTest, VolumeToDbBasic) {
   EXPECT_FLOAT_EQ(curve.VolumeToDb(fuchsia::media::audio::MAX_VOLUME), Gain::kUnityGainDb);
 }
 
-TEST(VolumeCurveTest, DefaultCurves) {
-  auto curve = VolumeCurve::Default();
-
-  EXPECT_FLOAT_EQ(curve.VolumeToDb(fuchsia::media::audio::MIN_VOLUME),
-                  fuchsia::media::audio::MUTED_GAIN_DB);
-  EXPECT_FLOAT_EQ(curve.VolumeToDb(fuchsia::media::audio::MAX_VOLUME), Gain::kUnityGainDb);
-
-  const auto middle = curve.VolumeToDb(0.5);
-  EXPECT_GT(middle, fuchsia::media::audio::MUTED_GAIN_DB);
-  EXPECT_LT(middle, Gain::kUnityGainDb);
-}
-
 TEST(VolumeCurveTest, DefaultCurveWithMinGainDb) {
   auto curve100 = VolumeCurve::DefaultForMinGain(-100.0);
   auto curve50 = VolumeCurve::DefaultForMinGain(-50.0);

@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 
 namespace media::audio {
 namespace {
@@ -36,11 +37,13 @@ class AudioLinkChild : public AudioLink {
 
 TEST(AudioLinkTest, LinkObjectWithVolumeCurve) {
   const auto no_curve = fbl::AdoptRef(new MockObjectNoCurve());
-  const auto with_curve = fbl::AdoptRef(new MockObjectWithCurve(VolumeCurve::Default()));
+  const auto with_curve =
+      fbl::AdoptRef(new MockObjectWithCurve(VolumeCurve::DefaultForMinGain(-10.0)));
 
   AudioLinkChild link(AudioLink::SourceType::Packet, no_curve, with_curve);
 
-  EXPECT_TRUE(link.volume_curve().has_value());
+  // Here we ensure our provided curve is loaded, and not the fallback.
+  EXPECT_FLOAT_EQ(link.volume_curve().VolumeToDb(0.5), -5.0);
 }
 
 TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
@@ -50,7 +53,11 @@ TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
   AudioLinkChild link(AudioLink::SourceType::Packet, no_curve1, no_curve2);
   // This passes by not crashing, to ensure we accept this valid case.
 
-  EXPECT_FALSE(link.volume_curve().has_value());
+  // A reasonable fallback curve should be loaded.
+  EXPECT_FLOAT_EQ(link.volume_curve().VolumeToDb(fuchsia::media::audio::MIN_VOLUME),
+                  fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_FLOAT_EQ(link.volume_curve().VolumeToDb(fuchsia::media::audio::MAX_VOLUME),
+                  Gain::kUnityGainDb);
 }
 
 }  // namespace

@@ -911,13 +911,7 @@ void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
   ForEachDestLink([stream_gain_db = stream_gain_db_, throttle_ptr = throttle_output_link_.get(),
                    &volume_command](auto& link) {
     if (&link != throttle_ptr) {
-      float gain_db;
-      const auto& volume_curve = link.volume_curve();
-      if (volume_curve.has_value()) {
-        gain_db = volume_curve->VolumeToDb(volume_command.volume);
-      } else {
-        gain_db = VolumeCurve::Default().VolumeToDb(volume_command.volume);
-      }
+      float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
 
       gain_db = Gain::CombineGains(gain_db, stream_gain_db);
       gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);

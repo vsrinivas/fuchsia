@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& stream, const rapidjson::SchemaValidator:
 // static
 zx_status_t AudioDeviceSettingsSerializationImpl::Create(
     std::unique_ptr<AudioDeviceSettingsSerialization>* ptr) {
-  return CreateWithSchema(kAudioDeviceSettingsSchema.c_str(), ptr);
+  return CreateWithSchema(kAudioDeviceSettingsSchema, ptr);
 }
 
 zx_status_t AudioDeviceSettingsSerializationImpl::CreateWithSchema(

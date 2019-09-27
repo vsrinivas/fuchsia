@@ -33,6 +33,8 @@ class VolumeCurve {
     float gain_dbfs;
   };
 
+  static constexpr float kDefaultGainForMinVolume = -60.0;
+
   // A default gain curve to use when the curve of the device is unknown.
   static const VolumeCurve& Default();
 

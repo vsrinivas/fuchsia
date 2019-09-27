@@ -19,7 +19,7 @@ namespace {
 
 rapidjson::SchemaDocument LoadSchema() {
   rapidjson::Document schema_doc;
-  const rapidjson::ParseResult result = schema_doc.Parse(kVolumeCurveSchema.c_str());
+  const rapidjson::ParseResult result = schema_doc.Parse(kVolumeCurveSchema);
   FXL_CHECK(!result.IsError()) << rapidjson::GetParseError_En(result.Code());
   return rapidjson::SchemaDocument(schema_doc);
 }

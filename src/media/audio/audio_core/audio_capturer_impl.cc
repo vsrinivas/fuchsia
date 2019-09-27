@@ -125,13 +125,7 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
   ForEachSourceLink([stream_gain_db = stream_gain_db_.load(), &volume_command](auto& link) {
     // Gain objects contain multiple stages. In capture, device gain is
     // the "source" stage and stream gain is the "dest" stage.
-    float gain_db;
-    const auto& volume_curve = link.volume_curve();
-    if (volume_curve.has_value()) {
-      gain_db = volume_curve->VolumeToDb(volume_command.volume);
-    } else {
-      gain_db = VolumeCurve::Default().VolumeToDb(volume_command.volume);
-    }
+    float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
 
     gain_db = Gain::CombineGains(gain_db, stream_gain_db);
     gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);

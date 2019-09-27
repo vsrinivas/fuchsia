@@ -21,7 +21,13 @@ HEADER = """#include <string>
 
 namespace media::audio {
 
-static const std::string %s =
+// This is a char[] type because that requires no code to run
+// initialization, so other constants can be initialized with
+// this value.
+//
+// It is constexpr so that it can be used in the initialization
+// of other constexprs. 
+static constexpr char %s[] =
 """
 
 FOOTER = """

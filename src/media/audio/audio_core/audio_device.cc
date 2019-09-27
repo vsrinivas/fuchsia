@@ -54,13 +54,10 @@ std::optional<VolumeCurve> AudioDevice::GetVolumeCurve() const {
     return std::nullopt;
   }
 
-  // TODO(35394): Add actual curve to this config, store it in driver_ and validate at load time.
-  const auto caps = driver_->hw_gain_state();
-  if (caps.min_gain == Gain::kUnityGainDb) {
-    return std::nullopt;
-  }
+  // TODO(35394): Check here for whether the device has its own dedicated curve, which should
+  //              take precedence over the default.
 
-  return {VolumeCurve::DefaultForMinGain(caps.min_gain)};
+  return std::nullopt;
 }
 
 uint64_t AudioDevice::token() const {

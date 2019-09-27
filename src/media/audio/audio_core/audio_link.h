@@ -53,7 +53,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
 
   // The VolumeCurve of the link, representing either the source or destination's mapping from
   // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
-  const std::optional<VolumeCurve>& volume_curve() const { return volume_curve_; }
+  const VolumeCurve& volume_curve() const;
 
   SourceType source_type() const { return source_type_; }
 
