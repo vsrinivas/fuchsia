@@ -42,6 +42,9 @@ bool VirtioQueue::NextChain(VirtioChain* chain) {
       return false;
     }
     head = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+    if (head >= ring_.size) {
+      return false;
+    }
   }
   *chain = VirtioChain(this, head);
   return true;
@@ -53,6 +56,9 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
   }
 
   *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+  if (*index >= ring_.size) {
+      return ZX_ERR_INTERNAL;
+  }
 
   // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
