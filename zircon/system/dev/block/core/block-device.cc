@@ -44,6 +44,8 @@ class BlockDevice;
 
 namespace {
 
+uint32_t block_operation(const block_op_t* op) { return op->command & BLOCK_OP_MASK; }
+
 using storage_metrics::BlockDeviceMetrics;
 using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable,
                                     ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
@@ -248,13 +250,13 @@ void BlockDevice::UpdateStats(bool success, zx::ticks start_tick, block_op_t* op
   fbl::AutoLock lock(&stat_lock_);
 
   uint64_t bytes_transfered = op->rw.length * info_.block_size;
-  if ((command & BLOCK_OP_WRITE) == BLOCK_OP_WRITE) {
+  if (block_operation(op) == BLOCK_OP_WRITE) {
     stats_.UpdateWriteStat(success, duration.get(), bytes_transfered);
-  } else if ((command & BLOCK_OP_READ) == BLOCK_OP_READ) {
+  } else if (block_operation(op) == BLOCK_OP_READ) {
     stats_.UpdateReadStat(success, duration.get(), bytes_transfered);
-  } else if ((command & BLOCK_OP_FLUSH) == BLOCK_OP_FLUSH) {
+  } else if (block_operation(op) == BLOCK_OP_FLUSH) {
     stats_.UpdateFlushStat(success, duration.get(), bytes_transfered);
-  } else if ((command & BLOCK_OP_TRIM) == BLOCK_OP_TRIM) {
+  } else if (block_operation(op) == BLOCK_OP_TRIM) {
     stats_.UpdateTrimStat(success, duration.get(), bytes_transfered);
   }
 

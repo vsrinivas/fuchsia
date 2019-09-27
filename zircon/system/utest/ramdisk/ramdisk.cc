@@ -2,30 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <climits>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <threads.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <block-client/cpp/client.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/array.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
@@ -40,18 +19,48 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <ramdevice-client/ramdisk.h>
-#include <unittest/unittest.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <threads.h>
+#include <time.h>
+#include <unistd.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
+#include <climits>
+#include <limits>
 #include <utility>
+
+#include <block-client/cpp/client.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <ramdevice-client/ramdisk.h>
+#include <unittest/unittest.h>
 
 namespace tests {
 
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
+
+static void fill_random(uint8_t* buf, uint64_t size) {
+  static unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
+  // TODO(US-286): Make this easier to reproduce with reliably generated prng.
+  unittest_printf("fill_random of %zu bytes with seed: %u\n", size, seed);
+  for (size_t i = 0; i < size; i++) {
+    buf[i] = static_cast<uint8_t>(rand_r(&seed));
+  }
+}
 
 static ramdisk_client_t* GetRamdisk(uint64_t blk_size, uint64_t blk_count,
                                     const uint8_t* guid = nullptr, size_t guid_len = 0) {
@@ -164,43 +173,100 @@ static bool RamdiskTestSimple(void) {
   END_TEST;
 }
 
-static bool RamdiskTestStats(void) {
+bool RamdiskStatsTest(void) {
   BEGIN_TEST;
-  fbl::unique_ptr<RamdiskTest> ramdisk;
   constexpr size_t kBlockSize = 512;
   constexpr size_t kBlockCount = 512;
+  // Set up the initial handshake connection with the ramdisk
+  fbl::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, kBlockCount, &ramdisk));
+
   fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
-
-  constexpr size_t kBlocksToWrite = 2;
-  uint8_t buf[kBlockSize * kBlocksToWrite];
-  memset(buf, 'a', sizeof(buf));
-
-  // Query stats. Until we have isolated devmgr integration, only query write
-  // stats to avoid a race condition with the block watcher.
-  bool clear = true;
   zx_status_t status;
+  zx::fifo fifo;
+  ASSERT_EQ(
+      fuchsia_hardware_block_BlockGetFifo(channel->get(), &status, fifo.reset_and_get_address()),
+      ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
+  groupid_t group = 0;
+
+  // Create an arbitrary VMO, fill it with some stuff
+  uint64_t vmo_size = PAGE_SIZE * 3;
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
+  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
+  fill_random(buf.get(), vmo_size);
+
+  ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
+
+  // Send a handle to the vmo to the block device, get a vmoid which identifies it
+  fuchsia_hardware_block_VmoID vmoid;
+  zx::vmo xfer_vmo;
+  ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+  ASSERT_EQ(
+      fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid),
+      ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
+
+  block_client::Client client;
+  ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
   fuchsia_hardware_block_BlockStats block_stats;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear, &status, &block_stats),
+  ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), true, &status, &block_stats),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_stats.write.success.total_calls, 0);
-  ASSERT_EQ(block_stats.write.failure.total_calls, 0);
-  ASSERT_EQ(block_stats.write.success.bytes_transferred, 0);
-  ASSERT_EQ(block_stats.write.failure.bytes_transferred, 0);
 
-  // Write a couple blocks to the device.
-  ASSERT_EQ(write(ramdisk->block_fd(), buf, sizeof(buf)), (ssize_t)sizeof(buf));
+  // Batch write the VMO to the ramdisk
+  // Split it into two requests, spread across the disk
+  block_fifo_request_t requests[4];
+  requests[0].group = group;
+  requests[0].vmoid = vmoid.id;
+  requests[0].opcode = BLOCKIO_WRITE;
+  requests[0].length = 1;
+  requests[0].vmo_offset = 0;
+  requests[0].dev_offset = 0;
 
-  // Observe that those writes are measurable via stats.
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear, &status, &block_stats),
+  requests[1].group = group;
+  requests[1].vmoid = vmoid.id;
+  requests[1].opcode = BLOCKIO_READ;
+  requests[1].length = 1;
+  requests[1].vmo_offset = 1;
+  requests[1].dev_offset = 100;
+
+  requests[2].group = group;
+  requests[2].vmoid = vmoid.id;
+  requests[2].opcode = BLOCKIO_FLUSH;
+  requests[2].length = 0;
+  requests[2].vmo_offset = 0;
+  requests[2].dev_offset = 0;
+
+  requests[3].group = group;
+  requests[3].vmoid = vmoid.id;
+  requests[3].opcode = BLOCKIO_WRITE;
+  requests[3].length = 1;
+  requests[3].vmo_offset = 0;
+  requests[3].dev_offset = 0;
+
+  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+
+  ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), false, &status, &block_stats),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_stats.write.success.total_calls, 1);
+  ASSERT_EQ(block_stats.write.success.total_calls, 2);
+  ASSERT_EQ(block_stats.write.success.bytes_transferred, 2 * kBlockSize);
+  ASSERT_EQ(block_stats.read.success.total_calls, 1);
+  ASSERT_EQ(block_stats.read.success.bytes_transferred, 1 * kBlockSize);
+  ASSERT_EQ(block_stats.flush.success.total_calls, 1);
+  ASSERT_EQ(block_stats.flush.success.bytes_transferred, 0);
+
+  ASSERT_EQ(block_stats.read.failure.total_calls, 0);
+  ASSERT_EQ(block_stats.read.failure.bytes_transferred, 0);
   ASSERT_EQ(block_stats.write.failure.total_calls, 0);
-  ASSERT_EQ(block_stats.write.success.bytes_transferred, kBlocksToWrite * kBlockSize);
   ASSERT_EQ(block_stats.write.failure.bytes_transferred, 0);
+
+  // Close the current vmo
+  requests[0].opcode = BLOCKIO_CLOSE_VMO;
+  ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
 
   END_TEST;
 }
@@ -607,15 +673,6 @@ bool RamdiskTestFifoNoOp(void) {
 
   ASSERT_TRUE(ramdisk->Terminate(), "Could not unlink ramdisk device");
   END_TEST;
-}
-
-static void fill_random(uint8_t* buf, uint64_t size) {
-  static unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-  // TODO(US-286): Make this easier to reproduce with reliably generated prng.
-  unittest_printf("fill_random of %zu bytes with seed: %u\n", size, seed);
-  for (size_t i = 0; i < size; i++) {
-    buf[i] = static_cast<uint8_t>(rand_r(&seed));
-  }
 }
 
 bool RamdiskTestFifoBasic(void) {
@@ -1721,7 +1778,7 @@ RUN_TEST_SMALL(RamdiskGrowTestDimensionsChange)
 RUN_TEST_SMALL(RamdiskGrowTestReadFromOldBlocks)
 RUN_TEST_SMALL(RamdiskGrowTestWriteToAddedBlocks)
 RUN_TEST_SMALL(RamdiskTestSimple)
-RUN_TEST_SMALL(RamdiskTestStats)
+RUN_TEST_SMALL(RamdiskStatsTest)
 RUN_TEST_SMALL(RamdiskTestGuid)
 RUN_TEST_SMALL(RamdiskTestVmo)
 RUN_TEST_SMALL(RamdiskTestFilesystem)
