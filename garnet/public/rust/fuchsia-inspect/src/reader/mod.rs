@@ -147,18 +147,26 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> 
         if self.values.len() < 6 {
             return None;
         }
-        let mut floor = self.values[0];
-        let mut current_step = self.values[1];
+        let floor = self.values[0];
+        let initial_step = self.values[1];
         let step_multiplier = self.values[2];
 
-        let mut result = Vec::new();
-        result.push(ArrayBucket::new(T::min_value(), floor, self.values[3]));
+        let mut result = vec![ArrayBucket::new(T::min_value(), floor, self.values[3])];
+
+        let mut offset = initial_step;
+        let mut current_floor = floor;
         for i in 4..self.values.len() - 1 {
-            result.push(ArrayBucket::new(floor, floor + current_step, self.values[i]));
-            floor += current_step;
-            current_step *= step_multiplier;
+            let upper = floor + offset;
+            result.push(ArrayBucket::new(current_floor, upper, self.values[i]));
+            offset *= step_multiplier;
+            current_floor = upper;
         }
-        result.push(ArrayBucket::new(floor, T::max_value(), self.values[self.values.len() - 1]));
+
+        result.push(ArrayBucket::new(
+            current_floor,
+            T::max_value(),
+            self.values[self.values.len() - 1],
+        ));
         Some(result)
     }
 }
@@ -553,7 +561,7 @@ mod tests {
                                 Property::UintArray(
                                     "property-uint-array".to_string(),
                                     ArrayValue::new(
-                                        vec![1, 1, 2, 0, 1, 2, 1, 0, 0],
+                                        vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
                                         ArrayFormat::ExponentialHistogram
                                     ),
                                 ),
@@ -667,8 +675,8 @@ mod tests {
         assert_eq!(buckets.len(), 4);
         assert_eq!(buckets[0], ArrayBucket { floor: std::f64::MIN, upper: 1.0, count: 7.0 });
         assert_eq!(buckets[1], ArrayBucket { floor: 1.0, upper: 3.0, count: 9.0 });
-        assert_eq!(buckets[2], ArrayBucket { floor: 3.0, upper: 13.0, count: 11.0 });
-        assert_eq!(buckets[3], ArrayBucket { floor: 13.0, upper: std::f64::MAX, count: 15.0 });
+        assert_eq!(buckets[2], ArrayBucket { floor: 3.0, upper: 11.0, count: 11.0 });
+        assert_eq!(buckets[3], ArrayBucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 });
     }
 
     #[test]
@@ -717,5 +725,18 @@ mod tests {
             ],
         };
         assert_eq!(sorted_hierarchy, hierarchy);
+    }
+
+    #[test]
+    fn exponential_histogram_buckets() {
+        let values = vec![0, 2, 4, 0, 1, 2, 3, 4, 5];
+        let buckets = ArrayValue::new(values, ArrayFormat::ExponentialHistogram).buckets().unwrap();
+        assert_eq!(buckets.len(), 6);
+        assert_eq!(buckets[0], ArrayBucket { floor: i64::min_value(), upper: 0, count: 0 });
+        assert_eq!(buckets[1], ArrayBucket { floor: 0, upper: 2, count: 1 });
+        assert_eq!(buckets[2], ArrayBucket { floor: 2, upper: 8, count: 2 });
+        assert_eq!(buckets[3], ArrayBucket { floor: 8, upper: 32, count: 3 });
+        assert_eq!(buckets[4], ArrayBucket { floor: 32, upper: 128, count: 4 });
+        assert_eq!(buckets[5], ArrayBucket { floor: 128, upper: i64::max_value(), count: 5 });
     }
 }

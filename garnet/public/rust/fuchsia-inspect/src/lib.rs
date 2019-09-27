@@ -742,12 +742,12 @@ macro_rules! exponential_histogram_property {
             impl [<$name_cap ExponentialHistogramProperty>] {
                 fn get_index(&self, value: $type) -> usize {
                     let mut current_floor = self.floor;
-                    let mut current_step = self.initial_step;
+                    let mut offset = self.initial_step;
                     // Start in the underflow index.
                     let mut index = constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2;
                     while value >= current_floor && index < self.slots - 1 {
-                        current_floor += current_step;
-                        current_step *= self.step_multiplier;
+                        current_floor = self.floor + offset;
+                        offset *= self.step_multiplier;
                         index += 1;
                     }
                     index as usize
@@ -1198,5 +1198,36 @@ mod tests {
     fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
         let heap = Heap::new(mapping).unwrap();
         Arc::new(Mutex::new(State::create(heap).unwrap()))
+    }
+
+    #[test]
+    fn exp_histogram_insert() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let hist = root.create_int_exponential_histogram(
+            "test",
+            ExponentialHistogramParams {
+                floor: 0,
+                initial_step: 2,
+                step_multiplier: 4,
+                buckets: 4,
+            },
+        );
+        for i in -200..200 {
+            hist.insert(i);
+        }
+        let block = hist.get_block().unwrap();
+        assert_eq!(block.array_get_int_slot(0).unwrap(), 0);
+        assert_eq!(block.array_get_int_slot(1).unwrap(), 2);
+        assert_eq!(block.array_get_int_slot(2).unwrap(), 4);
+
+        // Buckets
+        let i = 3;
+        assert_eq!(block.array_get_int_slot(i).unwrap(), 200);
+        assert_eq!(block.array_get_int_slot(i + 1).unwrap(), 2);
+        assert_eq!(block.array_get_int_slot(i + 2).unwrap(), 6);
+        assert_eq!(block.array_get_int_slot(i + 3).unwrap(), 24);
+        assert_eq!(block.array_get_int_slot(i + 4).unwrap(), 96);
+        assert_eq!(block.array_get_int_slot(i + 5).unwrap(), 72);
     }
 }

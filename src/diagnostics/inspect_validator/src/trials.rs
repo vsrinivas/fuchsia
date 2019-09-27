@@ -381,9 +381,7 @@ fn int_histogram_ops_trial() -> Trial {
     for value in &[std::i64::MIN, std::i64::MAX, 0] {
         push_ops(&mut actions, *value);
     }
-    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
-    //    for value in -10_i64..100 {
-    for &value in &[-10_i64, 4, 5, 6, 7, 12, 15, 16, 100] {
+    for value in -10_i64..100 {
         push_ops(&mut actions, value);
     }
     actions.push(delete_property!(id: 4));
@@ -408,9 +406,7 @@ fn uint_histogram_ops_trial() -> Trial {
     for value in &[std::u64::MAX, 0] {
         push_ops(&mut actions, *value);
     }
-    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
-    //    for value in 0_u64..100 {
-    for &value in &[0_u64, 4, 5, 6, 7, 12, 15, 16, 100] {
+    for value in 0_u64..100 {
         push_ops(&mut actions, value);
     }
     actions.push(delete_property!(id: 4));
@@ -436,9 +432,7 @@ fn double_histogram_ops_trial() -> Trial {
     for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
         push_ops(&mut actions, *value);
     }
-    // TODO(miguelfrde): Reinstate the next line once the histogram math fix lands.
-    //    for value in -100_i64..1000 {
-    for &value in &[-100, 30, 40, 50, 60, 70, 100, 150, 160, 1000] {
+    for value in -100_i64..1000 {
         push_ops(&mut actions, value as f64 / 10.0);
     }
     actions.push(delete_property!(id: 4));
