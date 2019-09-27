@@ -94,10 +94,6 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
     crash_server->url =
         crash_server->node.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
   }
-
-  config_.feedback_data_collection_timeout_in_milliseconds =
-      config_.node.CreateUint(kFeedbackDataCollectionTimeoutInMillisecondsKey,
-                              config.feedback_data_collection_timeout.to_msecs());
 }
 
 void InspectManager::ExposeSettings(feedback::Settings* settings) {

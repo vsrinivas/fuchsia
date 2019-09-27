@@ -194,7 +194,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
     return fit::make_error_promise();
   }
 
-  return GetFeedbackData(dispatcher_, services_, config_.feedback_data_collection_timeout)
+  return GetFeedbackData(dispatcher_, services_, /*timeout=*/zx::sec(10))
       .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
                 fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
@@ -302,7 +302,7 @@ size_t CrashpadAgent::CleanDatabase() {
   // We set the |lockfile_ttl| to one day to ensure that reports in new aren't removed until
   // a period of time has passed in which it is certain they are orphaned.
   const size_t num_removed =
-      static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/60*60*24));
+      static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/60 * 60 * 24));
   if (num_removed > 0) {
     FX_LOGS(INFO) << fxl::StringPrintf("Removed %lu orphan file(s) from Crashpad database",
                                        num_removed);

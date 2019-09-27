@@ -5,7 +5,6 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 
 #include <lib/syslog/cpp/logger.h>
-#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include "src/lib/fxl/test/test_settings.h"
@@ -23,7 +22,6 @@ void CheckEmptyConfig(const Config& config) {
   EXPECT_EQ(config.crashpad_database.path, "");
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   EXPECT_EQ(config.crash_server.url, nullptr);
-  EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(0));
 }
 
 TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
@@ -33,7 +31,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   EXPECT_EQ(config.crash_server.url, nullptr);
-  EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
 }
 
 TEST(ConfigTest, ParseConfig_ValidConfig_UploadEnabled) {
@@ -53,7 +50,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadReadFromPrivacySettings) {
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
-  EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
 }
 
 TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
@@ -65,7 +61,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   // Even though a URL is set in the config file, we check that it is not set in the struct.
   EXPECT_EQ(config.crash_server.url, nullptr);
-  EXPECT_EQ(config.feedback_data_collection_timeout, zx::msec(10));
 }
 
 TEST(ConfigTest, ParseConfig_MissingConfig) {

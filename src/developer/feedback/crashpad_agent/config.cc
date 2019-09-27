@@ -55,15 +55,11 @@ const char kSchema[] = R"({
         "upload_policy"
       ],
       "additionalProperties": false
-    },
-    "feedback_data_collection_timeout_in_milliseconds": {
-      "type": "integer"
     }
   },
   "required": [
     "crashpad_database",
-    "crash_server",
-    "feedback_data_collection_timeout_in_milliseconds"
+    "crash_server"
   ],
   "additionalProperties": false
 })";
@@ -165,8 +161,6 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
     return ZX_ERR_INTERNAL;
   }
-  local_config.feedback_data_collection_timeout =
-      zx::msec(doc[kFeedbackDataCollectionTimeoutInMillisecondsKey].GetUint());
 
   *config = std::move(local_config);
   return ZX_OK;

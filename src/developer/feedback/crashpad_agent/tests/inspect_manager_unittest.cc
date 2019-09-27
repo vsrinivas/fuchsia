@@ -202,14 +202,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
       {
           /*upload_policy=*/kConfigEnabled,
           /*url=*/std::make_unique<std::string>("http://localhost:1234"),
-      },
-      /*feedback_data_collection_timeout=*/zx::msec(10)});
+      }});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(AllOf(
-              NameMatches(kInspectConfigName),
-              PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey, 10))))),
+          NodeMatches(NameMatches(kInspectConfigName)),
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({
@@ -234,14 +231,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
                                         {
                                             /*upload_policy=*/kConfigDisabled,
                                             /*url=*/nullptr,
-                                        },
-                                        /*feedback_data_collection_timeout=*/zx::msec(10)});
+                                        }});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(AllOf(
-              NameMatches(kInspectConfigName),
-              PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey, 10))))),
+          NodeMatches(NameMatches(kInspectConfigName)),
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({
@@ -264,14 +258,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
                                         {
                                             /*upload_policy=*/kConfigReadFromPrivacySettings,
                                             /*url=*/nullptr,
-                                        },
-                                        /*feedback_data_collection_timeout=*/zx::msec(10)});
+                                        }});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(AllOf(
-              NameMatches(kInspectConfigName),
-              PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey, 10))))),
+          NodeMatches(NameMatches(kInspectConfigName)),
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({

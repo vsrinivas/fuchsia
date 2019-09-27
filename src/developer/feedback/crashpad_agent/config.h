@@ -5,10 +5,9 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONFIG_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONFIG_H_
 
-#include <lib/zx/time.h>
-#include <stdint.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -53,9 +52,6 @@ struct Config {
   CrashpadDatabaseConfig crashpad_database;
 
   CrashServerConfig crash_server;
-
-  // Maximum time spent collecting feedback data to attach to crash reports.
-  zx::duration feedback_data_collection_timeout;
 };
 
 // Parses the JSON config at |filepath| as |config|.

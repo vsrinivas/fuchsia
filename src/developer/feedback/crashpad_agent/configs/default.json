@@ -5,6 +5,5 @@
     },
     "crash_server": {
         "upload_policy": "disabled"
-    },
-    "feedback_data_collection_timeout_in_milliseconds": 10000
+    }
 }

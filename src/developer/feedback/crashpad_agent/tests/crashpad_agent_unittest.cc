@@ -73,9 +73,6 @@ using testing::UnorderedElementsAreArray;
 // a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
-// The actual value does not matter as we are using a test loop with a fake clock.
-constexpr zx::duration kFeedbackDataCollectionTimeout = zx::msec(10);
-
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
 
@@ -123,8 +120,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
                {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-               },
-               /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout},
+               }},
         std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
@@ -456,8 +452,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                     {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
-                    },
-                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
+                    }});
 
   // We generate a crash report.
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -489,8 +484,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                     {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
-                    },
-                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
+                    }});
 
   // We generate a first crash report.
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_ok());
@@ -537,9 +531,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
   for (size_t i = 0; i < kNumReports; ++i) {
     CrashReport report;
     report.set_program_name(kProgramName);
-    agent_->File(std::move(report), [&results](fit::result<void, zx_status_t> result) {
-      results.push_back(result);
-    });
+    agent_->File(std::move(report),
+                 [&results](fit::result<void, zx_status_t> result) { results.push_back(result); });
   }
 
   ASSERT_TRUE(RunLoopUntilIdle());
@@ -561,8 +554,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             },
-             /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout},
+             }},
       std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
   EXPECT_TRUE(FileOneCrashReport().is_error());
@@ -579,8 +571,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                     {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
-                    },
-                    /*feedback_data_collection_timeout=*/kFeedbackDataCollectionTimeout});
+                    }});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -613,7 +604,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
   fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
-  RunLoopFor(kFeedbackDataCollectionTimeout);
+  RunLoopFor(zx::sec(10));
   EXPECT_TRUE(result.is_ok());
   CheckAttachments({kSingleAttachmentKey});
 }
@@ -636,10 +627,7 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(AllOf(
-                    NameMatches(kInspectConfigName),
-                    PropertyList(Contains(UintIs(kFeedbackDataCollectionTimeoutInMillisecondsKey,
-                                                 kFeedbackDataCollectionTimeout.to_msecs()))))),
+          AllOf(NodeMatches(NameMatches(kInspectConfigName)),
                 ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(
                         AllOf(NameMatches(kCrashpadDatabaseKey),

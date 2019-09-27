@@ -68,7 +68,6 @@ class InspectManager {
 
     CrashpadDatabaseConfig crashpad_database;
     CrashServerConfig crash_server;
-    inspect::UintProperty feedback_data_collection_timeout_in_milliseconds;
   };
 
   // Inspect node containing the mutable settings.
