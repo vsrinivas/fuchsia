@@ -296,6 +296,7 @@ void DumpInfo(const Superblock* info) {
   FS_TRACE_DEBUG("minfs: inode bitmap @ %10u\n", info->ibm_block);
   FS_TRACE_DEBUG("minfs: alloc bitmap @ %10u\n", info->abm_block);
   FS_TRACE_DEBUG("minfs: inode table  @ %10u\n", info->ino_block);
+  FS_TRACE_DEBUG("minfs: integrity start block  @ %10u\n", info->integrity_start_block);
   FS_TRACE_DEBUG("minfs: data blocks  @ %10u\n", info->dat_block);
   FS_TRACE_DEBUG("minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
   FS_TRACE_DEBUG("minfs: checksum:  %10u\n", info->checksum);
