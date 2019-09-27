@@ -11,6 +11,7 @@ use {
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
+    fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     fidl_fuchsia_update as fidl_update, files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
@@ -212,7 +213,14 @@ fn main() -> Result<(), failure::Error> {
                     | fidl_update::CheckStartedResult::InProgress => Ok(()),
                 }
             }
-            Command::Gc => Err(format_err!("Command not yet implemented.")),
+            Command::Gc => {
+                let space_manager = connect_to_service::<SpaceManagerMarker>()
+                    .context("Failed to connect to space manager service")?;
+                space_manager
+                    .gc()
+                    .await?
+                    .map_err(|err| format_err!("Garbage collection failed with error: {:?}", err))
+            }
         }
     };
 

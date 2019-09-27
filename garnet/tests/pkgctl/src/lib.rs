@@ -14,6 +14,7 @@ use {
         RepositoryConfigBuilder, RepositoryKey,
     },
     fidl_fuchsia_pkg_rewrite::EngineRequestStream,
+    fidl_fuchsia_space as fidl_space,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fidl_fuchsia_update as fidl_update, fuchsia_async as fasync,
     fuchsia_component::{
@@ -41,6 +42,7 @@ struct TestEnv {
     package_resolver: Arc<MockPackageResolverService>,
     rewrite_engine: Arc<MockRewriteEngineService>,
     update_manager: Arc<MockUpdateManagerService>,
+    space_manager: Arc<MockSpaceManagerService>,
     _test_dir: TempDir,
     repo_config_arg_path: PathBuf,
 }
@@ -108,6 +110,17 @@ impl TestEnv {
             )
         });
 
+        let space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager_clone = space_manager.clone();
+        fs.add_fidl_service(move |stream: fidl_space::ManagerRequestStream| {
+            let space_manager_clone = space_manager_clone.clone();
+            fasync::spawn(
+                space_manager_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running space service: {:?}", e)),
+            )
+        });
+
         let _test_dir = TempDir::new().expect("create test tempdir");
 
         let repo_config_arg_path = _test_dir.path().join("repo_config");
@@ -125,6 +138,7 @@ impl TestEnv {
             package_resolver,
             rewrite_engine,
             update_manager,
+            space_manager,
             _test_dir,
             repo_config_arg_path,
         }
@@ -163,6 +177,7 @@ impl TestEnv {
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.space_manager.call_count.lock(), 0);
     }
 
     fn assert_only_update_manager_called_with(
@@ -174,6 +189,16 @@ impl TestEnv {
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.update_manager.captured_args.lock(), expected_args);
+        assert_eq!(*self.space_manager.call_count.lock(), 0);
+    }
+
+    fn assert_only_space_manager_called(&self) {
+        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
+        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.space_manager.call_count.lock(), 1);
     }
 }
 
@@ -348,6 +373,36 @@ impl MockUpdateManagerService {
     }
 }
 
+struct MockSpaceManagerService {
+    call_count: Mutex<u32>,
+    gc_err: Mutex<Option<fidl_space::ErrorCode>>,
+}
+
+impl MockSpaceManagerService {
+    fn new() -> Self {
+        Self { call_count: Mutex::new(0), gc_err: Mutex::new(None) }
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: fidl_space::ManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await? {
+            *self.call_count.lock() += 1;
+
+            match req {
+                fidl_space::ManagerRequest::Gc { responder } => {
+                    if let Some(e) = *self.gc_err.lock() {
+                        responder.send(&mut Err(e))?;
+                    } else {
+                        responder.send(&mut Ok(()))?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 fn assert_no_errors(output: &Output) {
     assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stdout valid utf8"), "");
     assert!(output.exit_status.success());
@@ -504,4 +559,22 @@ async fn test_update_throttled_is_error() {
     env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
         options: fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
     }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_gc_success() {
+    let env = TestEnv::new();
+    *env.space_manager.gc_err.lock() = None;
+    let output = env.run_pkgctl(vec!["gc"]).await;
+    assert!(output.exit_status.success());
+    env.assert_only_space_manager_called();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_gc_fail() {
+    let env = TestEnv::new();
+    *env.space_manager.gc_err.lock() = Some(fidl_space::ErrorCode::Internal);
+    let output = env.run_pkgctl(vec!["gc"]).await;
+    assert!(!output.exit_status.success());
+    env.assert_only_space_manager_called();
 }
