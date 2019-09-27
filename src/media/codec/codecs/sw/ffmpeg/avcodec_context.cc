@@ -80,7 +80,7 @@ int AvCodecContext::SendPacket(const CodecPacket* codec_packet) {
 
   AVPacket packet;
   av_init_packet(&packet);
-  packet.data = codec_packet->buffer()->buffer_base() + codec_packet->start_offset();
+  packet.data = codec_packet->buffer()->base() + codec_packet->start_offset();
   packet.size = codec_packet->valid_length_bytes();
 
   if (codec_packet->has_timestamp_ish()) {

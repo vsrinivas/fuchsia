@@ -472,21 +472,21 @@ void DecryptorAdapter::ProcessInput() {
     uint32_t data_length = item.packet()->valid_length_bytes();
 
     InputBuffer input;
-    input.data = item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
+    input.data = item.packet()->buffer()->base() + item.packet()->start_offset();
     input.data_length = data_length;
 
     OutputBuffer output;
 
     if (is_secure()) {
       SecureOutputBuffer secure_output;
-      secure_output.vmo = zx::unowned_vmo(output_buffer->buffer_vmo());
-      secure_output.data_offset = output_buffer->buffer_offset();
-      secure_output.data_length = output_buffer->buffer_size();
+      secure_output.vmo = zx::unowned_vmo(output_buffer->vmo());
+      secure_output.data_offset = output_buffer->offset();
+      secure_output.data_length = output_buffer->size();
       output = secure_output;
     } else {
       ClearOutputBuffer clear_output;
-      clear_output.data = output_buffer->buffer_base();
-      clear_output.data_length = output_buffer->buffer_size();
+      clear_output.data = output_buffer->base();
+      clear_output.data_length = output_buffer->size();
       output = clear_output;
     }
 

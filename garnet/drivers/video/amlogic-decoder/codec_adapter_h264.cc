@@ -744,7 +744,7 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
     std::lock_guard<std::mutex> lock(lock_);
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
+      ZX_DEBUG_ASSERT(all_output_buffers_[i]->index() == i);
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() == i);
       frames.emplace_back(CodecFrame{
           .codec_buffer_spec = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
@@ -860,7 +860,7 @@ void CodecAdapterH264::ProcessInput() {
       }
     }
 
-    uint8_t* data = item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
+    uint8_t* data = item.packet()->buffer()->base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
     video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
