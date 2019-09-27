@@ -77,6 +77,12 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
   Serialize(record.frames, writer);
 }
 
+void Serialize(const ProcessRecord& record, MessageWriter* writer) {
+  writer->WriteUint64(record.process_koid);
+  writer->WriteString(record.process_name);
+  Serialize(record.threads, writer);
+}
+
 void Serialize(const MemoryBlock& block, MessageWriter* writer) {
   writer->WriteUint64(block.address);
   writer->WriteBool(block.valid);
@@ -143,7 +149,7 @@ bool ReadRequest(MessageReader* reader, StatusRequest* request, uint32_t* transa
 
 void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kStatus, transaction_id);
-  Serialize(reply.process_koids, writer);
+  Serialize(reply.processes, writer);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------

@@ -194,6 +194,13 @@ struct ThreadRecord {
   std::vector<StackFrame> frames;
 };
 
+struct ProcessRecord {
+  uint64_t process_koid = 0;
+  std::string process_name;
+
+  std::vector<ThreadRecord> threads;
+};
+
 struct MemoryBlock {
   // Begin address of this memory.
   uint64_t address = 0;

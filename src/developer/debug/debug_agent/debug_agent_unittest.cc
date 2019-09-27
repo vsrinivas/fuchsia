@@ -114,46 +114,74 @@ TEST(DebugAgent, OnGlobalStatus) {
   debug_ipc::StatusReply reply = {};
   remote_api->OnStatus(request, &reply);
 
-  ASSERT_EQ(reply.process_koids.size(), 0u);
+  ASSERT_EQ(reply.processes.size(), 0u);
 
   constexpr uint64_t kProcessKoid1 = 0x1234;
-  auto process1 = std::make_unique<MockProcess>(kProcessKoid1, nullptr);
+  const std::string kProcessName1 = "process-1";
+  constexpr uint64_t kProcess1ThreadKoid1 = 0x1;
+
+  auto process1 =
+      std::make_unique<MockProcess>(kProcessKoid1, kProcessName1, test_context->object_provider);
+  process1->AddThread(kProcess1ThreadKoid1);
   debug_agent.InjectProcessForTest(std::move(process1));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
 
-  ASSERT_EQ(reply.process_koids.size(), 1u);
-  EXPECT_EQ(reply.process_koids[0], kProcessKoid1);
+  ASSERT_EQ(reply.processes.size(), 1u);
+  EXPECT_EQ(reply.processes[0].process_koid, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].process_name, kProcessName1);
+  ASSERT_EQ(reply.processes[0].threads.size(), 1u);
+  EXPECT_EQ(reply.processes[0].threads[0].process_koid, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].thread_koid, kProcess1ThreadKoid1);
 
   constexpr uint64_t kProcessKoid2 = 0x5678;
-  auto process2 = std::make_unique<MockProcess>(kProcessKoid2, nullptr);
+  const std::string kProcessName2 = "process-2";
+  constexpr uint64_t kProcess2ThreadKoid1 = 0x1;
+  constexpr uint64_t kProcess2ThreadKoid2 = 0x2;
+
+  auto process2 =
+      std::make_unique<MockProcess>(kProcessKoid2, kProcessName2, test_context->object_provider);
+  process2->AddThread(kProcess2ThreadKoid1);
+  process2->AddThread(kProcess2ThreadKoid2);
   debug_agent.InjectProcessForTest(std::move(process2));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
 
-  ASSERT_EQ(reply.process_koids.size(), 2u);
-  EXPECT_EQ(reply.process_koids[0], kProcessKoid1);
-  EXPECT_EQ(reply.process_koids[1], kProcessKoid2);
+  ASSERT_EQ(reply.processes.size(), 2u);
+  EXPECT_EQ(reply.processes[0].process_koid, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].process_name, kProcessName1);
+  ASSERT_EQ(reply.processes[0].threads.size(), 1u);
+  EXPECT_EQ(reply.processes[0].threads[0].process_koid, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].thread_koid, kProcess1ThreadKoid1);
+
+  EXPECT_EQ(reply.processes[1].process_koid, kProcessKoid2);
+  EXPECT_EQ(reply.processes[1].process_name, kProcessName2);
+  ASSERT_EQ(reply.processes[1].threads.size(), 2u);
+  EXPECT_EQ(reply.processes[1].threads[0].process_koid, kProcessKoid2);
+  EXPECT_EQ(reply.processes[1].threads[0].thread_koid, kProcess2ThreadKoid1);
+  EXPECT_EQ(reply.processes[1].threads[1].process_koid, kProcessKoid2);
+  EXPECT_EQ(reply.processes[1].threads[1].thread_koid, kProcess2ThreadKoid2);
 }
 
 TEST(DebugAgent, OnProcessStatus) {
   auto test_context = CreateTestContext();
+
   DebugAgent debug_agent(nullptr, test_context->object_provider);
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
   constexpr uint64_t kProcessKoid1 = 0x1234;
   std::string kProcessName1 = "process-1";
-  auto process1 =
-      std::make_unique<DebugAgentMockProcess>(&debug_agent, kProcessKoid1, kProcessName1, nullptr);
+  auto process1 = std::make_unique<DebugAgentMockProcess>(
+      &debug_agent, kProcessKoid1, kProcessName1, test_context->object_provider);
   debug_agent.InjectProcessForTest(std::move(process1));
 
   constexpr uint64_t kProcessKoid2 = 0x5678;
   std::string kProcessName2 = "process-2";
-  auto process2 =
-      std::make_unique<DebugAgentMockProcess>(&debug_agent, kProcessKoid2, kProcessName2, nullptr);
+  auto process2 = std::make_unique<DebugAgentMockProcess>(
+      &debug_agent, kProcessKoid2, kProcessName2, test_context->object_provider);
   auto* process2_ptr = process2.get();
   debug_agent.InjectProcessForTest(std::move(process2));
 

@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/debug_agent/mock_thread.h"
 
+#include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -32,6 +33,13 @@ bool MockThread::Suspend(bool synchronous) {
 bool MockThread::WaitForSuspension(zx::time deadline) {
   DEBUG_LOG(Test) << "WaitForSuspension on " << koid();
   return true;
+}
+
+void MockThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
+                                  const zx_thread_state_general_regs* optional_regs,
+                                  debug_ipc::ThreadRecord* record) const {
+  record->process_koid = process()->koid();
+  record->thread_koid = koid();
 }
 
 void MockThread::IncreaseSuspend() {

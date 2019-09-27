@@ -125,9 +125,22 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::Hell
 }
 
 void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {
-  reply->process_koids.reserve(procs_.size());
-  for (auto& [process_koid, _] : procs_) {
-    reply->process_koids.emplace_back(process_koid);
+  reply->processes.reserve(procs_.size());
+  for (auto& [process_koid, proc] : procs_) {
+    debug_ipc::ProcessRecord process_record = {};
+    process_record.process_koid = process_koid;
+    process_record.process_name = proc->name();
+
+    auto threads = proc->GetThreads();
+    process_record.threads.reserve(threads.size());
+    for (auto* thread : threads) {
+      debug_ipc::ThreadRecord thread_record;
+      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr,
+                               &thread_record);
+      process_record.threads.emplace_back(std::move(thread_record));
+    }
+
+    reply->processes.emplace_back(std::move(process_record));
   }
 }
 

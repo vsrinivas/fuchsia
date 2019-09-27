@@ -131,9 +131,9 @@ class DebuggedThread {
   // If optional_regs is non-null, it should point to the current registers of
   // the thread. If null, these will be fetched automatically (this is an
   // optimization for cases where the caller has already requested registers).
-  void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
-                        const zx_thread_state_general_regs* optional_regs,
-                        debug_ipc::ThreadRecord* record) const;
+  virtual void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
+                                const zx_thread_state_general_regs* optional_regs,
+                                debug_ipc::ThreadRecord* record) const;
 
   // Register reading and writing.
   void ReadRegisters(const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,

@@ -57,6 +57,15 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, ProcessRecord* record) {
+  if (!reader->ReadUint64(&record->process_koid) ||
+      !reader->ReadString(&record->process_name)) {
+    return false;
+  }
+
+  return Deserialize(reader, &record->threads);
+}
+
 bool Deserialize(MessageReader* reader, MemoryBlock* block) {
   if (!reader->ReadUint64(&block->address))
     return false;
@@ -174,7 +183,7 @@ bool ReadReply(MessageReader* reader, StatusReply* reply, uint32_t* transaction_
     return false;
   *transaction_id = header.transaction_id;
 
-  return Deserialize(reader, &reply->process_koids);
+  return Deserialize(reader, &reply->processes);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------

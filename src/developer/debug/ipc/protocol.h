@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 15;
+constexpr uint32_t kProtocolVersion = 16;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -107,7 +107,7 @@ const char* InferiorTypeToString(InferiorType);
 struct StatusRequest {};
 struct StatusReply {
   // All the processes that the debug agent is currently attached.
-  std::vector<uint64_t> process_koids;
+  std::vector<ProcessRecord> processes;
 };
 
 // Triggers the system to send the notifications (process starting, modules) for an already

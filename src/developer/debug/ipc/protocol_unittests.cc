@@ -11,6 +11,7 @@
 #include "src/developer/debug/ipc/protocol_helpers.h"
 #include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {
 
@@ -114,6 +115,31 @@ TEST(Protocol, HelloReply) {
 
 // Status ------------------------------------------------------------------------------------------
 
+namespace {
+
+ThreadRecord CreateThreadRecord(uint32_t process_koid, uint32_t thread_koid) {
+  ThreadRecord record = {};
+  record.process_koid = process_koid;
+  record.thread_koid = thread_koid;
+  record.name = fxl::StringPrintf("thread-%u", thread_koid);
+  return record;
+}
+
+ProcessRecord CreateProcessRecord(uint32_t process_koid, uint32_t thread_count) {
+  ProcessRecord record = {};
+  record.process_koid = process_koid;
+  record.process_name = fxl::StringPrintf("process-%u", process_koid);
+
+  record.threads.reserve(thread_count);
+  for (uint32_t i = 0; i < thread_count; i++) {
+    record.threads.push_back(CreateThreadRecord(process_koid, i));
+  }
+
+  return record;
+}
+
+}  // namespace
+
 TEST(Protocol, StatusRequest) {
   StatusRequest initial;
   StatusRequest second;
@@ -121,18 +147,31 @@ TEST(Protocol, StatusRequest) {
 }
 
 TEST(Protocol, StatusReply) {
-  StatusReply initial;
-  initial.process_koids.push_back(0x1);
-  initial.process_koids.push_back(0x2);
-  initial.process_koids.push_back(0x3);
+  StatusReply one;
+  one.processes.push_back(CreateProcessRecord(0x1, 1));
+  one.processes.push_back(CreateProcessRecord(0x2, 2));
 
-  StatusReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  StatusReply two;
+  ASSERT_TRUE(SerializeDeserializeReply(one, &two));
 
-  ASSERT_EQ(second.process_koids.size(), 3u);
-  EXPECT_EQ(second.process_koids[0], initial.process_koids[0]);
-  EXPECT_EQ(second.process_koids[1], initial.process_koids[1]);
-  EXPECT_EQ(second.process_koids[2], initial.process_koids[2]);
+  ASSERT_EQ(two.processes.size(), 2u);
+  EXPECT_EQ(two.processes[0].process_koid,            one.processes[0].process_koid);
+  EXPECT_EQ(two.processes[0].process_name,            one.processes[0].process_name);
+  ASSERT_EQ(two.processes[0].threads.size(), 1u);
+  ASSERT_EQ(two.processes[0].threads[0].process_koid, one.processes[0].threads[0].process_koid);
+  ASSERT_EQ(two.processes[0].threads[0].thread_koid,  one.processes[0].threads[0].thread_koid);
+  ASSERT_EQ(two.processes[0].threads[0].name,         one.processes[0].threads[0].name);
+
+  ASSERT_EQ(two.processes.size(), 2u);
+  EXPECT_EQ(two.processes[1].process_koid,            one.processes[1].process_koid);
+  EXPECT_EQ(two.processes[1].process_name,            one.processes[1].process_name);
+  ASSERT_EQ(two.processes[1].threads.size(), 2u);
+  ASSERT_EQ(two.processes[1].threads[0].process_koid, one.processes[1].threads[0].process_koid);
+  ASSERT_EQ(two.processes[1].threads[0].thread_koid,  one.processes[1].threads[0].thread_koid);
+  ASSERT_EQ(two.processes[1].threads[0].name,         one.processes[1].threads[0].name);
+  ASSERT_EQ(two.processes[1].threads[1].process_koid, one.processes[1].threads[1].process_koid);
+  ASSERT_EQ(two.processes[1].threads[1].thread_koid,  one.processes[1].threads[1].thread_koid);
+  ASSERT_EQ(two.processes[1].threads[1].name,         one.processes[1].threads[1].name);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------
