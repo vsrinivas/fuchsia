@@ -14,6 +14,7 @@
 
 #include <memory>
 
+#include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <src/lib/fxl/macros.h>
@@ -23,7 +24,6 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
-#include "src/modular/lib/agent/cpp/agent_impl.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/mock_base.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
@@ -90,7 +90,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunnerTest);
 };
 
-class MyEntityProvider : AgentImpl::Delegate,
+class MyEntityProvider : fuchsia::modular::Agent,
                          fuchsia::modular::EntityProvider,
                          public fuchsia::sys::ComponentController,
                          public testing::MockBase {
@@ -100,16 +100,20 @@ class MyEntityProvider : AgentImpl::Delegate,
       : vfs_(async_get_default_dispatcher()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         controller_(this, std::move(ctrl)),
+        agent_binding_(this),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
+    outgoing_directory_->AddEntry(fuchsia::modular::Agent::Name_,
+                                  fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+                                    agent_binding_.Bind(std::move(channel));
+                                    return ZX_OK;
+                                  })));
     outgoing_directory_->AddEntry(fuchsia::modular::EntityProvider::Name_,
                                   fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
                                     entity_provider_binding_.Bind(std::move(channel));
                                     return ZX_OK;
                                   })));
     vfs_.ServeDirectory(outgoing_directory_, std::move(launch_info_.directory_request));
-    agent_impl_ =
-        std::make_unique<AgentImpl>(outgoing_directory_, static_cast<AgentImpl::Delegate*>(this));
 
     // Get |agent_context_| and |entity_resolver_| from incoming namespace.
     FXL_CHECK(launch_info_.additional_services);
@@ -131,12 +135,13 @@ class MyEntityProvider : AgentImpl::Delegate,
   // |ComponentController|
   void Detach() override { ++counts["Detach"]; }
 
-  // |AgentImpl::Delegate|
-  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) override {
+  // |fuchsia::modular::Agent|
+  void Connect(std::string requestor_url,
+               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) override {
     ++counts["Connect"];
   }
-  // |AgentImpl::Delegate|
-  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) override {
+  // |fuchsia::modular::Agent|
+  void RunTask(std::string task_id, fit::function<void()> done) override {
     ++counts["RunTask"];
     done();
   }
@@ -175,9 +180,9 @@ class MyEntityProvider : AgentImpl::Delegate,
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   fuchsia::modular::AgentContextPtr agent_context_;
-  std::unique_ptr<AgentImpl> agent_impl_;
   fuchsia::modular::EntityResolverPtr entity_resolver_;
   fidl::Binding<fuchsia::sys::ComponentController> controller_;
+  fidl::Binding<fuchsia::modular::Agent> agent_binding_;
   fidl::Binding<fuchsia::modular::EntityProvider> entity_provider_binding_;
   fuchsia::sys::LaunchInfo launch_info_;
 

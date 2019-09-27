@@ -85,7 +85,7 @@ class TestHarnessImpl::InterceptedComponentImpl
 // This class implements a session agent using AgentDriver.
 class TestHarnessImpl::InterceptedSessionAgent final {
  public:
-  InterceptedSessionAgent(::modular::AgentHost* host) {}
+  InterceptedSessionAgent(sys::ComponentContext* context) {}
 
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {}
@@ -378,10 +378,9 @@ zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
             std::make_shared<sys::ServiceDirectory>(
                 TakeSvcFromFlatNamespace(&startup_info.flat_namespace)),
             std::move(startup_info.launch_info.directory_request));
-        intercepted_session_agent_info_.agent_driver.reset(
-            new ::modular::AgentDriver<InterceptedSessionAgent>(
-                intercepted_session_agent_info_.component_context.get(),
-                [this] { intercepted_session_agent_info_.intercepted_component->Exit(0); }));
+        intercepted_session_agent_info_.agent.reset(new ::modular::Agent(
+            intercepted_session_agent_info_.component_context->outgoing(),
+            [this] { intercepted_session_agent_info_.intercepted_component->Exit(0); }));
         intercepted_session_agent_info_.intercepted_component = std::move(intercepted_component);
 
         FlushBufferedSessionAgentServices();

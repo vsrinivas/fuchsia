@@ -6,24 +6,8 @@ import("//build/fidl/fidl.gni")
 
 group("cpp") {
   public_deps = [
-    ":agent_driver",
     ":app_driver",
     ":module_driver",
-  ]
-}
-
-source_set("agent_driver") {
-  sources = [
-    "agent_driver.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/modular/lib/agent/cpp",
-    "//src/modular/lib/lifecycle/cpp",
   ]
 }
 

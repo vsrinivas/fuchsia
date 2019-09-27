@@ -43,12 +43,13 @@ executable("modular_lib_unittests") {
   testonly = true
 
   deps = [
-    "async/cpp:unittests",
-    "entity/cpp:unittests",
-    "fidl:unittests",
-    "modular_config:unittests",
-    "modular_test_harness/cpp:unittests",
-    "module_manifest:unittests",
+    "//src/modular/lib/agent/cpp:unittests",
+    "//src/modular/lib/async/cpp:unittests",
+    "//src/modular/lib/entity/cpp:unittests",
+    "//src/modular/lib/fidl:unittests",
+    "//src/modular/lib/modular_config:unittests",
+    "//src/modular/lib/modular_test_harness/cpp:unittests",
+    "//src/modular/lib/module_manifest:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

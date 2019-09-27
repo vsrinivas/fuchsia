@@ -57,5 +57,6 @@ executable("entity_provider_runner_unittest") {
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
     "//zircon/public/lib/trace",
+    "//zircon/public/lib/fs",
   ]
 }

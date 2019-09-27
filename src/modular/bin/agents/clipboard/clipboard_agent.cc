@@ -5,68 +5,38 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/service_namespace.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "src/modular/bin/agents/clipboard/clipboard_impl.h"
 #include "src/modular/bin/agents/clipboard/clipboard_storage.h"
-#include "src/modular/lib/app_driver/cpp/agent_driver.h"
-
-namespace modular {
-
-// An agent responsible for providing the fuchsia::modular::Clipboard service.
-class ClipboardAgent {
- public:
-  ClipboardAgent(AgentHost* const agent_host) {
-    fuchsia::modular::ComponentContextPtr component_context;
-    agent_host->agent_context()->GetComponentContext(component_context.NewRequest());
-
-    fuchsia::ledger::LedgerPtr ledger;
-    component_context->GetLedger(ledger.NewRequest());
-
-    ledger_client_ = std::make_unique<LedgerClient>(std::move(ledger), [](zx_status_t status) {
-      FXL_LOG(ERROR) << "Ledger connection died: " << status;
-    });
-
-    clipboard_ = std::make_unique<ClipboardImpl>(ledger_client_.get());
-
-    agent_host->component_context()->outgoing()->AddPublicService<fuchsia::modular::Clipboard>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-          clipboard_->Connect(std::move(request));
-        });
-
-    services_.AddService<fuchsia::modular::Clipboard>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-          clipboard_->Connect(std::move(request));
-        });
-  }
-
-  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
-    services_.AddBinding(std::move(outgoing_services));
-  }
-
-  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) { done(); }
-
-  void Terminate(fit::function<void()> done) { done(); }
-
- private:
-  // The ledger client that is provided to the ClipboardImpl.
-  std::unique_ptr<LedgerClient> ledger_client_;
-
-  std::unique_ptr<ClipboardImpl> clipboard_;
-
-  // The service namespace that the fuchsia::modular::Clipboard is added to.
-  component::ServiceNamespace services_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardAgent);
-};
-
-}  // namespace modular
+#include "src/modular/lib/agent/cpp/agent.h"
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-  modular::AgentDriver<modular::ClipboardAgent> driver(context.get(), [&loop] { loop.Quit(); });
+
+  // 1. Get Ledger.
+  auto modular_component_context = context->svc()->Connect<fuchsia::modular::ComponentContext>();
+  fuchsia::ledger::LedgerPtr ledger;
+  modular_component_context->GetLedger(ledger.NewRequest());
+
+  modular::LedgerClient ledger_client(std::move(ledger), /* on_error */ [](zx_status_t status) {
+    FXL_LOG(ERROR) << "Ledger connection died: " << status;
+  });
+
+  // 2. Setup the clipboard impl (give it the ledger).
+  modular::ClipboardImpl clipboard_impl(&ledger_client);
+  fidl::BindingSet<fuchsia::modular::Clipboard> clipboard_bindings;
+
+  // 3. Publish the Clipboard service (both as an agent, and as a normal component)
+  context->outgoing()->AddPublicService<fuchsia::modular::Clipboard>(
+      clipboard_bindings.GetHandler(&clipboard_impl));
+
+  modular::Agent clipboard_agent(context->outgoing(), [&loop] { loop.Quit(); });
+  clipboard_agent.AddService<fuchsia::modular::Clipboard>(
+      clipboard_bindings.GetHandler(&clipboard_impl));
+
   loop.Run();
   return 0;
 }

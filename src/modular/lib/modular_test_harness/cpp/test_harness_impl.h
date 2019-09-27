@@ -18,7 +18,8 @@
 
 #include <set>
 
-#include "src/modular/lib/app_driver/cpp/agent_driver.h"
+#include "src/modular/lib/agent/cpp/agent.h"
+#include "src/modular/lib/lifecycle/cpp/lifecycle_impl.h"
 
 namespace modular::testing {
 
@@ -78,7 +79,7 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
     // the component alive:
     std::unique_ptr<sys::ComponentContext> component_context;
     std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component;
-    std::unique_ptr<::modular::AgentDriver<InterceptedSessionAgent>> agent_driver;
+    std::unique_ptr<::modular::Agent> agent;
   };
 
   // |fuchsia::modular::testing::TestHarness|

@@ -1,12 +1,15 @@
-# How-To: Write an fuchsia::modular::Agent in C++
+# How-To: Write an Agent in C++
 
 ## Overview
 
-An `fuchsia::modular::Agent` is a Peridot component that runs without any direct user interaction.
-The lifetime of a single fuchsia::modular::Agent instance is bounded by its session.  It can be
-shared by mods across many stories. In addition to the capabilities provided to all
-Peridot components via `fuchsia::modular::ComponentContext`, an `fuchsia::modular::Agent` is given additional
-capabilities via its `fuchsia::modular::AgentContext`.
+An Agent is a component that runs without any direct user interaction. The lifetime of an Agent
+component instance is bounded by its session.  It can be shared by mods across many stories. In
+addition to the capabilities provided to all modular components via
+`fuchsia::modular::ComponentContext`, an Agent is given additional capabilities via
+`fuchsia::modular::AgentContext` as an incoming service.
+
+Agents must expose the `fuchsia::modular::Agent` service to receive new connections and provide
+services. An Agent component may implement the `fuchsia::modular::Lifecycle` service to receive termination signals and voluntarily exit.
 
 See [the simple directory](../simple/) for a complete implementation of
 the `fuchsia::modular::Agent` described here.
@@ -15,31 +18,27 @@ the `fuchsia::modular::Agent` described here.
 
 ### fuchsia::modular::Agent Initialization
 
-The first step to writing an `fuchsia::modular::Agent` is implementing the initializer:
+The first step to writing an Agent is setting up the scaffolding using the `modular::Agent` utility
+class.
 
 ```c++
-#include "src/modular/lib/app_driver/cpp/agent_driver.h"
+#include "src/modular/lib/agent/cpp/agent.h"
 
-class SimpleAgent {
-  public:
-    SimpleAgent(AgentHost* const agent_host) {
-      ...
-    }
-};
+int main(int /*argc*/, const char** /*argv*/) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::Create();
+  modular::Agent agent(context->outgoing(), [&loop] { loop.Quit(); });
+  loop.Run();
+  return 0;
+}
 ```
 
-The `AgentHost` parameter provides the `fuchsia::modular::Agent` with an `StartupContext`
-and an `fuchsia::modular::AgentContext`.
-
-#### `StartupContext`
-
-`StartupContext` gives the `fuchsia::modular::Agent` access to services provided to it by
-other system components via `incoming_services`. It also allows the `fuchsia::modular::Agent`
-to provide services to other components via `outgoing_services`.
+The `modular::Agent` utility above implements and exposes `fuchsia::modular::Agent` and
+`fuchsia::modular::Lifecycle` services. Additionally,
 
 #### `fuchsia::modular::AgentContext`
 
-`fuchsia::modular::AgentContext` is a protocol that is exposed to all `Agents`.
+`fuchsia::modular::AgentContext` is a protocol that is exposed to all Agent components.
 For example, it allows agents to schedule `Task`s that will be executed at
 specific intervals.
 
@@ -51,95 +50,37 @@ Peridot's cross-device storage solution.
 
 ### Advertising the `Simple` Protocol
 
-In order for the `SimpleAgent` to advertise the `Simple` protocol to the system
-it needs to provide it in its `outgoing_services`.
+In order for the `SimpleAgent` to advertise the `Simple` protocol to other modular components,
+it needs to expose it as an agent service. `modular::Agent::AddService<>()` provides a way to do
+this:
 
 ```c++
-  SimpleAgent(AgentHost* const agent_host) {
-    services_.AddService<Simple>(
-        [this](fidl::InterfaceRequest<Simple> request) {
-          simple_impl_->Connect(std::move(request));
-        });
+  class SimpleImpl : Simple {
+    SimpleImpl();
+    ~SimpleImpl();
+
+    std::string message_queue_token() const { return token_; }
+
+  private:
+    // The current message queue token.
+    std::string token_;
+  };
+
+  int main(int /*argc*/, const char** /*argv*/) {
+    ...
+    modular::Agent agent(context->outgoing(), [&loop] { loop.Quit(); });
+
+    SimpleImpl simple_impl;
+    fidl::BindingSet<Simple> simple_bindings;
+
+    agent.AddService<Simple>(simple_bindings.GetHandler(&simple_impl));
+    ...
   }
-
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
-    services_.AddBinding(std::move(outgoing_services));
-  }
-
- private:
-  // The services namespace that the `Simple` service is added to.
-  component::ServiceNamespace services_;
-
-  // The implementation of the Simple service.
-  std::unique_ptr<SimpleImpl> simple_impl_;
 ```
 
-In the initializer above, `SimpleAgent` adds the `Simple` service to its `ServiceNamespace`.
- When `SimpleAgent` receives a `Connect` call, it needs to bind the handle held by `request`
- to the concrete implementation in `services_`. It does this by calling
-`AddBinding(std::move(outgoing_services))`.
-
-Now, when a component connects to the `SimpleAgent`, it will be able to connect
-to the `SimpleInterface` and call methods on it. Those method calls will be
-delegated to the `simple_impl_` per the callback given to `AddService()`.
-
-```c++
-class SimpleImpl : Simple {
-  SimpleImpl();
-  ~SimpleImpl();
-
-  void Connect(fidl::InterfaceRequest<Simple> request);
-
-  std::string message_queue_token() const { return token_; }
-
- private:
-  // The bindings to the Simple service.
-  fidl::BindingSet<Simple> bindings_;
-
-  // The current message queue token.
-  std::string token_;
-};
-```
-
-The `SimpleImpl` could be part of the `SimpleAgent` class, but it's good practice
-to separate out the implementation of an `fuchsia::modular::Agent` from the
-implementation(s) of the protocol(s) it provides.
-
-## Running the fuchsia::modular::Agent
-
-```c++
-int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
-  modular::AgentDriver<simple_agent::SimpleAgent> driver(
-      context.get(), [&loop] { loop.Quit(); });
-  loop.Run();
-  return 0;
-}
-```
-
-`AgentDriver` is a helper class that helps manage the `fuchsia::modular::Agent` lifecycle. Here
-it is given a newly created `StartupContext` and a callback that will be
-executed when the `fuchsia::modular::Agent` exits. `AgentDriver` requires `SimpleAgent` to
-implement three methods, one of which is `Connect` which was shown above.
-
-The other two are:
-
-```c++
-void RunTask(const fidl::StringPtr& task_id,
-             fit::function<void()> done) {
-  done();
-}
-
-void Terminate(fit::function<void()> done) { done(); }
-```
-
-`RunTask` is called when a task, scheduled through `fuchsia::modular::AgentContext`'s
-`ScheduleTask`, is triggered.
-
-`Terminate` is called when the framework requests `fuchsia::modular::Agent` to
-exit gracefully.
+In the code above, `SimpleAgent` adds the `Simple` service as an agent service. Now, when a
+component connects to the `SimpleAgent`, it will be able to connect to the `Simple` interface and
+call methods on it. Those method calls will be delegated to the `simple_impl` object.
 
 ## Connecting to SimpleAgent
 
@@ -149,10 +90,11 @@ To connect to the `SimpleAgent` from a different component:
 // The agent is guaranteed to stay alive as long as |agent_controller| stays in scope.
 fuchsia::modular::AgentControllerPtr agent_controller;
 fuchsia::sys::ServiceProviderPtr agent_services;
-SimpleServicePtr agent_service;
+SimplePtr simple;
 component_context->ConnectToAgent(agent_url,
                                   agent_services.NewRequest(),
                                   agent_controller.NewRequest());
+agent_services.ConnectToService(Simple::Name_, simple.NewRequest().TakeChannel());
 ```
 
 Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`,
@@ -160,6 +102,6 @@ and is given a request for the services that the `SimpleAgent` will provide via 
 and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 
 Then the client connects to the `Simple` protocol by invoking `ConnectToService` with
-a request for a new `SimpleServicePtr`.
+a request for a new `SimplePtr`.
 
 See the [SimpleModule](how_to_write_a_mod.md) guide for a more in-depth example.

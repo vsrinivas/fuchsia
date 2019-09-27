@@ -102,8 +102,9 @@ source_set("test_harness_impl") {
     "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
-    "//src/modular/lib/app_driver/cpp:agent_driver",
+    "//src/modular/lib/agent/cpp",
     "//src/modular/lib/modular_config",
+    "//src/modular/lib/lifecycle/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
