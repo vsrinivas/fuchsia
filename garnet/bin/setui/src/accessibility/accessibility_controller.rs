@@ -1,12 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
+    crate::switchboard::accessibility_types::{AccessibilityInfo, Merge},
     crate::switchboard::base::{
-        AccessibilityInfo, CaptionsSettings, ColorBlindnessType, SettingRequest,
-        SettingRequestResponder, SettingResponse, SettingType,
+        SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -70,22 +71,7 @@ pub fn spawn_accessibility_controller(
                             SettingRequest::SetAccessibilityInfo(info) => {
                                 let old_value = stored_value.clone();
 
-                                stored_value.audio_description =
-                                    info.audio_description.or(stored_value.audio_description);
-                                stored_value.screen_reader =
-                                    info.screen_reader.or(stored_value.screen_reader);
-                                stored_value.color_inversion =
-                                    info.color_inversion.or(stored_value.color_inversion);
-                                stored_value.enable_magnification =
-                                    info.enable_magnification.or(stored_value.enable_magnification);
-                                stored_value.color_correction = info
-                                    .color_correction
-                                    .map(ColorBlindnessType::into)
-                                    .or(stored_value.color_correction);
-                                stored_value.captions_settings = info
-                                    .captions_settings
-                                    .map(CaptionsSettings::into)
-                                    .or(stored_value.captions_settings);
+                                stored_value = info.merge(stored_value);
 
                                 if old_value == stored_value {
                                     // No change in value, no need to notify listeners or persist.

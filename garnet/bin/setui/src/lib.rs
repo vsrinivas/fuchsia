@@ -126,7 +126,8 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Accessibility,
                 spawn_accessibility_controller(
-                    unboxed_storage_factory.get_store::<switchboard::base::AccessibilityInfo>(),
+                    unboxed_storage_factory
+                        .get_store::<switchboard::accessibility_types::AccessibilityInfo>(),
                 ),
             )
             .unwrap();
