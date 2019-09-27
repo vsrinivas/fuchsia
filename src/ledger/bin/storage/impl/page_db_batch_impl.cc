@@ -24,7 +24,7 @@ PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_
                                  ObjectIdentifierFactory* factory)
     : batch_(std::move(batch)), page_db_(page_db), db_(db), factory_(factory) {}
 
-PageDbBatchImpl::~PageDbBatchImpl() = default;
+PageDbBatchImpl::~PageDbBatchImpl() { UntrackPendingDeletions(); }
 
 Status PageDbBatchImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
                                 zx::time_utc timestamp) {
@@ -222,14 +222,22 @@ Status PageDbBatchImpl::SetClockEntry(coroutine::CoroutineHandler* handler, Devi
 }
 
 Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
-  // Check that no deletion has been aborted.
+  if (!UntrackPendingDeletions()) {
+    return Status::INTERNAL_ERROR;
+  }
+  return batch_->Execute(handler);
+}
+
+bool PageDbBatchImpl::UntrackPendingDeletions() {
+  bool aborted = false;
   for (const ObjectDigest& object_digest : pending_deletion_) {
     if (!factory_->CompleteDeletion(object_digest)) {
       FXL_VLOG(1) << "Deletion has been aborted, object cannot be deleted: " << object_digest;
-      return Status::INTERNAL_ERROR;
+      aborted = true;
     }
   }
-  return batch_->Execute(handler);
+  pending_deletion_.clear();
+  return !aborted;
 }
 
 Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler, const ObjectIdentifier& key) {

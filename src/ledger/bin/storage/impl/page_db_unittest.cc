@@ -511,6 +511,62 @@ TEST_F(PageDbTest, DeleteSyncedObjectWithOnDiskReferences) {
   });
 }
 
+// Tests that all deletions are aborted correctly when several deletions are batched together and
+// one of them fails.
+TEST_F(PageDbTest, DeleteObjectBatchAbort) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create two objects not referenced by anything.
+    ObjectIdentifier object_identifier1 = RandomObjectIdentifier();
+    const ObjectDigest object_digest1 = object_identifier1.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier1, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+
+    ObjectIdentifier object_identifier2 = RandomObjectIdentifier();
+    const ObjectDigest object_digest2 = object_identifier2.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier2, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+
+    // Check that the objects have been written correctly.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier1), Status::OK);
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier2), Status::OK);
+
+    // Discard the live references.
+    object_identifier1 = ObjectIdentifier();
+    object_identifier2 = ObjectIdentifier();
+
+    // Start deleting both objects.
+    std::unique_ptr<PageDbImpl::Batch> batch;
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest1, {}), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest2, {}), Status::OK);
+
+    // Mint a new reference to the first object, which aborts the pending deletion.
+    page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest1);
+
+    // Check that the whole batch has been aborted.
+    EXPECT_EQ(batch->Execute(handler), Status::INTERNAL_ERROR);
+
+    // Check that both deletions have stopped been tracked: it should be possible to restart them
+    // immediately.
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest1, {}), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest2, {}), Status::OK);
+
+    // Drop the batch.
+    batch.reset();
+
+    // Check that both deletions have stopped been tracked when the batch was dropped: it should be
+    // possible to restart them immediately again.
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest1, {}), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest2, {}), Status::OK);
+  });
+}
+
 TEST_F(PageDbTest, UnsyncedCommits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId(environment_.random());

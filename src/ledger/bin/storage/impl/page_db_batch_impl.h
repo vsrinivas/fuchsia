@@ -71,6 +71,11 @@ class PageDbBatchImpl : public PageDb::Batch {
   bool IsGarbageCollectable(coroutine::CoroutineHandler* handler, const ObjectDigest& digest,
                             PageDbObjectStatus object_status);
 
+  // Stops tracking all deletions for this batch and clears |pending_deletions_|.
+  // Returns false if any of the pending deletions was aborted by the object identifier factory
+  // tracking them.
+  bool UntrackPendingDeletions();
+
   Status DCheckHasObject(coroutine::CoroutineHandler* handler, const ObjectIdentifier& key);
 
   std::unique_ptr<Db::Batch> batch_;
