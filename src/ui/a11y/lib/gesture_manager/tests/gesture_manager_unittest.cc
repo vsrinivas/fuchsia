@@ -34,6 +34,8 @@ AccessibilityPointerEvent GetDefaultPointerEvent() {
 
 TEST_F(GestureManagerTest, CallsActionOnTouch) {
   GestureManager gesture_manager;
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr listener;
+  listener.Bind(std::move(gesture_manager.binding().NewBinding()));
   // Registers the callback (in a real use case, an Screen Reader action for example), that will be
   // invoked once a gesture is detected. For now, this only detects a single touch (finger down ->
   // up).
@@ -50,45 +52,48 @@ TEST_F(GestureManagerTest, CallsActionOnTouch) {
   uint32_t actual_device_id = 0, actual_pointer_id = 1000;
   fuchsia::ui::input::accessibility::EventHandling actual_handled =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [&actual_device_id, &actual_pointer_id, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id = device_id;
+    actual_pointer_id = pointer_id;
+    actual_handled = handled;
+  };
+  listener.events().OnStreamHandled = std::move(listener_callback);
+  RunLoopUntilIdle();
+
   {
     // Sends an ADD event. Expects the callback from this event to be called
     // (consuming the pointer stream).
     auto event = GetDefaultPointerEvent();
-    auto listener_callback = [&actual_device_id, &actual_pointer_id, &actual_handled](
-                                 uint32_t device_id, uint32_t pointer_id,
-                                 fuchsia::ui::input::accessibility::EventHandling handled) {
-      actual_device_id = device_id;
-      actual_pointer_id = pointer_id;
-      actual_handled = handled;
-    };
-    gesture_manager.OnEvent(std::move(event), std::move(listener_callback));
+    listener->OnEvent(std::move(event));
+    RunLoopUntilIdle();
   }
 
   {
     // Down event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::DOWN);
-    auto listener_callback = [](auto...) {};
-    gesture_manager.OnEvent(std::move(event), std::move(listener_callback));
+    listener->OnEvent(std::move(event));
+    RunLoopUntilIdle();
   }
 
   {
     // UP event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::UP);
-    auto listener_callback = [](auto...) {};
-    gesture_manager.OnEvent(std::move(event), std::move(listener_callback));
+    listener->OnEvent(std::move(event));
+    RunLoopUntilIdle();
   }
 
   {
     // REMOVE event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    auto listener_callback = [](auto...) {};
-    gesture_manager.OnEvent(std::move(event), std::move(listener_callback));
+    listener->OnEvent(std::move(event));
+    RunLoopUntilIdle();
   }
-
-  RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid, 100u);
   EXPECT_EQ(actual_point.x, 2);

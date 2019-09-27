@@ -36,8 +36,7 @@ void PointerEventRouter::InvokePointerEventCallbacks(
 }
 
 void PointerEventRouter::RouteEventToArenaMembers(
-    AccessibilityPointerEvent pointer_event,
-    fuchsia::ui::input::accessibility::PointerEventListener::OnEventCallback callback,
+    AccessibilityPointerEvent pointer_event, OnEventCallback callback,
     const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
   // Note that at some point we must answer whether the pointer event stream was
   // consumed / rejected. For this reason, for each ADD event we store the
@@ -132,9 +131,8 @@ ArenaMember* GestureArena::Add(GestureRecognizer* recognizer) {
   return last.get();
 }
 
-void GestureArena::OnEvent(
-    fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-    fuchsia::ui::input::accessibility::PointerEventListener::OnEventCallback callback) {
+void GestureArena::OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
+                           PointerEventRouter::OnEventCallback callback) {
   FX_CHECK(!arena_members_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                        "but has no added gesture recognizer.";
 

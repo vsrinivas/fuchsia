@@ -160,14 +160,14 @@ class AccessibilityPointerEventListenerSessionWrapper
  private:
   // |fuchsia::ui::input::accessibility::AccessibilityPointerEventListener|
   // Perform the response, reset for next response.
-  void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-               OnEventCallback callback) override {
+  void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event) override {
     accessibility_pointer_events_.emplace_back(std::move(pointer_event));
     ++num_events_until_response_;
     if (!responses_.empty() && num_events_until_response_ == responses_.front().first) {
       num_events_until_response_ = 0;
-      callback(/*device_id=*/1, /*pointer_id=*/1,
-               /*handled=*/responses_.front().second);
+      listener_bindings_.bindings().front()->events().OnStreamHandled(
+          /*device_id=*/1, /*pointer_id=*/1,
+          /*handled=*/responses_.front().second);
       responses_.erase(responses_.begin());
     }
   }
@@ -295,7 +295,6 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
           EXPECT_EQ(down.viewref_koid(), client.view_ref_koid());
           EXPECT_EQ(down.local_point().x, 2.5);
           EXPECT_EQ(down.local_point().y, 2.5);
-
         }
       });
 
@@ -1336,7 +1335,6 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
           EXPECT_EQ(remove.local_point().y, 3.5);
         }
       });
-
 }
 
 }  // namespace lib_ui_input_tests

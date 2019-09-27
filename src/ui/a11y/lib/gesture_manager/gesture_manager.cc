@@ -35,17 +35,18 @@ PointerEvent AccessibilityPointerEventToPointerEvent(const AccessibilityPointerE
 }
 }  // namespace
 
-GestureManager::GestureManager() : gesture_detector_(this), context_(&gesture_handler_) {}
+GestureManager::GestureManager()
+    : binding_(this), gesture_detector_(this), context_(&gesture_handler_) {}
 
-void GestureManager::OnEvent(AccessibilityPointerEvent pointer_event, OnEventCallback callback) {
+void GestureManager::OnEvent(AccessibilityPointerEvent pointer_event) {
   auto ptr = AccessibilityPointerEventToPointerEvent(pointer_event);
   context_.AddPointerEvent(std::move(pointer_event));
   gesture_detector_.OnPointerEvent(ptr);
   if (ptr.phase == Phase::ADD) {
     // For now, all pointer events dispatched to accessibility services are consumed.
     // TODO(): Implement consume / reject functionality of pointer events in Gesture Manager.
-    callback(ptr.device_id, ptr.pointer_id,
-             fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+    binding_.events().OnStreamHandled(ptr.device_id, ptr.pointer_id,
+                                      fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
   }
 }
 

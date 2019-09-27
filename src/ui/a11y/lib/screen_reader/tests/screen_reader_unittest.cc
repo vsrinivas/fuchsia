@@ -39,7 +39,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         semantic_provider_(&semantics_manager_) {}
 
   AccessibilityPointerEvent GetDefaultPointerEvent();
-  void CreateOnOneFngerTapAction();
+  void CreateOnOneFingerTapAction();
 
   sys::testing::ComponentContextProvider context_provider_;
   a11y::TtsManager tts_manager_;
@@ -63,22 +63,18 @@ AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() {
   return event;
 }
 
-void ScreenReaderTest::CreateOnOneFngerTapAction() {
+void ScreenReaderTest::CreateOnOneFingerTapAction() {
   {
     // Down event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(PointerEventPhase::DOWN);
-    auto listener_callback = [](uint32_t device_id, uint32_t pointer_id,
-                                fuchsia::ui::input::accessibility::EventHandling handled) {};
-    gesture_manager_.OnEvent(std::move(event), std::move(listener_callback));
+    gesture_manager_.OnEvent(std::move(event));
   }
   {
     // Send UP event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(PointerEventPhase::UP);
-    auto listener_callback = [](uint32_t device_id, uint32_t pointer_id,
-                                fuchsia::ui::input::accessibility::EventHandling handled) {};
-    gesture_manager_.OnEvent(std::move(event), std::move(listener_callback));
+    gesture_manager_.OnEvent(std::move(event));
   }
 }
 
@@ -136,7 +132,7 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   semantic_provider_.SetHitTestResult(0);
 
   // Create OnOneFingerTap Action.
-  CreateOnOneFngerTapAction();
+  CreateOnOneFingerTapAction();
   RunLoopUntilIdle();
 
   // Verify that TTS is called when OneFingerTapAction was performed.

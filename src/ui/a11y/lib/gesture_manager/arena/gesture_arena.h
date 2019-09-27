@@ -94,6 +94,12 @@ class ArenaMember {
 // rejecting pointer events.
 class PointerEventRouter {
  public:
+  // Callback signature used to indicate when and how an pointer event sent to the arena was
+  // processed.
+  using OnEventCallback =
+      fit::function<void(uint32_t device_id, uint32_t pointer_id,
+                         fuchsia::ui::input::accessibility::EventHandling handled)>;
+
   PointerEventRouter() = default;
   ~PointerEventRouter() = default;
 
@@ -108,10 +114,9 @@ class PointerEventRouter {
   // Dispatches the pointer event to all active arena members. In this
   // process, also caches the callback from the input system to notify it
   // later whether the pointer events were consumed / rejected.
-  void RouteEventToArenaMembers(
-      fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-      fuchsia::ui::input::accessibility::PointerEventListener::OnEventCallback callback,
-      const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
+  void RouteEventToArenaMembers(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
+                                OnEventCallback callback,
+                                const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
 
   // Returns true if it has any pending pointer event streams waiting a response whether they were
   // consumed / rejected.
@@ -127,8 +132,7 @@ class PointerEventRouter {
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
   // https://chromium.googlesource.com/chromium/src/+/master/base/containers/README.md#map-and-set-selection
-  std::map<std::pair</*pointer_id=*/uint32_t, /*device_id=*/uint32_t>,
-           std::vector<fuchsia::ui::input::accessibility::PointerEventListener::OnEventCallback>>
+  std::map<std::pair</*pointer_id=*/uint32_t, /*device_id=*/uint32_t>, std::vector<OnEventCallback>>
       pointer_event_callbacks_;
 };
 
@@ -196,7 +200,7 @@ class GestureArena {
   // Dispatches a new pointer event to this arena. This event gets sent to all
   // arena members which are active at the moment.
   void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-               fuchsia::ui::input::accessibility::PointerEventListener::OnEventCallback callback);
+               PointerEventRouter::OnEventCallback callback);
 
   // Tries to resolve the arena if it is not resolved already.
   // It follows two rules:

@@ -35,8 +35,7 @@ class FakePointerEventRegistry : public fuchsia::ui::policy::accessibility::Poin
     registered_ = true;
 
     // Sends a dummy pointer event to the listener.
-    listener->OnEvent(fuchsia::ui::input::accessibility::PointerEvent(),
-                      [](uint32_t, uint32_t, fuchsia::ui::input::accessibility::EventHandling) {});
+    listener->OnEvent(fuchsia::ui::input::accessibility::PointerEvent());
   }
 
   bool IsListenerRegistered() const { return registered_; }
@@ -64,8 +63,7 @@ class FakePointerEventListener : public fuchsia::ui::input::accessibility::Point
   // |fuchsia::ui::input::accessibility::AccessibilityPointerEventListener|
   // This method records in |received_event_| when this fake is called, so it
   // can be later checked in tests.
-  void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-               OnEventCallback callback) override {
+  void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event) override {
     received_event_ = true;
   }
 

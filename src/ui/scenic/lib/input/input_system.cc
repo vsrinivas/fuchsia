@@ -628,6 +628,14 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
             /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED,
             /*focus_change=*/false);
       }
+      // Registers an event handler for this listener.
+      auto event_handler = [buffer = pointer_event_buffer_.get()](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+        buffer->UpdateStream(pointer_id, handled);
+      };
+      input_system_->accessibility_pointer_event_listener().events().OnStreamHandled =
+          std::move(event_handler);
     }
     return true;
   } else if (pointer_event_buffer_) {
@@ -760,12 +768,8 @@ void InputCommandDispatcher::PointerEventBuffer::AddEvents(
   // to consume / decide if it will consume them.
   if (status == PointerIdStreamStatus::WAITING_RESPONSE ||
       status == PointerIdStreamStatus::CONSUMED) {
-    auto listener_callback = [this](uint32_t device_id, uint32_t pointer_id,
-                                    fuchsia::ui::input::accessibility::EventHandling handled) {
-      this->UpdateStream(pointer_id, handled);
-    };
     dispatcher_->input_system_->accessibility_pointer_event_listener()->OnEvent(
-        std::move(accessibility_pointer_event), std::move(listener_callback));
+        std::move(accessibility_pointer_event));
   }
 }
 

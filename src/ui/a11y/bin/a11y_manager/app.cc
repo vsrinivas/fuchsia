@@ -122,10 +122,8 @@ void App::OnScreenReaderEnabled(bool enabled) {
 void App::OnAccessibilityPointerEventListenerEnabled(bool enabled) {
   if (enabled) {
     gesture_manager_ = std::make_unique<a11y::GestureManager>();
-    auto listener_handle = listener_bindings_.AddBinding(gesture_manager_.get());
-    pointer_event_registry_->Register(std::move(listener_handle));
+    pointer_event_registry_->Register(std::move(gesture_manager_->binding().NewBinding()));
   } else {
-    listener_bindings_.CloseAll();
     gesture_manager_.reset();
   }
 }
