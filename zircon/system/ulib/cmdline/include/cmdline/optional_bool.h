@@ -5,6 +5,8 @@
 #ifndef CMDLINE_OPTIONAL_BOOL_H_
 #define CMDLINE_OPTIONAL_BOOL_H_
 
+#include <cassert>
+
 namespace cmdline {
 // Used by cmdline::ArgsParser to represent a boolean command line switch
 // that may or may not be present on the command line.
