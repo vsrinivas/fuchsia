@@ -301,6 +301,25 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 			// TODO(fxb.dev/35006): Handle all transport read errors.
 			switch err {
 			case nil:
+			case tcpip.ErrNoLinkAddress:
+				// TODO(tamird/iyerm): revisit this assertion when
+				// https://github.com/google/gvisor/issues/751 is fixed.
+				if connected {
+					panic(fmt.Sprintf("Endpoint.Read() = %s on a connected socket should never happen", err))
+				}
+				// At the time of writing, this error is only possible when link
+				// address resolution fails during an outbound TCP connection attempt.
+				// This happens via the following call hierarchy:
+				//
+				//  (*tcp.endpoint).protocolMainLoop
+				//    (*tcp.handshake).execute
+				//      (*tcp.handshake).resolveRoute
+				//        (*stack.Route).Resolve
+				//          (*stack.Stack).GetLinkAddress
+				//            (*stack.linkAddrCache).get
+				//
+				// This is equivalent to the connection having been refused.
+				fallthrough
 			case tcpip.ErrConnectionRefused:
 				// Linux allows sockets with connection errors to be reused. If the
 				// client calls connect() again (and the underlying Endpoint correctly

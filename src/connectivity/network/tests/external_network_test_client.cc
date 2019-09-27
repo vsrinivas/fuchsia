@@ -86,6 +86,28 @@ TEST(ExternalNetworkTest, Uname) {
 #endif
 }
 
+TEST(ExternalNetworkTest, ConnectToRoutableNonexistentINET) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  // Connect to a routable address to a non-existing remote. This triggers ARP resolution which is
+  // expected to fail.
+  addr.sin_addr.s_addr = htonl(0xd0e0a0d);
+  addr.sin_port = htons(1337);
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), -1);
+  // TODO(tamird): match linux. https://github.com/google/gvisor/issues/923.
+#if defined(__linux__)
+  EXPECT_EQ(errno, ETIMEDOUT) << strerror(errno);
+#else
+  EXPECT_EQ(errno, EHOSTDOWN) << strerror(errno);
+#endif
+
+  EXPECT_EQ(close(fd), 0) << strerror(errno);
+}
+
 // Test to ensure UDP send doesn`t error even with ARP timeouts.
 // TODO(fxb.dev/35006): Test needs to be extended or replicated to test
 // against other transport send errors.
