@@ -172,6 +172,12 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     codec_impl_->BindAsync([this]() { codec_impl_.reset(); });
   }
 
+  bool RunUntil(fit::function<bool()> condition) {
+    constexpr auto kLoopTimeout = zx::sec(15);
+
+    return RunLoopWithTimeoutOrUntil(std::move(condition), kLoopTimeout);
+  }
+
   void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error) {
     stream_error_ = std::move(error);
   }
@@ -406,7 +412,7 @@ TEST_F(DecryptorAdapterTest, ClearTextDecrypt) {
   ConnectDecryptor();
   decryptor_adapter_->set_has_keys(true);
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return input_buffer_info_.has_value(); }));
+  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
 
   AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
@@ -418,7 +424,7 @@ TEST_F(DecryptorAdapterTest, ClearTextDecrypt) {
 
   PumpInput();
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return end_of_stream_reached_; }));
+  EXPECT_TRUE(RunUntil([this]() { return end_of_stream_reached_; }));
 
   AssertNoChannelErrors();
 
@@ -436,7 +442,7 @@ TEST_F(DecryptorAdapterTest, NoKeys) {
   decryptor_adapter_->set_has_keys(false);
   decryptor_->EnableOnStreamFailed();
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return input_buffer_info_.has_value(); }));
+  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
 
   AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
@@ -448,7 +454,7 @@ TEST_F(DecryptorAdapterTest, NoKeys) {
 
   PumpInput();
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return stream_error_.has_value(); }));
+  EXPECT_TRUE(RunUntil([this]() { return stream_error_.has_value(); }));
 
   AssertNoChannelErrors();
 
