@@ -112,12 +112,12 @@ void PageDataGenerator::PutMultipleEntries(PagePtr* page, std::vector<std::vecto
                                            size_t value_size, ReferenceStrategy ref_strategy,
                                            Priority priority,
                                            fit::function<void(Status)> callback) {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& key : keys) {
     std::vector<uint8_t> value = generator_.MakeValue(value_size);
-    PutEntry(page, std::move(key), std::move(value), ref_strategy, priority, waiter->NewCallback());
+    PutEntry(page, std::move(key), std::move(value), ref_strategy, priority,
+             [](Status /*status*/) {});
   }
-  waiter->Finalize(std::move(callback));
+  (*page)->Sync([callback = std::move(callback)] { callback(Status::OK); });
 }
 
 }  // namespace ledger

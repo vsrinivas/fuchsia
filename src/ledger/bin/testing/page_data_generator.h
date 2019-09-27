@@ -37,12 +37,12 @@ class PageDataGenerator {
                 ReferenceStrategy ref_strategy, Priority priority,
                 fit::function<void(Status)> callback);
 
-  // Fill the page |page| with entries with keys |keys| and random values of
-  // size |value_size|, performing at maximum
-  // |transaction_size| Put operations per commit.
+  // Fill the page |page| with entries with keys |keys| and random values of size |value_size|,
+  // performing at maximum |transaction_size| Put operations per commit. |callback| is called after
+  // contents have been processed by Ledger, i.e. after |Page::Sync()| has returned.
   void Populate(PagePtr* page, std::vector<std::vector<uint8_t>> keys, size_t value_size,
                 size_t transaction_size, ReferenceStrategy ref_strategy, Priority priority,
-                fit::function<void(Status)> /*callback*/);
+                fit::function<void(Status)> callback);
 
  private:
   // Run PutEntry |transaction_size| times on provided keys |keys| with random
