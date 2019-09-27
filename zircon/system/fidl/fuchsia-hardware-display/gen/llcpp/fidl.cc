@@ -13,10 +13,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenVirtconController_Ordinal = 0x7522c7b300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProvider_OpenVirtconController_GenOrdinal = 0x7163a23d838e6fb6lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenController_Ordinal = 0x69d407d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProvider_OpenController_GenOrdinal = 0x54b5aa00a47ab0b3lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerResponseTable;
 
@@ -161,6 +165,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kProvider_OpenVirtconController_Ordinal:
+    case kProvider_OpenVirtconController_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OpenVirtconControllerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -173,6 +178,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kProvider_OpenController_Ordinal:
+    case kProvider_OpenController_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OpenControllerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -439,97 +445,163 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kController_DisplaysChanged_Ordinal = 0x30f5452200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_DisplaysChanged_GenOrdinal = 0x848efe931ddb1c6lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportVmoImage_Ordinal = 0x420a4b7000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ImportVmoImage_GenOrdinal = 0x7cab4d73f9f1893clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImage_Ordinal = 0x18d6e53b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ImportImage_GenOrdinal = 0x1be9cd6562de6db5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseImage_Ordinal = 0x3abc075800000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_ReleaseImage_GenOrdinal = 0x63a7d0a6b107bd11lu;
+[[maybe_unused]]
 constexpr uint64_t kController_ImportEvent_Ordinal = 0x7d2447aa00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ImportEvent_GenOrdinal = 0x402289f13944e6d7lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseEvent_Ordinal = 0x4379630400000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_ReleaseEvent_GenOrdinal = 0x657e4eab9a8e23a1lu;
+[[maybe_unused]]
 constexpr uint64_t kController_CreateLayer_Ordinal = 0x7f56932400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_CreateLayer_GenOrdinal = 0x468d06aadd139295lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DestroyLayer_Ordinal = 0x2abc04b100000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_DestroyLayer_GenOrdinal = 0x6b42dce004859fe5lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetDisplayMode_Ordinal = 0x584c92ab00000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_SetDisplayMode_GenOrdinal = 0x55a035e7a881c48dlu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetDisplayColorConversion_Ordinal = 0x71cb370500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetDisplayColorConversion_GenOrdinal = 0x3d3548d04caf79b7lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayLayers_Ordinal = 0x9bebf8600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetDisplayLayers_GenOrdinal = 0x47e92da1f9702675lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryConfig_Ordinal = 0x3673de6000000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_SetLayerPrimaryConfig_GenOrdinal = 0x10bc9fc5d61f5c94lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryPosition_Ordinal = 0x6bd4fbc600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetLayerPrimaryPosition_GenOrdinal = 0x735faf29ee889cdclu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryAlpha_Ordinal = 0x5a79ec9200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetLayerPrimaryAlpha_GenOrdinal = 0x1b81604b1a9b6576lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorConfig_Ordinal = 0x74020b200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_SetLayerCursorConfig_GenOrdinal = 0x2fddfd240f9e7764lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorPosition_Ordinal = 0x2f36e7b000000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_SetLayerCursorPosition_GenOrdinal = 0x147c1526ac3ad9c5lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetLayerColorConfig_Ordinal = 0x21cc7c8800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetLayerColorConfig_GenOrdinal = 0x19cb6da071d515calu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerImage_Ordinal = 0x1ecab8800000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_SetLayerImage_GenOrdinal = 0x7c71f66253182fb9lu;
+[[maybe_unused]]
 constexpr uint64_t kController_CheckConfig_Ordinal = 0x160ce58b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_CheckConfig_GenOrdinal = 0x586ca589eaf66e11lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ApplyConfig_Ordinal = 0x572081a200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_ApplyConfig_GenOrdinal = 0x65b30a10604984f7lu;
+[[maybe_unused]]
 constexpr uint64_t kController_EnableVsync_Ordinal = 0x2be2db1300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_EnableVsync_GenOrdinal = 0x5d517bdbc05d434elu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Vsync_Ordinal = 0x71fcce9000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_Vsync_GenOrdinal = 0x5813c85bf6f9d5f5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetVirtconMode_Ordinal = 0x49c4520700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetVirtconMode_GenOrdinal = 0x7c8d1b102e72182clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ClientOwnershipChange_Ordinal = 0x4360b92e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ClientOwnershipChange_GenOrdinal = 0x41b1af32fb2f7362lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ComputeLinearImageStride_Ordinal = 0x6ac90cda00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ComputeLinearImageStride_GenOrdinal = 0x1ed33802ba2d797clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateVmo_Ordinal = 0x6fb5bafa00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_AllocateVmo_GenOrdinal = 0x589658048f8d398blu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_Ordinal = 0x605b9d0d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ImportBufferCollection_GenOrdinal = 0x1cdf9cc2e60832d1lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseBufferCollection_Ordinal = 0x52f8b58400000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_ReleaseBufferCollection_GenOrdinal = 0x4527c480391b6c83lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetBufferCollectionConstraints_Ordinal = 0x78b51dd00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetBufferCollectionConstraints_GenOrdinal = 0x3b78d75d2d21b451lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetSingleBufferFramebuffer_Ordinal = 0x2ecce54500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetSingleBufferFramebuffer_GenOrdinal = 0x65cd908c2c03b49dlu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_Ordinal = 0x3150d1a200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ImportImageForCapture_GenOrdinal = 0x2a595fbc2df7f9eblu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_StartCapture_Ordinal = 0x5436d93300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_StartCapture_GenOrdinal = 0x7d4ccf55f0259266lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseCapture_Ordinal = 0x7f1785f000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ReleaseCapture_GenOrdinal = 0x3c5dbe1d114a5752lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
 
 }  // namespace
@@ -2560,6 +2632,7 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kController_DisplaysChanged_Ordinal:
+    case kController_DisplaysChanged_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DisplaysChangedResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -2569,6 +2642,7 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
       return handlers.displays_changed(std::move(message->added), std::move(message->removed));
     }
     case kController_Vsync_Ordinal:
+    case kController_Vsync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<VsyncResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -2578,6 +2652,7 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
       return handlers.vsync(std::move(message->display_id), std::move(message->timestamp), std::move(message->images));
     }
     case kController_ClientOwnershipChange_Ordinal:
+    case kController_ClientOwnershipChange_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ClientOwnershipChangeResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -2601,6 +2676,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kController_ImportVmoImage_Ordinal:
+    case kController_ImportVmoImage_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ImportVmoImageRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2613,6 +2689,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ImportImage_Ordinal:
+    case kController_ImportImage_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ImportImageRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2625,6 +2702,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ReleaseImage_Ordinal:
+    case kController_ReleaseImage_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseImageRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2637,6 +2715,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ImportEvent_Ordinal:
+    case kController_ImportEvent_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ImportEventRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2649,6 +2728,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ReleaseEvent_Ordinal:
+    case kController_ReleaseEvent_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseEventRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2661,6 +2741,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_CreateLayer_Ordinal:
+    case kController_CreateLayer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateLayerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2672,6 +2753,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_DestroyLayer_Ordinal:
+    case kController_DestroyLayer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DestroyLayerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2684,6 +2766,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetDisplayMode_Ordinal:
+    case kController_SetDisplayMode_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetDisplayModeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2696,6 +2779,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetDisplayColorConversion_Ordinal:
+    case kController_SetDisplayColorConversion_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetDisplayColorConversionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2708,6 +2792,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetDisplayLayers_Ordinal:
+    case kController_SetDisplayLayers_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetDisplayLayersRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2720,6 +2805,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerPrimaryConfig_Ordinal:
+    case kController_SetLayerPrimaryConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerPrimaryConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2732,6 +2818,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerPrimaryPosition_Ordinal:
+    case kController_SetLayerPrimaryPosition_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerPrimaryPositionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2744,6 +2831,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerPrimaryAlpha_Ordinal:
+    case kController_SetLayerPrimaryAlpha_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerPrimaryAlphaRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2756,6 +2844,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerCursorConfig_Ordinal:
+    case kController_SetLayerCursorConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerCursorConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2768,6 +2857,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerCursorPosition_Ordinal:
+    case kController_SetLayerCursorPosition_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerCursorPositionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2780,6 +2870,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerColorConfig_Ordinal:
+    case kController_SetLayerColorConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerColorConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2792,6 +2883,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetLayerImage_Ordinal:
+    case kController_SetLayerImage_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetLayerImageRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2804,6 +2896,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_CheckConfig_Ordinal:
+    case kController_CheckConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CheckConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2816,6 +2909,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ApplyConfig_Ordinal:
+    case kController_ApplyConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ApplyConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2827,6 +2921,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_EnableVsync_Ordinal:
+    case kController_EnableVsync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<EnableVsyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2839,6 +2934,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetVirtconMode_Ordinal:
+    case kController_SetVirtconMode_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetVirtconModeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2851,6 +2947,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ComputeLinearImageStride_Ordinal:
+    case kController_ComputeLinearImageStride_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ComputeLinearImageStrideRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2863,6 +2960,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_AllocateVmo_Ordinal:
+    case kController_AllocateVmo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AllocateVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2875,6 +2973,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ImportBufferCollection_Ordinal:
+    case kController_ImportBufferCollection_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ImportBufferCollectionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2887,6 +2986,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ReleaseBufferCollection_Ordinal:
+    case kController_ReleaseBufferCollection_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseBufferCollectionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2899,6 +2999,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetBufferCollectionConstraints_Ordinal:
+    case kController_SetBufferCollectionConstraints_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetBufferCollectionConstraintsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2911,6 +3012,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetSingleBufferFramebuffer_Ordinal:
+    case kController_GetSingleBufferFramebuffer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetSingleBufferFramebufferRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2922,6 +3024,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ImportImageForCapture_Ordinal:
+    case kController_ImportImageForCapture_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ImportImageForCaptureRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2934,6 +3037,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_StartCapture_Ordinal:
+    case kController_StartCapture_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StartCaptureRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2946,6 +3050,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ReleaseCapture_Ordinal:
+    case kController_ReleaseCapture_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseCaptureRequest>(msg);
       if (result.status != ZX_OK) {

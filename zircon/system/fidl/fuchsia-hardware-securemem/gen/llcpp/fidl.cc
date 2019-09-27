@@ -13,6 +13,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetSecureMemoryPhysicalAddress_Ordinal = 0x7f32703100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetSecureMemoryPhysicalAddress_GenOrdinal = 0x5f37764a495847f7lu;
 extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
 
@@ -90,6 +92,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_GetSecureMemoryPhysicalAddress_Ordinal:
+    case kDevice_GetSecureMemoryPhysicalAddress_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetSecureMemoryPhysicalAddressRequest>(msg);
       if (result.status != ZX_OK) {

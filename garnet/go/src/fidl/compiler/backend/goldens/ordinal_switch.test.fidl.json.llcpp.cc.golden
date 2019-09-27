@@ -13,11 +13,19 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 0x7784636700000000lu;
 [[maybe_unused]]
+constexpr uint64_t kSwitchingOrdinals_OrdinalFive_GenOrdinal = 0x254f3bdfa9d3dcablu;
+[[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 0x27c9581f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal = 0x163a45fcac049f5blu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 0x577495a100000000lu;
 [[maybe_unused]]
+constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal = 0x15e4293098574a7lu;
+[[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 0x7fec464e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal = 0x47107cabe23f6510lu;
 
 }  // namespace
 
@@ -171,6 +179,7 @@ zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
+    case kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<EventOrdinalFifteenResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -179,6 +188,7 @@ zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end
       return handlers.event_ordinal_fifteen();
     }
     case kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
+    case kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<EventOnlyGeneratedOrdinalResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -201,6 +211,7 @@ bool SwitchingOrdinals::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kSwitchingOrdinals_OrdinalFive_Ordinal:
+    case kSwitchingOrdinals_OrdinalFive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OrdinalFiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -212,6 +223,7 @@ bool SwitchingOrdinals::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
       return true;
     }
     case kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
+    case kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnlyGeneratedOrdinalRequest>(msg);
       if (result.status != ZX_OK) {

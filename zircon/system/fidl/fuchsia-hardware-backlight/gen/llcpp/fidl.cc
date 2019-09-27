@@ -308,20 +308,30 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateNormalized_Ordinal = 0x44ba72a000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetStateNormalized_GenOrdinal = 0x2506201b5999b9b7lu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateNormalized_Ordinal = 0xc19adb00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetStateNormalized_GenOrdinal = 0x554ac5cb4f9f5b62lu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateAbsolute_Ordinal = 0x971592f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetStateAbsolute_GenOrdinal = 0x1f8ccf01cf526a2blu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateAbsolute_Ordinal = 0x697f353e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetStateAbsolute_GenOrdinal = 0x19c100c43faaa178lu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetMaxAbsoluteBrightness_Ordinal = 0x65fe16500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetMaxAbsoluteBrightness_GenOrdinal = 0x2aa0699313d4160dlu;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
 
 }  // namespace
@@ -647,6 +657,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_GetStateNormalized_Ordinal:
+    case kDevice_GetStateNormalized_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetStateNormalizedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -658,6 +669,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetStateNormalized_Ordinal:
+    case kDevice_SetStateNormalized_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetStateNormalizedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -670,6 +682,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetStateAbsolute_Ordinal:
+    case kDevice_GetStateAbsolute_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetStateAbsoluteRequest>(msg);
       if (result.status != ZX_OK) {
@@ -681,6 +694,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetStateAbsolute_Ordinal:
+    case kDevice_SetStateAbsolute_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetStateAbsoluteRequest>(msg);
       if (result.status != ZX_OK) {
@@ -693,6 +707,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetMaxAbsoluteBrightness_Ordinal:
+    case kDevice_GetMaxAbsoluteBrightness_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetMaxAbsoluteBrightnessRequest>(msg);
       if (result.status != ZX_OK) {

@@ -15,7 +15,11 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kEvents_FunctionRegistered_GenOrdinal = 0x191278425c4a96e8lu;
+[[maybe_unused]]
 constexpr uint64_t kEvents_FunctionsCleared_Ordinal = 0x24319fec00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kEvents_FunctionsCleared_GenOrdinal = 0x6feab079055dacf1lu;
 
 }  // namespace
 template <>
@@ -114,6 +118,7 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kEvents_FunctionRegistered_Ordinal:
+    case kEvents_FunctionRegistered_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<FunctionRegisteredRequest>(msg);
       if (result.status != ZX_OK) {
@@ -125,6 +130,7 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kEvents_FunctionsCleared_Ordinal:
+    case kEvents_FunctionsCleared_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<FunctionsClearedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -224,12 +230,18 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfiguration_Ordinal = 0x7969547500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetConfiguration_GenOrdinal = 0x464bafee91a3d6delu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
 [[maybe_unused]]
+constexpr uint64_t kDevice_ClearFunctions_GenOrdinal = 0x67d9d8086dfab0cblu;
+[[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetStateChangeListener_GenOrdinal = 0x5575723c4674d1d9lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 
 }  // namespace
@@ -420,6 +432,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_SetConfiguration_Ordinal:
+    case kDevice_SetConfiguration_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -432,6 +445,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_ClearFunctions_Ordinal:
+    case kDevice_ClearFunctions_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ClearFunctionsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -443,6 +457,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetStateChangeListener_Ordinal:
+    case kDevice_SetStateChangeListener_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetStateChangeListenerRequest>(msg);
       if (result.status != ZX_OK) {

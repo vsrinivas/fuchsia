@@ -15,12 +15,18 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_EnableWritebackCache_Ordinal = 0x2b47735200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_EnableWritebackCache_GenOrdinal = 0x34283a6794f49dc0lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_block_DeviceEnableWritebackCacheResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_DisableWritebackCache_Ordinal = 0x2e4207e900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_DisableWritebackCache_GenOrdinal = 0x39e864cc9ab523alu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_block_DeviceDisableWritebackCacheResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetWritebackCacheReported_Ordinal = 0x340bd79400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetWritebackCacheReported_GenOrdinal = 0x43c6f4d0035ed0b5lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_block_DeviceSetWritebackCacheReportedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_block_DeviceSetWritebackCacheReportedResponseTable;
 
@@ -222,6 +228,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_EnableWritebackCache_Ordinal:
+    case kDevice_EnableWritebackCache_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<EnableWritebackCacheRequest>(msg);
       if (result.status != ZX_OK) {
@@ -233,6 +240,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_DisableWritebackCache_Ordinal:
+    case kDevice_DisableWritebackCache_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DisableWritebackCacheRequest>(msg);
       if (result.status != ZX_OK) {
@@ -244,6 +252,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetWritebackCacheReported_Ordinal:
+    case kDevice_SetWritebackCacheReported_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetWritebackCacheReportedRequest>(msg);
       if (result.status != ZX_OK) {

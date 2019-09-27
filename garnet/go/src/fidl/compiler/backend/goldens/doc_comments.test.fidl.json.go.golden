@@ -105,7 +105,9 @@ func (u *Table) ClearField() {
 }
 const (
 	InterfaceMethodOrdinal uint64 = 0x3f43684c00000000
+	InterfaceMethodGenOrdinal uint64 = 0x60e700e002995ef8
 	InterfaceOnEventOrdinal uint64 = 0x136d200d00000000
+	InterfaceOnEventGenOrdinal uint64 = 0x914c226136244ed
 )
 
 type InterfaceInterface _bindings.ChannelProxy
@@ -125,7 +127,7 @@ func (p *InterfaceInterface) Method() error {
 // event comment #3
 func (p *InterfaceInterface) ExpectOnEvent() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_, InterfaceOnEventGenOrdinal)
 	return err
 }
 
@@ -160,6 +162,8 @@ type InterfaceStub struct {
 func (s_ *InterfaceStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case InterfaceMethodOrdinal:
+		fallthrough
+	case InterfaceMethodGenOrdinal:
 		err_ := s_.Impl.Method()
 		return nil, false, err_
 	}

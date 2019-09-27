@@ -13,6 +13,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetChannel_Ordinal = 0x1ff7011500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x2add7b2741b2d65dlu;
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
 
 }  // namespace
@@ -90,6 +92,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_GetChannel_Ordinal:
+    case kDevice_GetChannel_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {

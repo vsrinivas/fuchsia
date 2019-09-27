@@ -616,7 +616,7 @@ impl futures::Stream for ParentRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x3692bc6900000000 => {
+				0x3692bc6900000000 | 0x57e26ed694158086 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ParentControlHandle {
@@ -629,7 +629,7 @@ impl futures::Stream for ParentRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x3faacc7e00000000 => {
+				0x3faacc7e00000000 | 0x5ea0990a698a80 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ParentControlHandle {
@@ -642,7 +642,7 @@ impl futures::Stream for ParentRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x4c0642f900000000 => {
+				0x4c0642f900000000 | 0x6a9827d18871f87d => {
 					let mut req: (fidl::endpoints::ClientEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ParentControlHandle {
@@ -651,7 +651,7 @@ impl futures::Stream for ParentRequestStream {
 
 					Ok(ParentRequest::TakeChild {c: req,control_handle,})
 				}
-				0x5ec3867a00000000 => {
+				0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
 					let mut req: (fidl::endpoints::ServerEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ParentControlHandle {

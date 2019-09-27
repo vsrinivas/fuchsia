@@ -164,12 +164,18 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kInputDevice_GetReportsEvent_Ordinal = 0x49e5124900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kInputDevice_GetReportsEvent_GenOrdinal = 0x2188910c9bac05aclu;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kInputDevice_GetReports_Ordinal = 0x28a404a100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kInputDevice_GetReports_GenOrdinal = 0x5ba2344d51c69c2blu;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kInputDevice_GetDescriptor_Ordinal = 0x5456d97300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kInputDevice_GetDescriptor_GenOrdinal = 0x3d76420f2ff8ad32lu;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
 
 }  // namespace
@@ -369,6 +375,7 @@ bool InputDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kInputDevice_GetReportsEvent_Ordinal:
+    case kInputDevice_GetReportsEvent_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetReportsEventRequest>(msg);
       if (result.status != ZX_OK) {
@@ -380,6 +387,7 @@ bool InputDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       return true;
     }
     case kInputDevice_GetReports_Ordinal:
+    case kInputDevice_GetReports_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetReportsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -391,6 +399,7 @@ bool InputDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       return true;
     }
     case kInputDevice_GetDescriptor_Ordinal:
+    case kInputDevice_GetDescriptor_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDescriptorRequest>(msg);
       if (result.status != ZX_OK) {

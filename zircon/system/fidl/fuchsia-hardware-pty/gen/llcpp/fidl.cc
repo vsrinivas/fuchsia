@@ -13,78 +13,124 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_Clone_Ordinal = 0x17fe6a4c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloneRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Close_Ordinal = 0x52b9568700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Describe_Ordinal = 0x1f62df5e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_OnOpen_Ordinal = 0x4700a7bd00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Sync_Ordinal = 0x62423faa00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetAttr_Ordinal = 0x4585e7c800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetAttr_Ordinal = 0xbd5559a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Ioctl_Ordinal = 0x35f3aca700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Read_Ordinal = 0x25f7418400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Read_GenOrdinal = 0x29b2b7074c95208clu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ReadAt_Ordinal = 0x7c724dc400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_ReadAt_GenOrdinal = 0x6527ee3fbc9c5749lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadAtResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Write_Ordinal = 0x512e7a000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Write_GenOrdinal = 0x3b6432f57914225blu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_WriteAt_Ordinal = 0x3e5522e500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_WriteAt_GenOrdinal = 0x4b29e1582ab379e4lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteAtResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Seek_Ordinal = 0x782a774500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Seek_GenOrdinal = 0x324968e9b8a0e394lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSeekResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Truncate_Ordinal = 0x42ab3a3a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Truncate_GenOrdinal = 0x5ec8f337359a2ddblu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceTruncateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetFlags_Ordinal = 0x6416a3f600000000lu;
 [[maybe_unused]]
+constexpr uint64_t kDevice_GetFlags_GenOrdinal = 0x200be82ca523ab96lu;
+[[maybe_unused]]
 constexpr uint64_t kDevice_SetFlags_Ordinal = 0x3f23cc7600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetFlags_GenOrdinal = 0x713f375258671141lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetBuffer_Ordinal = 0x74c3097300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetBuffer_GenOrdinal = 0x4b93b8486666d951lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_OpenClient_Ordinal = 0x5ce2427f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_OpenClient_GenOrdinal = 0x78f040fe6a1ebb3lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOpenClientRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOpenClientResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClrSetFeature_Ordinal = 0x5b74b23900000000lu;
 [[maybe_unused]]
+constexpr uint64_t kDevice_ClrSetFeature_GenOrdinal = 0x6367986e6053a15elu;
+[[maybe_unused]]
 constexpr uint64_t kDevice_GetWindowSize_Ordinal = 0x6b4f1d8300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetWindowSize_GenOrdinal = 0x747bed0460f5f9f7lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_MakeActive_Ordinal = 0x9648f9700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_MakeActive_GenOrdinal = 0x2763944f30ee2a62lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceMakeActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceMakeActiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ReadEvents_Ordinal = 0x65e3e0bd00000000lu;
 [[maybe_unused]]
+constexpr uint64_t kDevice_ReadEvents_GenOrdinal = 0xede96f3e3258f62lu;
+[[maybe_unused]]
 constexpr uint64_t kDevice_SetWindowSize_Ordinal = 0x3c0c556700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetWindowSize_GenOrdinal = 0x17d1cb37377e7928lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetWindowSizeResponseTable;
 
 }  // namespace
@@ -1562,6 +1608,7 @@ zx_status_t Device::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kDevice_OnOpen_Ordinal:
+    case kDevice_OnOpen_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -1585,6 +1632,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_Clone_Ordinal:
+    case kDevice_Clone_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1597,6 +1645,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Close_Ordinal:
+    case kDevice_Close_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1608,6 +1657,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Describe_Ordinal:
+    case kDevice_Describe_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1619,6 +1669,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Sync_Ordinal:
+    case kDevice_Sync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1630,6 +1681,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetAttr_Ordinal:
+    case kDevice_GetAttr_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1641,6 +1693,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetAttr_Ordinal:
+    case kDevice_SetAttr_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1653,6 +1706,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Ioctl_Ordinal:
+    case kDevice_Ioctl_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1665,6 +1719,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Read_Ordinal:
+    case kDevice_Read_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1677,6 +1732,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_ReadAt_Ordinal:
+    case kDevice_ReadAt_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadAtRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1689,6 +1745,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Write_Ordinal:
+    case kDevice_Write_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1701,6 +1758,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_WriteAt_Ordinal:
+    case kDevice_WriteAt_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteAtRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1713,6 +1771,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Seek_Ordinal:
+    case kDevice_Seek_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SeekRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1725,6 +1784,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Truncate_Ordinal:
+    case kDevice_Truncate_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<TruncateRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1737,6 +1797,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetFlags_Ordinal:
+    case kDevice_GetFlags_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetFlagsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1748,6 +1809,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetFlags_Ordinal:
+    case kDevice_SetFlags_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetFlagsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1760,6 +1822,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetBuffer_Ordinal:
+    case kDevice_GetBuffer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetBufferRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1772,6 +1835,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_OpenClient_Ordinal:
+    case kDevice_OpenClient_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OpenClientRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1784,6 +1848,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_ClrSetFeature_Ordinal:
+    case kDevice_ClrSetFeature_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ClrSetFeatureRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1796,6 +1861,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_GetWindowSize_Ordinal:
+    case kDevice_GetWindowSize_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetWindowSizeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1807,6 +1873,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_MakeActive_Ordinal:
+    case kDevice_MakeActive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<MakeActiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1819,6 +1886,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_ReadEvents_Ordinal:
+    case kDevice_ReadEvents_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadEventsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1830,6 +1898,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetWindowSize_Ordinal:
+    case kDevice_SetWindowSize_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetWindowSizeRequest>(msg);
       if (result.status != ZX_OK) {

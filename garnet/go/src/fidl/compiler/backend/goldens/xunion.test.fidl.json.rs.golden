@@ -371,7 +371,7 @@ impl futures::Stream for TestProtocolRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x71a1b4b700000000 => {
+				0x71a1b4b700000000 | 0x2b158c786064d0de => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = TestProtocolControlHandle {
@@ -384,7 +384,7 @@ impl futures::Stream for TestProtocolRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x3959ff0900000000 => {
+				0x3959ff0900000000 | 0x5ecf85aadd137696 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = TestProtocolControlHandle {

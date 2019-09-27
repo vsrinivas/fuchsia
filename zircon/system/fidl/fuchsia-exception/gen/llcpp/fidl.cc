@@ -12,6 +12,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kHandler_OnException_Ordinal = 0x7ec50e5a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kHandler_OnException_GenOrdinal = 0x5de09d36098de59elu;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
 
 }  // namespace
@@ -90,6 +92,7 @@ bool Handler::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kHandler_OnException_Ordinal:
+    case kHandler_OnException_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnExceptionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -261,9 +264,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_Ordinal = 0x7bde19d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal = 0x43e1864bf356ef50lu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_Ordinal = 0x47ad466f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_RetrieveException_GenOrdinal = 0x6ee2df26d6e0444blu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
 
 }  // namespace
@@ -402,6 +409,7 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kProcessLimbo_ListProcessesWaitingOnException_Ordinal:
+    case kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ListProcessesWaitingOnExceptionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -413,6 +421,7 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       return true;
     }
     case kProcessLimbo_RetrieveException_Ordinal:
+    case kProcessLimbo_RetrieveException_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<RetrieveExceptionRequest>(msg);
       if (result.status != ZX_OK) {

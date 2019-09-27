@@ -60,9 +60,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal = 0x71a1b4b700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal = 0x2b158c786064d0delu;
 extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal = 0x3959ff0900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal = 0x5ecf85aadd137696lu;
 extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
@@ -200,6 +204,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
+    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -211,6 +216,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       return true;
     }
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
+    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(msg);
       if (result.status != ZX_OK) {

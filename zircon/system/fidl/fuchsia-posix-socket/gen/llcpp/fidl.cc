@@ -13,6 +13,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kProvider_Socket_Ordinal = 0x4d07378200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProvider_Socket_GenOrdinal = 0x3c53fd7d5afacab8lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
 
@@ -94,6 +96,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kProvider_Socket_Ordinal:
+    case kProvider_Socket_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SocketRequest>(msg);
       if (result.status != ZX_OK) {
@@ -156,62 +159,96 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kControl_Clone_Ordinal = 0x17fe6a4c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_Ordinal = 0x52b9568700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_Ordinal = 0x1f62df5e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_Ordinal = 0x4700a7bd00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_Ordinal = 0x62423faa00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_Ordinal = 0x4585e7c800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_Ordinal = 0xbd5559a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Ioctl_Ordinal = 0x35f3aca700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Bind_Ordinal = 0x147441ed00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Bind_GenOrdinal = 0x369838aa5347aa8flu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Connect_Ordinal = 0x237ed33800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Connect_GenOrdinal = 0x1138f666cb3655b1lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Listen_Ordinal = 0x2e63628600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Listen_GenOrdinal = 0xa860257383d5651lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Accept_Ordinal = 0x11ed297300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_Accept_GenOrdinal = 0x17921a9ebebb7ba0lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_Ordinal = 0x63c1368200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_GetSockName_GenOrdinal = 0x6f68e0f0d72c2d1dlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_Ordinal = 0x58787bb600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_GetPeerName_GenOrdinal = 0x555a019c03d9820dlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_Ordinal = 0x4ba217a700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_SetSockOpt_GenOrdinal = 0x24e784a5e281b466lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockOpt_Ordinal = 0x3685367800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_GetSockOpt_GenOrdinal = 0x66298180e94aa6b4lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_IoctlPOSIX_Ordinal = 0x50a8f69d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kControl_IoctlPOSIX_GenOrdinal = 0x47466fcb0021432dlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
 
@@ -1321,6 +1358,7 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kControl_OnOpen_Ordinal:
+    case kControl_OnOpen_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -1344,6 +1382,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kControl_Clone_Ordinal:
+    case kControl_Clone_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1356,6 +1395,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Close_Ordinal:
+    case kControl_Close_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1367,6 +1407,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Describe_Ordinal:
+    case kControl_Describe_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1378,6 +1419,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Sync_Ordinal:
+    case kControl_Sync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1389,6 +1431,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_GetAttr_Ordinal:
+    case kControl_GetAttr_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1400,6 +1443,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_SetAttr_Ordinal:
+    case kControl_SetAttr_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1412,6 +1456,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Ioctl_Ordinal:
+    case kControl_Ioctl_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1424,6 +1469,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Bind_Ordinal:
+    case kControl_Bind_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<BindRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1436,6 +1482,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Connect_Ordinal:
+    case kControl_Connect_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1448,6 +1495,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Listen_Ordinal:
+    case kControl_Listen_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ListenRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1460,6 +1508,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_Accept_Ordinal:
+    case kControl_Accept_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AcceptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1472,6 +1521,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_GetSockName_Ordinal:
+    case kControl_GetSockName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetSockNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1483,6 +1533,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_GetPeerName_Ordinal:
+    case kControl_GetPeerName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetPeerNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1494,6 +1545,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_SetSockOpt_Ordinal:
+    case kControl_SetSockOpt_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1506,6 +1558,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_GetSockOpt_Ordinal:
+    case kControl_GetSockOpt_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1518,6 +1571,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kControl_IoctlPOSIX_Ordinal:
+    case kControl_IoctlPOSIX_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<IoctlPOSIXRequest>(msg);
       if (result.status != ZX_OK) {

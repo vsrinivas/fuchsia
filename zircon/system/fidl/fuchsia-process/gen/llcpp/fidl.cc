@@ -12,6 +12,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kResolver_Resolve_Ordinal = 0x20980a8100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kResolver_Resolve_GenOrdinal = 0x3c15951efde89c90lu;
 extern "C" const fidl_type_t fuchsia_process_ResolverResolveRequestTable;
 extern "C" const fidl_type_t fuchsia_process_ResolverResolveResponseTable;
 
@@ -94,6 +96,7 @@ bool Resolver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kResolver_Resolve_Ordinal:
+    case kResolver_Resolve_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ResolveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -158,23 +161,35 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kLauncher_Launch_Ordinal = 0x26884d9d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_Launch_GenOrdinal = 0x11335a9928afbfa4lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherLaunchRequestTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherLaunchResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_CreateWithoutStarting_Ordinal = 0x4fcfbc1100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_CreateWithoutStarting_GenOrdinal = 0x755f8263fe51cb61lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingRequestTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddArgs_Ordinal = 0x1480f9a000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_AddArgs_GenOrdinal = 0x3be445d3e4fd6512lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddEnvirons_Ordinal = 0x48c62c9900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_AddEnvirons_GenOrdinal = 0x73a3c97fa7fe1779lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddNames_Ordinal = 0x53fcef0c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_AddNames_GenOrdinal = 0x2579ee2c7be28662lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddHandles_Ordinal = 0x5cd6900b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLauncher_AddHandles_GenOrdinal = 0x51025267a537a615lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
 
 }  // namespace
@@ -600,6 +615,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kLauncher_Launch_Ordinal:
+    case kLauncher_Launch_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<LaunchRequest>(msg);
       if (result.status != ZX_OK) {
@@ -612,6 +628,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kLauncher_CreateWithoutStarting_Ordinal:
+    case kLauncher_CreateWithoutStarting_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateWithoutStartingRequest>(msg);
       if (result.status != ZX_OK) {
@@ -624,6 +641,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kLauncher_AddArgs_Ordinal:
+    case kLauncher_AddArgs_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AddArgsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -636,6 +654,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kLauncher_AddEnvirons_Ordinal:
+    case kLauncher_AddEnvirons_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AddEnvironsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -648,6 +667,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kLauncher_AddNames_Ordinal:
+    case kLauncher_AddNames_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AddNamesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -660,6 +680,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       return true;
     }
     case kLauncher_AddHandles_Ordinal:
+    case kLauncher_AddHandles_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AddHandlesRequest>(msg);
       if (result.status != ZX_OK) {

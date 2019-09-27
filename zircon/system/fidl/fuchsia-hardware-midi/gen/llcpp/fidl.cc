@@ -13,6 +13,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInfo_Ordinal = 0x7eddfe3c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetInfo_GenOrdinal = 0x67d496c0a087b7dlu;
 extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 }  // namespace
@@ -88,6 +90,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_GetInfo_Ordinal:
+    case kDevice_GetInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
       if (result.status != ZX_OK) {

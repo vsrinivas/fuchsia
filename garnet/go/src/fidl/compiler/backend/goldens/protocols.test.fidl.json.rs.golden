@@ -277,14 +277,14 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			0x697fd73200000000 => {
+			0x697fd73200000000 | 0x42e90e9a86944b3 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					WithAndWithoutRequestResponseEvent::OnEmptyResponse {}
 				))
 			}
-			0x7a47120700000000 => {
+			0x7a47120700000000 | 0x2a9767b3ae6c2b09 => {
 				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
@@ -467,7 +467,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x1e03f87500000000 => {
+				0x1e03f87500000000 | 0x3931f96bc77fba8 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -476,7 +476,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestNoResponse {control_handle,})
 				}
-				0x4df6dbd500000000 => {
+				0x4df6dbd500000000 | 0x706ec7bd335005f9 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -489,7 +489,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x668d7f800000000 => {
+				0x668d7f800000000 | 0x4625ad5934067a48 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -502,7 +502,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x19c2137100000000 => {
+				0x19c2137100000000 | 0x46e5095902913025 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -511,7 +511,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestNoResponse {arg: req,control_handle,})
 				}
-				0x76f2397300000000 => {
+				0x76f2397300000000 | 0x180c481d4a15967 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -524,7 +524,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x1973292000000000 => {
+				0x1973292000000000 | 0x553860267eceec0 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
@@ -1453,7 +1453,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x7b58113900000000 => {
+				0x7b58113900000000 | 0x20cf80ad7d9b60be => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithErrorSyntaxControlHandle {
@@ -1466,7 +1466,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x4c95de1f00000000 => {
+				0x4c95de1f00000000 | 0x3fcd36560f812e7f => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = WithErrorSyntaxControlHandle {
@@ -1956,7 +1956,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			0x1c78c20200000000 => {
+			0x1c78c20200000000 | 0x2558b206a254d8a0 => {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
@@ -2117,7 +2117,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x556693d200000000 => {
+				0x556693d200000000 | 0x1b1e059b3f02bffc => {
 					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
@@ -2126,7 +2126,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 
 					Ok(ChannelProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
 				}
-				0xac6551b00000000 => {
+				0xac6551b00000000 | 0x5db17a61464744a3 => {
 					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
@@ -2139,7 +2139,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 								ordinal: header.ordinal,
 							},})
 				}
-				0x4b02e28600000000 => {
+				0x4b02e28600000000 | 0x36caa6fff7569577 => {
 					let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {

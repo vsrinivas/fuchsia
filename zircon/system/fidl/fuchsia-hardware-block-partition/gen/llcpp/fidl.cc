@@ -14,32 +14,50 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetInfo_Ordinal = 0x7279049800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetInfo_GenOrdinal = 0x79df1a5cdb6cc6a3lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetStats_Ordinal = 0x73b9275400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetStats_GenOrdinal = 0x53d9542a778385aelu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetFifo_Ordinal = 0x63616dbe00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetFifo_GenOrdinal = 0x507ea563fb50747elu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_AttachVmo_Ordinal = 0x72df2e6600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_AttachVmo_GenOrdinal = 0x7e726e5993add9b7lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_CloseFifo_Ordinal = 0x6b4a461300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_CloseFifo_GenOrdinal = 0x4dc09acdfa2a2a65lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_RebindDevice_Ordinal = 0x2c1ffdb000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_RebindDevice_GenOrdinal = 0x5d728cbd5312c9aelu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetTypeGuid_Ordinal = 0x40d3186c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetTypeGuid_GenOrdinal = 0x111843d737a9b847lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetInstanceGuid_Ordinal = 0x69f426600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetInstanceGuid_GenOrdinal = 0x14a5a573b275d435lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPartition_GetName_Ordinal = 0x39b49c4000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPartition_GetName_GenOrdinal = 0x7e3c6f0b0937fc02lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
 
 }  // namespace
@@ -613,6 +631,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kPartition_GetInfo_Ordinal:
+    case kPartition_GetInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -624,6 +643,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_GetStats_Ordinal:
+    case kPartition_GetStats_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetStatsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -636,6 +656,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_GetFifo_Ordinal:
+    case kPartition_GetFifo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetFifoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -647,6 +668,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_AttachVmo_Ordinal:
+    case kPartition_AttachVmo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AttachVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -659,6 +681,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_CloseFifo_Ordinal:
+    case kPartition_CloseFifo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseFifoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -670,6 +693,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_RebindDevice_Ordinal:
+    case kPartition_RebindDevice_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<RebindDeviceRequest>(msg);
       if (result.status != ZX_OK) {
@@ -681,6 +705,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_GetTypeGuid_Ordinal:
+    case kPartition_GetTypeGuid_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetTypeGuidRequest>(msg);
       if (result.status != ZX_OK) {
@@ -692,6 +717,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_GetInstanceGuid_Ordinal:
+    case kPartition_GetInstanceGuid_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetInstanceGuidRequest>(msg);
       if (result.status != ZX_OK) {
@@ -703,6 +729,7 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kPartition_GetName_Ordinal:
+    case kPartition_GetName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetNameRequest>(msg);
       if (result.status != ZX_OK) {

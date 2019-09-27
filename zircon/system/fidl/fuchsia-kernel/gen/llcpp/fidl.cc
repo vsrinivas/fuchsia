@@ -151,6 +151,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kMexecBroker_PerformMexec_Ordinal = 0x2db06f5f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kMexecBroker_PerformMexec_GenOrdinal = 0x191f56222830486flu;
 extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
 
 }  // namespace
@@ -230,6 +232,7 @@ bool MexecBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kMexecBroker_PerformMexec_Ordinal:
+    case kMexecBroker_PerformMexec_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<PerformMexecRequest>(msg);
       if (result.status != ZX_OK) {
@@ -261,10 +264,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDebugBroker_SendDebugCommand_Ordinal = 0x3f05f48400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDebugBroker_SendDebugCommand_GenOrdinal = 0x1ee270f83b5d6ff6lu;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDebugBroker_SetTracingEnabled_Ordinal = 0x273cf2d900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDebugBroker_SetTracingEnabled_GenOrdinal = 0x12e368d05329b30elu;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
 
@@ -410,6 +417,7 @@ bool DebugBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDebugBroker_SendDebugCommand_Ordinal:
+    case kDebugBroker_SendDebugCommand_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SendDebugCommandRequest>(msg);
       if (result.status != ZX_OK) {
@@ -422,6 +430,7 @@ bool DebugBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       return true;
     }
     case kDebugBroker_SetTracingEnabled_Ordinal:
+    case kDebugBroker_SetTracingEnabled_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetTracingEnabledRequest>(msg);
       if (result.status != ZX_OK) {
@@ -511,9 +520,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kCounter_GetInspectVMO_Ordinal = 0x6d0e779600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kCounter_GetInspectVMO_GenOrdinal = 0x60b72cf2b2b7a42alu;
 extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVMOResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCounter_UpdateInspectVMO_Ordinal = 0x4844746000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kCounter_UpdateInspectVMO_GenOrdinal = 0x50102ae9da53b142lu;
 extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVMOResponseTable;
 
 }  // namespace
@@ -651,6 +664,7 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kCounter_GetInspectVMO_Ordinal:
+    case kCounter_GetInspectVMO_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetInspectVMORequest>(msg);
       if (result.status != ZX_OK) {
@@ -662,6 +676,7 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       return true;
     }
     case kCounter_UpdateInspectVMO_Ordinal:
+    case kCounter_UpdateInspectVMO_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<UpdateInspectVMORequest>(msg);
       if (result.status != ZX_OK) {
@@ -837,9 +852,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kStats_GetMemoryStats_Ordinal = 0x3f74d35b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStats_GetMemoryStats_GenOrdinal = 0x686677932ae41074lu;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStats_GetCpuStats_Ordinal = 0x34c546a700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStats_GetCpuStats_GenOrdinal = 0x470e2684ca1ca19elu;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsResponseTable;
 
 }  // namespace
@@ -977,6 +996,7 @@ bool Stats::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kStats_GetMemoryStats_Ordinal:
+    case kStats_GetMemoryStats_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetMemoryStatsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -988,6 +1008,7 @@ bool Stats::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kStats_GetCpuStats_Ordinal:
+    case kStats_GetCpuStats_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetCpuStatsRequest>(msg);
       if (result.status != ZX_OK) {

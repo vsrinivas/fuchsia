@@ -61,7 +61,7 @@
       "methods": [
         {
           "ordinal": 2162845427462832128,
-          "generated_ordinal": 2162845427462832128,
+          "generated_ordinal": 257584335957785512,
           "name": "NoRequestNoResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -79,7 +79,7 @@
         },
         {
           "ordinal": 5617919293065789440,
-          "generated_ordinal": 5617919293065789440,
+          "generated_ordinal": 8101632395109729785,
           "name": "NoRequestEmptyResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -102,7 +102,7 @@
         },
         {
           "ordinal": 461856421957337088,
-          "generated_ordinal": 461856421957337088,
+          "generated_ordinal": 5054636755429784136,
           "name": "NoRequestWithResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -143,7 +143,7 @@
         },
         {
           "ordinal": 1856067372482297856,
-          "generated_ordinal": 1856067372482297856,
+          "generated_ordinal": 5108499630221504549,
           "name": "WithRequestNoResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -179,7 +179,7 @@
         },
         {
           "ordinal": 8570976206923497472,
-          "generated_ordinal": 8570976206923497472,
+          "generated_ordinal": 108302452954061159,
           "name": "WithRequestEmptyResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -220,7 +220,7 @@
         },
         {
           "ordinal": 1833854690685616128,
-          "generated_ordinal": 1833854690685616128,
+          "generated_ordinal": 383797738148261568,
           "name": "WithRequestWithResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -279,7 +279,7 @@
         },
         {
           "ordinal": 7602031305773023232,
-          "generated_ordinal": 7602031305773023232,
+          "generated_ordinal": 301337558307652787,
           "name": "OnEmptyResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -297,7 +297,7 @@
         },
         {
           "ordinal": 8811031017247735808,
-          "generated_ordinal": 8811031017247735808,
+          "generated_ordinal": 3069035692499413769,
           "name": "OnWithResponse",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -343,7 +343,7 @@
       "methods": [
         {
           "ordinal": 8887872801126481920,
-          "generated_ordinal": 8887872801126481920,
+          "generated_ordinal": 2364249812017832126,
           "name": "ErrorAsPrimitive",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -385,7 +385,7 @@
         },
         {
           "ordinal": 5518561143137763328,
-          "generated_ordinal": 5518561143137763328,
+          "generated_ordinal": 4597390537870356095,
           "name": "ErrorAsEnum",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -443,7 +443,7 @@
       "methods": [
         {
           "ordinal": 6153768471000776704,
-          "generated_ordinal": 6153768471000776704,
+          "generated_ordinal": 1954005452660588540,
           "name": "MethodA",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -496,7 +496,7 @@
         },
         {
           "ordinal": 2051602944112984064,
-          "generated_ordinal": 2051602944112984064,
+          "generated_ordinal": 2691096518916888736,
           "name": "EventA",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -549,7 +549,7 @@
         },
         {
           "ordinal": 776401560220467200,
-          "generated_ordinal": 776401560220467200,
+          "generated_ordinal": 6751311874614576291,
           "name": "MethodB",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
@@ -625,7 +625,7 @@
         },
         {
           "ordinal": 5405131567951511552,
-          "generated_ordinal": 5405131567951511552,
+          "generated_ordinal": 3948151641640179063,
           "name": "MutateSocket",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",

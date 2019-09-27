@@ -13,6 +13,7 @@ import (
 
 const (
 	FirstProtocolMethodOnFirstOrdinal uint64 = 0x2838a83100000000
+	FirstProtocolMethodOnFirstGenOrdinal uint64 = 0x580cbd0d43ccbe3b
 )
 
 type FirstProtocolInterface _bindings.ChannelProxy
@@ -46,6 +47,8 @@ type FirstProtocolStub struct {
 func (s_ *FirstProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case FirstProtocolMethodOnFirstOrdinal:
+		fallthrough
+	case FirstProtocolMethodOnFirstGenOrdinal:
 		err_ := s_.Impl.MethodOnFirst()
 		return nil, false, err_
 	}
@@ -70,6 +73,7 @@ type FirstProtocolEventProxy _bindings.ChannelProxy
 
 const (
 	SecondProtocolMethodOnSecondOrdinal uint64 = 0xd09c00f00000000
+	SecondProtocolMethodOnSecondGenOrdinal uint64 = 0x5785f9c1f2aece21
 )
 
 type SecondProtocolInterface _bindings.ChannelProxy
@@ -103,6 +107,8 @@ type SecondProtocolStub struct {
 func (s_ *SecondProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SecondProtocolMethodOnSecondOrdinal:
+		fallthrough
+	case SecondProtocolMethodOnSecondGenOrdinal:
 		err_ := s_.Impl.MethodOnSecond()
 		return nil, false, err_
 	}

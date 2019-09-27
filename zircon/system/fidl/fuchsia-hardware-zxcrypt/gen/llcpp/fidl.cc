@@ -13,10 +13,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Unseal_Ordinal = 0x7fb13b1100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDeviceManager_Unseal_GenOrdinal = 0x77a38acfb1b33056lu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_Ordinal = 0x3ecfec3100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDeviceManager_Seal_GenOrdinal = 0x6b740d57dd46950blu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
 
 }  // namespace
@@ -162,6 +166,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDeviceManager_Unseal_Ordinal:
+    case kDeviceManager_Unseal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<UnsealRequest>(msg);
       if (result.status != ZX_OK) {
@@ -174,6 +179,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       return true;
     }
     case kDeviceManager_Seal_Ordinal:
+    case kDeviceManager_Seal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SealRequest>(msg);
       if (result.status != ZX_OK) {

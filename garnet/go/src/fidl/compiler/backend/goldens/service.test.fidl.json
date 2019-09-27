@@ -16,7 +16,7 @@
       "methods": [
         {
           "ordinal": 2898251288619778048,
-          "generated_ordinal": 2898251288619778048,
+          "generated_ordinal": 6344653839727902267,
           "name": "MethodOnFirst",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/service.test.fidl",
@@ -44,7 +44,7 @@
       "methods": [
         {
           "ordinal": 939493167940501504,
-          "generated_ordinal": 939493167940501504,
+          "generated_ordinal": 6306721464597794337,
           "name": "MethodOnSecond",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/service.test.fidl",

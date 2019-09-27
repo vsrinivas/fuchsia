@@ -84,10 +84,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPayloadStream_RegisterVmo_GenOrdinal = 0x388d7fe44bcb4clu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPayloadStream_ReadData_GenOrdinal = 0x2ccde55366318afalu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
@@ -226,6 +230,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kPayloadStream_RegisterVmo_Ordinal:
+    case kPayloadStream_RegisterVmo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<RegisterVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -238,6 +243,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       return true;
     }
     case kPayloadStream_ReadData_Ordinal:
+    case kPayloadStream_ReadData_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadDataRequest>(msg);
       if (result.status != ZX_OK) {
@@ -503,52 +509,80 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializeAbr_Ordinal = 0x2233bf3300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_InitializeAbr_GenOrdinal = 0x715dddabfb08c8e1lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
+constexpr uint64_t kPaver_QueryActiveConfiguration_GenOrdinal = 0x5517c7c0119ded35lu;
+[[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_QueryConfigurationStatus_GenOrdinal = 0x63a9170989a1efdflu;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationActive_Ordinal = 0x942de4b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_SetConfigurationActive_GenOrdinal = 0x66a45688107aa07flu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationUnbootable_Ordinal = 0x52cf3c8200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_SetConfigurationUnbootable_GenOrdinal = 0x623c8fe814130d4alu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_SetActiveConfigurationHealthy_GenOrdinal = 0x6b86cae4d01d72c1lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_ReadAsset_Ordinal = 0x4b8e09f500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_ReadAsset_GenOrdinal = 0x30a69bd25198eb0lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WriteAsset_GenOrdinal = 0x68008e0190578208lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteVolumes_Ordinal = 0x71b3cf2600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WriteVolumes_GenOrdinal = 0x1dedf69f6f1f9ba7lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteBootloader_Ordinal = 0x4b6ba17600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WriteBootloader_GenOrdinal = 0x18099de6007b393lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteDataFile_Ordinal = 0x7b8433de00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WriteDataFile_GenOrdinal = 0x55cd644f9291ad5alu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipeVolumes_Ordinal = 0x6be96a000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WipeVolumes_GenOrdinal = 0x22124c31791b9fbelu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializePartitionTables_Ordinal = 0x5b692a5000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_InitializePartitionTables_GenOrdinal = 0xee77c2ceea6edddlu;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipePartitionTables_Ordinal = 0x5930adfc00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_WipePartitionTables_GenOrdinal = 0x327490536ea29d7clu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
 
@@ -1455,6 +1489,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kPaver_InitializeAbr_Ordinal:
+    case kPaver_InitializeAbr_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<InitializeAbrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1466,6 +1501,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_QueryActiveConfiguration_Ordinal:
+    case kPaver_QueryActiveConfiguration_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1477,6 +1513,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_QueryConfigurationStatus_Ordinal:
+    case kPaver_QueryConfigurationStatus_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<QueryConfigurationStatusRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1489,6 +1526,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_SetConfigurationActive_Ordinal:
+    case kPaver_SetConfigurationActive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetConfigurationActiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1501,6 +1539,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_SetConfigurationUnbootable_Ordinal:
+    case kPaver_SetConfigurationUnbootable_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetConfigurationUnbootableRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1513,6 +1552,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_SetActiveConfigurationHealthy_Ordinal:
+    case kPaver_SetActiveConfigurationHealthy_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetActiveConfigurationHealthyRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1524,6 +1564,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_ReadAsset_Ordinal:
+    case kPaver_ReadAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadAssetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1536,6 +1577,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WriteAsset_Ordinal:
+    case kPaver_WriteAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1548,6 +1590,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WriteVolumes_Ordinal:
+    case kPaver_WriteVolumes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteVolumesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1560,6 +1603,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WriteBootloader_Ordinal:
+    case kPaver_WriteBootloader_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteBootloaderRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1572,6 +1616,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WriteDataFile_Ordinal:
+    case kPaver_WriteDataFile_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteDataFileRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1584,6 +1629,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WipeVolumes_Ordinal:
+    case kPaver_WipeVolumes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WipeVolumesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1596,6 +1642,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_InitializePartitionTables_Ordinal:
+    case kPaver_InitializePartitionTables_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<InitializePartitionTablesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1608,6 +1655,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       return true;
     }
     case kPaver_WipePartitionTables_Ordinal:
+    case kPaver_WipePartitionTables_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WipePartitionTablesRequest>(msg);
       if (result.status != ZX_OK) {

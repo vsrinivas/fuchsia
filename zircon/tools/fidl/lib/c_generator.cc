@@ -797,9 +797,9 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       const auto& method = *method_with_info.method;
       NamedMethod named_method;
       std::string method_name = NameMethod(named_protocol.c_name, method);
-      named_method.ordinal = method.generated_ordinal32->value;
+      named_method.ordinal = static_cast<uint64_t>(method.generated_ordinal32->value) << 32;
       named_method.ordinal_name = NameOrdinal(method_name);
-      named_method.generated_ordinal = method.generated_ordinal32->value;
+      named_method.generated_ordinal = static_cast<uint64_t>(method.generated_ordinal64->value);
       named_method.generated_ordinal_name = NameGenOrdinal(method_name);
       named_method.identifier = NameIdentifier(method.name);
       named_method.c_name = method_name;
@@ -917,11 +917,10 @@ void CGenerator::ProduceProtocolForwardDeclaration(const NamedProtocol& named_pr
   for (const auto& method_info : named_protocol.methods) {
     {
       IOFlagsGuard reset_flags(&file_);
-      file_ << "#define " << method_info.ordinal_name << " ((uint64_t)0x" << std::uppercase
-            << std::hex << method_info.ordinal << std::dec << " << 32 )\n";
+      file_ << "#define " << method_info.ordinal_name << " ((uint64_t)0x"
+            << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
       file_ << "#define " << method_info.generated_ordinal_name << " ((uint64_t)0x"
-            << std::uppercase << std::hex << method_info.generated_ordinal << std::dec
-            << " << 32)\n";
+            << std::uppercase << std::hex << method_info.generated_ordinal << std::dec << ")\n";
     }
     if (method_info.request)
       GenerateStructTypedef(method_info.request->c_name);

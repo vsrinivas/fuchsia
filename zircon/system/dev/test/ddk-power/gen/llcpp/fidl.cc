@@ -132,10 +132,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_Ordinal = 0x5d89a15400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_GenOrdinal = 0x6f4b31b6d68abb48lu;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_Ordinal = 0x724b2ef700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_GenOrdinal = 0x15ff1a2b10784103lu;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 }  // namespace
@@ -279,6 +283,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kTestDevice_AddDeviceWithPowerArgs_Ordinal:
+    case kTestDevice_AddDeviceWithPowerArgs_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AddDeviceWithPowerArgsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -291,6 +296,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kTestDevice_GetCurrentDevicePowerState_Ordinal:
+    case kTestDevice_GetCurrentDevicePowerState_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetCurrentDevicePowerStateRequest>(msg);
       if (result.status != ZX_OK) {

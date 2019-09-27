@@ -272,7 +272,9 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 
 const (
 	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal uint64 = 0x71a1b4b700000000
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal uint64 = 0x2b158c786064d0de
 	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x3959ff0900000000
+	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal uint64 = 0x5ecf85aadd137696
 )
 
 type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
@@ -337,11 +339,15 @@ type TestProtocolStub struct {
 func (s_ *TestProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
+		fallthrough
+	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
 		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
 		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
 		out_.Xu = xu
 		return &out_, true, err_
 	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
+		fallthrough
+	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
 		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
 		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
 		out_.Xu = xu

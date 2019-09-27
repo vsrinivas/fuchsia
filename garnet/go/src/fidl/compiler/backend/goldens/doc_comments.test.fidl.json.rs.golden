@@ -222,7 +222,7 @@ impl futures::Stream for InterfaceEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			0x136d200d00000000 => {
+			0x136d200d00000000 | 0x914c226136244ed => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
@@ -371,7 +371,7 @@ impl futures::Stream for InterfaceRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				0x3f43684c00000000 => {
+				0x3f43684c00000000 | 0x60e700e002995ef8 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = InterfaceControlHandle {

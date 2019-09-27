@@ -24,9 +24,11 @@ SwitchingOrdinals::~SwitchingOrdinals() = default;
 const fidl_type_t* SwitchingOrdinals_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kSwitchingOrdinals_OrdinalFive_Ordinal:
+    case internal::kSwitchingOrdinals_OrdinalFive_GenOrdinal:
       *out_needs_response = false;
       return &test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
     case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
+    case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal:
       *out_needs_response = false;
       return &test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
     default:
@@ -38,8 +40,10 @@ const fidl_type_t* SwitchingOrdinals_RequestDecoder::GetType(uint64_t ordinal, b
 const fidl_type_t* SwitchingOrdinals_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
+    case internal::kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal:
       return &test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
     case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
+    case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal:
       return &test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
     default:
       return nullptr;
@@ -61,6 +65,7 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
+    case internal::kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal:
     {
       if (!EventOrdinalFifteen) {
         status = ZX_OK;
@@ -76,6 +81,7 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
       break;
     }
     case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
+    case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal:
     {
       if (!EventOnlyGeneratedOrdinal) {
         status = ZX_OK;
@@ -143,11 +149,13 @@ zx_status_t SwitchingOrdinals_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kSwitchingOrdinals_OrdinalFive_Ordinal:
+    case internal::kSwitchingOrdinals_OrdinalFive_GenOrdinal:
     {
       impl_->OrdinalFive();
       break;
     }
     case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
+    case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal:
     {
       impl_->OnlyGeneratedOrdinal();
       break;

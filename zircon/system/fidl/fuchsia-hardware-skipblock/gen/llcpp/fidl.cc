@@ -13,17 +13,25 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 0x61812f6e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSkipBlock_GetPartitionInfo_GenOrdinal = 0xf95442de92af21dlu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Read_Ordinal = 0x68e3be6200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSkipBlock_Read_GenOrdinal = 0x28fdd003439e980lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Write_Ordinal = 0x697d770a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSkipBlock_Write_GenOrdinal = 0x36b3b73dc0b576c8lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_WriteBytes_Ordinal = 0x4ce2ddf400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSkipBlock_WriteBytes_GenOrdinal = 0x6e1f96cd22fd1c2dlu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
 
@@ -289,6 +297,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kSkipBlock_GetPartitionInfo_Ordinal:
+    case kSkipBlock_GetPartitionInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetPartitionInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -300,6 +309,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kSkipBlock_Read_Ordinal:
+    case kSkipBlock_Read_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadRequest>(msg);
       if (result.status != ZX_OK) {
@@ -312,6 +322,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kSkipBlock_Write_Ordinal:
+    case kSkipBlock_Write_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteRequest>(msg);
       if (result.status != ZX_OK) {
@@ -324,6 +335,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       return true;
     }
     case kSkipBlock_WriteBytes_Ordinal:
+    case kSkipBlock_WriteBytes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteBytesRequest>(msg);
       if (result.status != ZX_OK) {

@@ -13,9 +13,13 @@ import (
 
 const (
 	SwitchingOrdinalsOrdinalFiveOrdinal uint64 = 0x7784636700000000
+	SwitchingOrdinalsOrdinalFiveGenOrdinal uint64 = 0x254f3bdfa9d3dcab
 	SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal uint64 = 0x27c9581f00000000
+	SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal uint64 = 0x163a45fcac049f5b
 	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint64 = 0x577495a100000000
+	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint64 = 0x15e4293098574a7
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal uint64 = 0x7fec464e00000000
+	SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal uint64 = 0x47107cabe23f6510
 )
 
 type SwitchingOrdinalsInterface _bindings.ChannelProxy
@@ -35,13 +39,13 @@ func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOrdinalFifteen() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_, SwitchingOrdinalsEventOrdinalFifteenGenOrdinal)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOnlyGeneratedOrdinal() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_, SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal)
 	return err
 }
 
@@ -68,9 +72,13 @@ type SwitchingOrdinalsStub struct {
 func (s_ *SwitchingOrdinalsStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SwitchingOrdinalsOrdinalFiveOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOrdinalFiveGenOrdinal:
 		err_ := s_.Impl.OrdinalFive()
 		return nil, false, err_
 	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal:
 		err_ := s_.Impl.OnlyGeneratedOrdinal()
 		return nil, false, err_
 	}

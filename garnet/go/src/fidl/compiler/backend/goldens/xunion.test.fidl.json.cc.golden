@@ -532,9 +532,11 @@ TestProtocol::~TestProtocol() = default;
 const fidl_type_t* TestProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
+    case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
       *out_needs_response = true;
       return &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
+    case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
       *out_needs_response = true;
       return &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
     default:
@@ -546,8 +548,10 @@ const fidl_type_t* TestProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* 
 const fidl_type_t* TestProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
+    case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
       return &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
+    case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
       return &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     default:
       return nullptr;
@@ -711,11 +715,13 @@ zx_status_t TestProtocol_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
+    case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
     {
       impl_->StrictXUnionHenceResponseMayBeStackAllocated(TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder(std::move(response)));
       break;
     }
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
+    case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
     {
       impl_->FlexibleXUnionHenceResponseMustBeHeapAllocated(TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder(std::move(response)));
       break;

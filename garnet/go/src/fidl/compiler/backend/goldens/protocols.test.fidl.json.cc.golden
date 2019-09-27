@@ -148,12 +148,15 @@ ChannelProtocol::~ChannelProtocol() = default;
 const fidl_type_t* ChannelProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kChannelProtocol_MethodA_Ordinal:
+    case internal::kChannelProtocol_MethodA_GenOrdinal:
       *out_needs_response = false;
       return &test_name_ChannelProtocolMethodARequestTable;
     case internal::kChannelProtocol_MethodB_Ordinal:
+    case internal::kChannelProtocol_MethodB_GenOrdinal:
       *out_needs_response = true;
       return &test_name_ChannelProtocolMethodBRequestTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
+    case internal::kChannelProtocol_MutateSocket_GenOrdinal:
       *out_needs_response = true;
       return &test_name_ChannelProtocolMutateSocketRequestTable;
     default:
@@ -165,10 +168,13 @@ const fidl_type_t* ChannelProtocol_RequestDecoder::GetType(uint64_t ordinal, boo
 const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kChannelProtocol_EventA_Ordinal:
+    case internal::kChannelProtocol_EventA_GenOrdinal:
       return &test_name_ChannelProtocolEventAEventTable;
     case internal::kChannelProtocol_MethodB_Ordinal:
+    case internal::kChannelProtocol_MethodB_GenOrdinal:
       return &test_name_ChannelProtocolMethodBResponseTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
+    case internal::kChannelProtocol_MutateSocket_GenOrdinal:
       return &test_name_ChannelProtocolMutateSocketResponseTable;
     default:
       return nullptr;
@@ -190,6 +196,7 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kChannelProtocol_EventA_Ordinal:
+    case internal::kChannelProtocol_EventA_GenOrdinal:
     {
       if (!EventA) {
         status = ZX_OK;
@@ -354,6 +361,7 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kChannelProtocol_MethodA_Ordinal:
+    case internal::kChannelProtocol_MethodA_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
@@ -362,6 +370,7 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       break;
     }
     case internal::kChannelProtocol_MethodB_Ordinal:
+    case internal::kChannelProtocol_MethodB_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
@@ -370,6 +379,7 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       break;
     }
     case internal::kChannelProtocol_MutateSocket_Ordinal:
+    case internal::kChannelProtocol_MutateSocket_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
@@ -454,21 +464,27 @@ WithAndWithoutRequestResponse::~WithAndWithoutRequestResponse() = default;
 const fidl_type_t* WithAndWithoutRequestResponse_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal:
       *out_needs_response = false;
       return &test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal:
       *out_needs_response = false;
       return &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     default:
@@ -480,16 +496,22 @@ const fidl_type_t* WithAndWithoutRequestResponse_RequestDecoder::GetType(uint64_
 const fidl_type_t* WithAndWithoutRequestResponse_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
     case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal:
       return &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
     default:
       return nullptr;
@@ -511,6 +533,7 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(::fidl::Message messa
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal:
     {
       if (!OnEmptyResponse) {
         status = ZX_OK;
@@ -526,6 +549,7 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(::fidl::Message messa
       break;
     }
     case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal:
     {
       if (!OnWithResponse) {
         status = ZX_OK;
@@ -787,21 +811,25 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal:
     {
       impl_->NoRequestNoResponse();
       break;
     }
     case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal:
     {
       impl_->NoRequestEmptyResponse(WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(std::move(response)));
       break;
     }
     case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal:
     {
       impl_->NoRequestWithResponse(WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(std::move(response)));
       break;
     }
     case internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
@@ -809,6 +837,7 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
@@ -816,6 +845,7 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    case internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal:
     {
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
@@ -1003,9 +1033,11 @@ WithErrorSyntax::~WithErrorSyntax() = default;
 const fidl_type_t* WithErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
     case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsEnum_GenOrdinal:
       *out_needs_response = true;
       return &test_name_WithErrorSyntaxErrorAsEnumRequestTable;
     default:
@@ -1017,8 +1049,10 @@ const fidl_type_t* WithErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, boo
 const fidl_type_t* WithErrorSyntax_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
       return &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsEnum_GenOrdinal:
       return &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     default:
       return nullptr;
@@ -1182,11 +1216,13 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
     {
       impl_->ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Responder(std::move(response)));
       break;
     }
     case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    case internal::kWithErrorSyntax_ErrorAsEnum_GenOrdinal:
     {
       impl_->ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Responder(std::move(response)));
       break;

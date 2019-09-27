@@ -12,6 +12,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 0x658708c800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kConnectivity_OnNetworkReachable_GenOrdinal = 0x6f099dcaa3ff5b7lu;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 }  // namespace
@@ -74,6 +76,7 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kConnectivity_OnNetworkReachable_Ordinal:
+    case kConnectivity_OnNetworkReachable_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnNetworkReachableResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -332,10 +335,14 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kNameLookup_LookupIp_Ordinal = 0x30c22b4c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kNameLookup_LookupIp_GenOrdinal = 0x58576c7210cd0f32lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNameLookup_LookupHostname_Ordinal = 0x17582c9400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kNameLookup_LookupHostname_GenOrdinal = 0x5dfea9b2c92f510alu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 
@@ -483,6 +490,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kNameLookup_LookupIp_Ordinal:
+    case kNameLookup_LookupIp_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<LookupIpRequest>(msg);
       if (result.status != ZX_OK) {
@@ -495,6 +503,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kNameLookup_LookupHostname_Ordinal:
+    case kNameLookup_LookupHostname_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<LookupHostnameRequest>(msg);
       if (result.status != ZX_OK) {

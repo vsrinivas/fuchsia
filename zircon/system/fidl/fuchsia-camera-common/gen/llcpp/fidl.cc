@@ -14,12 +14,20 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kStream_Start_Ordinal = 0x379994e300000000lu;
 [[maybe_unused]]
+constexpr uint64_t kStream_Start_GenOrdinal = 0x29e5df97942274dblu;
+[[maybe_unused]]
 constexpr uint64_t kStream_Stop_Ordinal = 0x8977a200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kStream_Stop_GenOrdinal = 0x7fc85867256c3ab2lu;
+[[maybe_unused]]
 constexpr uint64_t kStream_ReleaseFrame_Ordinal = 0x258c738c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStream_ReleaseFrame_GenOrdinal = 0x63a92caad17019c8lu;
 extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 0x69926e9500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStream_OnFrameAvailable_GenOrdinal = 0x60a4aa8c252e1ab6lu;
 
 }  // namespace
 
@@ -231,6 +239,7 @@ zx_status_t Stream::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kStream_OnFrameAvailable_Ordinal:
+    case kStream_OnFrameAvailable_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnFrameAvailableResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -254,6 +263,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kStream_Start_Ordinal:
+    case kStream_Start_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StartRequest>(msg);
       if (result.status != ZX_OK) {
@@ -265,6 +275,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kStream_Stop_Ordinal:
+    case kStream_Stop_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StopRequest>(msg);
       if (result.status != ZX_OK) {
@@ -276,6 +287,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kStream_ReleaseFrame_Ordinal:
+    case kStream_ReleaseFrame_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseFrameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -353,6 +365,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kVirtualCameraFactory_CreateDevice_Ordinal = 0x77cc2f4400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kVirtualCameraFactory_CreateDevice_GenOrdinal = 0x27229ac3c6f044c0lu;
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDeviceRequestTable;
 
 }  // namespace
@@ -435,6 +449,7 @@ bool VirtualCameraFactory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl:
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kVirtualCameraFactory_CreateDevice_Ordinal:
+    case kVirtualCameraFactory_CreateDevice_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateDeviceRequest>(msg);
       if (result.status != ZX_OK) {

@@ -126,13 +126,21 @@ func WithErrorSyntaxErrorAsEnumResultWithErr(err ErrorEnun) WithErrorSyntaxError
 }
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint64 = 0x1e03f87500000000
+	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint64 = 0x3931f96bc77fba8
 	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal uint64 = 0x4df6dbd500000000
+	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal uint64 = 0x706ec7bd335005f9
 	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal uint64 = 0x668d7f800000000
+	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal uint64 = 0x4625ad5934067a48
 	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint64 = 0x19c2137100000000
+	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal uint64 = 0x46e5095902913025
 	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 0x76f2397300000000
+	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal uint64 = 0x180c481d4a15967
 	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal uint64 = 0x1973292000000000
+	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal uint64 = 0x553860267eceec0
 	WithAndWithoutRequestResponseOnEmptyResponseOrdinal uint64 = 0x697fd73200000000
+	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal uint64 = 0x42e90e9a86944b3
 	WithAndWithoutRequestResponseOnWithResponseOrdinal uint64 = 0x7a47120700000000
+	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint64 = 0x2a9767b3ae6c2b09
 )
 
 type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
@@ -252,13 +260,13 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg str
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_, WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
 	resp_ := &withAndWithoutRequestResponseOnWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_, WithAndWithoutRequestResponseOnWithResponseGenOrdinal)
 	return resp_.Ret, err
 }
 
@@ -289,17 +297,25 @@ type WithAndWithoutRequestResponseStub struct {
 func (s_ *WithAndWithoutRequestResponseStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal:
 		err_ := s_.Impl.NoRequestNoResponse()
 		return nil, false, err_
 	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal:
 		err_ := s_.Impl.NoRequestEmptyResponse()
 		return nil, true, err_
 	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal:
 		ret, err_ := s_.Impl.NoRequestWithResponse()
 		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, true, err_
 	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal:
 		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -307,6 +323,8 @@ func (s_ *WithAndWithoutRequestResponseStub) DispatchImpl(ordinal_ uint64, data_
 		err_ := s_.Impl.WithRequestNoResponse(in_.Arg)
 		return nil, false, err_
 	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal:
 		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -314,6 +332,8 @@ func (s_ *WithAndWithoutRequestResponseStub) DispatchImpl(ordinal_ uint64, data_
 		err_ := s_.Impl.WithRequestEmptyResponse(in_.Arg)
 		return nil, true, err_
 	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal:
 		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -354,7 +374,9 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) err
 
 const (
 	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x7b58113900000000
+	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint64 = 0x20cf80ad7d9b60be
 	WithErrorSyntaxErrorAsEnumOrdinal uint64 = 0x4c95de1f00000000
+	WithErrorSyntaxErrorAsEnumGenOrdinal uint64 = 0x3fcd36560f812e7f
 )
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
@@ -419,11 +441,15 @@ type WithErrorSyntaxStub struct {
 func (s_ *WithErrorSyntaxStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:
 		result, err_ := s_.Impl.ErrorAsPrimitive()
 		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
 		out_.Result = result
 		return &out_, true, err_
 	case WithErrorSyntaxErrorAsEnumOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsEnumGenOrdinal:
 		result, err_ := s_.Impl.ErrorAsEnum()
 		out_ := withErrorSyntaxErrorAsEnumResponse{}
 		out_.Result = result
@@ -450,9 +476,13 @@ type WithErrorSyntaxEventProxy _bindings.ChannelProxy
 
 const (
 	ChannelProtocolMethodAOrdinal uint64 = 0x556693d200000000
+	ChannelProtocolMethodAGenOrdinal uint64 = 0x1b1e059b3f02bffc
 	ChannelProtocolEventAOrdinal uint64 = 0x1c78c20200000000
+	ChannelProtocolEventAGenOrdinal uint64 = 0x2558b206a254d8a0
 	ChannelProtocolMethodBOrdinal uint64 = 0xac6551b00000000
+	ChannelProtocolMethodBGenOrdinal uint64 = 0x5db17a61464744a3
 	ChannelProtocolMutateSocketOrdinal uint64 = 0x4b02e28600000000
+	ChannelProtocolMutateSocketGenOrdinal uint64 = 0x36caa6fff7569577
 )
 
 type channelProtocolMethodARequest struct {
@@ -538,7 +568,7 @@ func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
 
 func (p *ChannelProtocolInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &channelProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_, ChannelProtocolEventAGenOrdinal)
 	return resp_.A, resp_.B, err
 }
 
@@ -585,6 +615,8 @@ type ChannelProtocolStub struct {
 func (s_ *ChannelProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case ChannelProtocolMethodAOrdinal:
+		fallthrough
+	case ChannelProtocolMethodAGenOrdinal:
 		in_ := channelProtocolMethodARequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -592,6 +624,8 @@ func (s_ *ChannelProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handl
 		err_ := s_.Impl.MethodA(in_.A,in_.B)
 		return nil, false, err_
 	case ChannelProtocolMethodBOrdinal:
+		fallthrough
+	case ChannelProtocolMethodBGenOrdinal:
 		in_ := channelProtocolMethodBRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -601,6 +635,8 @@ func (s_ *ChannelProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handl
 		out_.Result = result
 		return &out_, true, err_
 	case ChannelProtocolMutateSocketOrdinal:
+		fallthrough
+	case ChannelProtocolMutateSocketGenOrdinal:
 		in_ := channelProtocolMutateSocketRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, false, err_

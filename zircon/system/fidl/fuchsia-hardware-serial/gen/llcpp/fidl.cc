@@ -13,9 +13,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetClass_Ordinal = 0x6549990f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetClass_GenOrdinal = 0x3d48bbcee248ab8blu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_SetConfig_GenOrdinal = 0x771a0946f6f87173lu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace
@@ -154,6 +158,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_GetClass_Ordinal:
+    case kDevice_GetClass_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetClassRequest>(msg);
       if (result.status != ZX_OK) {
@@ -165,6 +170,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_SetConfig_Ordinal:
+    case kDevice_SetConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetConfigRequest>(msg);
       if (result.status != ZX_OK) {

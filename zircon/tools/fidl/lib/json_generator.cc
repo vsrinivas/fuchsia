@@ -319,7 +319,7 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     EmitNumeric(static_cast<uint64_t>(value.generated_ordinal32->value) << 32);
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("generated_ordinal");
-    EmitNumeric(static_cast<uint64_t>(value.generated_ordinal32->value) << 32);
+    EmitNumeric(static_cast<uint64_t>(value.generated_ordinal64->value));
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameLocation(value.name));
     GenerateObjectMember("has_request", value.maybe_request != nullptr);

@@ -13,15 +13,23 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kLoader_Done_Ordinal = 0x501635da00000000lu;
 [[maybe_unused]]
+constexpr uint64_t kLoader_Done_GenOrdinal = 0x63ba6b76d3671001lu;
+[[maybe_unused]]
 constexpr uint64_t kLoader_LoadObject_Ordinal = 0x18d35e6000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLoader_LoadObject_GenOrdinal = 0x48c5a151d6df2853lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Config_Ordinal = 0x1adeb78d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLoader_Config_GenOrdinal = 0x6a8a1a1464632841lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Clone_Ordinal = 0x3862fcb900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kLoader_Clone_GenOrdinal = 0x57e643a9ab6e4c29lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
 
@@ -278,6 +286,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kLoader_Done_Ordinal:
+    case kLoader_Done_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DoneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -289,6 +298,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kLoader_LoadObject_Ordinal:
+    case kLoader_LoadObject_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<LoadObjectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -301,6 +311,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kLoader_Config_Ordinal:
+    case kLoader_Config_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -313,6 +324,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kLoader_Clone_Ordinal:
+    case kLoader_Clone_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {

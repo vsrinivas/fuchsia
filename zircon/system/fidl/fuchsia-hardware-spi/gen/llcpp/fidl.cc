@@ -13,14 +13,20 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDevice_Transmit_Ordinal = 0x589d02df00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Transmit_GenOrdinal = 0x5fdb4f4f36a3efd2lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Receive_Ordinal = 0x58529d900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Receive_GenOrdinal = 0x2327a558210150b1lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Exchange_Ordinal = 0x13c3394e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_Exchange_GenOrdinal = 0x5661a0cef18dd908lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
 
@@ -234,6 +240,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDevice_Transmit_Ordinal:
+    case kDevice_Transmit_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<TransmitRequest>(msg);
       if (result.status != ZX_OK) {
@@ -246,6 +253,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Receive_Ordinal:
+    case kDevice_Receive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReceiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -258,6 +266,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       return true;
     }
     case kDevice_Exchange_Ordinal:
+    case kDevice_Exchange_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ExchangeRequest>(msg);
       if (result.status != ZX_OK) {

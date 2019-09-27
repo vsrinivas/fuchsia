@@ -16,7 +16,7 @@
       "methods": [
         {
           "ordinal": 8612117681472012288,
-          "generated_ordinal": 8612117681472012288,
+          "generated_ordinal": 2688433334376455339,
           "name": "OrdinalFive",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
@@ -34,7 +34,7 @@
         },
         {
           "ordinal": 2866919527965261824,
-          "generated_ordinal": 2866919527965261824,
+          "generated_ordinal": 1601669569003691867,
           "name": "OnlyGeneratedOrdinal",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
@@ -52,7 +52,7 @@
         },
         {
           "ordinal": 6301826297320439808,
-          "generated_ordinal": 6301826297320439808,
+          "generated_ordinal": 98589441136096423,
           "name": "EventOrdinalFifteen",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
@@ -70,7 +70,7 @@
         },
         {
           "ordinal": 9217819838141956096,
-          "generated_ordinal": 9217819838141956096,
+          "generated_ordinal": 5120729853997311248,
           "name": "EventOnlyGeneratedOrdinal",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",

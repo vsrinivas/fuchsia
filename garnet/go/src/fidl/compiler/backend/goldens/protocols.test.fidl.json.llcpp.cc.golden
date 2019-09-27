@@ -72,11 +72,19 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal = 0x1b1e059b3f02bffclu;
+[[maybe_unused]]
 constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1c78c20200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kChannelProtocol_EventA_GenOrdinal = 0x2558b206a254d8a0lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0xac6551b00000000lu;
 [[maybe_unused]]
+constexpr uint64_t kChannelProtocol_MethodB_GenOrdinal = 0x5db17a61464744a3lu;
+[[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x4b02e28600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal = 0x36caa6fff7569577lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -334,6 +342,7 @@ zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kChannelProtocol_EventA_Ordinal:
+    case kChannelProtocol_EventA_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<EventAResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -357,6 +366,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kChannelProtocol_MethodA_Ordinal:
+    case kChannelProtocol_MethodA_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<MethodARequest>(msg);
       if (result.status != ZX_OK) {
@@ -369,6 +379,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       return true;
     }
     case kChannelProtocol_MethodB_Ordinal:
+    case kChannelProtocol_MethodB_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<MethodBRequest>(msg);
       if (result.status != ZX_OK) {
@@ -381,6 +392,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       return true;
     }
     case kChannelProtocol_MutateSocket_Ordinal:
+    case kChannelProtocol_MutateSocket_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
       if (result.status != ZX_OK) {
@@ -503,24 +515,40 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x1e03f87500000000lu;
 [[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal = 0x3931f96bc77fba8lu;
+[[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x4df6dbd500000000lu;
 [[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal = 0x706ec7bd335005f9lu;
+[[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x668d7f800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal = 0x4625ad5934067a48lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x19c2137100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal = 0x46e5095902913025lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x76f2397300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal = 0x180c481d4a15967lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x1973292000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal = 0x553860267eceec0lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x697fd73200000000lu;
 [[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal = 0x42e90e9a86944b3lu;
+[[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x7a47120700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal = 0x2a9767b3ae6c2b09lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -943,6 +971,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -951,6 +980,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
       return handlers.on_empty_response();
     }
     case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnWithResponseResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -974,6 +1004,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -985,6 +1016,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       return true;
     }
     case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -996,6 +1028,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       return true;
     }
     case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1007,6 +1040,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1019,6 +1053,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1031,6 +1066,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1271,9 +1307,13 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x20cf80ad7d9b60belu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal = 0x3fcd36560f812e7flu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
@@ -1411,6 +1451,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    case kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ErrorAsPrimitiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1422,6 +1463,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       return true;
     }
     case kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    case kWithErrorSyntax_ErrorAsEnum_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ErrorAsEnumRequest>(msg);
       if (result.status != ZX_OK) {

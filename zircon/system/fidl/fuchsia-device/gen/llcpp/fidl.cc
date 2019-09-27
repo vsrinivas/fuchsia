@@ -71,6 +71,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kNameProvider_GetDeviceName_Ordinal = 0x980ac2500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kNameProvider_GetDeviceName_GenOrdinal = 0x6030de8d2052b2celu;
 extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTable;
 
 }  // namespace
@@ -146,6 +148,7 @@ bool NameProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kNameProvider_GetDeviceName_Ordinal:
+    case kNameProvider_GetDeviceName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDeviceNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -452,53 +455,85 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kController_Bind_Ordinal = 0x30b1cd5d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_Bind_GenOrdinal = 0x3388f12801462769lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ScheduleUnbind_Ordinal = 0xd0cd4ba00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ScheduleUnbind_GenOrdinal = 0x6128ba9d76aff9clu;
 extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverName_Ordinal = 0x76995acd00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetDriverName_GenOrdinal = 0x26f6ecf97738afe8lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDeviceName_Ordinal = 0x377a34e000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetDeviceName_GenOrdinal = 0x69220024bb341abelu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetTopologicalPath_Ordinal = 0x430fc2d600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetTopologicalPath_GenOrdinal = 0x2689b37663e00788lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetEventHandle_Ordinal = 0x73cacb3600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetEventHandle_GenOrdinal = 0x60b4bf1536cb0ef4lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverLogFlags_Ordinal = 0x5c5b709300000000lu;
 [[maybe_unused]]
+constexpr uint64_t kController_GetDriverLogFlags_GenOrdinal = 0x7272c2cf685f4b16lu;
+[[maybe_unused]]
 constexpr uint64_t kController_SetDriverLogFlags_Ordinal = 0x7d56732b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetDriverLogFlags_GenOrdinal = 0x45a98c40a24b8cf0lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugSuspend_Ordinal = 0x65f2322400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_DebugSuspend_GenOrdinal = 0x37827c5e2f45e12elu;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugResume_Ordinal = 0x5fee29c400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_DebugResume_GenOrdinal = 0xe1555cdd68b40e6lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_RunCompatibilityTests_Ordinal = 0x484cd9af00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_RunCompatibilityTests_GenOrdinal = 0x58268c9ba1dc54d1lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePowerCaps_Ordinal = 0x70a9ecf200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetDevicePowerCaps_GenOrdinal = 0x19acb37026ae22dlu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_UpdatePowerStateMapping_Ordinal = 0x5200982600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_UpdatePowerStateMapping_GenOrdinal = 0x185489481614d7a6lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetPowerStateMapping_Ordinal = 0x4ca6662900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetPowerStateMapping_GenOrdinal = 0x1a509f4010ee5cbelu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Suspend_Ordinal = 0x5897568300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_Suspend_GenOrdinal = 0x6af131a48f7c8fdalu;
 extern "C" const fidl_type_t fuchsia_device_ControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSuspendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Resume_Ordinal = 0x363da84d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_Resume_GenOrdinal = 0x22c86261fd50a61elu;
 extern "C" const fidl_type_t fuchsia_device_ControllerResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerResumeResponseTable;
 
@@ -1518,6 +1553,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kController_Bind_Ordinal:
+    case kController_Bind_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<BindRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1530,6 +1566,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_ScheduleUnbind_Ordinal:
+    case kController_ScheduleUnbind_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ScheduleUnbindRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1541,6 +1578,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetDriverName_Ordinal:
+    case kController_GetDriverName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDriverNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1552,6 +1590,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetDeviceName_Ordinal:
+    case kController_GetDeviceName_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDeviceNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1563,6 +1602,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetTopologicalPath_Ordinal:
+    case kController_GetTopologicalPath_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetTopologicalPathRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1574,6 +1614,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetEventHandle_Ordinal:
+    case kController_GetEventHandle_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetEventHandleRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1585,6 +1626,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetDriverLogFlags_Ordinal:
+    case kController_GetDriverLogFlags_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDriverLogFlagsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1596,6 +1638,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_SetDriverLogFlags_Ordinal:
+    case kController_SetDriverLogFlags_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetDriverLogFlagsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1608,6 +1651,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_DebugSuspend_Ordinal:
+    case kController_DebugSuspend_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DebugSuspendRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1619,6 +1663,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_DebugResume_Ordinal:
+    case kController_DebugResume_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DebugResumeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1630,6 +1675,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_RunCompatibilityTests_Ordinal:
+    case kController_RunCompatibilityTests_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<RunCompatibilityTestsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1642,6 +1688,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetDevicePowerCaps_Ordinal:
+    case kController_GetDevicePowerCaps_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDevicePowerCapsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1653,6 +1700,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_UpdatePowerStateMapping_Ordinal:
+    case kController_UpdatePowerStateMapping_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<UpdatePowerStateMappingRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1665,6 +1713,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_GetPowerStateMapping_Ordinal:
+    case kController_GetPowerStateMapping_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetPowerStateMappingRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1676,6 +1725,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_Suspend_Ordinal:
+    case kController_Suspend_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SuspendRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1688,6 +1738,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       return true;
     }
     case kController_Resume_Ordinal:
+    case kController_Resume_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ResumeRequest>(msg);
       if (result.status != ZX_OK) {
