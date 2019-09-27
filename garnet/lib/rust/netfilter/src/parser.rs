@@ -89,11 +89,19 @@ WHITESPACE = _{ " " }
 
 pub struct FilterRuleParser;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     Pest(pest::error::Error<Rule>),
     Addr(std::net::AddrParseError),
     Num(std::num::ParseIntError),
+    Invalid(InvalidReason),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InvalidReason {
+    MixedIPVersions,
+    InvalidPortRange,
+    PortRangeLengthMismatch,
 }
 
 fn parse_action(pair: Pair<Rule>) -> filter::Action {
@@ -321,13 +329,67 @@ fn parse_rdr(pair: Pair<Rule>) -> Result<filter::Rdr, Error> {
     })
 }
 
+fn validate_port_range(range: &filter::PortRange) -> Result<(), Error> {
+    if (range.start == 0 && range.end != 0) || range.start > range.end {
+        return Err(Error::Invalid(InvalidReason::InvalidPortRange));
+    }
+    Ok(())
+}
+
+fn port_range_length(range: &filter::PortRange) -> Result<u16, Error> {
+    let () = validate_port_range(&range)?;
+    Ok(range.end - range.start)
+}
+
+fn ip_version_eq(left: &net::IpAddress, right: &net::IpAddress) -> bool {
+    match (left, right) {
+        (net::IpAddress::Ipv4(_), net::IpAddress::Ipv4(_))
+        | (net::IpAddress::Ipv6(_), net::IpAddress::Ipv6(_)) => true,
+        (net::IpAddress::Ipv4(_), net::IpAddress::Ipv6(_))
+        | (net::IpAddress::Ipv6(_), net::IpAddress::Ipv4(_)) => false,
+    }
+}
+
+fn validate_rule(rule: &filter::Rule) -> Result<(), Error> {
+    if let (Some(src_subnet), Some(dst_subnet)) = (&rule.src_subnet, &rule.dst_subnet) {
+        if !ip_version_eq(&src_subnet.addr, &dst_subnet.addr) {
+            return Err(Error::Invalid(InvalidReason::MixedIPVersions));
+        }
+    }
+    let () = validate_port_range(&rule.src_port_range)?;
+    let () = validate_port_range(&rule.dst_port_range)?;
+
+    Ok(())
+}
+
+fn validate_nat(nat: &filter::Nat) -> Result<(), Error> {
+    if !ip_version_eq(&nat.src_subnet.addr, &nat.new_src_addr) {
+        return Err(Error::Invalid(InvalidReason::MixedIPVersions));
+    }
+
+    Ok(())
+}
+
+fn validate_rdr(rdr: &filter::Rdr) -> Result<(), Error> {
+    if !ip_version_eq(&rdr.dst_addr, &rdr.new_dst_addr) {
+        return Err(Error::Invalid(InvalidReason::MixedIPVersions));
+    }
+    if port_range_length(&rdr.dst_port_range)? != port_range_length(&rdr.new_dst_port_range)? {
+        return Err(Error::Invalid(InvalidReason::PortRangeLengthMismatch));
+    }
+
+    Ok(())
+}
+
 pub fn parse_str_to_rules(line: &str) -> Result<Vec<filter::Rule>, Error> {
     let mut pairs = FilterRuleParser::parse(Rule::rules, &line).map_err(Error::Pest)?;
     let mut rules = Vec::new();
     for filter_rule in pairs.next().unwrap().into_inner() {
         match filter_rule.as_rule() {
             Rule::rule => {
-                rules.push(parse_rule(filter_rule)?);
+                let rule = parse_rule(filter_rule)?;
+                let () = validate_rule(&rule)?;
+                rules.push(rule);
             }
             Rule::EOI => (),
             _ => unreachable!(),
@@ -342,7 +404,9 @@ pub fn parse_str_to_nat_rules(line: &str) -> Result<Vec<filter::Nat>, Error> {
     for filter_rule in pairs.next().unwrap().into_inner() {
         match filter_rule.as_rule() {
             Rule::nat => {
-                nat_rules.push(parse_nat(filter_rule)?);
+                let nat = parse_nat(filter_rule)?;
+                let () = validate_nat(&nat)?;
+                nat_rules.push(nat);
             }
             Rule::EOI => (),
             _ => unreachable!(),
@@ -357,7 +421,9 @@ pub fn parse_str_to_rdr_rules(line: &str) -> Result<Vec<filter::Rdr>, Error> {
     for filter_rule in pairs.next().unwrap().into_inner() {
         match filter_rule.as_rule() {
             Rule::rdr => {
-                rdr_rules.push(parse_rdr(filter_rule)?);
+                let rdr = parse_rdr(filter_rule)?;
+                let () = validate_rdr(&rdr)?;
+                rdr_rules.push(rdr);
             }
             Rule::EOI => (),
             _ => unreachable!(),
@@ -370,65 +436,11 @@ pub fn parse_str_to_rdr_rules(line: &str) -> Result<Vec<filter::Rdr>, Error> {
 mod test {
     use super::*;
 
-    fn test_parse_line_to_rules(line: &str, expected: &[filter::Rule]) {
-        let mut iter = expected.iter();
-        match FilterRuleParser::parse(Rule::rules, &line) {
-            Ok(mut pairs) => {
-                for filter_rule in pairs.next().unwrap().into_inner() {
-                    match filter_rule.as_rule() {
-                        Rule::rule => {
-                            assert_eq!(parse_rule(filter_rule).unwrap(), *iter.next().unwrap());
-                        }
-                        Rule::EOI => (),
-                        _ => unreachable!(),
-                    }
-                }
-            }
-            Err(e) => panic!("Parse error: {}", e),
-        }
-    }
-
-    fn test_parse_line_to_nat_rules(line: &str, expected: &[filter::Nat]) {
-        let mut iter = expected.iter();
-        match FilterRuleParser::parse(Rule::nat_rules, &line) {
-            Ok(mut pairs) => {
-                for filter_rule in pairs.next().unwrap().into_inner() {
-                    match filter_rule.as_rule() {
-                        Rule::nat => {
-                            assert_eq!(parse_nat(filter_rule).unwrap(), *iter.next().unwrap());
-                        }
-                        Rule::EOI => (),
-                        _ => unreachable!(),
-                    }
-                }
-            }
-            Err(e) => panic!("Parse error: {}", e),
-        }
-    }
-
-    fn test_parse_line_to_rdr_rules(line: &str, expected: &[filter::Rdr]) {
-        let mut iter = expected.iter();
-        match FilterRuleParser::parse(Rule::rdr_rules, &line) {
-            Ok(mut pairs) => {
-                for filter_rule in pairs.next().unwrap().into_inner() {
-                    match filter_rule.as_rule() {
-                        Rule::rdr => {
-                            assert_eq!(parse_rdr(filter_rule).unwrap(), *iter.next().unwrap());
-                        }
-                        Rule::EOI => (),
-                        _ => unreachable!(),
-                    }
-                }
-            }
-            Err(e) => panic!("Parse error: {}", e),
-        }
-    }
-
     #[test]
     fn test_rule_with_proto_any() {
-        test_parse_line_to_rules(
-            "pass in;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -442,15 +454,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_proto_tcp() {
-        test_parse_line_to_rules(
-            "pass in proto tcp;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -464,15 +476,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_multiple_rules() {
-        test_parse_line_to_rules(
-            "pass in proto tcp; drop out proto udp;",
-            &[
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp; drop out proto udp;"),
+            Ok(vec![
                 filter::Rule {
                     action: filter::Action::Pass,
                     direction: filter::Direction::Incoming,
@@ -503,15 +515,15 @@ mod test {
                     log: false,
                     keep_state: true,
                 },
-            ],
+            ])
         );
     }
 
     #[test]
     fn test_rule_with_from_v4_address() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from 1.2.3.4/24;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from 1.2.3.4/24;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -528,15 +540,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_from_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from port 10000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from port 10000;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -550,15 +562,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_from_range() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from range 10000:10010;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from range 10000:10010;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -572,15 +584,31 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
+        );
+    }
+
+    #[test]
+    fn test_rule_with_from_invalid_range_1() {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from range 0:5;"),
+            Err(Error::Invalid(InvalidReason::InvalidPortRange))
+        );
+    }
+
+    #[test]
+    fn test_rule_with_from_invalid_range_2() {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from range 10005:10000;"),
+            Err(Error::Invalid(InvalidReason::InvalidPortRange))
         );
     }
 
     #[test]
     fn test_rule_with_from_v4_address_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from 1.2.3.4/24 port 10000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from 1.2.3.4/24 port 10000;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -597,15 +625,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_from_not_v4_address_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from !1.2.3.4/24 port 10000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from !1.2.3.4/24 port 10000;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -622,15 +650,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_from_v6_address_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from 1234:5678::/32 port 10000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp from 1234:5678::/32 port 10000;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -649,15 +677,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_to_v6_address_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp to 1234:5678::/32 port 10000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp to 1234:5678::/32 port 10000;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -676,15 +704,27 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_from_v6_address_port_to_v4_address_port() {
-        test_parse_line_to_rules(
-            "pass in proto tcp from 1234:5678::/32 port 10000 to 1.2.3.4/8 port 1000;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules(
+                "pass in proto tcp from 1234:5678::/32 port 10000 to 1.2.3.4/8 port 1000;"
+            ),
+            Err(Error::Invalid(InvalidReason::MixedIPVersions))
+        );
+    }
+
+    #[test]
+    fn test_rule_with_from_v6_address_port_to_v6_address_port() {
+        assert_eq!(
+            parse_str_to_rules(
+                "pass in proto tcp from 1234:5678::/32 port 10000 to 2345:6789::/32 port 1000;"
+            ),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -698,23 +738,25 @@ mod test {
                 src_subnet_invert_match: false,
                 src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    prefix_len: 8,
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: [0x23, 0x45, 0x67, 0x89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    }),
+                    prefix_len: 32,
                 })),
                 dst_subnet_invert_match: false,
                 dst_port_range: filter::PortRange { start: 1000, end: 1000 },
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_log_no_state() {
-        test_parse_line_to_rules(
-            "pass in proto tcp log no state;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in proto tcp log no state;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: false,
@@ -728,15 +770,15 @@ mod test {
                 nic: 0,
                 log: true,
                 keep_state: false,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rule_with_keep_state() {
-        test_parse_line_to_rules(
-            "pass in quick proto tcp keep state;",
-            &[filter::Rule {
+        assert_eq!(
+            parse_str_to_rules("pass in quick proto tcp keep state;"),
+            Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
                 quick: true,
@@ -750,15 +792,15 @@ mod test {
                 nic: 0,
                 log: false,
                 keep_state: true,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_nat_rule_with_from_v4_subnet_to_v4_address() {
-        test_parse_line_to_nat_rules(
-            "nat from 1.2.3.0/24 -> from 192.168.1.1;",
-            &[filter::Nat {
+        assert_eq!(
+            parse_str_to_nat_rules("nat from 1.2.3.0/24 -> from 192.168.1.1;"),
+            Ok(vec![filter::Nat {
                 proto: filter::SocketProtocol::Any,
                 src_subnet: net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
@@ -766,15 +808,15 @@ mod test {
                 },
                 new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 nic: 0,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_nat_rule_with_proto_tcp_from_v4_subnet_to_v4_address() {
-        test_parse_line_to_nat_rules(
-            "nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;",
-            &[filter::Nat {
+        assert_eq!(
+            parse_str_to_nat_rules("nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;"),
+            Ok(vec![filter::Nat {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
@@ -782,52 +824,113 @@ mod test {
                 },
                 new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 nic: 0,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rdr_rule_with_to_v4_address_port_to_v4_address_port() {
-        test_parse_line_to_rdr_rules(
-            "rdr to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
-            &[filter::Rdr {
+        assert_eq!(
+            parse_str_to_rdr_rules("rdr to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;"),
+            Ok(vec![filter::Rdr {
                 proto: filter::SocketProtocol::Any,
                 dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                 dst_port_range: filter::PortRange { start: 10000, end: 10000 },
                 new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 new_dst_port_range: filter::PortRange { start: 20000, end: 20000 },
                 nic: 0,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rdr_rule_with_proto_tcp_to_v4_address_port_to_v4_address_port() {
-        test_parse_line_to_rdr_rules(
-            "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
-            &[filter::Rdr {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;"
+            ),
+            Ok(vec![filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
                 dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                 dst_port_range: filter::PortRange { start: 10000, end: 10000 },
                 new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 new_dst_port_range: filter::PortRange { start: 20000, end: 20000 },
                 nic: 0,
-            }],
+            }])
         );
     }
 
     #[test]
     fn test_rdr_rule_with_to_v4_address_range_to_v4_address_range() {
-        test_parse_line_to_rdr_rules(
-            "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 192.168.1.1 range 20000:20005;",
-            &[filter::Rdr {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 192.168.1.1 range 20000:20005;"
+            ),
+            Ok(vec![filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
                 dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                 dst_port_range: filter::PortRange { start: 10000, end: 10005 },
                 new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 new_dst_port_range: filter::PortRange { start: 20000, end: 20005 },
                 nic: 0,
-            }],
+            }])
+        );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v4_address_range_to_v4_address_invalid_range() {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 192.168.1.1 range 0:5;"
+            ),
+            Err(Error::Invalid(InvalidReason::InvalidPortRange))
+        );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v4_address_range_to_v4_address_port_range_length_mismatch() {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 192.168.1.1 range 20000:20003;"
+            ),
+            Err(Error::Invalid(InvalidReason::PortRangeLengthMismatch))
+        );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v4_address_range_to_v6_address_range() {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 1234:5678:: range 20000:20005;"
+            ),
+            Err(Error::Invalid(InvalidReason::MixedIPVersions))
+        );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v6_address_range_to_v6_address_range() {
+        assert_eq!(
+            parse_str_to_rdr_rules(
+                "rdr proto tcp to 1234:5678:: range 10000:10005 -> to 2345:6789:: range 20000:20005;"
+            ),
+            Ok(vec![filter::Rdr {
+                proto: filter::SocketProtocol::Tcp,
+                dst_addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                }),
+                dst_port_range: filter::PortRange {
+                    start: 10000,
+                    end: 10005,
+                },
+                new_dst_addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: [0x23, 0x45, 0x67, 0x89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                }),
+                new_dst_port_range: filter::PortRange {
+                    start: 20000,
+                    end: 20005,
+                },
+                nic: 0,
+            }])
         );
     }
 }
