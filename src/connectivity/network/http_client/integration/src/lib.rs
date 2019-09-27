@@ -16,7 +16,6 @@ use {
 };
 
 const SERVER_IP: &str = "[::]";
-const SERVER_PORT: &str = "5646";
 const ROOT_DOCUMENT: &str = "Root document\n";
 
 pub fn serve_request(request: &Request) -> Response {
@@ -30,17 +29,18 @@ pub fn serve_request(request: &Request) -> Response {
     )
 }
 
-pub fn start_test_server() -> Result<(), Error> {
-    let address = format!("{}:{}", SERVER_IP, SERVER_PORT);
+pub fn start_test_server() -> Result<u16, Error> {
+    let address = format!("{}:0", SERVER_IP);
+    let server =
+        rouille::Server::new(address, serve_request).expect("failed to create rouille server");
+    let port = server.server_addr().port();
     thread::Builder::new().name("test-server".into()).spawn(move || {
-        rouille::start_server(address, serve_request);
+        server.run();
     })?;
 
-    Ok(())
+    Ok(port)
 }
 
-// Disabled because test is flaky. See FLK-217.
-#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn test_new_client() -> Result<(), Error> {
     test_oldhttp(fuchsia_single_component_package_url!("http_client"), false).await
@@ -52,7 +52,7 @@ async fn test_old_client() -> Result<(), Error> {
 }
 
 async fn test_oldhttp(package_path: &str, check_body: bool) -> Result<(), Error> {
-    start_test_server()?;
+    let server_port = start_test_server()?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
     let http_client = launch(&launcher, package_path.to_string(), None)
@@ -63,7 +63,7 @@ async fn test_oldhttp(package_path: &str, check_body: bool) -> Result<(), Error>
     service.create_url_loader(loader_server)?;
 
     let mut request = oldhttp::UrlRequest {
-        url: "http://127.0.0.1:5646/".to_string(),
+        url: format!("http://127.0.0.1:{}/", server_port).to_string(),
         method: "GET".to_string(),
         headers: None,
         body: None,
@@ -75,11 +75,12 @@ async fn test_oldhttp(package_path: &str, check_body: bool) -> Result<(), Error>
     let response = loader.start(&mut request).await?;
 
     assert_eq!(response.status_code, 200);
-    let expected_header_names = ["Server", "Date", "Content-Type", "Content-Length"];
+    let expected_header_names = ["server", "date", "content-type", "content-length"];
     // If the webserver started above ever returns different headers, or changes the order, this
-    // assertion will fail.
+    // assertion will fail. Note that case doesn't matter, and can vary across HTTP client
+    // implementations, so we lowercase all the header keys before checking.
     let response_headers: Vec<String> =
-        response.headers.unwrap().iter().map(|h| h.name.clone()).collect();
+        response.headers.unwrap().iter().map(|h| h.name.to_lowercase()).collect();
     assert_eq!(&response_headers, &expected_header_names);
 
     if check_body {
