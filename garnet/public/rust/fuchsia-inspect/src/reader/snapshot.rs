@@ -92,18 +92,17 @@ impl Snapshot {
 /// and nobody is writing to it.
 fn header_generation_count(bytes: &[u8]) -> Option<u64> {
     if bytes.len() < 16 {
-        None
-    } else {
-        fence(Ordering::Acquire);
-        BlockIterator::from(&bytes[..16])
-            .find(|block| {
-                block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
-                    && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
-                    && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
-                    && !block.header_is_locked().unwrap()
-            })
-            .and_then(|block| block.header_generation_count().ok())
+        return None;
     }
+    fence(Ordering::Acquire);
+    BlockIterator::from(&bytes[..16])
+        .find(|block| {
+            block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
+                && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
+                && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+                && !block.header_is_locked().unwrap()
+        })
+        .and_then(|block| block.header_generation_count().ok())
 }
 
 /// Construct a snapshot from a byte array.
@@ -111,7 +110,7 @@ impl TryFrom<&[u8]> for Snapshot {
     type Error = failure::Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if header_generation_count(&bytes[..16]).is_some() {
+        if header_generation_count(&bytes).is_some() {
             Ok(Snapshot { buffer: bytes.to_vec() })
         } else {
             bail!("expected block with at least a header");
@@ -124,13 +123,10 @@ impl TryFrom<Vec<u8>> for Snapshot {
     type Error = failure::Error;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        if header_generation_count(&bytes[..16]).is_some() {
-            Ok(Snapshot { buffer: bytes })
-        } else {
-            bail!("expected block with at least a header");
-        }
+        Snapshot::try_from(&bytes[..])
     }
 }
+
 /// Construct a snapshot from a VMO.
 impl TryFrom<&Vmo> for Snapshot {
     type Error = failure::Error;
@@ -296,5 +292,14 @@ mod tests {
         })
         .is_err());
         Ok(())
+    }
+
+    #[test]
+    fn snapshot_from_few_bytes() {
+        let values = (0u8..16).collect::<Vec<u8>>();
+        assert!(Snapshot::try_from(&values[..]).is_err());
+        assert!(Snapshot::try_from(values).is_err());
+        assert!(Snapshot::try_from(vec![]).is_err());
+        assert!(Snapshot::try_from(vec![0u8, 1, 2, 3, 4]).is_err());
     }
 }
