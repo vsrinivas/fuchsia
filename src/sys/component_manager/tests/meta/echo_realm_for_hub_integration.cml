@@ -7,30 +7,18 @@
         {
             "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
-            "to": [
-                {
-                    "dest": "#hub_client",
-                },
-            ],
+            "to": [ "#hub_client" ]
         },
         {
             "directory": "/hub",
             "from": "framework",
-            "to": [
-              {
-                "dest": "#hub_client",
-              },
-            ],
+            "to": [ "#hub_client" ]
         },
         {
             "directory": "/hub",
             "from": "#echo_server",
-            "to": [
-              {
-                "dest": "#hub_client",
-                "as": "/sibling_hub",
-              },
-            ],
+            "to": [ "#hub_client" ],
+            "as": "/sibling_hub"
         },
     ],
     // Two children: a server and client. "hub_client" has "eager" startup so it

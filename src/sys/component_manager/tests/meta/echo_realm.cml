@@ -7,11 +7,7 @@
         {
             "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
-            "to": [
-                {
-                    "dest": "#echo_client",
-                },
-            ],
+            "to": [ "#echo_client" ]
         },
     ],
     // Two children: a server and client. "echo_client" has "eager" startup so it

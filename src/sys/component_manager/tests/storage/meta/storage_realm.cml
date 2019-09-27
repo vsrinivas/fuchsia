@@ -10,19 +10,12 @@
         {
             "storage": "data",
             "from": "#mystorage",
-            "to": [
-                { "dest": "#storage_user" },
-                { "dest": "#coll" },
-            ],
+            "to": [ "#storage_user", "#coll" ]
         },
         {
             "legacy_service": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
-            "to": [
-                { "dest": "#storage_user" },
-                { "dest": "#coll" },
-                { "dest": "#memfs" },
-            ]
+            "to": [ "#storage_user", "#coll", "#memfs" ]
         },
     ],
     "children": [

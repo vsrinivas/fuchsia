@@ -17,20 +17,12 @@
         {
             "legacy_service": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
-            "to": [
-                {
-                    "dest": "#coll",
-                },
-            ],
+            "to": [ "#coll" ]
         },
         {
             "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
-            "to": [
-                {
-                    "dest": "#coll",
-                },
-            ],
+            "to": [ "#coll" ]
         },
     ],
     "children": [

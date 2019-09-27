@@ -235,10 +235,12 @@ impl<'a> ValidationContext<'a> {
         prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("expose", expose)?;
+        let as_clause = expose as &dyn cml::AsClause;
         self.validate_target(
             "expose",
             expose,
-            expose,
+            as_clause.r#as(),
+            None,
             &mut HashSet::new(),
             prev_target_paths,
             &mut HashMap::new(),
@@ -260,32 +262,34 @@ impl<'a> ValidationContext<'a> {
         let mut prev_targets = HashSet::new();
         for to in offer.to.iter() {
             // Check that any referenced child in the target name is valid.
-            if let Some(caps) = cml::REFERENCE_RE.captures(&to.dest) {
+            if let Some(caps) = cml::REFERENCE_RE.captures(&to) {
                 if !self.all_children.contains(&caps[1]) && !self.all_collections.contains(&caps[1])
                 {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
                          or \"collections\"",
-                        &to.dest,
+                        &to,
                     )));
                 }
             }
 
             // Check that the capability is not being re-offered to a target that exposed it.
             if let Some(from_child) = &from_child {
-                if from_child == &to.dest {
+                if from_child == &to {
                     return Err(Error::validate(format!(
                         "Offer target \"{}\" is same as source",
-                        &to.dest,
+                        &to,
                     )));
                 }
             }
 
             // Perform common target validation.
+            let as_clause = offer as &dyn cml::AsClause;
             self.validate_target(
                 "offer",
                 offer,
-                to,
+                as_clause.r#as(),
+                Some(&to),
                 &mut prev_targets,
                 prev_target_paths,
                 prev_storage_types,
@@ -328,21 +332,22 @@ impl<'a> ValidationContext<'a> {
     /// - `keyword` is the keyword for the clause ("offer" or "expose").
     /// - `source_obj` is the object containing the source capability info. This is needed for the
     ///   default path.
-    /// - `target_obj` is the object containing the target capability info.
-    /// - `prev_target` holds target names collected for this source capability so far.
+    /// - `as_entry` is the field containing the target path.
+    /// - `to_entry` is the field containing the destination (target) of the capability.
+    /// - `prev_targets` holds target names collected for this source capability so far.
     /// - `prev_target_paths` holds target paths collected so far.
-    fn validate_target<T, U>(
+    fn validate_target<T>(
         &self,
         keyword: &str,
         source_obj: &'a T,
-        target_obj: &'a U,
+        as_entry: Option<&'a String>,
+        to_entry: Option<&'a String>,
         prev_targets: &mut HashSet<&'a str>,
         prev_target_paths: &mut PathMap<'a>,
         prev_storage_types: &mut PathMap<'a>,
     ) -> Result<(), Error>
     where
         T: cml::CapabilityClause + cml::FromClause,
-        U: cml::DestClause + cml::AsClause,
     {
         // Get the source capability's path.
         let source_path = if let Some(p) = source_obj.service().as_ref() {
@@ -352,19 +357,25 @@ impl<'a> ValidationContext<'a> {
         } else if let Some(p) = source_obj.directory().as_ref() {
             p
         } else if source_obj.storage().is_some() {
-            return self.validate_storage_target(source_obj, target_obj, prev_storage_types);
+            return self.validate_storage_target(
+                source_obj,
+                as_entry,
+                to_entry,
+                prev_storage_types,
+            );
         } else {
             return Err(Error::internal(format!("no capability path")));
         };
 
         // Get the target capability's path (defaults to the source path).
-        let target_path: &str = match &target_obj.r#as() {
+        let target_path: &str = match &as_entry {
             Some(a) => a,
             None => source_path,
         };
 
         // Check that target path is not a duplicate of another capability.
-        let target_name = target_obj.dest().unwrap_or("");
+        let target_name = to_entry.map_or("", |t| t.as_str());
+
         let paths_for_target =
             prev_target_paths.entry(target_name.to_string()).or_insert(HashSet::new());
         if !paths_for_target.insert(target_path) {
@@ -381,7 +392,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Check that the target is not a duplicate of a previous target (for this source).
-        if let Some(target_name) = target_obj.dest() {
+        if let Some(target_name) = to_entry {
             if !prev_targets.insert(target_name) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"{}\" target for \"{}\"",
@@ -397,28 +408,29 @@ impl<'a> ValidationContext<'a> {
     /// duplicate offers of any storage type to a single target and any referenced child is valid.
     /// - `source_obj` is the object containing the source capability info. This is needed for the
     ///   default path.
-    /// - `target_obj` is the object containing the target capability info.
+    /// - `as_entry` is the field containing the target capability info.
+    /// - `to_entry` is the object containing the destination (target) of the capability.
     /// - `prev_storage_types` holds storage types collected so far.
-    fn validate_storage_target<T, U>(
+    fn validate_storage_target<T>(
         &self,
         source_obj: &'a T,
-        target_obj: &'a U,
+        as_entry: Option<&'a String>,
+        to_entry: Option<&'a String>,
         prev_storage_types: &mut PathMap<'a>,
     ) -> Result<(), Error>
     where
         T: cml::CapabilityClause + cml::FromClause,
-        U: cml::DestClause + cml::AsClause,
     {
         let storage_type = match source_obj.storage().as_ref() {
             Some(s) => s,
             None => return Err(Error::internal("no storage type")),
         };
 
-        if target_obj.r#as().is_some() {
+        if as_entry.is_some() {
             return Err(Error::validate("\"as\" field cannot be used for storage offer targets"));
         }
 
-        let target_name = target_obj.dest().unwrap_or("");
+        let target_name = to_entry.map_or("", |t| t.as_str());
 
         // Check that the source of this storage capability does not match the target
         if let Some(f) = cml::REFERENCE_RE.captures(source_obj.from()).map(|c| c[1].to_string()) {
@@ -1577,61 +1589,39 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "to": [
-                            { "dest": "#echo_server" },
-                            { "dest": "#modular", "as": "/svc/fuchsia.logger.SysLog" }
-                        ]
+                        "to": [ "#echo_server", "#modular" ],
+                        "as": "/svc/fuchsia.logger.SysLog"
                     },
                     {
                         "service": "/svc/fuchsia.fonts.Provider",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
-                    },
-                    {
-                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
-                        "from": "#logger",
-                        "to": [
-                            { "dest": "#echo_server" },
-                            { "dest": "#modular", "as": "/svc/fuchsia.logger.LegacySysLog" }
-                        ]
+                        "to": [ "#echo_server" ]
                     },
                     {
                         "legacy_service": "/svc/fuchsia.fonts.LegacyProvider",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ]
                     },
                     {
                         "directory": "/data/assets",
                         "from": "self",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ]
                     },
                     {
                         "directory": "/data/index",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#modular" },
-                        ]
+                        "to": [ "#modular" ]
                     },
                     {
                         "directory": "/hub",
                         "from": "framework",
-                        "to": [
-                            { "dest": "#modular", "as": "/hub" }
-                        ]
+                        "to": [ "#modular" ],
+                        "as": "/hub"
                     },
                     {
                         "storage": "data",
                         "from": "#minfs",
-                        "to": [
-                            { "dest": "#modular"},
-                            { "dest": "#logger"},
-                        ]
+                        "to": [ "#modular", "#logger" ]
                     }
                 ],
                 "children": [
@@ -1666,20 +1656,12 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "to": [
-                            {
-                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-to",
-                            },
-                        ],
+                        "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
                     },
                     {
                         "storage": "data",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-storage",
-                        "to": [
-                            {
-                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-to",
-                            },
-                        ],
+                        "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
                     }
                 ],
                 "children": [
@@ -1713,9 +1695,7 @@ mod tests {
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#missing",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ],
                     } ]
                 }),
             result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
@@ -1725,9 +1705,7 @@ mod tests {
                     "offer": [ {
                         "storage": "cache",
                         "from": "#missing",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ],
                     } ]
                 }),
             result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"storage\"")),
@@ -1737,9 +1715,7 @@ mod tests {
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#invalid@",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ],
                     } ]
                 }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/from")),
@@ -1749,9 +1725,8 @@ mod tests {
                     "offer": [ {
                         "storage": "cache",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#logger", "as": "/invalid" },
-                        ]
+                        "to": [ "#logger" ],
+                        "as": "/invalid",
                     } ],
                     "children": [ {
                         "name": "logger",
@@ -1775,21 +1750,17 @@ mod tests {
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "to": [
-                        { "as": "/svc/fuchsia.logger.SysLog" }
-                    ]
+                    "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/to/0/dest")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/to")),
         },
         test_cml_offer_target_missing_to => {
             input = json!({
                 "offer": [ {
                     "service": "/snvc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "to": [
-                        { "dest": "#missing" }
-                    ]
+                    "to": [ "#missing" ],
                 } ],
                 "children": [ {
                     "name": "logger",
@@ -1803,21 +1774,19 @@ mod tests {
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "to": [
-                        { "dest": "self", "as": "/svc/fuchsia.logger.SysLog" }
-                    ]
+                    "to": [ "self" ],
+                    "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0/dest")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0")),
         },
         test_cml_offer_target_equals_from => {
             input = json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "to": [
-                        { "dest": "#logger", "as": "/svc/fuchsia.logger.SysLog", },
-                    ],
+                    "to": [ "#logger" ],
+                    "as": "/svc/fuchsia.logger.SysLog",
                 } ],
                 "children": [ {
                     "name": "logger", "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
@@ -1830,9 +1799,7 @@ mod tests {
                 "offer": [ {
                     "storage": "data",
                     "from": "#minfs",
-                    "to": [
-                        { "dest": "#logger" },
-                    ],
+                    "to": [ "#logger" ],
                 } ],
                 "children": [ {
                     "name": "logger",
@@ -1852,17 +1819,18 @@ mod tests {
                     {
                         "service": "/svc/logger",
                         "from": "self",
-                        "to": [
-                            { "dest": "#echo_server", "as": "/thing" },
-                            { "dest": "#scenic" }
-                        ]
+                        "to": [ "#echo_server" ],
+                        "as": "/thing"
+                    },
+                    {
+                        "service": "/svc/logger",
+                        "from": "self",
+                        "to": [ "#scenic" ],
                     },
                     {
                         "directory": "/thing",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#echo_server" }
-                        ]
+                        "to": [ "#echo_server" ]
                     }
                 ],
                 "children": [
@@ -1884,16 +1852,12 @@ mod tests {
                     {
                         "storage": "cache",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#echo_server" },
-                        ]
+                        "to": [ "#echo_server" ]
                     },
                     {
                         "storage": "cache",
                         "from": "#minfs",
-                        "to": [
-                            { "dest": "#echo_server" }
-                        ]
+                        "to": [ "#echo_server" ]
                     }
                 ],
                 "storage": [ {

@@ -91,12 +91,7 @@ pub struct Offer {
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub from: String,
-    pub to: Vec<To>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct To {
-    pub dest: String,
+    pub to: Vec<String>,
     pub r#as: Option<String>,
 }
 
@@ -132,11 +127,7 @@ pub trait CapabilityClause {
 }
 
 pub trait AsClause {
-    fn r#as(&self) -> &Option<String>;
-}
-
-pub trait DestClause {
-    fn dest(&self) -> Option<&str>;
+    fn r#as(&self) -> Option<&String>;
 }
 
 impl CapabilityClause for Use {
@@ -155,8 +146,8 @@ impl CapabilityClause for Use {
 }
 
 impl AsClause for Use {
-    fn r#as(&self) -> &Option<String> {
-        &self.r#as
+    fn r#as(&self) -> Option<&String> {
+        self.r#as.as_ref()
     }
 }
 
@@ -182,14 +173,8 @@ impl CapabilityClause for Expose {
 }
 
 impl AsClause for Expose {
-    fn r#as(&self) -> &Option<String> {
-        &self.r#as
-    }
-}
-
-impl DestClause for Expose {
-    fn dest(&self) -> Option<&str> {
-        None
+    fn r#as(&self) -> Option<&String> {
+        self.r#as.as_ref()
     }
 }
 
@@ -214,15 +199,9 @@ impl CapabilityClause for Offer {
     }
 }
 
-impl AsClause for To {
-    fn r#as(&self) -> &Option<String> {
-        &self.r#as
-    }
-}
-
-impl DestClause for To {
-    fn dest(&self) -> Option<&str> {
-        Some(&self.dest)
+impl AsClause for Offer {
+    fn r#as(&self) -> Option<&String> {
+        self.r#as.as_ref()
     }
 }
 

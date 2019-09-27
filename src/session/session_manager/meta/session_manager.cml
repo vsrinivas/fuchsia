@@ -24,9 +24,7 @@
             // Sessions use Scenic to display images.
             "legacy_service": "/svc/fuchsia.ui.scenic.Scenic",
             "from": "realm",
-            "to": [
-                { "dest": "#session" }
-            ]
+            "to": [ "#session" ]
         },
     ],
 }

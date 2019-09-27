@@ -8,9 +8,7 @@
         {
             "legacy_service": "/svc/fuchsia.sys2.SystemController",
             "from": "realm",
-            "to": [
-                { "dest": "#power_switch" },
-            ]
+            "to": [ "#power_switch" ]
         },
     ],
 

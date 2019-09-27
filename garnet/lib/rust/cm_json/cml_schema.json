@@ -314,31 +314,22 @@
             "uniqueItems": true,
             "minItems": 1,
             "items": {
-              "type": "object",
-              "required": [
-                "dest"
-              ],
-              "properties": {
-                "dest": {
-                  "title": "Offered capability target",
-                  "description": "The child component or collection to which the capability is being offered, with the syntax \"#$CHILD\".",
-                  "pattern": "^#[a-zA-Z0-9_-]+$",
-                  "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
-                  "examples": [
-                    "#scenic"
-                  ]
-                },
-                "as": {
-                  "title": "Offered capability target path",
-                  "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\"). Must be omitted for storage capabilities.",
-                  "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
-                  "examples": [
-                    "/data/assets/widgets",
-                    "/svc/fuchsia.ui.Scenic"
-                  ]
-                }
-              }
+              "type": "string",
+              "pattern": "^#[a-zA-Z0-9_-]+$",
+              "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+              "examples": [
+                "#scenic"
+              ]
             }
+          },
+          "as": {
+            "title": "Offered capability target path",
+            "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\"). Must be omitted for storage capabilities.",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "examples": [
+              "/data/assets/widgets",
+              "/svc/fuchsia.ui.Scenic"
+            ]
           }
         }
       }

@@ -362,9 +362,9 @@ fn extract_storage_targets(
         .to
         .iter()
         .map(|to| {
-            let caps = match cml::REFERENCE_RE.captures(&to.dest) {
+            let caps = match cml::REFERENCE_RE.captures(to.as_str()) {
                 Some(c) => Ok(c),
-                None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
+                None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
             }?;
             let name = caps[1].to_string();
 
@@ -387,13 +387,18 @@ fn extract_targets(
     all_collections: &HashSet<&str>,
 ) -> Result<Vec<(cm::Ref, String)>, Error> {
     let mut out_targets = vec![];
+
+    let target_path =
+        extract_target_path(in_obj, in_obj).ok_or(Error::internal("no capability".to_string()))?;
+
+    // Validate the "to" references.
     for to in in_obj.to.iter() {
-        let target_path =
-            extract_target_path(in_obj, to).ok_or(Error::internal("no capability".to_string()))?;
-        let caps = match cml::REFERENCE_RE.captures(&to.dest) {
+        let caps = match cml::REFERENCE_RE.captures(to.as_str()) {
             Some(c) => Ok(c),
-            None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
+            None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
         }?;
+
+        // Obtain the target reference.
         let name = caps[1].to_string();
         let target = if all_children.contains(&name as &str) {
             cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? })
@@ -402,7 +407,7 @@ fn extract_targets(
         } else {
             return Err(Error::internal(format!("dangling reference: \"{}\"", name)));
         };
-        out_targets.push((target, target_path));
+        out_targets.push((target, target_path.clone()))
     }
     Ok(out_targets)
 }
@@ -691,41 +696,49 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular", "as": "/svc/fuchsia.logger.SysLog" },
-                        ]
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "/svc/fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#modular" ],
+                        "as": "/svc/fuchsia.logger.SysLog"
                     },
                     {
                         "legacy_service": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular", "as": "/svc/fuchsia.logger.LegacySysLog" },
-                        ]
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+                        "from": "#logger",
+                        "to": [ "#modular" ],
+                        "as": "/svc/fuchsia.logger.LegacySysLog"
                     },
                     {
                         "directory": "/data/assets",
                         "from": "realm",
-                        "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular", "as": "/data" }
-                        ]
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "directory": "/data/assets",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                        "as": "/data"
                     },
                     {
                         "directory": "/hub",
                         "from": "framework",
-                        "to": [
-                            { "dest": "#modular", "as": "/hub" }
-                        ]
+                        "to": [ "#modular" ],
+                        "as": "/hub",
                     },
                     {
                         "storage": "data",
                         "from": "#logger-storage",
                         "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular" }
-                        ]
+                            "#netstack",
+                            "#modular"
+                        ],
                     },
                 ],
                 "children": [
@@ -1068,18 +1081,12 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular" },
-                        ],
+                        "to": [ "#netstack", "#modular" ]
                     },
                     {
                         "legacy_service": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [
-                            { "dest": "#netstack" },
-                            { "dest": "#modular" },
-                        ],
+                        "to": [ "#netstack", "#modular" ]
                     },
                 ],
                 "children": [
