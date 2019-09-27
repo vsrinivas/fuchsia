@@ -118,30 +118,64 @@ func TestParseBytes(t *testing.T) {
 		},
 		// base 10
 		{
-			gidl: `[1, 2, 3,]`,
+			gidl: `[3:raw(1, 2, 3,),]`,
 			expectedValue: map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: []byte{1, 2, 3},
+				ir.FidlWireFormat: {1, 2, 3},
 			},
 		},
 		// base 16
 		{
-			gidl: `[0x0, 0xff, 0xA, 0x0a, 7,]`,
+			gidl: `[5:raw(0x0, 0xff, 0xA, 0x0a, 7,),]`,
 			expectedValue: map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: []byte{0, 255, 10, 10, 7},
+				ir.FidlWireFormat: {0, 255, 10, 10, 7},
 			},
 		},
 		// character codes
 		{
-			gidl: `['h', 'e', 'l', 'l', 'o',]`,
+			gidl: `[5:raw('h', 'e', 'l', 'l', 'o',),]`,
 			expectedValue: map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: []byte{'h','e','l','l','o'},
+				ir.FidlWireFormat: {'h', 'e', 'l', 'l', 'o'},
+			},
+		},
+		// positive number
+		{
+			gidl: `[4:num(2147483647),]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: {0xff, 0xff, 0xff, 0x7f},
+			},
+		},
+		// negative number
+		{
+			gidl: `[2:num(-32768),]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: {0x00, 0x80},
+			},
+		},
+		// padding - default of 0
+		{
+			gidl: `[3:padding,]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: {0, 0, 0},
+			},
+		},
+		// padding with non default value
+		{
+			gidl: `[3:padding(0x33),]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: {0x33, 0x33, 0x33},
+			},
+		},
+		// multiple byte block types in same list
+		{
+			gidl: `[2:num(127), 3:padding(0x33),]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: {0x7f, 0x00, 0x33, 0x33, 0x33},
 			},
 		},
 		// multiple wire format style empty
 		{
-			gidl: `{}`,
-			expectedValue: map[ir.WireFormat][]byte{
-			},
+			gidl:          `{}`,
+			expectedValue: map[ir.WireFormat][]byte{},
 		},
 		// multiple wire format style empty bytes
 		{
@@ -155,21 +189,21 @@ func TestParseBytes(t *testing.T) {
 		// multiple wire format style w/ non-empty bytes
 		{
 			gidl: `{
-				fidl = [1, 2, 3,],
+				fidl = [3:raw(1, 2, 3,),],
 			}`,
 			expectedValue: map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: []byte{1, 2, 3},
+				ir.FidlWireFormat: {1, 2, 3},
 			},
 		},
 		// multiple wire formats
 		{
 			gidl: `{
-				fidl = [1, 2, 3,],
-				test = [4, 5, 6,],
+				fidl = [3:raw(1, 2, 3,),],
+				test = [3:padding(4),],
 			}`,
 			expectedValue: map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: []byte{1, 2, 3},
-				ir.TestWireFormat: []byte{4, 5, 6},
+				ir.FidlWireFormat: {1, 2, 3},
+				ir.TestWireFormat: {4, 4, 4},
 			},
 		},
 	}
@@ -181,6 +215,40 @@ func TestParseBytes(t *testing.T) {
 		})
 	}
 }
+
+func TestParseBytesFailures(t *testing.T) {
+	type testCase struct {
+		gidl         string
+		errSubstring string
+	}
+	testCases := []testCase{
+		{
+			gidl:         `[0:raw(),]`,
+			errSubstring: "non-zero",
+		},
+		{
+			gidl:         `[2:num(65536),]`,
+			errSubstring: "exceeds byte size",
+		},
+		{
+			gidl:         `[2:num(-32769),]`,
+			errSubstring: "exceeds byte size",
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl))
+		_, err := p.parseByteSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			if err == nil {
+				t.Fatalf("error was expected, but no error was returned")
+			}
+			if !strings.Contains(err.Error(), tc.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", tc.errSubstring, err.Error())
+			}
+		})
+	}
+}
+
 func TestParseSuccessCase(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
@@ -188,14 +256,16 @@ func TestParseSuccessCase(t *testing.T) {
 			first: "four",
 		},
 		bytes = [
-			0, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
 		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{{
-			Name: "OneStringOfMaxLengthFive-empty",
+			Name:       "OneStringOfMaxLengthFive-empty",
 			WireFormat: ir.FidlWireFormat,
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
@@ -215,7 +285,7 @@ func TestParseSuccessCase(t *testing.T) {
 		},
 		},
 		DecodeSuccess: []ir.DecodeSuccess{{
-			Name: "OneStringOfMaxLengthFive-empty",
+			Name:       "OneStringOfMaxLengthFive-empty",
 			WireFormat: ir.FidlWireFormat,
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
@@ -245,16 +315,18 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 			first: "four",
 		},
 		bytes = [
-			0, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
 		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{
 			{
-				Name: "OneStringOfMaxLengthFive-empty",
-			WireFormat: ir.FidlWireFormat,
+				Name:       "OneStringOfMaxLengthFive-empty",
+				WireFormat: ir.FidlWireFormat,
 				Value: ir.Object{
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
@@ -283,14 +355,16 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 			first: "four",
 		},
 		bytes = [
-			0, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
 		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		DecodeSuccess: []ir.DecodeSuccess{{
-			Name: "OneStringOfMaxLengthFive-empty",
+			Name:       "OneStringOfMaxLengthFive-empty",
 			WireFormat: ir.FidlWireFormat,
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
@@ -323,7 +397,7 @@ func TestParseEncodeFailureCase(t *testing.T) {
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		EncodeFailure: []ir.EncodeFailure{{
-			Name: "OneStringOfMaxLengthFive-too-long",
+			Name:       "OneStringOfMaxLengthFive-too-long",
 			WireFormat: ir.FidlWireFormat,
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
@@ -347,17 +421,19 @@ func TestParseDecodeFailureCase(t *testing.T) {
 	decode_failure("OneStringOfMaxLengthFive-wrong-length") {
 		type = TypeName,
 		bytes = [
-			1, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-			// one character missing
+			16:raw(
+				1, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				// one character missing
+			),
 		],
 		err = STRING_TOO_LONG,
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{DecodeFailure: []ir.DecodeFailure{{
-		Name: "OneStringOfMaxLengthFive-wrong-length",
-			WireFormat: ir.FidlWireFormat,
-		Type: "TypeName",
+		Name:       "OneStringOfMaxLengthFive-wrong-length",
+		WireFormat: ir.FidlWireFormat,
+		Type:       "TypeName",
 		Bytes: []byte{
 			1, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -376,8 +452,10 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 			first: "four",
 		},
 		bytes = [
-			0, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
 		],
 		bindings_allowlist = [go, rust,],
 		bindings_denylist = [go,],
@@ -386,8 +464,8 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{
 			{
-				Name: "OneStringOfMaxLengthFive-empty",
-			WireFormat: ir.FidlWireFormat,
+				Name:       "OneStringOfMaxLengthFive-empty",
+				WireFormat: ir.FidlWireFormat,
 				Value: ir.Object{
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
@@ -409,8 +487,8 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 		},
 		DecodeSuccess: []ir.DecodeSuccess{
 			{
-				Name: "OneStringOfMaxLengthFive-empty",
-			WireFormat: ir.FidlWireFormat,
+				Name:       "OneStringOfMaxLengthFive-empty",
+				WireFormat: ir.FidlWireFormat,
 				Value: ir.Object{
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
@@ -441,8 +519,10 @@ func TestParseFailsExtraKind(t *testing.T) {
 			first: "four",
 		},
 		bytes = [
-			0, 0, 0, 0, 0, 0, 0, 0, // length
-			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
 		],
 	}`
 	_, err := parse(gidl)

@@ -5,6 +5,8 @@
 package parser
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"strconv"
@@ -582,11 +584,51 @@ func (p *Parser) parseByteList() ([]byte, error) {
 	}
 	var bytes []byte
 	for !p.peekToken(tRsquare) {
-		lit, err := p.parseByte()
-		if err != nil {
-			return nil, err
+		// Read the byte size.
+		tok, ok := p.consumeToken(tText)
+		if !ok {
+			return nil, p.failExpectedToken(tText, tok)
 		}
-		bytes = append(bytes, lit)
+		if p.peekToken(tText) {
+			// First token was the label. Now get the byte size.
+			tok, _ = p.consumeToken(tText)
+		}
+		byteSize, err := strconv.ParseUint(tok.value, 10, 64)
+		if err != nil {
+			return nil, p.newParseError(tok, "error parsing byte block size: %v", err)
+		}
+		if byteSize == 0 {
+			return nil, p.newParseError(tok, "expected non-zero byte size")
+		}
+
+		if tok, ok := p.consumeToken(tColon); !ok {
+			return nil, p.failExpectedToken(tColon, tok)
+		}
+
+		// Read the type.
+		tok, ok = p.consumeToken(tText)
+		if !ok {
+			return nil, p.failExpectedToken(tText, tok)
+		}
+		var handler func(byteSize int) ([]byte, error)
+		switch tok.value {
+		case "raw":
+			handler = p.parseByteBlockRaw
+		case "num":
+			handler = p.parseByteBlockNum
+		case "padding":
+			handler = p.parseByteBlockPadding
+		default:
+			return nil, p.newParseError(tok, "unknown byte block type %q", tok.value)
+		}
+		if b, err := handler(int(byteSize)); err != nil {
+			return nil, err
+		} else if len(b) != int(byteSize) {
+			return nil, p.newParseError(tok, "byte block produced of incorrect size. got %d, want %d", len(b), byteSize)
+		} else {
+			bytes = append(bytes, b...)
+		}
+
 		if tok, ok := p.consumeToken(tComma); !ok {
 			return nil, p.failExpectedToken(tComma, tok)
 		}
@@ -595,6 +637,80 @@ func (p *Parser) parseByteList() ([]byte, error) {
 		return nil, p.failExpectedToken(tRsquare, tok)
 	}
 	return bytes, nil
+}
+
+func (p *Parser) parseByteBlockRaw(byteSize int) ([]byte, error) {
+	if tok, ok := p.consumeToken(tLparen); !ok {
+		return nil, p.failExpectedToken(tLparen, tok)
+	}
+	res := make([]byte, 0, byteSize)
+	for !p.peekToken(tRparen) {
+		b, err := p.parseByte()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, b)
+
+		if tok, ok := p.consumeToken(tComma); !ok {
+			return nil, p.failExpectedToken(tComma, tok)
+		}
+	}
+	if tok, ok := p.consumeToken(tRparen); !ok {
+		return nil, p.failExpectedToken(tRparen, tok)
+	}
+	return res, nil
+}
+
+func (p *Parser) parseByteBlockNum(byteSize int) ([]byte, error) {
+	if tok, ok := p.consumeToken(tLparen); !ok {
+		return nil, p.failExpectedToken(tLparen, tok)
+	}
+	neg := p.peekToken(tNeg)
+	if neg {
+		p.consumeToken(tNeg)
+	}
+	tok, ok := p.consumeToken(tText)
+	if !ok {
+		return nil, p.failExpectedToken(tText, tok)
+	}
+	buf := make([]byte, 8)
+	uintVal, err := strconv.ParseUint(tok.value, 0, 64)
+	if err != nil {
+		return nil, p.newParseError(tok, "error parsing unsigned integer num: %v", err)
+	}
+	if neg {
+		intVal := -int64(uintVal)
+		if intVal>>(uint(byteSize)*8-1) < -1 {
+			return nil, p.newParseError(tok, "num value %d exceeds byte size %d", intVal, byteSize)
+		}
+		uintVal = uint64(intVal)
+	} else {
+		if uintVal>>(uint(byteSize)*8) > 0 {
+			return nil, p.newParseError(tok, "num value %d exceeds byte size %d", uintVal, byteSize)
+		}
+	}
+	binary.LittleEndian.PutUint64(buf, uintVal)
+	if tok, ok := p.consumeToken(tRparen); !ok {
+		return nil, p.failExpectedToken(tRparen, tok)
+	}
+	return buf[:byteSize], nil
+}
+
+func (p *Parser) parseByteBlockPadding(byteSize int) ([]byte, error) {
+	if !p.peekToken(tLparen) {
+		return bytes.Repeat([]byte{0}, byteSize), nil
+	}
+	if tok, ok := p.consumeToken(tLparen); !ok {
+		return nil, p.failExpectedToken(tLparen, tok)
+	}
+	b, err := p.parseByte()
+	if err != nil {
+		return nil, err
+	}
+	if tok, ok := p.consumeToken(tRparen); !ok {
+		return nil, p.failExpectedToken(tRparen, tok)
+	}
+	return bytes.Repeat([]byte{b}, byteSize), nil
 }
 
 func (p *Parser) parseByte() (byte, error) {
