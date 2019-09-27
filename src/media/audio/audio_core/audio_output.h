@@ -92,16 +92,13 @@ class AudioOutput : public AudioDevice {
 
   void ForEachLink(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  bool SetupMix(Bookkeeping* info) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
-                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+  bool SetupTrim(Bookkeeping* info) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  bool ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   fxl::TimePoint next_sched_time_;

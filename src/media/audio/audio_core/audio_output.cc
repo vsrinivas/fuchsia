@@ -236,8 +236,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // If we have not set up for this renderer yet, do so. If the setup fails for any reason, stop
       // processing packets for this renderer.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix) ? SetupMix(audio_renderer, &info)
-                                                  : SetupTrim(audio_renderer, &info);
+        setup_done = (task_type == TaskType::Mix) ? SetupMix(&info) : SetupTrim(&info);
         if (!setup_done) {
           // Clear our ramps, if we exit with error?
           break;
@@ -248,7 +247,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
       release_audio_renderer_packet = (task_type == TaskType::Mix)
                                           ? ProcessMix(audio_renderer, &info, pkt_ref)
-                                          : ProcessTrim(audio_renderer, &info, pkt_ref);
+                                          : ProcessTrim(&info, pkt_ref);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
       // we should now do with the source packet.
@@ -277,8 +276,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
   }
 }
 
-bool AudioOutput::SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                           Bookkeeping* info) {
+bool AudioOutput::SetupMix(Bookkeeping* info) {
   TRACE_DURATION("audio", "AudioOutput::SetupMix");
   // If we need to recompose our transformation from destination frame space to source fractional
   // frames, do so now.
@@ -482,8 +480,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
   return consumed_source;
 }
 
-bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                            Bookkeeping* info) {
+bool AudioOutput::SetupTrim(Bookkeeping* info) {
   TRACE_DURATION("audio", "AudioOutput::SetupTrim");
   // Compute the cutoff time used to decide whether to trim packets. ForEachLink has already updated
   // our transformation, no need for us to do so here.
@@ -502,8 +499,7 @@ bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer
   return true;
 }
 
-bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                              Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
+bool AudioOutput::ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   TRACE_DURATION("audio", "AudioOutput::ProcessTrim");
   FXL_DCHECK(pkt_ref);
 
