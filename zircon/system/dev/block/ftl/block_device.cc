@@ -284,6 +284,7 @@ bool BlockDevice::RemoveFromList(FtlOp** operation) {
 }
 
 // Number of operations issued to the nand driver by each block device operation.
+__EXPORT
 thread_local int g_nand_op_count = 0;
 
 int BlockDevice::WorkerThread() {

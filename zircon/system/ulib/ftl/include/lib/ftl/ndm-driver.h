@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <zircon/compiler.h>
 
 struct ndm;
 
@@ -36,7 +37,7 @@ struct VolumeOptions {
 };
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.
-class NdmDriver {
+class __EXPORT NdmDriver {
  public:
   virtual ~NdmDriver() {}
 
@@ -80,7 +81,7 @@ class NdmDriver {
 };
 
 // Base functionality for a driver implementation.
-class NdmBaseDriver : public NdmDriver {
+class __EXPORT NdmBaseDriver : public NdmDriver {
  public:
   NdmBaseDriver() {}
   virtual ~NdmBaseDriver();

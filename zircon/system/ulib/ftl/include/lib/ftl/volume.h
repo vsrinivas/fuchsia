@@ -16,7 +16,7 @@ struct XfsVol;
 namespace ftl {
 
 // Interface for an upper-layer (block device) view of an FTL.
-class FtlInstance {
+class __EXPORT FtlInstance {
  public:
   virtual ~FtlInstance() {}
 
@@ -27,7 +27,7 @@ class FtlInstance {
 };
 
 // Exposes the upper layer (block device) interface of the FTL.
-class Volume {
+class __EXPORT Volume {
  public:
   // Basic stats about the state of the device.
   struct Stats {
@@ -84,7 +84,7 @@ class Volume {
 };
 
 // Implementation of the Volume interface.
-class VolumeImpl final : public Volume {
+class __EXPORT VolumeImpl final : public Volume {
  public:
   VolumeImpl(FtlInstance* owner) : owner_(owner) {}
   ~VolumeImpl() final {}

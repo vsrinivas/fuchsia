@@ -206,6 +206,7 @@ bool NdmBaseDriver::IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, cons
   return true;
 }
 
+__EXPORT
 bool InitModules() {
   if (!g_init_performed) {
     // Unfortunately, module initialization is a global affair, and there is
