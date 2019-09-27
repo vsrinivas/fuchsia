@@ -231,11 +231,7 @@ func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChec
 			actual:   attrs.MD5,
 		}
 	}
-	// Update the timestamp of the remote blob in this case, which is
-	// accomplished by copying the object over itself. This should be a fast
-	// metadata-only operation.
-	_, err = obj.CopierFrom(obj).Run(ctx)
-	return true, err
+	return true, nil
 }
 
 func (s cloudSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
