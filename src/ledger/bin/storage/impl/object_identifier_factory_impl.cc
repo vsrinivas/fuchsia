@@ -41,12 +41,16 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
       return;
     }
 
-    FXL_VLOG(1) << "ObjectIdentifier: stop tracking " << map_entry_->first;
+    ObjectDigest object_digest = map_entry_->first;
+    FXL_VLOG(2) << "ObjectIdentifier: stop tracking " << object_digest;
     FXL_DCHECK(tracker_->thread_checker_.IsCreationThreadCurrent());
     FXL_DCHECK(tracker_->dispatcher_checker_.IsCreationDispatcherCurrent());
     FXL_DCHECK(map_entry_->second.expired());
 
     tracker_->tokens_.erase(map_entry_);
+    if (tracker_->on_untracked_object_) {
+      tracker_->on_untracked_object_(object_digest);
+    }
   }
 
   ObjectIdentifierFactory* factory() const override { return tracker_.get(); }
@@ -75,7 +79,7 @@ std::shared_ptr<ObjectIdentifier::Token> ObjectIdentifierFactoryImpl::GetToken(
     FXL_DCHECK(!it->second.expired());
     return it->second.lock();
   }
-  FXL_VLOG(1) << "ObjectIdentifier: start tracking " << it->first;
+  FXL_VLOG(2) << "ObjectIdentifier: start tracking " << it->first;
   auto token = std::make_shared<TokenImpl>(weak_factory_.GetWeakPtr(), it);
   it->second = token;
   FXL_DCHECK(it->second.use_count() == 1);
@@ -91,6 +95,11 @@ long ObjectIdentifierFactoryImpl::count(const ObjectDigest& digest) const {
 }
 
 int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
+
+void ObjectIdentifierFactoryImpl::SetUntrackedCallback(
+    fit::function<void(const ObjectDigest&)> callback) {
+  on_untracked_object_ = std::move(callback);
+}
 
 bool ObjectIdentifierFactoryImpl::TrackDeletion(const ObjectDigest& object_digest) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());

@@ -36,6 +36,10 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
   // Returns the number of tracked identifiers.
   int size() const;
 
+  // Sets a |callback| to be called every time the number of live object identifiers for an object
+  // reaches 0.
+  void SetUntrackedCallback(fit::function<void(const ObjectDigest&)> callback);
+
   // ObjectIdentifierFactory:
   // Returns an object identifier for the provided parameters. If the |object_digest| is currently
   // pending deletion, marks the deletion as aborted.
@@ -58,6 +62,9 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
 
   // Current token for each live digest. Entries are cleaned up when the tokens expire.
   std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>> tokens_;
+
+  // Called every time the number of live object identifiers for an object reaches 0.
+  fit::function<void(const ObjectDigest&)> on_untracked_object_;
 
   // Every key in the map is an object digest pending deletion. The value indicates whether the
   // deletion must be aborted or not.

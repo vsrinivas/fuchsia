@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {
@@ -17,6 +18,7 @@ namespace ledger {
 class TestWithEnvironment : public gtest::TestLoopFixture {
  public:
   TestWithEnvironment();
+  TestWithEnvironment(storage::GarbageCollectionPolicy gc_policy);
 
  protected:
   // Runs the given test code in a coroutine.

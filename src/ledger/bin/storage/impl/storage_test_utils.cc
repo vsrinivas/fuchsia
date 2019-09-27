@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -175,6 +176,9 @@ Entry WithoutEntryId(Entry e) {
 }
 
 StorageTest::StorageTest() = default;
+
+StorageTest::StorageTest(GarbageCollectionPolicy gc_policy)
+    : ledger::TestWithEnvironment(gc_policy) {}
 
 StorageTest::~StorageTest() = default;
 

@@ -57,6 +57,7 @@ class JournalImpl : public Journal {
   // - the new commit if a new commit object has been created.
   // - a null commit if the operation is a no-op.
   // This Journal object should not be deleted during the operation.
+  // Note that |commit| is returned but not written to page storage.
   Status Commit(coroutine::CoroutineHandler* handler,
                 std::unique_ptr<const storage::Commit>* commit,
                 std::vector<ObjectIdentifier>* objects_to_sync);

@@ -903,6 +903,19 @@ void PageStorageImpl::GetCommitRootIdentifier(
   }
 }
 
+void PageStorageImpl::ScheduleObjectGarbageCollection(const ObjectDigest& object_digest) {
+  DeleteObject(object_digest,
+               callback::MakeScoped(
+                   weak_factory_.GetWeakPtr(),
+                   [this, object_digest](Status status, ObjectReferencesAndPriority references) {
+                     if (status == Status::OK) {
+                       for (const auto& [object_digest, priority] : references) {
+                         ScheduleObjectGarbageCollection(object_digest);
+                       }
+                     }
+                   }));
+}
+
 Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Batch* batch,
                                            std::vector<ObjectIdentifier> object_identifiers) {
   std::set<ObjectIdentifier> seen_identifiers;
@@ -1238,6 +1251,8 @@ void PageStorageImpl::GetOrDownloadPiece(
                     final_callback(status, nullptr);
                     return;
                   }
+                  // The piece is moved to |AddPiece| but is kept alive through the identifier
+                  // embedded in |object| which is passed to |final_callback|.
                   AddPiece(std::move(piece), source, is_object_synced, references,
                            [final_callback = std::move(final_callback),
                             object = std::move(object)](Status status) mutable {
@@ -1331,6 +1346,13 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   }
 
   RETURN_ON_ERROR(status);
+
+  if (environment_->gc_policy() == GarbageCollectionPolicy::EAGER_LIVE_REFERENCES) {
+    object_identifier_factory_.SetUntrackedCallback(
+        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](const ObjectDigest& object_digest) {
+          ScheduleObjectGarbageCollection(object_digest);
+        }));
+  }
 
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
@@ -1629,7 +1651,10 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
     RETURN_ON_ERROR(batch->AddHead(handler, head.second->GetId(), head.second->GetTimestamp()));
   }
 
-  // If adding local commits, mark all new pieces as local.
+  // If adding local commits, mark all new pieces as local. It is safe to discard |new_objects| at
+  // this point, because only the root piece of each commit needs to be kept alive (other pieces
+  // down the tree have on-disk references to each other), and each is referenced by its respective
+  // commit in |commits| or |commits_to_send|.
   RETURN_ON_ERROR(MarkAllPiecesLocal(handler, batch.get(), std::move(new_objects)));
   RETURN_ON_ERROR(batch->Execute(handler));
 

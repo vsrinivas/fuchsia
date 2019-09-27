@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
@@ -322,7 +323,10 @@ class ControlledLevelDb : public Db {
 
 class PageStorageTest : public StorageTest {
  public:
-  PageStorageTest() : encryption_service_(dispatcher()) {}
+  PageStorageTest() : PageStorageTest(ledger::kTestingGarbageCollectionPolicy) {}
+
+  PageStorageTest(GarbageCollectionPolicy gc_policy)
+      : StorageTest(gc_policy), encryption_service_(dispatcher()) {}
 
   ~PageStorageTest() override = default;
 
@@ -675,6 +679,12 @@ class PageStorageTest : public StorageTest {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
+};
+
+// A PageStorage test with garbage-collection disabled.
+class PageStorageTestNoGc : public PageStorageTest {
+ public:
+  PageStorageTestNoGc() : PageStorageTest(GarbageCollectionPolicy::NEVER) {}
 };
 
 TEST_F(PageStorageTest, AddGetLocalCommits) {
@@ -1206,7 +1216,9 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   });
 }
 
-TEST_F(PageStorageTest, AddHugeObjectFromLocal) {
+// This test implements its own garbage-collection to discover bugs earlier and with better
+// error messages.
+TEST_F(PageStorageTestNoGc, AddHugeObjectFromLocal) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     // Create data large enough to be split into pieces (and trigger potential garbage-collection
     // bugs: the more pieces, the more likely we are to hit them).
@@ -1309,7 +1321,9 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   EXPECT_EQ(status, Status::IO_ERROR);
 }
 
-TEST_F(PageStorageTest, DeleteObject) {
+// This test deletes objects manually, do not use automatic garbage-collection to keep
+// results predictable.
+TEST_F(PageStorageTestNoGc, DeleteObject) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     auto data = std::make_unique<ObjectData>(storage_->GetObjectIdentifierFactory(), "Some data",
                                              InlineBehavior::PREVENT);
@@ -1368,7 +1382,9 @@ ObjectReferencesAndPriority MakeObjectReferencesAndPriority(
 }
 
 // Tests that DeleteObject deletes both piece references and tree references.
-TEST_F(PageStorageTest, DeleteObjectWithReferences) {
+// This test deletes objects manually, do not use automatic garbage-collection to keep
+// results predictable.
+TEST_F(PageStorageTestNoGc, DeleteObjectWithReferences) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     // Create a valid random tree node object, with tree references and large enough to be split
     // into several pieces.
@@ -1463,7 +1479,9 @@ TEST_F(PageStorageTest, DeleteObjectWithReferences) {
 // This makes another attempt at the same deletions succeed: the root piece is now synchronized and
 // referenced by a non-head commit, and the piece containing "Some data" is not referenced by
 // anything (after the former deletion succeeds), making both of them garbage-collectable.
-TEST_F(PageStorageTest, DeleteObjectAbortsWhenOnDiskReference) {
+// This test deletes objects manually, do not use automatic garbage-collection to keep
+// results predictable.
+TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     auto data = std::make_unique<ObjectData>(&fake_factory_, "Some data", InlineBehavior::PREVENT);
     ObjectIdentifier object_identifier = data->object_identifier;
@@ -1591,7 +1609,9 @@ TEST_F(PageStorageTest, DeleteObjectAbortsWhenOnDiskReference) {
   });
 }
 
-TEST_F(PageStorageTest, DeleteObjectAbortsWhenLiveReference) {
+// This test deletes objects manually, do not use automatic garbage-collection to keep
+// results predictable.
+TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenLiveReference) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     auto data = std::make_unique<ObjectData>(&fake_factory_, "Some data", InlineBehavior::PREVENT);
     ObjectIdentifier object_identifier = data->object_identifier;
@@ -1952,7 +1972,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytesNotFound) {
                    Status::INTERNAL_NOT_FOUND);
 }
 
-TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
+// This test implements its own garbage-collection to discover bugs earlier and with better
+// error messages.
+TEST_F(PageStorageTestNoGc, GetHugeObjectPartFromSync) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 28672;
   int64_t size = 128;
@@ -2205,7 +2227,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   });
 }
 
-TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
+// This test implements its own garbage-collection to discover bugs earlier and with better
+// error messages.
+TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   // Build a random, valid tree node.
   std::vector<Entry> entries;
   std::map<size_t, ObjectIdentifier> children;
@@ -3785,6 +3809,38 @@ TEST_F(PageStorageTest, GetGenerationAndMissingParents) {
   EXPECT_EQ(status, Status::OK);
   EXPECT_EQ(generation, commit_to_add->GetGeneration());
   EXPECT_THAT(missing, ElementsAre(missing_parent->GetId()));
+}
+
+TEST_F(PageStorageTest, EagerGarbageCollection) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
+
+    bool called;
+    Status status;
+    ObjectIdentifier object_identifier;
+    storage_->AddObjectFromLocal(
+        ObjectType::BLOB, data.ToDataSource(), {},
+        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(object_identifier, data.object_identifier);
+
+    // The object is available.
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+
+    // Release the references to the object.
+    UntrackIdentifier(&object_identifier);
+    piece.reset();
+
+    // Give some time for the object to be collected.
+    RunLoopUntilIdle();
+
+    // Check that it has been collected.
+    RetrackIdentifier(&object_identifier);
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+  });
 }
 
 }  // namespace

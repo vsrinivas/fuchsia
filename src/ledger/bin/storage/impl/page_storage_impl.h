@@ -218,6 +218,10 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   void DeleteObject(ObjectDigest object_digest,
                     fit::function<void(Status, ObjectReferencesAndPriority references)> callback);
 
+  // Attempts to delete |object_digest|, and recursively schedules the deletion of the objects it
+  // references upon success.
+  void ScheduleObjectGarbageCollection(const ObjectDigest& object_digest);
+
   // Synchronous versions of API methods using coroutines.
   FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler);
 

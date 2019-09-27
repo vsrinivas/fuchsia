@@ -9,6 +9,7 @@
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 
@@ -56,7 +57,9 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
 }  // namespace
 
-TestWithEnvironment::TestWithEnvironment()
+TestWithEnvironment::TestWithEnvironment() : TestWithEnvironment(kTestingGarbageCollectionPolicy) {}
+
+TestWithEnvironment::TestWithEnvironment(storage::GarbageCollectionPolicy gc_policy)
     : io_loop_interface_(test_loop().StartNewLoop()),
       environment_(EnvironmentBuilder()
                        .SetAsync(dispatcher())
@@ -64,7 +67,7 @@ TestWithEnvironment::TestWithEnvironment()
                        .SetStartupContext(component_context_provider_.context())
                        .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
                        .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
-                       .SetGcPolicy(kTestingGarbageCollectionPolicy)
+                       .SetGcPolicy(gc_policy)
                        .Build()) {}
 
 ::testing::AssertionResult TestWithEnvironment::RunInCoroutine(

@@ -102,6 +102,7 @@ Entry WithoutEntryId(Entry entry);
 class StorageTest : public ledger::TestWithEnvironment {
  protected:
   StorageTest();
+  StorageTest(GarbageCollectionPolicy gc_policy);
 
   ~StorageTest() override;
 

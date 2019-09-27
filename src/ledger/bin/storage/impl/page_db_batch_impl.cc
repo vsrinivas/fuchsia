@@ -248,7 +248,7 @@ Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler, const ObjectI
   if (status == Status::INTERRUPTED) {
     return status;
   }
-  FXL_DCHECK(status == Status::OK);
+  FXL_DCHECK(status == Status::OK) << key;
   return Status::OK;
 #endif
 }
