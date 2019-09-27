@@ -5,20 +5,20 @@
 #include "fshost-fs-provider.h"
 
 #include <lib/fdio/directory.h>
-
 #include <stdio.h>
 #include <string.h>
-
 
 namespace devmgr {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
+  int flags = FS_READ_WRITE_DIR_FLAGS;
   if (strcmp(path, "svc") == 0) {
     path = "/svc";
   } else if (strcmp(path, "data") == 0) {
     path = "/fs/data";
-  } else if (strcmp(path, "blob") == 0) {
+  } else if (strcmp(path, "blobexec") == 0) {
     path = "/fs/blob";
+    flags = FS_READ_WRITE_EXEC_DIR_FLAGS;
   } else {
     printf("%s: Cannot clone: %s\n", __FUNCTION__, path);
     return zx::channel();
@@ -29,7 +29,7 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
   if (status != ZX_OK) {
     return zx::channel();
   }
-  status = fdio_service_connect(path, server.release());
+  status = fdio_open(path, flags, server.release());
   if (status != ZX_OK) {
     printf("%s: Failed to connect to %s: %d\n", __FUNCTION__, path, status);
     return zx::channel();

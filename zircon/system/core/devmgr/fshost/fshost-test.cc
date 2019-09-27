@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -15,6 +19,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"
+#include "fshost-fs-provider.h"
 #include "metrics.h"
 #include "registry.h"
 #include "vnode.h"
@@ -82,6 +87,71 @@ TEST(FsManagerTestCase, WatchExit) {
   deadline = zx::deadline_after(zx::sec(1));
   EXPECT_OK(controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
   EXPECT_TRUE(pending & FSHOST_SIGNAL_EXIT_DONE);
+}
+
+struct Context {
+  uint32_t open_flags;
+  uint32_t open_count;
+  char path[PATH_MAX + 1];
+};
+
+static zx_status_t DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const char* path_data,
+                                 size_t path_size, zx_handle_t object) {
+  Context* context = reinterpret_cast<Context*>(ctx);
+  context->open_flags = flags;
+  context->open_count += 1;
+  memcpy(context->path, path_data, path_size);
+  context->path[path_size] = '\0';
+  // Having this handle still open does not spark joy.  Thank it for its
+  // service, and then let it go.
+  zx_handle_close(object);
+  return ZX_OK;
+}
+
+static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
+  fuchsia_io_DirectoryAdmin_ops_t ops;
+  ops.Open = DirectoryOpen;
+  return ops;
+}();
+
+// Test that asking FshostFsProvider for blobexec opens /fs/blob from the
+// current installed namespace with the EXEC right
+TEST(FshostFsProviderTestCase, CloneBlobExec) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  fdio_ns_t* ns;
+  ASSERT_OK(fdio_ns_get_installed(&ns));
+
+  // Mock out an object that implements DirectoryOpen and records some state;
+  // bind it to the server handle.  Install it at /fs.
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  Context context = {};
+  ASSERT_OK(fidl_bind(loop.dispatcher(), server.release(),
+                      reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_DirectoryAdmin_dispatch),
+                      &context, &kDirectoryAdminOps));
+  fdio_ns_bind(ns, "/fs", client.release());
+
+  // Verify that requesting blobexec gets you the handle at /fs/blob, with the
+  // permissions expected.
+  devmgr::FshostFsProvider provider;
+  zx::channel blobexec = provider.CloneFs("blobexec");
+
+  // Force a describe call on the target of the Open, to resolve the Open.  We
+  // expect this to fail because our mock just closes the channel after Open.
+  int fd;
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
+
+  EXPECT_EQ(1, context.open_count);
+  uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
+                            ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
+  EXPECT_EQ(expected_flags, context.open_flags);
+  EXPECT_EQ(0, strcmp("blob", context.path));
+
+  // Tear down.
+  ASSERT_OK(fdio_ns_unbind(ns, "/fs"));
 }
 
 }  // namespace

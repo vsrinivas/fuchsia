@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/array.h>
-#include <fbl/vector.h>
+#include "fdio.h"
+
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -17,21 +16,21 @@
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
-
-#include <zircon/processargs.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/log.h>
-
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 
 #include <utility>
 
-#include "fdio.h"
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/vector.h>
 
 namespace devmgr {
 
@@ -62,6 +61,7 @@ static struct {
     { "/blob",      "blob",      FS_BLOB,     FdioAction::AddNsEntry },
     { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::AddNsEntry },
     { "/tmp",       "tmp",       FS_TMP,      FdioAction::AddNsEntry },
+    { "/blob",      "blobexec",  FS_BLOB_EXEC, FdioAction::AddNsEntry },
 };
 
 // clang-format on
@@ -72,10 +72,12 @@ FsProvider::~FsProvider() {}
 
 DevmgrLauncher::DevmgrLauncher(FsProvider* fs_provider) : fs_provider_(fs_provider) {}
 
-zx_status_t DevmgrLauncher::LaunchWithLoader(
-    const zx::job& job, const char* name, zx::vmo executable, zx::channel loader,
-    const char* const* argv, const char** initial_envp, int stdiofd, const zx_handle_t* handles,
-    const uint32_t* types, size_t hcount, zx::process* out_proc, uint32_t flags) {
+zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* name,
+                                             zx::vmo executable, zx::channel loader,
+                                             const char* const* argv, const char** initial_envp,
+                                             int stdiofd, const zx_handle_t* handles,
+                                             const uint32_t* types, size_t hcount,
+                                             zx::process* out_proc, uint32_t flags) {
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
@@ -185,12 +187,12 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(
   return ZX_OK;
 }
 
-zx_status_t DevmgrLauncher::Launch(
-    const zx::job& job, const char* name, const char* const* argv, const char** initial_envp,
-    int stdiofd, const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx::process* out_proc, uint32_t flags) {
-  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
-                                   handles, types, hcount, out_proc, flags);
+zx_status_t DevmgrLauncher::Launch(const zx::job& job, const char* name, const char* const* argv,
+                                   const char** initial_envp, int stdiofd,
+                                   const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+                                   zx::process* out_proc, uint32_t flags) {
+  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd, handles,
+                          types, hcount, out_proc, flags);
 }
 
 ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {

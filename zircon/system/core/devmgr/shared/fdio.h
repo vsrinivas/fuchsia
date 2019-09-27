@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <memory>
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
+#include <zircon/device/vfs.h>
+
+#include <memory>
 
 namespace devmgr {
 
@@ -31,7 +33,10 @@ namespace devmgr {
 #define FS_TMP      0x0400
 #define FS_HUB      0x0800
 #define FS_BIN      0x1000
-#define FS_ALL      0xFFFF
+#define FS_BLOB_EXEC 0x2000
+// Intended to include everything except for FS_BLOB_EXEC, which conflicts with
+// FS_BLOB, and is not needed except for when spawning pkgfs
+#define FS_ALL      0xDFFF
 
 // clang-format on
 
@@ -41,7 +46,10 @@ namespace devmgr {
 #define FS_READONLY_DIR_FLAGS \
   (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
-#define FS_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
+#define FS_READ_EXEC_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_EXECUTABLE)
+#define FS_READ_WRITE_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
+#define FS_READ_WRITE_EXEC_DIR_FLAGS \
+  (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE)
 
 class FsProvider {
   // Pure abstract interface describing how to get a clone of a channel to an fs handle.
@@ -65,13 +73,12 @@ class DevmgrLauncher {
   // If |loader| is invalid, the default loader service is used.
   zx_status_t LaunchWithLoader(const zx::job& job, const char* name, zx::vmo executable,
                                zx::channel loader, const char* const* argv,
-                               const char** initial_envp, int stdiofd,
-                               const zx_handle_t* handles, const uint32_t* types,
-                               size_t hcount, zx::process* out_proc, uint32_t flags);
+                               const char** initial_envp, int stdiofd, const zx_handle_t* handles,
+                               const uint32_t* types, size_t hcount, zx::process* out_proc,
+                               uint32_t flags);
   zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv,
                      const char** envp, int stdiofd, const zx_handle_t* handles,
-                     const uint32_t* types, size_t hcount, zx::process* proc_out,
-                     uint32_t flags);
+                     const uint32_t* types, size_t hcount, zx::process* proc_out, uint32_t flags);
 
  private:
   FsProvider* fs_provider_;
@@ -104,5 +111,6 @@ void devmgr_disable_appmgr_services();
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_

@@ -145,7 +145,8 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
     if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
       return status;
     }
-    if ((status = fdio_open("/fs/system", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN,
+    if ((status = fdio_open("/fs/system",
+                            ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_RIGHT_ADMIN,
                             server.release())) != ZX_OK) {
       printf("fshost: cannot open connection to /system: %d\n", status);
       return status;

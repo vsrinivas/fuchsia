@@ -2,29 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "pkgfs-launcher.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <fbl/unique_fd.h>
-#include <fs-management/mount.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
-#include <loader-service/loader-service.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
 
+#include <fbl/unique_fd.h>
+#include <fs-management/mount.h>
+#include <loader-service/loader-service.h>
+
 #include "../shared/fdio.h"
 #include "fshost-fs-provider.h"
-#include "pkgfs-launcher.h"
 
 namespace devmgr {
 namespace {
@@ -47,7 +48,7 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
   if (zx::channel::create(0, &system_channel, &system_req) != ZX_OK) {
     return;
   }
-  if (fdio_open_at(pkgfs_root.get(), "system", FS_READONLY_DIR_FLAGS, system_req.release()) !=
+  if (fdio_open_at(pkgfs_root.get(), "system", FS_READ_EXEC_DIR_FLAGS, system_req.release()) !=
       ZX_OK) {
     return;
   }
@@ -56,7 +57,7 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
   if (zx::channel::create(0, &bin_chan, &bin_req) != ZX_OK) {
     return;
   }
-  if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_READONLY_DIR_FLAGS,
+  if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_READ_EXEC_DIR_FLAGS,
                    bin_req.release()) != ZX_OK) {
     // non-fatal.
     printf("fshost: failed to install /bin (could not open shell-commands)\n");
@@ -93,19 +94,17 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
   if (blob == nullptr) {
     return ZX_ERR_NOT_FOUND;
   }
-  int fd = openat(fs_blob_fd, blob, O_RDONLY);
-  if (fd < 0) {
-    return ZX_ERR_NOT_FOUND;
-  }
 
-  zx::vmo nonexec_vmo;
-  zx::vmo exec_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, nonexec_vmo.reset_and_get_address());
-  close(fd);
+  int fd;
+  zx_status_t status = fdio_open_fd_at(
+      fs_blob_fd, blob, fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
   if (status != ZX_OK) {
     return status;
   }
-  status = nonexec_vmo.replace_as_executable(zx::handle(), &exec_vmo);
+
+  zx::vmo exec_vmo;
+  status = fdio_get_vmo_exec(fd, exec_vmo.reset_and_get_address());
+  close(fd);
   if (status != ZX_OK) {
     return status;
   }
@@ -214,7 +213,7 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
   DevmgrLauncher launcher(&fs_provider);
   status = launcher.LaunchWithLoader(
       *zx::job::default_job(), "pkgfs", std::move(executable), std::move(loader), argv, nullptr, -1,
-      &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
+      &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC);
   if (status != ZX_OK) {
     printf("fshost: failed to launch %s: %d (%s)\n", cmd, status, zx_status_get_string(status));
     return false;

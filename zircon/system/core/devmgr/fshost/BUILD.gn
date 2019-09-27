@@ -111,10 +111,12 @@ test("fshost-test") {
     "fshost-test.cc",
   ]
   deps = [
+    ":block-watcher",
     ":fshost-registry",
     ":metrics",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -126,11 +128,11 @@ test("fshost-metrics-test") {
   ]
   deps = [
     ":metrics",
+    "$zx/system/ulib/async-testing",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/zxtest",
-    "$zx/system/ulib/async-testing"
   ]
 }
 

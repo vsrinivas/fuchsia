@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_FDIO_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_FDIO_H_
+#ifndef SRC_DEVICES_COORDINATOR_FDIO_H_
+#define SRC_DEVICES_COORDINATOR_FDIO_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -42,7 +42,10 @@ namespace devmgr {
 #define FS_READONLY_DIR_FLAGS \
   (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
-#define FS_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
+#define FS_READ_EXEC_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_EXECUTABLE)
+#define FS_READ_WRITE_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
+#define FS_READ_WRITE_EXEC_DIR_FLAGS \
+  (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE)
 
 class FsProvider {
   // Pure abstract interface describing how to get a clone of a channel to an fs handle.
@@ -106,4 +109,4 @@ void devmgr_disable_appmgr_services();
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_FDIO_H_
+#endif  // SRC_DEVICES_COORDINATOR_FDIO_H_

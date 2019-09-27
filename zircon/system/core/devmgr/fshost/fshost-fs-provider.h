@@ -10,10 +10,10 @@
 namespace devmgr {
 
 class FshostFsProvider : public FsProvider {
+ public:
   zx::channel CloneFs(const char* path) override;
 };
 
 }  // namespace devmgr
-
 
 #endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FSHOST_FS_PROVIDER_H_

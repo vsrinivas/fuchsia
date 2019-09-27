@@ -1016,7 +1016,7 @@ zx::channel SystemInstance::CloneFs(const char* path) {
     return h0;
   }
   zx::unowned_channel fs(fs_root);
-  int flags = FS_DIR_FLAGS;
+  int flags = FS_READ_WRITE_DIR_FLAGS;
   if (!strcmp(path, "hub")) {
     fs = zx::unowned_channel(appmgr_client);
   } else if (!strcmp(path, "svc")) {
@@ -1026,6 +1026,8 @@ zx::channel SystemInstance::CloneFs(const char* path) {
   } else if (!strncmp(path, "dev/", 4)) {
     fs = devmgr::devfs_root_borrow();
     path += 4;
+  } else if (!strcmp(path, "system")) {
+    flags = FS_READ_EXEC_DIR_FLAGS;
   }
   zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
   if (status != ZX_OK) {
