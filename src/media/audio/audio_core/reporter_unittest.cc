@@ -9,6 +9,8 @@
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_object_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/test/null_audio_capturer.h"
+#include "src/media/audio/lib/test/null_audio_renderer.h"
 
 namespace media::audio {
 namespace {
@@ -286,10 +288,10 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
 
 // Tests methods that add and remove client ports.
 TEST_F(ReporterTest, AddRemoveClientPorts) {
-  AudioRendererImpl& renderer_a = *(reinterpret_cast<AudioRendererImpl*>(1));
-  AudioRendererImpl& renderer_b = *(reinterpret_cast<AudioRendererImpl*>(2));
-  AudioCapturerImpl& capturer_a = *(reinterpret_cast<AudioCapturerImpl*>(3));
-  AudioCapturerImpl& capturer_b = *(reinterpret_cast<AudioCapturerImpl*>(4));
+  test::NullAudioRenderer renderer_a;
+  test::NullAudioRenderer renderer_b;
+  test::NullAudioCapturer capturer_a;
+  test::NullAudioCapturer capturer_b;
 
   under_test_.AddingRenderer(renderer_a);
   under_test_.AddingRenderer(renderer_b);
@@ -348,7 +350,7 @@ TEST_F(ReporterTest, AddRemoveClientPorts) {
 
 // Tests methods that change renderer metrics.
 TEST_F(ReporterTest, RendererMetrics) {
-  AudioRendererImpl& renderer = *(reinterpret_cast<AudioRendererImpl*>(1));
+  test::NullAudioRenderer renderer;
 
   under_test_.AddingRenderer(renderer);
 
@@ -414,7 +416,7 @@ TEST_F(ReporterTest, RendererMetrics) {
 
 // Tests methods that change capturer metrics.
 TEST_F(ReporterTest, CapturerMetrics) {
-  AudioCapturerImpl& capturer = *(reinterpret_cast<AudioCapturerImpl*>(1));
+  test::NullAudioCapturer capturer;
 
   under_test_.AddingCapturer(capturer);
 

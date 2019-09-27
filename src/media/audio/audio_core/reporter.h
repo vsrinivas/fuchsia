@@ -20,8 +20,6 @@ namespace media::audio {
 #if ENABLE_REPORTER
 
 class AudioDevice;
-class AudioRendererImpl;
-class AudioCapturerImpl;
 
 // A singleton instance of |Reporter| handles instrumentation concerns (e.g.
 // exposing information via inspect, cobalt, etc) for an audio_core instance.
@@ -78,39 +76,40 @@ class Reporter {
                              const fuchsia::media::AudioGainInfo& gain_info, uint32_t set_flags);
 
   // Renderers.
-  void AddingRenderer(const AudioRendererImpl& renderer);
-  void RemovingRenderer(const AudioRendererImpl& renderer);
-  void SettingRendererStreamType(const AudioRendererImpl& renderer,
+  void AddingRenderer(const fuchsia::media::AudioRenderer& renderer);
+  void RemovingRenderer(const fuchsia::media::AudioRenderer& renderer);
+  void SettingRendererStreamType(const fuchsia::media::AudioRenderer& renderer,
                                  const fuchsia::media::AudioStreamType& stream_type);
-  void AddingRendererPayloadBuffer(const AudioRendererImpl& renderer, uint32_t buffer_id,
-                                   uint64_t size);
-  void RemovingRendererPayloadBuffer(const AudioRendererImpl& renderer, uint32_t buffer_id);
-  void SendingRendererPacket(const AudioRendererImpl& renderer,
+  void AddingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& renderer,
+                                   uint32_t buffer_id, uint64_t size);
+  void RemovingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& renderer,
+                                     uint32_t buffer_id);
+  void SendingRendererPacket(const fuchsia::media::AudioRenderer& renderer,
                              const fuchsia::media::StreamPacket& packet);
-  void SettingRendererGain(const AudioRendererImpl& renderer, float gain_db);
-  void SettingRendererGainWithRamp(const AudioRendererImpl& renderer, float gain_db,
+  void SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db);
+  void SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& renderer, float gain_db,
                                    zx_duration_t duration_ns,
                                    fuchsia::media::audio::RampType ramp_type);
-  void SettingRendererMute(const AudioRendererImpl& renderer, bool muted);
-  void SettingRendererMinClockLeadTime(const AudioRendererImpl& renderer,
+  void SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted);
+  void SettingRendererMinClockLeadTime(const fuchsia::media::AudioRenderer& renderer,
                                        int64_t min_clock_lead_time_ns);
-  void SettingRendererPtsContinuityThreshold(const AudioRendererImpl& renderer,
+  void SettingRendererPtsContinuityThreshold(const fuchsia::media::AudioRenderer& renderer,
                                              float threshold_seconds);
 
   // Capturers.
-  void AddingCapturer(const AudioCapturerImpl& capturer);
-  void RemovingCapturer(const AudioCapturerImpl& capturer);
-  void SettingCapturerStreamType(const AudioCapturerImpl& capturer,
+  void AddingCapturer(const fuchsia::media::AudioCapturer& capturer);
+  void RemovingCapturer(const fuchsia::media::AudioCapturer& capturer);
+  void SettingCapturerStreamType(const fuchsia::media::AudioCapturer& capturer,
                                  const fuchsia::media::AudioStreamType& stream_type);
-  void AddingCapturerPayloadBuffer(const AudioCapturerImpl& capturer, uint32_t buffer_id,
-                                   uint64_t size);
-  void SendingCapturerPacket(const AudioCapturerImpl& capturer,
+  void AddingCapturerPayloadBuffer(const fuchsia::media::AudioCapturer& capturer,
+                                   uint32_t buffer_id, uint64_t size);
+  void SendingCapturerPacket(const fuchsia::media::AudioCapturer& capturer,
                              const fuchsia::media::StreamPacket& packet);
-  void SettingCapturerGain(const AudioCapturerImpl& capturer, float gain_db);
-  void SettingCapturerGainWithRamp(const AudioCapturerImpl& capturer, float gain_db,
+  void SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer, float gain_db);
+  void SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& capturer, float gain_db,
                                    zx_duration_t duration_ns,
                                    fuchsia::media::audio::RampType ramp_type);
-  void SettingCapturerMute(const AudioCapturerImpl& capturer, bool muted);
+  void SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted);
 
   // Logs an Underflow event to cobalt. output_duration_missed is the amount of time by which we
   // missed a time-critical write into the output buffer.
@@ -194,8 +193,8 @@ class Reporter {
 
   Device* FindOutput(const AudioDevice& device);
   Device* FindInput(const AudioDevice& device);
-  Renderer* FindRenderer(const AudioRendererImpl& renderer);
-  Capturer* FindCapturer(const AudioCapturerImpl& capturer);
+  Renderer* FindRenderer(const fuchsia::media::AudioRenderer& renderer);
+  Capturer* FindCapturer(const fuchsia::media::AudioCapturer& capturer);
   std::string NextRendererName();
   std::string NextCapturerName();
 
@@ -211,8 +210,8 @@ class Reporter {
   inspect::Node capturers_node_;
   std::unordered_map<const AudioDevice*, Output> outputs_;
   std::unordered_map<const AudioDevice*, Input> inputs_;
-  std::unordered_map<const AudioRendererImpl*, Renderer> renderers_;
-  std::unordered_map<const AudioCapturerImpl*, Capturer> capturers_;
+  std::unordered_map<const fuchsia::media::AudioRenderer*, Renderer> renderers_;
+  std::unordered_map<const fuchsia::media::AudioCapturer*, Capturer> capturers_;
   uint64_t next_renderer_name_ = 0;
   uint64_t next_capturer_name_ = 0;
 
