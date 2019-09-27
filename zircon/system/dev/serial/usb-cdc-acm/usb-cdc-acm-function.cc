@@ -38,6 +38,9 @@
 
 namespace fake_usb_cdc_acm_function {
 
+// Acts as a fake USB device for CDC-ACM serial tests. Stores a single write's worth of data and
+// echos it back on the next read, unless the write is exactly a single '0' byte, in which case
+// the next read will be an empty response.
 class FakeUsbCdcAcmFunction;
 using DeviceType = ddk::Device<FakeUsbCdcAcmFunction, ddk::Unbindable>;
 class FakeUsbCdcAcmFunction : public DeviceType,
@@ -131,7 +134,11 @@ void FakeUsbCdcAcmFunction::DataOutComplete() {
   // Queue up another write.
   RequestQueue(data_out_req_->request(), &complete);
 
-  // Queue up exact same read data.
+  // Queue up the exact same read data, unless the read was a single '0', in which case queue an
+  // empty response.
+  if (data.size() == 1 && data[0] == '0') {
+    data.clear();
+  }
   data_in_req_->request()->header.length = data.size();
   data_in_req_->request()->header.ep_address = bulk_in_addr_;
 

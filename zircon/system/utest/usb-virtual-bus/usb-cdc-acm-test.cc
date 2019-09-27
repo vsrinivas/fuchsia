@@ -114,6 +114,16 @@ TEST_F(UsbCdcAcmTest, ReadAndWriteTest) {
   for (size_t i = 0; i < sizeof(write_data2); i++) {
     ASSERT_EQ(read_data2[i], write_data2[i]);
   }
+
+  // Writing just "0" to the fake USB driver will cause an empty response to be queued.
+  uint8_t write_data3[1] = {'0'};
+  bytes_sent = write(fd.get(), write_data3, sizeof(write_data3));
+  ASSERT_EQ(bytes_sent, sizeof(write_data3));
+
+  uint8_t read_data3[1] = {};
+  status = ReadWithTimeout(fd.get(), read_data3, sizeof(read_data3), &bytes_sent);
+  ASSERT_EQ(status, ZX_ERR_SHOULD_WAIT);
+  ASSERT_EQ(bytes_sent, 0);
 }
 
 }  // namespace

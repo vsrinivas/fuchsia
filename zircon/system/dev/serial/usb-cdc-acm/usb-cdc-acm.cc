@@ -74,25 +74,29 @@ zx_status_t UsbCdcAcmDevice::DdkRead(void* data, size_t len, zx_off_t /*off*/, s
       break;
     }
 
-    // |offset| will always be zero if a response is being read for the first time. It can only be
-    // non-zero if |req| was re-queued below, which should guarantee that |offset| is within the
-    // response length.
-    assert(offset < req->request()->response.actual);
+    // Skip invalid or empty responses.
+    if (req->request()->response.status == ZX_OK && req->request()->response.actual > 0) {
 
-    // Copy as many bytes as available or as needed from the first request.
-    size_t to_copy = req->request()->response.actual - offset;
-    if ((to_copy + bytes_copied) > len) {
-      to_copy = len - bytes_copied;
-    }
-    req->CopyFrom(&buffer[bytes_copied], to_copy, offset);
-    bytes_copied += to_copy;
+      // |offset| will always be zero if a response is being read for the first time. It can only be
+      // non-zero if |req| was re-queued below, which should guarantee that |offset| is within the
+      // response length.
+      assert(offset < req->request()->response.actual);
 
-    // If we aren't reading the whole request, put it back on the front of the completed queue and
-    // mark the offset into it for the next read.
-    if ((to_copy + offset) < req->request()->response.actual) {
-      offset = offset + to_copy;
-      completed_reads_queue_.push_next(*std::move(req));
-      break;
+      // Copy as many bytes as available or as needed from the first request.
+      size_t to_copy = req->request()->response.actual - offset;
+      if ((to_copy + bytes_copied) > len) {
+        to_copy = len - bytes_copied;
+      }
+      req->CopyFrom(&buffer[bytes_copied], to_copy, offset);
+      bytes_copied += to_copy;
+
+      // If we aren't reading the whole request, put it back on the front of the completed queue and
+      // mark the offset into it for the next read.
+      if ((to_copy + offset) < req->request()->response.actual) {
+        offset = offset + to_copy;
+        completed_reads_queue_.push_next(*std::move(req));
+        break;
+      }
     }
 
     usb_client_.RequestQueue(req->take(), &read_request_complete_);
