@@ -2,13 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::validate::*, serde_derive::Serialize, std::collections::HashSet};
+use {
+    super::{metrics::Metrics, validate::*},
+    serde_derive::Serialize,
+    std::collections::HashSet,
+};
 
 #[derive(Serialize, Debug)]
 pub struct Results {
     messages: Vec<String>,
     unimplemented: HashSet<String>,
     failed: bool,
+    metrics: Vec<Metrics>,
 }
 
 trait Summary {
@@ -81,7 +86,12 @@ impl Summary for Action {
 
 impl Results {
     pub fn new() -> Results {
-        Results { messages: Vec::new(), unimplemented: HashSet::new(), failed: false }
+        Results {
+            messages: Vec::new(),
+            metrics: Vec::new(),
+            unimplemented: HashSet::new(),
+            failed: false,
+        }
     }
 
     pub fn error(&mut self, message: String) {
@@ -91,6 +101,10 @@ impl Results {
 
     pub fn unimplemented(&mut self, puppet_name: &str, action: &Action) {
         self.unimplemented.insert(format!("{}: {}", puppet_name, action.summary()));
+    }
+
+    pub fn remember_metrics(&mut self, metrics: Metrics) {
+        self.metrics.push(metrics);
     }
 
     pub fn to_json(&self) -> String {
@@ -113,6 +127,12 @@ impl Results {
             println!("\nUnimplemented:");
             for info in self.unimplemented.iter() {
                 println!("  {}", info);
+            }
+        }
+        if self.metrics.len() > 0 {
+            println!("\nMetrics:");
+            for metric in self.metrics.iter() {
+                println!("  {:?}", metric);
             }
         }
     }

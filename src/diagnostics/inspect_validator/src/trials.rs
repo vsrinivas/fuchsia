@@ -6,26 +6,22 @@ use super::validate::{self, Number, NumberType, ROOT_ID};
 
 pub struct Step {
     pub actions: Vec<validate::Action>,
-    //metrics: Vec<metrics::Metric>, Ignore for now - will be in a future CL
+    pub do_metrics: bool,
+}
+
+impl Step {
+    pub fn new(actions: Vec<validate::Action>) -> Step {
+        Step { actions, do_metrics: false }
+    }
+
+    pub fn new_with_metrics(actions: Vec<validate::Action>) -> Step {
+        Step { actions, do_metrics: true }
+    }
 }
 
 pub struct Trial {
     pub name: String,
     pub steps: Vec<Step>,
-}
-
-impl Step {
-    /* Ignore for now - will be in a future CL
-    pub fn run_metrics(
-        &self,
-        info: &InfoTree,
-        results: &mut results::Results,
-    ) -> Result<(), Error> {
-        for metric in self.metrics.iter() {
-            metric.process(info, results)?;
-        }
-        Ok(())
-    }*/
 }
 
 pub fn real_trials() -> Vec<Trial> {
@@ -42,6 +38,7 @@ pub fn real_trials() -> Vec<Trial> {
         int_histogram_ops_trial(),
         uint_histogram_ops_trial(),
         double_histogram_ops_trial(),
+        metrics_trial(),
     ]
 }
 
@@ -232,98 +229,86 @@ macro_rules! insert_multiple {
 fn basic_node() -> Trial {
     Trial {
         name: "Basic Node".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_node!(parent: ROOT_ID, id: 1, name: "child"),
-                create_node!(parent: 1, id: 2, name: "grandchild"),
-                delete_node!( id: 2),
-                delete_node!( id: 1 ),
-                // Verify they can be deleted in either order.
-                create_node!(parent: ROOT_ID, id: 1, name: "child"),
-                create_node!(parent: 1, id: 2, name: "grandchild"),
-                delete_node!( id: 1),
-                delete_node!( id: 2 ),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_node!(parent: ROOT_ID, id: 1, name: "child"),
+            create_node!(parent: 1, id: 2, name: "grandchild"),
+            delete_node!( id: 2),
+            delete_node!( id: 1 ),
+            // Verify they can be deleted in either order.
+            create_node!(parent: ROOT_ID, id: 1, name: "child"),
+            create_node!(parent: 1, id: 2, name: "grandchild"),
+            delete_node!( id: 1),
+            delete_node!( id: 2 ),
+        ])],
     }
 }
 
 fn basic_string() -> Trial {
     Trial {
         name: "Basic String".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
-                set_string!(id: 1, value: "bar"),
-                set_string!(id: 1, value: "This Is A Longer String"),
-                set_string!(id: 1, value: "."),
-                // Make sure it can hold a string bigger than the biggest block (3000 chars > 2040)
-                set_string!(id: 1, value: ["1234567890"; 300].to_vec().join("")),
-                delete_property!(id: 1),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
+            set_string!(id: 1, value: "bar"),
+            set_string!(id: 1, value: "This Is A Longer String"),
+            set_string!(id: 1, value: "."),
+            // Make sure it can hold a string bigger than the biggest block (3000 chars > 2040)
+            set_string!(id: 1, value: ["1234567890"; 300].to_vec().join("")),
+            delete_property!(id: 1),
+        ])],
     }
 }
 
 fn basic_bytes() -> Trial {
     Trial {
         name: "Basic bytes".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_bytes_property!(parent: ROOT_ID, id: 8, name: "bytes", value: vec![1u8, 2u8]),
-                set_bytes!(id: 8, value: vec![3u8, 4, 5, 6, 7]),
-                set_bytes!(id: 8, value: vec![8u8]),
-                delete_property!(id: 8),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_bytes_property!(parent: ROOT_ID, id: 8, name: "bytes", value: vec![1u8, 2u8]),
+            set_bytes!(id: 8, value: vec![3u8, 4, 5, 6, 7]),
+            set_bytes!(id: 8, value: vec![8u8]),
+            delete_property!(id: 8),
+        ])],
     }
 }
 
 fn basic_int() -> Trial {
     Trial {
         name: "Basic Int".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(10)),
-                set_number!(id: 5, value: Number::IntT(std::i64::MAX)),
-                subtract_number!(id: 5, value: Number::IntT(3)),
-                set_number!(id: 5, value: Number::IntT(std::i64::MIN)),
-                add_number!(id: 5, value: Number::IntT(2)),
-                delete_property!(id: 5),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(10)),
+            set_number!(id: 5, value: Number::IntT(std::i64::MAX)),
+            subtract_number!(id: 5, value: Number::IntT(3)),
+            set_number!(id: 5, value: Number::IntT(std::i64::MIN)),
+            add_number!(id: 5, value: Number::IntT(2)),
+            delete_property!(id: 5),
+        ])],
     }
 }
 
 fn basic_uint() -> Trial {
     Trial {
         name: "Basic Uint".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1)),
-                set_number!(id: 5, value: Number::UintT(std::u64::MAX)),
-                subtract_number!(id: 5, value: Number::UintT(3)),
-                set_number!(id: 5, value: Number::UintT(0)),
-                add_number!(id: 5, value: Number::UintT(2)),
-                delete_property!(id: 5),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1)),
+            set_number!(id: 5, value: Number::UintT(std::u64::MAX)),
+            subtract_number!(id: 5, value: Number::UintT(3)),
+            set_number!(id: 5, value: Number::UintT(0)),
+            add_number!(id: 5, value: Number::UintT(2)),
+            delete_property!(id: 5),
+        ])],
     }
 }
 
 fn basic_double() -> Trial {
     Trial {
         name: "Basic Double".into(),
-        steps: vec![Step {
-            actions: vec![
-                create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::DoubleT(1.0)),
-                set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
-                subtract_number!(id: 5, value: Number::DoubleT(std::f64::MIN/10_f64)),
-                set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
-                add_number!(id: 5, value: Number::DoubleT(std::f64::MIN / 10_f64)),
-                delete_property!(id: 5),
-            ],
-        }],
+        steps: vec![Step::new(vec![
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::DoubleT(1.0)),
+            set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
+            subtract_number!(id: 5, value: Number::DoubleT(std::f64::MIN/10_f64)),
+            set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
+            add_number!(id: 5, value: Number::DoubleT(std::f64::MIN / 10_f64)),
+            delete_property!(id: 5),
+        ])],
     }
 }
 
@@ -337,7 +322,7 @@ fn basic_int_array() -> Trial {
         actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
     }
     actions.push(delete_property!(id: 5));
-    Trial { name: "Int Array Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Int Array Ops".into(), steps: vec![Step::new(actions)] }
 }
 
 fn basic_uint_array() -> Trial {
@@ -349,7 +334,7 @@ fn basic_uint_array() -> Trial {
         actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
     }
     actions.push(delete_property!(id: 6));
-    Trial { name: "Unt Array Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Unt Array Ops".into(), steps: vec![Step::new(actions)] }
 }
 
 fn basic_double_array() -> Trial {
@@ -361,7 +346,7 @@ fn basic_double_array() -> Trial {
         actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));
     }
     actions.push(delete_property!(id: 4));
-    Trial { name: "Int Array Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Int Array Ops".into(), steps: vec![Step::new(actions)] }
 }
 
 fn int_histogram_ops_trial() -> Trial {
@@ -386,7 +371,7 @@ fn int_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Int Histogram Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Int Histogram Ops".into(), steps: vec![Step::new(actions)] }
 }
 
 fn uint_histogram_ops_trial() -> Trial {
@@ -411,7 +396,7 @@ fn uint_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Uint Histogram Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Uint Histogram Ops".into(), steps: vec![Step::new(actions)] }
 }
 
 fn double_histogram_ops_trial() -> Trial {
@@ -437,7 +422,12 @@ fn double_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Double Histogram Ops".into(), steps: vec![Step { actions: actions }] }
+    Trial { name: "Double Histogram Ops".into(), steps: vec![Step::new(actions)] }
+}
+
+fn metrics_trial() -> Trial {
+    let actions = vec![create_node!(parent: ROOT_ID, id: 1, name: "foo")];
+    Trial { name: "Do Metrics".into(), steps: vec![Step::new_with_metrics(actions)] }
 }
 
 #[cfg(test)]
@@ -445,6 +435,6 @@ pub(crate) mod tests {
     use {super::*, fidl_test_inspect_validate::*};
 
     pub fn trial_with_action(name: &str, action: Action) -> Trial {
-        Trial { name: name.into(), steps: vec![Step { actions: vec![action] }] }
+        Trial { name: name.into(), steps: vec![Step::new(vec![action])] }
     }
 }

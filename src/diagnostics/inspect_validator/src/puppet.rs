@@ -3,20 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    super::data::Data,
-    failure::{bail, Error, ResultExt},
+    super::{data::Data, metrics::Metrics},
+    failure::{bail, err_msg, Error, ResultExt},
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, Vmo},
+    std::{path::Path, str::FromStr},
 };
 
-const VMO_SIZE: u64 = 4096;
+pub const VMO_SIZE: u64 = 4096;
 
 pub struct Puppet {
     vmo: Vmo,
     // Need to remember the connection to avoid dropping the VMO
     #[allow(dead_code)]
     connection: Connection,
+    name: String,
 }
 
 impl Puppet {
@@ -27,21 +30,50 @@ impl Puppet {
         Ok(self.connection.fidl.act(action).await?)
     }
 
+    pub fn name<'a>(&'a self) -> &'a str {
+        &self.name
+    }
+
+    // Extracts the .cmx file basename for output to the user.
+    fn derive_my_name(url: &str) -> Result<String, Error> {
+        let url_parse = PkgUrl::from_str(url)?;
+        let cmx_name = url_parse.resource().ok_or(err_msg("URL parse"))?;
+        let cmx_path = Path::new(cmx_name);
+        if let Some(s) = cmx_path.file_stem() {
+            if let Some(s) = s.to_str() {
+                return Ok(s.to_owned());
+            }
+        }
+        bail!("Bad path {} from url {}", cmx_name, url);
+    }
+
     pub async fn connect(server_url: &str) -> Result<Self, Error> {
-        Puppet::initialize_with_connection(Connection::start_and_connect(server_url).await?).await
+        Puppet::initialize_with_connection(
+            Connection::start_and_connect(server_url).await?,
+            Self::derive_my_name(server_url)?,
+        )
+        .await
     }
 
     #[cfg(test)]
     pub async fn connect_local(local_fidl: validate::ValidateProxy) -> Result<Puppet, Error> {
-        Puppet::initialize_with_connection(Connection::new(local_fidl, None)).await
+        Puppet::initialize_with_connection(Connection::new(local_fidl, None), "*Local*".to_owned())
+            .await
     }
 
-    async fn initialize_with_connection(mut connection: Connection) -> Result<Puppet, Error> {
-        Ok(Puppet { vmo: connection.initialize_vmo().await?, connection })
+    async fn initialize_with_connection(
+        mut connection: Connection,
+        name: String,
+    ) -> Result<Puppet, Error> {
+        Ok(Puppet { vmo: connection.initialize_vmo().await?, connection, name })
     }
 
     pub fn read_data(&self) -> Result<Data, Error> {
         Data::try_from_vmo(&self.vmo)
+    }
+
+    pub fn read_metrics(&self, trial_name: &str, step_index: usize) -> Result<Metrics, Error> {
+        Metrics::from_vmo(&self.vmo, trial_name, step_index)
     }
 }
 
@@ -105,6 +137,15 @@ pub(crate) mod tests {
         log::*,
         std::collections::HashMap,
     };
+
+    #[test]
+    fn puppet_name_derivation() -> Result<(), Error> {
+        assert_eq!(
+            Puppet::derive_my_name("fuchsia-pkg://path#meta/my_name.cmx")?,
+            "my_name".to_string()
+        );
+        Ok(())
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_fidl_loopback() -> Result<(), Error> {

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod data;
-mod puppet;
-mod results;
-mod runner; // coordinates testing operations
-mod trials;
+mod data; // Local data maintainer/updater, remote data reader, compare engine
+mod metrics; // Evaluates memory performance of Inspect library
+mod puppet; // Interface to target Inspect library wrapper programs (puppets)
+mod results; // Stores and formats reports-to-user
+mod runner; // Coordinates testing operations
+mod trials; // Defines the trials to run
 
 use {
     argh::FromArgs,
