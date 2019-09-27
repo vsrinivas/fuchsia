@@ -24,6 +24,9 @@ toc:
 - title: "Hardware"
   section:
   - include: /docs/development/hardware/_toc.yaml
+- title: "Internationalization"
+  section:
+  - include: /docs/development/internationalization/_toc.yaml
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml

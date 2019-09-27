@@ -90,6 +90,10 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Tracing booting Fuchsia](tracing/tracing-boot.md)
  - [CPU Performance Monitor](tracing/cpuperf-provider.md)
 
+## Internationalization
+
+ - [Internationalization, localization and input methods](internationalization/README.md)
+
 ## Miscellaneous
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
