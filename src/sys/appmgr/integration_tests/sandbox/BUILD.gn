@@ -7,7 +7,6 @@ import("//build/package.gni")
 group("sandbox") {
   testonly = true
   deps = [
-    ":namespace_test",
     "features",
     "services",
   ]

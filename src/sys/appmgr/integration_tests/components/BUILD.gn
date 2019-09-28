@@ -9,11 +9,7 @@ import("//build/testing/environments.gni")
 group("components") {
   testonly = true
   deps = [
-    ":components_binary_test",
     ":components_binary_tests",
-    ":echo1",
-    ":echo2",
-    ":getenv",
   ]
 }
 

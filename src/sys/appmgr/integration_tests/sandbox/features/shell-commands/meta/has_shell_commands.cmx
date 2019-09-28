@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/has_shell_commands"
     },
     "sandbox": {
         "features": [

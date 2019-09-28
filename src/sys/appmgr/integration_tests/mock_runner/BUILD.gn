@@ -5,7 +5,15 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
-executable("mock_runner") {
+group("mock_runner") {
+  testonly = true
+  deps = [
+    ":appmgr_mock_runner",
+    ":fake_component_for_runner",
+  ]
+}
+
+executable("bin") {
   testonly = true
   output_name = "appmgr_mock_runner"
 
@@ -40,8 +48,8 @@ package("appmgr_mock_runner") {
   testonly = true
 
   deps = [
+    ":bin",
     ":fake_component_for_runner",
-    ":mock_runner",
   ]
 
   meta = [

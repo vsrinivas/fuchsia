@@ -8,8 +8,8 @@ import("//build/images/pkgfs.gni")
 
 recovery_packages = [
   "//build/info:build-info",
-  "//garnet/bin/appmgr:appmgr_scheme_config",
-  "//garnet/bin/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/appmgr",
   "//garnet/bin/network_time_service",
   "//garnet/bin/omaha_client",
   "//garnet/bin/pkg_cache",

@@ -9,12 +9,8 @@ import("//build/testing/environments.gni")
 group("inspect") {
   testonly = true
   deps = [
-    ":bin",
-    ":bin-vmo",
     ":inspect_integration_tests",
     ":inspect_vmo_integration_tests",
-    ":test",
-    ":test-vmo",
   ]
 }
 

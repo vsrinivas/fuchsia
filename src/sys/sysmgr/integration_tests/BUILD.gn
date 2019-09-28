@@ -65,12 +65,12 @@ executable("service_startup_test") {
 
   deps = [
     ":interface",
-    "//garnet/bin/appmgr:appmgr_for_test",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr:appmgr_for_test",
   ]
 }
 

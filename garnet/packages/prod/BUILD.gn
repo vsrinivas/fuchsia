@@ -917,8 +917,8 @@ group("bluetooth_core") {
 group("appmgr") {
   testonly = true
   public_deps = [
-    "//garnet/bin/appmgr",
-    "//garnet/bin/appmgr:appmgr_scheme_config",
+    "//src/sys/appmgr",
+    "//src/sys/appmgr:appmgr_scheme_config",
   ]
 }
 

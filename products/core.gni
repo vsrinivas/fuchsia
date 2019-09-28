@@ -16,8 +16,6 @@ meta_package_labels += [
 
 base_package_labels += [
   "//build/info:build-info",
-  "//garnet/bin/appmgr",
-  "//garnet/bin/appmgr:appmgr_scheme_config",
   "//garnet/bin/device_settings:device_settings_manager",
   "//garnet/bin/http",
   "//garnet/bin/log_listener:log_listener",
@@ -66,6 +64,8 @@ base_package_labels += [
   "//src/diagnostics/archivist",
   "//src/identity/bin:core",
   "//src/recovery/factory_reset",
+  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]

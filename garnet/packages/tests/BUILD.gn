@@ -313,7 +313,6 @@ group("all") {
     ":cmx",
     ":cobalt_client",
     ":component_cpp",
-    ":components_binary_tests",
     ":containers_cpp",
     ":cpuperf",
     ":cpuperf_provider",
@@ -949,13 +948,6 @@ group("json") {
   ]
 }
 
-group("components_binary_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/appmgr/integration_tests/components:components_binary_tests",
-  ]
-}
-
 group("display_capture_test") {
   testonly = true
   public_deps = [
@@ -1034,27 +1026,6 @@ group("zircon") {
 group("runtime") {
   testonly = true
   public_deps = [
-    "//garnet/bin/appmgr:unittests",
-    "//garnet/bin/appmgr/integration_tests:appmgr_integration_tests",
-    "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
-    "//garnet/bin/appmgr/integration_tests/inspect:inspect_vmo_integration_tests",
-    "//garnet/bin/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
-    "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/build-info:build_info_tests",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/hub:has_hub",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/hub:no_hub",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/isolated-temp:has_isolated_temp",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/isolated-temp:no_isolated_temp",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/storage",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
-    "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
-    "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
-    "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
-    "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
     "//garnet/bin/glob",
     "//garnet/examples/fidl/echo_server_cpp",
     "//garnet/packages/prod:runtime",

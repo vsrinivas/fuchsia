@@ -13,8 +13,8 @@
 #include <src/lib/fxl/logging.h>
 #include <test/sysmgr/cpp/fidl.h>
 
-#include "garnet/bin/appmgr/appmgr.h"
 #include "gtest/gtest.h"
+#include "src/sys/appmgr/appmgr.h"
 
 namespace sysmgr {
 namespace test {
