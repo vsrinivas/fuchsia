@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("closure-queue") {
   # Note: The appearance of "sdk" does not mean this will or is intended to be
   # in the sdk. It's just the way we export from zircon for use elsewhere.
