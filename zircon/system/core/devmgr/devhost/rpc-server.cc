@@ -539,7 +539,7 @@ static zx_status_t fidl_DeviceControllerRunCompatibilityTests(void* ctx, int64_t
 
 static zx_status_t fidl_DeviceControllerScheduleUnbind(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
-  zx_status_t status = device_unbind(conn->dev);
+  zx_status_t status = device_schedule_remove(conn->dev, true /* unbind_self */);
   return fuchsia_device_ControllerScheduleUnbind_reply(txn, status);
 }
 

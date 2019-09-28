@@ -556,99 +556,6 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
                   "");
 }
 
-// Reads the request from |remote| and verifies whether it matches the expected Unbind request.
-// |SendUnbindReply| can be used to send the desired response.
-void CheckUnbindReceived(const zx::channel& remote) {
-  // Read the unbind request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the unbind request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerUnbindOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerUnbindRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckUnbindReceived|.
-void SendUnbindReply(const zx::channel& remote) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-  // Write the Unbind response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_CoordinatorUnbindDoneRequest*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_CoordinatorUnbindDoneOrdinal;
-  zx_status_t status =
-      fidl_encode(&fuchsia_device_manager_CoordinatorUnbindDoneRequestTable, bytes, sizeof(*resp),
-                  handles, fbl::count_of(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
-}
-
-void CheckUnbindReceivedAndReply(const zx::channel& remote) {
-  CheckUnbindReceived(remote);
-  SendUnbindReply(remote);
-}
-
-// Reads the request from |remote| and verifies whether it matches the expected
-// CompleteRemoval request.
-// |SendRemoveReply| can be used to send the desired response.
-void CheckRemoveReceived(const zx::channel& remote) {
-  // Read the remove request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the remove request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckRemoveReceived|.
-void SendRemoveReply(const zx::channel& remote) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-  // Write the remove response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_CoordinatorRemoveDoneRequest*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_CoordinatorRemoveDoneOrdinal;
-  zx_status_t status =
-      fidl_encode(&fuchsia_device_manager_CoordinatorRemoveDoneRequestTable, bytes, sizeof(*resp),
-                  handles, fbl::count_of(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
-}
-
-void CheckRemoveReceivedAndReply(const zx::channel& remote) {
-  CheckRemoveReceived(remote);
-  SendRemoveReply(remote);
-}
-
 // Reads a Suspend request from remote and checks that it is for the expected
 // flags, without sending a response. |SendSuspendReply| can be used to send the desired response.
 void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags) {
@@ -822,6 +729,13 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void DoSuspend(uint32_t flags);
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
 
+  void CheckUnbindReceived(const zx::channel& remote);
+  void SendUnbindReply(const zx::channel& remote);
+  void CheckUnbindReceivedAndReply(const zx::channel& remote);
+  void CheckRemoveReceived(const zx::channel& remote);
+  void SendRemoveReply(const zx::channel& remote);
+  void CheckRemoveReceivedAndReply(const zx::channel& remote);
+
  protected:
   void SetUp() override {
     ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
@@ -993,6 +907,139 @@ TEST_F(MultipleDeviceTestCase, RemoveDeadDevice) {
   ASSERT_FALSE(state.device->is_bindable());
 
   ASSERT_NOT_OK(coordinator_.RemoveDevice(state.device, false), "device should already be dead");
+}
+
+// Reads the request from |remote| and verifies whether it matches the expected Unbind request.
+// |SendUnbindReply| can be used to send the desired response.
+void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote) {
+  // Read the unbind request.
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                   &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(0, actual_handles);
+
+  // Validate the unbind request.
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerUnbindOrdinal, hdr->ordinal);
+  status = fidl_decode(&fuchsia_device_manager_DeviceControllerUnbindRequestTable, bytes,
+                       actual_bytes, handles, actual_handles, nullptr);
+  ASSERT_OK(status);
+}
+
+// Sends a response with the given return_status. This can be used to reply to a
+// request received by |CheckUnbindReceived|.
+void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote) {
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_handles;
+  // Write the UnbindDone message.
+  memset(bytes, 0, sizeof(bytes));
+  auto req = reinterpret_cast<fuchsia_device_manager_CoordinatorUnbindDoneRequest*>(bytes);
+  req->hdr.ordinal = fuchsia_device_manager_CoordinatorUnbindDoneOrdinal;
+  req->hdr.txid = 1;
+  zx_status_t status =
+      fidl_encode(&fuchsia_device_manager_CoordinatorUnbindDoneRequestTable, bytes, sizeof(*req),
+                  handles, fbl::count_of(handles), &actual_handles, nullptr);
+  ASSERT_OK(status);
+  ASSERT_EQ(0, actual_handles);
+  status = remote.write(0, bytes, sizeof(*req), nullptr, 0);
+  ASSERT_OK(status);
+
+  coordinator_loop()->RunUntilIdle();
+
+  // Verify the UnbindDone response.
+  uint32_t actual_bytes;
+  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                       &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(0, actual_handles);
+
+  fidl::EncodedMessage<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> encoded(
+      fidl::BytePart(bytes, actual_bytes, actual_bytes));
+  auto decode_result = fidl::Decode(std::move(encoded));
+  ASSERT_OK(decode_result.status);
+
+  const ::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse& msg =
+      *decode_result.message.message();
+  ASSERT_FALSE(msg.result.is_err());
+}
+
+void MultipleDeviceTestCase::CheckUnbindReceivedAndReply(const zx::channel& remote) {
+  CheckUnbindReceived(remote);
+  SendUnbindReply(remote);
+}
+
+// Reads the request from |remote| and verifies whether it matches the expected
+// CompleteRemoval request.
+// |SendRemoveReply| can be used to send the desired response.
+void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote) {
+  // Read the remove request.
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                   &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(0, actual_handles);
+
+  // Validate the remove request.
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal, hdr->ordinal);
+  status = fidl_decode(&fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable, bytes,
+                       actual_bytes, handles, actual_handles, nullptr);
+  ASSERT_OK(status);
+}
+
+// Sends a response with the given return_status. This can be used to reply to a
+// request received by |CheckRemoveReceived|.
+void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote) {
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_handles;
+  // Write the RemoveDone message.
+  memset(bytes, 0, sizeof(bytes));
+  auto req = reinterpret_cast<fuchsia_device_manager_CoordinatorRemoveDoneRequest*>(bytes);
+  req->hdr.ordinal = fuchsia_device_manager_CoordinatorRemoveDoneOrdinal;
+  req->hdr.txid = 1;
+  zx_status_t status =
+      fidl_encode(&fuchsia_device_manager_CoordinatorRemoveDoneRequestTable, bytes, sizeof(*req),
+                  handles, fbl::count_of(handles), &actual_handles, nullptr);
+  ASSERT_OK(status);
+  ASSERT_EQ(0, actual_handles);
+  status = remote.write(0, bytes, sizeof(*req), nullptr, 0);
+  ASSERT_OK(status);
+
+  coordinator_loop()->RunUntilIdle();
+
+  // Verify the RemoveDone response.
+  uint32_t actual_bytes;
+  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                       &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(0, actual_handles);
+
+  fidl::EncodedMessage<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> encoded(
+      fidl::BytePart(bytes, actual_bytes, actual_bytes));
+  auto decode_result = fidl::Decode(std::move(encoded));
+  ASSERT_OK(decode_result.status);
+
+  const ::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse& msg =
+      *decode_result.message.message();
+  ASSERT_FALSE(msg.result.is_err());
+}
+
+void MultipleDeviceTestCase::CheckRemoveReceivedAndReply(const zx::channel& remote) {
+  CheckRemoveReceived(remote);
+  SendRemoveReply(remote);
 }
 
 class UnbindTestCase : public MultipleDeviceTestCase {

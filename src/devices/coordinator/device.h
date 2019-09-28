@@ -102,7 +102,6 @@ class Device : public fbl::RefCounted<Device>,
                           ::fidl::StringView driver_path, ::fidl::StringView args,
                           ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync _completer) override;
-  void RemoveDevice(RemoveDeviceCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
   void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;

@@ -154,10 +154,11 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
 __EXPORT zx_status_t device_remove(zx_device_t* dev) {
   ApiAutoLock lock;
-  // This recovers the leaked reference that happened in
-  // device_add_from_driver() above.
-  auto dev_ref = fbl::ImportFromRawPtr(dev);
-  return devhost_device_remove(std::move(dev_ref));
+  // The leaked reference in device_add_from_driver() will be recovered when
+  // devhost_remove() completes. We can't drop it here as we may just be
+  // scheduling a removal, and do not know when that will happen.
+  fbl::RefPtr<zx_device_t> dev_ref(dev);
+  return devhost_device_remove(dev_ref);
 }
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
@@ -235,6 +236,11 @@ zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_lib
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
   ApiAutoLock lock;
   return devhost_device_unbind(dev);
+}
+
+zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
+  ApiAutoLock lock;
+  return devhost_schedule_remove(dev, unbind_self);
 }
 
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,

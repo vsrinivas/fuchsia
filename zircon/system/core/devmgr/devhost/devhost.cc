@@ -294,7 +294,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel rpc, ::fidl::StringVi
   // message is spurious in this case, since the dummy parent never
   // actually begins its device lifecycle.  This flag is ordinarily
   // set by device_remove().
-  creation_context.parent->flags |= DEV_FLAG_VERY_DEAD;
+  creation_context.parent->flags |= DEV_FLAG_DEAD;
 
   if (r != ZX_OK) {
     log(ERROR, "devhost: driver create() failed: %d\n", r);
@@ -642,7 +642,7 @@ static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
   log(RPC_OUT, "devhost[%s] %s'\n", path, opname);
 }
 
-static void log_rpc_result(const char* opname, zx_status_t status, zx_status_t call_status) {
+static void log_rpc_result(const char* opname, zx_status_t status, zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
     log(ERROR, "devhost: rpc:%s sending failed: %d\n", opname, status);
   } else if (call_status != ZX_OK) {
@@ -672,7 +672,7 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
 
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
-zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
+zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
   DeviceControllerConnection* conn = dev->conn.load();
   if (conn == nullptr) {
     log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
@@ -691,16 +691,15 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->rpc;
   ZX_ASSERT(rpc.is_valid());
   // TODO(teisenbe): Handle failures here...
-  log_rpc(dev, "remove-device");
-  auto response =
-      fuchsia::device::manager::Coordinator::Call::RemoveDevice(zx::unowned_channel(rpc.get()));
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
-  }
 
-  log_rpc_result("remove-device", status, call_status);
+  log_rpc(dev, "remove-done");
+  auto resp = fuchsia::device::manager::Coordinator::Call::RemoveDone(
+      zx::unowned_channel(rpc.get()));
+  zx_status_t call_status = ZX_OK;
+  if (resp.status() == ZX_OK && resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  log_rpc_result("remove-done", resp.status(), call_status);
 
   // Forget our local ID, to release the reference stored by the local ID map
   dev->set_local_id(0);
@@ -717,6 +716,40 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
   proxy_ios_destroy(dev);
 
   return ZX_OK;
+}
+
+zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev) {
+  const zx::channel& rpc = *dev->rpc;
+  ZX_ASSERT(rpc.is_valid());
+  log_rpc(dev, "unbind-done");
+  auto resp = fuchsia::device::manager::Coordinator::Call::UnbindDone(
+      zx::unowned_channel(rpc.get()));
+  zx_status_t call_status = ZX_OK;
+  if (resp.status() == ZX_OK && resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  log_rpc_result("unbind-done", resp.status(), call_status);
+  return resp.status();
+}
+
+zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
+  const zx::channel& rpc = *dev->rpc;
+  ZX_ASSERT(rpc.is_valid());
+  log_rpc(dev, "schedule-remove");
+  auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleRemove(
+      zx::unowned_channel(rpc.get()), unbind_self);
+  log_rpc_result("schedule-remove", resp.status());
+  return resp.status();
+}
+
+zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
+  const zx::channel& rpc = *dev->rpc;
+  ZX_ASSERT(rpc.is_valid());
+  log_rpc(dev, "schedule-unbind-children");
+  auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleUnbindChildren(
+      zx::unowned_channel(rpc.get()));
+  log_rpc_result("schedule-unbind-children", resp.status());
+  return resp.status();
 }
 
 zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,

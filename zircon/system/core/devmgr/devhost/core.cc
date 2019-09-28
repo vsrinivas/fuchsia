@@ -327,7 +327,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK {
   auto mark_dead = fbl::MakeAutoCall([&dev]() {
     if (dev) {
-      dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
+      dev->flags |= DEV_FLAG_DEAD;
     }
   });
 
@@ -440,52 +440,25 @@ static const char* removal_problem(uint32_t flags) {
   return "?";
 }
 
-static void devhost_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-#if TRACE_ADD_REMOVE
-  printf("devhost_unbind_children: %p(%s)\n", dev.get(), dev->name);
-#endif
-  enum_lock_acquire();
-  for (auto& child : dev->children) {
-    if (!(child.flags & DEV_FLAG_DEAD)) {
-      // Try to get a reference to the child.   This will fail if the last
-      // reference to it went away and fbl_recycle() is going to blocked
-      // waiting for the DM lock
-      auto child_ref = fbl::MakeRefPtrUpgradeFromRaw(&child, &::devmgr::internal::devhost_api_lock);
-      if (child_ref) {
-        devhost_device_unbind(std::move(child_ref));
-      }
-    }
-  }
-
-  fbl::RefPtr<CompositeDevice> composite = dev->take_composite();
-  if (composite) {
-    fbl::RefPtr<zx_device_t> child = composite->Detach();
-    if (child && !(child->flags & DEV_FLAG_DEAD)) {
-      devhost_device_unbind(std::move(child));
-    }
-  }
-
-  enum_lock_release();
-}
-
-zx_status_t devhost_device_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK {
+zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
            removal_problem(dev->flags));
     return ZX_ERR_INVALID_ARGS;
   }
+  if (dev->flags & DEV_FLAG_UNBOUND) {
 #if TRACE_ADD_REMOVE
-  printf("device: %p(%s): is being removed\n", dev.get(), dev->name);
+    printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
 #endif
-  dev->flags |= DEV_FLAG_DEAD;
-
-  devhost_unbind_children(dev);
-
-  // cause the vfs entry to be unpublished to avoid further open() attempts
-  xprintf("device: %p: devhost->devmgr remove rpc\n", dev.get());
-  devhost_remove(dev);
-
-  dev->flags |= DEV_FLAG_VERY_DEAD;
+    // This removal is in response to the unbind hook.
+    devhost_send_unbind_done(dev);
+  } else {
+#if TRACE_ADD_REMOVE
+    printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
+#endif
+    // Ask the devcoordinator to schedule the removal of this device and its children.
+    devhost_schedule_remove(dev, false /* unbind_self */);
+  }
   return ZX_OK;
 }
 
@@ -495,7 +468,7 @@ zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
     dev->flags |= DEV_FLAG_WANTS_REBIND;
 
     // request that any existing children go away
-    devhost_unbind_children(dev);
+    devhost_schedule_unbind_children(dev);
   } else {
     return devhost_device_bind(dev, "");
   }
@@ -504,6 +477,8 @@ zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
 }
 
 zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+  enum_lock_acquire();
+
   if (!(dev->flags & DEV_FLAG_UNBOUND)) {
     dev->flags |= DEV_FLAG_UNBOUND;
     // Call dev's unbind op.
@@ -513,8 +488,27 @@ zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
 #endif
       ApiAutoRelock relock;
       dev->UnbindOp();
+    } else {
+      // We should reply to the unbind hook so we don't get stuck.
+      devhost_send_unbind_done(dev);
     }
   }
+
+  enum_lock_release();
+
+  return ZX_OK;
+}
+
+zx_status_t devhost_device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+#if TRACE_ADD_REMOVE
+  printf("device: %p(%s): is being removed (removal requested)\n", dev.get(), dev->name);
+#endif
+
+  // This recovers the leaked reference that happened in device_add_from_driver().
+  auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
+  devhost_remove(std::move(dev_add_ref));
+
+  dev->flags |= DEV_FLAG_DEAD;
   return ZX_OK;
 }
 

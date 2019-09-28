@@ -39,10 +39,12 @@ struct Coordinator_AddDevice_Response;
 struct Coordinator_AddDevice_Result;
 struct Coordinator_AddDeviceInvisible_Response;
 struct Coordinator_AddDeviceInvisible_Result;
+struct Coordinator_UnbindDone_Response;
+struct Coordinator_UnbindDone_Result;
 struct Coordinator_RunCompatibilityTests_Response;
 struct Coordinator_RunCompatibilityTests_Result;
-struct Coordinator_RemoveDevice_Response;
-struct Coordinator_RemoveDevice_Result;
+struct Coordinator_RemoveDone_Response;
+struct Coordinator_RemoveDone_Result;
 struct Coordinator_PublishMetadata_Response;
 struct Coordinator_PublishMetadata_Result;
 struct Coordinator_MakeVisible_Response;
@@ -1392,6 +1394,113 @@ constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
 
 
 
+struct Coordinator_UnbindDone_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+
+struct Coordinator_UnbindDone_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Coordinator_UnbindDone_Result();
+  ~Coordinator_UnbindDone_Result();
+
+  Coordinator_UnbindDone_Result(Coordinator_UnbindDone_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Coordinator_UnbindDone_Result& operator=(Coordinator_UnbindDone_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Coordinator_UnbindDone_Result WithResponse(Coordinator_UnbindDone_Response&& val) {
+    Coordinator_UnbindDone_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  Coordinator_UnbindDone_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Coordinator_UnbindDone_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Coordinator_UnbindDone_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  Coordinator_UnbindDone_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Coordinator_UnbindDone_Result WithErr(int32_t&& val) {
+    Coordinator_UnbindDone_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Coordinator_UnbindDone_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    Coordinator_UnbindDone_Response response_;
+    int32_t err_;
+  };
+};
+
+
+
 struct Coordinator_RunCompatibilityTests_Response {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -1499,7 +1608,7 @@ struct Coordinator_RunCompatibilityTests_Result {
 
 
 
-struct Coordinator_RemoveDevice_Response {
+struct Coordinator_RemoveDone_Response {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
@@ -1509,26 +1618,26 @@ struct Coordinator_RemoveDevice_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDevice_ResultTable;
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
 
-struct Coordinator_RemoveDevice_Result {
+struct Coordinator_RemoveDone_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  Coordinator_RemoveDevice_Result();
-  ~Coordinator_RemoveDevice_Result();
+  Coordinator_RemoveDone_Result();
+  ~Coordinator_RemoveDone_Result();
 
-  Coordinator_RemoveDevice_Result(Coordinator_RemoveDevice_Result&& other) {
+  Coordinator_RemoveDone_Result(Coordinator_RemoveDone_Result&& other) {
     tag_ = Tag::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  Coordinator_RemoveDevice_Result& operator=(Coordinator_RemoveDevice_Result&& other) {
+  Coordinator_RemoveDone_Result& operator=(Coordinator_RemoveDone_Result&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1539,32 +1648,32 @@ struct Coordinator_RemoveDevice_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Coordinator_RemoveDevice_Result WithResponse(Coordinator_RemoveDevice_Response&& val) {
-    Coordinator_RemoveDevice_Result result;
+  static Coordinator_RemoveDone_Result WithResponse(Coordinator_RemoveDone_Response&& val) {
+    Coordinator_RemoveDone_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Coordinator_RemoveDevice_Response& mutable_response();
+  Coordinator_RemoveDone_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Coordinator_RemoveDevice_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, Coordinator_RemoveDone_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Coordinator_RemoveDevice_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, Coordinator_RemoveDone_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Coordinator_RemoveDevice_Response const & response() const { return response_; }
+  Coordinator_RemoveDone_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  static Coordinator_RemoveDevice_Result WithErr(int32_t&& val) {
-    Coordinator_RemoveDevice_Result result;
+  static Coordinator_RemoveDone_Result WithErr(int32_t&& val) {
+    Coordinator_RemoveDone_Result result;
     result.set_err(std::move(val));
     return result;
   }
@@ -1587,7 +1696,7 @@ struct Coordinator_RemoveDevice_Result {
 
   Tag which() const { return tag_; }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDevice_ResultTable;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -1595,11 +1704,11 @@ struct Coordinator_RemoveDevice_Result {
 
  private:
   void Destroy();
-  void MoveImpl_(Coordinator_RemoveDevice_Result&& other);
+  void MoveImpl_(Coordinator_RemoveDone_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Coordinator_RemoveDevice_Response response_;
+    Coordinator_RemoveDone_Response response_;
     int32_t err_;
   };
 };
@@ -3305,7 +3414,8 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponse
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
@@ -3416,16 +3526,12 @@ class Coordinator final {
 
   using ScheduleUnbindChildrenRequest = ::fidl::AnyZeroArgMessage;
 
-  using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
-
-  using RemoveDoneRequest = ::fidl::AnyZeroArgMessage;
-
-  struct RemoveDeviceResponse final {
+  struct UnbindDoneResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Coordinator_RemoveDevice_Result result;
+    Coordinator_UnbindDone_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3433,7 +3539,22 @@ class Coordinator final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using RemoveDeviceRequest = ::fidl::AnyZeroArgMessage;
+  using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
+
+  struct RemoveDoneResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Coordinator_RemoveDone_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using RemoveDoneRequest = ::fidl::AnyZeroArgMessage;
 
   struct MakeVisibleResponse final {
     FIDL_ALIGNDECL
@@ -3784,8 +3905,9 @@ class Coordinator final {
       using Super::error;
       using Super::ok;
     };
-    class UnbindDone_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class UnbindDone_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
       UnbindDone_Impl(zx::unowned_channel _client_end);
       ~UnbindDone_Impl() = default;
@@ -3794,26 +3916,19 @@ class Coordinator final {
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
-    class RemoveDone_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class RemoveDone_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
       RemoveDone_Impl(zx::unowned_channel _client_end);
       ~RemoveDone_Impl() = default;
       RemoveDone_Impl(RemoveDone_Impl&& other) = default;
       RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-    };
-    template <typename ResponseType>
-    class RemoveDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      RemoveDevice_Impl(zx::unowned_channel _client_end);
-      ~RemoveDevice_Impl() = default;
-      RemoveDevice_Impl(RemoveDevice_Impl&& other) = default;
-      RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -4004,9 +4119,8 @@ class Coordinator final {
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
-    using UnbindDone = UnbindDone_Impl;
-    using RemoveDone = RemoveDone_Impl;
-    using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
+    using UnbindDone = UnbindDone_Impl<UnbindDoneResponse>;
+    using RemoveDone = RemoveDone_Impl<RemoveDoneResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -4079,36 +4193,30 @@ class Coordinator final {
       using Super::error;
       using Super::ok;
     };
-    class UnbindDone_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class UnbindDone_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      UnbindDone_Impl(zx::unowned_channel _client_end);
+      UnbindDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~UnbindDone_Impl() = default;
       UnbindDone_Impl(UnbindDone_Impl&& other) = default;
       UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
-    class RemoveDone_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class RemoveDone_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RemoveDone_Impl(zx::unowned_channel _client_end);
+      RemoveDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~RemoveDone_Impl() = default;
       RemoveDone_Impl(RemoveDone_Impl&& other) = default;
       RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-    };
-    template <typename ResponseType>
-    class RemoveDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      RemoveDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~RemoveDevice_Impl() = default;
-      RemoveDevice_Impl(RemoveDevice_Impl&& other) = default;
-      RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -4299,9 +4407,8 @@ class Coordinator final {
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
-    using UnbindDone = UnbindDone_Impl;
-    using RemoveDone = RemoveDone_Impl;
-    using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
+    using UnbindDone = UnbindDone_Impl<UnbindDoneResponse>;
+    using RemoveDone = RemoveDone_Impl<RemoveDoneResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -4376,22 +4483,20 @@ class Coordinator final {
 
 
     // Sent as the response to |Unbind|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UnbindDone UnbindDone();
 
+    // Sent as the response to |Unbind|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::UnbindDone UnbindDone(::fidl::BytePart _response_buffer);
 
     // Sent as the response to |CompleteRemoval|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RemoveDone RemoveDone();
 
-
-    // Record the removal of this device.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::RemoveDevice RemoveDevice();
-
-    // Record the removal of this device.
+    // Sent as the response to |CompleteRemoval|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::RemoveDevice RemoveDevice(::fidl::BytePart _response_buffer);
+    UnownedResultOf::RemoveDone RemoveDone(::fidl::BytePart _response_buffer);
 
     // Mark this device as visible.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -4576,22 +4681,20 @@ class Coordinator final {
 
 
     // Sent as the response to |Unbind|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end);
 
+    // Sent as the response to |Unbind|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Sent as the response to |CompleteRemoval|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RemoveDone RemoveDone(zx::unowned_channel _client_end);
 
-
-    // Record the removal of this device.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RemoveDevice RemoveDevice(zx::unowned_channel _client_end);
-
-    // Record the removal of this device.
+    // Sent as the response to |CompleteRemoval|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RemoveDevice RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RemoveDone RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Mark this device as visible.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -4748,13 +4851,10 @@ class Coordinator final {
     static ::fidl::internal::StatusAndError ScheduleUnbindChildren(zx::unowned_channel _client_end);
 
     // Sent as the response to |Unbind|.
-    static ::fidl::internal::StatusAndError UnbindDone(zx::unowned_channel _client_end);
+    static ::fidl::DecodeResult<UnbindDoneResponse> UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Sent as the response to |CompleteRemoval|.
-    static ::fidl::internal::StatusAndError RemoveDone(zx::unowned_channel _client_end);
-
-    // Record the removal of this device.
-    static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RemoveDoneResponse> RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Mark this device as visible.
     static ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -4853,27 +4953,33 @@ class Coordinator final {
 
     virtual void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync _completer) = 0;
 
-    using UnbindDoneCompleter = ::fidl::Completer<>;
-
-    virtual void UnbindDone(UnbindDoneCompleter::Sync _completer) = 0;
-
-    using RemoveDoneCompleter = ::fidl::Completer<>;
-
-    virtual void RemoveDone(RemoveDoneCompleter::Sync _completer) = 0;
-
-    class RemoveDeviceCompleterBase : public _Base {
+    class UnbindDoneCompleterBase : public _Base {
      public:
-      void Reply(Coordinator_RemoveDevice_Result result);
-      void Reply(::fidl::BytePart _buffer, Coordinator_RemoveDevice_Result result);
-      void Reply(::fidl::DecodedMessage<RemoveDeviceResponse> params);
+      void Reply(Coordinator_UnbindDone_Result result);
+      void Reply(::fidl::BytePart _buffer, Coordinator_UnbindDone_Result result);
+      void Reply(::fidl::DecodedMessage<UnbindDoneResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using RemoveDeviceCompleter = ::fidl::Completer<RemoveDeviceCompleterBase>;
+    using UnbindDoneCompleter = ::fidl::Completer<UnbindDoneCompleterBase>;
 
-    virtual void RemoveDevice(RemoveDeviceCompleter::Sync _completer) = 0;
+    virtual void UnbindDone(UnbindDoneCompleter::Sync _completer) = 0;
+
+    class RemoveDoneCompleterBase : public _Base {
+     public:
+      void Reply(Coordinator_RemoveDone_Result result);
+      void Reply(::fidl::BytePart _buffer, Coordinator_RemoveDone_Result result);
+      void Reply(::fidl::DecodedMessage<RemoveDoneResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using RemoveDoneCompleter = ::fidl::Completer<RemoveDoneCompleterBase>;
+
+    virtual void RemoveDone(RemoveDoneCompleter::Sync _completer) = 0;
 
     class MakeVisibleCompleterBase : public _Base {
      public:
@@ -5191,6 +5297,16 @@ struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisi
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response) == ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response, __reserved) == 0);
@@ -5201,14 +5317,14 @@ struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilit
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response>);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result>);
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response> : public std::true_type {};
@@ -5441,12 +5557,20 @@ static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRem
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest, unbind_self) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse)
-    == ::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse)
+    == ::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse)
+    == ::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::MakeVisibleResponse> : public std::true_type {};

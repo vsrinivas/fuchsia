@@ -701,17 +701,8 @@ int Device::RunCompatibilityTests() {
     auto& child = *itr;
     itr++;
     this->set_test_state(Device::TestStateMachine::kTestUnbindSent);
-    status = dh_send_unbind(&child);
-    if (status != ZX_OK) {
-      // TODO(ravoorir): How do we return to clean state here? Forcefully
-      // remove all the children?
-      log(ERROR,
-          "devcoordinator: Driver Compatibility test failed for %s: "
-          "Sending unbind to %s failed\n",
-          test_driver_name, child.name().data());
-      test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
-      return -1;
-    }
+    coordinator->ScheduleDevhostRequestedRemove(fbl::RefPtr<Device>(&child),
+                                                true /* unbind_self */);
   }
 
   zx_signals_t observed = 0;
@@ -868,7 +859,14 @@ void Device::UnbindDone(UnbindDoneCompleter::Sync completer) {
 
   log(DEVLC, "devcoordinator: unbind done '%s'\n", dev->name().data());
 
-  dev->CompleteUnbind();
+  zx_status_t status = dev->CompleteUnbind();
+  llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result response;
+  if (status != ZX_OK) {
+    response.set_err(status);
+  } else {
+    response.set_response(llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response{});
+  }
+  completer.Reply(std::move(response));
 }
 
 void Device::RemoveDone(RemoveDoneCompleter::Sync completer) {
@@ -876,26 +874,13 @@ void Device::RemoveDone(RemoveDoneCompleter::Sync completer) {
 
   log(DEVLC, "devcoordinator: remove done '%s'\n", dev->name().data());
 
-  dev->CompleteRemove();
-}
-
-void Device::RemoveDevice(RemoveDeviceCompleter::Sync completer) {
-  auto dev = fbl::RefPtr(this);
-
-  llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result response;
-  if (dev->state() == Device::State::kSuspending) {
-    log(ERROR, "devcoordinator: rpc: remove-device '%s' forbidden when device is suspending\n",
-        dev->name().data());
-    response.set_err(ZX_ERR_BAD_STATE);
-    completer.Reply(std::move(response));
-    return;
+  zx_status_t status = dev->CompleteRemove();
+  llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result response;
+  if (status != ZX_OK) {
+    response.set_err(status);
+  } else {
+    response.set_response(llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response{});
   }
-
-  log(RPC_IN, "devcoordinator: rpc: remove-device '%s'\n", dev->name().data());
-  // TODO(teisenbe): RemoveDevice and the reply func can return errors.  We should probably
-  // act on it, but the existing code being migrated does not.
-  dev->coordinator->RemoveDevice(dev, false);
-  response.set_response(llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Response{});
   completer.Reply(std::move(response));
 }
 

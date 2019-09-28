@@ -229,8 +229,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
 // clang-format off
 
-#define DEV_FLAG_DEAD                  0x00000001  // being deleted
-#define DEV_FLAG_VERY_DEAD             0x00000002  // safe for ref0 and release()
+#define DEV_FLAG_DEAD                  0x00000001  // this device has been removed and
+                                                   // is safe for ref0 and release()
 #define DEV_FLAG_UNBINDABLE            0x00000004  // nobody may bind to this device
 #define DEV_FLAG_BUSY                  0x00000010  // device being created
 #define DEV_FLAG_INSTANCE              0x00000020  // this device was created-on-open
@@ -244,6 +244,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
+zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self);
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time);
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,

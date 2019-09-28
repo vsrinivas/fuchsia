@@ -44,6 +44,10 @@ class CompositeDeviceInstance {
   void Release() { delete this; }
 
   void Unbind() {
+    for (auto& component : components_) {
+      // Drop the reference to the composite device.
+      component->take_composite();
+    }
     components_.reset();
     device_remove(zxdev_);
   }

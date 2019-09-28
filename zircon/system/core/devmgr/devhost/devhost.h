@@ -139,13 +139,12 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK;
-// Note that devhost_device_remove() takes a RefPtr rather than a const RefPtr&.
-// It intends to consume a reference.
-zx_status_t devhost_device_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev,
                                 const char* drv_libname) REQ_DM_LOCK;
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+zx_status_t devhost_device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                                    int64_t hook_wait_time) REQ_DM_LOCK;
 zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
@@ -233,7 +232,13 @@ zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::c
 zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& child,
                         const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
                         zx::channel client_remote) REQ_DM_LOCK;
-zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+// Note that devhost_remove() takes a RefPtr rather than a const RefPtr&.
+// It intends to consume a reference.
+zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev);
+zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev,
+                                    bool unbind_self) REQ_DM_LOCK;
+zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
 
 // State that is shared between the zx_device implementation and devhost-core.cpp

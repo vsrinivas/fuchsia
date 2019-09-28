@@ -200,13 +200,10 @@ protocol Coordinator {
     ScheduleUnbindChildren();
 
     /// Sent as the response to |Unbind|.
-    UnbindDone();
+    UnbindDone() -> () error zx.status;
 
     /// Sent as the response to |CompleteRemoval|.
-    RemoveDone();
-
-    /// Record the removal of this device.
-    RemoveDevice() -> () error zx.status;
+    RemoveDone() -> () error zx.status;
 
     /// Mark this device as visible.
     MakeVisible() -> () error zx.status;

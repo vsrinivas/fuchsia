@@ -10,6 +10,7 @@
 #include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
+#include "devhost.h"
 #include "zx-device.h"
 
 namespace {
@@ -28,8 +29,17 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
-  void UnbindDone(UnbindDoneCompleter::Sync completer) override {}
-  void RemoveDone(RemoveDoneCompleter::Sync completer) override {}
+  void UnbindDone(UnbindDoneCompleter::Sync completer) override {
+    unbind_reply_count_++;
+    llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result response;
+    response.set_err(ZX_OK);
+    completer.Reply(std::move(response));
+  }
+  void RemoveDone(RemoveDoneCompleter::Sync completer) override {
+    llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result response;
+    response.set_err(ZX_OK);
+    completer.Reply(std::move(response));
+  }
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) override {}
   void AddCompositeDevice(
       ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
@@ -52,11 +62,6 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
                           ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
-  }
-  void RemoveDevice(RemoveDeviceCompleter::Sync completer) override {
-    llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result response;
     response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
@@ -112,6 +117,7 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
   }
 
   uint32_t bind_count_ = 0;
+  uint32_t unbind_reply_count_ = 0;
 };
 
 class CoreTest : public zxtest::Test {
@@ -125,6 +131,17 @@ class CoreTest : public zxtest::Test {
     ASSERT_OK(zx::channel::create(0, &local, &remote));
     ASSERT_OK(coordinator_.Connect(loop_.dispatcher(), std::move(remote)));
     *out = std::move(local);
+  }
+
+  // This simulates receiving an unbind and remove request from the devcoordinator.
+  void UnbindDevice(fbl::RefPtr<zx_device> dev) {
+    devmgr::ApiAutoLock lock;
+    devmgr::devhost_device_unbind(dev);
+    // devhost_device_complete_removal() will drop the device reference added by device_add().
+    // Since we never called device_add(), we should increment the reference count here.
+    fbl::RefPtr<zx_device_t> dev_add_ref(dev.get());
+    __UNUSED auto ptr = fbl::ExportToRawPtr(&dev_add_ref);
+    devmgr::devhost_device_complete_removal(dev);
   }
 
   async::Loop loop_;
@@ -145,7 +162,7 @@ TEST_F(CoreTest, RebindNoChildren) {
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
   EXPECT_EQ(coordinator_.bind_count_, 1);
 
-  dev->flags |= DEV_FLAG_VERY_DEAD;
+  dev->flags |= DEV_FLAG_DEAD;
 }
 
 TEST_F(CoreTest, RebindHasOneChild) {
@@ -173,11 +190,13 @@ TEST_F(CoreTest, RebindHasOneChild) {
       child->parent = parent;
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
+      EXPECT_EQ(coordinator_.bind_count_, 0);
+      ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
       EXPECT_EQ(unbind_count, 1);
 
-      child->flags |= DEV_FLAG_VERY_DEAD;
+      child->flags |= DEV_FLAG_DEAD;
     }
-    parent->flags |= DEV_FLAG_VERY_DEAD;
+    parent->flags |= DEV_FLAG_DEAD;
   }
   EXPECT_EQ(coordinator_.bind_count_, 1);
 }
@@ -209,15 +228,39 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
       }
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
+
+      for (auto& child : children) {
+        EXPECT_EQ(coordinator_.bind_count_, 0);
+        ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
+      }
+
       EXPECT_EQ(unbind_count, children.size());
 
       for (auto& child : children) {
-        child->flags |= DEV_FLAG_VERY_DEAD;
+        child->flags |= DEV_FLAG_DEAD;
       }
     }
-    parent->flags |= DEV_FLAG_VERY_DEAD;
+    parent->flags |= DEV_FLAG_DEAD;
   }
   EXPECT_EQ(coordinator_.bind_count_, 1);
+}
+
+TEST_F(CoreTest, NoUnbindHook) {
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
+
+  zx_protocol_device_t ops = {};
+  dev->ops = &ops;
+
+  zx::channel rpc;
+  ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
+  dev->rpc = zx::unowned(rpc);
+
+  ASSERT_NO_FATAL_FAILURES(UnbindDevice(dev));
+  // No unbind hook implemented, but the devhost should auto-reply for us.
+  EXPECT_EQ(coordinator_.unbind_reply_count_, 1);
+
+  dev->flags |= DEV_FLAG_DEAD;
 }
 
 }  // namespace

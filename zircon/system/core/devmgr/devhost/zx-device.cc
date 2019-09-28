@@ -122,7 +122,7 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   if (this->flags & DEV_FLAG_INSTANCE) {
     // these don't get removed, so mark dead state here
-    this->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
+    this->flags |= DEV_FLAG_DEAD;
   }
   if (this->flags & DEV_FLAG_BUSY) {
     // this can happen if creation fails
@@ -134,8 +134,8 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   printf("device: %p(%s): ref=0. releasing.\n", this, this->name);
 #endif
 
-  if (!(this->flags & DEV_FLAG_VERY_DEAD)) {
-    printf("device: %p(%s): only mostly dead (this is bad)\n", this, this->name);
+  if (!(this->flags & DEV_FLAG_DEAD)) {
+    printf("device: %p(%s): not yet dead (this is bad)\n", this, this->name);
   }
   if (!this->children.is_empty()) {
     printf("device: %p(%s): still has children! not good.\n", this, this->name);

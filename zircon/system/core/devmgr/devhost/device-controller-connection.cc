@@ -150,7 +150,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
 }
 
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
-  // TODO(jocelyndang): implement this.
+  ApiAutoLock lock;
+  devhost_device_complete_removal(this->dev());
 }
 
 DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc)

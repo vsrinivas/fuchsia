@@ -954,6 +954,65 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Resul
 }
 
 
+::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::Coordinator_UnbindDone_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::~Coordinator_UnbindDone_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_UnbindDone_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::MoveImpl_(Coordinator_UnbindDone_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result) == ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::PrimarySize);
+}
+
+
+Coordinator_UnbindDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_UnbindDone_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Coordinator_RunCompatibilityTests_Result() {
   tag_ = Tag::Invalid;
 }
@@ -1013,18 +1072,18 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Re
 }
 
 
-::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::Coordinator_RemoveDevice_Result() {
+::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::Coordinator_RemoveDone_Result() {
   tag_ = Tag::Invalid;
 }
 
-::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::~Coordinator_RemoveDevice_Result() {
+::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::~Coordinator_RemoveDone_Result() {
   Destroy();
 }
 
-void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::Destroy() {
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::Destroy() {
   switch (which()) {
   case Tag::kResponse:
-    response_.~Coordinator_RemoveDevice_Response();
+    response_.~Coordinator_RemoveDone_Response();
     break;
   default:
     break;
@@ -1032,7 +1091,7 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::Destroy
   tag_ = Tag::Invalid;
 }
 
-void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::MoveImpl_(Coordinator_RemoveDevice_Result&& other) {
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::MoveImpl_(Coordinator_RemoveDone_Result&& other) {
   switch (other.which()) {
   case Tag::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -1046,23 +1105,23 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::MoveImp
   other.Destroy();
 }
 
-void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::PrimarySize);
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::PrimarySize);
 }
 
 
-Coordinator_RemoveDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::mutable_response() {
+Coordinator_RemoveDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_RemoveDevice_Response;
+    new (&response_) Coordinator_RemoveDone_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
 }
 
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::mutable_err() {
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) int32_t;
@@ -2259,11 +2318,10 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveReq
 constexpr uint64_t kCoordinator_ScheduleUnbindChildren_Ordinal = 0x59a4dcaf00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 0x4503c92800000000lu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDone_Ordinal = 0x2ebb580c00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 0x1e76778800000000lu;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_MakeVisible_Ordinal = 0x52d55e5c00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
@@ -2576,8 +2634,8 @@ Coordinator::ResultOf::ScheduleUnbindChildren Coordinator::Call::ScheduleUnbindC
   }
 }
 
-
-Coordinator::ResultOf::UnbindDone_Impl::UnbindDone_Impl(zx::unowned_channel _client_end) {
+template <>
+Coordinator::ResultOf::UnbindDone_Impl<Coordinator::UnbindDoneResponse>::UnbindDone_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2585,8 +2643,8 @@ Coordinator::ResultOf::UnbindDone_Impl::UnbindDone_Impl(zx::unowned_channel _cli
   memset(_write_bytes, 0, UnbindDoneRequest::PrimarySize);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneRequest));
   ::fidl::DecodedMessage<UnbindDoneRequest> _decoded_request(std::move(_request_bytes));
-  Super::operator=(
-      Coordinator::InPlace::UnbindDone(std::move(_client_end)));
+  Super::SetResult(
+      Coordinator::InPlace::UnbindDone(std::move(_client_end), Super::response_buffer()));
 }
 
 Coordinator::ResultOf::UnbindDone Coordinator::SyncClient::UnbindDone() {
@@ -2597,7 +2655,26 @@ Coordinator::ResultOf::UnbindDone Coordinator::Call::UnbindDone(zx::unowned_chan
   return ResultOf::UnbindDone(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError Coordinator::InPlace::UnbindDone(zx::unowned_channel _client_end) {
+template <>
+Coordinator::UnownedResultOf::UnbindDone_Impl<Coordinator::UnbindDoneResponse>::UnbindDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(UnbindDoneRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, UnbindDoneRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(UnbindDoneRequest));
+  ::fidl::DecodedMessage<UnbindDoneRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Coordinator::InPlace::UnbindDone(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Coordinator::UnownedResultOf::UnbindDone Coordinator::SyncClient::UnbindDone(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UnbindDone(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::UnbindDone Coordinator::Call::UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UnbindDone(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Coordinator::UnbindDoneResponse> Coordinator::InPlace::UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(UnbindDoneRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -2607,20 +2684,20 @@ Coordinator::ResultOf::UnbindDone Coordinator::Call::UnbindDone(zx::unowned_chan
   params.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
+    return ::fidl::DecodeResult<Coordinator::UnbindDoneResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  auto _call_result = ::fidl::Call<UnbindDoneRequest, UnbindDoneResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Coordinator::UnbindDoneResponse>::FromFailure(
+        std::move(_call_result));
   }
+  return ::fidl::Decode(std::move(_call_result.message));
 }
 
-
-Coordinator::ResultOf::RemoveDone_Impl::RemoveDone_Impl(zx::unowned_channel _client_end) {
+template <>
+Coordinator::ResultOf::RemoveDone_Impl<Coordinator::RemoveDoneResponse>::RemoveDone_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2628,8 +2705,8 @@ Coordinator::ResultOf::RemoveDone_Impl::RemoveDone_Impl(zx::unowned_channel _cli
   memset(_write_bytes, 0, RemoveDoneRequest::PrimarySize);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneRequest));
   ::fidl::DecodedMessage<RemoveDoneRequest> _decoded_request(std::move(_request_bytes));
-  Super::operator=(
-      Coordinator::InPlace::RemoveDone(std::move(_client_end)));
+  Super::SetResult(
+      Coordinator::InPlace::RemoveDone(std::move(_client_end), Super::response_buffer()));
 }
 
 Coordinator::ResultOf::RemoveDone Coordinator::SyncClient::RemoveDone() {
@@ -2640,7 +2717,26 @@ Coordinator::ResultOf::RemoveDone Coordinator::Call::RemoveDone(zx::unowned_chan
   return ResultOf::RemoveDone(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError Coordinator::InPlace::RemoveDone(zx::unowned_channel _client_end) {
+template <>
+Coordinator::UnownedResultOf::RemoveDone_Impl<Coordinator::RemoveDoneResponse>::RemoveDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RemoveDoneRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, RemoveDoneRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(RemoveDoneRequest));
+  ::fidl::DecodedMessage<RemoveDoneRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Coordinator::InPlace::RemoveDone(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Coordinator::UnownedResultOf::RemoveDone Coordinator::SyncClient::RemoveDone(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveDone(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::RemoveDone Coordinator::Call::RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveDone(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Coordinator::RemoveDoneResponse> Coordinator::InPlace::RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(RemoveDoneRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -2650,75 +2746,13 @@ Coordinator::ResultOf::RemoveDone Coordinator::Call::RemoveDone(zx::unowned_chan
   params.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
+    return ::fidl::DecodeResult<Coordinator::RemoveDoneResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
-}
-
-template <>
-Coordinator::ResultOf::RemoveDevice_Impl<Coordinator::RemoveDeviceResponse>::RemoveDevice_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, RemoveDeviceRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceRequest));
-  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Coordinator::InPlace::RemoveDevice(std::move(_client_end), Super::response_buffer()));
-}
-
-Coordinator::ResultOf::RemoveDevice Coordinator::SyncClient::RemoveDevice() {
-  return ResultOf::RemoveDevice(zx::unowned_channel(this->channel_));
-}
-
-Coordinator::ResultOf::RemoveDevice Coordinator::Call::RemoveDevice(zx::unowned_channel _client_end) {
-  return ResultOf::RemoveDevice(std::move(_client_end));
-}
-
-template <>
-Coordinator::UnownedResultOf::RemoveDevice_Impl<Coordinator::RemoveDeviceResponse>::RemoveDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RemoveDeviceRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, RemoveDeviceRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(RemoveDeviceRequest));
-  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Coordinator::InPlace::RemoveDevice(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Coordinator::UnownedResultOf::RemoveDevice Coordinator::SyncClient::RemoveDevice(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RemoveDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Coordinator::UnownedResultOf::RemoveDevice Coordinator::Call::RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RemoveDevice(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Coordinator::RemoveDeviceResponse> Coordinator::InPlace::RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(RemoveDeviceRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<RemoveDeviceRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Coordinator::RemoveDeviceResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<RemoveDeviceRequest, RemoveDeviceResponse>(
+  auto _call_result = ::fidl::Call<RemoveDoneRequest, RemoveDoneResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Coordinator::RemoveDeviceResponse>::FromFailure(
+    return ::fidl::DecodeResult<Coordinator::RemoveDoneResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -3534,17 +3568,6 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::RemoveDoneCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_RemoveDevice_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<RemoveDeviceRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->RemoveDevice(
-        Interface::RemoveDeviceCompleter::Sync(txn));
-      return true;
-    }
     case kCoordinator_MakeVisible_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MakeVisibleRequest>(msg);
@@ -3749,31 +3772,60 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(Coordinator_RemoveDevice_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceResponse, ::fidl::MessageDirection::kSending>();
+void Coordinator::Interface::UnbindDoneCompleterBase::Reply(Coordinator_UnbindDone_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<RemoveDeviceResponse*>(_write_bytes);
-  _response._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
+  auto& _response = *reinterpret_cast<UnbindDoneResponse*>(_write_bytes);
+  _response._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDeviceResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RemoveDevice_Result result) {
-  if (_buffer.capacity() < RemoveDeviceResponse::PrimarySize) {
+void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_UnbindDone_Result result) {
+  if (_buffer.capacity() < UnbindDoneResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RemoveDeviceResponse*>(_buffer.data());
-  _response._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
+  auto& _response = *reinterpret_cast<UnbindDoneResponse*>(_buffer.data());
+  _response._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(RemoveDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDeviceResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(UnbindDoneResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_buffer)));
 }
 
-void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(::fidl::DecodedMessage<RemoveDeviceResponse> params) {
+void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::DecodedMessage<UnbindDoneResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
+  params.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Coordinator::Interface::RemoveDoneCompleterBase::Reply(Coordinator_RemoveDone_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<RemoveDoneResponse*>(_write_bytes);
+  _response._hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_response_bytes)));
+}
+
+void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RemoveDone_Result result) {
+  if (_buffer.capacity() < RemoveDoneResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<RemoveDoneResponse*>(_buffer.data());
+  _response._hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(RemoveDoneResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_buffer)));
+}
+
+void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::DecodedMessage<RemoveDoneResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
