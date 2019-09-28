@@ -341,7 +341,7 @@ static zx_status_t InitCpuTrace(zx_device_t* parent, zx_handle_t dummy_iommu_han
 }
 
 static zx_protocol_device_t sys_device_proto = []() {
-  zx_protocol_device_t result;
+  zx_protocol_device_t result = {};
 
   result.version = DEVICE_OPS_VERSION;
   result.suspend = sys_device_suspend;
