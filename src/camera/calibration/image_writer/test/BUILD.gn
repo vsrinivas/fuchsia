@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test.gni")
-
 executable("image_writer_test") {
   testonly = true
   sources = [
@@ -14,6 +11,6 @@ executable("image_writer_test") {
   deps = [
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl",
-    "//zircon/public/lib/zxtest",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

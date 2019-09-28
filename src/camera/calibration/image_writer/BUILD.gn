@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("image_writer_bin") {
   output_name = "image_writer"
@@ -14,7 +12,6 @@ executable("image_writer_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.camera",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fzl",

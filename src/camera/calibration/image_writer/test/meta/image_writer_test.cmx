@@ -1,5 +1,14 @@
 {
     "program": {
         "binary": "test/image_writer_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
     }
 }
