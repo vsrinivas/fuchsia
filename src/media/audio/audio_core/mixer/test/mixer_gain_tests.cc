@@ -7,6 +7,11 @@
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 
+using testing::Each;
+using testing::FloatEq;
+using testing::Not;
+using testing::Pointwise;
+
 namespace media::audio::test {
 
 // TODO(36446): Move unittests into audio_mixer_unittests
@@ -93,9 +98,7 @@ TEST_F(GainTest, GainScaleToDb) {
 
   // 1/2x scale-down by calculation: -6.020600... dB.
   const float half_scale = -6.0206001f;
-  // Because of float imprecision, use our Compare...() with float tolerance.
-  EXPECT_TRUE(
-      CompareBufferToVal(&half_scale, Gain::ScaleToDb(Gain::kUnityScale * 0.5f), 1, true, true));
+  EXPECT_FLOAT_EQ(half_scale, Gain::ScaleToDb(Gain::kUnityScale * 0.5f));
 }
 
 // Test the inline function that converts a numerical value to dB.
@@ -409,7 +412,8 @@ TEST_F(ScaleArrayTest, GetScaleArrayNoRampEqualsGetScale) {
 
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
   Gain::AScale expect_scale = gain_.GetGainScale();
-  EXPECT_TRUE(CompareBufferToVal(scale_arr, expect_scale, fbl::count_of(scale_arr)));
+
+  EXPECT_THAT(scale_arr, Each(FloatEq(expect_scale)));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
@@ -424,8 +428,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayRamp) {
   gain_.SetSourceGainWithRamp(-20, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -440,8 +443,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayLongRamp) {
   gain_.SetSourceGainWithRamp(-40, ZX_MSEC(10));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -456,8 +458,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayShortRamp) {
   gain_.SetSourceGainWithRamp(-20, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -474,7 +475,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayWithoutAdvance) {
   Gain::AScale scale_arr2[10];
   gain_.GetScaleArray(scale_arr2, fbl::count_of(scale_arr2), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBuffers(scale_arr, scale_arr2, fbl::count_of(scale_arr)));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), scale_arr2));
 }
 
 // Advances that exceed ramp durations should lead to end-to-ramp conditions.
@@ -485,7 +486,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   gain_.SetSourceGainWithRamp(6.0205999, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_FALSE(CompareBufferToVal(scale_arr, expect, fbl::count_of(scale_arr), false, true));
+  EXPECT_THAT(scale_arr, Not(Each(FloatEq(expect))));
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
@@ -493,7 +494,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   gain_.Advance(rate_1khz_output_.Scale(ZX_SEC(10)), rate_1khz_output_);
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBufferToVal(scale_arr, expect, fbl::count_of(scale_arr)));
+  EXPECT_THAT(scale_arr, Each(FloatEq(expect)));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
@@ -507,8 +508,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.SetSourceGainWithRamp(-30.1029995, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_FALSE(
-      CompareBufferToVal(scale_arr, Gain::kUnityScale, fbl::count_of(scale_arr), false, true));
+  EXPECT_THAT(scale_arr, Not(Each(FloatEq(Gain::kUnityScale))));
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
@@ -517,7 +517,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.ClearSourceRamp();
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBufferToVal(scale_arr, Gain::kUnityScale, fbl::count_of(scale_arr)));
+  EXPECT_THAT(scale_arr, Each(FloatEq(Gain::kUnityScale)));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_TRUE(gain_.IsUnity());
@@ -526,7 +526,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.Advance(10, rate_1khz_output_);
   gain_.GetScaleArray(scale_arr2, fbl::count_of(scale_arr2), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBufferToVal(scale_arr2, Gain::kUnityScale, fbl::count_of(scale_arr2)));
+  EXPECT_THAT(scale_arr2, Each(FloatEq(Gain::kUnityScale)));
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -548,7 +548,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -560,13 +560,13 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   // DisplayScaleVals(scale_arr, fbl::count_of(scale_arr));
 
   expect_scale = expect_arr[kFramesToAdvance];
-  EXPECT_TRUE(CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
+  EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
 
   for (auto& val : expect_arr) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -588,8 +588,7 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
 
   // Advance only partially through the duration of the ramp.
   const uint32_t kFramesToAdvance = 2;
@@ -602,13 +601,13 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   // DisplayScaleVals(scale_arr, fbl::count_of(scale_arr));
 
   expect_scale = expect_arr[kFramesToAdvance];
-  EXPECT_TRUE(CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
+  EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
 
   for (auto& val : expect_arr) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -646,7 +645,7 @@ TEST(MixGain, Scaling_Linearity) {
   float expect[] = {0x080E8000,  0x07FF8000,  0x015E000,   0x00028000,
                     -0x0008C000, -0x000FA000, -0x07FF8000, -0x0808E000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   //
   // How precisely linear are our gain stages, mathematically?
@@ -660,7 +659,7 @@ TEST(MixGain, Scaling_Linearity) {
   float expect2[] = {0x00339000,  0x00333000,  0x00008C00,  0x00001000,
                      -0x00003800, -0x00006400, -0x00333000, -0x00336C00};
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
 // How does our gain scaling respond to scale values close to the limits?
@@ -680,7 +679,7 @@ TEST(MixGain, Scaling_Precision) {
   //  At this gain_scale, resulting audio should be unchanged.
   float max_expect1[] = {0x07FFF000, -0x08000000};  // left-shift source by 12.
   NormalizeInt28ToPipelineBitwidth(max_expect1, fbl::count_of(max_expect1));
-  EXPECT_TRUE(CompareBuffers(accum, max_expect1, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect1));
 
   // This is the highest (closest-to-Unity) AScale with an observable effect on
   // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
@@ -692,7 +691,7 @@ TEST(MixGain, Scaling_Precision) {
   // Float32 has 25-bit precision (not 28), hence our min delta is 8 (not 1).
   float max_expect2[] = {0x07FFEFF8, -0x07FFFFF8};
   NormalizeInt28ToPipelineBitwidth(max_expect2, fbl::count_of(max_expect2));
-  EXPECT_TRUE(CompareBuffers(accum, max_expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect2));
 
   // kMinGainDbNonMute is the lowest (closest-to-zero) at which audio is not
   // silenced (i.e. the smallest that is distinguishable from Mute).  Although
@@ -708,7 +707,7 @@ TEST(MixGain, Scaling_Precision) {
   // fixed-point, normalized into float) cannot precisely express these values.
   // Nonetheless, they are present and non-zero!
   float min_expect[] = {3.051763215e-13, -3.051763215e-13};
-  EXPECT_TRUE(CompareBuffers(accum, min_expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
 
   //
   // kMaxGainDbMute is the highest (furthest-from-Mute) scalar that silences
@@ -723,7 +722,7 @@ TEST(MixGain, Scaling_Precision) {
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), max_source, accum, true, fbl::count_of(accum), AudioResult::kMaxGainDbMute);
 
-  EXPECT_TRUE(CompareBuffers(accum, min_expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
 }
 
 //
@@ -747,13 +746,13 @@ TEST(MixGain, Accumulator) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, true, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // these values even exceed uint16
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, true, 1);
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
 // Our mixer contains an optimization in which it skips mixing operations if it
@@ -767,14 +766,14 @@ void TestAccumulatorClear(Resampler sampler_type) {
       SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
   // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
   DoMix(mixer.get(), source, accum, true, fbl::count_of(accum), Gain::kMinGainDb);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // When accumulate = false but gain is sufficiently low, overwriting previous
   // contents is skipped. This should lead to the same results as above.
   mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), Gain::kMinGainDb);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Validate the SampleAndHold interpolator for this behavior.

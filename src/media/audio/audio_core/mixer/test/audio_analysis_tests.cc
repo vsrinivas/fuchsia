@@ -2,110 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
+
+using testing::Each;
+using testing::ElementsAreArray;
+using testing::Eq;
+using testing::FloatEq;
+using testing::Pointwise;
 
 namespace media::audio::test {
 
 constexpr double RT_2 = 1.4142135623730950488016887242;
-
-// Test uint8 version of CompareBuffers, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffers_8) {
-  uint8_t source[] = {0x42, 0x55};
-  uint8_t expect[] = {0x42, 0xAA};
-
-  // First values match ...
-  EXPECT_TRUE(CompareBuffers(source, expect, 1));
-  // ... but entire buffer does NOT
-  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
-}
-
-// Test int16 version of CompareBuffers, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffers_16) {
-  int16_t source[] = {-1, 0x1157, 0x5555};
-  int16_t expect[] = {-1, 0x1357, 0x5555};
-
-  // Buffers do not match ...
-  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
-  // ... but the first values DO
-  EXPECT_TRUE(CompareBuffers(source, expect, 1));
-}
-
-// Test int32 version of CompareBuffers, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffers_32) {
-  int32_t source[] = {0x13579BDF, 0x26AE048C, -0x76543210, 0x1234567};
-  int32_t expect[] = {0x13579BDF, 0x26AE048C, -0x76543210, 0x7654321};
-
-  // Buffers do not match ...
-  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
-  // ... but the first three values DO
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
-}
-
-// Test float version of CompareBuffers, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffers_Float) {
-  float source[] = {-0.5f, 1.0f / 3.0f, -2.0f / 9.0f, 3.1416f};
-  float expect[] = {-0.5f, 1.0f / 3.0f, -2.0f / 9.0f, 3.14159f};
-
-  // Buffers do not match ...
-  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
-  // ... but the first three values DO
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
-}
-
-// Test double version of CompareBuffers, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffers_Double) {
-  double source[] = {-0.5, 1.0 / 3.0, -2.0 / 9.0, 3.14159001};
-  double expect[] = {-0.5, 1.0 / 3.0, -2.0 / 9.0, 3.14159};
-
-  // Buffers do not match ...
-  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
-  // ... but the first three values DO
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
-}
-
-// Test uint8 version of this func, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffToVal_8) {
-  uint8_t source[] = {0xBB, 0xBB};
-
-  // No match ...
-  EXPECT_FALSE(
-      CompareBufferToVal(source, static_cast<uint8_t>(0xBC), fbl::count_of(source), false));
-  // Match
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0xBB), fbl::count_of(source)));
-}
-
-// Test int16 version of this func, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffToVal_16) {
-  int16_t source[] = {0xBAD, 0xCAD};
-
-  // No match ...
-  EXPECT_FALSE(
-      CompareBufferToVal(source, static_cast<int16_t>(0xBAD), fbl::count_of(source), false));
-  // Match - if we only look at the second value
-  EXPECT_TRUE(CompareBufferToVal(source + 1, static_cast<int16_t>(0xCAD), 1));
-}
-
-// Test int32 version of this func, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffToVal_32) {
-  int32_t source[] = {0xF00CAFE, 0xBADF00D};
-
-  // No match ...
-  EXPECT_FALSE(CompareBufferToVal(source, 0xF00CAFE, fbl::count_of(source), false));
-  // Match - if we only look at the first value
-  EXPECT_TRUE(CompareBufferToVal(source, 0xF00CAFE, 1));
-}
-
-// Test float version of this func, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffToVal_Float) {
-  float source[] = {3.1415926f, 2.7182818f};
-
-  // No match ...
-  EXPECT_FALSE(CompareBufferToVal(source, 3.1415926f, fbl::count_of(source), false));
-  // Match - if we only look at the first value
-  EXPECT_TRUE(CompareBufferToVal(source, 3.1415926f, 1));
-}
 
 // GenerateCosine writes a cosine wave into given buffer & length, at given frequency, magnitude
 // (default 1.0), and phase offset (default false). The 'accumulate' flag specifies whether to add
@@ -118,7 +28,7 @@ TEST(AnalysisHelpers, GenerateCosine_8) {
   GenerateCosine(source, fbl::count_of(source), 0.0, false, 0.0, 0.0);
 
   // Frequency 0.0 produces constant value. Val 0 is shifted to 0x80.
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0x80), fbl::count_of(source)));
+  EXPECT_THAT(source, Each(Eq(0x80)));
 }
 
 TEST(AnalysisHelpers, GenerateCosine_16) {
@@ -126,7 +36,7 @@ TEST(AnalysisHelpers, GenerateCosine_16) {
   GenerateCosine(source, fbl::count_of(source), 0.0, false, -32766.4);
 
   // Frequency of 0.0 produces constant value, with -.4 rounded toward zero.
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<int16_t>(-32766), fbl::count_of(source)));
+  EXPECT_THAT(source, Each(Eq(-32766)));
 
   // Test default bool value (false): also overwrite
   OverwriteCosine(source, 1, 0.0, -41.5, 0.0);
@@ -145,7 +55,7 @@ TEST(AnalysisHelpers, GenerateCosine_32) {
   // PI phase leads to effective magnitude of -12345.6. At frequency 1.0, the change to the buffer
   // is [-12345.6, 0, +12345.6, 0], with +.6 values being rounded away from zero.
   int32_t expect[] = {-16346, 0, 16346, 8000};
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
+  EXPECT_THAT(source, ElementsAreArray(expect));
 }
 
 // Test float-based version of AccumCosine, including default amplitude (1.0)
@@ -154,12 +64,12 @@ TEST(AnalysisHelpers, GenerateCosine_Float) {
 
   OverwriteCosine(source, fbl::count_of(source), 0.0);
   float expect[] = {1.0f, 1.0f, 1.0f, 1.0f};
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
+  EXPECT_THAT(source, Pointwise(FloatEq(), expect));
 
   // PI/2 shifts the freq:1 wave left by 1 here
   AccumulateCosine(source, fbl::count_of(source), 1.0, 0.5, M_PI / 2.0);
   float expect2[] = {1.0f, 0.5f, 1.0f, 1.5f};
-  EXPECT_TRUE(CompareBuffers(source, expect2, fbl::count_of(source)));
+  EXPECT_THAT(source, Pointwise(FloatEq(), expect2));
 }
 
 // Test double-based version of AccumCosine (no int-based rounding)
@@ -171,7 +81,7 @@ TEST(AnalysisHelpers, GenerateCosine_Double) {
   // PI phase leads to effective magnitude of -12345.5. At frequency 1.0, the change to the buffer
   // is [-12345.5, 0, +12345.5, 0], with no rounding because input is double.
   double expect[] = {-16345.5, -83000.0, 16345.5, 78000.0};
-  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
+  EXPECT_THAT(source, Pointwise(FloatEq(), expect));
 }
 
 TEST(AnalysisHelpers, GetPhase) {

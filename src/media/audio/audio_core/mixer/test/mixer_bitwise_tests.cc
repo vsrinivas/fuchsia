@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
+
 #include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+
+using testing::Each;
+using testing::Eq;
+using testing::FloatEq;
+using testing::Pointwise;
 
 namespace media::audio::test {
 
@@ -111,12 +118,12 @@ TEST(PassThru, Source_8) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 8, 48000, 8, 48000,
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 8);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Can 16-bit values flow unchanged (2-2, N-N) thru the system? With 1:1 frame
@@ -133,14 +140,14 @@ TEST(PassThru, Source_16) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                            Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 4, 48000,
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Can 24-bit values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
@@ -158,14 +165,14 @@ TEST(PassThru, Source_24) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 8-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 8, 48000, 8, 48000,
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 8);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Can float values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
@@ -183,14 +190,14 @@ TEST(PassThru, Source_Float) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 4, 48000, 4, 48000,
                       Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Does NoOp mixer behave as expected? (not update offsets, nor touch buffers)
@@ -213,7 +220,7 @@ TEST(PassThru, NoOp) {
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, 0u);
   EXPECT_EQ(frac_src_offset, 0);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 16-bit outputs
@@ -229,7 +236,7 @@ TEST(PassThru, MonoToStereo) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Do we correctly mix stereo to mono, when channels sum to exactly zero
@@ -241,7 +248,7 @@ TEST(PassThru, StereoToMono_Cancel) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBufferToVal(accum, 0.0f, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Each(FloatEq(0.0f)));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -249,7 +256,7 @@ TEST(PassThru, StereoToMono_Cancel) {
                       Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBufferToVal(accum, 0.0f, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Each(FloatEq(0.0f)));
 }
 
 // Validate that we correctly mix stereo->mono, including rounding.
@@ -267,7 +274,7 @@ TEST(PassThru, StereoToMono_Round) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -275,7 +282,7 @@ TEST(PassThru, StereoToMono_Round) {
                       Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Validate that we correctly mix quad->mono, including rounding.
@@ -301,7 +308,7 @@ TEST(PassThru, QuadToMono) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -309,7 +316,7 @@ TEST(PassThru, QuadToMono) {
                       Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Validate that we correctly mix quad->stereo, including rounding. Note: 0|1|2|3 becomes 0+2 | 1+3
@@ -337,7 +344,7 @@ TEST(PassThru, QuadToStereo_Round) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);  // dest frames have 2 samples
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -345,7 +352,7 @@ TEST(PassThru, QuadToStereo_Round) {
                       Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);  // dest frames have 2 samples
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 16-bit outputs
@@ -365,7 +372,7 @@ TEST(PassThru, MonoToQuad) {
                            Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -373,7 +380,7 @@ TEST(PassThru, MonoToQuad) {
                       Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 16-bit outputs
@@ -391,7 +398,7 @@ TEST(PassThru, StereoToQuad) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
   std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
@@ -399,7 +406,7 @@ TEST(PassThru, StereoToQuad) {
                       Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Do we obey the 'accumulate' flag if mixing into existing accumulated data?
@@ -415,7 +422,7 @@ TEST(PassThru, Accumulate) {
                            Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, true, fbl::count_of(accum) / 2);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   float expect2[] = {-0x010E1000, 0x00929000, 0x01A85000, -0x0223D000};  // =source
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
@@ -423,7 +430,7 @@ TEST(PassThru, Accumulate) {
                       Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
 // Are all valid data values rounded correctly to 8-bit outputs?
@@ -440,7 +447,7 @@ TEST(PassThru, Output_8) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
+  EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 16-bit outputs?
@@ -457,7 +464,7 @@ TEST(PassThru, Output_16) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum) / 2);
-  EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
+  EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 24-bit outputs?
@@ -476,7 +483,7 @@ TEST(PassThru, Output_24) {
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum) / 4);
-  EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
+  EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to float outputs
@@ -495,60 +502,77 @@ TEST(PassThru, Output_Float) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum));
-  EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
+  EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
 // Are 8-bit output buffers correctly silenced? Do we stop when we should?
 TEST(PassThru, Output_8_Silence) {
-  uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78};
+  constexpr auto elements = 7;
+  constexpr auto silent_elements = elements - 1;
+
+  std::array<uint8_t, elements> dest = {12, 23, 34, 45, 56, 67, 78};
   // should be overwritten, except for the last value: we only fill(6)
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest), (fbl::count_of(dest) - 1) / 2);
-  EXPECT_TRUE(CompareBufferToVal(dest, static_cast<uint8_t>(0x80), fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 78u);  // this val survives
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 2);
+
+  auto& init = reinterpret_cast<const std::array<uint8_t, silent_elements>&>(dest);
+  EXPECT_THAT(init, Each(Eq(0x80)));
+  EXPECT_EQ(dest[silent_elements], 78);
 }
 
 // Are 16-bit output buffers correctly silenced? Do we stop when we should?
 TEST(PassThru, Output_16_Silence) {
-  int16_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
+  constexpr auto elements = 7;
+  constexpr auto silent_elements = elements - 1;
+
+  std::array<int16_t, elements> dest = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest), (fbl::count_of(dest) - 1) / 3);
-  EXPECT_TRUE(CompareBufferToVal(dest, static_cast<int16_t>(0), fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 3);
+  auto& init = reinterpret_cast<const std::array<int16_t, silent_elements>&>(dest);
+  EXPECT_THAT(init, Each(Eq(0)));
+  EXPECT_EQ(dest[silent_elements], 7890);
 }
 
 // Are 24-bit output buffers correctly silenced? Do we stop when we should?
 TEST(PassThru, Output_24_Silence) {
-  int32_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
+  constexpr auto elements = 7;
+  constexpr auto silent_elements = elements - 1;
+
+  std::array<int32_t, elements> dest = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
   auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest), fbl::count_of(dest) - 1);
-  EXPECT_TRUE(CompareBufferToVal(dest, 0, fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements);
+  auto& init = reinterpret_cast<const std::array<int32_t, silent_elements>&>(dest);
+  EXPECT_THAT(init, Each(Eq(0)));
+  EXPECT_EQ(dest[silent_elements], 7890);
 }
 
 // Are float output buffers correctly silenced? Do we stop when we should?
 TEST(PassThru, Output_Float_Silence) {
-  float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f};
+  constexpr auto elements = 7;
+  constexpr auto silent_elements = elements - 1;
+
+  std::array<float, elements> dest = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f};
   // should be overwritten, except for the last value: we only fill(6)
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 2);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest), (fbl::count_of(dest) - 1) / 2);
-  EXPECT_TRUE(CompareBufferToVal(dest, static_cast<float>(0.0f), fbl::count_of(dest) - 1));
-  EXPECT_FLOAT_EQ(dest[fbl::count_of(dest) - 1], 7.8f);  // this val survives
+  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 2);
+  auto& init = reinterpret_cast<const std::array<uint8_t, silent_elements>&>(dest);
+  EXPECT_THAT(init, Each(Eq(0.0f)));
+  EXPECT_EQ(dest[silent_elements], 7.8f);
 }
 
 }  // namespace media::audio::test

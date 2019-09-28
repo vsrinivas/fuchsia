@@ -23,88 +23,6 @@ namespace media::audio::test {
 // metrics).
 //
 
-// These are the multiplicative factors by which float-based buffer comparisons can differ, and
-// still qualify as "equal" (if 'float_tolerance' is specified). These are just enough to cover
-// "off-by-one" imprecision when converting to 32-bit IEEE-754 float (which essentially has 23 bits
-// of data precision).
-constexpr double kFloatPrecisionUpperBound = 1.00000015;
-constexpr double kFloatPrecisionLowerBound = 1.0 / kFloatPrecisionUpperBound;
-//
-// Numerically compare two buffers of integers. Emit values if mismatch found. For testability,
-// fourth param represents whether we expect comp to fail.
-//
-// TODO(mpuryear): Consider using the googletest Array Matchers for this
-template <typename T>
-bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size, bool expect_to_pass,
-                    bool float_tolerance) {
-  // uint8_t is interpreted as char. Cast into larger int for correct display.
-  constexpr bool is_uint8 = std::is_same_v<T, uint8_t>;
-
-  float_tolerance = float_tolerance && (std::is_same_v<T, float>);
-
-  for (uint32_t idx = 0; idx < buf_size; ++idx) {
-    if (actual[idx] != expect[idx]) {
-      if (expect_to_pass) {
-        if (float_tolerance) {
-          // If expect[idx] is negative, then upper bound is closer to zero (hence multiplied by the
-          // .99999... kFloatPrecisionLowerBound).
-          T low_val = expect[idx] *
-                      (expect[idx] >= 0 ? kFloatPrecisionLowerBound : kFloatPrecisionUpperBound);
-          T high_val = expect[idx] *
-                       (expect[idx] >= 0 ? kFloatPrecisionUpperBound : kFloatPrecisionLowerBound);
-          if (actual[idx] >= low_val && actual[idx] <= high_val) {
-            continue;
-          }
-        }
-        FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
-                       << (is_uint8 ? static_cast<int32_t>(actual[idx]) : actual[idx])
-                       << ", should be "
-                       << (is_uint8 ? static_cast<int32_t>(expect[idx]) : expect[idx]);
-      }
-      return false;
-    }
-  }
-  if (!expect_to_pass) {
-    FXL_LOG(ERROR) << "We expected two buffers (length " << buf_size
-                   << ") to differ, but they did not!";
-  }
-  return true;
-}
-
-// Numerically compares a buffer of integers to a specific value. For testability, 'expect_to_pass'
-// represents whether we expect the comp to fail.
-template <typename T>
-bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_pass,
-                        bool float_tolerance) {
-  // uint8_t is interpreted as char. Cast into larger int for correct display.
-  constexpr bool is_uint8 = std::is_same_v<T, uint8_t>;
-
-  float_tolerance = float_tolerance && (std::is_same_v<T, float>);
-
-  for (uint32_t idx = 0; idx < buf_size; ++idx) {
-    if (buf[idx] != val) {
-      if (expect_to_pass) {
-        if (float_tolerance) {
-          T low_val = val * kFloatPrecisionLowerBound;
-          T high_val = val * kFloatPrecisionUpperBound;
-          if (buf[idx] >= low_val && buf[idx] <= high_val) {
-            continue;
-          }
-        }
-        FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
-                       << (is_uint8 ? static_cast<int32_t>(buf[idx]) : buf[idx]) << ", should be "
-                       << (is_uint8 ? static_cast<int32_t>(val) : val);
-      }
-      return false;
-    }
-  }
-  if (!expect_to_pass) {
-    FXL_LOG(ERROR) << "We expected buffer (length " << buf_size << ") to differ from value "
-                   << (is_uint8 ? static_cast<int32_t>(val) : val) << ", but it was equal!";
-  }
-  return true;
-}
-
 // Display array of values
 template <typename T>
 void DisplayVals(const T* buf, uint32_t buf_size) {
@@ -464,18 +382,6 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_s
     *phase_signal = GetPhase(reals[freq], imags[freq]);
   }
 }
-
-template bool CompareBuffers<uint8_t>(const uint8_t*, const uint8_t*, uint32_t, bool, bool);
-template bool CompareBuffers<int16_t>(const int16_t*, const int16_t*, uint32_t, bool, bool);
-template bool CompareBuffers<int32_t>(const int32_t*, const int32_t*, uint32_t, bool, bool);
-template bool CompareBuffers<float>(const float*, const float*, uint32_t, bool, bool);
-template bool CompareBuffers<double>(const double*, const double*, uint32_t, bool, bool);
-
-template bool CompareBufferToVal<uint8_t>(const uint8_t*, uint8_t, uint32_t, bool, bool);
-template bool CompareBufferToVal<int16_t>(const int16_t*, int16_t, uint32_t, bool, bool);
-template bool CompareBufferToVal<int32_t>(const int32_t*, int32_t, uint32_t, bool, bool);
-template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool, bool);
-template bool CompareBufferToVal<double>(const double*, double, uint32_t, bool, bool);
 
 template void DisplayVals(const int32_t* buf, uint32_t buf_size);
 template void DisplayVals(const float* buf, uint32_t buf_size);

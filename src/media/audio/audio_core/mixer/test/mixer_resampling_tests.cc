@@ -7,6 +7,9 @@
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 
+using testing::FloatEq;
+using testing::Pointwise;
+
 namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
@@ -64,7 +67,7 @@ void TestBasicPosition(Resampler samplerType) {
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(5 << kPtsFractionalBits, frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   //
   // Check: source supply exceeds destination demand.
@@ -83,7 +86,7 @@ void TestBasicPosition(Resampler samplerType) {
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(2 << kPtsFractionalBits, frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum2, expect2, fbl::count_of(accum2)));
+  EXPECT_THAT(accum2, Pointwise(FloatEq(), expect2));
 
   //
   // Check: destination demand exceeds source supply.
@@ -100,7 +103,7 @@ void TestBasicPosition(Resampler samplerType) {
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(3 << kPtsFractionalBits, frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum2, expect3, fbl::count_of(accum2)));
+  EXPECT_THAT(accum2, Pointwise(FloatEq(), expect3));
 }
 
 // Validate basic (frame-level) position for SampleAndHold resampler.
@@ -138,7 +141,7 @@ TEST(Resampling, Position_Fractional_Point) {
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(3u, dest_offset);
   EXPECT_EQ(7 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   //
   // Check: Destination demand exceeds source supply
@@ -155,7 +158,7 @@ TEST(Resampling, Position_Fractional_Point) {
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(3u, dest_offset);
   EXPECT_EQ(9 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
 // Verify LinearSampler mixes from/to correct locations, given fractional src
@@ -191,7 +194,7 @@ TEST(Resampling, Position_Fractional_Linear) {
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
   // src_offset ended less than 1 from end: src[2] will be cached for next mix.
 
   //
@@ -209,7 +212,7 @@ TEST(Resampling, Position_Fractional_Linear) {
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(3u, dest_offset);
   EXPECT_EQ(3 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
 void TestRateModulo(Resampler sampler_type) {
@@ -714,7 +717,7 @@ TEST(Resampling, Reset_Linear) {
                               &frac_src_offset, true, &info));
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
   // src_offset ended less than 1 from end: src[2] will be cached for next mix.
 
   // Mixes with a frac_src_offset < 0 rely on a cached val. This one, post-
@@ -732,7 +735,7 @@ TEST(Resampling, Reset_Linear) {
                                &frac_src_offset, false, &info));
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(1 << (kPtsFractionalBits - 1), frac_src_offset);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 }  // namespace media::audio::test
