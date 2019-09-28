@@ -12,6 +12,7 @@ use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse, MlmeMarker};
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{self, CobaltSender};
+use fuchsia_inspect_contrib::inspect_log;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info};
@@ -92,12 +93,15 @@ pub async fn serve_device_requests(
                                 new_iface.phy_ownership,
                                 mlme_proxy,
                                 ifaces.clone(),
+                                inspect_tree.clone(),
                                 iface_tree_holder,
                                 cobalt_sender.clone(),
                             )
                             .map(move |result| {
                                 if let Err(e) = result {
-                                    error!("error serving iface {}: {}", iface_id, e);
+                                    let msg = format!("error serving iface {}: {}", iface_id, e);
+                                    error!("{}", msg);
+                                    inspect_log!(inspect_tree.device_events.lock(), msg: msg);
                                 }
                                 inspect_tree.notify_iface_removed(iface_id);
                             });

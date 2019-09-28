@@ -26,6 +26,7 @@ use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
+use fuchsia_inspect::Inspector;
 use futures::future::{try_join, try_join5};
 use futures::prelude::*;
 use log::info;
@@ -72,8 +73,9 @@ async fn main() -> Result<(), Error> {
     info!("Starting");
     let cfg = ServiceCfg::from_args();
     let mut fs = ServiceFs::new_local();
-    let inspect_tree =
-        Arc::new(inspect::WlanstackTree::new(&mut fs).expect("fail creating Inspect tree"));
+    let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
+    inspector.export(&mut fs);
+    let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector));
     fs.dir("svc").add_fidl_service(IncomingServices::Device);
 
     let (phys, phy_events) = device::PhyMap::new();
@@ -81,7 +83,8 @@ async fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let phy_server = device::serve_phys(phys.clone(), cfg.isolated_devmgr).map_ok(|x| match x {});
+    let phy_server = device::serve_phys(phys.clone(), cfg.isolated_devmgr, inspect_tree.clone())
+        .map_ok(|x| match x {});
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
         .serve(ConnectionType::project_name(wlan_metrics_registry::PROJECT_NAME));
     let telemetry_server =

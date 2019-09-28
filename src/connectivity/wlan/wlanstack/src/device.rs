@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
     fuchsia_cobalt::CobaltSender,
+    fuchsia_inspect_contrib::inspect_log,
     futures::{
         channel::mpsc,
         future::{Future, FutureExt, FutureObj},
@@ -89,7 +90,11 @@ pub struct IfaceDevice {
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
-pub async fn serve_phys(phys: Arc<PhyMap>, isolated_devmgr: bool) -> Result<Void, Error> {
+pub async fn serve_phys(
+    phys: Arc<PhyMap>,
+    isolated_devmgr: bool,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+) -> Result<Void, Error> {
     let new_phys = if isolated_devmgr {
         device_watch::watch_phy_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
     } else {
@@ -105,7 +110,7 @@ pub async fn serve_phys(phys: Arc<PhyMap>, isolated_devmgr: bool) -> Result<Void
                 None => bail!("new phy stream unexpectedly finished"),
                 Some(Err(e)) => bail!("new phy stream returned an error: {}", e),
                 Some(Ok(new_phy)) => {
-                    let fut = serve_phy(&phys, new_phy);
+                    let fut = serve_phy(&phys, new_phy, inspect_tree.clone());
                     active_phys.push(fut);
                 }
             },
@@ -114,17 +119,26 @@ pub async fn serve_phys(phys: Arc<PhyMap>, isolated_devmgr: bool) -> Result<Void
     }
 }
 
-async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
-    info!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
+async fn serve_phy(
+    phys: &PhyMap,
+    new_phy: device_watch::NewPhyDevice,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+) {
+    let msg = format!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
+    info!("{}", msg);
+    inspect_log!(inspect_tree.device_events.lock(), msg: msg);
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
     phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
     let r = event_stream.map_ok(|_| ()).try_collect::<()>().await;
     phys.remove(&id);
     if let Err(e) = r {
-        error!("error reading from the FIDL channel of phy #{}: {}", id, e);
+        let msg = format!("error reading from FIDL channel of phy #{}: {}", id, e);
+        error!("{}", msg);
+        inspect_log!(inspect_tree.device_events.lock(), msg: msg);
     }
     info!("phy removed: #{}", id);
+    inspect_log!(inspect_tree.device_events.lock(), msg: format!("phy removed: #{}", id));
 }
 
 pub async fn serve_ifaces(
@@ -236,13 +250,16 @@ pub async fn query_and_serve_iface(
     phy_ownership: PhyOwnership,
     mlme_proxy: fidl_mlme::MlmeProxy,
     ifaces: Arc<IfaceMap>,
+    inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
 
-    let device_info = mlme_proxy.query_device_info().await
+    let device_info = mlme_proxy
+        .query_device_info()
+        .await
         .map_err(|e| format_err!("failed querying iface: {}", e))?;
     let (sme, sme_fut) = create_sme(
         cfg,
@@ -255,7 +272,10 @@ pub async fn query_and_serve_iface(
     )
     .map_err(|e| format_err!("failed to creating SME: {}", e))?;
 
-    info!("new iface #{} with role '{:?}'", id, device_info.role,);
+    info!("new iface #{} with role '{:?}'", id, device_info.role);
+    inspect_log!(inspect_tree.device_events.lock(), {
+        msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
+    });
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     ifaces.insert(
         id,
@@ -270,7 +290,8 @@ pub async fn query_and_serve_iface(
     );
 
     let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
-    info!("iface removed: {:?}", id);
+    info!("iface removed: #{}", id);
+    inspect_log!(inspect_tree.device_events.lock(), msg: format!("iface removed: #{}", id));
     ifaces.remove(&id);
     result
 }
@@ -333,7 +354,7 @@ mod tests {
         fidl_fuchsia_wlan_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_cobalt::{self, CobaltSender},
-        fuchsia_inspect::Inspector,
+        fuchsia_inspect::{assert_inspect_tree, Inspector},
         futures::channel::mpsc,
         futures::sink::SinkExt,
         futures::task::Poll,
@@ -358,8 +379,8 @@ mod tests {
         let mut mlme_stream = mlme_server.into_stream().expect("failed to create stream");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
-        let sme_root_node = Inspector::new().root().create_child("sme");
-        let inspect = Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node));
+        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+        let iface_tree_holder = inspect_tree.create_iface_child(1);
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
 
@@ -369,7 +390,8 @@ mod tests {
             PhyOwnership { phy_id: 1, phy_assigned_id: 2 },
             mlme_proxy,
             iface_map.clone(),
-            inspect,
+            inspect_tree.clone(),
+            iface_tree_holder,
             cobalt_sender,
         );
         pin_mut!(serve_fut);
@@ -425,5 +447,12 @@ mod tests {
         let fut_result = exec.run_until_stalled(&mut serve_fut);
         assert_variant!(fut_result, Poll::Ready(_), "expected SME serving to be terminated");
         assert!(iface_map.get(&5).is_none());
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            device_events: {
+                "0": contains { msg: "new iface #5 with role 'Client'" },
+                "1": contains { msg: "iface removed: #5" },
+            },
+        });
     }
 }
