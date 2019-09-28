@@ -45,6 +45,7 @@ build_api_module("api") {
     ":generated_sources",
     ":images",
     ":packages",
+    ":tests",
     ":tool_paths",
   ]
 }
@@ -252,6 +253,36 @@ build_api_module("packages") {
   deps = [
     ":everything",
   ]
+}
+
+# Tests in the build.
+#
+#  Below, the "testing root" refers to $root_build_dir on host, and the full
+#  filesystem path from the root on device.
+#
+# Type: list(scope)
+#
+#   * name
+#     - Required: Name of test.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label associated with the test
+#     - Type: label_with_toolchain
+#
+#   * path
+#     - Required: Path to the test's executable.
+#     - Type: path relative to the testing root.
+#
+#   * cpu, os
+#     - Required: $current_cpu and $current_os values, respectively, for
+#       which this test is intended.
+#     - Type: string
+#
+build_api_module("tests") {
+  testonly = true
+  data_keys = [ "test_specs" ]
+  deps = default_deps
 }
 
 # Tools provided by the build or as prebuilts, to be used outside the build.

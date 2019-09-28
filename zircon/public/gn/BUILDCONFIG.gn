@@ -1436,6 +1436,7 @@ template("test") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               "metadata",
                                "target_type",
                                "test_group",
                                "testonly",
@@ -1451,6 +1452,10 @@ template("test") {
         output_extension = toolchain.executable_extension
       }
 
+      if (!defined(output_dir)) {
+        output_dir = target_out_dir
+      }
+
       if (!is_host && !defined(install_path)) {
         if (defined(invoker.test_group)) {
           test_group = invoker.test_group
@@ -1461,6 +1466,29 @@ template("test") {
         if (output_extension != "") {
           install_path += ".$output_extension"
         }
+      }
+
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+        test_specs = [
+          {
+            test = {
+              name = get_label_info(":$target_name", "name")
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              cpu = current_cpu
+              os = current_os
+              if (is_host) {
+                path = rebase_path("$output_dir/$output_name", root_build_dir)
+              } else {
+                # Inside of a package, this will actually be a package-relative
+                # path.
+                path = install_path
+              }
+            }
+          },
+        ]
       }
     }
   }

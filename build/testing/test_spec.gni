@@ -63,11 +63,7 @@ template("test_spec") {
     }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {
-      if (is_linux) {
-        environments = [ linux_env ]
-      } else if (is_mac) {
-        environments = [ mac_env ]
-      }
+      environments = [ host_env ]
     }
   } else {
     assert(false, "$current_os not supported")

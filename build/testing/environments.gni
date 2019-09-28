@@ -48,9 +48,16 @@ mac_env = {
     os = "Mac"
     cpu = current_cpu
   }
+
   # When running tests for a mac build, we only wish to run mac tests; we attach
   # the "mac" tag in that case to filter out other tests.
-  tags = ["mac"]
+  tags = [ "mac" ]
+}
+
+if (host_os == "linux") {
+  host_env = linux_env
+} else if (host_os == "mac") {
+  host_env = mac_env
 }
 
 ### Select environment lists ###
