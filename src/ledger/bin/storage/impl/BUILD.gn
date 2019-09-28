@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [ "//src/ledger/*" ]
@@ -239,4 +240,16 @@ source_set("unittests") {
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
+}
+
+fuzzer("leveldb_fuzzer") {
+  sources = [
+    "leveldb_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
+    "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/bin/testing:lib",
+    "//zircon/public/lib/async-testing",
+  ]
 }

@@ -10,52 +10,9 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/testing/run_in_coroutine.h"
 
 namespace ledger {
-
-namespace {
-
-// Wrapper around a real CoroutineHandler for test.
-//
-// The wrapper allows to delay re-entering the coroutine body when the run loop
-// is running. When |Resume| is called, it quits the loop, and the main method
-// calls |ResumeIfNeeded| when the loop exits.
-class TestCoroutineHandler : public coroutine::CoroutineHandler {
- public:
-  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate, fit::closure quit_callback)
-      : delegate_(delegate), quit_callback_(std::move(quit_callback)) {}
-
-  coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
-
-  void Resume(coroutine::ContinuationStatus status) override {
-    // If interrupting, no need to delay the call as the test will not run the
-    // loop itself.
-    if (status == coroutine::ContinuationStatus::INTERRUPTED) {
-      delegate_->Resume(status);
-      return;
-    }
-    quit_callback_();
-    need_to_continue_ = true;
-  }
-
-  // Re-enters the coroutine body if the handler delayed the call.
-  // Returns true if the coroutine was indeed resumed, false otherwise.
-  bool ResumeIfNeeded() {
-    if (need_to_continue_) {
-      need_to_continue_ = false;
-      delegate_->Resume(coroutine::ContinuationStatus::OK);
-      return true;
-    }
-    return false;
-  }
-
- private:
-  coroutine::CoroutineHandler* delegate_;
-  fit::closure quit_callback_;
-  bool need_to_continue_ = false;
-};
-
-}  // namespace
 
 TestWithEnvironment::TestWithEnvironment() : TestWithEnvironment(kTestingGarbageCollectionPolicy) {}
 
@@ -72,19 +29,10 @@ TestWithEnvironment::TestWithEnvironment(storage::GarbageCollectionPolicy gc_pol
 
 ::testing::AssertionResult TestWithEnvironment::RunInCoroutine(
     fit::function<void(coroutine::CoroutineHandler*)> run_test, zx::duration delay) {
-  std::unique_ptr<TestCoroutineHandler> test_handler;
-  volatile bool ended = false;
-  environment_.coroutine_service()->StartCoroutine([&](coroutine::CoroutineHandler* handler) {
-    test_handler = std::make_unique<TestCoroutineHandler>(handler, [this] { QuitLoop(); });
-    run_test(test_handler.get());
-    ended = true;
-  });
-  while (!ended) {
-    bool has_resumed = test_handler->ResumeIfNeeded();
-    bool tasks_executed = RunLoopFor(delay);
-    if (!has_resumed && !tasks_executed) {
-      return ::testing::AssertionFailure() << "Coroutine stopped executing but did not end.";
-    }
+  bool completed = ::ledger::RunInCoroutine(&test_loop(), environment_.coroutine_service(),
+                                            std::move(run_test), delay);
+  if (!completed) {
+    return ::testing::AssertionFailure() << "Coroutine stopped executing but did not end.";
   }
   return ::testing::AssertionSuccess();
 }
