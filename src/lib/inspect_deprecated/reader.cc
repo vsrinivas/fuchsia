@@ -240,10 +240,9 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo) {
   return ::inspect_deprecated::ReadFromSnapshot(std::move(snapshot));
 }
 
-fit::result<ObjectHierarchy> ReadFromBuffer(fbl::Array<uint8_t> buffer) {
+fit::result<ObjectHierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
   inspect::Snapshot snapshot;
-  std::vector<uint8_t> new_buffer(buffer.begin(), buffer.end());
-  if (inspect::Snapshot::Create(std::move(new_buffer), &snapshot) != ZX_OK) {
+  if (inspect::Snapshot::Create(std::move(buffer), &snapshot) != ZX_OK) {
     // TODO(CF-865): Best-effort read of invalid snapshots.
     return fit::error();
   }

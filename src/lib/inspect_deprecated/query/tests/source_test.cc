@@ -164,12 +164,12 @@ class SourceTestFile : public SourceTestVmo {
     if (status != ZX_OK) {
       return fit::error("could not get VMO size");
     }
-    const fbl::Array<uint8_t> buf(new uint8_t[vmo_size], vmo_size);
-    status = vmo.read(buf.begin(), 0, vmo_size);
+    std::vector<uint8_t> buf(vmo_size);
+    status = vmo.read(buf.data(), 0, vmo_size);
     if (status != ZX_OK) {
       return fit::error("could not read from VMO");
     }
-    const char* f = reinterpret_cast<const char*>(buf.begin());  // Known safe.
+    const char* f = reinterpret_cast<const char*>(buf.data());  // Known safe.
     if (!files::WriteFile(path, f, buf.size())) {
       return fit::error(fxl::Substitute("Could not write: $0", path));
     }

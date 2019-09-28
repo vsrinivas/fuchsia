@@ -9,7 +9,7 @@
 #include <lib/fit/promise.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
 
-#include <fbl/array.h>
+#include <vector>
 
 #include "lib/inspect_deprecated/hierarchy.h"
 #include "lib/inspect_deprecated/inspect.h"
@@ -90,8 +90,8 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 fit::result<ObjectHierarchy> ReadFromSnapshot(::inspect::Snapshot snapshot);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
-// contents of the given immutable buffer.
-fit::result<ObjectHierarchy> ReadFromBuffer(fbl::Array<uint8_t> buffer);
+// contents of the given.
+fit::result<ObjectHierarchy> ReadFromBuffer(std::vector<uint8_t> buffer);
 
 // TODO(crjohns, nathaniel): Needs to be asynchronous use of a ChildrenManager.
 // Construct a new object hierarchy by directly reading objects

@@ -40,18 +40,11 @@ fit::promise<inspect_deprecated::ObjectReader> OpenPathInsideRoot(
 // inside it.
 fit::result<ObjectHierarchy> ReadFromFilePtr(const std::string& path, fuchsia::io::NodeInfo info) {
   if (info.is_file()) {
-    // The fbl::Array below will take ownership of buf.first.
-    std::pair<uint8_t*, intptr_t> buf = files::ReadFileToBytes(path);
-    if (buf.first == nullptr) {
+    std::vector<uint8_t> data;
+    if (!files::ReadFileToVector(path, &data)) {
       return fit::error();
     }
-    // fbl::Array takes ownership of the file path, but uses delete[] instead of
-    // delete.  To avoid the error ASan would give us if we simply transferred
-    // ownership, we copy the array to something that can use delete[].
-    uint8_t* new_buf = new uint8_t[buf.second];
-    memcpy(new_buf, buf.first, buf.second);
-    free(buf.first);
-    return inspect_deprecated::ReadFromBuffer(fbl::Array(new_buf, buf.second));
+    return inspect_deprecated::ReadFromBuffer(std::move(data));
   }
   return inspect_deprecated::ReadFromVmo(info.vmofile().vmo);
 }
