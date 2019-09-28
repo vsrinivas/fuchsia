@@ -1476,6 +1476,39 @@ TEST_F(UnbindTestCase, RemoveParentWhileRemovingChild) {
   coordinator_loop()->RunUntilIdle();
 }
 
+TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(parent_device->device,
+                                                                       false /* do_unbind */));
+  coordinator_loop()->RunUntilIdle();
+
+  // At the same time, have the child try to remove itself.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(child_device->device,
+                                                                       false /* do_unbind */));
+  coordinator_loop()->RunUntilIdle();
+
+  // The child device will not reply, as it already called device_remove previously.
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  coordinator_loop()->RunUntilIdle();
+}
+
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);

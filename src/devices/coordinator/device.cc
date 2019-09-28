@@ -259,16 +259,39 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
   }
   // Create the tasks if they do not exist yet. We always create both.
   if (active_unbind_ == nullptr && active_remove_ == nullptr) {
-    active_unbind_ = UnbindTask::Create(fbl::RefPtr(this), opts);
+    // Make sure the remove task exists before the unbind task,
+    // as the unbind task adds the remove task as a dependent.
     active_remove_ = RemoveTask::Create(fbl::RefPtr(this));
-  } else if (state_ != Device::State::kUnbinding) {
-    // |do_unbind| may not match the stored field in the existing unbind task due to
-    // the current device_remove / unbind model.
-    // For closest compatibility with the current model, we should prioritize
-    // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
-    if (opts.devhost_requested && !active_unbind_->devhost_requested()) {
-      active_unbind_->set_do_unbind(opts.do_unbind);
+    active_unbind_ = UnbindTask::Create(fbl::RefPtr(this), opts);
+    return;
+  }
+  if (!active_unbind_) {
+    // The unbind task has already completed and the device is now being removed.
+    return;
+  }
+  // User requested removals take priority over coordinator generated unbind tasks.
+  bool override_existing = opts.devhost_requested && !active_unbind_->devhost_requested();
+  if (!override_existing) {
+    return;
+  }
+  // There is a potential race condition where a driver calls device_remove() on themselves
+  // but the device's unbind hook is about to be called due to a parent being removed.
+  // Since it is illegal to call device_remove() twice under the old API,
+  // drivers handle this by checking whether their device has already been removed in
+  // their unbind hook and hence will never reply to their unbind hook.
+  if (state_ == Device::State::kUnbinding) {
+    if (unbind_completion_) {
+      zx_status_t status = CompleteUnbind(ZX_OK);
+      if (status != ZX_OK) {
+        log(ERROR, "could not complete unbind task, err: %d\n", status);
+      }
     }
+  } else {
+     // |do_unbind| may not match the stored field in the existing unbind task due to
+     // the current device_remove / unbind model.
+     // For closest compatibility with the current model, we should prioritize
+     // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
+    active_unbind_->set_do_unbind(opts.do_unbind);
   }
 }
 
