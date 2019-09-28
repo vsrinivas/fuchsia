@@ -38,6 +38,10 @@ enum class PixelFormatType : uint32_t {
   MJPEG = 106u,
   YV12 = 107u,
   BGR24 = 108u,
+  RGB565 = 109u,
+  RGB332 = 110u,
+  RGB2220 = 111u,
+  L8 = 112u,
 };
 
 

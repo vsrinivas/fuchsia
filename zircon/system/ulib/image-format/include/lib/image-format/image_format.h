@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_
+#define LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <zircon/pixelformat.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -66,6 +68,14 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out);
 
+bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
+                                  zx_pixel_format_t* zx_pixel_format_out);
+
+bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
+                                  fuchsia_sysmem_PixelFormat* pixel_format_out);
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif
+
+#endif  // LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_

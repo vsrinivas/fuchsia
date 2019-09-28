@@ -11,6 +11,8 @@
 
 #include <fbl/algorithm.h>
 
+#include "fuchsia/sysmem/c/fidl.h"
+
 namespace {
 
 // There are two aspects of the ColorSpace and PixelFormat that we care about:
@@ -52,6 +54,13 @@ const std::map<fuchsia_sysmem_PixelFormatType, SamplingInfo> kPixelFormatSamplin
     {fuchsia_sysmem_PixelFormatType_MJPEG, {{8}, kColorType_RGB}},
     {fuchsia_sysmem_PixelFormatType_YV12, {{8}, kColorType_YUV}},
     {fuchsia_sysmem_PixelFormatType_BGR24, {{8}, kColorType_RGB}},
+
+    // These use the same colorspaces as regular 8-bit-per-component formats
+    {fuchsia_sysmem_PixelFormatType_RGB565, {{8}, kColorType_RGB}},
+    {fuchsia_sysmem_PixelFormatType_RGB332, {{8}, kColorType_RGB}},
+    {fuchsia_sysmem_PixelFormatType_RGB2220, {{8}, kColorType_RGB}},
+    // Expands to RGB
+    {fuchsia_sysmem_PixelFormatType_L8, {{8}, kColorType_RGB}},
 };
 
 class ImageFormatSet {
@@ -182,6 +191,10 @@ class LinearFormats : public ImageFormatSet {
       case fuchsia_sysmem_PixelFormatType_NV12:
       case fuchsia_sysmem_PixelFormatType_YUY2:
       case fuchsia_sysmem_PixelFormatType_YV12:
+      case fuchsia_sysmem_PixelFormatType_RGB565:
+      case fuchsia_sysmem_PixelFormatType_RGB332:
+      case fuchsia_sysmem_PixelFormatType_RGB2220:
+      case fuchsia_sysmem_PixelFormatType_L8:
         return true;
     }
     return false;
@@ -195,6 +208,10 @@ class LinearFormats : public ImageFormatSet {
       case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
       case fuchsia_sysmem_PixelFormatType_BGRA32:
       case fuchsia_sysmem_PixelFormatType_BGR24:
+      case fuchsia_sysmem_PixelFormatType_RGB565:
+      case fuchsia_sysmem_PixelFormatType_RGB332:
+      case fuchsia_sysmem_PixelFormatType_RGB2220:
+      case fuchsia_sysmem_PixelFormatType_L8:
         return coded_height * bytes_per_row;
       case fuchsia_sysmem_PixelFormatType_I420:
         return coded_height * bytes_per_row * 3 / 2;
@@ -300,6 +317,12 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format)
       return 2u * 8u;
     case fuchsia_sysmem_PixelFormatType_YV12:
       return 12u;
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      return 16u;
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+    case fuchsia_sysmem_PixelFormatType_L8:
+      return 8u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
   return 0u;
@@ -328,6 +351,14 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* p
     case fuchsia_sysmem_PixelFormatType_YUY2:
       return 2u;
     case fuchsia_sysmem_PixelFormatType_YV12:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_L8:
       return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
@@ -367,6 +398,14 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel
       return 2u;
     case fuchsia_sysmem_PixelFormatType_YV12:
       return 2u;
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_L8:
+      return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
   return 0u;
@@ -396,6 +435,14 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixe
       return 2u;
     case fuchsia_sysmem_PixelFormatType_YV12:
       return 2u;
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_L8:
+      return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
   return 0u;
@@ -425,6 +472,14 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
       return 2u;
     case fuchsia_sysmem_PixelFormatType_YV12:
       return 2u;
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_L8:
+      return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
   return 0u;
@@ -445,4 +500,87 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* con
       constraints->bytes_per_row_divisor);
   ZX_ASSERT(*minimum_row_bytes_out <= constraints->max_bytes_per_row);
   return true;
+}
+
+bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
+                                  zx_pixel_format_t* zx_pixel_format_out) {
+  if (pixel_format->has_format_modifier &&
+      (pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR)) {
+    return false;
+  }
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_ARGB_8888;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_RGB_888;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_RGB_565;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_RGB_332;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_RGB_2220;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_L8:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_MONO_8;
+      return true;
+
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_NV12;
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
+                                  fuchsia_sysmem_PixelFormat* pixel_format_out) {
+  pixel_format_out->has_format_modifier = true;
+  pixel_format_out->format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  switch (zx_pixel_format) {
+    case ZX_PIXEL_FORMAT_RGB_565:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_RGB565;
+      return true;
+
+    case ZX_PIXEL_FORMAT_RGB_332:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_RGB332;
+      return true;
+
+    case ZX_PIXEL_FORMAT_RGB_2220:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_RGB2220;
+      return true;
+
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_BGRA32;
+      return true;
+
+    case ZX_PIXEL_FORMAT_RGB_x888:
+      // Switch to using alpha.
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_BGRA32;
+      return true;
+
+    case ZX_PIXEL_FORMAT_MONO_8:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_L8;
+      return true;
+
+    case ZX_PIXEL_FORMAT_NV12:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_NV12;
+      return true;
+
+    case ZX_PIXEL_FORMAT_RGB_888:
+      pixel_format_out->type = fuchsia_sysmem_PixelFormatType_BGR24;
+      return true;
+
+    default:
+      return false;
+  }
 }
