@@ -1,0 +1,83 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("syzkaller") {
+  testonly = true
+  deps = [
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":syz-executor-pkg",
+  ]
+}
+
+package("syz-executor-pkg") {
+  deps = [
+    ":syz-executor",
+  ]
+  binaries = [
+    {
+      name = "syz-executor"
+      shell = true
+    },
+  ]
+}
+
+src = rebase_path("//third_party/syzkaller")
+
+if (target_cpu == "x64") {
+  GOARCH = "amd64"
+} else {
+  GOARCH = target_cpu
+}
+
+GOOS = "fuchsia"
+HOSTGOOS = "linux"
+GIT_REVISION = read_file("${src}/.git/HEAD", "trim string")
+
+executable("syz-executor") {
+  sources = [
+    "${src}/executor/common.h",
+    "${src}/executor/common_akaros.h",
+    "${src}/executor/common_bsd.h",
+    "${src}/executor/common_fuchsia.h",
+    "${src}/executor/common_kvm_amd64.h",
+    "${src}/executor/common_kvm_arm64.h",
+    "${src}/executor/common_linux.h",
+    "${src}/executor/common_test.h",
+    "${src}/executor/common_usb.h",
+    "${src}/executor/common_windows.h",
+    "${src}/executor/defs.h",
+    "${src}/executor/executor.cc",
+    "${src}/executor/executor_akaros.h",
+    "${src}/executor/executor_bsd.h",
+    "${src}/executor/executor_fuchsia.h",
+    "${src}/executor/executor_linux.h",
+    "${src}/executor/executor_test.h",
+    "${src}/executor/executor_windows.h",
+    "${src}/executor/kvm.S.h",
+    "${src}/executor/kvm.h",
+    "${src}/executor/nocover.h",
+    "${src}/executor/syscalls.h",
+    "${src}/executor/test.h",
+    "${src}/executor/test_linux.h",
+  ]
+  cflags = [
+    "-DGOOS_${GOOS}=1",
+    "-DGOARCH_${GOARCH}=1",
+    "-DHOSTGOOS_${HOSTGOOS}=1",
+    "-DGIT_REVISION=\"${GIT_REVISION}\"",
+  ]
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fdio",
+  ]
+}
