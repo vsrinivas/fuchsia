@@ -95,6 +95,26 @@ type Rule struct {
 	keepState            bool
 }
 
+// IsValid pre-checks any errors in a rule before it is installed.
+// Currently it makes sure:
+// - Both srcSubnet and dstSubnet have the same address type.
+// - srcPortRange and dstPortRange are valid.
+func (r *Rule) IsValid() bool {
+	if r.srcSubnet != nil && r.dstSubnet != nil {
+		// Not valid if srcSubnet and dstSubnet have different address types.
+		if len(r.srcSubnet.ID()) != len(r.dstSubnet.ID()) {
+			return false
+		}
+	}
+	if !r.srcPortRange.IsValid() {
+		return false
+	}
+	if !r.dstPortRange.IsValid() {
+		return false
+	}
+	return true
+}
+
 func (r *Rule) Match(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16) bool {
 	return r.direction == dir &&
 		(r.transProto == 0 || r.transProto == transProto) &&
@@ -105,12 +125,34 @@ func (r *Rule) Match(dir Direction, transProto tcpip.TransportProtocolNumber, sr
 }
 
 // NAT is a special rule for Network Address Translation, which rewrites
-// the address of an outgoing packet.
+// the source address of an outgoing packet. If the original IP address
+// (private IP address) in the packet is contained in srcSubnet, it is
+// rewritten into newSrcAddr (public IP address).
 type NAT struct {
 	transProto tcpip.TransportProtocolNumber
 	srcSubnet  *tcpip.Subnet
 	newSrcAddr tcpip.Address
 	nic        tcpip.NICID
+}
+
+// IsValid pre-checks any errors in a rule before it is installed.
+// Currently it makes sure:
+// - Subnet field is not nil.
+// - Both srcSubnet and newSrcAddr have the same address type.
+// - Only IPv4 address is used.
+func (nat *NAT) IsValid() bool {
+	if nat.srcSubnet == nil {
+		return false
+	}
+	// Not valid if srcSubnet and newSrcAddr have different address types.
+	if len(nat.srcSubnet.ID()) != len(nat.newSrcAddr) {
+		return false
+	}
+	// Only IPv4 addresses are supported.
+	if len(nat.srcSubnet.ID()) != 4 {
+		return false
+	}
+	return true
 }
 
 func (nat *NAT) Match(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) bool {
@@ -128,7 +170,16 @@ type RDR struct {
 	nic             tcpip.NICID
 }
 
+// IsValid pre-checks any errors in a rule before it is installed.
+// Currently it makes sure:
+// - Both dstAddr and newDstAddr have the same address type.
+// - dstPortRange and newDstPortRange are valid.
+// - The lenght of dstPortRange and the length of newDstPortRange are the same.
 func (rdr *RDR) IsValid() bool {
+	// Not valid if dstAddr and newDstAddr have different address types.
+	if len(rdr.dstAddr) != len(rdr.newDstAddr) {
+		return false
+	}
 	if !rdr.dstPortRange.IsValid() || !rdr.newDstPortRange.IsValid() {
 		return false
 	}

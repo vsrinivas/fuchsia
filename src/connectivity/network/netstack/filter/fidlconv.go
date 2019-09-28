@@ -172,6 +172,9 @@ func fromRule(o *Rule) (filter.Rule, error) {
 	if dstPortRange.Start > dstPortRange.End {
 		return filter.Rule{}, ErrBadPortRange
 	}
+	if !o.IsValid() {
+		return filter.Rule{}, ErrBadRule
+	}
 	return filter.Rule{
 		Action:               action,
 		Direction:            direction,
@@ -219,7 +222,7 @@ func toRule(o *filter.Rule) (Rule, error) {
 	if !dstPortRange.IsValid() {
 		return Rule{}, ErrBadPortRange
 	}
-	return Rule{
+	r := Rule{
 		action:               action,
 		direction:            direction,
 		quick:                o.Quick,
@@ -233,7 +236,11 @@ func toRule(o *filter.Rule) (Rule, error) {
 		nic:                  tcpip.NICID(o.Nic),
 		log:                  o.Log,
 		keepState:            o.KeepState,
-	}, nil
+	}
+	if !r.IsValid() {
+		return Rule{}, ErrBadRule
+	}
+	return r, nil
 }
 
 func fromRules(rs []Rule) ([]filter.Rule, error) {
@@ -273,6 +280,9 @@ func fromNAT(o *NAT) (filter.Nat, error) {
 	if err != nil {
 		return filter.Nat{}, err
 	}
+	if !o.IsValid() {
+		return filter.Nat{}, ErrBadRule
+	}
 	return filter.Nat{
 		Proto:      transProto,
 		SrcSubnet:  srcSubnet,
@@ -291,12 +301,16 @@ func toNAT(o *filter.Nat) (NAT, error) {
 		return NAT{}, err
 	}
 	srcSubnet := fidlconv.ToTCPIPSubnet(o.SrcSubnet)
-	return NAT{
+	n := NAT{
 		transProto: transProto,
 		srcSubnet:  &srcSubnet,
 		newSrcAddr: newSrcAddr,
 		nic:        tcpip.NICID(o.Nic),
-	}, nil
+	}
+	if !n.IsValid() {
+		return NAT{}, ErrBadRule
+	}
+	return n, nil
 }
 
 func fromNATs(ns []NAT) ([]filter.Nat, error) {
@@ -349,6 +363,9 @@ func fromRDR(o *RDR) (filter.Rdr, error) {
 	if dstPortRangeLen != newDstPortRangeLen {
 		return filter.Rdr{}, ErrBadPortRange
 	}
+	if !o.IsValid() {
+		return filter.Rdr{}, ErrBadRule
+	}
 	return filter.Rdr{
 		Proto:           transProto,
 		DstAddr:         dstAddr,
@@ -385,14 +402,18 @@ func toRDR(o *filter.Rdr) (RDR, error) {
 	if dstPortRangeLen != newDstPortRangeLen {
 		return RDR{}, ErrBadPortRange
 	}
-	return RDR{
+	r := RDR{
 		transProto:      transProto,
 		dstAddr:         dstAddr,
 		dstPortRange:    dstPortRange,
 		newDstAddr:      newDstAddr,
 		newDstPortRange: newDstPortRange,
 		nic:             tcpip.NICID(o.Nic),
-	}, nil
+	}
+	if !r.IsValid() {
+		return RDR{}, ErrBadRule
+	}
+	return r, nil
 }
 
 func fromRDRs(rs []RDR) ([]filter.Rdr, error) {

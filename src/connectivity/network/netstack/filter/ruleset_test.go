@@ -189,6 +189,146 @@ func TestPortRangeLength(t *testing.T) {
 	}
 }
 
+func TestRuleIsValid(t *testing.T) {
+	var tests = []struct {
+		description string
+		rule        Rule
+		want        bool
+	}{
+		{
+			"srcSubnet is nil",
+			Rule{
+				srcSubnet:    nil,
+				srcPortRange: PortRange{1, 2},
+				dstSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0b\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				dstPortRange: PortRange{10, 15},
+			},
+			true,
+		},
+		{
+			"dstSubnet is nil",
+			Rule{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0b\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				srcPortRange: PortRange{1, 2},
+				dstSubnet:    nil,
+				dstPortRange: PortRange{10, 15},
+			},
+			true,
+		},
+		{
+			"both srcSubnet and dstSubnet are IPv4",
+			Rule{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				srcPortRange: PortRange{1, 2},
+				dstSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0b\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				dstPortRange: PortRange{10, 15},
+			},
+			true,
+		},
+		{
+			"srcSubnet is IPv4, and dstSubnet are IPv6",
+			Rule{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				srcPortRange: PortRange{1, 2},
+				dstSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet(
+						"\x0b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+						"\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				dstPortRange: PortRange{10, 15},
+			},
+			false,
+		},
+		{
+			"srcPortRange is not valid",
+			Rule{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				srcPortRange: PortRange{2, 1},
+				dstSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0b\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				dstPortRange: PortRange{10, 15},
+			},
+			false,
+		},
+		{
+			"dstPortRange is not valid",
+			Rule{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				srcPortRange: PortRange{1, 2},
+				dstSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0b\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				dstPortRange: PortRange{15, 10},
+			},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			got := test.rule.IsValid()
+			if got != test.want {
+				t.Errorf("got=%t, want=%t", got, test.want)
+			}
+		})
+	}
+}
+
 func TestRuleMatch(t *testing.T) {
 	subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
@@ -343,6 +483,52 @@ func TestRuleMatch(t *testing.T) {
 	}
 }
 
+func TestNATIsValid(t *testing.T) {
+	var tests = []struct {
+		description string
+		nat         NAT
+		want        bool
+	}{
+		{
+			"both srcSubnet and newSrcAddr are IPv4",
+			NAT{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				newSrcAddr: "\x0b\x00\x00\x00",
+			},
+			true,
+		},
+		{
+			"srcSubnet is IPv4 and newSrcAddr is IPv6",
+			NAT{
+				srcSubnet: func() *tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return &subnet
+				}(),
+				newSrcAddr: "\x0b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+			},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			got := test.nat.IsValid()
+			if got != test.want {
+				t.Errorf("got=%t, want=%t", got, test.want)
+			}
+		})
+	}
+}
+
 func TestNATMatch(t *testing.T) {
 	subnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
@@ -478,6 +664,17 @@ func TestRDRIsValid(t *testing.T) {
 				dstPortRange:    PortRange{1, 2},
 				newDstAddr:      "\x0b\x00\x00\x00",
 				newDstPortRange: PortRange{1, 3},
+			},
+			false,
+		},
+		{
+			"dstAddr is IPv4 and newDstAddr is IPv6",
+			RDR{
+				transProto:      header.UDPProtocolNumber,
+				dstAddr:         "\x0a\x00\x00\x00",
+				dstPortRange:    PortRange{1, 2},
+				newDstAddr:      "\x0b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+				newDstPortRange: PortRange{1, 2},
 			},
 			false,
 		},

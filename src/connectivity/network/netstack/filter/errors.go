@@ -22,4 +22,5 @@ var (
 	ErrUnknownAddressType = Error{Msg: "Unknown Address Type"}
 	ErrBadAddress         = Error{Msg: "Bad address"}
 	ErrBadPortRange       = Error{Msg: "Bad Port Range"}
+	ErrBadRule            = Error{Msg: "Bad rule"}
 )
