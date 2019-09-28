@@ -9,7 +9,7 @@ group("tools") {
     ":infratools",
     "//tools/blackout:all",
     "//tools/debroot($host_toolchain)",
-    "//tools/fidl/fidldoc",
+    "//tools/fidl/fidldoc($host_toolchain)",
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
     "//tools/net:tools($host_toolchain)",
