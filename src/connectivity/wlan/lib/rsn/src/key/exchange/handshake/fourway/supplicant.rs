@@ -10,7 +10,8 @@ use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
-    Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
+    Dot11VerifiedKeyFrame, NegotiatedProtection, ProtectionType, SecAssocUpdate, UnverifiedKeyData,
+    UpdateSink,
 };
 use crate::Error;
 use crate::ProtectionInfo;
@@ -79,61 +80,86 @@ fn create_message_2<B: ByteSlice>(
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &protection.akm, msg2.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection, msg2.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg2.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 
 // IEEE Std 802.11-2016, 12.7.6.4
+// This function will never return an empty GTK unless the protection is WPA1, in which case this is
+// not set until a subsequent GroupKey handshake.
 fn handle_message_3<B: ByteSlice>(
     cfg: &Config,
     kck: &[u8],
     kek: &[u8],
     msg3: FourwayHandshakeFrame<B>,
-) -> Result<(KeyFrameBuf, Gtk), failure::Error> {
+) -> Result<(KeyFrameBuf, Option<Gtk>), failure::Error> {
     let negotiated_protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
-    let (frame, key_data) = match msg3.get() {
+    let (frame, key_data_elements) = match msg3.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(kck, &negotiated_protection.akm)? {
+            match unverified_mic.verify_mic(kck, &negotiated_protection)? {
                 UnverifiedKeyData::Encrypted(encrypted) => {
-                    encrypted.decrypt(kek, &negotiated_protection.akm)?
+                    let key_data = encrypted.decrypt(kek, &negotiated_protection)?;
+                    (key_data.0, key_data::extract_elements(&key_data.1[..])?)
                 }
-                UnverifiedKeyData::NotEncrypted(_) => {
-                    bail!("msg3 of 4-Way Handshake must carry encrypted key data")
+                UnverifiedKeyData::NotEncrypted(keyframe) => {
+                    match negotiated_protection.protection_type {
+                        ProtectionType::LegacyWpa1 => {
+                            // WFA, WPA1 Spec. 3.1, Chapter 2.2.4
+                            // WPA1 does not encrypt the key data field during a 4-way handshake.
+                            let elements = key_data::extract_elements(&keyframe.key_data[..])?;
+                            (keyframe, elements)
+                        }
+                        _ => bail!("msg3 of 4-Way Handshake must carry encrypted key data"),
+                    }
                 }
             }
         }
         Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
     };
-
     let mut gtk: Option<key_data::kde::Gtk> = None;
     let mut protection: Option<ProtectionInfo> = None;
     let mut _second_protection: Option<ProtectionInfo> = None;
-    let elements = key_data::extract_elements(&key_data[..])?;
-    // TODO: Need to handle WPA1 here.
-    for ele in elements {
-        match (ele, protection.as_ref()) {
+    for element in key_data_elements {
+        match (element, &protection) {
             (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
             (key_data::Element::Rsne(e), None) => protection = Some(ProtectionInfo::Rsne(e)),
             (key_data::Element::Rsne(e), Some(_)) => {
                 _second_protection = Some(ProtectionInfo::Rsne(e))
             }
+            (key_data::Element::LegacyWpa1(e), None) => {
+                protection = Some(ProtectionInfo::LegacyWpa(e))
+            }
             _ => (),
         }
     }
 
-    // Proceed if key data held a GTK and RSNE and RSNE is the Authenticator's announced one.
-    match (gtk, protection) {
-        (Some(gtk), Some(protection)) => {
-            ensure!(&protection == &cfg.a_protection, Error::InvalidKeyDataRsne);
-            let msg4 = create_message_4(&negotiated_protection, kck, &frame)?;
+    // Proceed if key data held a protection element matching the Authenticator's announced one.
+    let msg4 = match protection {
+        Some(protection) => {
+            ensure!(&protection == &cfg.a_protection, Error::InvalidKeyDataProtection);
+            create_message_4(&negotiated_protection, kck, &frame)?
+        }
+        None => bail!(Error::InvalidKeyDataContent),
+    };
+    match gtk {
+        Some(gtk) => {
             let rsc = frame.key_frame_fields.key_rsc.to_native();
             Ok((
                 msg4,
-                Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_protection.group_data, rsc)?,
+                Some(Gtk::from_gtk(
+                    gtk.gtk,
+                    gtk.info.key_id(),
+                    negotiated_protection.group_data,
+                    rsc,
+                )?),
             ))
         }
-        _ => bail!(Error::InvalidKeyDataContent),
+        // In WPA1 a GTK is not specified until a subsequent GroupKey handshake.
+        None if negotiated_protection.protection_type == ProtectionType::LegacyWpa1 => {
+            Ok((msg4, None))
+        }
+        None => bail!(Error::InvalidKeyDataContent),
     }
 }
 
@@ -143,11 +169,14 @@ fn create_message_4<B: ByteSlice>(
     kck: &[u8],
     msg3: &eapol::KeyFrameRx<B>,
 ) -> Result<KeyFrameBuf, failure::Error> {
+    // WFA, WPA1 Spec. 3.1, Chapter 2 seems to imply that the secure bit should not be set for WPA1
+    // supplicant messages, and in practice this seems to be the case.
+    let secure_bit = msg3.key_frame_fields.descriptor_type != eapol::KeyDescriptor::LEGACY_WPA1;
     let key_info = eapol::KeyInformation(0)
         .with_key_descriptor_version(msg3.key_frame_fields.key_info().key_descriptor_version())
         .with_key_type(msg3.key_frame_fields.key_info().key_type())
         .with_key_mic(true)
-        .with_secure(true);
+        .with_secure(secure_bit);
 
     let msg4 = eapol::KeyFrameTx::new(
         msg3.eapol_fields.version,
@@ -165,7 +194,7 @@ fn create_message_4<B: ByteSlice>(
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &protection.akm, msg4.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection, msg4.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg4.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
@@ -174,7 +203,7 @@ fn create_message_4<B: ByteSlice>(
 pub enum State {
     AwaitingMsg1 { pmk: Vec<u8>, cfg: Config, snonce: Nonce },
     AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, snonce: Nonce, anonce: Nonce, cfg: Config },
-    KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Gtk, cfg: Config },
+    KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Option<Gtk>, cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
@@ -257,7 +286,9 @@ impl State {
                             Ok((msg4, gtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
-                                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
+                                if let Some(gtk) = gtk.as_ref() {
+                                    update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())))
+                                }
                                 State::KeysInstalled { pmk, ptk, gtk, cfg }
                             }
                         }
@@ -281,9 +312,16 @@ impl State {
                             // case and leaves room for interpretation whether or not a replayed
                             // 3rd message can carry a different GTK than originally sent.
                             // Fuchsia decided to require all GTKs to match; if the GTK doesn't
-                            // match with the original one Fuchsia drops the received message.
+                            // match with the original one Fuchsia drops the received message. This
+                            // includes the case where no GTK has been set.
                             Ok((msg4, gtk)) => {
-                                if fixed_time_eq(&gtk.gtk[..], &expected_gtk.gtk[..]) {
+                                if match (&gtk, expected_gtk) {
+                                    (Some(gtk), Some(expected_gtk)) => {
+                                        fixed_time_eq(&gtk.gtk[..], &expected_gtk.gtk[..])
+                                    }
+                                    (None, None) => true,
+                                    _ => false,
+                                } {
                                     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 } else {
                                     error!("error: GTK differs in replayed 3rd message");

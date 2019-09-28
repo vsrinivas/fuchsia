@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::integrity::integrity_algorithm;
+use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::Key;
-use crate::keywrap::keywrap_algorithm;
+use crate::keywrap::{self, keywrap_algorithm};
 use crate::Error;
 use crate::ProtectionInfo;
 use eapol;
@@ -22,7 +22,7 @@ pub mod esssa;
 pub mod test_util;
 
 #[derive(Debug, Clone, PartialEq)]
-enum ProtectionType {
+pub enum ProtectionType {
     LegacyWpa1,
     Rsne,
 }
@@ -33,10 +33,10 @@ pub struct NegotiatedProtection {
     pub pairwise: Cipher,
     pub akm: Akm,
     pub mic_size: u16,
+    pub protection_type: ProtectionType,
     // Some networks carry RSN capabilities.
     // To construct a valid RSNE, these capabilities must be tracked.
     caps: Option<RsnCapabilities>,
-    protection_type: ProtectionType,
 }
 
 impl NegotiatedProtection {
@@ -45,6 +45,22 @@ impl NegotiatedProtection {
             ProtectionInfo::Rsne(rsne) => Self::from_rsne(rsne),
             ProtectionInfo::LegacyWpa(wpa) => Self::from_legacy_wpa(wpa),
         }
+    }
+
+    fn key_descriptor_version(&self) -> u16 {
+        let key_descriptor_type = match self.protection_type {
+            ProtectionType::LegacyWpa1 => eapol::KeyDescriptor::LEGACY_WPA1,
+            ProtectionType::Rsne => eapol::KeyDescriptor::IEEE802DOT11,
+        };
+        derive_key_descriptor_version(key_descriptor_type, self)
+    }
+
+    pub fn integrity_algorithm(&self) -> Result<Box<dyn integrity::Algorithm>, Error> {
+        integrity_algorithm(self.key_descriptor_version()).ok_or(Error::UnknownIntegrityAlgorithm)
+    }
+
+    pub fn keywrap_algorithm(&self) -> Result<Box<dyn keywrap::Algorithm>, Error> {
+        keywrap_algorithm(self.key_descriptor_version()).ok_or(Error::UnknownKeywrapAlgorithm)
     }
 
     /// Validates that this RSNE contains only one of each cipher type and one AKM, and produces
@@ -68,8 +84,8 @@ impl NegotiatedProtection {
             pairwise: pairwise.clone(),
             akm: akm.clone(),
             mic_size,
-            caps: rsne.rsn_capabilities.clone(),
             protection_type: ProtectionType::Rsne,
+            caps: rsne.rsn_capabilities.clone(),
         })
     }
 
@@ -87,8 +103,8 @@ impl NegotiatedProtection {
             pairwise,
             akm,
             mic_size,
-            caps: None,
             protection_type: ProtectionType::LegacyWpa1,
+            caps: None,
         })
     }
 
@@ -114,7 +130,6 @@ impl NegotiatedProtection {
 }
 
 /// Wraps an EAPOL key frame to enforces successful decryption before the frame can be used.
-#[derive(Debug)]
 pub struct EncryptedKeyData<B: ByteSlice>(eapol::KeyFrameRx<B>);
 
 impl<B: ByteSlice> EncryptedKeyData<B> {
@@ -123,9 +138,9 @@ impl<B: ByteSlice> EncryptedKeyData<B> {
     pub fn decrypt(
         self,
         kek: &[u8],
-        akm: &Akm,
+        protection: &NegotiatedProtection,
     ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), failure::Error> {
-        let key_data = keywrap_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.unwrap_key(
+        let key_data = protection.keywrap_algorithm()?.unwrap_key(
             kek,
             &self.0.key_frame_fields.key_iv,
             &self.0.key_data[..],
@@ -142,20 +157,21 @@ impl<B: ByteSlice> WithUnverifiedMic<B> {
     /// Yields the captured EAPOL Key frame if the MIC was successfully verified.
     /// The Key frame is wrapped to enforce decryption of potentially encrypted key data.
     /// Returns an Error if the MIC is invalid.
-    pub fn verify_mic(self, kck: &[u8], akm: &Akm) -> Result<UnverifiedKeyData<B>, failure::Error> {
+    pub fn verify_mic(
+        self,
+        kck: &[u8],
+        protection: &NegotiatedProtection,
+    ) -> Result<UnverifiedKeyData<B>, failure::Error> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
-        let mic_bytes = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+        let mic_bytes = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         ensure!(self.0.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
 
         // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
         let mut buf = vec![];
         self.0.write_into(true, &mut buf)?;
-        let valid_mic = integrity_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.verify(
-            kck,
-            &buf[..],
-            &self.0.key_mic[..],
-        );
+        let valid_mic =
+            protection.integrity_algorithm()?.verify(kck, &buf[..], &self.0.key_mic[..]);
         ensure!(valid_mic, Error::InvalidMic);
 
         if self.0.key_frame_fields.key_info().encrypted_key_data() {
@@ -211,12 +227,12 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         };
 
         // IEEE Std 802.11-2016, 12.7.2 b.1)
+        let frame_key_descriptor_version =
+            frame.key_frame_fields.key_info().key_descriptor_version();
         let expected_version = derive_key_descriptor_version(key_descriptor, protection);
         ensure!(
-            frame.key_frame_fields.key_info().key_descriptor_version() == expected_version,
-            Error::UnsupportedKeyDescriptorVersion(
-                frame.key_frame_fields.key_info().key_descriptor_version()
-            )
+            frame_key_descriptor_version == expected_version,
+            Error::UnsupportedKeyDescriptorVersion(frame_key_descriptor_version)
         );
 
         // IEEE Std 802.11-2016, 12.7.2 b.2)
@@ -393,16 +409,18 @@ pub fn derive_key_descriptor_version(
 
     match akm.suite_type {
         1 | 2 => match key_descriptor_type {
-            eapol::KeyDescriptor::RC4 | eapol::KeyDescriptor::LEGACY_WPA1 => {
-                match pairwise.suite_type {
-                    TKIP | GROUP_CIPHER_SUITE => 1,
-                    _ => 0,
+            eapol::KeyDescriptor::RC4 => match pairwise.suite_type {
+                TKIP | GROUP_CIPHER_SUITE => 1,
+                _ => 0,
+            },
+            eapol::KeyDescriptor::IEEE802DOT11 | eapol::KeyDescriptor::LEGACY_WPA1 => {
+                if pairwise.suite_type == TKIP || pairwise.suite_type == GROUP_CIPHER_SUITE {
+                    1
+                } else if pairwise.is_enhanced() || protection.group_data.is_enhanced() {
+                    2
+                } else {
+                    0
                 }
-            }
-            eapol::KeyDescriptor::IEEE802DOT11
-                if pairwise.is_enhanced() || protection.group_data.is_enhanced() =>
-            {
-                2
             }
             _ => 0,
         },

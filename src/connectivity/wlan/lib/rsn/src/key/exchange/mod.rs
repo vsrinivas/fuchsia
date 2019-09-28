@@ -8,13 +8,11 @@ use self::handshake::{
     fourway::{self, Fourway},
     group_key::{self, GroupKey},
 };
-use crate::integrity::integrity_algorithm;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
-use crate::rsna::{Dot11VerifiedKeyFrame, UpdateSink};
+use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, UpdateSink};
 use crate::Error;
 use failure;
-use wlan_common::ie::rsn::akm::Akm;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -94,9 +92,13 @@ pub enum Config {
 
 /// Computes and returns a serialized key frame's MIC.
 /// Fails if the AKM has no associated integrity algorithm or MIC size.
-pub fn compute_mic_from_buf(kck: &[u8], akm: &Akm, frame: &[u8]) -> Result<Vec<u8>, Error> {
-    let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
-    let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize;
+pub fn compute_mic_from_buf(
+    kck: &[u8],
+    protection: &NegotiatedProtection,
+    frame: &[u8],
+) -> Result<Vec<u8>, Error> {
+    let integrity_alg = protection.integrity_algorithm()?;
+    let mic_len = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize;
     let mut mic = integrity_alg.compute(kck, frame)?;
     mic.truncate(mic_len);
     Ok(mic)
@@ -108,11 +110,11 @@ pub fn compute_mic_from_buf(kck: &[u8], akm: &Akm, frame: &[u8]) -> Result<Vec<u
 /// MIC bit set.
 pub fn compute_mic<B: ByteSlice>(
     kck: &[u8],
-    akm: &Akm,
+    protection: &NegotiatedProtection,
     frame: &eapol::KeyFrameRx<B>,
 ) -> Result<Vec<u8>, Error> {
-    let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
-    let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize;
+    let integrity_alg = protection.integrity_algorithm()?;
+    let mic_len = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize;
     if !frame.key_frame_fields.key_info().key_mic() {
         return Err(Error::ComputingMicForUnprotectedFrame);
     }
@@ -132,7 +134,9 @@ pub fn compute_mic<B: ByteSlice>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wlan_common::{assert_variant, ie::rsn::akm::PSK};
+    use crate::integrity::{self, Algorithm};
+    use crate::rsna::test_util;
+    use wlan_common::{assert_variant, ie::rsn::akm::Akm};
 
     fn fake_key_frame(mic_len: usize) -> eapol::KeyFrameTx {
         let key_info = eapol::KeyInformation(0).with_key_mic(true);
@@ -159,8 +163,10 @@ mod tests {
             .serialize()
             .finalize_with_mic(&[0u8; 16][..])
             .expect("failed to create fake key frame");
-        let result = compute_mic(&KCK[..], &Akm::new_dot11(200), &frame.keyframe());
-        assert_variant!(result, Err(Error::UnsupportedAkmSuite));
+        let mut protection = test_util::get_rsne_protection();
+        protection.akm = Akm::new_dot11(200);
+        let result = compute_mic(&KCK[..], &protection, &frame.keyframe());
+        assert_variant!(result, Err(Error::UnknownIntegrityAlgorithm));
     }
 
     #[test]
@@ -170,7 +176,7 @@ mod tests {
         frame.key_frame_fields.set_key_info(eapol::KeyInformation(0));
         let frame =
             frame.serialize().finalize_without_mic().expect("failed to create fake key frame");
-        let result = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe());
+        let result = compute_mic(&KCK[..], &test_util::get_rsne_protection(), &frame.keyframe());
         assert_variant!(result, Err(Error::ComputingMicForUnprotectedFrame));
     }
 
@@ -181,24 +187,19 @@ mod tests {
             .serialize()
             .finalize_with_mic(&[][..])
             .expect("failed to create fake key frame");
-        let result = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe());
+        let result = compute_mic(&KCK[..], &test_util::get_rsne_protection(), &frame.keyframe());
         assert_variant!(result, Err(Error::MicSizesDiffer(0, 16)));
     }
 
     #[test]
     fn compute_mic_success() {
         const KCK: [u8; 16] = [5; 16];
-        let psk = Akm::new_dot11(PSK);
         let frame = fake_key_frame(16)
             .serialize()
             .finalize_with_mic(&[0u8; 16][..])
             .expect("failed to create fake key frame");
-        let mic = compute_mic(&KCK[..], &psk, &frame.keyframe())
+        let mic = compute_mic(&KCK[..], &test_util::get_rsne_protection(), &frame.keyframe())
             .expect("expected failure with unsupported AKM");
-
-        let integrity_alg =
-            integrity_algorithm(&psk).expect("expected known integrity algorithm for PSK");
-        assert!(integrity_alg.verify(&KCK[..], &frame[..], &mic[..]));
+        assert!(integrity::hmac_sha1::HmacSha1::new().verify(&KCK[..], &frame[..], &mic[..]));
     }
-
 }

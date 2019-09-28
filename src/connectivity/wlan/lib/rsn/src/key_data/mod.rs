@@ -5,15 +5,16 @@
 pub mod kde;
 
 use crate::Error;
-use failure::{self, ensure};
+use failure;
 use nom::IResult;
 use nom::{call, complete, many0, named, take, try_parse, Needed};
-use wlan_common::ie::rsn::rsne;
+use wlan_common::ie::{rsn::rsne, wpa, Id};
 
 #[derive(Debug, PartialEq)]
 pub enum Element {
     Gtk(kde::Header, kde::Gtk),
     Rsne(rsne::Rsne),
+    LegacyWpa1(wpa::WpaIe),
     Padding,
     UnsupportedKde(kde::Header),
     UnsupportedIe(u8, u8),
@@ -31,8 +32,8 @@ fn parse_ie(i0: &[u8]) -> IResult<&[u8], Element> {
     let (i1, id) = try_parse!(i0, call!(peek_u8_at, 0));
     let (i2, len) = try_parse!(i1, call!(peek_u8_at, 1));
     let (out, bytes) = try_parse!(i2, take!(2 + (len as usize)));
-    match id {
-        rsne::ID => {
+    match id.into() {
+        Id::RSNE => {
             let (_, rsne) = try_parse!(bytes, rsne::from_bytes);
             Ok((out, Element::Rsne(rsne)))
         }
@@ -51,13 +52,7 @@ fn parse_element(input: &[u8]) -> IResult<&[u8], Element> {
 named!(parse_elements<&[u8], Vec<Element>>, many0!(complete!(parse_element)));
 
 pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error> {
-    // Key Data field must be at least 16 bytes long and its length a multiple of 8.
-    ensure!(
-        key_data.len() % 8 == 0 && key_data.len() >= 16,
-        Error::InvaidKeyDataLength(key_data.len())
-    );
-
-    match parse_elements(key_data) {
+    match parse_elements(&key_data[..]) {
         Ok((_, elements)) => Ok(elements),
         Err(nom::Err::Error((_, kind))) => Err(Error::InvalidKeyData(kind).into()),
         Err(nom::Err::Failure((_, kind))) => Err(Error::InvalidKeyData(kind).into()),
@@ -68,7 +63,11 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wlan_common::{assert_variant, organization::Oui};
+    use wlan_common::{
+        assert_variant,
+        ie::rsn::{akm, cipher},
+        organization::Oui,
+    };
 
     #[test]
     fn test_complex_key_data() {
@@ -159,30 +158,10 @@ mod tests {
                     assert_eq!(hdr.data_type, 1);
                 }
                 Element::Padding => assert_eq!(pos, 6),
+                _ => panic!("Unexpected element in key data"),
             }
             pos += 1;
         }
-    }
-
-    #[test]
-    fn test_too_short_key_data() {
-        #[rustfmt::skip]
-        let buf = [
-            10, 5, 1, 2, 3, 4, 5, // Unsupported IE
-        ];
-        let result = extract_elements(&buf[..]);
-        assert_eq!(result.is_ok(), false, "Error: {:?}", result);
-    }
-
-    #[test]
-    fn test_not_multiple_of_8() {
-        #[rustfmt::skip]
-        let buf = [
-            // Unsupported IE
-            10, 21, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-        ];
-        let result = extract_elements(&buf[..]);
-        assert_eq!(result.is_ok(), false, "Error: {:?}", result);
     }
 
     #[test]
@@ -295,6 +274,45 @@ mod tests {
                 assert_eq!(
                     kde.gtk,
                     vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+                );
+            });
+        }
+    }
+
+    #[test]
+    fn test_parse_legacy_wpa() {
+        #[rustfmt::skip]
+        let buf = [
+            // MSFT Vendor IE
+            0xdd, 0x16, 0x00, 0x50, 0xf2,
+            // WPA header
+            0x01, 0x01, 0x00,
+            // Multicast cipher
+            0x00, 0x50, 0xf2, 0x02,
+            // Unicast cipher list
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02,
+            // AKM list
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02,
+        ];
+        let result = extract_elements(&buf[..]);
+        assert!(result.is_ok(), "Error: {:?}", result);
+
+        let elements = result.unwrap();
+        assert_eq!(elements.len(), 1);
+
+        for e in elements {
+            assert_variant!(e, Element::LegacyWpa1(wpa_ie) => {
+                assert_eq!(
+                    wpa_ie.multicast_cipher,
+                    cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }
+                );
+                assert_eq!(
+                    wpa_ie.unicast_cipher_list,
+                    vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }]
+                );
+                assert_eq!(
+                    wpa_ie.akm_list,
+                    vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }]
                 );
             });
         }

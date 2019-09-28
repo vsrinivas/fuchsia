@@ -311,7 +311,9 @@ impl PacketType {
 #[bitfield(
     0..=2   key_descriptor_version,
     3       key_type as KeyType(bool),
-    4..=5   _, // reserved
+    // WFA, WPA1 Spec. 3.1, Chapter 2.2.4, Key Information.
+    // These bits are reserved for non-WPA1 protection.
+    4..=5   legacy_wpa1_key_id,
     6       install,
     7       key_ack,
     8       key_mic,

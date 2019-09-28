@@ -784,8 +784,8 @@ mod tests {
         assert_eq!(msg4.key_data.len(), 0);
         assert!(test_util::is_zero(&msg4.key_data[..]));
         // Verify the message's MIC.
-        let mic =
-            compute_mic(ptk.kck(), &test_util::get_akm(), &msg4).expect("error computing MIC");
+        let mic = compute_mic(ptk.kck(), &test_util::get_rsne_protection(), &msg4)
+            .expect("error computing MIC");
         assert_eq!(&msg4.key_mic[..], &mic[..]);
 
         // Verify PTK was reported.
@@ -823,8 +823,8 @@ mod tests {
         assert_eq!(msg2.key_data.len(), 0);
         assert!(test_util::is_zero(&msg2.key_data[..]));
         // Verify the message's MIC.
-        let mic =
-            compute_mic(ptk.kck(), &test_util::get_akm(), &msg2).expect("error computing MIC");
+        let mic = compute_mic(ptk.kck(), &test_util::get_rsne_protection(), &msg2)
+            .expect("error computing MIC");
         assert_eq!(&msg2.key_mic[..], &mic[..]);
 
         // Verify PTK was NOT re-installed.
@@ -874,8 +874,8 @@ mod tests {
         assert_eq!(keyframe.key_data.len(), 0);
         assert!(test_util::is_zero(&keyframe.key_data[..]));
         // Verify the message's MIC.
-        let mic =
-            compute_mic(ptk.kck(), &test_util::get_akm(), &keyframe).expect("error computing MIC");
+        let mic = compute_mic(ptk.kck(), &test_util::get_rsne_protection(), &keyframe)
+            .expect("error computing MIC");
         assert_eq!(&keyframe.key_mic[..], &mic[..]);
 
         // Verify neither PTK nor GTK were re-installed.

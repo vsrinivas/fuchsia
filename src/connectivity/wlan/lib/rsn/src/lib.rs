@@ -59,9 +59,10 @@ impl Supplicant {
         a_protection: ProtectionInfo,
     ) -> Result<Supplicant, failure::Error> {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
-        let akm = negotiated_protection.akm.clone();
-        let group_data = negotiated_protection.group_data.clone();
-
+        let gtk_exch_cfg = Some(exchange::Config::GroupKeyHandshake(group_key::Config {
+            role: Role::Supplicant,
+            protection: negotiated_protection.clone(),
+        }));
         let esssa = EssSa::new(
             Role::Supplicant,
             negotiated_protection,
@@ -75,11 +76,7 @@ impl Supplicant {
                 nonce_rdr,
                 None,
             )?),
-            Some(exchange::Config::GroupKeyHandshake(group_key::Config {
-                role: Role::Supplicant,
-                akm,
-                cipher: group_data,
-            })),
+            gtk_exch_cfg,
         )?;
 
         Ok(Supplicant { esssa })
@@ -256,7 +253,7 @@ pub enum Error {
     InvalidKeyAckBitValue(MessageNumber),
     #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
     InvalidKeyMicBitValue(MessageNumber),
-    #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
+    #[fail(display = "invalid secure bit value; message: {:?}", _0)]
     InvalidSecureBitValue(MessageNumber),
     #[fail(display = "error, secure bit set by Authenticator before PTK is known")]
     SecureBitWithUnknownPtk,
@@ -314,14 +311,18 @@ pub enum Error {
     PmksaNotEstablished,
     #[fail(display = "invalid nonce size; expected 32 bytes, found: {:?}", _0)]
     InvalidNonceSize(usize),
-    #[fail(display = "invalid key data; expected negotiated RSNE")]
-    InvalidKeyDataRsne,
+    #[fail(display = "invalid key data; expected negotiated protection")]
+    InvalidKeyDataProtection,
     #[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
     BufferTooSmall(usize, usize),
     #[fail(display = "error, SMK-Handshake is not supported")]
     SmkHandshakeNotSupported,
     #[fail(display = "error, negotiated protection is invalid")]
     InvalidNegotiatedProtection,
+    #[fail(display = "unknown integrity algorithm for negotiated protection")]
+    UnknownIntegrityAlgorithm,
+    #[fail(display = "unknown keywrap algorithm for negotiated protection")]
+    UnknownKeywrapAlgorithm,
 }
 
 impl From<std::io::Error> for Error {

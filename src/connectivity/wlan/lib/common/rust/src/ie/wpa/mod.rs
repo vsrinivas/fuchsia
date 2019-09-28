@@ -86,6 +86,17 @@ where
 named!(parse_akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
 named!(parse_cipher<&[u8], cipher::Cipher>, call!(read_suite_selector::<cipher::Cipher>));
 
+// Take as many zeroes as possible from the beginning of the buffer. Unlike nom's take_while, this
+// handles the case where we run into the end of the buffer.
+fn take_while_zero(input: &[u8]) -> IResult<&[u8], ()> {
+    for i in 0..input.len() {
+        if input[i] != 0 {
+            return Ok((&input[i..], ()));
+        }
+    }
+    Ok((&[], ()))
+}
+
 named_attr!(
     /// Convert bytes of a WPA information element into a WpaIe representation.
     , // comma ends the attribute list to named_attr
@@ -97,6 +108,8 @@ named_attr!(
           unicast_cipher_list: count!(parse_cipher, unicast_cipher_count as usize) >>
           akm_count: le_u16 >>
           akm_list: count!(parse_akm, akm_count as usize) >>
+          // In practice this IE is sometimes zero-padded.
+          call!(take_while_zero) >>
           eof!() >>
           (WpaIe{
               multicast_cipher,
@@ -188,6 +201,29 @@ mod tests {
             0x00, 0x50
         ];
         let wpa_frame = from_bytes(&bad_frame[..]);
+        assert!(!wpa_frame.is_ok());
+    }
+
+    #[test]
+    fn test_parse_with_padding() {
+        let mut frame = DEFAULT_FRAME.to_vec();
+        frame.resize(DEFAULT_FRAME.len() + 5, 0);
+
+        let wpa_frame = from_bytes(&frame[..]);
+        assert!(wpa_frame.is_ok());
+        let wpa_frame = wpa_frame.unwrap().1;
+        assert_eq!(
+            wpa_frame.multicast_cipher,
+            cipher::Cipher { oui: OUI, suite_type: cipher::TKIP }
+        );
+        assert_eq!(
+            wpa_frame.unicast_cipher_list,
+            vec![cipher::Cipher { oui: OUI, suite_type: cipher::TKIP }]
+        );
+        assert_eq!(wpa_frame.akm_list, vec![akm::Akm { oui: OUI, suite_type: akm::PSK }]);
+
+        frame[DEFAULT_FRAME.len() + 1] = 1;
+        let wpa_frame = from_bytes(&frame[..]);
         assert!(!wpa_frame.is_ok());
     }
 }

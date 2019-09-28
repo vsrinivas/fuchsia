@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
-use crate::rsna::{Dot11VerifiedKeyFrame, Role, UpdateSink};
+use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, UpdateSink};
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
-use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
 use zerocopy::ByteSlice;
 
 mod supplicant;
@@ -67,10 +66,15 @@ impl<B: ByteSlice> GroupKeyHandshakeFrame<B> {
                     key_info.key_ack(),
                     "ACK bit must be set in 1st message of Group Key Handshake"
                 );
-                ensure!(
-                    key_info.encrypted_key_data(),
-                    "encrypted data bit must be set in 1st message of Group Key Handshake"
-                );
+
+                // WFA, WPA1 Spec. 3.1, Chapter 2.2.4
+                // WPA1 does not use the encrypted key data bit, so we don't bother checking it.
+                if raw_frame.key_frame_fields.descriptor_type != eapol::KeyDescriptor::LEGACY_WPA1 {
+                    ensure!(
+                        key_info.encrypted_key_data(),
+                        "encrypted data bit must be set in 1st message of Group Key Handshake"
+                    );
+                }
 
                 // IEEE Std 802.11-2016, 12.7.7.2 requires the key frame's IV to be zero'ed when
                 // using 802.1X-2004. Some routers, such as Linksys, violate this constraint.
@@ -111,8 +115,7 @@ impl<B: ByteSlice> GroupKeyHandshakeFrame<B> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub role: Role,
-    pub akm: Akm,
-    pub cipher: Cipher,
+    pub protection: NegotiatedProtection,
 }
 
 #[derive(Debug, PartialEq)]

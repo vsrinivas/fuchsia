@@ -15,6 +15,7 @@ impl Id {
     pub const DSSS_PARAM_SET: Self = Self(3);
     pub const TIM: Self = Self(5);
     pub const HT_CAPABILITIES: Self = Self(45);
+    pub const RSNE: Self = Self(48);
     pub const EXT_SUPPORTED_RATES: Self = Self(50);
     pub const HT_OPERATION: Self = Self(61);
     pub const MESH_PEERING_MGMT: Self = Self(117);
@@ -24,4 +25,10 @@ impl Id {
     pub const VHT_CAPABILITIES: Self = Self(191);
     pub const VHT_OPERATION: Self = Self(192);
     pub const VENDOR_SPECIFIC: Self = Self(221);
+}
+
+impl From<u8> for Id {
+    fn from(id: u8) -> Id {
+        Id(id)
+    }
 }

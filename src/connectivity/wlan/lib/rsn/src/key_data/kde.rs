@@ -10,6 +10,7 @@ use nom::number::streaming::le_u8;
 use nom::{call, do_parse, eof, map, named, named_args, take, try_parse, IResult};
 use wlan_common::{
     appendable::{Appendable, BufferTooSmall},
+    ie::wpa,
     ie::write_wpa1_ie,
     organization::Oui,
 };
@@ -114,15 +115,19 @@ pub fn parse(i0: &[u8]) -> IResult<&[u8], Element> {
     // Read the KDE Header first.
     let (i1, hdr) = try_parse!(i0, call!(parse_header));
     let (i2, bytes) = try_parse!(i1, take!(hdr.data_len()));
-    if hdr.oui != Oui::DOT11 {
-        return Ok((i2, Element::UnsupportedKde(hdr)));
-    }
-
-    // Once the header was validated, read the KDE data.
-    match hdr.data_type {
-        GTK_DATA_TYPE => {
-            let (_, gtk) = try_parse!(bytes, call!(parse_gtk, hdr.data_len()));
-            Ok((i2, Element::Gtk(hdr, gtk)))
+    match hdr.oui {
+        Oui::DOT11 => match hdr.data_type {
+            GTK_DATA_TYPE => {
+                let (_, gtk) = try_parse!(bytes, call!(parse_gtk, hdr.data_len()));
+                Ok((i2, Element::Gtk(hdr, gtk)))
+            }
+            _ => Ok((i2, Element::UnsupportedKde(hdr))),
+        },
+        // The WPA1 IE uses the same vendor IE format as a KDE, so we handle it here as a special
+        // case.
+        Oui::MSFT if hdr.data_type == wpa::VENDOR_SPECIFIC_TYPE => {
+            let (_, wpa) = try_parse!(&bytes[..], wpa::from_bytes);
+            Ok((i2, Element::LegacyWpa1(wpa)))
         }
         _ => Ok((i2, Element::UnsupportedKde(hdr))),
     }

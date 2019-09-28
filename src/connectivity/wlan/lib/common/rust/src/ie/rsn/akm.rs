@@ -171,4 +171,12 @@ mod tests {
         assert!(psk.has_known_algorithm());
         assert!(!psk.is_reserved());
     }
+
+    #[test]
+    fn test_msft_akm() {
+        let psk = Akm { oui: Oui::MSFT, suite_type: PSK };
+        assert!(psk.is_vendor_specific());
+        assert!(psk.has_known_algorithm());
+        assert!(!psk.is_reserved());
+    }
 }

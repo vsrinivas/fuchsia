@@ -289,19 +289,22 @@ fn validate_message_3<B: ByteSlice>(
     ensure!(key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message3));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
     ensure!(key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message3));
-    // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message3));
-    // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message3));
+    // These bit values are not used by WPA1.
+    if frame.key_frame_fields.descriptor_type != eapol::KeyDescriptor::LEGACY_WPA1 {
+        // IEEE Std 802.11-2016, 12.7.2 b.6)
+        ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message3));
+        // IEEE Std 802.11-2016, 12.7.2 b.7)
+        ensure!(key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message3));
+        // IEEE Std 802.11-2016, 12.7.2 b.10)
+        ensure!(
+            key_info.encrypted_key_data(),
+            Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message3)
+        );
+    }
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message3));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
     ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message3));
-    // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(
-        key_info.encrypted_key_data(),
-        Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message3)
-    );
     // IEEE Std 802.11-2016, 12.7.2 e)
     if let Some(nonce) = nonce {
         ensure!(
@@ -399,10 +402,11 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::Fourway;
     use crate::rsna::{test_util, SecAssocUpdate, UpdateSink};
     use wlan_common::big_endian::BigEndianU64;
 
-    // Create an Authenticator and Supplicant and perfoms the entire 4-Way Handshake.
+    // Create an Authenticator and Supplicant and performs the entire 4-Way Handshake.
     #[test]
     fn test_supplicant_with_authenticator() {
         let mut env = test_util::FourwayTestEnv::new();
@@ -421,6 +425,31 @@ mod tests {
         // Finally verify that Supplicant and Authenticator derived the same keys.
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
+    }
+
+    #[test]
+    fn test_wpa1_handshake() {
+        let pmk = test_util::get_pmk();
+        let cfg = test_util::make_wpa1_fourway_cfg();
+        let protection = test_util::get_wpa1_protection();
+        let mut supplicant = Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake");
+
+        // We don't have a WPA1 authenticator so we use fake messages.
+        let anonce = [0xab; 32];
+        let msg1_buf = test_util::get_wpa1_4whs_msg1(&anonce[..]);
+        let msg1 = msg1_buf.keyframe();
+        let updates = test_util::send_msg_to_fourway(&mut supplicant, msg1, 0, &protection);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let a_ptk =
+            test_util::get_wpa1_ptk(&anonce[..], &msg2.keyframe().key_frame_fields.key_nonce[..]);
+        let msg3_buf = &test_util::get_wpa1_4whs_msg3(&a_ptk, &anonce[..]);
+        let msg3 = msg3_buf.keyframe();
+        let updates = test_util::send_msg_to_fourway(&mut supplicant, msg3, 0, &protection);
+
+        // Verify that we completed the exchange and computed the same PTK as our fake AP would.
+        test_util::expect_eapol_resp(&updates[..]);
+        let s_ptk = test_util::expect_reported_ptk(&updates[..]);
+        assert_eq!(s_ptk, a_ptk);
     }
 
     #[test]

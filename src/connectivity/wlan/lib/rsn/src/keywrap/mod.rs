@@ -5,9 +5,7 @@
 mod aes;
 mod rc4;
 
-use aes::NistAes;
-use failure::Error;
-use wlan_common::ie::rsn::akm::Akm;
+use {aes::NistAes, failure::Error, rc4::Rc4};
 
 /// An arbitrary algorithm used to encrypt the key data field of an EAPoL keyframe.
 /// Usage is specified in IEEE 802.11-2016 8.5.2 j
@@ -18,11 +16,11 @@ pub trait Algorithm {
     fn unwrap_key(&self, kek: &[u8], iv: &[u8; 16], data: &[u8]) -> Result<Vec<u8>, Error>;
 }
 
-/// Returns the keywrap algorithm specified by IEEE 802.11-2016 for the given AKM.
-pub fn keywrap_algorithm(akm: &Akm) -> Option<Box<dyn Algorithm>> {
-    // IEEE 802.11-2016, 12.7.3, Table 12-8
-    match akm.suite_type {
-        1..=13 => Some(Box::new(NistAes)),
+/// IEEE Std 802.11-2016, 12.7.2 b.1)
+pub fn keywrap_algorithm(key_descriptor_version: u16) -> Option<Box<dyn Algorithm>> {
+    match key_descriptor_version {
+        1 => Some(Box::new(Rc4)),
+        2 => Some(Box::new(NistAes)),
         _ => None,
     }
 }

@@ -8,7 +8,6 @@ use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data::kde;
-use crate::keywrap::keywrap_algorithm;
 use crate::rsna::{
     derive_key_descriptor_version, Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate,
     UnverifiedKeyData, UpdateSink,
@@ -215,13 +214,13 @@ pub fn handle_message_2<B: ByteSlice>(
         anonce,
         snonce,
         &protection.akm,
-        protection.pairwise,
+        protection.pairwise.clone(),
     )?;
 
     // PTK was computed, verify the frame's MIC.
     let frame = match frame.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(ptk.kck(), &protection.akm)? {
+            match unverified_mic.verify_mic(ptk.kck(), &protection)? {
                 UnverifiedKeyData::Encrypted(_) => {
                     bail!("msg2 of 4-Way Handshake must not be encrypted")
                 }
@@ -258,9 +257,8 @@ fn create_message_3(
     w.write_gtk(&kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk()))?;
     let key_data = w.finalize_for_encryption()?;
     let key_iv = [0u8; 16];
-    let encrypted_key_data = keywrap_algorithm(&protection.akm)
-        .ok_or(Error::UnsupportedAkmSuite)?
-        .wrap_key(kek, &key_iv, &key_data[..])?;
+    let encrypted_key_data =
+        protection.keywrap_algorithm()?.wrap_key(kek, &key_iv, &key_data[..])?;
 
     // Construct message.
     let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, protection);
@@ -294,7 +292,7 @@ fn create_message_3(
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &protection.akm, msg3.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection, msg3.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg3.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
@@ -309,7 +307,7 @@ pub fn handle_message_4<B: ByteSlice>(
     let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let frame = match frame.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(kck, &protection.akm)? {
+            match unverified_mic.verify_mic(kck, &protection)? {
                 UnverifiedKeyData::Encrypted(_) => {
                     bail!("msg4 of 4-Way Handshake must not be encrypted")
                 }
