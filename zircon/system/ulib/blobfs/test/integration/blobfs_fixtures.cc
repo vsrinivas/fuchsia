@@ -53,6 +53,10 @@ void BlobfsTest::CheckInfo() {
   CheckBlobfsInfo();
 }
 
+void BlobfsFixedDiskSizeTest::CheckInfo() {
+  CheckBlobfsInfo();
+}
+
 void BlobfsTestWithFvm::CheckInfo() {
   CheckBlobfsInfo();
 }
@@ -63,6 +67,10 @@ void BlobfsTestWithFvm::CheckPartitionSize() {
   const size_t kMinFvmSize =
       fvm::MetadataSize(kMinDataSize, kTestFvmSliceSize) * 2 + kMinDataSize;  // ~8.5mb
   ASSERT_GE(environment_->disk_size(), kMinFvmSize, "Insufficient disk space for FVM tests");
+}
+
+void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() {
+  CheckBlobfsInfo();
 }
 
 void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {

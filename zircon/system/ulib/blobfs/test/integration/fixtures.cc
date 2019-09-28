@@ -88,18 +88,22 @@ zx_status_t FilesystemTest::CheckFs() {
 }
 
 void FilesystemTestWithFvm::SetUp() {
-  fvm_path_.assign(device_path_);
-  fvm_path_.append("/fvm");
-
-  ASSERT_NO_FAILURES(CheckPartitionSize());
-
-  CreatePartition();
+  ASSERT_NO_FAILURES(FvmSetUp());
   FilesystemTest::SetUp();
 }
 
 void FilesystemTestWithFvm::TearDown() {
   FilesystemTest::TearDown();
   ASSERT_OK(fvm_destroy(partition_path_.c_str()));
+}
+
+void FilesystemTestWithFvm::FvmSetUp() {
+  fvm_path_.assign(device_path_);
+  fvm_path_.append("/fvm");
+
+  ASSERT_NO_FAILURES(CheckPartitionSize());
+
+  CreatePartition();
 }
 
 void FilesystemTestWithFvm::BindFvm() {
@@ -138,4 +142,18 @@ void FilesystemTestWithFvm::CreatePartition() {
   // The base test must see the FVM volume as the device to work with.
   partition_path_.swap(device_path_);
   device_path_.assign(path);
+}
+
+FixedDiskSizeTest::FixedDiskSizeTest(uint64_t disk_size) {
+  const int kBlockSize = 512;
+  uint64_t num_blocks = disk_size / kBlockSize;
+  ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+  device_path_ = ramdisk_->path();
+}
+
+FixedDiskSizeTestWithFvm::FixedDiskSizeTestWithFvm(uint64_t disk_size) {
+  const int kBlockSize = 512;
+  uint64_t num_blocks = disk_size / kBlockSize;
+  ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+  device_path_ = ramdisk_->path();
 }

@@ -70,6 +70,9 @@ class FilesystemTestWithFvm : public FilesystemTest {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(FilesystemTestWithFvm);
 
+ protected:
+  void FvmSetUp();
+
  private:
   void BindFvm();
   void CreatePartition();
@@ -77,4 +80,22 @@ class FilesystemTestWithFvm : public FilesystemTest {
 
   std::string fvm_path_;
   std::string partition_path_;
+};
+
+// Base class for tests that create a dedicated disk of a given size.
+class FixedDiskSizeTest : public FilesystemTest {
+ public:
+  explicit FixedDiskSizeTest(uint64_t disk_size);
+
+ private:
+  std::unique_ptr<RamDisk> ramdisk_;
+};
+
+// Base class for tests that create a dedicated disk of a given size.
+class FixedDiskSizeTestWithFvm : public FilesystemTestWithFvm {
+ public:
+  explicit FixedDiskSizeTestWithFvm(uint64_t disk_size);
+
+ private:
+  std::unique_ptr<RamDisk> ramdisk_;
 };

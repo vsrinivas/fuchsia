@@ -20,6 +20,7 @@
 
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
+#include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
@@ -375,82 +376,82 @@ TEST_F(BlobfsTest, ReadDirectory) { RunReadDirectoryTest(); }
 
 TEST_F(BlobfsTestWithFvm, ReadDirectory) { RunReadDirectoryTest(); }
 
-/*
+class SmallDiskTest : public BlobfsFixedDiskSizeTest {
+ public:
+  SmallDiskTest() : BlobfsFixedDiskSizeTest(MinimumDiskSize()) {}
+  explicit SmallDiskTest(uint64_t disk_size) : BlobfsFixedDiskSizeTest(disk_size) {}
 
-static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
-    BEGIN_TEST;
+ protected:
+  static uint64_t MinimumDiskSize() {
+    blobfs::Superblock info;
+    info.inode_count = blobfs::kBlobfsDefaultInodeCount;
+    info.data_block_count = blobfs::kMinimumDataBlocks;
+    info.journal_block_count = blobfs::kMinimumJournalBlocks;
+    info.flags = 0;
 
-    if (gUseRealDisk) {
-        fprintf(stderr, "Ramdisk required; skipping test\n");
-        return true;
-    }
+    return blobfs::TotalBlocks(info) * blobfs::kBlobfsBlockSize;
+  }
+};
 
-    uint64_t minimum_size = 0;
-    if (blobfsTest->GetType() == FsTestType::kFvm) {
-        size_t blocks_per_slice = kTestFvmSliceSize / blobfs::kBlobfsBlockSize;
+TEST_F(SmallDiskTest, SmallestValidDisk) {}
 
-        // Calculate slices required for data blocks based on minimum requirement and slice size.
-        uint64_t required_data_slices = fbl::round_up(blobfs::kMinimumDataBlocks, blocks_per_slice)
-                                        / blocks_per_slice;
-        uint64_t required_journal_slices = fbl::round_up(blobfs::kDefaultJournalBlocks,
-                                                         blocks_per_slice) / blocks_per_slice;
+class TooSmallDiskTest : public SmallDiskTest {
+ public:
+  TooSmallDiskTest() : SmallDiskTest(MinimumDiskSize() - 1024) {}
 
-        // Require an additional 1 slice each for super, inode, and block bitmaps.
-        uint64_t blobfs_size = (required_journal_slices + required_data_slices + 3)
-                               * kTestFvmSliceSize;
-        minimum_size = blobfs_size;
-        uint64_t metadata_size = fvm::MetadataSize(blobfs_size, kTestFvmSliceSize);
+  void SetUp() override {}
+  void TearDown() override {}
+};
 
-        // Re-calculate minimum size until the metadata size stops growing.
-        while (minimum_size - blobfs_size != metadata_size * 2) {
-            minimum_size = blobfs_size + metadata_size * 2;
-            metadata_size = fvm::MetadataSize(minimum_size, kTestFvmSliceSize);
-        }
-
-        ASSERT_EQ(minimum_size - blobfs_size,
-                  fvm::MetadataSize(minimum_size, kTestFvmSliceSize) * 2);
-    } else {
-        blobfs::Superblock info;
-        info.inode_count = blobfs::kBlobfsDefaultInodeCount;
-        info.data_block_count = blobfs::kMinimumDataBlocks;
-        info.journal_block_count = blobfs::kMinimumJournalBlocks;
-        info.flags = 0;
-
-        minimum_size = blobfs::TotalBlocks(info) * blobfs::kBlobfsBlockSize;
-    }
-
-    // Teardown the initial test configuration and reset the test state.
-    ASSERT_TRUE(blobfsTest->Teardown());
-    ASSERT_TRUE(blobfsTest->Reset());
-
-    // Create disk with minimum possible size, make sure init passes.
-    ASSERT_GE(minimum_size, blobfsTest->GetBlockSize());
-    uint64_t disk_blocks = minimum_size / blobfsTest->GetBlockSize();
-    ASSERT_TRUE(blobfsTest->SetBlockCount(disk_blocks));
-    ASSERT_TRUE(blobfsTest->Init());
-    ASSERT_TRUE(blobfsTest->Teardown());
-
-    // Reset the disk size and test state.
-    ASSERT_TRUE(blobfsTest->Reset());
-    ASSERT_TRUE(blobfsTest->SetBlockCount(disk_blocks - 1));
-
-    // Create disk with smaller than minimum size, make sure mkfs fails.
-    ASSERT_TRUE(blobfsTest->Init(FsTestState::kMinimal));
-
-    char device_path[PATH_MAX];
-    ASSERT_TRUE(blobfsTest->GetDevicePath(device_path, PATH_MAX));
-    ASSERT_NE(mkfs(device_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
-              ZX_OK);
-
-    // Reset the ramdisk counts so we don't attempt to run ramdisk failure tests. There isn't
-    // really a point with this test since we are testing blobfs creation, which doesn't generate
-    // any journal entries.
-    ASSERT_TRUE(blobfsTest->ToggleSleep());
-    ASSERT_TRUE(blobfsTest->ToggleSleep());
-    END_TEST;
+TEST_F(TooSmallDiskTest, DiskTooSmall) {
+  ASSERT_NOT_OK(
+      mkfs(device_path().c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
 }
 
-*/
+class SmallDiskTestWithFvm : public BlobfsFixedDiskSizeTestWithFvm {
+ public:
+  SmallDiskTestWithFvm() : BlobfsFixedDiskSizeTestWithFvm(MinimumDiskSize()) {}
+  explicit SmallDiskTestWithFvm(uint64_t disk_size) : BlobfsFixedDiskSizeTestWithFvm(disk_size) {}
+
+ protected:
+  static uint64_t MinimumDiskSize() {
+    size_t blocks_per_slice = kTestFvmSliceSize / blobfs::kBlobfsBlockSize;
+
+    // Calculate slices required for data blocks based on minimum requirement and slice size.
+    uint64_t required_data_slices =
+        fbl::round_up(blobfs::kMinimumDataBlocks, blocks_per_slice) / blocks_per_slice;
+    uint64_t required_journal_slices =
+        fbl::round_up(blobfs::kDefaultJournalBlocks, blocks_per_slice) / blocks_per_slice;
+
+    // Require an additional 1 slice each for super, inode, and block bitmaps.
+    uint64_t blobfs_size = (required_journal_slices + required_data_slices + 3) * kTestFvmSliceSize;
+    uint64_t minimum_size = blobfs_size;
+    uint64_t metadata_size = fvm::MetadataSize(blobfs_size, kTestFvmSliceSize);
+
+    // Re-calculate minimum size until the metadata size stops growing.
+    while (minimum_size - blobfs_size != metadata_size * 2) {
+      minimum_size = blobfs_size + metadata_size * 2;
+      metadata_size = fvm::MetadataSize(minimum_size, kTestFvmSliceSize);
+    }
+
+    return minimum_size;
+  }
+};
+
+TEST_F(SmallDiskTestWithFvm, SmallestValidDisk) {}
+
+class TooSmallDiskTestWithFvm : public SmallDiskTestWithFvm {
+ public:
+  TooSmallDiskTestWithFvm() : SmallDiskTestWithFvm(MinimumDiskSize() - 1024) {}
+
+  void SetUp() override { ASSERT_NO_FAILURES(FvmSetUp()); }
+  void TearDown() override {}
+};
+
+TEST_F(TooSmallDiskTestWithFvm, DiskTooSmall) {
+  ASSERT_NOT_OK(
+      mkfs(device_path().c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
+}
 
 void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -1987,35 +1988,30 @@ TEST_F(BlobfsTestWithFvm, FailedWrite) {
   Remount();
 }
 
-class LargeBlobTest : public BlobfsTest {
+class LargeBlobTest : public BlobfsFixedDiskSizeTest {
  public:
-  LargeBlobTest() {
+  LargeBlobTest() : BlobfsFixedDiskSizeTest(GetDiskSize()) {}
+
+  static uint64_t GetDataBlockCount() { return 12 * blobfs::kBlobfsBlockBits / 10; }
+
+ private:
+  static uint64_t GetDiskSize() {
     // Create blobfs with enough data blocks to ensure 2 block bitmap blocks.
     // Any number above kBlobfsBlockBits should do, and the larger the
     // number, the bigger the disk (and memory used for the test).
-    superblock_.flags = 0;
-    superblock_.inode_count = blobfs::kBlobfsDefaultInodeCount;
-    superblock_.journal_block_count = blobfs::kDefaultJournalBlocks;
-    superblock_.data_block_count = 12 * blobfs::kBlobfsBlockBits / 10;
-
-    const int kBlockSize = 512;
-    uint64_t blobfs_blocks = blobfs::TotalBlocks(superblock_);
-    uint64_t num_blocks = (blobfs_blocks * blobfs::kBlobfsBlockSize) / kBlockSize;
-    ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
-    device_path_ = ramdisk_->path();
+    blobfs::Superblock superblock;
+    superblock.flags = 0;
+    superblock.inode_count = blobfs::kBlobfsDefaultInodeCount;
+    superblock.journal_block_count = blobfs::kDefaultJournalBlocks;
+    superblock.data_block_count = GetDataBlockCount();
+    return blobfs::TotalBlocks(superblock) * blobfs::kBlobfsBlockSize;
   }
-
- protected:
-  blobfs::Superblock superblock_;
-
- private:
-  std::unique_ptr<RamDisk> ramdisk_;
 };
 
 TEST_F(LargeBlobTest, UseSecondBitmap) {
   // Create (and delete) a blob large enough to overflow into the second bitmap block.
   std::unique_ptr<fs_test_utils::BlobInfo> info;
-  size_t blob_size = ((superblock_.data_block_count / 2) + 1) * blobfs::kBlobfsBlockSize;
+  size_t blob_size = ((GetDataBlockCount() / 2) + 1) * blobfs::kBlobfsBlockSize;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blob_size, &info));
 
   fbl::unique_fd fd;
@@ -2030,7 +2026,6 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 /*
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS(MEDIUM, TestDiskTooSmall)
 RUN_TESTS_SILENT(MEDIUM, CorruptedBlob)
 RUN_TESTS_SILENT(MEDIUM, CorruptedDigest)
 RUN_TESTS(LARGE, TestHugeBlobRandom)

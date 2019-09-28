@@ -20,6 +20,13 @@ class BlobfsTest : public FilesystemTest {
   void CheckInfo() override;
 };
 
+// Base class for tests that create a dedicated disk of a given size.
+class BlobfsFixedDiskSizeTest : public FixedDiskSizeTest {
+ protected:
+  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size) : FixedDiskSizeTest(disk_size) {}
+  void CheckInfo() override;
+};
+
 class BlobfsTestWithFvm : public FilesystemTestWithFvm {
  public:
   size_t GetSliceSize() const override { return kTestFvmSliceSize; }
@@ -27,6 +34,17 @@ class BlobfsTestWithFvm : public FilesystemTestWithFvm {
  protected:
   void CheckInfo() override;
   void CheckPartitionSize() override;
+};
+
+// Base class for tests that create a dedicated disk of a given size.
+class BlobfsFixedDiskSizeTestWithFvm : public FixedDiskSizeTestWithFvm {
+ public:
+  size_t GetSliceSize() const override { return kTestFvmSliceSize; }
+
+ protected:
+  explicit BlobfsFixedDiskSizeTestWithFvm(uint64_t disk_size)
+      : FixedDiskSizeTestWithFvm(disk_size) {}
+  void CheckInfo() override;
 };
 
 // Creates an open blob with the provided Merkle tree + Data, and reads back to
