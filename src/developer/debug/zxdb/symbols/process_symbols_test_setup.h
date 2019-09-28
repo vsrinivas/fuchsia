@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class MockModuleSymbols;
 class ModuleSymbols;
 
 // This class sets up a ProcessSymbols for testing purposes. It allows MockModuleSymbols to be
@@ -33,6 +34,16 @@ class ProcessSymbolsTestSetup {
   // typically be a MockModuleSymbols.
   void InjectModule(const std::string& name, const std::string& build_id, uint64_t base,
                     fxl::RefPtr<ModuleSymbols> mod_sym);
+
+  // The default load address for InjectMockModule. See that for more.
+  static constexpr uint64_t kDefaultLoadAddress = 0x1000000;
+
+  // Injects a module at the address kDefaultLoadAddress, returning a pointer to it. The returned
+  // pointer will be owned by the symbol system associated with the process().
+  //
+  // Most callers only need one module, want to use the standard mock, and don't care about the
+  // particular name or load address. This uses some defaults to make injection simpler.
+  MockModuleSymbols* InjectMockModule();
 
  private:
   SystemSymbols system_;

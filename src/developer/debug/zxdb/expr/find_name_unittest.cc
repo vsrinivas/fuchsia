@@ -590,11 +590,10 @@ TEST(FindName, FindType) {
 
 TEST(FindName, FindNamespace) {
   ProcessSymbolsTestSetup setup;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+
   auto& root = module_symbols->index().root();
-  constexpr uint64_t kLoadAddress = 0x1000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod", "1234", kLoadAddress, module_symbols);
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
   FindNameContext context(&setup.process(), symbol_context);
 
   const char kStd[] = "std";
@@ -636,6 +635,99 @@ TEST(FindName, FindNamespace) {
   FindName(context, find_ns_prefix, star_internal_prefix, &results);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("star::internal", results[0].GetName().GetFullName());
+}
+
+// A symbol should be found in any namespace with the "all namespaces" flag set.
+TEST(FindName, FindRecursiveNamespace) {
+  ProcessSymbolsTestSetup setup;
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+
+  auto& root = module_symbols->index().root();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  FindNameContext context(&setup.process(), symbol_context);
+
+  // Make several functions
+  //
+  // - ::Foo()
+  // - ::std::Foo()
+  // - ::std::bar::Foo()
+
+  const char kStdName[] = "std";
+  auto std_ns_symbol = fxl::MakeRefCounted<Namespace>(kStdName);
+  auto std_ns = root.AddChild(IndexNode::Kind::kNamespace, kStdName);
+
+  const char kBarName[] = "bar";
+  auto std_bar_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, kBarName);
+
+  // ::Foo().
+  const char kFooName[] = "Foo";
+  auto foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  foo->set_assigned_name(kFooName);
+  TestIndexedSymbol foo_indexed(module_symbols, &root, kFooName, foo);
+
+  // ::std::Foo(). Note this symbol and the next don't have a parent so their reported full name
+  // won't have the namespace qualification. But this test needs only that they're indexed in the
+  // right place.
+  auto std_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  std_foo->set_parent(std_ns_symbol);
+  std_foo->set_assigned_name(kFooName);
+  TestIndexedSymbol std_foo_indexed(module_symbols, std_ns, kFooName, std_foo);
+
+  // ::std::bar::Foo().
+  auto std_bar_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  std_bar_foo->set_assigned_name(kFooName);
+  TestIndexedSymbol std_bar_foo_indexed(module_symbols, std_bar_ns, kFooName, std_bar_foo);
+
+  // Search for "Foo" in all namespaces.
+  ParsedIdentifier foo_ident((ParsedIdentifierComponent(kFooName)));
+  FindNameOptions opts(FindNameOptions::kAllKinds);
+  opts.max_results = 100;  // Want everything.
+  opts.search_mode = FindNameOptions::kAllNamespaces;
+  std::vector<FoundName> results;
+  FindName(context, opts, foo_ident, &results);
+
+  // It should have found all 3 Foo's in order.
+  ASSERT_EQ(3u, results.size());
+  EXPECT_EQ(foo.get(), results[0].function().get());
+  EXPECT_EQ(std_foo.get(), results[1].function().get());
+  EXPECT_EQ(std_bar_foo.get(), results[2].function().get());
+
+  // Now find by prefix recursively.
+  FindNameOptions prefix_opts = opts;
+  prefix_opts.how = FindNameOptions::kPrefix;
+  results.clear();
+  FindName(context, prefix_opts, ParsedIdentifier(ParsedIdentifierComponent("F")), &results);
+
+  // Should have found the same matches.
+  ASSERT_EQ(3u, results.size());
+  EXPECT_EQ(foo.get(), results[0].function().get());
+  EXPECT_EQ(std_foo.get(), results[1].function().get());
+  EXPECT_EQ(std_bar_foo.get(), results[2].function().get());
+
+  // Find "bar::Foo" should find only the one match, using the implicit toplevel namespace.
+  ParsedIdentifier bar_foo;
+  bar_foo.AppendComponent(ParsedIdentifierComponent("bar"));
+  bar_foo.AppendComponent(ParsedIdentifierComponent("Foo"));
+  results.clear();
+  FindName(context, opts, bar_foo, &results);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(std_bar_foo.get(), results[0].function().get());
+
+  // Find "::Foo" should only find the toplevel one, even with implicit namespace searching.
+  ParsedIdentifier abs_foo(IdentifierQualification::kGlobal, ParsedIdentifierComponent(kFooName));
+  results.clear();
+  FindName(context, opts, abs_foo, &results);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(foo.get(), results[0].function().get());
+
+  // Find "::std::Foo" should work.
+  ParsedIdentifier abs_std_foo(IdentifierQualification::kGlobal,
+                               ParsedIdentifierComponent(kStdName));
+  abs_std_foo.AppendComponent(ParsedIdentifierComponent(kFooName));
+  results.clear();
+  FindName(context, opts, abs_std_foo, &results);
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ(std_foo.get(), results[0].function().get());
 }
 
 }  // namespace zxdb

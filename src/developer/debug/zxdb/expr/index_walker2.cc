@@ -134,6 +134,8 @@ bool IndexWalker::WalkInto(const ParsedIdentifier& ident) {
   return true;
 }
 
+void IndexWalker::WalkIntoSpecific(const IndexNode* node) { path_.push_back(Stage{node}); }
+
 bool IndexWalker::WalkIntoClosest(const ParsedIdentifier& ident) {
   if (ident.qualification() == IdentifierQualification::kGlobal)
     path_.resize(1);  // Only keep the root.

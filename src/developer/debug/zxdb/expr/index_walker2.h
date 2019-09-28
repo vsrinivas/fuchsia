@@ -65,6 +65,11 @@ class IndexWalker {
   // to do a relative name resolution. Handling which scopes to search in is the job of the caller.
   bool WalkInto(const ParsedIdentifier& ident);
 
+  // Walks into a specific node. This node should be a child of one of the current() nodes. This
+  // is used when code identifies a specific child rather than a general name it wants to walk
+  // into.
+  void WalkIntoSpecific(const IndexNode* node);
+
   // Like WalkInto but does a best effort and always commits the results. This is typically used to
   // move to the starting point in an index for searching: just because that exact namespace isn't
   // in the index, doesn't mean one can't resolve variables in it.

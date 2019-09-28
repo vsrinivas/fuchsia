@@ -241,7 +241,8 @@ VisitResult VisitPerModule(const FindNameContext& context,
   return VisitResult::kContinue;
 }
 
-VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+// Searches for |looking_for| at a given level of the index, as stored in the given IndexWalker.
+VisitResult FindInIndexLevel(const FindNameOptions& options, const ModuleSymbols* module_symbols,
                              const IndexWalker& walker, const ParsedIdentifier& looking_for,
                              std::vector<FoundName>* results) {
   if (looking_for.empty())
@@ -309,6 +310,33 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
     }
   }
 
+  return VisitResult::kContinue;
+}
+
+// Searches the given index node and recursively, all child namespaces. This is used to implement
+// the "all namespaces" search mode.
+VisitResult FindInIndexLevelRecursiveNs(const FindNameOptions& options,
+                                        const ModuleSymbols* module_symbols,
+                                        const IndexWalker& walker,
+                                        const ParsedIdentifier& looking_for,
+                                        std::vector<FoundName>* results) {
+  // Search in this node first.
+  VisitResult vr = FindInIndexLevel(options, module_symbols, walker, looking_for, results);
+  if (vr != VisitResult::kContinue)
+    return vr;
+
+  // Recursively search in child namespaces.
+  IndexWalker ns_walker(walker);  // Stores the namespace we're checking.
+  for (const auto& current_node : walker.current()) {
+    for (const auto& [ns_name, ns_node] : current_node->namespaces()) {
+      // Check one specific child namespace index node.
+      ns_walker.WalkIntoSpecific(&ns_node);
+      vr = FindInIndexLevelRecursiveNs(options, module_symbols, ns_walker, looking_for, results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+      ns_walker.WalkUp();
+    }
+  }
   return VisitResult::kContinue;
 }
 
@@ -400,7 +428,7 @@ FoundName FindName(const FindNameContext& context, const FindNameOptions& option
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
-  if (options.find_vars && context.block &&
+  if (options.search_mode == FindNameOptions::kLexical && options.find_vars && context.block &&
       looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
     FindLocalVariable(options, context.block, looking_for, results);
@@ -449,6 +477,8 @@ VisitResult VisitLocalVariables(const CodeBlock* block,
 
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
                        const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
+  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+
   // TODO(DX-1214) lookup type names defined locally in this function.
 
   // Local variables can only be simple names.
@@ -469,6 +499,8 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Collection* object, const ParsedIdentifier& looking_for,
                 const Variable* optional_object_ptr, std::vector<FoundName>* result) {
+  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+
   VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr, result](
                                   const Collection* cur_collection, uint64_t cur_offset) {
     // Called for each collection in the class hierarchy.
@@ -479,6 +511,8 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 
 void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& options,
                       const ParsedIdentifier& looking_for, std::vector<FoundName>* result) {
+  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+
   if (!context.block)
     return;  // No current code.
   const Function* function = context.block->GetContainingFunction();
@@ -532,14 +566,23 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     const ParsedIdentifier& looking_for, bool search_containing,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
-  if (!current_scope.empty() && looking_for.qualification() == IdentifierQualification::kRelative) {
+  if (options.search_mode == FindNameOptions::kLexical && !current_scope.empty() &&
+      looking_for.qualification() == IdentifierQualification::kRelative) {
     // Unless the input identifier is fully qualified, start the search in the current context.
     walker.WalkIntoClosest(current_scope);
   }
 
   // Search from the current namespace going up.
   do {
-    VisitResult vr = FindPerIndexNode(options, module_symbols, walker, looking_for, results);
+    // Do recursive searching when requested. The name must also be relative. Global qualifications
+    // on the input override implicit namespace searching.
+    VisitResult vr;
+    if (options.search_mode == FindNameOptions::kAllNamespaces &&
+        looking_for.qualification() == IdentifierQualification::kRelative) {
+      vr = FindInIndexLevelRecursiveNs(options, module_symbols, walker, looking_for, results);
+    } else {
+      vr = FindInIndexLevel(options, module_symbols, walker, looking_for, results);
+    }
     if (vr != VisitResult::kContinue)
       return vr;
     if (!search_containing)

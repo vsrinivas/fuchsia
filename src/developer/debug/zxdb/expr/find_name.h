@@ -74,6 +74,25 @@ struct FindNameOptions {
   enum HowMatch { kPrefix, kExact };
   HowMatch how = kExact;
 
+  enum SearchMode {
+    // A lexical search is a normal search starting from the current scope and searching outward
+    // from there. This is the normal search that programmers expect when typing names in a
+    // language.
+    kLexical,
+
+    // An "all namespaces" search ignores the current scope and recursively searches all namespaces
+    // for matches for a given name. This can be the desired behavior for things like finding
+    // functions for breakpoints, but this search will never find local or class variables.
+    //
+    // Fully qualified identifiers ("::Foo") will not get implicit namespace searching, even when
+    // requested. Then will only match the toplevel.
+    //
+    // This mode is only valid for full index searches via FindName() and FindIndexedName().
+    // The local searching variants like FindLocalVariable() and FindMember() do not support it.
+    kAllNamespaces,
+  };
+  SearchMode search_mode = kLexical;
+
   // This constructor's argument indicates whether the caller wants to default to finding all or no
   // types (presumably in the "no types" case, the caller will set one or more to true afterward).
   enum InitialKinds : bool { kNoKinds = false, kAllKinds = true };
