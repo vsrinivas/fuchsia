@@ -12,12 +12,14 @@ pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
 pub const KEY_FRAME_EXCHANGE_MAX_ATTEMPTS: u32 = 3;
 pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
+pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 
 #[derive(Debug, Clone)]
 pub enum Event {
     EstablishingRsnaTimeout(EstablishingRsnaTimeout),
     KeyFrameExchangeTimeout(KeyFrameExchangeTimeout),
     ConnectionPing(ConnectionPingInfo),
+    InspectPulseCheck(InspectPulseCheck),
 }
 impl From<EstablishingRsnaTimeout> for Event {
     fn from(timeout: EstablishingRsnaTimeout) -> Self {
@@ -27,6 +29,11 @@ impl From<EstablishingRsnaTimeout> for Event {
 impl From<KeyFrameExchangeTimeout> for Event {
     fn from(timeout: KeyFrameExchangeTimeout) -> Self {
         Event::KeyFrameExchangeTimeout(timeout)
+    }
+}
+impl From<InspectPulseCheck> for Event {
+    fn from(this: InspectPulseCheck) -> Self {
+        Event::InspectPulseCheck(this)
     }
 }
 
@@ -48,5 +55,13 @@ pub struct KeyFrameExchangeTimeout {
 impl TimeoutDuration for KeyFrameExchangeTimeout {
     fn timeout_duration(&self) -> zx::Duration {
         KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS.millis()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InspectPulseCheck;
+impl TimeoutDuration for InspectPulseCheck {
+    fn timeout_duration(&self) -> zx::Duration {
+        INSPECT_PULSE_CHECK_MINUTES.minutes()
     }
 }

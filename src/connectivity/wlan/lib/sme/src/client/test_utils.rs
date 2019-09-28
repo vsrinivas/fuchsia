@@ -15,7 +15,7 @@ use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities};
 use wlan_rsn::rsna::UpdateSink;
 
 use crate::{
-    client::rsn::Supplicant,
+    client::{bss::BssInfo, rsn::Supplicant},
     test_utils::{self, *},
     InfoEvent, InfoStream, Ssid,
 };
@@ -103,6 +103,17 @@ pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {
         vht_cap: Some(Box::new(fake_vht_capabilities())),
         vht_op: Some(Box::new(fake_vht_operation())),
         ..bss
+    }
+}
+
+pub fn fake_bss_info() -> BssInfo {
+    BssInfo {
+        bssid: [55, 11, 22, 3, 9, 70],
+        ssid: b"foo".to_vec(),
+        rx_dbm: 0,
+        channel: 1,
+        protected: true,
+        compatible: true,
     }
 }
 

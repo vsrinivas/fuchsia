@@ -180,9 +180,11 @@ impl ClientSme {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
-        let (timer, time_stream) = timer::create_timer();
+        let (mut timer, time_stream) = timer::create_timer();
         let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node));
         iface_tree_holder.place_iface_subtree(inspect.clone());
+        timer.schedule(event::InspectPulseCheck);
+
         (
             ClientSme {
                 cfg,
@@ -237,6 +239,7 @@ impl ClientSme {
 
     pub fn on_disconnect_command(&mut self) {
         self.state = self.state.take().map(|state| state.disconnect(&mut self.context));
+        self.context.inspect.last_pulse.lock().update(self.status());
     }
 
     pub fn on_scan_command(
@@ -385,6 +388,8 @@ impl super::Station for ClientSme {
                     self.state.take().map(|state| state.on_mlme_event(other, &mut self.context));
             }
         };
+
+        self.context.inspect.last_pulse.lock().update(self.status());
     }
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
@@ -394,7 +399,15 @@ impl super::Station for ClientSme {
             | event @ Event::ConnectionPing(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
+            Event::InspectPulseCheck(..) => {
+                self.context.timer.schedule(event::InspectPulseCheck);
+                state
+            }
         });
+
+        // Because `self.status()` relies on the value of `self.state` to be present, we cannot
+        // retrieve it and update pulse node inside the closure above.
+        self.context.inspect.last_pulse.lock().update(self.status());
     }
 }
 
