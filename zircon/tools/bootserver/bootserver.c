@@ -755,6 +755,9 @@ int main(int argc, char** argv) {
     if (status == 0 && vbmetab_image) {
       status = xfer(&ra, vbmetab_image, NB_VBMETAB_FILENAME);
     }
+    if (status == 0 && vbmetar_image) {
+      status = xfer(&ra, vbmetar_image, NB_VBMETAR_FILENAME);
+    }
     if (status == 0 && authorized_keys) {
       status = xfer(&ra, authorized_keys, NB_SSHAUTH_FILENAME);
     }
