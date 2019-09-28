@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("service-llcpp") {
+  sdk = "source"
+  sdk_headers = [ "lib/service/llcpp/service.h" ]
+  sources = [
+    "llcpp/service.cc",
+  ]
+  public_deps = [
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/fidl:fidl-llcpp",
+    "$zx/system/ulib/zircon",
+  ]
+}

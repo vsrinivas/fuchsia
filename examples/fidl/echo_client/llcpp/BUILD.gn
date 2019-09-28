@@ -1,0 +1,38 @@
+import("//build/package.gni")
+
+executable("echo_client") {
+  output_name = "example_fidl_llcpp_echo_client"
+  sources = [
+    "echo_client.cc",
+  ]
+
+  deps = [
+    "//examples/fidl/echo_server/cpp:echo_server",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//garnet/examples/fidl/services:echo_llcpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/service-llcpp",
+  ]
+}
+
+package("echo_service_client_llcpp") {
+  deps = [
+    ":echo_client",
+  ]
+
+  binaries = [
+    {
+      name = "example_fidl_llcpp_echo_client"
+      dest = "echo_client"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("../meta/echo_client.cmx")
+      dest = "echo_client.cmx"
+    },
+  ]
+}

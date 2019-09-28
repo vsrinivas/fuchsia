@@ -114,6 +114,7 @@ group("ulib") {
     "rtc",
     "runtests-utils",
     "runtime",
+    "service:service-llcpp",
     "smbios",
     "storage-metrics",
     "svc",

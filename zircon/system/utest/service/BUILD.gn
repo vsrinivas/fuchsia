@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+if (is_fuchsia) {
+  group("test") {
+    testonly = true
+    deps = [
+      ":service-llcpp-test",
+    ]
+  }
+
+  test("service-llcpp-test") {
+    sources = [
+      "llcpp/client_test.cc",
+    ]
+    deps = [
+      ":fidl.service.test-llcpp",
+      "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/async-loop:async-loop-default",
+      "$zx/system/ulib/fidl-async",
+      "$zx/system/ulib/fidl-async:fidl-async-cpp",
+      "$zx/system/ulib/fs",
+      "$zx/system/ulib/service:service-llcpp",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zxtest",
+    ]
+  }
+
+  # Manually generated LLCPP bindings.
+  source_set("fidl.service.test-llcpp") {
+    testonly = true
+    sources = [
+      "generated/fidl_llcpp_test.cc",
+    ]
+    include_dirs = [ "generated" ]
+    deps = [
+      ":fidl.service.test.c",
+      "$zx/system/ulib/fidl:fidl-llcpp",
+    ]
+    public_deps = [
+      "$zx/system/ulib/fidl:fidl-llcpp.headers",
+    ]
+  }
+}
+
+# Generate C bindings that the LLCPP bindings depend on.
+fidl_library("fidl.service.test") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "test.test.fidl",
+  ]
+}

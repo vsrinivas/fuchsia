@@ -273,6 +273,7 @@ if (current_cpu != "") {
       "rtc-lib",
       "runtests-utils",
       "sanitizer",
+      "service:test",
       "status",
       "stdio",
       "svchost",

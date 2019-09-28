@@ -14,3 +14,13 @@ fidl("fuchsia.examples") {
     "//garnet/examples/fidl/services:echo",
   ]
 }
+
+source_set("gen") {
+  sources = [
+    "my_service_llcpp.h",
+  ]
+
+  public_deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+  ]
+}
