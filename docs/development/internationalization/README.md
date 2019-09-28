@@ -6,8 +6,8 @@ with the use of Fuchsia in multi-language environments.
 
 Topics of interest (with details to be filled in over time):
 
-- ICU use in Fuchsia.
-- ICU timezone data dynamic loading.
+- [ICU use in Fuchsia](icu.md).
+- [ICU timezone data dynamic loading](icu_data.md).
 - Internationalization and localization of mods in Fuchsia.
 - Internationalization and localization of Ermine Shell.
 - International profile preferences.

@@ -4,3 +4,7 @@
 toc:
 - title: "Internationalization"
   path: /docs/development/internationalization/README.md
+- title: "ICU"
+  path: /docs/development/internationalization/icu.md
+- title: "ICU data"
+  path: /docs/development/internationalization/icu_data.md
