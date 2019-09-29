@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 
+#include <block-client/cpp/remote-block-device.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fvm/format.h>
@@ -1598,14 +1599,59 @@ TEST_F(BlobfsTest, ReadOnly) { RunReadOnlyTest(this); }
 
 TEST_F(BlobfsTestWithFvm, ReadOnly) { RunReadOnlyTest(this); }
 
-// This tests growing both additional inodes and blocks
+void OpenBlockDevice(const std::string& path,
+                     std::unique_ptr<block_client::RemoteBlockDevice>* block_device) {
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
+  ASSERT_TRUE(fd, "Unable to open block device");
+
+  zx::channel channel, server;
+  ASSERT_OK(zx::channel::create(0, &channel, &server));
+  fzl::FdioCaller caller(std::move(fd));
+  ASSERT_OK(fuchsia_io_NodeClone(caller.borrow_channel(), ZX_FS_FLAG_CLONE_SAME_RIGHTS,
+                                 server.release()));
+  ASSERT_OK(block_client::RemoteBlockDevice::Create(std::move(channel), block_device));
+}
+
+using SliceRange = fuchsia_hardware_block_volume_VsliceRange;
+
+uint64_t BlobfsBlockToFvmSlice(uint64_t block) {
+  constexpr size_t kBlocksPerSlice = kTestFvmSliceSize / blobfs::kBlobfsBlockSize;
+  return block / kBlocksPerSlice;
+}
+
+void GetSliceRange(const BlobfsTestWithFvm& test, const std::vector<uint64_t>& slices,
+                   std::vector<SliceRange>* ranges) {
+  std::unique_ptr<block_client::RemoteBlockDevice> block_device;
+  ASSERT_NO_FAILURES(OpenBlockDevice(test.device_path(), &block_device));
+
+  size_t ranges_count;
+  SliceRange range_array[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+  ASSERT_OK(block_device->VolumeQuerySlices(slices.data(), slices.size(), range_array,
+                                            &ranges_count));
+  ranges->clear();
+  for (size_t i = 0; i < ranges_count; i++) {
+    ranges->push_back(range_array[i]);
+  }
+}
+
+// This tests growing both additional inodes and data blocks.
 TEST_F(BlobfsTestWithFvm, ResizePartition) {
-  // Create 1000 blobs. Test slices are small enough that this will require both inodes and
-  // blocks to be added.
-  // TODO(rvargas): Verify the number of used slices.
-  for (int i = 0; i < 1000; i++) {
+  ASSERT_NO_FAILURES(Unmount());
+  std::vector<SliceRange> slices;
+  std::vector<uint64_t> query = {BlobfsBlockToFvmSlice(blobfs::kFVMNodeMapStart),
+                                 BlobfsBlockToFvmSlice(blobfs::kFVMDataStart)};
+  ASSERT_NO_FAILURES(GetSliceRange(*this, query, &slices));
+  ASSERT_EQ(2, slices.size());
+  EXPECT_TRUE(slices[0].allocated);
+  EXPECT_EQ(1, slices[0].count);
+  EXPECT_TRUE(slices[1].allocated);
+  EXPECT_EQ(2, slices[1].count);
+  ASSERT_NO_FAILURES(Mount());
+
+  size_t required = kTestFvmSliceSize / blobfs::kBlobfsInodeSize + 2;
+  for (size_t i = 0; i < required; i++) {
     std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 64, &info));
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsInodeSize, &info));
 
     fbl::unique_fd fd;
     ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
@@ -1613,6 +1659,14 @@ TEST_F(BlobfsTestWithFvm, ResizePartition) {
 
   // Remount partition.
   ASSERT_NO_FAILURES(Remount(), "Could not re-mount blobfs");
+
+  ASSERT_NO_FAILURES(Unmount());
+  ASSERT_NO_FAILURES(GetSliceRange(*this, query, &slices));
+  ASSERT_EQ(2, slices.size());
+  EXPECT_TRUE(slices[0].allocated);
+  EXPECT_LT(1, slices[0].count);
+  EXPECT_TRUE(slices[1].allocated);
+  EXPECT_LT(2, slices[1].count);
 }
 
 /*
