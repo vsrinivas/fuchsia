@@ -63,7 +63,7 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   }
 
   zx_status_t WaitUntilReset() {
-    return sync_completion_wait_deadline(&is_reset_, zx::deadline_after(zx::msec(100)).get());
+    return sync_completion_wait_deadline(&is_reset_, zx::time::infinite().get());
   }
 
  private:
