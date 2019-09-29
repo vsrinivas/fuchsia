@@ -14,7 +14,8 @@ CodecBuffer::CodecBuffer(CodecImpl* parent, CodecPort port, fuchsia::media::Stre
 
 CodecBuffer::~CodecBuffer() {
   if (buffer_base_) {
-    zx_status_t res = zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(base()), size());
+    zx_status_t res =
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(buffer_base()), buffer_size());
     if (res != ZX_OK) {
       parent_->FailFatalLocked("CodecBuffer::~Buffer() failed to unmap() Buffer");
     }
@@ -46,35 +47,35 @@ bool CodecBuffer::Map(bool input_require_write) {
   return true;
 }
 
-uint64_t CodecBuffer::lifetime_ordinal() const {
+uint64_t CodecBuffer::buffer_lifetime_ordinal() const {
   ZX_ASSERT(buffer_.has_buffer_lifetime_ordinal());
   return buffer_.buffer_lifetime_ordinal();
 }
 
-uint32_t CodecBuffer::index() const {
+uint32_t CodecBuffer::buffer_index() const {
   ZX_ASSERT(buffer_.has_buffer_index());
   return buffer_.buffer_index();
 }
 
-uint8_t* CodecBuffer::base() const {
+uint8_t* CodecBuffer::buffer_base() const {
   ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if buffer was not mapped.");
   return buffer_base_;
 }
 
-size_t CodecBuffer::size() const {
+size_t CodecBuffer::buffer_size() const {
   ZX_ASSERT(buffer_.has_data());
   ZX_ASSERT(buffer_.data().is_vmo());
   ZX_ASSERT(buffer_.data().vmo().has_vmo_usable_size());
   return buffer_.data().vmo().vmo_usable_size();
 }
 
-const zx::vmo& CodecBuffer::vmo() const {
+const zx::vmo& CodecBuffer::buffer_vmo() const {
   ZX_ASSERT(buffer_.has_data());
   ZX_ASSERT(buffer_.data().is_vmo());
   return buffer_.data().vmo().vmo_handle();
 }
 
-uint64_t CodecBuffer::offset() const {
+uint64_t CodecBuffer::buffer_offset() const {
   ZX_ASSERT(buffer_.has_data());
   ZX_ASSERT(buffer_.data().is_vmo());
   ZX_ASSERT(buffer_.data().vmo().has_vmo_usable_start());

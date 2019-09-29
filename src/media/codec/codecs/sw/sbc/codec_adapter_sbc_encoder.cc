@@ -270,7 +270,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
         SBC_Encode(&context_->params,
                    reinterpret_cast<int16_t*>(const_cast<uint8_t*>(input_block.data)), output);
 
-        if (output_offset_ + context_->sbc_frame_length() > output_buffer_->size() ||
+        if (output_offset_ + context_->sbc_frame_length() > output_buffer_->buffer_size() ||
             input_block.is_end_of_stream) {
           FXL_DCHECK(output_packet_ != nullptr);
 
@@ -324,7 +324,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
 
 void CodecAdapterSbcEncoder::SendOutputPacket(CodecPacket* output_packet) {
   {
-    fit::closure free_buffer = [this, base = output_packet->buffer()->base()] {
+    fit::closure free_buffer = [this, base = output_packet->buffer()->buffer_base()] {
       output_buffer_pool_.FreeBuffer(base);
     };
     std::lock_guard<std::mutex> lock(lock_);
@@ -348,10 +348,10 @@ uint8_t* CodecAdapterSbcEncoder::NextOutputBlock() {
 
   // We assume sysmem has enforced our minimum requested buffer size of at
   // least one sbc frame length.
-  FXL_DCHECK(output_buffer_->size() >= context_->sbc_frame_length());
+  FXL_DCHECK(output_buffer_->buffer_size() >= context_->sbc_frame_length());
 
   // Caller must set `output_buffer` to `nullptr` when space is insufficient.
-  uint8_t* output = output_buffer_->base() + output_offset_;
+  uint8_t* output = output_buffer_->buffer_base() + output_offset_;
   output_offset_ += context_->sbc_frame_length();
   return output;
 }

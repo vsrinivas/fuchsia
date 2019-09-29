@@ -32,17 +32,17 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     auto buffer = buffers.ptr(0);
 
     // Initialize buffer with bytes counting from 0 to (>=99).
-    const uint8_t* end = buffer->base() + buffer->size();
-    for (uint8_t* pos = buffer->base(); pos < end; ++pos) {
-      *pos = pos - buffer->base();
+    const uint8_t* end = buffer->buffer_base() + buffer->buffer_size();
+    for (uint8_t* pos = buffer->buffer_base(); pos < end; ++pos) {
+      *pos = pos - buffer->buffer_base();
     }
 
     // Assign packets random lengths until the buffer is accounted for.
     std::vector<std::pair<size_t, size_t>> packet_lengths_and_offsets;
-    uint8_t* pos = buffer->base();
+    uint8_t* pos = buffer->buffer_base();
     while (pos < end) {
       size_t packet_length = std::min((rand() % 10) + 1, static_cast<int>(end - pos));
-      packet_lengths_and_offsets.push_back({packet_length, pos - buffer->base()});
+      packet_lengths_and_offsets.push_back({packet_length, pos - buffer->buffer_base()});
       pos += packet_length;
     }
 
@@ -92,7 +92,7 @@ TEST(ChunkInputStream, FlushIncomplete) {
   packet->SetValidLengthBytes(kPacketLen);
   packet->SetBuffer(buffer);
   packet->SetStartOffset(0);
-  *(buffer->base()) = kExpectedByte;
+  *(buffer->buffer_base()) = kExpectedByte;
 
   bool was_called_for_input_block = false;
   bool flush_called = false;
@@ -138,7 +138,7 @@ TEST(ChunkInputStream, FlushLeftover) {
   packet->SetValidLengthBytes(kPacketLen);
   packet->SetBuffer(buffer);
   packet->SetStartOffset(0);
-  memcpy(buffer->base(), kExpectedBytes, kPacketLen);
+  memcpy(buffer->buffer_base(), kExpectedBytes, kPacketLen);
 
   size_t input_block_call_count = 0;
   bool flush_called = false;
@@ -391,12 +391,12 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
   // Configure two packets, the first length 4. The second will contain a
   // timestamp. Since the chunk size is 5, the second packet will need its
   // timestamp extrapolated 1 byte.
-  packets.ptr(0)->SetValidLengthBytes(buffers.ptr(0)->size());
+  packets.ptr(0)->SetValidLengthBytes(buffers.ptr(0)->buffer_size());
   packets.ptr(0)->SetStartOffset(0);
   packets.ptr(0)->SetBuffer(buffers.ptr(0));
 
   const uint64_t kInputTimestamp = 30;
-  packets.ptr(1)->SetValidLengthBytes(buffers.ptr(1)->size());
+  packets.ptr(1)->SetValidLengthBytes(buffers.ptr(1)->buffer_size());
   packets.ptr(1)->SetBuffer(buffers.ptr(1));
   packets.ptr(1)->SetStartOffset(0);
   packets.ptr(1)->SetTimstampIsh(kInputTimestamp);

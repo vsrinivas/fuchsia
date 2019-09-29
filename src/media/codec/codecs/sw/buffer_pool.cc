@@ -20,7 +20,7 @@ const CodecBuffer* BufferPool::AllocateBuffer(size_t alloc_len) {
 
   {
     std::lock_guard<std::mutex> lock(lock_);
-    buffers_in_use_[buffer->base()] = {
+    buffers_in_use_[buffer->buffer_base()] = {
         .buffer = buffer,
         .bytes_used = alloc_len,
     };

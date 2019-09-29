@@ -48,7 +48,7 @@ OutputSink::Status OutputSink::NextOutputBlock(
   }
 
   auto output_block = OutputBlock{
-      .data = current_packet_->buffer()->base() + current_packet_->valid_length_bytes(),
+      .data = current_packet_->buffer()->buffer_base() + current_packet_->valid_length_bytes(),
       .len = write_size,
   };
 
@@ -73,7 +73,8 @@ OutputSink::Status OutputSink::Flush() {
 
 bool OutputSink::CurrentPacketHasRoomFor(size_t write_size) {
   return (current_packet_ != nullptr) &&
-         current_packet_->buffer()->size() - current_packet_->valid_length_bytes() >= write_size;
+         current_packet_->buffer()->buffer_size() - current_packet_->valid_length_bytes() >=
+             write_size;
 }
 
 OutputSink::Status OutputSink::SendCurrentPacket() {
@@ -99,7 +100,7 @@ OutputSink::Status OutputSink::SetNewPacketForWrite(size_t write_size) {
   ZX_DEBUG_ASSERT_MSG(*maybe_buffer, "A null buffer made it into the queue.");
   const CodecBuffer* buffer = *maybe_buffer;
 
-  if (buffer->size() < write_size) {
+  if (buffer->buffer_size() < write_size) {
     return kBuffersTooSmall;
   }
 

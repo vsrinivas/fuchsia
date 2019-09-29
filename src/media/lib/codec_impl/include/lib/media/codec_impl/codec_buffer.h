@@ -36,17 +36,17 @@ struct VideoFrame;
 // instance, not to the data pointed at by buffer_base().
 class CodecBuffer {
  public:
-  uint64_t lifetime_ordinal() const;
+  uint64_t buffer_lifetime_ordinal() const;
 
-  uint32_t index() const;
+  uint32_t buffer_index() const;
 
-  uint8_t* base() const;
+  uint8_t* buffer_base() const;
 
-  size_t size() const;
+  size_t buffer_size() const;
 
-  const zx::vmo& vmo() const;
+  const zx::vmo& buffer_vmo() const;
 
-  uint64_t offset() const;
+  uint64_t buffer_offset() const;
 
   const fuchsia::media::StreamBuffer& codec_buffer() const;
 

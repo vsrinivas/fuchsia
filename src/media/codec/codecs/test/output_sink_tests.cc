@@ -16,7 +16,7 @@ TEST(OutputSink, Basic) {
     size_t total_read = 0;
     fit::function<void(CodecPacket*)> recycle;
     auto sender = [&total_read, &recycle](CodecPacket* output_packet) {
-      const uint8_t* input = output_packet->buffer()->base() + output_packet->start_offset();
+      const uint8_t* input = output_packet->buffer()->buffer_base() + output_packet->start_offset();
       EXPECT_FALSE(output_packet->has_timestamp_ish());
       for (size_t i = 0; i < output_packet->valid_length_bytes(); ++i) {
         EXPECT_EQ(input[i], (total_read + i) % 256);
@@ -33,14 +33,14 @@ TEST(OutputSink, Basic) {
     for (size_t i = 0; i < buffers.buffers.size(); ++i) {
       auto buffer = buffers.ptr(i);
       under_test.AddOutputBuffer(buffer);
-      total_bytes += buffer->size();
+      total_bytes += buffer->buffer_size();
     }
 
     size_t smallest_buffer_size = INT_MAX;
     for (size_t i = 0; i < buffers.buffers.size(); ++i) {
       auto buffer = buffers.ptr(i);
-      if (buffer->size() < smallest_buffer_size) {
-        smallest_buffer_size = buffer->size();
+      if (buffer->buffer_size() < smallest_buffer_size) {
+        smallest_buffer_size = buffer->buffer_size();
       }
     }
 
