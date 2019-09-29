@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <cstddef>
@@ -84,23 +83,12 @@ const std::map<std::string, std::string> kServices = {
      "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"},
 };
 
-class FakeDecryptorAdapter : public DecryptorAdapter {
- public:
-  explicit FakeDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
-                                bool secure_mode)
-      : DecryptorAdapter(lock, codec_adapter_events, secure_mode) {}
-
-  void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
-  bool has_keys() const { return has_keys_; }
-
- private:
-  bool has_keys_ = false;
-};
-
-class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
+class ClearTextDecryptorAdapter : public DecryptorAdapter {
  public:
   explicit ClearTextDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events, false) {}
+      : DecryptorAdapter(lock, codec_adapter_events, false) {}
+
+  void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
@@ -114,7 +102,7 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
       return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
     }
 
-    if (!has_keys()) {
+    if (!has_keys_) {
       return fuchsia::media::StreamError::DECRYPTOR_NO_KEY;
     }
 
@@ -122,24 +110,13 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
 
     return std::nullopt;
   }
-};
 
-class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
- public:
-  explicit FakeSecureDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events, true) {}
-
-  std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
-                                                     const InputBuffer& input,
-                                                     const OutputBuffer& output) override {
-    // We should not get here, so just return an error.
-    return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
-  }
+ private:
+  bool has_keys_ = false;
 };
 
 }  // namespace
 
-template <typename DecryptorAdapterT>
 class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
  protected:
   DecryptorAdapterTest() : random_device_(), prng_(random_device_()) {
@@ -186,7 +163,8 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     codec_impl_ =
         std::make_unique<CodecImpl>(std::move(allocator), nullptr, dispatcher(), thrd_current(),
                                     CreateDecryptorParams(), decryptor_.NewRequest());
-    auto adapter = std::make_unique<DecryptorAdapterT>(codec_impl_->lock(), codec_impl_.get());
+    auto adapter =
+        std::make_unique<ClearTextDecryptorAdapter>(codec_impl_->lock(), codec_impl_.get());
     // Grab a non-owning reference to the adapter for test manipulation.
     decryptor_adapter_ = adapter.get();
     codec_impl_->SetCoreCodecAdapter(std::move(adapter));
@@ -227,9 +205,8 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
         oc.buffer_constraints());
     output_collection_->WaitForBuffersAllocated(
         [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
-          if (status == ZX_OK) {
-            output_buffer_info_ = std::move(info);
-          }
+          ASSERT_EQ(status, ZX_OK);
+          output_buffer_info_ = std::move(info);
         });
 
     output_collection_->Sync([this, settings = std::move(settings)]() mutable {
@@ -397,7 +374,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   fuchsia::media::StreamProcessorPtr decryptor_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   std::unique_ptr<CodecImpl> codec_impl_;
-  DecryptorAdapterT* decryptor_adapter_;
+  ClearTextDecryptorAdapter* decryptor_adapter_;
 
   using DataSet = std::vector<std::vector<uint8_t>>;
   DataSet input_data_;
@@ -431,9 +408,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   std::mt19937 prng_;
 };
 
-class ClearDecryptorAdapterTest : public DecryptorAdapterTest<ClearTextDecryptorAdapter> {};
-
-TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
+TEST_F(DecryptorAdapterTest, ClearTextDecrypt) {
   ConnectDecryptor();
   decryptor_adapter_->set_has_keys(true);
 
@@ -462,7 +437,7 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
   EXPECT_EQ(output_data_, input_data_);
 }
 
-TEST_F(ClearDecryptorAdapterTest, NoKeys) {
+TEST_F(DecryptorAdapterTest, NoKeys) {
   ConnectDecryptor();
   decryptor_adapter_->set_has_keys(false);
   decryptor_->EnableOnStreamFailed();
@@ -485,36 +460,4 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 
   ASSERT_TRUE(stream_error_.has_value());
   EXPECT_EQ(*stream_error_, fuchsia::media::StreamError::DECRYPTOR_NO_KEY);
-}
-
-class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecryptorAdapter> {};
-
-TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
-  ConnectDecryptor();
-
-  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
-
-  AssertNoChannelErrors();
-  ASSERT_TRUE(input_buffer_info_);
-
-  ConfigureInputPackets();
-
-  decryptor_->QueueInputFormatDetails(
-      kStreamLifetimeOrdinal, CreateInputFormatDetails("secure", fuchsia::media::KeyId{}, {}));
-
-  PumpInput();
-
-  // TODO(13678): Once there is a Sysmem fake that allows us to control behavior, we could actually
-  // force it to give us back "secure" buffers that aren't really secure and go through more of the
-  // flow.
-  EXPECT_TRUE(RunUntil([this]() { return output_collection_error_.has_value(); }));
-
-  EXPECT_TRUE(decryptor_error_.has_value());
-  EXPECT_TRUE(output_collection_error_.has_value());
-
-  EXPECT_TRUE(input_constraints_);
-  EXPECT_TRUE(output_constraints_);
-  EXPECT_FALSE(output_format_);
-
-  EXPECT_FALSE(end_of_stream_reached_);
 }

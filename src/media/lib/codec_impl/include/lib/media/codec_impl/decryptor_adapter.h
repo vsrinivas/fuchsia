@@ -95,11 +95,6 @@ class DecryptorAdapter : public CodecAdapter {
   virtual std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                              const InputBuffer& input,
                                                              const OutputBuffer& output) = 0;
-  // GetSecureOutputMemoryConstraints
-  //
-  // If the specialized Decryptor supports working with secure memory, it should override this
-  // method to provide the proper coherency and permitted heaps that it can support.
-  virtual fuchsia::sysmem::BufferMemoryConstraints GetSecureOutputMemoryConstraints() const;
 
   bool is_secure() const { return secure_mode_; }
 

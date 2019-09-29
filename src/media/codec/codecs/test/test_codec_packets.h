@@ -49,7 +49,7 @@ class CodecBufferForTest : public CodecBuffer {
  public:
   CodecBufferForTest(size_t size, uint32_t index)
       : CodecBuffer(/*parent=*/nullptr, kOutputPort, StreamBufferOfSize(size, index)) {
-    Map();
+    Init();
   }
 };
 

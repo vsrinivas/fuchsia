@@ -78,8 +78,8 @@ DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_a
 bool DecryptorAdapter::IsCoreCodecRequiringOutputConfigForFormatDetection() { return true; }
 
 bool DecryptorAdapter::IsCoreCodecMappedBufferNeeded(CodecPort port) {
-  // Only require mapped buffers for input and clear output buffers.
-  return (port == kInputPort) || (port == kOutputPort && !is_secure());
+  // TODO(MTWN-376): Add secure mode buffer handling
+  return true;
 }
 
 bool DecryptorAdapter::IsCoreCodecHwBased() { return false; }
@@ -120,17 +120,15 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
   ZX_DEBUG_ASSERT(result.max_buffer_count == 0);
 
   result.has_buffer_memory_constraints = true;
-
-  if (port == kOutputPort && is_secure()) {
-    result.buffer_memory_constraints = GetSecureOutputMemoryConstraints();
-  } else {
-    result.buffer_memory_constraints.physically_contiguous_required = false;
-    result.buffer_memory_constraints.secure_required = false;
-  }
   result.buffer_memory_constraints.min_size_bytes =
       stream_buffer_constraints.per_packet_buffer_bytes_min();
   result.buffer_memory_constraints.max_size_bytes =
       stream_buffer_constraints.per_packet_buffer_bytes_max();
+
+  // TODO(MTWN-376): secure mode handling for physically contig and secure
+  // required
+  result.buffer_memory_constraints.physically_contiguous_required = false;
+  result.buffer_memory_constraints.secure_required = false;
 
   ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
 
@@ -146,23 +144,10 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
 
 void DecryptorAdapter::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  const auto& buffer_settings = buffer_collection_info.settings.buffer_settings;
   if (port == kInputPort) {
-    if (buffer_settings.coherency_domain != fuchsia::sysmem::CoherencyDomain::CPU) {
-      events_->onCoreCodecFailCodec("DecryptorAdapter only supports CPU coherent input buffers");
-      return;
-    }
-  } else if (!is_secure()) {  // port == kOutputPort
-    if (buffer_settings.coherency_domain != fuchsia::sysmem::CoherencyDomain::CPU) {
-      events_->onCoreCodecFailCodec(
-          "DecryptorAdapter only supports CPU coherent clear output buffers");
-      return;
-    }
-  } else {  // port == kOutputPort && is_secure()
-    if (!buffer_settings.is_secure) {
-      events_->onCoreCodecFailCodec("Secure DecryptorAdapter requires secure buffers");
-      return;
-    }
+    // TODO(MTWN-376): Use/permit CoherencyDomain::Inaccessible when secure.
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain ==
+                    fuchsia::sysmem::CoherencyDomain::CPU);
   }
 }
 
@@ -380,20 +365,6 @@ void DecryptorAdapter::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // For this adapter, nothing to do here.
 }
 
-fuchsia::sysmem::BufferMemoryConstraints DecryptorAdapter::GetSecureOutputMemoryConstraints()
-    const {
-  fuchsia::sysmem::BufferMemoryConstraints constraints;
-  constraints.physically_contiguous_required = true;
-  constraints.secure_required = true;
-  constraints.ram_domain_supported = false;
-  constraints.cpu_domain_supported = true;
-  constraints.inaccessible_domain_supported = true;
-
-  constraints.heap_permitted_count = 1;
-  constraints.heap_permitted[0] = fuchsia::sysmem::HeapType::SYSTEM_RAM;
-  return constraints;
-}
-
 void DecryptorAdapter::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
   ZX_ASSERT_MSG(post_result == ZX_OK, "async::PostTask() failed - result: %d", post_result);
@@ -478,15 +449,14 @@ void DecryptorAdapter::ProcessInput() {
     OutputBuffer output;
 
     if (is_secure()) {
+      // TODO(MTWN-376): Add secure buffer handling
+      ZX_ASSERT(false);
       SecureOutputBuffer secure_output;
-      secure_output.vmo = zx::unowned_vmo(output_buffer->buffer_vmo());
-      secure_output.data_offset = output_buffer->buffer_offset();
-      secure_output.data_length = output_buffer->buffer_size();
       output = secure_output;
     } else {
       ClearOutputBuffer clear_output;
       clear_output.data = output_buffer->buffer_base();
-      clear_output.data_length = output_buffer->buffer_size();
+      clear_output.data_length = data_length;
       output = clear_output;
     }
 

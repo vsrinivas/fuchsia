@@ -44,10 +44,6 @@ class CodecBuffer {
 
   size_t buffer_size() const;
 
-  const zx::vmo& buffer_vmo() const;
-
-  uint64_t buffer_offset() const;
-
   const fuchsia::media::StreamBuffer& codec_buffer() const;
 
   // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
@@ -69,7 +65,7 @@ class CodecBuffer {
 
   CodecBuffer(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBuffer buffer);
   ~CodecBuffer();
-  bool Map(bool input_require_write = false);
+  bool Init(bool input_require_write = false);
 
   // The parent CodecImpl instance.  Just so we can call parent_->Fail().
   // The parent_ CodecImpl out-lives the CodecImpl::Buffer.

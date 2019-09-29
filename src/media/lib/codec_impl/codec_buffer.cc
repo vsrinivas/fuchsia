@@ -23,7 +23,7 @@ CodecBuffer::~CodecBuffer() {
   }
 }
 
-bool CodecBuffer::Map(bool input_require_write) {
+bool CodecBuffer::Init(bool input_require_write) {
   ZX_DEBUG_ASSERT(!input_require_write || port_ == kInputPort);
   // Map the VMO in the local address space.
   uintptr_t tmp;
@@ -58,7 +58,7 @@ uint32_t CodecBuffer::buffer_index() const {
 }
 
 uint8_t* CodecBuffer::buffer_base() const {
-  ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if buffer was not mapped.");
+  ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if Init() didn't work.");
   return buffer_base_;
 }
 
@@ -67,19 +67,6 @@ size_t CodecBuffer::buffer_size() const {
   ZX_ASSERT(buffer_.data().is_vmo());
   ZX_ASSERT(buffer_.data().vmo().has_vmo_usable_size());
   return buffer_.data().vmo().vmo_usable_size();
-}
-
-const zx::vmo& CodecBuffer::buffer_vmo() const {
-  ZX_ASSERT(buffer_.has_data());
-  ZX_ASSERT(buffer_.data().is_vmo());
-  return buffer_.data().vmo().vmo_handle();
-}
-
-uint64_t CodecBuffer::buffer_offset() const {
-  ZX_ASSERT(buffer_.has_data());
-  ZX_ASSERT(buffer_.data().is_vmo());
-  ZX_ASSERT(buffer_.data().vmo().has_vmo_usable_start());
-  return buffer_.data().vmo().vmo_usable_start();
 }
 
 const fuchsia::media::StreamBuffer& CodecBuffer::codec_buffer() const { return buffer_; }
