@@ -47,34 +47,7 @@ static bool MakeBlobUnverified(fs_test_utils::BlobInfo* info, fbl::unique_fd* ou
     return true;
 }
 
-static bool VerifyCompromised(int fd, const char* data, size_t size_data) {
-    // Verify the contents of the Blob
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
-    EXPECT_EQ(ac.check(), true);
-
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(fs_test_utils::StreamAll(read, fd, &buf[0], size_data), -1,
-                                       "Expected reading to fail");
-    return true;
-}
-
-// Creates a blob with the provided Merkle tree + Data, and
-// reads to verify the data.
-static bool MakeBlobCompromised(fs_test_utils::BlobInfo* info) {
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-
-    // If we're writing a blob with invalid sizes, it's possible that writing will fail.
-    fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data);
-
-    ASSERT_TRUE(VerifyCompromised(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
-    return true;
-}
-
-static bool uint8_to_hex_str(const uint8_t* data, char* hex_str) {
+bool uint8_to_hex_str(const uint8_t* data, char* hex_str) {
     for (size_t i = 0; i < 32; i++) {
         ASSERT_EQ(sprintf(hex_str + (i * 2), "%02x", data[i]), 2,
                   "Error converting name to string");
@@ -702,65 +675,84 @@ TEST_F(BlobfsTest, BadAllocation) { RunBadAllocationTest(environment_->disk_size
 
 TEST_F(BlobfsTestWithFvm, BadAllocation) { RunBadAllocationTest(environment_->disk_size()); }
 
-/*
+// Attempts to read the contents of the Blob.
+void VerifyCompromised(int fd, const char* data, size_t size_data) {
+  std::unique_ptr<char[]> buf(new char[size_data]);
 
-static bool CorruptedBlob(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    for (size_t i = 1; i < 18; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
-        info->size_data -= (rand() % info->size_data) + 1;
-        if (info->size_data == 0) {
-            info->size_data = 1;
-        }
-        ASSERT_TRUE(MakeBlobCompromised(info.get()));
-    }
-
-    for (size_t i = 0; i < 18; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
-        // Flip a random bit of the data
-        size_t rand_index = rand() % info->size_data;
-        char old_val = info->data.get()[rand_index];
-        while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
-        }
-        ASSERT_TRUE(MakeBlobCompromised(info.get()));
-    }
-
-    END_HELPER;
+  ASSERT_EQ(0, lseek(fd, 0, SEEK_SET));
+  ASSERT_EQ(-1, fs_test_utils::StreamAll(read, fd, &buf[0], size_data), "Expected reading to fail");
 }
 
-static bool CorruptedDigest(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+// Creates a blob with the provided Merkle tree + Data, and
+// reads to verify the data.
+void MakeBlobCompromised(fs_test_utils::BlobInfo* info) {
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
 
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    for (size_t i = 1; i < 18; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
+  // If we're writing a blob with invalid sizes, it's possible that writing will fail.
+  fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data);
 
-        char hexdigits[17] = "0123456789abcdef";
-        size_t idx = strlen(info->path) - 1 - (rand() % (2 * Digest::kLength));
-        char newchar = hexdigits[rand() % 16];
-        while (info->path[idx] == newchar) {
-            newchar = hexdigits[rand() % 16];
-        }
-        info->path[idx] = newchar;
-        ASSERT_TRUE(MakeBlobCompromised(info.get()));
-    }
-
-    for (size_t i = 0; i < 18; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
-        // Flip a random bit of the data
-        size_t rand_index = rand() % info->size_data;
-        char old_val = info->data.get()[rand_index];
-        while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
-        }
-        ASSERT_TRUE(MakeBlobCompromised(info.get()));
-    }
-
-    END_HELPER;
+  ASSERT_NO_FAILURES(VerifyCompromised(fd.get(), info->data.get(), info->size_data));
 }
 
-*/
+void RunCorruptBlobTest() {
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  for (size_t i = 1; i < 18; i++) {
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+    info->size_data -= (rand() % info->size_data) + 1;
+    if (info->size_data == 0) {
+      info->size_data = 1;
+    }
+    ASSERT_NO_FAILURES(MakeBlobCompromised(info.get()));
+  }
+
+  for (size_t i = 0; i < 18; i++) {
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+    // Flip a random bit of the data.
+    size_t rand_index = rand() % info->size_data;
+    char old_val = info->data.get()[rand_index];
+    while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+    }
+    ASSERT_NO_FAILURES(MakeBlobCompromised(info.get()));
+  }
+}
+
+TEST_F(BlobfsTest, CorruptBlob) { RunCorruptBlobTest(); }
+
+TEST_F(BlobfsTestWithFvm, CorruptBlob) { RunCorruptBlobTest(); }
+
+void RunCorruptDigestTest() {
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  for (size_t i = 1; i < 18; i++) {
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+
+    char hexdigits[17] = "0123456789abcdef";
+    size_t idx = strlen(info->path) - 1 - (rand() % (2 * digest::Digest::kLength));
+    char newchar = hexdigits[rand() % 16];
+    while (info->path[idx] == newchar) {
+      newchar = hexdigits[rand() % 16];
+    }
+    info->path[idx] = newchar;
+    ASSERT_NO_FAILURES(MakeBlobCompromised(info.get()));
+  }
+
+  for (size_t i = 0; i < 18; i++) {
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+    // Flip a random bit of the data.
+    size_t rand_index = rand() % info->size_data;
+    char old_val = info->data.get()[rand_index];
+    while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+    }
+    ASSERT_NO_FAILURES(MakeBlobCompromised(info.get()));
+  }
+}
+
+TEST_F(BlobfsTest, CorruptDigest) { RunCorruptDigestTest(); }
+
+TEST_F(BlobfsTestWithFvm, CorruptDigest) { RunCorruptDigestTest(); }
 
 void RunEdgeAllocationTest() {
   // Powers of two...
@@ -2080,8 +2072,6 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 /*
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS_SILENT(MEDIUM, CorruptedBlob)
-RUN_TESTS_SILENT(MEDIUM, CorruptedDigest)
 RUN_TESTS(LARGE, TestHugeBlobRandom)
 RUN_TESTS(LARGE, TestHugeBlobCompressible)
 RUN_TESTS(LARGE, CreateUmountRemountLarge)
