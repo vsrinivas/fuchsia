@@ -88,12 +88,12 @@ zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* 
   return status;
 }
 
-void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
+void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
   TRACE_DURATION("input", "HID GetReports Instance");
 
   if (flags_ & kHidFlagsDead) {
     ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
-    _completer.Reply(ZX_ERR_PEER_CLOSED, buf_view);
+    completer.Reply(ZX_ERR_PEER_CLOSED, buf_view);
     return;
   }
 
@@ -138,7 +138,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
 
   if (status != ZX_OK) {
     ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
-    _completer.Reply(status, buf_view);
+    completer.Reply(status, buf_view);
     return;
   }
 
@@ -148,14 +148,14 @@ void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
     TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
   }
   ::fidl::VectorView<uint8_t> buf_view(buf, buf_index);
-  _completer.Reply(status, buf_view);
+  completer.Reply(status, buf_view);
 }
 
-void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync _completer) {
+void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync completer) {
   zx::event new_event;
   zx_status_t status = fifo_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
 
-  _completer.Reply(status, std::move(new_event));
+  completer.Reply(status, std::move(new_event));
 }
 
 zx_status_t HidInstance::DdkClose(uint32_t flags) {
@@ -172,60 +172,60 @@ zx_status_t HidInstance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync _completer) {
-  _completer.Reply(base_->GetBootProtocol());
+void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync completer) {
+  completer.Reply(base_->GetBootProtocol());
 }
 
-void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) {
+void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync completer) {
   hid_info_t info = base_->GetHidInfo();
   ::llcpp::fuchsia::hardware::input::DeviceIds ids = {};
   ids.vendor_id = info.vendor_id;
   ids.product_id = info.product_id;
   ids.version = info.version;
 
-  _completer.Reply(ids);
+  completer.Reply(ids);
 }
 
-void HidInstance::GetReportDescSize(GetReportDescSizeCompleter::Sync _completer) {
-  _completer.Reply(static_cast<uint16_t>(base_->GetReportDescLen()));
+void HidInstance::GetReportDescSize(GetReportDescSizeCompleter::Sync completer) {
+  completer.Reply(static_cast<uint16_t>(base_->GetReportDescLen()));
 }
 
-void HidInstance::GetReportDesc(GetReportDescCompleter::Sync _completer) {
+void HidInstance::GetReportDesc(GetReportDescCompleter::Sync completer) {
   size_t desc_size = base_->GetReportDescLen();
   const uint8_t* desc = base_->GetReportDesc();
 
   // (BUG 35762) Const cast is necessary until simple data types are generated
   // as const in LLCPP. We know the data is not modified.
-  _completer.Reply(::fidl::VectorView<uint8_t>(const_cast<uint8_t*>(desc), desc_size));
+  completer.Reply(::fidl::VectorView<uint8_t>(const_cast<uint8_t*>(desc), desc_size));
 }
 
-void HidInstance::GetNumReports(GetNumReportsCompleter::Sync _completer) {
-  _completer.Reply(static_cast<uint16_t>(base_->GetNumReports()));
+void HidInstance::GetNumReports(GetNumReportsCompleter::Sync completer) {
+  completer.Reply(static_cast<uint16_t>(base_->GetNumReports()));
 }
 
-void HidInstance::GetReportIds(GetReportIdsCompleter::Sync _completer) {
+void HidInstance::GetReportIds(GetReportIdsCompleter::Sync completer) {
   uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS];
   base_->GetReportIds(report_ids);
 
   fidl::VectorView id_view(report_ids, base_->GetNumReports());
 
-  _completer.Reply(id_view);
+  completer.Reply(id_view);
 }
 
 void HidInstance::GetReportSize(ReportType type, uint8_t id,
-                                GetReportSizeCompleter::Sync _completer) {
+                                GetReportSizeCompleter::Sync completer) {
   input_report_size_t size = base_->GetReportSizeById(id, type);
-  _completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, size);
+  completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, size);
 }
 
-void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync _completer) {
-  _completer.Reply(base_->GetMaxInputReportSize());
+void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync completer) {
+  completer.Reply(base_->GetMaxInputReportSize());
 }
 
-void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) {
+void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync completer) {
   input_report_size_t needed = base_->GetReportSizeById(id, type);
   if (needed == 0) {
-    _completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(nullptr, 0));
+    completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(nullptr, 0));
     return;
   }
 
@@ -235,24 +235,24 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
                                                              needed, &actual);
 
   fidl::VectorView<uint8_t> report_view(report, actual);
-  _completer.Reply(status, report_view);
+  completer.Reply(status, report_view);
 }
 
 void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
-                            SetReportCompleter::Sync _completer) {
+                            SetReportCompleter::Sync completer) {
   input_report_size_t needed = base_->GetReportSizeById(id, type);
   if (needed < report.count()) {
-    _completer.Reply(ZX_ERR_BUFFER_TOO_SMALL);
+    completer.Reply(ZX_ERR_BUFFER_TOO_SMALL);
     return;
   }
 
   zx_status_t status = base_->GetHidbusProtocol()->SetReport(static_cast<uint8_t>(type), id,
                                                              report.data(), report.count());
-  _completer.Reply(status);
+  completer.Reply(status);
   return;
 }
 
-void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) { trace_id_ = id; }
+void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync completer) { trace_id_ = id; }
 
 void HidInstance::CloseInstance() {
   flags_ |= kHidFlagsDead;

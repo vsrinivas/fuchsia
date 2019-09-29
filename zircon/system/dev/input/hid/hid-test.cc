@@ -222,7 +222,7 @@ TEST_F(HidDeviceTest, TestQuery) {
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
   auto result = sync_client.GetDeviceIds();
   ASSERT_OK(result.status());
-  llcpp::fuchsia::hardware::input::DeviceIds ids = result.Unwrap()->ids;
+  llcpp::fuchsia::hardware::input::DeviceIds ids = result->ids;
 
   ASSERT_EQ(kVendorId, ids.vendor_id);
   ASSERT_EQ(kProductId, ids.product_id);
@@ -347,11 +347,10 @@ TEST_F(HidDeviceTest, GetReportsSingleReport) {
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
   auto result = sync_client.GetReports();
   ASSERT_OK(result.status());
-  auto response = result.Unwrap();
-  ASSERT_OK(response->status);
-  ASSERT_EQ(sizeof(mouse_report), response->data.count());
-  for (size_t i = 0; i < response->data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], response->data[i]);
+  ASSERT_OK(result->status);
+  ASSERT_EQ(sizeof(mouse_report), result->data.count());
+  for (size_t i = 0; i < result->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->data[i]);
   }
 
   // Close the instance device.
@@ -377,11 +376,10 @@ TEST_F(HidDeviceTest, GetReportsDoubleeReport) {
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
   auto result = sync_client.GetReports();
   ASSERT_OK(result.status());
-  auto response = result.Unwrap();
-  ASSERT_OK(response->status);
-  ASSERT_EQ(sizeof(double_mouse_report), response->data.count());
-  for (size_t i = 0; i < response->data.count(); i++) {
-    EXPECT_EQ(double_mouse_report[i], response->data[i]);
+  ASSERT_OK(result->status);
+  ASSERT_EQ(sizeof(double_mouse_report), result->data.count());
+  for (size_t i = 0; i < result->data.count(); i++) {
+    EXPECT_EQ(double_mouse_report[i], result->data[i]);
   }
 
   // Close the instance device.
@@ -412,20 +410,18 @@ TEST_F(HidDeviceTest, GetReportsBlockingWait) {
   {
     auto result = sync_client.GetReportsEvent();
     ASSERT_OK(result.status());
-    auto response = result.Unwrap();
-    ASSERT_OK(response->status);
-    event = std::move(response->event);
+    ASSERT_OK(result->status);
+    event = std::move(result->event);
   }
   ASSERT_OK(event.wait_one(DEV_STATE_READABLE, zx::time::infinite(), nullptr));
 
   // Get the report.
   auto result = sync_client.GetReports();
   ASSERT_OK(result.status());
-  auto response = result.Unwrap();
-  ASSERT_OK(response->status);
-  ASSERT_EQ(sizeof(mouse_report), response->data.count());
-  for (size_t i = 0; i < response->data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], response->data[i]);
+  ASSERT_OK(result->status);
+  ASSERT_EQ(sizeof(mouse_report), result->data.count());
+  for (size_t i = 0; i < result->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->data[i]);
   }
 
   report_thread.join();
@@ -457,11 +453,10 @@ TEST_F(HidDeviceTest, GetReportsOneAndAHalfReports) {
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
   auto result = sync_client.GetReports();
   ASSERT_OK(result.status());
-  auto response = result.Unwrap();
-  ASSERT_OK(response->status);
-  ASSERT_EQ(sizeof(mouse_report), response->data.count());
-  for (size_t i = 0; i < response->data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], response->data[i]);
+  ASSERT_OK(result->status);
+  ASSERT_EQ(sizeof(mouse_report), result->data.count());
+  for (size_t i = 0; i < result->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->data[i]);
   }
 
   // Close the instance device.
