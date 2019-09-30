@@ -117,6 +117,11 @@ while true; do
     log "Registering devhost as update source"
     if fx-command-run add-update-source --port "${port}"; then
       log "Ready to push packages!"
+      # Log the uptime so that it is clear(er) from fx serve if the device rebooted.
+      # The tr is present as the output sometimes contains spurious control characters.
+      uptime=$(fx-command-run shell clock --monotonic | tr '[[:cntrl:]]' ' ' ) && {
+        log "Target uptime: $(( $uptime / 1000000000 ))"
+      }
       state="ready"
     else
       log "Device lost while configuring update source"
