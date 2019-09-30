@@ -122,6 +122,50 @@ void main(List<String> args) {
       shouldFailDueToInspect: false,
       findCommandExitCode: [-1, -1, -1, 0],
       inspectCommandExitCode: [-1, -1, -1, 0]);
+
+  group(FreezeDetector, () {
+    test('no freeze', () async {
+      final inspect = FakeInspect()..delay = const Duration(milliseconds: 10);
+      final freezeDetector = FreezeDetector(inspect)
+        ..threshold = const Duration(seconds: 1)
+        ..start();
+
+      await Future.delayed(Duration(seconds: 1));
+      freezeDetector.stop();
+
+      expect(freezeDetector.freezeHappened(), isFalse);
+    });
+
+    test('freeze', () async {
+      final inspect = FakeInspect()..delay = const Duration(seconds: 1);
+      final freezeDetector = FreezeDetector(inspect)
+        ..threshold = const Duration(milliseconds: 10)
+        ..start();
+
+      await Future.delayed(Duration(seconds: 1));
+      freezeDetector.stop();
+
+      expect(freezeDetector.freezeHappened(), isTrue);
+    });
+
+    test('waitUntilUnfrozen', () async {
+      final inspect = FakeInspect()..delay = const Duration(seconds: 1);
+      final freezeDetector = FreezeDetector(inspect)
+        ..threshold = const Duration(milliseconds: 10);
+      expect(freezeDetector.freezeHappened(), isFalse);
+
+      freezeDetector.start();
+
+      await Future.delayed(Duration(milliseconds: 300));
+      expect(freezeDetector.freezeHappened(), isTrue);
+      freezeDetector.threshold = const Duration(seconds: 10);
+      await freezeDetector.waitUntilUnfrozen();
+
+      freezeDetector.stop();
+
+      expect(freezeDetector.isFrozen(), isFalse);
+    });
+  });
 }
 
 void _testRetry(
@@ -166,6 +210,29 @@ void _testRetry(
     expect(
         fakeSsh.inspectCommandCount, anyOf(0, inspectCommandExitCode.length));
   });
+}
+
+class FakeInspect implements Inspect {
+  @override
+  final Ssh ssh = null;
+
+  Duration delay;
+
+  @override
+  Future<dynamic> inspectComponentRoot(Pattern componentName) async {
+    await Future.delayed(delay);
+  }
+
+  @override
+  Future<dynamic> inspectRecursively(List<String> entries) async {
+    await Future.delayed(delay);
+  }
+
+  @override
+  Future<List<String>> retrieveHubEntries({Pattern filter}) async {
+    await Future.delayed(delay);
+    return null;
+  }
 }
 
 class FakeSsh implements Ssh {

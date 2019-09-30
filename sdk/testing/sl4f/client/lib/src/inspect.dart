@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:logging/logging.dart';
@@ -109,5 +110,92 @@ class Inspect {
     _log.info('Command failed on attempt ${retries + 1} of ${retries + 1}.'
         '  No more retries remain.');
     return null;
+  }
+}
+
+/// Attempts to detect freezes related to:
+/// TODO(b/139742629): Device freezes for a minute after startup
+/// TODO(fxb/35898): FTL operations blocked behind wear leveling.
+/// TODO(fxb/31379): Need Implementation of "TRIM" command for flash devices
+///
+/// Freezes can cause running 'iquery' to hang, so we just run iquery every second
+/// and watch how long it takes to execute.  Most executions take less than 1 second
+/// so 5 seconds is enough to tell that the system was probably wedged.
+///
+/// In addition, it provides functions for insight into whether a freeze happened,
+/// which can be used for retrying failed tests.
+class FreezeDetector {
+  final Inspect inspect;
+
+  bool _started = false;
+  bool _isFrozen = false;
+  bool _freezeHappened = false;
+
+  Duration threshold = const Duration(seconds: 5);
+  static const _workInterval = Duration(seconds: 1);
+  static const _updateInterval = Duration(milliseconds: 100);
+
+  Timer _checker;
+  Timer _worker;
+  final _lastExecution = Stopwatch();
+
+  FreezeDetector(this.inspect);
+
+  void _workerHandler() async {
+    _lastExecution.reset();
+    await inspect.retrieveHubEntries();
+    if (_started) {
+      _worker = new Timer(_workInterval, _workerHandler);
+    }
+  }
+
+  void _timerHandler(timer) async {
+    final checkTime = DateTime.now();
+    final checkDuration = _lastExecution.elapsed;
+
+    if (checkDuration > threshold) {
+      if (!_isFrozen) {
+        _isFrozen = true;
+        _log.info('Freeze Start Detected $checkTime');
+        _freezeHappened = true;
+      }
+    } else {
+      if (_isFrozen) {
+        _log.info('Freeze End Detected $checkTime');
+        _isFrozen = false;
+        _log.info('Freeze Duration $checkDuration');
+      }
+    }
+  }
+
+  void start() {
+    _log.info('Starting FreezeDetector');
+    _started = true;
+    _worker = Timer(_workInterval, _workerHandler);
+    _lastExecution.start();
+    _checker = Timer.periodic(_updateInterval, _timerHandler);
+  }
+
+  void stop() async {
+    if (!_started) {
+      return;
+    }
+    _log.info('Stopping FreezeDetector');
+    _checker?.cancel();
+    _started = false;
+    _worker?.cancel();
+  }
+
+  Future<void> waitUntilUnfrozen() async {
+    while (_isFrozen) {
+      await Future.delayed(_updateInterval);
+    }
+  }
+
+  bool isFrozen() => _isFrozen;
+  bool freezeHappened() => _freezeHappened;
+
+  void clearFreezeHappened() {
+    _freezeHappened = false;
   }
 }
