@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -15,9 +16,9 @@ BOLD_BLACK = '\033[1;30m'
 BOLD_RED = '\033[1;31m'
 NO_COLOR = '\033[0m'
 def info_print(s):
-  print '\n%s%s%s' % (BOLD_BLACK, s, NO_COLOR)
+  print('\n%s%s%s' % (BOLD_BLACK, s, NO_COLOR))
 def error_print(s):
-  print '\n%s%s%s' % (BOLD_RED, s, NO_COLOR)
+  print('\n%s%s%s' % (BOLD_RED, s, NO_COLOR))
 
 def main():
     parser = argparse.ArgumentParser(
