@@ -242,11 +242,9 @@ class Element final : public inspect_deprecated::ChildrenManager {
     auto it = children_.find(child_short_name);
     if (it == children_.end()) {
       inspect_deprecated::Node child_inspect_node = inspect_node_.CreateChild(child_short_name);
-      auto emplacement = children_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(child_short_name),
-          std::forward_as_tuple(test_loop_, random_,
-                                table_->children.find(child_short_name)->second.get(),
-                                std::move(child_inspect_node)));
+      auto emplacement = children_.try_emplace(child_short_name, test_loop_, random_,
+                                           table_->children.find(child_short_name)->second.get(),
+                                           std::move(child_inspect_node));
       return &emplacement.first->second;
     } else {
       return &it->second;
@@ -325,12 +323,9 @@ class Application final {
       if (it == elements_.end()) {
         inspect_deprecated::Node child_inspect_node =
             application_inspect_node_->CreateChild(first_short_name);
-        auto emplacement = elements_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(first_short_name),
-            std::forward_as_tuple(loop_, random_,
-                                  table_.children.find(first_short_name)->second.get(),
-
-                                  std::move(child_inspect_node)));
+        auto emplacement = elements_.try_emplace(
+            first_short_name, loop_, random_, table_.children.find(first_short_name)->second.get(),
+            std::move(child_inspect_node));
         element = &emplacement.first->second;
       } else {
         element = &it->second;
