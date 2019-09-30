@@ -158,6 +158,18 @@ bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid) {
   return microarch_config->has_swapgs_bug;
 }
 
+bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
+    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+    if (arch_capabilities & X86_ARCH_CAPABILITIES_SSB_NO) {
+      return false;
+    }
+  }
+
+  auto* const microarch_config = get_microarch_config(cpuid);
+  return microarch_config->has_ssb;
+}
+
 void x86_intel_init_percpu(void) {
   // Some intel cpus support auto-entering C1E state when all cores are at C1. In
   // C1E state the voltage is reduced on all cores as well as clock gated. There is

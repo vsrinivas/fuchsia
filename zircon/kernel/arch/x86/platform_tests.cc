@@ -388,6 +388,50 @@ namespace {
     END_TEST;
   }
 
+  static bool test_x64_ssb_enumeration() {
+    BEGIN_TEST;
+
+    fbl::AllocChecker ac;
+    {
+      // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
+      FakeMsrAccess fake_msrs;
+      EXPECT_TRUE(x86_intel_cpu_has_ssb(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
+    }
+
+    {
+      // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+          (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+      cpu_id::FakeCpuId cpu(*data.get());
+      FakeMsrAccess fake_msrs = {};
+      fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
+      EXPECT_TRUE(x86_intel_cpu_has_ssb(&cpu, &fake_msrs));
+    }
+
+    {
+      // Intel(R) Celeron(R) CPU J3455 (Goldmont) reports SSB_NO via IA32_ARCH_CAPABILITIES
+      FakeMsrAccess fake_msrs = {};
+      // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
+      fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
+      EXPECT_FALSE(x86_intel_cpu_has_ssb(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs));
+    }
+
+    {
+       // AMD Threadripper (Zen1) has SSB
+       FakeMsrAccess fake_msrs;
+       EXPECT_TRUE(x86_amd_cpu_has_ssb(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs));
+    }
+    {
+       // AMD A4-9120C (Stoney Ridge) has SSB
+       FakeMsrAccess fake_msrs;
+       EXPECT_TRUE(x86_amd_cpu_has_ssb(&cpu_id::kCpuIdAmdA49120C, &fake_msrs));
+    }
+
+    END_TEST;
+  }
+
   static uint32_t intel_make_microcode_checksum(uint32_t * patch, size_t bytes) {
     size_t dwords = bytes / sizeof(uint32_t);
     uint32_t sum = 0;
@@ -530,6 +574,7 @@ UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enu
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
 UNITTEST("test enumeration of x64 SWAPGS vulnerability", test_x64_swapgs_bug_enumeration)
+UNITTEST("test enumeration of x64 SSB vulnerability", test_x64_ssb_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)

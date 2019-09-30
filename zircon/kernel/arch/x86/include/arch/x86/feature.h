@@ -330,6 +330,7 @@ typedef struct {
   bool has_l1tf;
   bool has_mds;
   bool has_swapgs_bug;
+  bool has_ssb;
 
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
@@ -352,6 +353,8 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid);
+bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);

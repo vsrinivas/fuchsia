@@ -43,6 +43,7 @@ bool g_has_l1tf;
 bool g_has_mds;
 bool g_has_swapgs_bug;
 bool g_swapgs_bug_mitigated;
+bool g_has_ssb;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -152,15 +153,16 @@ void x86_feature_init(void) {
 
   x86_hypervisor = get_hypervisor();
 
+  MsrAccess msr;
   if (x86_vendor == X86_VENDOR_INTEL) {
-    cpu_id::CpuId cpuid;
-    MsrAccess msr;
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
     g_has_mds = x86_intel_cpu_has_mds(&cpuid, &msr);
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
+    g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
+  } else if (x86_vendor == X86_VENDOR_AMD) {
+    g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
   }
-
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
 
   g_disable_spec_mitigations = gCmdline.GetBool("kernel.x86.disable_spec_mitigations",
@@ -372,6 +374,8 @@ void x86_feature_debug(void) {
   if (x86_kpti_is_enabled()) {
     printf("pti_enabled ");
   }
+  if (g_has_ssb)
+    printf("ssb ");
   printf("\n");
 }
 
@@ -508,6 +512,7 @@ static const x86_microarch_config_t kbl_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states =
@@ -535,6 +540,7 @@ static const x86_microarch_config_t skl_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -552,6 +558,7 @@ static const x86_microarch_config_t bdw_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -569,6 +576,7 @@ static const x86_microarch_config_t hsw_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -586,6 +594,7 @@ static const x86_microarch_config_t ivb_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -603,6 +612,7 @@ static const x86_microarch_config_t snb_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -620,6 +630,7 @@ static const x86_microarch_config_t westmere_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -637,6 +648,7 @@ static const x86_microarch_config_t nehalem_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -654,6 +666,7 @@ static const x86_microarch_config_t smt_config{
     .has_l1tf = false,
     .has_mds = true,
     .has_swapgs_bug = false,
+    .has_ssb = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -672,6 +685,7 @@ static const x86_microarch_config_t glm_config{
     .has_l1tf = false,
     .has_mds = false,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -689,6 +703,7 @@ static const x86_microarch_config_t intel_default_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = true,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -708,6 +723,7 @@ static const x86_microarch_config_t zen_config{
     .has_l1tf = false,
     .has_mds = false,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -725,6 +741,7 @@ static const x86_microarch_config_t jaguar_config{
     .has_l1tf = false,
     .has_mds = false,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -742,6 +759,7 @@ static const x86_microarch_config_t bulldozer_config{
     .has_l1tf = false,
     .has_mds = false,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -759,6 +777,7 @@ static const x86_microarch_config_t amd_default_config{
     .has_l1tf = false,
     .has_mds = false,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -778,6 +797,7 @@ static const x86_microarch_config_t unknown_vendor_config{
     .has_l1tf = true,
     .has_mds = true,
     .has_swapgs_bug = false,
+    .has_ssb = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
