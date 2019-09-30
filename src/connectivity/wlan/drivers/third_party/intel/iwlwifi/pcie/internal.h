@@ -36,6 +36,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
+#include <lib/async/task.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/condition.h>
 #include <threads.h>
@@ -282,6 +283,29 @@ struct iwl_pcie_first_tb_buf {
   uint8_t buf[IWL_FIRST_TB_SIZE_ALIGN];
 };
 
+typedef void(iwlwifi_timer_callback_t)(void* data);
+
+/**
+ * struct iwlwifi_timer_info - Timer used for txq stuck timer.
+ * @task: async task for scheduling the timer to wake up
+ * @dispatcher: async dispatcher to post the task to
+ * @finished: notifies the timer that the handler has finished
+ * @lock: timer lock
+ */
+struct iwlwifi_timer_info {
+  async_task_t task;
+  async_dispatcher_t* dispatcher;
+  sync_completion_t finished;
+  mtx_t lock;
+};
+
+// Initialize the timer.
+void iwlwifi_timer_init(struct iwl_trans* trans, struct iwlwifi_timer_info* timer);
+// Set the timer to run the handler after |delay|. If the timer is already running, this will reset.
+void iwlwifi_timer_set(struct iwlwifi_timer_info* timer, zx_duration_t delay);
+// If the timer is running, stop it. If the handler is currently running, wait for it to finish.
+void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
+
 /**
  * struct iwl_txq - Tx Queue for DMA
  * @q: generic Rx/Tx queue descriptor
@@ -331,9 +355,7 @@ struct iwl_txq {
   struct iwl_pcie_txq_entry* entries;
   mtx_t lock;
   unsigned long frozen_expiry_remainder;
-#if 0   // NEEDS_PORTING
-    struct timer_list stuck_timer;
-#endif  // NEEDS_PORTING
+  struct iwlwifi_timer_info stuck_timer;
   struct iwl_trans_pcie* trans_pcie;
   bool need_update;
   bool frozen;

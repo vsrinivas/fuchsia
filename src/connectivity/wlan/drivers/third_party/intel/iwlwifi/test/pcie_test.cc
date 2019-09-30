@@ -14,10 +14,15 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <zircon/listnode.h>
+
+#include <thread>
 
 #include <ddk/io-buffer.h>
 #include <zxtest/zxtest.h>
@@ -260,6 +265,92 @@ TEST_F(PcieTest, RxInterrupts) {
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
 
   iwl_pcie_rx_free(trans_);
+}
+
+class StuckTimerTest : public PcieTest {
+ public:
+  StuckTimerTest() {
+    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToThread, &trans_->loop));
+    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
+
+    mtx_init(&txq_.lock, mtx_plain);
+    iwlwifi_timer_init(trans_, &txq_.stuck_timer);
+
+    // Set read and write pointers such that firing the stuck timer is valid.
+    txq_.write_ptr = 0;
+    txq_.read_ptr = 1;
+  }
+
+  void WaitForWorkerThread() {
+    async_loop_quit(trans_->loop);
+    async_loop_join_threads(trans_->loop);
+  }
+
+ protected:
+  struct iwl_txq txq_;
+};
+
+TEST_F(StuckTimerTest, SetTimer) {
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
+  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
+  WaitForWorkerThread();
+}
+
+TEST_F(StuckTimerTest, SetSpuriousTimer) {
+  // Set read and write pointers such that firing the stuck timer is spurious.
+  txq_.write_ptr = 0;
+  txq_.read_ptr = 0;
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
+  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
+  WaitForWorkerThread();
+}
+
+TEST_F(StuckTimerTest, SetTimerOverride) {
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
+  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
+  WaitForWorkerThread();
+}
+
+TEST_F(StuckTimerTest, StopPendingTimer) {
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
+  // Test that stop doesn't deadlock.
+  iwlwifi_timer_stop(&txq_.stuck_timer);
+  WaitForWorkerThread();
+}
+
+TEST_F(StuckTimerTest, StopUnsetTimer) {
+  // Test that stop doesn't deadlock.
+  iwlwifi_timer_stop(&txq_.stuck_timer);
+  WaitForWorkerThread();
+}
+
+// This test is a best-effort attempt to test that a race condition is correctly handled. The test
+// should pass both when the race condition is and isn't triggered.
+TEST_F(StuckTimerTest, StopRunningTimer) {
+  // Hold the txq lock so that the timer handler blocks.
+  mtx_lock(&txq_.lock);
+
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
+
+  // Sleep to give the timer thread a chance to schedule.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+
+  // Call stop on a new thread, it will block until the handler completes.
+  std::thread stop_thread(iwlwifi_timer_stop, &txq_.stuck_timer);
+
+  // Sleep to give the stop thread a chance to schedule.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+
+  // Unblock the timer thread.
+  mtx_unlock(&txq_.lock);
+
+  // Wait for all the threads to finish. This tests that the timer doesn't deadlock. We can't check
+  // the value of finished, since there's a chance that the race condition we're trying to trigger
+  // didn't happen (i.e. the handler didn't fire before we called stop, or stop didn't block before
+  // the handler was unblocked.)
+  WaitForWorkerThread();
+  stop_thread.join();
 }
 
 }  // namespace

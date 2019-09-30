@@ -33,9 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+
+#include <lib/async/time.h>
+
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #endif  // NEEDS_PORTING
@@ -135,25 +137,73 @@ void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr) {
     dma_free_coherent(trans->dev, ptr->size, ptr->addr, ptr->dma);
     memset(ptr, 0, sizeof(*ptr));
 }
+#endif  // NEEDS_PORTING
 
-static void iwl_pcie_txq_stuck_timer(struct timer_list* t) {
-    struct iwl_txq* txq = from_timer(txq, t, stuck_timer);
-    struct iwl_trans_pcie* trans_pcie = txq->trans_pcie;
-    struct iwl_trans* trans = iwl_trans_pcie_get_trans(trans_pcie);
+static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_t* task,
+                                     zx_status_t status) {
+  if (status != ZX_OK) {
+    // This indicates that the dispatcher was shut down, in which case there's nothing for us to do.
+    return;
+  }
 
-    spin_lock(&txq->lock);
-    /* check if triggered erroneously */
-    if (txq->read_ptr == txq->write_ptr) {
-        spin_unlock(&txq->lock);
-        return;
-    }
-    spin_unlock(&txq->lock);
+  struct iwlwifi_timer_info* timer = containerof(task, struct iwlwifi_timer_info, task);
+  struct iwl_txq* txq = containerof(timer, struct iwl_txq, stuck_timer);
 
-    iwl_trans_pcie_log_scd_error(trans, txq);
+  mtx_lock(&txq->lock);
+  /* check if triggered erroneously */
+  if (txq->read_ptr == txq->write_ptr) {
+    mtx_unlock(&txq->lock);
+    sync_completion_signal(&timer->finished);
+    return;
+  }
+  mtx_unlock(&txq->lock);
 
-    iwl_force_nmi(trans);
+#if 0   // NEEDS_PORTING
+  struct iwl_trans_pcie* trans_pcie = txq->trans_pcie;
+  struct iwl_trans* trans = iwl_trans_pcie_get_trans(trans_pcie);
+  iwl_trans_pcie_log_scd_error(trans, txq);
+
+  iwl_force_nmi(trans);
+#endif  // NEEDS_PORTING
+
+  sync_completion_signal(&timer->finished);
 }
 
+void iwlwifi_timer_init(struct iwl_trans* trans, struct iwlwifi_timer_info* timer) {
+  timer->dispatcher = async_loop_get_dispatcher(trans->loop);
+
+  // Initialize the completion to signaled so that if the timer is stopped before being set then
+  // waiting on |finished| doesn't block.
+  timer->finished = SYNC_COMPLETION_INIT;
+  sync_completion_signal(&timer->finished);
+
+  timer->task.state = (async_state_t)ASYNC_STATE_INIT;
+  timer->task.handler = iwl_pcie_txq_stuck_timer;
+  mtx_init(&timer->lock, mtx_plain);
+}
+
+void iwlwifi_timer_set(struct iwlwifi_timer_info* timer, zx_duration_t delay) {
+  mtx_lock(&timer->lock);
+  async_cancel_task(timer->dispatcher, &timer->task);
+  timer->task.deadline = zx_time_add_duration(async_now(timer->dispatcher), delay);
+  sync_completion_reset(&timer->finished);
+  async_post_task(timer->dispatcher, &timer->task);
+  mtx_unlock(&timer->lock);
+}
+
+void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer) {
+  mtx_lock(&timer->lock);
+  zx_status_t status = async_cancel_task(timer->dispatcher, &timer->task);
+  mtx_unlock(&timer->lock);
+
+  // If we failed to cancel the task then it might already be running, so we wait for it to finish.
+  // If the timer has not been set, or already finished then this will not block.
+  if (status == ZX_ERR_NOT_FOUND) {
+    sync_completion_wait(&timer->finished, ZX_TIME_INFINITE);
+  }
+}
+
+#if 0   // NEEDS_PORTING
 /*
  * iwl_pcie_txq_update_byte_cnt_tbl - Set up entry in Tx byte-count array
  */

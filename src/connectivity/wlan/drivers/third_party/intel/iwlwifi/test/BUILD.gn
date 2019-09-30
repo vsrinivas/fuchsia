@@ -24,11 +24,11 @@ source_set("iwlwifi_sim_trans_ss") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fake_ddk",
     "//zircon/system/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
   ]
 
   public_deps = [
@@ -113,6 +113,8 @@ executable("pcie_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",

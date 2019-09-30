@@ -34,6 +34,8 @@
  *
  *****************************************************************************/
 
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
 #include <lib/device-protocol/pci.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -1102,16 +1104,28 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
+  status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &iwl_trans->loop);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to create async loop: %s\n", zx_status_get_string(status));
+    goto fail_remove_device;
+  }
+
+  status = async_loop_start_thread(iwl_trans->loop, "iwlwifi-worker", NULL);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to create async loop thread: %s\n", zx_status_get_string(status));
+    goto fail_destroy_loop;
+  }
+
   status = iwl_drv_init();
   if (status != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to init driver: %s\n", zx_status_get_string(status));
-    goto fail_remove_device;
+    goto fail_destroy_loop;
   }
 
   status = iwl_drv_start(iwl_trans);
   if (status != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(status));
-    goto fail_remove_device;
+    goto fail_destroy_loop;
   }
 
   /* register transport layer debugfs here */
@@ -1146,6 +1160,8 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
 
 fail_stop_device:
   iwl_drv_stop(iwl_trans->drv);
+fail_destroy_loop:
+  async_loop_destroy(iwl_trans->loop);
 fail_remove_device:
   device_remove(iwl_trans->zxdev);
   return status;
