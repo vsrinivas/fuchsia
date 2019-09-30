@@ -184,29 +184,37 @@ is useful for drivers that have to do extended initialization or probing and
 do not want to visibly publish their device(s) until that succeeds (and quietly
 remove them if that fails).
 
-Devices are reference counted.  When a driver creates one with `device_add()`,
-it then holds a reference on that device until it eventually calls `device_remove()`.
-If a device is opened by a remote process via the Device Filesystem, a reference
-is acquired there as well.  When a device's parent is removed, its `unbind()`
-method is invoked.  This signals to the driver that it should start shutting
-the device down and remove any child devices it has created by calling `device_remove()`
-on them.
-
-Since a child device may have work in progress when its `unbind()` method is
-called, it's possible that the parent device which just called `device_remove()`
-on the child could continue to receive device method calls or protocol method
-calls on behalf of that child.  It is advisable that before removing its children,
-the parent device should arrange for these methods to return errors, so that
-calls from a child before the child removal is completed do not start more
-work or cause unexpected interactions.
+Devices are reference counted. A reference is acquired when a driver creates
+the device with `device_add()` and when the device is opened by a remote process
+via the Device Filesystem.
 
 From the moment that `device_add()` is called without the **DEVICE_ADD_INVISIBLE**
 flag, or `device_make_visible()` is called on an invisible device, other device
 ops may be called by the Device Host.
 
-The `release()` method is only called after the creating driver has called
-`device_remove()` on the device, all open instances of that device have been
-closed, and all children of that device have been removed and released.  This
+When `device_async_remove()` is called on a device, this schedules the removal
+of the device and its descendents.
+
+The removal of a device consists of four parts: running the device's `unbind()` hook,
+removal of the device from the Device Filesystem, dropping the reference acquired
+by `device_add()` and running the device's `release()` hook.
+
+When the `unbind()` method is invoked, this signals to the driver it should start
+shutting the device down, and call `device_unbind_reply()` once it has finished unbinding.
+This is an optional hook. If it is not implemented, it is treated as `device_unbind_reply()`
+was called immediately.
+
+Since a child device may have work in progress when its `unbind()` method is
+called, it's possible that the parent device (which already completed
+unbinding) could continue to receive device method calls or protocol method
+calls on behalf of that child.  It is advisable that before completing unbinding,
+the parent device should arrange for these methods to return errors, so that
+calls from a child before the child removal is completed do not start more
+work or cause unexpected interactions.
+
+The `release()` method is only called after the creating driver has completed
+unbinding, all open instances of that device have been closed,
+and all children of that device have been unbound and released.  This
 is the last opportunity for the driver to destroy or free any resources associated
 with the device.  It is not valid to refer to the `zx_device_t` for that device
 after `release()` returns.  Calling any device methods or protocol methods for
@@ -228,8 +236,8 @@ have been created under the PHY interface.
 
 ```
             +------------+
-            | USB Device |
-            +------------+
+            | USB Device | .unbind()
+            +------------+ .release()
                   |
             +------------+
             |  WLAN PHY  | .unbind()
@@ -242,21 +250,34 @@ have been created under the PHY interface.
 
 Now, we unplug this USB WLAN device.
 
-* The USB XHCI detects the removal and calls `device_remove(usb_device)`.
+* The USB XHCI detects the removal and calls `device_async_remove(usb_device)`.
 
-* Since the parent device is being removed, the WLAN PHY's `unbind()` is called.
-  In this `unbind()`, it would remove the interface it created via `device_add()`:
+* This will lead to the USB device's `unbind()` being called.
+  Once it completes unbinding, it would call `device_unbind_reply()`.
+
+```c
+    usb_device_unbind(void* ctx) {
+        // Stop interrupt or anything to prevent incoming requests.
+        ...
+
+        device_unbind_reply(usb_dev);
+    }
+```
+
+* When the USB device completes unbinding, the WLAN PHY's `unbind()` is called.
+  Once it completes unbinding, it would call `device_unbind_reply()`.
 
 ```c
     wlan_phy_unbind(void* ctx) {
         // Stop interrupt or anything to prevent incoming requests.
         ...
 
-        device_remove(wlan_phy);
+        device_unbind_reply(wlan_phy);
     }
 ```
 
-* When wlan_phy is removed, unbind() will be called on all of its children (wlan_mac_0, wlan_mac_1).
+* When wlan_phy completes unbinding, unbind() will be called on all of its children
+  (wlan_mac_0, wlan_mac_1).
 
 ```c
     wlan_mac_unbind(void* ctx) {
@@ -264,7 +285,7 @@ Now, we unplug this USB WLAN device.
         // by returning an ZX_ERR_IO_NOT_PRESENT to any requests that happen after unbind).
         ...
 
-        device_remove(iface_mac_X);
+        device_unbind_reply(iface_mac_X);
     }
 ```
 
@@ -296,3 +317,5 @@ Now, we unplug this USB WLAN device.
         ...
     }
 ```
+
+* Once the USB device now has no child devices or open connections, its `release()` would be called.

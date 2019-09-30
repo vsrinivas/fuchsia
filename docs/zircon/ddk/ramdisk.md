@@ -183,7 +183,7 @@ static zx_off_t ramdisk_getsize(void* ctx) {
 static void ramdisk_unbind(void* ctx) {
     ramdisk_device_t* ramdev = ctx;
     ramdev->dead = true;
-    device_remove(ramdev->zxdev);
+    device_unbind_reply(ramdev->zxdev);
 }
 
 static void ramdisk_release(void* ctx) {
@@ -211,10 +211,10 @@ It sets the `dead` flag to indicate that the driver is shutting down (this is ch
 in the **ramdisk_queue()** handler, below).
 It's expected that the driver will finish up any I/O operations that are in progress (there
 won't be any in our RAM-disk), and it should call
-**device_remove()**
-to remove itself from the parent.
+**device_unbind_reply()**
+to indicate unbinding is complete.
 
-After **device_remove()** is called,
+Sometime after **device_unbind_reply()** is called,
 the driver's **ramdisk_release()** will be called.
 Here we unmap the [VMAR](../objects/vm_address_region.md),
 via [**zx_vmar_unmap()**](../syscalls/vmar_unmap.md), and close the

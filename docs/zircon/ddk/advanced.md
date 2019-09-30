@@ -80,7 +80,7 @@ Function                    | Purpose
 ----------------------------|-------------------------------------------
 **device_add()**                 | Adds a device to a parent
 **device_make_visible()**        | Makes a device visible
-**device_remove()**              | Removes a device from a parent
+**device_async_remove()**        | Schedules the removal of a device and all its children
 
 ### Signalling
 

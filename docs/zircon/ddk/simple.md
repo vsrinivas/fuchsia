@@ -828,7 +828,7 @@ zx_status_t multi_bind(void* ctx, zx_device_t* parent) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .ops = &multi_base_device_ops,          // use base ops initially
         .name = "demo-multi",
-        .ctx = &device->base_device,
+        .ctx = device,
     };
 
     // (3) bind base device
@@ -855,14 +855,10 @@ zx_status_t multi_bind(void* ctx, zx_device_t* parent) {
             rc = ZX_ERR_NO_MEMORY;
         }
 
-        // (5) failure backout
+        // (5) failure backout, schedule the removal of the base device and its children
+        // sub-devices.
         if (rc != ZX_OK) {
-            for (int j = 0; j < i; j++) {
-                device_remove(device->devices[j].zxdev);
-                free(device->devices[j]);
-            }
-            device_remove(device->base_device.zxdev);
-            free(device);
+            device_async_remove(device->base_device.zxdev);
             return rc;
         }
     }
@@ -882,7 +878,7 @@ The steps are:
 2.  Create and initialize an `args` structure that we'll pass to
     **device_add()**.
     This structure has the base device name, "`demo-multi`", and a context pointer
-    to the base device context block `base_device`.
+    to the multi root device `device`.
 3.  Call **device_add()** to add the base device.
     This has now created `/dev/misc/demo-multi`.
     Note that we store the newly created device into `base_device.zxdev`. This then
@@ -904,6 +900,9 @@ The steps are:
     This is why we called **free()** on the sub-device structure in step 4 in
     case of **device_add()** failure.
 6.  We release the per-device context block in our release handler.
+    Since the base device and 16 sub-devices do not implement unbind hooks,
+    **device_async_remove()** will invoke the release hooks of the sub-devices,
+    followed by the base device.
 
 ### Which device is which?
 
@@ -982,7 +981,8 @@ static const char* devnames[NDEVICES] = {
 
 static zx_status_t
 multi_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
-    multidev_t* device = ctx;
+    multi_root_device_t* root_device = ctx;
+    multidev_t* device = &root_device->base_device;
 
     if (off == 0) {
         char tmp[16];
