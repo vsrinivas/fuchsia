@@ -5,24 +5,27 @@
 #include "qmi-usb-transport.h"
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
-#include <fuchsia/hardware/telephony/transport/c/fidl.h>
+#include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
 #include <fuchsia/telephony/snoop/c/fidl.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <usb/usb.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/usb.h>
+#include <ddktl/fidl.h>
+#include <usb/usb.h>
 #define _ALL_SOURCE
 #include <threads.h>
+
 #include <usb/usb-request.h>
 
 // The maximum amount of memory we are willing to allocate to transaction
@@ -39,6 +42,9 @@
 
 #define ETHERNET_FRAME_OFFSET 14
 
+namespace telephony_transport = ::llcpp::fuchsia::hardware::telephony::transport;
+namespace telephony_snoop = ::llcpp::fuchsia::telephony::snoop;
+
 typedef struct txn_info {
   ethernet_netbuf_t netbuf;
   ethernet_impl_queue_tx_callback completion_cb;
@@ -47,7 +53,7 @@ typedef struct txn_info {
 } txn_info_t;
 
 static void complete_txn(txn_info_t* txn, zx_status_t status) {
-    txn->completion_cb(txn->cookie, status, &txn->netbuf);
+  txn->completion_cb(txn->cookie, status, &txn->netbuf);
 }
 
 // qmi usb transport device
@@ -93,8 +99,8 @@ typedef struct qmi_ctx {
   uint16_t endpoint_size;
   list_node_t tx_txn_bufs;       // list of usb_request_t
   list_node_t tx_pending_infos;  // list of txn_info_t
-  bool unbound;  // set to true when device is going away. Guarded by tx_mutex
-  uint64_t tx_endpoint_delay;  // wait time between 2 transmit requests
+  bool unbound;                  // set to true when device is going away. Guarded by tx_mutex
+  uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
   // Receive context
   uint8_t rx_endpoint_addr;
@@ -106,7 +112,7 @@ static void usb_write_complete(void* ctx, usb_request_t* request);
 static zx_status_t set_channel(void* ctx, zx_handle_t channel) {
   ZX_DEBUG_ASSERT(ctx);
   zxlogf(INFO, "qmi-usb-transport: getting channel from transport\n");
-  qmi_ctx_t* qmi_ctx = ctx;
+  qmi_ctx_t* qmi_ctx = static_cast<qmi_ctx_t*>(ctx);
   zx_status_t result = ZX_OK;
 
   if (qmi_ctx->channel != ZX_HANDLE_INVALID) {
@@ -121,12 +127,11 @@ static zx_status_t set_channel(void* ctx, zx_handle_t channel) {
   return result;
 }
 
-static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data,
-                                 size_t length, usb_request_t* req) {
+static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data, size_t length,
+                                 usb_request_t* req) {
   req->header.length = length;
   if (length < 41) {
-    zxlogf(ERROR, "qmi-usb-transport: length is too short (length: %zx) \n",
-           length);
+    zxlogf(ERROR, "qmi-usb-transport: length is too short (length: %zx) \n", length);
     return ZX_ERR_IO;
   }
 
@@ -179,8 +184,7 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data,
 
   ssize_t bytes_copied = usb_request_copy_to(req, eth, ip_length, 0);
   if (bytes_copied < 0) {
-    zxlogf(ERROR,
-           "qmi-usb-transport: failed to copy data into send txn (error %zd)\n",
+    zxlogf(ERROR, "qmi-usb-transport: failed to copy data into send txn (error %zd)\n",
            bytes_copied);
     return ZX_ERR_IO;
   }
@@ -194,12 +198,11 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data,
 }
 
 static zx_status_t send_locked(qmi_ctx_t* ctx, ethernet_netbuf_t* netbuf) {
-  const uint8_t* byte_data = netbuf->data_buffer;
+  const uint8_t* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
   size_t length = netbuf->data_size;
 
   // Make sure that we can get all of the tx buffers we need to use
-  usb_request_t* tx_req =
-      usb_req_list_remove_head(&ctx->tx_txn_bufs, ctx->parent_req_size);
+  usb_request_t* tx_req = usb_req_list_remove_head(&ctx->tx_txn_bufs, ctx->parent_req_size);
   if (tx_req == NULL) {
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -207,8 +210,7 @@ static zx_status_t send_locked(qmi_ctx_t* ctx, ethernet_netbuf_t* netbuf) {
   zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->tx_endpoint_delay)));
   zx_status_t status;
   if ((status = queue_request(ctx, byte_data, length, tx_req)) != ZX_OK) {
-    zx_status_t add_status =
-        usb_req_list_add_tail(&ctx->tx_txn_bufs, tx_req, ctx->parent_req_size);
+    zx_status_t add_status = usb_req_list_add_tail(&ctx->tx_txn_bufs, tx_req, ctx->parent_req_size);
     ZX_DEBUG_ASSERT(add_status == ZX_OK);
     return status;
   }
@@ -226,8 +228,7 @@ static void qmi_update_online_status(qmi_ctx_t* ctx, bool is_online) {
     zxlogf(INFO, "qmi-usb-transport: connected to network\n");
     ctx->online = true;
     if (ctx->ethernet_ifc.ops) {
-      ethernet_ifc_status(&ctx->ethernet_ifc,
-                        ctx->online ? ETHERNET_STATUS_ONLINE : 0);
+      ethernet_ifc_status(&ctx->ethernet_ifc, ctx->online ? ETHERNET_STATUS_ONLINE : 0);
     } else {
       zxlogf(ERROR, "qmi-usb-transport: not connected to ethermac interface\n");
     }
@@ -244,9 +245,9 @@ done:
 }
 
 static inline zx_status_t set_async_wait(qmi_ctx_t* ctx) {
-  zx_status_t status = zx_object_wait_async(
-      ctx->channel, ctx->channel_port, CHANNEL_MSG,
-      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  zx_status_t status =
+      zx_object_wait_async(ctx->channel, ctx->channel_port, CHANNEL_MSG,
+                           ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
   return status;
 }
 
@@ -259,18 +260,16 @@ static zx_status_t set_snoop_channel(qmi_ctx_t* qmi_ctx, zx_handle_t channel) {
   if (qmi_ctx->snoop_channel_port == ZX_HANDLE_INVALID) {
     status = zx_port_create(0, &qmi_ctx->snoop_channel_port);
     if (status != ZX_OK) {
-      zxlogf(
-          ERROR,
-          "qmi-usb-transport: failed to create a port to watch snoop channel: "
-          "%s\n",
-          zx_status_get_string(status));
+      zxlogf(ERROR,
+             "qmi-usb-transport: failed to create a port to watch snoop channel: "
+             "%s\n",
+             zx_status_get_string(status));
       return status;
     }
   } else {
     status = zx_port_wait(qmi_ctx->snoop_channel_port, 0, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "qmi-usb-transport: timed out: %s\n",
-             zx_status_get_string(status));
+      zxlogf(ERROR, "qmi-usb-transport: timed out: %s\n", zx_status_get_string(status));
     } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
       zxlogf(INFO, "qmi-usb-transport: snoop channel peer closed\n");
       qmi_ctx->snoop_channel = ZX_HANDLE_INVALID;
@@ -291,92 +290,64 @@ static zx_status_t set_snoop_channel(qmi_ctx_t* qmi_ctx, zx_handle_t channel) {
   return result;
 }
 
-#define REPLY(x) fuchsia_hardware_telephony_transport_Qmi##x##_reply
-
-static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t transport,
-                                   fidl_txn_t* txn) {
-  zx_status_t status = ZX_OK;
-  qmi_ctx_t* qmi_ctx = ctx;
-  fuchsia_hardware_telephony_transport_Qmi_SetChannel_Result res;
-  zx_status_t set_channel_res = set_channel(ctx, transport);
-  if (set_channel_res == ZX_OK) {
-    res.tag = 0;
-    res.response._reserved = 0;
-  } else {
-    res.tag = 1;
-    res.err = set_channel_res;
-  }
-  status = REPLY(SetChannel)(txn, &res);
-  if (status != ZX_OK) {
-    goto done;
-  }
-  if (set_channel_res == ZX_OK) {
-    status = set_async_wait(qmi_ctx);
-    if (status != ZX_OK) {
-      zx_handle_close(qmi_ctx->channel);
+class QmiServer final : public telephony_transport::Qmi::Interface {
+ public:
+  QmiServer(qmi_ctx_t* ctx) : qmi_ctx(ctx) {}
+  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) override {
+    zx_status_t status = set_channel(qmi_ctx, transport.get());
+    if (status == ZX_OK) {
+      completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse({
+          .__reserved = 0,
+      }));
+    } else {
+      completer.Reply(
+          telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t>(status)));
     }
   }
-done:
-  return status;
-}
-
-static zx_status_t fidl_SetNetworkStatus(void* ctx, bool connected,
-                                         fidl_txn_t* txn) {
-  qmi_ctx_t* qmi_ctx = ctx;
-  qmi_update_online_status(qmi_ctx, connected);
-  return REPLY(SetNetwork)(txn);
-}
-
-static zx_status_t fidl_SetSnoopChannel(void* ctx, zx_handle_t snoop_channel,
-                                        fidl_txn_t* txn) {
-  qmi_ctx_t* qmi_ctx = ctx;
-  zx_status_t set_snoop_channel_res;
-  fuchsia_hardware_telephony_transport_Qmi_SetSnoopChannel_Result res;
-  set_snoop_channel_res = set_snoop_channel(qmi_ctx, snoop_channel);
-  if (set_snoop_channel_res == ZX_OK) {
-    res.tag = 0;
-    res.response._reserved = 0;
-  } else {
-    res.tag = 1;
-    res.err = set_snoop_channel_res;
+  void SetNetwork(bool connected, SetNetworkCompleter::Sync completer) override {
+    qmi_update_online_status(qmi_ctx, connected);
+    completer.Reply();
   }
-  return REPLY(SetSnoopChannel)(txn, &res);
-}
-#undef REPLY
+  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) override {
+    zx_status_t status = set_snoop_channel(qmi_ctx, interface.get());
+    if (status == ZX_OK) {
+      completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse({
+          .__reserved = 0,
+      }));
+    } else {
+      completer.Reply(
+          telephony_transport::Qmi_SetSnoopChannel_Result::WithErr(static_cast<int32_t>(status)));
+    }
+  }
 
-static fuchsia_hardware_telephony_transport_Qmi_ops_t fidl_ops = {
-    .SetChannel = fidl_SetChannel,
-    .SetNetwork = fidl_SetNetworkStatus,
-    .SetSnoopChannel = fidl_SetSnoopChannel,
+ private:
+  qmi_ctx_t* qmi_ctx;
 };
 
 static zx_status_t qmi_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  zx_status_t status = fuchsia_hardware_telephony_transport_Qmi_dispatch(
-      ctx, txn, msg, &fidl_ops);
+  QmiServer server(static_cast<qmi_ctx_t*>(ctx));
+  DdkTransaction ddkTxn(txn);
+  zx_status_t status = telephony_transport::Qmi::Dispatch(&server, msg, &ddkTxn);
   return status;
 }
 
 static void qmi_release(void* ctx) {
   zxlogf(INFO, "qmi-usb-transport: releasing device\n");
-  qmi_ctx_t* qmi_ctx = ctx;
+  qmi_ctx_t* qmi_ctx = static_cast<qmi_ctx_t*>(ctx);
   free(qmi_ctx);
 }
 
 static void qmi_unbind(void* ctx) {
-  qmi_ctx_t* qmi_ctx = ctx;
+  qmi_ctx_t* qmi_ctx = static_cast<qmi_ctx_t*>(ctx);
   zx_status_t result = ZX_OK;
   result = device_remove(qmi_ctx->zxdev);
   if (result != ZX_OK) {
-    zxlogf(
-        ERROR,
-        "Failed to unbind qmi-usb-transport driver. Cannot remove device: %u\n",
-        result);
+    zxlogf(ERROR, "Failed to unbind qmi-usb-transport driver. Cannot remove device: %u\n", result);
   }
 }
 
-static zx_status_t qmi_ethernet_impl_query(void* ctx, uint32_t options,
-                                    ethernet_info_t* info) {
-  qmi_ctx_t* eth = ctx;
+static zx_status_t qmi_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
+  qmi_ctx_t* eth = static_cast<qmi_ctx_t*>(ctx);
 
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
 
@@ -394,10 +365,9 @@ static zx_status_t qmi_ethernet_impl_query(void* ctx, uint32_t options,
   return ZX_OK;
 }
 
-static zx_status_t qmi_ethernet_impl_start(void* ctx_cookie,
-                                    const ethernet_ifc_protocol_t* ifc) {
+static zx_status_t qmi_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
-  qmi_ctx_t* ctx = ctx_cookie;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(ctx_cookie);
   zx_status_t status = ZX_OK;
 
   mtx_lock(&ctx->ethernet_mutex);
@@ -412,15 +382,14 @@ static zx_status_t qmi_ethernet_impl_start(void* ctx_cookie,
   return status;
 }
 
-static zx_status_t qmi_ethernet_impl_set_param(void* cookie, uint32_t param,
-                                        int32_t value, const void* data,
-                                        size_t data_size) {
+static zx_status_t qmi_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
+                                               const void* data, size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void qmi_ethernet_impl_stop(void* cookie) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
-  qmi_ctx_t* ctx = cookie;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(cookie);
   mtx_lock(&ctx->ethernet_mutex);
   ctx->ethernet_ifc.ops = NULL;
   mtx_unlock(&ctx->ethernet_mutex);
@@ -429,7 +398,7 @@ static void qmi_ethernet_impl_stop(void* cookie) {
 static void qmi_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet_netbuf_t* netbuf,
                                        ethernet_impl_queue_tx_callback completion_cb,
                                        void* cookie) {
-  qmi_ctx_t* ctx = context;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(context);
   size_t length = netbuf->data_size;
   zx_status_t status;
 
@@ -499,45 +468,35 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
 
   switch (usb_req.bNotification) {
     case USB_CDC_NC_RESPONSE_AVAILABLE:
-      status = usb_control_in(
-          &qmi_ctx->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-          USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM,
-          ZX_TIME_INFINITE, buffer, packet_size, NULL);
+      status = usb_control_in(&qmi_ctx->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                              USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM,
+                              ZX_TIME_INFINITE, buffer, packet_size, NULL);
       if (!qmi_ctx->channel) {
-        zxlogf(
-            WARN,
-            "qmi-usb-transport: recieving USB CDC frames without a channel\n");
+        zxlogf(WARN, "qmi-usb-transport: recieving USB CDC frames without a channel\n");
         return;
       }
-      status = zx_channel_write(qmi_ctx->channel, 0, buffer, sizeof(buffer),
-                                NULL, 0);
+      status = zx_channel_write(qmi_ctx->channel, 0, buffer, sizeof(buffer), NULL, 0);
       if (status < 0) {
-        zxlogf(ERROR,
-               "qmi-usb-transport: failed to write message to channel: %s\n",
+        zxlogf(ERROR, "qmi-usb-transport: failed to write message to channel: %s\n",
                zx_status_get_string(status));
       }
       if (qmi_ctx->snoop_channel) {
-        fuchsia_telephony_snoop_Message snoop_msg;
-        snoop_msg.tag = 0;
-        uint32_t current_length;
-        if (sizeof(buffer) > sizeof(snoop_msg.qmi_message.opaque_bytes)) {
-          current_length = sizeof(snoop_msg.qmi_message.opaque_bytes);
-          snoop_msg.qmi_message.is_partial_copy = true;
+        telephony_snoop::QmiMessage qmi_msg;
+        if (sizeof(buffer) > sizeof(qmi_msg.opaque_bytes)) {
+          qmi_msg.is_partial_copy = true;
         } else {
-          current_length = sizeof(buffer);
-          snoop_msg.qmi_message.is_partial_copy = false;
+          qmi_msg.is_partial_copy = false;
         }
-        snoop_msg.qmi_message.direction =
-            fuchsia_telephony_snoop_Direction_FROM_MODEM;
-        snoop_msg.qmi_message.timestamp = zx_clock_get_monotonic();
-        memcpy(snoop_msg.qmi_message.opaque_bytes, buffer, current_length);
-        fuchsia_telephony_snoop_PublisherSendMessage(qmi_ctx->snoop_channel,
-                                                     &snoop_msg);
+        qmi_msg.direction = telephony_snoop::Direction::FROM_MODEM;
+        qmi_msg.timestamp = zx_clock_get_monotonic();
+        telephony_snoop::Message snoop_msg =
+            telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
+        telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(qmi_ctx->snoop_channel),
+                                                      std::move(snoop_msg));
       }
       return;
     default:
-      zxlogf(ERROR,
-             "qmi-usb-transport: Unknown Notification Type for QMI: %d\n",
+      zxlogf(ERROR, "qmi-usb-transport: Unknown Notification Type for QMI: %d\n",
              usb_req.bNotification);
   }
 }
@@ -551,7 +510,7 @@ static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {
 }
 
 static int qmi_transport_thread(void* cookie) {
-  qmi_ctx_t* ctx = cookie;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(cookie);
   usb_request_t* txn = ctx->int_txn_buf;
 
   usb_request_complete_t complete = {
@@ -560,19 +519,16 @@ static int qmi_transport_thread(void* cookie) {
   };
   usb_request_queue(&ctx->usb, txn, &complete);
   if (ctx->max_packet_size > 2048) {
-    zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n",
-           ctx->max_packet_size);
+    zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n", ctx->max_packet_size);
     return ZX_ERR_IO_REFUSED;
   }
   uint8_t buffer[ctx->max_packet_size];
   uint32_t length = sizeof(buffer);
   zx_port_packet_t packet;
   while (true) {
-    zx_status_t status =
-        zx_port_wait(ctx->channel_port, ZX_TIME_INFINITE, &packet);
+    zx_status_t status = zx_port_wait(ctx->channel_port, ZX_TIME_INFINITE, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "qmi-usb-transport: timed out: %s\n",
-             zx_status_get_string(status));
+      zxlogf(ERROR, "qmi-usb-transport: timed out: %s\n", zx_status_get_string(status));
     } else {
       if (packet.key == CHANNEL_MSG) {
         if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
@@ -581,22 +537,18 @@ static int qmi_transport_thread(void* cookie) {
           ctx->channel = ZX_HANDLE_INVALID;
           continue;
         }
-        status = zx_channel_read(ctx->channel, 0, buffer, NULL, sizeof(buffer),
-                                 0, &length, NULL);
+        status = zx_channel_read(ctx->channel, 0, buffer, NULL, sizeof(buffer), 0, &length, NULL);
         if (status != ZX_OK) {
           zxlogf(ERROR, "qmi-usb-transport: failed to read channel: %s\n",
                  zx_status_get_string(status));
           return status;
         }
-        status = usb_control_out(
-            &ctx->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-            USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, 8, ZX_TIME_INFINITE, buffer,
-            length);
+        status = usb_control_out(&ctx->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                                 USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, 8, ZX_TIME_INFINITE, buffer,
+                                 length);
         if (status != ZX_OK) {
-          zxlogf(
-              ERROR,
-              "qmi-usb-transport: got an bad status from usb_control_out: %s\n",
-              zx_status_get_string(status));
+          zxlogf(ERROR, "qmi-usb-transport: got an bad status from usb_control_out: %s\n",
+                 zx_status_get_string(status));
           return status;
         }
         status = set_async_wait(ctx);
@@ -604,22 +556,18 @@ static int qmi_transport_thread(void* cookie) {
           return status;
         }
         if (ctx->snoop_channel) {
-          fuchsia_telephony_snoop_Message snoop_msg;
-          snoop_msg.tag = 0;
-          uint32_t current_length;
-          if (sizeof(buffer) > sizeof(snoop_msg.qmi_message.opaque_bytes)) {
-            current_length = sizeof(snoop_msg.qmi_message.opaque_bytes);
-            snoop_msg.qmi_message.is_partial_copy = true;
+          telephony_snoop::QmiMessage qmi_msg;
+          if (sizeof(buffer) > sizeof(qmi_msg.opaque_bytes)) {
+            qmi_msg.is_partial_copy = true;
           } else {
-            current_length = sizeof(buffer);
-            snoop_msg.qmi_message.is_partial_copy = false;
+            qmi_msg.is_partial_copy = false;
           }
-          snoop_msg.qmi_message.direction =
-              fuchsia_telephony_snoop_Direction_TO_MODEM;
-          snoop_msg.qmi_message.timestamp = zx_clock_get_monotonic();
-          memcpy(snoop_msg.qmi_message.opaque_bytes, buffer, current_length);
-          fuchsia_telephony_snoop_PublisherSendMessage(ctx->snoop_channel,
-                                                       &snoop_msg);
+          qmi_msg.direction = telephony_snoop::Direction::TO_MODEM;
+          qmi_msg.timestamp = zx_clock_get_monotonic();
+          telephony_snoop::Message snoop_msg =
+              telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
+          telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(ctx->snoop_channel),
+                                                        std::move(snoop_msg));
         }
       } else if (packet.key == INTERRUPT_MSG) {
         if (txn->response.status == ZX_OK) {
@@ -631,8 +579,7 @@ static int qmi_transport_thread(void* cookie) {
           usb_request_queue(&ctx->usb, txn, &complete);
         } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||
                    txn->response.status == ZX_ERR_IO_NOT_PRESENT) {
-          zxlogf(INFO,
-                 "qmi-usb-transport: terminating interrupt handling thread\n");
+          zxlogf(INFO, "qmi-usb-transport: terminating interrupt handling thread\n");
           return txn->response.status;
         }
       }
@@ -646,16 +593,14 @@ static void usb_recv(qmi_ctx_t* ctx, usb_request_t* request) {
   size_t len = request->response.actual;
 
   uint8_t* read_data;
-  zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+  zx_status_t status = usb_request_mmap(request, reinterpret_cast<void**>(&read_data));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-usb-transport: usb_request_mmap failed with status %d\n",
-           status);
+    zxlogf(ERROR, "qmi-usb-transport: usb_request_mmap failed with status %d\n", status);
     return;
   }
 
   if (len > 2048) {
-    zxlogf(ERROR, "qmi-usb-transport: recieved usb packet is too large: %zd\n",
-           len);
+    zxlogf(ERROR, "qmi-usb-transport: recieved usb packet is too large: %zd\n", len);
     return;
   }
 
@@ -680,18 +625,16 @@ static void usb_recv(qmi_ctx_t* ctx, usb_request_t* request) {
   memcpy(&send_data[ETHERNET_FRAME_OFFSET], read_data, len);
   mtx_lock(&ctx->ethernet_mutex);
   if (ctx->ethernet_ifc.ops) {
-    ethernet_ifc_recv(&ctx->ethernet_ifc, send_data, len + ETHERNET_FRAME_OFFSET,
-                    0);
+    ethernet_ifc_recv(&ctx->ethernet_ifc, send_data, len + ETHERNET_FRAME_OFFSET, 0);
   }
   mtx_unlock(&ctx->ethernet_mutex);
 }
 
 static void usb_read_complete(void* context, usb_request_t* request) {
-  qmi_ctx_t* ctx = context;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(context);
 
   if (request->response.status != ZX_OK) {
-    zxlogf(ERROR,
-           "qmi-usb-transport: usb_read_complete called with status %d\n",
+    zxlogf(ERROR, "qmi-usb-transport: usb_read_complete called with status %d\n",
            (int)request->response.status);
   }
 
@@ -726,7 +669,7 @@ static void usb_read_complete(void* context, usb_request_t* request) {
 }
 
 static void usb_write_complete(void* context, usb_request_t* request) {
-  qmi_ctx_t* ctx = context;
+  qmi_ctx_t* ctx = static_cast<qmi_ctx_t*>(context);
 
   if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
     usb_request_release(request);
@@ -736,8 +679,7 @@ static void usb_write_complete(void* context, usb_request_t* request) {
   mtx_lock(&ctx->tx_mutex);
 
   // Return transmission buffer to pool
-  zx_status_t status =
-      usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
+  zx_status_t status = usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
   if (request->response.status == ZX_ERR_IO_REFUSED) {
@@ -783,16 +725,28 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   zx_status_t status;
   qmi_ctx_t* qmi_ctx;
   usb_request_t* int_buf = NULL;
-  if ((qmi_ctx = calloc(1, sizeof(qmi_ctx_t))) == NULL) {
+  if ((qmi_ctx = static_cast<qmi_ctx_t*>(calloc(1, sizeof(qmi_ctx_t)))) == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  goto body;
+
+fail:
+  zxlogf(ERROR, "qmi-usb-transport: bind failed: %s\n", zx_status_get_string(status));
+failnoerr:
+  if (int_buf) {
+    usb_request_release(int_buf);
+  }
+  free(qmi_ctx);
+  return status;
+
+body:
 
   // Set up USB stuff
   usb_protocol_t usb;
   status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-usb-transport: get protocol failed: %s\n",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "qmi-usb-transport: get protocol failed: %s\n", zx_status_get_string(status));
     goto fail;
   }
 
@@ -843,7 +797,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
   while (desc) {
     if (desc->bDescriptorType == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endp = (void*)desc;
+      usb_endpoint_descriptor_t* endp = reinterpret_cast<usb_endpoint_descriptor_t*>(desc);
       if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
         if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
           bulk_out_addr = endp->bEndpointAddress;
@@ -868,8 +822,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   }
 
   if (intr_max_packet < 1 || bulk_max_packet < 1) {
-    zxlogf(ERROR,
-           "qmi-usb-transport: failed to find reasonable max packet sizes");
+    zxlogf(ERROR, "qmi-usb-transport: failed to find reasonable max packet sizes");
     goto fail;
   }
 
@@ -892,8 +845,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   // create port to watch for interrupts and channel messages
   status = zx_port_create(0, &qmi_ctx->channel_port);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-usb-transport: failed to create a port: %s\n",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "qmi-usb-transport: failed to create a port: %s\n", zx_status_get_string(status));
     goto fail;
   }
   qmi_ctx->tx_endpoint_addr = bulk_out_addr;
@@ -906,8 +858,8 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   size_t tx_buf_remain = MAX_TX_BUF_SZ;
   while (tx_buf_remain >= tx_buf_sz) {
     usb_request_t* tx_buf;
-    zx_status_t alloc_result = usb_request_alloc(
-        &tx_buf, tx_buf_sz, qmi_ctx->tx_endpoint_addr, req_size);
+    zx_status_t alloc_result =
+        usb_request_alloc(&tx_buf, tx_buf_sz, qmi_ctx->tx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
       goto fail;
@@ -918,8 +870,8 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
     // the total transmission size
     tx_buf->header.send_zlp = true;
 
-    zx_status_t status = usb_req_list_add_head(&qmi_ctx->tx_txn_bufs, tx_buf,
-                                               qmi_ctx->parent_req_size);
+    zx_status_t status =
+        usb_req_list_add_head(&qmi_ctx->tx_txn_bufs, tx_buf, qmi_ctx->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     tx_buf_remain -= tx_buf_sz;
   }
@@ -930,8 +882,8 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   size_t rx_buf_remain = MAX_RX_BUF_SZ;
   while (rx_buf_remain >= rx_buf_sz) {
     usb_request_t* rx_buf;
-    zx_status_t alloc_result = usb_request_alloc(
-        &rx_buf, rx_buf_sz, qmi_ctx->rx_endpoint_addr, req_size);
+    zx_status_t alloc_result =
+        usb_request_alloc(&rx_buf, rx_buf_sz, qmi_ctx->rx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
       goto fail;
@@ -954,12 +906,10 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   qmi_ctx->mac_addr[5] = 0x62;
 
   // Kick off the handler thread
-  int thread_result =
-      thrd_create_with_name(&qmi_ctx->int_thread, qmi_transport_thread, qmi_ctx,
-                            "qmi_transport_thread");
+  int thread_result = thrd_create_with_name(&qmi_ctx->int_thread, qmi_transport_thread, qmi_ctx,
+                                            "qmi_transport_thread");
   if (thread_result != thrd_success) {
-    zxlogf(ERROR, "qmi-usb-transport: failed to create transport thread (%d)\n",
-           thread_result);
+    zxlogf(ERROR, "qmi-usb-transport: failed to create transport thread (%d)\n", thread_result);
     goto fail;
   }
 
@@ -974,8 +924,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   };
   result = device_add(device, &eth_args, &qmi_ctx->eth_zxdev);
   if (result < 0) {
-    zxlogf(ERROR, "qmi-usb-transport: failed to add ethernet device: %d\n",
-           (int)result);
+    zxlogf(ERROR, "qmi-usb-transport: failed to add ethernet device: %d\n", (int)result);
     goto fail;
   }
 
@@ -993,16 +942,6 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   }
 
   return ZX_OK;
-
-fail:
-  zxlogf(ERROR, "qmi-usb-transport: bind failed: %s\n",
-         zx_status_get_string(status));
-failnoerr:
-  if (int_buf) {
-    usb_request_release(int_buf);
-  }
-  free(qmi_ctx);
-  return status;
 }
 
 static zx_driver_ops_t qmi_driver_ops = {

@@ -24,7 +24,6 @@ union Message {
 };
 
 /// Protocol for forwarding QMI messages from driver to Snoop CLI
-[Layout = "Simple"]
 protocol Publisher {
     SendMessage(Message msg);
 };

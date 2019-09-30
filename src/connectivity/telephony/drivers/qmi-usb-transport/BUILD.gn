@@ -23,22 +23,22 @@ driver_module("qmi_driver") {
   output_name = "qmi-transport"
 
   sources = [
-    "qmi-usb-transport.c",
+    "qmi-usb-transport.cc",
     "qmi-usb-transport.h",
   ]
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_c",
-    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
+    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
