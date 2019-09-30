@@ -129,8 +129,6 @@ package("ledger_tests") {
     {
       name = "ledger_integration_tests"
       environments = basic_envs
-      # TODO(35267): Reenable
-      disabled = true
     },
     {
       name = "ledger_e2e_local"

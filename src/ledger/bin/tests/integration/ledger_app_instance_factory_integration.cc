@@ -82,8 +82,9 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
 class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      LoopControllerTestLoop* loop_controller, async_dispatcher_t* services_dispatcher,
-      rng::Random* random,
+      LoopController* loop_controller, std::unique_ptr<SubLoop> loop,
+      std::unique_ptr<SubLoop> io_loop, std::unique_ptr<Environment> environment,
+      async_dispatcher_t* services_dispatcher,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
       cloud_provider::CloudControllerPtr* cloud_controller,
@@ -96,16 +97,14 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   class LedgerRepositoryFactoryContainer {
    public:
     LedgerRepositoryFactoryContainer(
-        async::TestLoop* loop, async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
-        rng::Random* random,
+        Environment* environment,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
         inspect_deprecated::Node repositories_node,
         fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
         fuchsia::inspect::Inspect* inspect_impl)
-        : environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
-                                        component_context_provider_.context(), random)),
-          factory_impl_(&environment_, std::move(user_communicator_factory),
+        : environment_(environment),
+          factory_impl_(environment_, std::move(user_communicator_factory),
                         std::move(repositories_node)),
           binding_(&factory_impl_, std::move(request)),
           inspect_binding_(inspect_impl, std::move(inspect_request)) {}
@@ -114,8 +113,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     void Close(fit::closure callback) { factory_impl_.Close(std::move(callback)); }
 
    private:
-    sys::testing::ComponentContextProvider component_context_provider_;
-    Environment environment_;
+    Environment* environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate> binding_;
     fidl::Binding<fuchsia::inspect::Inspect> inspect_binding_;
@@ -129,6 +127,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   LoopController* const loop_controller_;
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
+  std::unique_ptr<Environment> environment_;
   inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
@@ -139,8 +138,9 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    LoopControllerTestLoop* loop_controller, async_dispatcher_t* services_dispatcher,
-    rng::Random* random,
+    LoopController* loop_controller, std::unique_ptr<SubLoop> loop,
+    std::unique_ptr<SubLoop> io_loop, std::unique_ptr<Environment> environment,
+    async_dispatcher_t* services_dispatcher,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
     cloud_provider::CloudControllerPtr* cloud_controller,
@@ -151,8 +151,9 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
                                                   std::move(repository_factory_ptr),
                                                   std::move(inspect_ptr)),
       loop_controller_(loop_controller),
-      loop_(loop_controller->StartNewLoop()),
-      io_loop_(loop_controller->StartNewLoop()),
+      loop_(std::move(loop)),
+      io_loop_(std::move(io_loop)),
+      environment_(std::move(environment)),
       services_dispatcher_(services_dispatcher),
       cloud_controller_(cloud_controller),
       weak_ptr_factory_(this) {
@@ -163,12 +164,11 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 
   async::PostTask(
       loop_->dispatcher(),
-      [this, loop_controller, random, request = std::move(repository_factory_request),
+      [this, request = std::move(repository_factory_request),
        user_communicator_factory = std::move(user_communicator_factory),
        inspect_request = std::move(inspect_request), top_level_component_object]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            &loop_controller->test_loop(), loop_->dispatcher(), io_loop_->dispatcher(), random,
-            std::move(request), std::move(user_communicator_factory),
+            environment_.get(), std::move(request), std::move(user_communicator_factory),
             top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()),
             std::move(inspect_request), top_level_component_object.get());
       });
@@ -202,12 +202,10 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
 
 class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
  public:
-  FakeUserCommunicatorFactory(async::TestLoop* loop, async_dispatcher_t* services_dispatcher,
-                              rng::Random* random, OvernetFactory* overnet_factory,
-                              uint64_t host_id)
-      : services_dispatcher_(services_dispatcher),
-        environment_(BuildEnvironment(loop, services_dispatcher, services_dispatcher,
-                                      component_context_provider_.context(), random)),
+  FakeUserCommunicatorFactory(Environment* environment, async_dispatcher_t* services_dispatcher,
+                              OvernetFactory* overnet_factory, uint64_t host_id)
+      : environment_(environment),
+        services_dispatcher_(services_dispatcher),
         overnet_factory_(overnet_factory),
         host_id_(std::move(host_id)),
         weak_ptr_factory_(this) {}
@@ -224,14 +222,13 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                                          }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
-            environment_.dispatcher(), std::move(overnet), std::move(user_id_provider));
-    return std::make_unique<p2p_sync::UserCommunicatorImpl>(&environment_, std::move(provider));
+            environment_->dispatcher(), std::move(overnet), std::move(user_id_provider));
+    return std::make_unique<p2p_sync::UserCommunicatorImpl>(environment_, std::move(provider));
   }
 
  private:
+  Environment* environment_;
   async_dispatcher_t* const services_dispatcher_;
-  sys::testing::ComponentContextProvider component_context_provider_;
-  Environment environment_;
   OvernetFactory* const overnet_factory_;
   uint64_t host_id_;
 
@@ -278,6 +275,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 
  private:
   async::TestLoop loop_;
+  sys::testing::ComponentContextProvider component_context_provider_;
   LoopControllerTestLoop loop_controller_;
   rng::TestRandom random_;
   // Loop on which to run services.
@@ -303,28 +301,26 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
       repository_factory_ptr.NewRequest();
   fuchsia::inspect::InspectPtr inspect_ptr;
   fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect_ptr.NewRequest();
-
-  std::unique_ptr<LedgerAppInstanceImpl> result;
+  auto loop = loop_controller_.StartNewLoop();
+  auto io_loop = loop_controller_.StartNewLoop();
+  auto environment = std::make_unique<Environment>(
+      BuildEnvironment(&loop_, loop->dispatcher(), io_loop->dispatcher(),
+                       component_context_provider_.context(), &random_));
   std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
-        app_instance_counter_);
-  }
-  if (enable_sync_ == EnableSync::YES) {
-    result = std::make_unique<LedgerAppInstanceImpl>(
-        &loop_controller_, services_loop_->dispatcher(), &random_,
-        std::move(repository_factory_request), std::move(repository_factory_ptr),
-        &cloud_controller_, std::move(user_communicator_factory), std::move(inspect_request),
-        std::move(inspect_ptr));
-  } else {
-    result = std::make_unique<LedgerAppInstanceImpl>(
-        &loop_controller_, services_loop_->dispatcher(), &random_,
-        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr,
-        std::move(user_communicator_factory), std::move(inspect_request), std::move(inspect_ptr));
+        environment.get(), services_loop_->dispatcher(), &overnet_factory_, app_instance_counter_);
   }
   app_instance_counter_++;
-  return result;
+
+  cloud_provider::CloudControllerPtr* cloud_controller =
+      enable_sync_ == EnableSync::YES ? &cloud_controller_ : nullptr;
+
+  return std::make_unique<LedgerAppInstanceImpl>(
+      &loop_controller_, std::move(loop), std::move(io_loop), std::move(environment),
+      services_loop_->dispatcher(), std::move(repository_factory_request),
+      std::move(repository_factory_ptr), cloud_controller, std::move(user_communicator_factory),
+      std::move(inspect_request), std::move(inspect_ptr));
 }
 
 LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() { return &loop_controller_; }
