@@ -18,9 +18,8 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
+#include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
-#include "src/developer/feedback/crashpad_agent/report_annotations.h"
-#include "src/developer/feedback/crashpad_agent/report_attachments.h"
 #include "src/developer/feedback/crashpad_agent/scoped_unlink.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -198,9 +197,9 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
         }
 
         bool has_minidump = false;
-        BuildAttachments(report, feedback_data, crashpad_report.get(), &has_minidump);
-        const std::map<std::string, std::string> annotations =
-            BuildAnnotations(report, feedback_data, has_minidump);
+        std::map<std::string, std::string> annotations;
+        BuildAnnotationsAndAttachments(report, feedback_data, &annotations, crashpad_report.get(),
+                                       &has_minidump);
 
         // Finish new local crash report.
         crashpad::UUID local_report_id;

@@ -14,21 +14,15 @@
 
 namespace feedback {
 
-// Extracts the annotations from a fuchsia.feedback.CrashReport if present and upsert them into
-// |annotations|.
-//
-// In the case of a Dart crash report, it also upserts the exception type and message.
-void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
-                        std::map<std::string, std::string>* annotations);
-
-// Extracts the attachments from a fuchsia.feedback.CrashReport if present and upsert them into
-// |crashpad_report|.
+// Extracts the annotations and attachments from a fuchsia.feedback.CrashReport if present and
+// upsert them into |annotations| and |crashpad_report| respectively.
 //
 // In the case of a native crash report, it also upserts the minidump and sets |has_minidump|.
-// In the case of a Dart crash report, it also upserts the exception stack trace.
-void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
-                        crashpad::CrashReportDatabase::NewReport* crashpad_report,
-                        bool* has_minidump);
+// In the case of a Dart crash report, it also upserts the exception type, message and stack trace.
+void ExtractAnnotationsAndAttachments(const fuchsia::feedback::CrashReport& report,
+                                      std::map<std::string, std::string>* annotations,
+                                      crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                                      bool* has_minidump);
 
 }  // namespace feedback
 

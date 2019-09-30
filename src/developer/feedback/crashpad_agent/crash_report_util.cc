@@ -5,17 +5,11 @@
 #include "src/developer/feedback/crashpad_agent/crash_report_util.h"
 
 #include <lib/syslog/cpp/logger.h>
-#include <zircon/errors.h>
 
 #include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
-#include "third_party/crashpad/util/file/file_writer.h"
 
 namespace feedback {
 namespace {
-
-using fuchsia::feedback::Annotation;
-using fuchsia::feedback::Attachment;
-using fuchsia::feedback::CrashReport;
 
 // The crash server expects a specific key for client-provided event keys.
 const char kEventIdKey[] = "comments";
@@ -32,8 +26,10 @@ const char kDartExceptionStackTraceKey[] = "DartError";
 
 }  // namespace
 
-void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
-                        std::map<std::string, std::string>* annotations) {
+void ExtractAnnotationsAndAttachments(const fuchsia::feedback::CrashReport& report,
+                                      std::map<std::string, std::string>* annotations,
+                                      crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                                      bool* has_minidump) {
   // Default annotations common to all crash reports.
   if (report.has_annotations()) {
     for (const auto& annotation : report.annotations()) {
@@ -73,11 +69,7 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
 
   // Native-specific annotations.
   // TODO(DX-1785): add process annotations from minidump.
-}
 
-void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
-                        crashpad::CrashReportDatabase::NewReport* crashpad_report,
-                        bool* has_minidump) {
   // Default attachments common to all crash reports.
   if (report.has_attachments()) {
     for (const auto& attachment : report.attachments()) {

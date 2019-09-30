@@ -5,8 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 
+#include <map>
 #include <string>
 
 #include "third_party/crashpad/client/crash_report_database.h"
@@ -21,6 +23,25 @@ bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
 bool AddAttachment(const std::string& attachment_filename,
                    const fuchsia::mem::Buffer& attachment_content,
                    crashpad::CrashReportDatabase::NewReport* crashpad_report);
+
+// Builds the final set of annotations and attachments to attach to the Crashpad report. Annotations
+// are written to |annotations| and attachments to |crashpad_report|.
+//
+// * Most annotations are shared across all crash reports, e.g., |feedback_data|.annotations().
+// * Some annotations are report-specific, e.g., Dart exception type.
+// * Adds any annotations from |report|.
+//
+// * Most attachments are shared across all crash reports, e.g.,
+//   |feedback_data|.attachment_bundle().
+// * Some attachments are report-specific, e.g., Dart exception stack trace.
+// * Adds any attachments from |report|.
+//
+// |has_minidump| indicates whether we wrote a minidump in |crashpad_report|.
+void BuildAnnotationsAndAttachments(const fuchsia::feedback::CrashReport& report,
+                                    const fuchsia::feedback::Data& feedback_data,
+                                    std::map<std::string, std::string>* annotations,
+                                    crashpad::CrashReportDatabase::NewReport* crashpad_report,
+                                    bool* has_minidump);
 
 }  // namespace feedback
 
