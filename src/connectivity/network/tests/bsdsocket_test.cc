@@ -11,7 +11,7 @@
 #include <netinet/if_ether.h>
 #include <netinet/tcp.h>
 #include <poll.h>
-#include <time.h>
+#include <sys/uio.h>
 
 #include <future>
 #include <thread>
@@ -502,14 +502,7 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
           break;
         case SO_SNDTIMEO:
           EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
-
-// TODO(NET-2462): Investigate why different errnos are returned
-// for Linux and Fuchsia.
-#if defined(__linux__)
           EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
-#else
-          EXPECT_EQ(errno, EPIPE) << strerror(errno);
-#endif
           break;
       }
     });
@@ -1039,9 +1032,121 @@ TEST(NetStreamTest, Shutdown) {
 }
 
 enum sendMethod {
+  WRITE,
+  WRITEV,
+  SEND,
   SENDTO,
   SENDMSG,
 };
+
+class SendSocketTest : public ::testing::TestWithParam<sendMethod /* send method */> {};
+
+TEST_P(SendSocketTest, sendMethod) {
+  sendMethod sendMethod = GetParam();
+
+  int acptfd;
+  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
+
+  int client_fd;
+  ASSERT_GE(client_fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_EQ(connect(client_fd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+
+  int server_fd;
+  ASSERT_GE(server_fd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
+  // We're done with the listener.
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+
+  // Fill the send buffer of the client socket to trigger write to wait.
+  fill_stream_send_buf(client_fd, server_fd);
+
+  // In the process of writing to the socket, close its peer socket with outstanding data to read,
+  // ECONNRESET is expected; write to the socket after it's closed, EPIPE is expected.
+  const auto fut = std::async(std::launch::async, [=]() {
+    char buf[16];
+    auto do_send = [=]() {
+      switch (sendMethod) {
+        case sendMethod::WRITE: {
+          return write(client_fd, buf, sizeof(buf));
+        }
+        case sendMethod::WRITEV: {
+          struct iovec iov = {};
+          iov.iov_base = (void*)buf;
+          iov.iov_len = sizeof(buf);
+          return writev(client_fd, &iov, 1);
+        }
+        case sendMethod::SEND: {
+          return send(client_fd, buf, sizeof(buf), 0);
+        }
+        case sendMethod::SENDTO: {
+          return sendto(client_fd, buf, sizeof(buf), 0, nullptr, 0);
+        }
+        case sendMethod::SENDMSG: {
+          struct iovec iov = {};
+          iov.iov_base = (void*)buf;
+          iov.iov_len = sizeof(buf);
+          struct msghdr msg = {};
+          msg.msg_iov = &iov;
+          msg.msg_iovlen = 1;
+          return sendmsg(client_fd, &msg, 0);
+        }
+        default:
+          ADD_FAILURE() << "unsupported test parameter";
+          return 0l;
+      }
+    };
+
+    EXPECT_EQ(do_send(), -1);
+    EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+    struct pollfd ufds = {};
+    ufds.fd = client_fd;
+    ufds.events = POLLOUT;
+    // 1 second timeout
+    int timeout_ms = 1000;
+    // This is needed to make sure the write half connection of the client is closed.
+    int n = poll(&ufds, 1, timeout_ms);
+    EXPECT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, 1);
+
+    // Linux generates SIGPIPE when the peer on a stream-oriented socket has closed the connection.
+    // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but write and writev
+    // do not. We only expect this during the second attempt, so we remove the default signal
+    // handler, make our attempt, and then restore it.
+#if defined(__linux__)
+    struct sigaction act = {};
+    act.sa_handler = SIG_IGN;
+
+    struct sigaction oldact;
+    EXPECT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
+#endif
+    EXPECT_EQ(do_send(), -1);
+#if defined(__linux__)
+    EXPECT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno);
+#endif
+
+    // The socket writes after the the peer socket is closed.
+    EXPECT_EQ(errno, EPIPE) << strerror(errno);
+  });
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+  // Closing the remote end should cause the write to complete.
+  EXPECT_EQ(close(server_fd), 0) << strerror(errno);
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(50)), std::future_status::ready);
+  EXPECT_EQ(close(client_fd), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, SendSocketTest,
+                         ::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
+                                           sendMethod::SENDTO, sendMethod::SENDMSG));
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
 // thread.

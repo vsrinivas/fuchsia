@@ -746,7 +746,8 @@ ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
   return r;
 }
 
-zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline, uint32_t* out_pending) {
+static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx_time_t deadline,
+                                     uint32_t* out_events, zx_signals_t* out_signals) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_signals_t signals = 0;
   fdio_get_ops(io)->wait_begin(io, events, &h, &signals);
@@ -758,11 +759,17 @@ zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline, uint32_t*
   zx_status_t status = zx_object_wait_one(h, signals, deadline, &pending);
   if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
     fdio_get_ops(io)->wait_end(io, pending, &events);
-    if (out_pending != NULL)
-      *out_pending = events;
+    if (out_events != nullptr)
+      *out_events = events;
+    if (out_signals != nullptr)
+      *out_signals = pending;
   }
 
   return status;
+}
+
+zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline, uint32_t* out_pending) {
+  return fdio_wait_signals(io, events, deadline, out_pending, nullptr);
 }
 
 __EXPORT
@@ -1046,6 +1053,24 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   }
 }
 
+// If return true, send operation should break the loop.
+static bool break_wait_send(fdio_t* io, zx_status_t* status, zx_time_t deadline) {
+  zx_signals_t signals;
+  zx_status_t wait_status =
+      fdio_wait_signals(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr, &signals);
+  switch (wait_status) {
+    case ZX_OK:
+      if (signals & ZX_SOCKET_PEER_CLOSED) {
+        *status = ZX_ERR_CONNECTION_RESET;
+        return true;
+      }
+      return false;
+    case ZX_ERR_TIMED_OUT:
+      return true;
+    default:
+      return false;
+  }
+}
 __EXPORT
 ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   fdio_t* io = fd_to_io(fd);
@@ -2275,10 +2300,19 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   for (;;) {
     size_t actual;
     zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual);
+    zx_signals_t signals;
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
-          ZX_ERR_TIMED_OUT) {
-        continue;
+      switch (fdio_wait_signals(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr,
+                                &signals)) {
+        case ZX_ERR_TIMED_OUT:
+          break;
+        case ZX_OK:
+          if (signals & ZX_SOCKET_WRITE_DISABLED) {
+            status = ZX_ERR_CONNECTION_RESET;
+            break;
+          }
+        default:
+          continue;
       }
     }
     fdio_release(io);
