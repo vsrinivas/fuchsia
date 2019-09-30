@@ -5,7 +5,6 @@ use crate::msgs::handshake::CertificatePayload;
 use crate::msgs::base::{PayloadU8, PayloadU16};
 
 use webpki;
-use untrusted;
 
 use std::mem;
 use std::cmp;
@@ -147,7 +146,7 @@ impl ClientSessionValue {
     pub fn get_obfuscated_ticket_age(&self, time_now: u64) -> u32 {
         let age_secs = time_now.saturating_sub(self.epoch);
         let age_millis = age_secs as u32 * 1000;
-        age_millis.wrapping_sub(self.age_add)
+        age_millis.wrapping_add(self.age_add)
     }
 
     pub fn take_ticket(&mut self) -> Vec<u8> {
@@ -207,7 +206,7 @@ impl Codec for ServerSessionValue {
         let sni = if has_sni == 1 {
             let dns_name = PayloadU8::read(r)?;
             let dns_name = webpki::DNSNameRef::try_from_ascii(
-                untrusted::Input::from(&dns_name.0)).ok()?;
+                &dns_name.0).ok()?;
             Some(dns_name.into())
         } else {
             None

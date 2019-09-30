@@ -66,17 +66,14 @@ fn start_server() -> &'static (SocketAddr, &'static str, &'static str) {
     &*TEST_SERVER
 }
 
-fn start_client(addr: &SocketAddr, domain: &str, chain: &str) -> io::Result<()> {
+fn start_client(addr: &SocketAddr, domain: &str, config: Arc<ClientConfig>) -> io::Result<()> {
     use tokio::prelude::*;
     use tokio::io as aio;
 
     const FILE: &'static [u8] = include_bytes!("../README.md");
 
     let domain = webpki::DNSNameRef::try_from_ascii_str(domain).unwrap();
-    let mut config = ClientConfig::new();
-    let mut chain = BufReader::new(Cursor::new(chain));
-    config.root_store.add_pem_file(&mut chain).unwrap();
-    let config = TlsConnector::from(Arc::new(config));
+    let config = TlsConnector::from(config);
 
     let done = TcpStream::connect(addr)
         .and_then(|stream| config.connect(domain, stream))
@@ -95,13 +92,23 @@ fn start_client(addr: &SocketAddr, domain: &str, chain: &str) -> io::Result<()> 
 fn pass() {
     let (addr, domain, chain) = start_server();
 
-    start_client(addr, domain, chain).unwrap();
+    let mut config = ClientConfig::new();
+    let mut chain = BufReader::new(Cursor::new(chain));
+    config.root_store.add_pem_file(&mut chain).unwrap();
+    let config = Arc::new(config);
+
+    start_client(addr, domain, config.clone()).unwrap();
 }
 
 #[test]
 fn fail() {
     let (addr, domain, chain) = start_server();
 
+    let mut config = ClientConfig::new();
+    let mut chain = BufReader::new(Cursor::new(chain));
+    config.root_store.add_pem_file(&mut chain).unwrap();
+    let config = Arc::new(config);
+
     assert_ne!(domain, &"google.com");
-    assert!(start_client(addr, "google.com", chain).is_err());
+    assert!(start_client(addr, "google.com", config).is_err());
 }

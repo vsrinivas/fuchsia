@@ -6,6 +6,8 @@ where
     T: From<Self>,
 {
     const ZERO: Self;
+
+    fn into_raw_value(self) -> T;
 }
 
 pub fn as_bytes<E: Encoding<T>, T>(x: &[E]) -> &[u8]
@@ -32,27 +34,32 @@ macro_rules! define_endian {
 macro_rules! impl_endian {
     ($endian:ident, $base:ident, $to_endian:ident, $from_endian:ident) => {
         impl Encoding<$base> for $endian<$base> {
-            const ZERO: Self = $endian(0);
+            const ZERO: Self = Self(0);
+
+            #[inline]
+            fn into_raw_value(self) -> $base {
+                self.0
+            }
         }
 
         impl From<$base> for $endian<$base> {
             #[inline]
-            fn from(value: $base) -> Self { $endian($base::$to_endian(value)) }
+            fn from(value: $base) -> Self {
+                Self($base::$to_endian(value))
+            }
         }
 
         impl From<Wrapping<$base>> for $endian<$base> {
             #[inline]
-            fn from(Wrapping(value): Wrapping<$base>) -> Self { $endian($base::$to_endian(value)) }
+            fn from(Wrapping(value): Wrapping<$base>) -> Self {
+                Self($base::$to_endian(value))
+            }
         }
 
         impl From<$endian<$base>> for $base {
             #[inline]
-            fn from($endian(value): $endian<$base>) -> Self { $base::$from_endian(value) }
-        }
-
-        impl AsRef<[u8; core::mem::size_of::<Self>()]> for $endian<$base> {
-            fn as_ref(&self) -> &[u8; core::mem::size_of::<Self>()] {
-                unsafe { core::mem::transmute(self) }
+            fn from($endian(value): $endian<$base>) -> Self {
+                $base::$from_endian(value)
             }
         }
     };

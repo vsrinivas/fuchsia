@@ -14,9 +14,9 @@
 
 //! Build the non-Rust components.
 
-#![deny(box_pointers)]
 #![forbid(
     anonymous_parameters,
+    box_pointers,
     legacy_directory_ownership,
     missing_copy_implementations,
     missing_debug_implementations,
@@ -51,7 +51,6 @@ const NEVER: &str = "Don't ever build this file.";
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 const RING_SRCS: &[(&[&str], &str)] = &[
-    (&[], "crypto/block.c"),
     (&[], "crypto/fipsmodule/bn/generic.c"),
     (&[], "crypto/fipsmodule/bn/montgomery.c"),
     (&[], "crypto/fipsmodule/bn/montgomery_inv.c"),
@@ -75,8 +74,6 @@ const RING_SRCS: &[(&[&str], &str)] = &[
     (&[X86], "crypto/fipsmodule/ec/asm/ecp_nistz256-x86.pl"),
     (&[X86], "crypto/fipsmodule/modes/asm/ghash-x86.pl"),
     (&[X86], "crypto/poly1305/asm/poly1305-x86.pl"),
-    (&[X86], "crypto/fipsmodule/sha/asm/sha256-586.pl"),
-    (&[X86], "crypto/fipsmodule/sha/asm/sha512-586.pl"),
 
     (&[X86_64], "crypto/fipsmodule/aes/asm/aes-x86_64.pl"),
     (&[X86_64], "crypto/fipsmodule/aes/asm/aesni-x86_64.pl"),
@@ -106,10 +103,11 @@ const RING_SRCS: &[(&[&str], &str)] = &[
     (&[ARM], "crypto/fipsmodule/sha/asm/sha256-armv4.pl"),
     (&[ARM], "crypto/fipsmodule/sha/asm/sha512-armv4.pl"),
 
-    (&[AARCH64], "crypto/fipsmodule/aes/aes.c"),
+    (&[AARCH64], "crypto/fipsmodule/aes/asm/vpaes-armv8.pl"),
     (&[AARCH64], "crypto/fipsmodule/bn/asm/armv8-mont.pl"),
     (&[AARCH64], "crypto/chacha/asm/chacha-armv8.pl"),
     (&[AARCH64], "crypto/fipsmodule/ec/asm/ecp_nistz256-armv8.pl"),
+    (&[AARCH64], "crypto/fipsmodule/modes/asm/ghash-neon-armv8.pl"),
     (&[AARCH64], "crypto/poly1305/asm/poly1305-armv8.pl"),
     (&[AARCH64], SHA512_ARMV8),
 ];
@@ -130,7 +128,6 @@ const RING_INCLUDES: &[&str] =
       "crypto/fipsmodule/ec/ecp_nistz.h",
       "crypto/fipsmodule/ec/ecp_nistz384.h",
       "crypto/fipsmodule/ec/ecp_nistz256.h",
-      "crypto/block.h",
       "crypto/internal.h",
       "crypto/limbs/limbs.h",
       "crypto/limbs/limbs.inl",
@@ -141,6 +138,8 @@ const RING_INCLUDES: &[&str] =
       "include/GFp/cpu.h",
       "include/GFp/mem.h",
       "include/GFp/type_check.h",
+      "third_party/fiat/curve25519_32.h",
+      "third_party/fiat/curve25519_64.h",
       "third_party/fiat/curve25519_tables.h",
       "third_party/fiat/internal.h",
     ];
@@ -155,14 +154,13 @@ const RING_PERL_INCLUDES: &[&str] =
 
 const RING_BUILD_FILE: &[&str] = &["build.rs"];
 
-const PREGENERATED: &'static str = "pregenerated";
+const PREGENERATED: &str = "pregenerated";
 
 fn c_flags(target: &Target) -> &'static [&'static str] {
     if target.env != MSVC {
         static NON_MSVC_FLAGS: &[&str] = &[
             "-std=c1x", // GCC 4.6 requires "c1x" instead of "c11"
             "-Wbad-function-cast",
-            "-Wmissing-prototypes",
             "-Wnested-externs",
             "-Wstrict-prototypes",
         ];
@@ -187,7 +185,6 @@ fn cpp_flags(target: &Target) -> &'static [&'static str] {
             "-Wformat=2",
             "-Winline",
             "-Winvalid-pch",
-            "-Wmissing-declarations",
             "-Wmissing-field-initializers",
             "-Wmissing-include-dirs",
             "-Wredundant-decls",
@@ -245,10 +242,10 @@ const ASM_TARGETS: &[(&str, Option<&str>, &str)] = &[
     ("arm", None, "linux32"),
 ];
 
-const WINDOWS: &'static str = "windows";
-const MSVC: &'static str = "msvc";
-const MSVC_OBJ_OPT: &'static str = "/Fo";
-const MSVC_OBJ_EXT: &'static str = "obj";
+const WINDOWS: &str = "windows";
+const MSVC: &str = "msvc";
+const MSVC_OBJ_OPT: &str = "/Fo";
+const MSVC_OBJ_EXT: &str = "obj";
 
 fn main() {
     if let Ok(package_name) = std::env::var("CARGO_PKG_NAME") {
@@ -280,13 +277,18 @@ fn ring_build_rs_main() {
         ("o", "-o")
     };
 
-    let is_debug = env::var("DEBUG").unwrap() != "false";
+    let is_git = std::fs::metadata(".git").is_ok();
+
+    // Published builds are always release builds.
+    let is_debug = is_git && env::var("DEBUG").unwrap() != "false";
+
     let target = Target {
         arch,
         os,
         env,
         obj_ext,
         obj_opt,
+        is_git,
         is_debug,
     };
     let pregenerated = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(PREGENERATED);
@@ -315,7 +317,6 @@ fn pregenerate_asm_main() {
         perlasm(&perlasm_src_dsts, target_arch, perlasm_format, None);
 
         if target_os == Some(WINDOWS) {
-            //let lib_name = ring_asm_name(target_arch);
             let srcs = asm_srcs(perlasm_src_dsts);
             for src in srcs {
                 let src_path = PathBuf::from(src);
@@ -332,17 +333,15 @@ struct Target {
     env: String,
     obj_ext: &'static str,
     obj_opt: &'static str,
+    is_git: bool,
     is_debug: bool,
 }
 
-impl Target {
-    pub fn arch(&self) -> &str { &self.arch }
-    pub fn os(&self) -> &str { &self.os }
-    pub fn env(&self) -> &str { &self.env }
-    pub fn is_debug(&self) -> bool { self.is_debug }
-}
-
 fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
+    if &target.arch == "wasm32" {
+        return;
+    }
+
     let includes_modified = RING_INCLUDES
         .iter()
         .chain(RING_BUILD_FILE.iter())
@@ -366,14 +365,12 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
         .iter()
         .find(|entry| {
             let &(entry_arch, entry_os, _) = *entry;
-            entry_arch == target.arch() && is_none_or_equals(entry_os, target.os())
+            entry_arch == &target.arch && is_none_or_equals(entry_os, &target.os)
         })
         .unwrap();
 
-    let is_git = std::fs::metadata(".git").is_ok();
-
-    let use_pregenerated = !is_git;
-    let warnings_are_errors = is_git;
+    let use_pregenerated = !target.is_git;
+    let warnings_are_errors = target.is_git;
 
     let asm_dir = if use_pregenerated {
         &pregenerated
@@ -382,12 +379,12 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
     };
 
     let perlasm_src_dsts =
-        perlasm_src_dsts(asm_dir, target.arch(), Some(target.os()), perlasm_format);
+        perlasm_src_dsts(asm_dir, &target.arch, Some(&target.os), perlasm_format);
 
     if !use_pregenerated {
         perlasm(
             &perlasm_src_dsts[..],
-            target.arch(),
+            &target.arch,
             perlasm_format,
             Some(includes_modified),
         );
@@ -398,7 +395,7 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
     // For Windows we also pregenerate the object files for non-Git builds so
     // the user doesn't need to install the assembler. On other platforms we
     // assume the C compiler also assembles.
-    if use_pregenerated && target.os() == WINDOWS {
+    if use_pregenerated && &target.os == WINDOWS {
         // The pregenerated object files always use ".obj" as the extension,
         // even when the C/C++ compiler outputs files with the ".o" extension.
         asm_srcs = asm_srcs
@@ -407,7 +404,7 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
             .collect::<Vec<_>>();
     }
 
-    let core_srcs = sources_for_arch(target.arch())
+    let core_srcs = sources_for_arch(&target.arch)
         .into_iter()
         .filter(|p| !is_perlasm(&p))
         .collect::<Vec<_>>();
@@ -441,15 +438,19 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
 }
 
 fn build_library(
-    target: &Target, out_dir: &Path, lib_name: &str, srcs: &[PathBuf], additional_srcs: &[PathBuf],
-    warnings_are_errors: bool, includes_modified: SystemTime,
+    target: &Target,
+    out_dir: &Path,
+    lib_name: &str,
+    srcs: &[PathBuf],
+    additional_srcs: &[PathBuf],
+    warnings_are_errors: bool,
+    includes_modified: SystemTime,
 ) {
     // Compile all the (dirty) source files into object files.
-    #[allow(box_pointers)] // XXX
     let objs = additional_srcs
         .into_iter()
         .chain(srcs.into_iter())
-        .filter(|f| target.env() != "msvc" || f.extension().unwrap().to_str().unwrap() != "S")
+        .filter(|f| &target.env != "msvc" || f.extension().unwrap().to_str().unwrap() != "S")
         .map(|f| compile(f, target, warnings_are_errors, out_dir, includes_modified))
         .collect::<Vec<_>>();
 
@@ -466,14 +467,14 @@ fn build_library(
         for f in LD_FLAGS {
             let _ = c.flag(&f);
         }
-        match target.os() {
+        match target.os.as_str() {
             "macos" => {
                 let _ = c.flag("-fPIC");
                 let _ = c.flag("-Wl,-dead_strip");
-            },
+            }
             _ => {
                 let _ = c.flag("-Wl,--gc-sections".into());
-            },
+            }
         }
         for o in objs {
             let _ = c.object(o);
@@ -496,7 +497,10 @@ fn build_library(
 }
 
 fn compile(
-    p: &Path, target: &Target, warnings_are_errors: bool, out_dir: &Path,
+    p: &Path,
+    target: &Target,
+    warnings_are_errors: bool,
+    out_dir: &Path,
     includes_modified: SystemTime,
 ) -> String {
     let ext = p.extension().unwrap().to_str().unwrap();
@@ -506,10 +510,10 @@ fn compile(
         let mut out_path = out_dir.clone().join(p.file_name().unwrap());
         assert!(out_path.set_extension(target.obj_ext));
         if need_run(&p, &out_path, includes_modified) {
-            let cmd = if target.os() != WINDOWS || ext != "asm" {
+            let cmd = if &target.os != WINDOWS || ext != "asm" {
                 cc(p, ext, target, warnings_are_errors, &out_path)
             } else {
-                yasm(p, target.arch(), &out_path)
+                yasm(p, &target.arch, &out_path)
             };
 
             run_command(cmd);
@@ -525,40 +529,45 @@ fn obj_path(out_dir: &Path, src: &Path, obj_ext: &str) -> PathBuf {
 }
 
 fn cc(
-    file: &Path, ext: &str, target: &Target, warnings_are_errors: bool, out_dir: &Path,
+    file: &Path,
+    ext: &str,
+    target: &Target,
+    warnings_are_errors: bool,
+    out_dir: &Path,
 ) -> Command {
     let mut c = cc::Build::new();
     let _ = c.include("include");
     match ext {
-        "c" =>
+        "c" => {
             for f in c_flags(target) {
                 let _ = c.flag(f);
-            },
+            }
+        }
         "S" => (),
         e => panic!("Unsupported file extension: {:?}", e),
     };
     for f in cpp_flags(target) {
         let _ = c.flag(&f);
     }
-    if target.os() != "none" && target.os() != "redox" && target.os() != "windows" {
+    if &target.os != "none" && &target.os != "redox" && &target.os != "windows" {
         let _ = c.flag("-fstack-protector");
     }
 
-    match (target.os(), target.env()) {
+    match (target.os.as_str(), target.env.as_str()) {
         // ``-gfull`` is required for Darwin's |-dead_strip|.
         ("macos", _) => {
             let _ = c.flag("-gfull");
-        },
+        }
         (_, "msvc") => (),
         _ => {
             let _ = c.flag("-g3");
-        },
+        }
     };
-    if !target.is_debug() {
+    if !target.is_debug {
         let _ = c.define("NDEBUG", None);
     }
 
-    if target.env() == "msvc" {
+    if &target.env == "msvc" {
         if std::env::var("OPT_LEVEL").unwrap() == "0" {
             let _ = c.flag("/Od"); // Disable optimization for debug builds.
                                    // run-time checking: (s)tack frame, (u)ninitialized variables
@@ -568,19 +577,15 @@ fn cc(
         }
     }
 
-    if target.env() != "msvc" {
-        let _ = c.define("_XOPEN_SOURCE", Some("700"));
-    }
-
     if warnings_are_errors {
-        let flag = if target.env() != "msvc" {
+        let flag = if &target.env != "msvc" {
             "-Werror"
         } else {
             "/WX"
         };
         let _ = c.flag(flag);
     }
-    if target.env() == "musl" {
+    if &target.env == "musl" {
         // Some platforms enable _FORTIFY_SOURCE by default, but musl
         // libc doesn't support it yet. See
         // http://wiki.musl-libc.org/wiki/Future_Ideas#Fortify
@@ -648,7 +653,10 @@ fn sources_for_arch(arch: &str) -> Vec<PathBuf> {
 }
 
 fn perlasm_src_dsts(
-    out_dir: &Path, arch: &str, os: Option<&str>, perlasm_format: &str,
+    out_dir: &Path,
+    arch: &str,
+    os: Option<&str>,
+    perlasm_format: &str,
 ) -> Vec<(PathBuf, PathBuf)> {
     let srcs = sources_for_arch(arch);
     let mut src_dsts = srcs
@@ -685,7 +693,9 @@ fn asm_srcs(perlasm_src_dsts: Vec<(PathBuf, PathBuf)>) -> Vec<PathBuf> {
         .collect::<Vec<_>>()
 }
 
-fn is_perlasm(path: &PathBuf) -> bool { path.extension().unwrap().to_str().unwrap() == "pl" }
+fn is_perlasm(path: &PathBuf) -> bool {
+    path.extension().unwrap().to_str().unwrap() == "pl"
+}
 
 fn asm_path(out_dir: &Path, src: &Path, os: Option<&str>, perlasm_format: &str) -> PathBuf {
     let src_stem = src.file_stem().expect("source file without basename");
@@ -697,7 +707,9 @@ fn asm_path(out_dir: &Path, src: &Path, os: Option<&str>, perlasm_format: &str) 
 }
 
 fn perlasm(
-    src_dst: &[(PathBuf, PathBuf)], arch: &str, perlasm_format: &str,
+    src_dst: &[(PathBuf, PathBuf)],
+    arch: &str,
+    perlasm_format: &str,
     includes_modified: Option<SystemTime>,
 ) {
     for (src, dst) in src_dst {
@@ -746,7 +758,9 @@ fn file_modified(path: &Path) -> SystemTime {
         .expect("nah")
 }
 
-fn get_command(var: &str, default: &str) -> String { std::env::var(var).unwrap_or(default.into()) }
+fn get_command(var: &str, default: &str) -> String {
+    std::env::var(var).unwrap_or(default.into())
+}
 
 fn check_all_files_tracked() {
     for path in &["crypto", "include", "third_party/fiat"] {
@@ -759,8 +773,9 @@ fn is_tracked(file: &DirEntry) {
     let cmp = |f| p == PathBuf::from(f);
     let tracked = match p.extension().and_then(|p| p.to_str()) {
         Some("h") | Some("inl") => RING_INCLUDES.iter().any(cmp),
-        Some("c") | Some("S") | Some("asm") =>
-            RING_SRCS.iter().any(|(_, f)| cmp(f)) || RING_TEST_SRCS.iter().any(cmp),
+        Some("c") | Some("S") | Some("asm") => {
+            RING_SRCS.iter().any(|(_, f)| cmp(f)) || RING_TEST_SRCS.iter().any(cmp)
+        }
         Some("pl") => RING_SRCS.iter().any(|(_, f)| cmp(f)) || RING_PERL_INCLUDES.iter().any(cmp),
         _ => true,
     };

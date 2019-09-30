@@ -56,15 +56,16 @@
 
 // This file should be the first included by all BoringSSL headers.
 
-#if defined(_MSC_VER)
+#include <GFp/type_check.h>
+
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push, 3)
 #endif
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #endif
 
@@ -80,20 +81,12 @@
 #elif defined(__arm) || defined(__arm__) || defined(_M_ARM)
 #define OPENSSL_32_BIT
 #define OPENSSL_ARM
-#elif (defined(__PPC64__) || defined(__powerpc64__)) && defined(_LITTLE_ENDIAN)
-#define OPENSSL_64_BIT
-#define OPENSSL_PPC64LE
 #elif defined(__mips__) && !defined(__LP64__)
 #define OPENSSL_32_BIT
 #define OPENSSL_MIPS
 #elif defined(__mips__) && defined(__LP64__)
 #define OPENSSL_64_BIT
 #define OPENSSL_MIPS64
-#elif defined(__pnacl__)
-#define OPENSSL_32_BIT
-#define OPENSSL_PNACL
-#elif defined(__myriad2__)
-#define OPENSSL_32_BIT
 #else
 // Note BoringSSL only supports standard 32-bit and 64-bit two's-complement,
 // little-endian architectures. Functions will not produce the correct answer
@@ -110,40 +103,17 @@
 #define OPENSSL_WINDOWS
 #endif
 
-#define OPENSSL_IS_BORINGSSL
-#define OPENSSL_IS_RING
-#define OPENSSL_VERSION_NUMBER 0x10002000
-
 // *ring* doesn't support the `BORINGSSL_SHARED_LIBRARY` configuration, so
 // the default (usually "hidden") visibility is always used, even for exported
 // items.
 #define OPENSSL_EXPORT
 
-#if defined(__GNUC__) || defined(__clang__)
-#define OPENSSL_UNUSED __attribute__((unused))
-#else
-#define OPENSSL_UNUSED
-#endif
-
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define OPENSSL_ASAN
-#endif
-#if __has_feature(thread_sanitizer)
-#define OPENSSL_TSAN
-#endif
-#if __has_feature(memory_sanitizer)
-#define OPENSSL_MSAN
-#define OPENSSL_ASM_INCOMPATIBLE
-#endif
-#endif
-
-#if defined(OPENSSL_ASM_INCOMPATIBLE)
-#undef OPENSSL_ASM_INCOMPATIBLE
-#if !defined(OPENSSL_NO_ASM)
-#define OPENSSL_NO_ASM
-#endif
-#endif  // OPENSSL_ASM_INCOMPATIBLE
-
+// `ring::c` would need to be customized on any platform where these assertions
+// fail. Keep in sync with `ring::c`.
+OPENSSL_STATIC_ASSERT(sizeof(int32_t) == sizeof(int), "int isn't 32 bits.");
+OPENSSL_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int), "unsigned int isn't 32 bits.");
+OPENSSL_STATIC_ASSERT(sizeof(size_t) == sizeof(uintptr_t), "uintptr_t and size_t differ.");
+OPENSSL_STATIC_ASSERT(sizeof(size_t) <= sizeof(uint64_t), "size_t is larger than uint64_t.");
+OPENSSL_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t), "size_t is smaller than uint32_t.");
 
 #endif  // OPENSSL_HEADER_BASE_H

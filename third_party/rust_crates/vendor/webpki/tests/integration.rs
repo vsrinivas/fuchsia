@@ -12,10 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-#![deny(
-    box_pointers,
-)]
-
+#![deny(box_pointers)]
 #![forbid(
     anonymous_parameters,
     legacy_directory_ownership,
@@ -31,22 +28,18 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings,
+    warnings
 )]
-
-#[cfg(feature = "trust_anchor_util")]
-extern crate untrusted;
 
 #[cfg(any(feature = "std", feature = "trust_anchor_util"))]
 extern crate webpki;
 
 #[cfg(feature = "trust_anchor_util")]
-static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
+static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
     &webpki::ECDSA_P256_SHA256,
     &webpki::ECDSA_P256_SHA384,
     &webpki::ECDSA_P384_SHA256,
     &webpki::ECDSA_P384_SHA384,
-    &webpki::RSA_PKCS1_2048_8192_SHA1,
     &webpki::RSA_PKCS1_2048_8192_SHA256,
     &webpki::RSA_PKCS1_2048_8192_SHA384,
     &webpki::RSA_PKCS1_2048_8192_SHA512,
@@ -59,49 +52,36 @@ static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
 #[allow(box_pointers)]
 #[cfg(feature = "trust_anchor_util")]
 #[test]
-pub fn netflix()
-{
+pub fn netflix() {
     let ee = include_bytes!("netflix/ee.der");
     let inter = include_bytes!("netflix/inter.der");
     let ca = include_bytes!("netflix/ca.der");
 
-    let ee_input = untrusted::Input::from(ee);
-    let inter_vec = vec![ untrusted::Input::from(inter) ];
-    let anchors = vec![
-        webpki::trust_anchor_util::cert_der_as_trust_anchor(
-            untrusted::Input::from(ca)
-        ).unwrap()
-    ];
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
-    let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    let _ = cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
-                                                 &inter_vec, time)
+    let cert = webpki::EndEntityCert::from(ee).unwrap();
+    let _ = cert
+        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
         .unwrap();
 }
 
 #[cfg(feature = "trust_anchor_util")]
 #[test]
-pub fn ed25519()
-{
+pub fn ed25519() {
     let ee = include_bytes!("ed25519/ee.der");
     let ca = include_bytes!("ed25519/ca.der");
 
-    let ee_input = untrusted::Input::from(ee);
-    let anchors = vec![
-        webpki::trust_anchor_util::cert_der_as_trust_anchor(
-            untrusted::Input::from(ca)
-        ).unwrap()
-    ];
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
 
-    let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    let _ = cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
-                                                 &[], time)
+    let cert = webpki::EndEntityCert::from(ee).unwrap();
+    let _ = cert
+        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
         .unwrap();
 }
 
@@ -109,24 +89,18 @@ pub fn ed25519()
 #[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
-    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(
-        untrusted::Input::from(ca)
-    ).expect("godaddy cert should parse as anchor");
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
+        .expect("godaddy cert should parse as anchor");
 }
 
 #[cfg(feature = "trust_anchor_util")]
 #[test]
 fn read_root_with_neg_serial() {
     let ca = include_bytes!("misc/serial_neg.der");
-    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(
-        untrusted::Input::from(ca)
-    ).expect("idcat cert should parse as anchor");
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
+        .expect("idcat cert should parse as anchor");
 }
 
 #[cfg(feature = "std")]
 #[test]
-fn time_constructor() {
-    use std;
-
-    let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
-}
+fn time_constructor() { let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap(); }

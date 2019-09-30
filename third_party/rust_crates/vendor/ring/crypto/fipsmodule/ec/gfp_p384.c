@@ -14,8 +14,6 @@
 
 #include "../../limbs/limbs.h"
 
-#include <string.h>
-
 #include "ecp_nistz384.h"
 #include "../bn/internal.h"
 #include "../../internal.h"
@@ -30,17 +28,6 @@
 typedef Limb Elem[P384_LIMBS];
 typedef Limb ScalarMont[P384_LIMBS];
 typedef Limb Scalar[P384_LIMBS];
-
-
-/* Prototypes to avoid -Wmissing-prototypes warnings. */
-void GFp_p384_elem_add(Elem r, const Elem a, const Elem b);
-void GFp_p384_elem_sub(Elem r, const Elem a, const Elem b);
-void GFp_p384_elem_div_by_2(Elem r, const Elem a);
-void GFp_p384_elem_mul_mont(Elem r, const Elem a, const Elem b);
-void GFp_p384_elem_neg(Elem r, const Elem a);
-void GFp_p384_scalar_inv_to_mont(ScalarMont r, const Scalar a);
-void GFp_p384_scalar_mul_mont(ScalarMont r, const ScalarMont a,
-                              const ScalarMont b);
 
 
 static const BN_ULONG Q[P384_LIMBS] = {
@@ -70,18 +57,21 @@ static const BN_ULONG ONE[P384_LIMBS] = {
 
 /* XXX: MSVC for x86 warns when it fails to inline these functions it should
  * probably inline. */
-#if defined(_MSC_VER)  && defined(OPENSSL_X86)
+#if defined(_MSC_VER) && !defined(__clang__) && defined(OPENSSL_X86)
 #define INLINE_IF_POSSIBLE __forceinline
 #else
 #define INLINE_IF_POSSIBLE inline
 #endif
 
-
-static INLINE_IF_POSSIBLE Limb is_equal(const Elem a, const Elem b) {
+static inline Limb is_equal(const Elem a, const Elem b) {
   return LIMBS_equal(a, b, P384_LIMBS);
 }
 
-static INLINE_IF_POSSIBLE void copy_conditional(Elem r, const Elem a,
+static inline Limb is_zero(const BN_ULONG a[P384_LIMBS]) {
+  return LIMBS_are_zero(a, P384_LIMBS);
+}
+
+static inline void copy_conditional(Elem r, const Elem a,
                                                 const Limb condition) {
   for (size_t i = 0; i < P384_LIMBS; ++i) {
     r[i] = constant_time_select_w(condition, a[i], r[i]);
@@ -89,11 +79,11 @@ static INLINE_IF_POSSIBLE void copy_conditional(Elem r, const Elem a,
 }
 
 
-static void elem_add(Elem r, const Elem a, const Elem b) {
+static inline void elem_add(Elem r, const Elem a, const Elem b) {
   LIMBS_add_mod(r, a, b, Q, P384_LIMBS);
 }
 
-static void elem_sub(Elem r, const Elem a, const Elem b) {
+static inline void elem_sub(Elem r, const Elem a, const Elem b) {
   LIMBS_sub_mod(r, a, b, Q, P384_LIMBS);
 }
 
@@ -162,7 +152,7 @@ static void elem_div_by_2(Elem r, const Elem a) {
 #if defined(NDEBUG)
   (void)carry2;
 #endif
-  assert(carry2 == 0);
+  ASSERT(carry2 == 0);
 
   copy_conditional(r, adjusted, is_odd);
 }
@@ -213,7 +203,7 @@ void GFp_p384_elem_neg(Elem r, const Elem a) {
 #if defined(NDEBUG)
   (void)borrow;
 #endif
-  assert(borrow == 0);
+  ASSERT(borrow == 0);
   for (size_t i = 0; i < P384_LIMBS; ++i) {
     r[i] = constant_time_select_w(is_zero, 0, r[i]);
   }
@@ -234,9 +224,9 @@ void GFp_p384_scalar_mul_mont(ScalarMont r, const ScalarMont a,
 
 static void gfp_p384_point_select_w5(P384_POINT *out,
                                      const P384_POINT table[16], size_t index) {
-  Elem x; memset(x, 0, sizeof(x));
-  Elem y; memset(y, 0, sizeof(y));
-  Elem z; memset(z, 0, sizeof(z));
+  Elem x; limbs_zero(x, P384_LIMBS);
+  Elem y; limbs_zero(y, P384_LIMBS);
+  Elem z; limbs_zero(z, P384_LIMBS);
 
   for (size_t i = 0; i < 16; ++i) {
     Limb mask = constant_time_eq_w(index, i + 1);

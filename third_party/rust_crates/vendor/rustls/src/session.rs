@@ -17,7 +17,6 @@ use crate::key_schedule::{SecretKind, KeySchedule};
 use crate::prf;
 use crate::rand;
 use crate::quic;
-use crate::hash_hs;
 #[cfg(feature = "logging")]
 use crate::log::{warn, debug, error};
 
@@ -39,7 +38,7 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
     /// This function returns `Ok(0)` when the underlying `rd` does
     /// so.  This typically happens when a socket is cleanly closed,
     /// or a file is at EOF.
-    fn read_tls(&mut self, rd: &mut Read) -> Result<usize, io::Error>;
+    fn read_tls(&mut self, rd: &mut dyn Read) -> Result<usize, io::Error>;
 
     /// Writes TLS messages to `wr`.
     ///
@@ -52,12 +51,12 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
     /// to check if output buffer is not empty.
     ///
     /// [`wants_write`]: #tymethod.wants_write
-    fn write_tls(&mut self, wr: &mut Write) -> Result<usize, io::Error>;
+    fn write_tls(&mut self, wr: &mut dyn Write) -> Result<usize, io::Error>;
 
     /// Like `write_tls`, but writes potentially many records in one
     /// go via `wr`; a `rustls::WriteV`.  This function has the same semantics
     /// as `write_tls` otherwise.
-    fn writev_tls(&mut self, wr: &mut WriteV) -> Result<usize, io::Error>;
+    fn writev_tls(&mut self, wr: &mut dyn WriteV) -> Result<usize, io::Error>;
 
     /// Processes any new packets read by a previous call to `read_tls`.
     /// Errors from this function relate to TLS protocol errors, and
@@ -401,8 +400,8 @@ enum Limit {
 pub struct SessionCommon {
     pub negotiated_version: Option<ProtocolVersion>,
     pub is_client: bool,
-    message_encrypter: Box<MessageEncrypter>,
-    message_decrypter: Box<MessageDecrypter>,
+    message_encrypter: Box<dyn MessageEncrypter>,
+    message_decrypter: Box<dyn MessageDecrypter>,
     pub secrets: Option<SessionSecrets>,
     pub key_schedule: Option<KeySchedule>,
     suite: Option<&'static SupportedCipherSuite>,
@@ -420,7 +419,6 @@ pub struct SessionCommon {
     received_plaintext: ChunkVecBuffer,
     sendable_plaintext: ChunkVecBuffer,
     pub sendable_tls: ChunkVecBuffer,
-    pub hs_transcript: hash_hs::HandshakeHash,
     /// Protocol whose key schedule should be used. Unused for TLS < 1.3.
     pub protocol: Protocol,
     #[cfg(feature = "quic")]
@@ -451,7 +449,6 @@ impl SessionCommon {
             received_plaintext: ChunkVecBuffer::new(),
             sendable_plaintext: ChunkVecBuffer::new(),
             sendable_tls: ChunkVecBuffer::new(),
-            hs_transcript: hash_hs::HandshakeHash::new(),
             protocol: Protocol::Tls13,
             #[cfg(feature = "quic")]
             quic: Quic::new(),
@@ -500,14 +497,14 @@ impl SessionCommon {
     }
 
     pub fn set_message_encrypter(&mut self,
-                                 cipher: Box<MessageEncrypter>) {
+                                 cipher: Box<dyn MessageEncrypter>) {
         self.message_encrypter = cipher;
         self.write_seq = 0;
         self.we_encrypting = true;
     }
 
     pub fn set_message_decrypter(&mut self,
-                                 cipher: Box<MessageDecrypter>) {
+                                 cipher: Box<dyn MessageDecrypter>) {
         self.message_decrypter = cipher;
         self.read_seq = 0;
         self.peer_encrypting = true;
@@ -595,9 +592,9 @@ impl SessionCommon {
         self.set_message_encrypter(cipher::new_tls13_write(scs, &write_key));
 
         if self.is_client {
-            self.get_mut_key_schedule().current_client_traffic_secret = write_key;
+            self.get_mut_key_schedule().current_client_traffic_secret = Some(write_key);
         } else {
-            self.get_mut_key_schedule().current_server_traffic_secret = write_key;
+            self.get_mut_key_schedule().current_server_traffic_secret = Some(write_key);
         }
     }
 
@@ -673,15 +670,15 @@ impl SessionCommon {
     /// Read TLS content from `rd`.  This method does internal
     /// buffering, so `rd` can supply TLS messages in arbitrary-
     /// sized chunks (like a socket or pipe might).
-    pub fn read_tls(&mut self, rd: &mut Read) -> io::Result<usize> {
+    pub fn read_tls(&mut self, rd: &mut dyn Read) -> io::Result<usize> {
         self.message_deframer.read(rd)
     }
 
-    pub fn write_tls(&mut self, wr: &mut Write) -> io::Result<usize> {
+    pub fn write_tls(&mut self, wr: &mut dyn Write) -> io::Result<usize> {
         self.sendable_tls.write_to(wr)
     }
 
-    pub fn writev_tls(&mut self, wr: &mut WriteV) -> io::Result<usize> {
+    pub fn writev_tls(&mut self, wr: &mut dyn WriteV) -> io::Result<usize> {
         self.sendable_tls.writev_to(wr)
     }
 
@@ -827,7 +824,7 @@ impl SessionCommon {
     }
 
     pub fn process_key_update(&mut self,
-                              kur: &KeyUpdateRequest,
+                              kur: KeyUpdateRequest,
                               read_kind: SecretKind)
                               -> Result<(), TLSError> {
         #[cfg(feature = "quic")]
@@ -847,7 +844,7 @@ impl SessionCommon {
             return Err(TLSError::PeerMisbehavedError(msg));
         }
 
-        match *kur {
+        match kur {
             KeyUpdateRequest::UpdateNotRequested => {}
             KeyUpdateRequest::UpdateRequested => {
                 self.want_write_key_update = true;
@@ -865,9 +862,9 @@ impl SessionCommon {
         self.set_message_decrypter(cipher::new_tls13_read(suite, &new_read_key));
 
         if read_kind == SecretKind::ServerApplicationTrafficSecret {
-            self.get_mut_key_schedule().current_server_traffic_secret = new_read_key;
+            self.get_mut_key_schedule().current_server_traffic_secret = Some(new_read_key);
         } else {
-            self.get_mut_key_schedule().current_client_traffic_secret = new_read_key;
+            self.get_mut_key_schedule().current_client_traffic_secret = Some(new_read_key);
         }
 
         Ok(())
@@ -908,7 +905,7 @@ pub(crate) struct Quic {
     pub params: Option<Vec<u8>>,
     pub alert: Option<AlertDescription>,
     pub hs_queue: VecDeque<(bool, Vec<u8>)>,
-    pub early_secret: Option<Vec<u8>>,
+    pub early_secret: Option<ring::hkdf::Prk>,
     pub hs_secrets: Option<quic::Secrets>,
     pub traffic_secrets: Option<quic::Secrets>,
 }

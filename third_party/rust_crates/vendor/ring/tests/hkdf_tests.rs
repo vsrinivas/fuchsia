@@ -25,33 +25,125 @@
     unstable_features,
     unused_extern_crates,
     unused_import_braces,
-    unused_qualifications,
     unused_results,
     variant_size_differences,
     warnings
 )]
 
-use ring::{error, hkdf, hmac, test, test_file};
+use ring::{digest, error, hkdf, test, test_file};
 
-#[test]
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test;
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test_configure;
+
+#[cfg(target_arch = "wasm32")]
+wasm_bindgen_test_configure!(run_in_browser);
+
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn hkdf_tests() {
     test::run(test_file!("hkdf_tests.txt"), |section, test_case| {
         assert_eq!(section, "");
-        let digest_alg = test_case
-            .consume_digest_alg("Hash")
-            .ok_or(error::Unspecified)?;
+        let alg = {
+            let digest_alg = test_case
+                .consume_digest_alg("Hash")
+                .ok_or(error::Unspecified)?;
+            if digest_alg == &digest::SHA256 {
+                hkdf::HKDF_SHA256
+            } else {
+                // TODO: add test vectors for other algorithms
+                panic!("unsupported algorithm: {:?}", digest_alg);
+            }
+        };
         let secret = test_case.consume_bytes("IKM");
         let salt = test_case.consume_bytes("salt");
         let info = test_case.consume_bytes("info");
         let _ = test_case.consume_bytes("PRK");
         let expected_out = test_case.consume_bytes("OKM");
 
-        let salt = hmac::SigningKey::new(digest_alg, &salt);
+        let salt = hkdf::Salt::new(alg, &salt);
 
-        let mut out = vec![0u8; expected_out.len()];
-        hkdf::extract_and_expand(&salt, &secret, &info, &mut out);
+        // TODO: test multi-part info, especially with empty parts.
+        let My(out) = salt
+            .extract(&secret)
+            .expand(&[&info], My(expected_out.len()))
+            .unwrap()
+            .into();
         assert_eq!(out, expected_out);
 
         Ok(())
     });
+}
+
+#[test]
+fn hkdf_output_len_tests() {
+    for &alg in &[hkdf::HKDF_SHA256, hkdf::HKDF_SHA384, hkdf::HKDF_SHA512] {
+        const MAX_BLOCKS: usize = 255;
+
+        let salt = hkdf::Salt::new(alg, &[]);
+        let prk = salt.extract(&[]); // TODO: enforce minimum length.
+
+        {
+            // Test zero length.
+            let okm = prk.expand(&[b"info"], My(0)).unwrap();
+            let result: My<Vec<u8>> = okm.into();
+            assert_eq!(&result.0, &[]);
+        }
+
+        let max_out_len = MAX_BLOCKS * alg.hmac_algorithm().digest_algorithm().output_len;
+
+        {
+            // Test maximum length output succeeds.
+            let okm = prk.expand(&[b"info"], My(max_out_len)).unwrap();
+            let result: My<Vec<u8>> = okm.into();
+            assert_eq!(result.0.len(), max_out_len);
+        }
+
+        {
+            // Test too-large output fails.
+            assert!(prk.expand(&[b"info"], My(max_out_len + 1)).is_err());
+        }
+
+        {
+            // Test length mismatch (smaller).
+            let okm = prk.expand(&[b"info"], My(2)).unwrap();
+            let mut buf = [0u8; 1];
+            assert_eq!(okm.fill(&mut buf), Err(error::Unspecified));
+        }
+
+        {
+            // Test length mismatch (larger).
+            let okm = prk.expand(&[b"info"], My(2)).unwrap();
+            let mut buf = [0u8; 3];
+            assert_eq!(okm.fill(&mut buf), Err(error::Unspecified));
+        }
+
+        {
+            // Control for above two tests.
+            let okm = prk.expand(&[b"info"], My(2)).unwrap();
+            let mut buf = [0u8; 2];
+            assert_eq!(okm.fill(&mut buf), Ok(()));
+        }
+    }
+}
+
+/// Generic newtype wrapper that lets us implement traits for externally-defined
+/// types.
+#[derive(Debug, PartialEq)]
+struct My<T: core::fmt::Debug + PartialEq>(T);
+
+impl hkdf::KeyType for My<usize> {
+    fn len(&self) -> usize {
+        self.0
+    }
+}
+
+impl From<hkdf::Okm<'_, My<usize>>> for My<Vec<u8>> {
+    fn from(okm: hkdf::Okm<My<usize>>) -> Self {
+        let mut r = vec![0u8; okm.len().0];
+        okm.fill(&mut r).unwrap();
+        My(r)
+    }
 }

@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 use std::sync::Arc;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Write, Read};
 use std::env;
 
 use rustls;
@@ -231,6 +231,15 @@ fn make_client_config(version: rustls::ProtocolVersion,
     cfg
 }
 
+fn apply_work_multiplier(work: u64) -> u64 {
+    let mul = match env::var("BENCH_MULTIPLIER") {
+        Ok(val) => val.parse::<f64>().expect("invalid BENCH_MULTIPLIER value"),
+        Err(_) => 1.
+    };
+
+    ((work as f64) * mul).round() as u64
+}
+
 fn bench_handshake(version: rustls::ProtocolVersion,
                    suite: &'static rustls::SupportedCipherSuite,
                    clientauth: ClientAuth,
@@ -242,7 +251,7 @@ fn bench_handshake(version: rustls::ProtocolVersion,
         return;
     }
 
-    let rounds = if resume == Resumption::No { 512 } else { 4096 };
+    let rounds = apply_work_multiplier(if resume == Resumption::No { 512 } else { 4096 });
     let mut client_time = 0f64;
     let mut server_time = 0f64;
 
@@ -278,7 +287,7 @@ fn bench_handshake(version: rustls::ProtocolVersion,
                  "server-auth"
              },
              resume.label(),
-             f64::from(rounds) / client_time);
+             (rounds as f64) / client_time);
     println!("handshakes\t{:?}\t{:?}\tserver\t{}\t{}\t{:.2}\thandshake/s",
              version,
              suite.suite,
@@ -288,20 +297,27 @@ fn bench_handshake(version: rustls::ProtocolVersion,
                  "server-auth"
              },
              resume.label(),
-             f64::from(rounds) / server_time);
+             (rounds as f64) / server_time);
 }
 
-fn do_handshake(client: &mut ClientSession, server: &mut ServerSession) {
-    while server.is_handshaking() || client.is_handshaking() {
+fn do_handshake_step(client: &mut ClientSession, server: &mut ServerSession) -> bool {
+    if server.is_handshaking() || client.is_handshaking() {
         transfer(client, server);
         server.process_new_packets().unwrap();
         transfer(server, client);
         client.process_new_packets().unwrap();
+        true
+    } else {
+        false
     }
 }
 
+fn do_handshake(client: &mut ClientSession, server: &mut ServerSession) {
+    while do_handshake_step(client, server) {}
+}
+
 fn bench_bulk(version: rustls::ProtocolVersion, suite: &'static rustls::SupportedCipherSuite,
-              plaintext_size: u32) {
+              plaintext_size: u64) {
     let client_config =
         Arc::new(make_client_config(version, suite, ClientAuth::No, Resumption::No));
     let server_config = Arc::new(make_server_config(version, suite, ClientAuth::No, Resumption::No));
@@ -319,11 +335,13 @@ fn bench_bulk(version: rustls::ProtocolVersion, suite: &'static rustls::Supporte
     let mut buf = Vec::new();
     buf.resize(plaintext_size as usize, 0u8);
 
-    let total_data = if plaintext_size < 8192 {
-        64 * 1024 * 1024
-    } else {
-        1024 * 1024 * 1024
-    };
+    let total_data = apply_work_multiplier(
+        if plaintext_size < 8192 {
+            64 * 1024 * 1024
+        } else {
+            1024 * 1024 * 1024
+        }
+    );
     let rounds = total_data / plaintext_size;
     let mut time_send = 0f64;
     let mut time_recv = 0f64;
@@ -342,7 +360,7 @@ fn bench_bulk(version: rustls::ProtocolVersion, suite: &'static rustls::Supporte
         drain(&mut client, buf.len());
     }
 
-    let total_mbs = f64::from(plaintext_size * rounds) / (1024. * 1024.);
+    let total_mbs = ((plaintext_size * rounds) as f64) / (1024. * 1024.);
     println!("bulk\t{:?}\t{:?}\tsend\t{:.2}\tMB/s",
              version,
              suite.suite,
@@ -351,6 +369,46 @@ fn bench_bulk(version: rustls::ProtocolVersion, suite: &'static rustls::Supporte
              version,
              suite.suite,
              total_mbs / time_recv);
+}
+
+fn bench_memory(version: rustls::ProtocolVersion,
+                suite: &'static rustls::SupportedCipherSuite,
+                session_count: u64) {
+    let client_config =
+        Arc::new(make_client_config(version, suite, ClientAuth::No, Resumption::No));
+    let server_config = Arc::new(make_server_config(version, suite, ClientAuth::No, Resumption::No));
+
+    if !suite.usable_for_version(version) {
+        return;
+    }
+
+    // The target here is to end up with session_count post-handshake
+    // server and client sessions.
+    let session_count = (session_count / 2) as usize;
+    let mut servers = Vec::with_capacity(session_count);
+    let mut clients = Vec::with_capacity(session_count);
+
+    for _i in 0..session_count {
+        servers.push(ServerSession::new(&server_config));
+        let dns_name = webpki::DNSNameRef::try_from_ascii_str("localhost").unwrap();
+        clients.push(ClientSession::new(&client_config, dns_name));
+    }
+
+    for _step in 0..5 {
+        for (mut client, mut server) in clients.iter_mut().zip(servers.iter_mut()) {
+            do_handshake_step(&mut client, &mut server);
+        }
+    }
+
+    for client in clients.iter_mut() {
+        client.write_all(&[0u8; 1024]).unwrap();
+    }
+
+    for (client, server) in clients.iter_mut().zip(servers.iter_mut()) {
+        transfer(client, server);
+        let mut buf = [0u8; 1024];
+        server.read(&mut buf).unwrap();
+    }
 }
 
 fn lookup_suite(name: &str) -> &'static rustls::SupportedCipherSuite {
@@ -372,8 +430,8 @@ fn selected_tests(mut args: env::Args) {
             match args.next() {
                 Some(suite) => {
                     let len = args.next()
-                        .map(|arg| arg.parse::<u32>()
-                             .expect("3rd arg must be integer"))
+                        .map(|arg| arg.parse::<u64>()
+                             .expect("3rd arg must be plaintext size integer"))
                         .unwrap_or(1048576);
                     let suite = lookup_suite(&suite);
                     bench_bulk(rustls::ProtocolVersion::TLSv1_3, suite, len);
@@ -402,6 +460,23 @@ fn selected_tests(mut args: env::Args) {
                 }
                 None => {
                     panic!("handshake* needs ciphersuite argument");
+                }
+            }
+        }
+
+        "memory" => {
+            match args.next() {
+                Some(suite) => {
+                    let count = args.next()
+                        .map(|arg| arg.parse::<u64>()
+                             .expect("3rd arg must be session count integer"))
+                        .unwrap_or(1000000);
+                    let suite = lookup_suite(&suite);
+                    bench_memory(rustls::ProtocolVersion::TLSv1_3, suite, count);
+                    bench_memory(rustls::ProtocolVersion::TLSv1_2, suite, count);
+                }
+                None => {
+                    panic!("memory needs ciphersuite argument");
                 }
             }
         }

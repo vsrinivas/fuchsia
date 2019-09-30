@@ -1,5 +1,4 @@
 use webpki;
-use untrusted;
 
 pub use crate::msgs::handshake::{DistinguishedName, DistinguishedNames};
 use crate::pemfile;
@@ -32,7 +31,9 @@ impl OwnedTrustAnchor {
         webpki::TrustAnchor {
             subject: &self.subject,
             spki: &self.spki,
-            name_constraints: self.name_constraints.as_ref().map(|x| x.as_slice()),
+            name_constraints: self.name_constraints
+                .as_ref()
+                .map(Vec::as_slice),
         }
     }
 }
@@ -77,10 +78,7 @@ impl RootCertStore {
 
     /// Add a single DER-encoded certificate to the store.
     pub fn add(&mut self, der: &key::Certificate) -> Result<(), webpki::Error> {
-        let ta = {
-            let inp = untrusted::Input::from(&der.0);
-            webpki::trust_anchor_util::cert_der_as_trust_anchor(inp)?
-        };
+        let ta = webpki::trust_anchor_util::cert_der_as_trust_anchor(&der.0)?;
 
         let ota = OwnedTrustAnchor::from_trust_anchor(&ta);
         self.roots.push(ota);
@@ -107,7 +105,7 @@ impl RootCertStore {
     ///
     /// Returns the number of certificates added, and the number
     /// which were extracted from the PEM but ultimately unsuitable.
-    pub fn add_pem_file(&mut self, rd: &mut io::BufRead) -> Result<(usize, usize), ()> {
+    pub fn add_pem_file(&mut self, rd: &mut dyn io::BufRead) -> Result<(usize, usize), ()> {
         let ders = pemfile::certs(rd)?;
         let mut valid_count = 0;
         let mut invalid_count = 0;

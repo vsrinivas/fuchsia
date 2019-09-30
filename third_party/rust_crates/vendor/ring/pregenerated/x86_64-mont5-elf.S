@@ -563,6 +563,7 @@ bn_mul4x_mont_gather5:
 .type	mul4x_internal,@function
 .align	32
 mul4x_internal:
+.cfi_startproc	
 	shlq	$5,%r9
 	movd	8(%rax),%xmm5
 	leaq	.Linc(%rip),%rax
@@ -1084,6 +1085,7 @@ mul4x_internal:
 	movq	16(%rbp),%r14
 	movq	24(%rbp),%r15
 	jmp	.Lsqr4x_sub_entry
+.cfi_endproc	
 .size	mul4x_internal,.-mul4x_internal
 .globl	GFp_bn_power5
 .hidden GFp_bn_power5
@@ -1229,6 +1231,7 @@ GFp_bn_power5:
 .align	32
 GFp_bn_sqr8x_internal:
 __bn_sqr8x_internal:
+.cfi_startproc	
 
 
 
@@ -2003,10 +2006,12 @@ __bn_sqr8x_reduction:
 	cmpq	%rdx,%rdi
 	jb	.L8x_reduction_loop
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	GFp_bn_sqr8x_internal,.-GFp_bn_sqr8x_internal
 .type	__bn_post4x_internal,@function
 .align	32
 __bn_post4x_internal:
+.cfi_startproc	
 	movq	0(%rbp),%r12
 	leaq	(%rdi,%r9,1),%rbx
 	movq	%r9,%rcx
@@ -2057,16 +2062,19 @@ __bn_post4x_internal:
 	movq	%r9,%r10
 	negq	%r9
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__bn_post4x_internal,.-__bn_post4x_internal
 .globl	GFp_bn_from_montgomery
 .hidden GFp_bn_from_montgomery
 .type	GFp_bn_from_montgomery,@function
 .align	32
 GFp_bn_from_montgomery:
+.cfi_startproc	
 	testl	$7,%r9d
 	jz	bn_from_mont8x
 	xorl	%eax,%eax
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	GFp_bn_from_montgomery,.-GFp_bn_from_montgomery
 
 .type	bn_from_mont8x,@function
@@ -2351,6 +2359,7 @@ bn_mulx4x_mont_gather5:
 .type	mulx4x_internal,@function
 .align	32
 mulx4x_internal:
+.cfi_startproc	
 	movq	%r9,8(%rsp)
 	movq	%r9,%r10
 	negq	%r9
@@ -2769,6 +2778,7 @@ mulx4x_internal:
 	movq	16(%rbp),%r14
 	movq	24(%rbp),%r15
 	jmp	.Lsqrx4x_sub_entry
+.cfi_endproc	
 .size	mulx4x_internal,.-mulx4x_internal
 .type	bn_powerx5,@function
 .align	32
@@ -3526,7 +3536,9 @@ __bn_sqrx8x_reduction:
 .cfi_endproc	
 .size	GFp_bn_sqrx8x_internal,.-GFp_bn_sqrx8x_internal
 .align	32
+.type	__bn_postx4x_internal,@function
 __bn_postx4x_internal:
+.cfi_startproc	
 	movq	0(%rbp),%r12
 	movq	%rcx,%r10
 	movq	%rcx,%r9
@@ -3574,12 +3586,14 @@ __bn_postx4x_internal:
 	negq	%r9
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__bn_postx4x_internal,.-__bn_postx4x_internal
 .globl	GFp_bn_scatter5
 .hidden GFp_bn_scatter5
 .type	GFp_bn_scatter5,@function
 .align	16
 GFp_bn_scatter5:
+.cfi_startproc	
 	cmpl	$0,%esi
 	jz	.Lscatter_epilogue
 	leaq	(%rdx,%rcx,8),%rdx
@@ -3592,6 +3606,7 @@ GFp_bn_scatter5:
 	jnz	.Lscatter
 .Lscatter_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	GFp_bn_scatter5,.-GFp_bn_scatter5
 
 .globl	GFp_bn_gather5
@@ -3599,9 +3614,11 @@ GFp_bn_scatter5:
 .type	GFp_bn_gather5,@function
 .align	32
 GFp_bn_gather5:
+.cfi_startproc	
 .LSEH_begin_GFp_bn_gather5:
 
 .byte	0x4c,0x8d,0x14,0x24
+.cfi_def_cfa_register	%r10
 .byte	0x48,0x81,0xec,0x08,0x01,0x00,0x00
 	leaq	.Linc(%rip),%rax
 	andq	$-16,%rsp
@@ -3755,8 +3772,10 @@ GFp_bn_gather5:
 	jnz	.Lgather
 
 	leaq	(%r10),%rsp
+.cfi_def_cfa_register	%rsp
 	.byte	0xf3,0xc3
 .LSEH_end_GFp_bn_gather5:
+.cfi_endproc	
 .size	GFp_bn_gather5,.-GFp_bn_gather5
 .align	64
 .Linc:

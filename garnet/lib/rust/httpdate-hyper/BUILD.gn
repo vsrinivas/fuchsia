@@ -22,7 +22,6 @@ rustc_library("httpdate-hyper") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rustls",
-    "//third_party/rust_crates:untrusted",
     "//third_party/rust_crates:webpki",
   ]
 }

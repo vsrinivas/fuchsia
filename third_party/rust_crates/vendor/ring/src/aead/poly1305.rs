@@ -19,14 +19,15 @@ use super::{
     block::{Block, BLOCK_LEN},
     Tag,
 };
-use crate::{bssl, error};
-use libc::size_t;
+use crate::{bssl, c, error};
 
 /// A Poly1305 key.
 pub struct Key([Block; KEY_BLOCKS]);
 
 impl From<[Block; KEY_BLOCKS]> for Key {
-    fn from(value: [Block; KEY_BLOCKS]) -> Self { Key(value) }
+    fn from(value: [Block; KEY_BLOCKS]) -> Self {
+        Self(value)
+    }
 }
 
 pub const KEY_BLOCKS: usize = 2;
@@ -44,10 +45,13 @@ const OPAQUE_LEN: usize = 192;
 
 impl Context {
     #[inline]
-    pub fn from_key(Key(key_and_nonce): Key) -> Context {
+    pub fn from_key(Key(key_and_nonce): Key) -> Self {
         extern "C" {
             fn GFp_poly1305_blocks(
-                state: &mut Opaque, input: *const u8, len: size_t, should_pad: Pad,
+                state: &mut Opaque,
+                input: *const u8,
+                len: c::size_t,
+                should_pad: Pad,
             );
             fn GFp_poly1305_emit(state: &mut Opaque, tag: &mut Tag, nonce: &Nonce);
         }
@@ -55,7 +59,7 @@ impl Context {
         let key = DerivedKey(key_and_nonce[0].clone());
         let nonce = Nonce(key_and_nonce[1].clone());
 
-        let mut ctx = Context {
+        let mut ctx = Self {
             opaque: Opaque([0u8; OPAQUE_LEN]),
             nonce,
             func: Funcs {
@@ -84,7 +88,9 @@ impl Context {
         self.func.blocks(&mut self.opaque, input, Pad::Pad);
     }
 
-    pub(super) fn finish(mut self) -> Tag { self.func.emit(&mut self.opaque, &self.nonce) }
+    pub(super) fn finish(mut self) -> Tag {
+        self.func.emit(&mut self.opaque, &self.nonce)
+    }
 }
 
 #[cfg(test)]
@@ -116,7 +122,7 @@ struct Nonce(Block);
 #[repr(C)]
 struct Funcs {
     blocks_fn:
-        unsafe extern "C" fn(&mut Opaque, input: *const u8, input_len: size_t, should_pad: Pad),
+        unsafe extern "C" fn(&mut Opaque, input: *const u8, input_len: c::size_t, should_pad: Pad),
     emit_fn: unsafe extern "C" fn(&mut Opaque, &mut Tag, nonce: &Nonce),
 }
 
@@ -124,7 +130,9 @@ struct Funcs {
 fn init(state: &mut Opaque, key: DerivedKey, func: &mut Funcs) -> Result<(), error::Unspecified> {
     extern "C" {
         fn GFp_poly1305_init_asm(
-            state: &mut Opaque, key: &DerivedKey, out_func: &mut Funcs,
+            state: &mut Opaque,
+            key: &DerivedKey,
+            out_func: &mut Funcs,
         ) -> bssl::Result;
     }
     Result::from(unsafe { GFp_poly1305_init_asm(state, &key, func) })
@@ -176,10 +184,13 @@ pub(super) fn sign(key: Key, input: &[u8]) -> Tag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{polyfill::convert::*, test};
+    use crate::{polyfill::convert::Into_, test};
+    use core::convert::TryInto;
 
     #[test]
-    pub fn test_state_layout() { check_state_layout(); }
+    pub fn test_state_layout() {
+        check_state_layout();
+    }
 
     // Adapted from BoringSSL's crypto/poly1305/poly1305_test.cc.
     #[test]
@@ -187,7 +198,7 @@ mod tests {
         test::run(test_file!("poly1305_test.txt"), |section, test_case| {
             assert_eq!(section, "");
             let key = test_case.consume_bytes("Key");
-            let key: &[u8; BLOCK_LEN * 2] = key.as_slice().try_into_().unwrap();
+            let key: &[u8; BLOCK_LEN * 2] = key.as_slice().try_into().unwrap();
             let key: [Block; 2] = key.into_();
             let input = test_case.consume_bytes("Input");
             let expected_mac = test_case.consume_bytes("MAC");

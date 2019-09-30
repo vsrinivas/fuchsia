@@ -101,6 +101,16 @@ impl<S, T> StreamOwned<S, T> where S: Session, T: Read + Write {
     pub fn new(sess: S, sock: T) -> StreamOwned<S, T> {
         StreamOwned { sess, sock }
     }
+
+    /// Get a reference to the underlying socket
+    pub fn get_ref(&self) -> &T {
+        &self.sock
+    }
+
+    /// Get a mutable reference to the underlying socket
+    pub fn get_mut(&mut self) -> &T {
+        &mut self.sock
+    }
 }
 
 impl<'a, S, T> StreamOwned<S, T> where S: Session, T: Read + Write {
@@ -135,7 +145,7 @@ mod tests {
 
     #[test]
     fn stream_can_be_created_for_session_and_tcpstream() {
-        fn _foo<'a>(sess: &'a mut Session, sock: &'a mut TcpStream) -> Stream<'a, Session, TcpStream> {
+        fn _foo<'a>(sess: &'a mut dyn Session, sock: &'a mut TcpStream) -> Stream<'a, dyn Session, TcpStream> {
             Stream {
                 sess,
                 sock,

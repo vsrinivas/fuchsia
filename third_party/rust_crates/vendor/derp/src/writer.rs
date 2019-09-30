@@ -1,7 +1,7 @@
 use std::io::Write;
 
-use Result;
 use der::{self, Tag};
+use Result;
 
 /// Helper for writing DER that automattically encoes tags and content lengths.
 pub struct Der<'a, W: Write + 'a> {
@@ -61,7 +61,7 @@ impl<'a, W: Write> Der<'a, W> {
         };
 
         self.write_len(input.len() + push_zero as usize)?;
-        
+
         if push_zero {
             self.writer.write_all(&[0x00])?;
         }
@@ -91,10 +91,7 @@ impl<'a, W: Write> Der<'a, W> {
 
     /// Write a `SEQUENCE` by passing in a handling function that writes to an intermediate `Vec`
     /// before writing the whole sequence to `self`.
-    pub fn sequence<F: FnOnce(&mut Der<Vec<u8>>) -> Result<()>>(
-        &mut self,
-        func: F,
-    ) -> Result<()> {
+    pub fn sequence<F: FnOnce(&mut Der<Vec<u8>>) -> Result<()>>(&mut self, func: F) -> Result<()> {
         self.nested(Tag::Sequence, func)
     }
 
@@ -113,11 +110,7 @@ impl<'a, W: Write> Der<'a, W> {
     }
 
     /// Write a `BIT STRING`.
-    pub fn bit_string(
-        &mut self,
-        unused_bits: u8,
-        bit_string: &[u8],
-    ) -> Result<()> {
+    pub fn bit_string(&mut self, unused_bits: u8, bit_string: &[u8]) -> Result<()> {
         self.writer.write_all(&[Tag::BitString as u8])?;
         self.write_len(bit_string.len() + 1)?;
         self.writer.write_all(&[unused_bits])?;
@@ -126,10 +119,7 @@ impl<'a, W: Write> Der<'a, W> {
     }
 
     /// Write an `OCTET STRING`.
-    pub fn octet_string(
-        &mut self,
-        octet_string: &[u8],
-    ) -> Result<()> {
+    pub fn octet_string(&mut self, octet_string: &[u8]) -> Result<()> {
         self.writer.write_all(&[Tag::OctetString as u8])?;
         self.write_len(octet_string.len())?;
         self.writer.write_all(&octet_string)?;
@@ -140,21 +130,23 @@ impl<'a, W: Write> Der<'a, W> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use Error;
     use untrusted::Input;
-    
+    use Error;
+
     static RSA_2048_PKCS1: &'static [u8] = include_bytes!("../tests/rsa-2048.pkcs1.der");
 
     #[test]
     fn write_pkcs1() {
         let input = Input::from(RSA_2048_PKCS1);
-        let (n, e) = input.read_all(Error::Read, |input| {
-            der::nested(input, Tag::Sequence, |input| {
-                let n = der::positive_integer(input)?;
-                let e = der::positive_integer(input)?;
-                Ok((n.as_slice_less_safe(), e.as_slice_less_safe()))
+        let (n, e) = input
+            .read_all(Error::Read, |input| {
+                der::nested(input, Tag::Sequence, |input| {
+                    let n = der::positive_integer(input)?;
+                    let e = der::positive_integer(input)?;
+                    Ok((n.as_slice_less_safe(), e.as_slice_less_safe()))
+                })
             })
-        }).unwrap();
+            .unwrap();
 
         let mut buf = Vec::new();
         {
@@ -162,7 +154,8 @@ mod test {
             der.sequence(|der| {
                 der.positive_integer(n)?;
                 der.positive_integer(e)
-            }).unwrap();
+            })
+            .unwrap();
         }
 
         assert_eq!(buf.as_slice(), RSA_2048_PKCS1);

@@ -22,6 +22,8 @@
 //! <table>
 //! <tr><th>Feature
 //!     <th>Description
+//! <tr><td><code>alloc (default)</code>
+//!     <td>Enable features that require use of the heap, RSA in particular.
 //! <tr><td><code>dev_urandom_fallback (default)</code>
 //!     <td>This is only applicable to Linux. On Linux, by default,
 //!         <code>ring::rand::SystemRandom</code> will fall back to reading
@@ -30,8 +32,9 @@
 //!         <code>dev_urandom_fallback</code> feature is disabled, such
 //!         fallbacks will not occur. See the documentation for
 //!         <code>rand::SystemRandom</code> for more details.
-//! <tr><td><code>use_heap (default)</code>
-//!     <td>Enable features that require use of the heap, RSA in particular.
+//! <tr><td><code>std</code>
+//!     <td>Enable features that use libstd, in particular `std::error::Error`
+//!         integration.
 //! </table>
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
@@ -46,7 +49,6 @@
 // internally.
 #![deny(
     missing_docs,
-    trivial_numeric_casts,
     unstable_features, // Used by `internal_benches`
     unused_qualifications,
     variant_size_differences,
@@ -54,29 +56,26 @@
 #![forbid(
     anonymous_parameters,
     trivial_casts,
+    trivial_numeric_casts,
     unused_extern_crates,
     unused_import_braces,
     unused_results,
     warnings
 )]
-#![cfg_attr(
-    any(
-        target_os = "redox",
-        all(
-            not(test),
-            not(feature = "use_heap"),
-            unix,
-            not(any(target_os = "macos", target_os = "ios")),
-            any(not(target_os = "linux"), feature = "dev_urandom_fallback")
-        )
-    ),
-    no_std
-)]
-#![cfg_attr(feature = "internal_benches", allow(unstable_features))]
-#![cfg_attr(feature = "internal_benches", feature(test))]
+#![no_std]
+#![cfg_attr(feature = "internal_benches", allow(unstable_features), feature(test))]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 #[macro_use]
 mod debug;
+
+#[macro_use]
+pub mod test;
+
+#[macro_use]
+mod arithmetic;
 
 #[macro_use]
 mod bssl;
@@ -84,17 +83,12 @@ mod bssl;
 #[macro_use]
 mod polyfill;
 
-#[cfg(any(test, feature = "use_heap"))]
-#[macro_use]
-pub mod test;
-
-mod arithmetic;
-
 pub mod aead;
 pub mod agreement;
 
 mod bits;
 
+pub(crate) mod c;
 pub mod constant_time;
 
 pub mod io;
@@ -108,10 +102,10 @@ pub mod hkdf;
 pub mod hmac;
 mod limb;
 pub mod pbkdf2;
-mod pkcs8;
+pub mod pkcs8;
 pub mod rand;
 
-#[cfg(feature = "use_heap")]
+#[cfg(feature = "alloc")]
 mod rsa;
 
 pub mod signature;

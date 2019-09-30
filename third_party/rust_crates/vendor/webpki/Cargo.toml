@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,10 +11,11 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "webpki"
-version = "0.19.1"
+version = "0.21.0"
 authors = ["Brian Smith <brian@briansmith.org>"]
-include = ["Cargo.toml", "LICENSE", "README.md", "src/", "src/calendar.rs", "src/cert.rs", "src/der.rs", "src/name.rs", "src/error.rs", "src/signed_data.rs", "src/time.rs", "src/trust_anchor_util.rs", "src/verify_cert.rs", "src/webpki.rs", "src/data/**/*", "tests/dns_name_tests.rs", "tests/integration.rs", "tests/misc/serial_neg.der", "tests/misc/serial_zero.der", "tests/netflix/ca.der", "tests/netflix/ee.der", "tests/netflix/inter.der", "third-party/chromium/**/*"]
+include = ["Cargo.toml", "LICENSE", "README.md", "src/calendar.rs", "src/cert.rs", "src/der.rs", "src/name.rs", "src/error.rs", "src/signed_data.rs", "src/time.rs", "src/trust_anchor_util.rs", "src/verify_cert.rs", "src/webpki.rs", "src/data/**/*", "tests/dns_name_tests.rs", "tests/integration.rs", "tests/misc/serial_neg.der", "tests/misc/serial_zero.der", "tests/netflix/ca.der", "tests/netflix/ee.der", "tests/netflix/inter.der", "third-party/chromium/**/*"]
 description = "Web PKI X.509 Certificate Verification."
 documentation = "https://briansmith.org/rustdoc/webpki/"
 readme = "README.md"
@@ -41,10 +42,10 @@ rpath = false
 name = "webpki"
 path = "src/webpki.rs"
 [dependencies.ring]
-version = "0.14.2"
+version = "0.16.0"
 
 [dependencies.untrusted]
-version = "0.6.2"
+version = "0.7.0"
 [dev-dependencies.base64]
 version = "0.9.1"
 

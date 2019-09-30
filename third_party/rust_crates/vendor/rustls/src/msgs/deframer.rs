@@ -25,9 +25,28 @@ pub struct MessageDeframer {
     /// the deframer cannot recover.
     pub desynced: bool,
 
-    /// A variable-size buffer containing the currently-
-    /// accumulating TLS message.
-    buf: Vec<u8>,
+    /// A fixed-size buffer containing the currently-accumulating
+    /// TLS message.
+    buf: Box<[u8; MAX_MESSAGE]>,
+
+    /// What size prefix of `buf` is used.
+    used: usize,
+}
+
+enum BufferContents {
+    /// Contains an invalid message as a header.
+    Invalid,
+
+    /// Might contain a valid message if we receive more.
+    /// Perhaps totally empty!
+    Partial,
+
+    /// Contains a valid frame as a prefix.
+    Valid,
+}
+
+impl Default for MessageDeframer {
+    fn default() -> Self { Self::new() }
 }
 
 impl MessageDeframer {
@@ -35,41 +54,34 @@ impl MessageDeframer {
         MessageDeframer {
             frames: VecDeque::new(),
             desynced: false,
-            buf: Vec::with_capacity(MAX_MESSAGE),
+            buf: Box::new([0u8; MAX_MESSAGE]),
+            used: 0,
         }
     }
 
     /// Read some bytes from `rd`, and add them to our internal
     /// buffer.  If this means our internal buffer contains
     /// full messages, decode them all.
-    pub fn read(&mut self, rd: &mut io::Read) -> io::Result<usize> {
+    pub fn read(&mut self, rd: &mut dyn io::Read) -> io::Result<usize> {
         // Try to do the largest reads possible.  Note that if
         // we get a message with a length field out of range here,
         // we do a zero length read.  That looks like an EOF to
         // the next layer up, which is fine.
-        let used = self.buf.len();
-        self.buf.resize(MAX_MESSAGE, 0u8);
-        let rc = rd.read(&mut self.buf[used..MAX_MESSAGE]);
+        debug_assert!(self.used <= MAX_MESSAGE);
+        let new_bytes = rd.read(&mut self.buf[self.used..])?;
 
-        if rc.is_err() {
-            // Discard indeterminate bytes.
-            self.buf.truncate(used);
-            return rc;
-        }
-
-        let new_bytes = rc.unwrap();
-        self.buf.truncate(used + new_bytes);
+        self.used += new_bytes;
 
         loop {
             match self.buf_contains_message() {
-                None => {
+                BufferContents::Invalid => {
                     self.desynced = true;
                     break;
                 }
-                Some(true) => {
+                BufferContents::Valid => {
                     self.deframe_one();
                 }
-                Some(false) => break,
+                BufferContents::Partial => break,
             }
         }
 
@@ -80,45 +92,70 @@ impl MessageDeframer {
     /// to process, either whole messages in our output
     /// queue or partial messages in our buffer.
     pub fn has_pending(&self) -> bool {
-        !self.frames.is_empty() || !self.buf.is_empty()
+        !self.frames.is_empty() || self.used > 0
     }
 
     /// Does our `buf` contain a full message?  It does if it is big enough to
     /// contain a header, and that header has a length which falls within `buf`.
-    /// This returns None if it contains a header which is invalid.
-    fn buf_contains_message(&self) -> Option<bool> {
-        if self.buf.len() < HEADER_SIZE {
-            return Some(false);
+    fn buf_contains_message(&self) -> BufferContents {
+        if self.used < HEADER_SIZE {
+            return BufferContents::Partial;
         }
 
-        let len_maybe = Message::check_header(&self.buf);
+        let len_maybe = Message::check_header(&self.buf[..self.used]);
 
         // Header damaged.
         if len_maybe == None {
-            return None;
+            return BufferContents::Invalid;
         }
 
         let len = len_maybe.unwrap();
 
         // This is just too large.
         if len >= MAX_MESSAGE - HEADER_SIZE {
-            return None;
+            return BufferContents::Invalid;
         }
 
-        let full_message = self.buf.len() >= len + HEADER_SIZE;
-        Some(full_message)
+        let full_message = self.used >= len + HEADER_SIZE;
+        if full_message { BufferContents::Valid } else { BufferContents::Partial }
     }
 
     /// Take a TLS message off the front of `buf`, and put it onto the back
     /// of our `frames` deque.
     fn deframe_one(&mut self) {
         let used = {
-            let mut rd = codec::Reader::init(&self.buf);
+            let mut rd = codec::Reader::init(&self.buf[..self.used]);
             let m = Message::read(&mut rd).unwrap();
             self.frames.push_back(m);
             rd.used()
         };
-        self.buf = self.buf.split_off(used);
+        self.buf_consume(used);
+    }
+
+    fn buf_consume(&mut self, taken: usize) {
+        if taken < self.used {
+            /* Before:
+             * +----------+----------+----------+
+             * | taken    | pending  |xxxxxxxxxx|
+             * +----------+----------+----------+
+             * 0          ^ taken    ^ self.used
+             *
+             * After:
+             * +----------+----------+----------+
+             * | pending  |xxxxxxxxxxxxxxxxxxxxx|
+             * +----------+----------+----------+
+             * 0          ^ self.used
+             */
+            let used_after = self.used - taken;
+
+            for i in 0..used_after {
+                self.buf[i] = self.buf[i + taken];
+            }
+
+            self.used = used_after;
+        } else if taken == self.used {
+            self.used = 0;
+        }
     }
 }
 
@@ -163,6 +200,43 @@ mod tests {
     fn input_bytes(d: &mut MessageDeframer, bytes: &[u8]) -> io::Result<usize> {
         let mut rd = ByteRead::new(bytes);
         d.read(&mut rd)
+    }
+
+    fn input_bytes_concat(d: &mut MessageDeframer, bytes1: &[u8], bytes2: &[u8]) -> io::Result<usize> {
+        let mut bytes = vec![0u8; bytes1.len() + bytes2.len()];
+        bytes[..bytes1.len()].clone_from_slice(bytes1);
+        bytes[bytes1.len()..].clone_from_slice(bytes2);
+        let mut rd = ByteRead::new(&bytes);
+        d.read(&mut rd)
+    }
+
+    struct ErrorRead {
+        error: Option<io::Error>,
+    }
+
+    impl ErrorRead {
+        fn new(error: io::Error) -> ErrorRead {
+            ErrorRead { error: Some(error) }
+        }
+    }
+
+    impl io::Read for ErrorRead {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            for (i, b) in buf.iter_mut().enumerate() {
+                *b = i as u8;
+            }
+
+            let error = self.error.take()
+                .unwrap();
+            Err(error)
+        }
+    }
+
+    fn input_error(d: &mut MessageDeframer) {
+        let error = io::Error::from(io::ErrorKind::TimedOut);
+        let mut rd = ErrorRead::new(error);
+        d.read(&mut rd)
+            .expect_err("error not propagated");
     }
 
     fn input_whole_incremental(d: &mut MessageDeframer, bytes: &[u8]) {
@@ -246,6 +320,42 @@ mod tests {
         assert_eq!(d.frames.len(), 2);
         pop_first(&mut d);
         pop_second(&mut d);
+        assert_eq!(d.has_pending(), false);
+    }
+
+    #[test]
+    fn test_two_in_one_read() {
+        let mut d = MessageDeframer::new();
+        assert_eq!(d.has_pending(), false);
+        assert_len(FIRST_MESSAGE.len() + SECOND_MESSAGE.len(),
+                   input_bytes_concat(&mut d, FIRST_MESSAGE, SECOND_MESSAGE));
+        assert_eq!(d.frames.len(), 2);
+        pop_first(&mut d);
+        pop_second(&mut d);
+        assert_eq!(d.has_pending(), false);
+    }
+
+    #[test]
+    fn test_two_in_one_read_shortest_first() {
+        let mut d = MessageDeframer::new();
+        assert_eq!(d.has_pending(), false);
+        assert_len(FIRST_MESSAGE.len() + SECOND_MESSAGE.len(),
+                   input_bytes_concat(&mut d, SECOND_MESSAGE, FIRST_MESSAGE));
+        assert_eq!(d.frames.len(), 2);
+        pop_second(&mut d);
+        pop_first(&mut d);
+        assert_eq!(d.has_pending(), false);
+    }
+
+    #[test]
+    fn test_incremental_with_nonfatal_read_error() {
+        let mut d = MessageDeframer::new();
+        assert_len(3, input_bytes(&mut d, &FIRST_MESSAGE[..3]));
+        input_error(&mut d);
+        assert_len(FIRST_MESSAGE.len() - 3,
+                   input_bytes(&mut d, &FIRST_MESSAGE[3..]));
+        assert_eq!(d.frames.len(), 1);
+        pop_first(&mut d);
         assert_eq!(d.has_pending(), false);
     }
 }

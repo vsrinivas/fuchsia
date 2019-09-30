@@ -28,20 +28,6 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
-/* Avoid -Wmissing-prototypes warnings. */
-void GFp_nistz384_point_mul(P384_POINT *r, const BN_ULONG p_scalar[P384_LIMBS],
-                            const BN_ULONG p_x[P384_LIMBS],
-                            const BN_ULONG p_y[P384_LIMBS]);
-
-
-static BN_ULONG is_zero(const BN_ULONG a[P384_LIMBS]) {
-  BN_ULONG acc = 0;
-  for (size_t i = 0; i < P384_LIMBS; ++i) {
-    acc |= a[i];
-  }
-  return constant_time_is_zero_w(acc);
-}
-
 /* Point double: r = 2*a */
 void GFp_nistz384_point_double(P384_POINT *r, const P384_POINT *a) {
   BN_ULONG S[P384_LIMBS];
@@ -128,13 +114,14 @@ void GFp_nistz384_point_add(P384_POINT *r, const P384_POINT *a,
   elem_mul_mont(U2, in2_x, Z1sqr); /* U2 = X2*Z1^2 */
   elem_sub(H, U2, U1);             /* H = U2 - U1 */
 
-  /* This should not happen during sign/ecdh,
-   * so no constant time violation */
-  if (is_equal(U1, U2) && !in1infty && !in2infty) {
+  BN_ULONG is_exceptional = is_equal(U1, U2) & ~in1infty & ~in2infty;
+  if (is_exceptional) {
     if (is_equal(S1, S2)) {
       GFp_nistz384_point_double(r, a);
     } else {
-      memset(r, 0, sizeof(*r));
+      limbs_zero(r->X, P384_LIMBS);
+      limbs_zero(r->Y, P384_LIMBS);
+      limbs_zero(r->Z, P384_LIMBS);
     }
     return;
   }
@@ -237,7 +224,7 @@ void GFp_nistz384_point_mul(P384_POINT *r, const BN_ULONG p_scalar[P384_LIMBS],
   wvalue = (wvalue >> ((index - 1) % 8)) & kMask;
 
   booth_recode(&recoded_is_negative, &recoded, wvalue, 5);
-  assert(!recoded_is_negative);
+  ASSERT(!recoded_is_negative);
 
   gfp_p384_point_select_w5(r, table, recoded);
 

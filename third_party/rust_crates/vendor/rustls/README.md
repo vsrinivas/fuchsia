@@ -12,12 +12,27 @@ expected.  [Here's what I'm working on now](https://github.com/ctz/rustls/projec
 If you'd like to help out, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [![Build Status](https://travis-ci.org/ctz/rustls.svg?branch=master)](https://travis-ci.org/ctz/rustls)
-[![Coverage Status](https://coveralls.io/repos/github/ctz/rustls/badge.svg?branch=master)](https://coveralls.io/github/ctz/rustls?branch=master)
+[![Build Status](https://dev.azure.com/ctz99/ctz/_apis/build/status/ctz.rustls?branchName=master)](https://dev.azure.com/ctz99/ctz/_build/latest?definitionId=3&branchName=master)
+[![Coverage Status (coveralls)](https://coveralls.io/repos/github/ctz/rustls/badge.svg?branch=master)](https://coveralls.io/github/ctz/rustls?branch=master)
+[![Coverage Status (codecov.io)](https://codecov.io/gh/ctz/rustls/branch/master/graph/badge.svg)](https://codecov.io/gh/ctz/rustls/)
 [![Documentation](https://docs.rs/rustls/badge.svg)](https://docs.rs/rustls/)
 
 ## Release history:
 
-* 0.15.1 (next release):
+* 0.16.0 (2019-08-10):
+  - Optimisation of read path for polled non-blocking IO.
+  - Correct an omission in TLS1.3 middlebox compatibility mode, causing
+    handshake failures with servers behind buggy middleboxes.
+  - Move to *ring* 0.16.
+  - Assorted refactoring to reduce memory usage during and after
+    handshake.
+  - Update other dependencies.
+* 0.15.2 (2019-04-02):
+  - Moved example code around for benefit of Fuchsia.
+  - Example code fixes for Windows -- Windows is now a tested platform.
+  - QUIC-specific bug fixes.
+  - Update dependencies.
+* 0.15.1 (2019-01-29):
   - Fix incorrect offering of SHA1.
 * 0.15.0 (2019-01-20):
   - Update dependencies.

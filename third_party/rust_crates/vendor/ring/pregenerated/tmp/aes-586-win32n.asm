@@ -432,162 +432,6 @@ L$002out:
 	pxor	mm0,[edi]
 	pxor	mm4,[8+edi]
 	ret
-align	16
-__x86_AES_encrypt:
-	mov	DWORD [20+esp],edi
-	xor	eax,DWORD [edi]
-	xor	ebx,DWORD [4+edi]
-	xor	ecx,DWORD [8+edi]
-	xor	edx,DWORD [12+edi]
-	mov	esi,DWORD [240+edi]
-	lea	esi,[esi*1+esi-2]
-	lea	esi,[esi*8+edi]
-	mov	DWORD [24+esp],esi
-align	16
-L$003loop:
-	mov	esi,eax
-	and	esi,255
-	mov	esi,DWORD [esi*8+ebp]
-	movzx	edi,bh
-	xor	esi,DWORD [3+edi*8+ebp]
-	mov	edi,ecx
-	shr	edi,16
-	and	edi,255
-	xor	esi,DWORD [2+edi*8+ebp]
-	mov	edi,edx
-	shr	edi,24
-	xor	esi,DWORD [1+edi*8+ebp]
-	mov	DWORD [4+esp],esi
-	mov	esi,ebx
-	and	esi,255
-	shr	ebx,16
-	mov	esi,DWORD [esi*8+ebp]
-	movzx	edi,ch
-	xor	esi,DWORD [3+edi*8+ebp]
-	mov	edi,edx
-	shr	edi,16
-	and	edi,255
-	xor	esi,DWORD [2+edi*8+ebp]
-	mov	edi,eax
-	shr	edi,24
-	xor	esi,DWORD [1+edi*8+ebp]
-	mov	DWORD [8+esp],esi
-	mov	esi,ecx
-	and	esi,255
-	shr	ecx,24
-	mov	esi,DWORD [esi*8+ebp]
-	movzx	edi,dh
-	xor	esi,DWORD [3+edi*8+ebp]
-	mov	edi,eax
-	shr	edi,16
-	and	edx,255
-	and	edi,255
-	xor	esi,DWORD [2+edi*8+ebp]
-	movzx	edi,bh
-	xor	esi,DWORD [1+edi*8+ebp]
-	mov	edi,DWORD [20+esp]
-	mov	edx,DWORD [edx*8+ebp]
-	movzx	eax,ah
-	xor	edx,DWORD [3+eax*8+ebp]
-	mov	eax,DWORD [4+esp]
-	and	ebx,255
-	xor	edx,DWORD [2+ebx*8+ebp]
-	mov	ebx,DWORD [8+esp]
-	xor	edx,DWORD [1+ecx*8+ebp]
-	mov	ecx,esi
-	add	edi,16
-	xor	eax,DWORD [edi]
-	xor	ebx,DWORD [4+edi]
-	xor	ecx,DWORD [8+edi]
-	xor	edx,DWORD [12+edi]
-	cmp	edi,DWORD [24+esp]
-	mov	DWORD [20+esp],edi
-	jb	NEAR L$003loop
-	mov	esi,eax
-	and	esi,255
-	mov	esi,DWORD [2+esi*8+ebp]
-	and	esi,255
-	movzx	edi,bh
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,65280
-	xor	esi,edi
-	mov	edi,ecx
-	shr	edi,16
-	and	edi,255
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,16711680
-	xor	esi,edi
-	mov	edi,edx
-	shr	edi,24
-	mov	edi,DWORD [2+edi*8+ebp]
-	and	edi,4278190080
-	xor	esi,edi
-	mov	DWORD [4+esp],esi
-	mov	esi,ebx
-	and	esi,255
-	shr	ebx,16
-	mov	esi,DWORD [2+esi*8+ebp]
-	and	esi,255
-	movzx	edi,ch
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,65280
-	xor	esi,edi
-	mov	edi,edx
-	shr	edi,16
-	and	edi,255
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,16711680
-	xor	esi,edi
-	mov	edi,eax
-	shr	edi,24
-	mov	edi,DWORD [2+edi*8+ebp]
-	and	edi,4278190080
-	xor	esi,edi
-	mov	DWORD [8+esp],esi
-	mov	esi,ecx
-	and	esi,255
-	shr	ecx,24
-	mov	esi,DWORD [2+esi*8+ebp]
-	and	esi,255
-	movzx	edi,dh
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,65280
-	xor	esi,edi
-	mov	edi,eax
-	shr	edi,16
-	and	edx,255
-	and	edi,255
-	mov	edi,DWORD [edi*8+ebp]
-	and	edi,16711680
-	xor	esi,edi
-	movzx	edi,bh
-	mov	edi,DWORD [2+edi*8+ebp]
-	and	edi,4278190080
-	xor	esi,edi
-	mov	edi,DWORD [20+esp]
-	and	edx,255
-	mov	edx,DWORD [2+edx*8+ebp]
-	and	edx,255
-	movzx	eax,ah
-	mov	eax,DWORD [eax*8+ebp]
-	and	eax,65280
-	xor	edx,eax
-	mov	eax,DWORD [4+esp]
-	and	ebx,255
-	mov	ebx,DWORD [ebx*8+ebp]
-	and	ebx,16711680
-	xor	edx,ebx
-	mov	ebx,DWORD [8+esp]
-	mov	ecx,DWORD [2+ecx*8+ebp]
-	and	ecx,4278190080
-	xor	edx,ecx
-	mov	ecx,esi
-	add	edi,16
-	xor	eax,DWORD [edi]
-	xor	ebx,DWORD [4+edi]
-	xor	ecx,DWORD [8+edi]
-	xor	edx,DWORD [12+edi]
-	ret
 align	64
 L$AES_Te:
 dd	2774754246,2774754246
@@ -998,17 +842,17 @@ L$_GFp_aes_nohw_encrypt_begin:
 	sub	esp,ebx
 	add	esp,4
 	mov	DWORD [28+esp],eax
-	call	L$004pic_point
-L$004pic_point:
+	call	L$003pic_point
+L$003pic_point:
 	pop	ebp
 	lea	eax,[_GFp_ia32cap_P]
-	lea	ebp,[(L$AES_Te-L$004pic_point)+ebp]
+	lea	ebp,[(L$AES_Te-L$003pic_point)+ebp]
 	lea	ebx,[764+esp]
 	sub	ebx,ebp
 	and	ebx,768
 	lea	ebp,[2176+ebx*1+ebp]
 	bt	DWORD [eax],25
-	jnc	NEAR L$005x86
+	jnc	NEAR L$004x86
 	movq	mm0,[esi]
 	movq	mm4,[8+esi]
 	call	__sse_AES_encrypt_compact
@@ -1023,7 +867,7 @@ L$004pic_point:
 	pop	ebp
 	ret
 align	16
-L$005x86:
+L$004x86:
 	mov	DWORD [24+esp],ebp
 	mov	eax,DWORD [esi]
 	mov	ebx,DWORD [4+esi]
@@ -1050,13 +894,13 @@ __x86_AES_set_encrypt_key:
 	mov	esi,DWORD [24+esp]
 	mov	edi,DWORD [32+esp]
 	test	esi,-1
-	jz	NEAR L$006badpointer
+	jz	NEAR L$005badpointer
 	test	edi,-1
-	jz	NEAR L$006badpointer
-	call	L$007pic_point
-L$007pic_point:
+	jz	NEAR L$005badpointer
+	call	L$006pic_point
+L$006pic_point:
 	pop	ebp
-	lea	ebp,[(L$AES_Te-L$007pic_point)+ebp]
+	lea	ebp,[(L$AES_Te-L$006pic_point)+ebp]
 	lea	ebp,[2176+ebp]
 	mov	eax,DWORD [ebp-128]
 	mov	ebx,DWORD [ebp-96]
@@ -1068,12 +912,12 @@ L$007pic_point:
 	mov	edx,DWORD [96+ebp]
 	mov	ecx,DWORD [28+esp]
 	cmp	ecx,128
-	je	NEAR L$00810rounds
+	je	NEAR L$00710rounds
 	cmp	ecx,256
-	je	NEAR L$00914rounds
+	je	NEAR L$00814rounds
 	mov	eax,-2
-	jmp	NEAR L$010exit
-L$00810rounds:
+	jmp	NEAR L$009exit
+L$00710rounds:
 	mov	eax,DWORD [esi]
 	mov	ebx,DWORD [4+esi]
 	mov	ecx,DWORD [8+esi]
@@ -1083,12 +927,12 @@ L$00810rounds:
 	mov	DWORD [8+edi],ecx
 	mov	DWORD [12+edi],edx
 	xor	ecx,ecx
-	jmp	NEAR L$01110shortcut
+	jmp	NEAR L$01010shortcut
 align	4
-L$01210loop:
+L$01110loop:
 	mov	eax,DWORD [edi]
 	mov	edx,DWORD [12+edi]
-L$01110shortcut:
+L$01010shortcut:
 	movzx	esi,dl
 	movzx	ebx,BYTE [esi*1+ebp-128]
 	movzx	esi,dh
@@ -1116,11 +960,11 @@ L$01110shortcut:
 	inc	ecx
 	add	edi,16
 	cmp	ecx,10
-	jl	NEAR L$01210loop
+	jl	NEAR L$01110loop
 	mov	DWORD [80+edi],10
 	xor	eax,eax
-	jmp	NEAR L$010exit
-L$00914rounds:
+	jmp	NEAR L$009exit
+L$00814rounds:
 	mov	eax,DWORD [esi]
 	mov	ebx,DWORD [4+esi]
 	mov	ecx,DWORD [8+esi]
@@ -1138,11 +982,11 @@ L$00914rounds:
 	mov	DWORD [24+edi],ecx
 	mov	DWORD [28+edi],edx
 	xor	ecx,ecx
-	jmp	NEAR L$01314shortcut
+	jmp	NEAR L$01214shortcut
 align	4
-L$01414loop:
+L$01314loop:
 	mov	edx,DWORD [28+edi]
-L$01314shortcut:
+L$01214shortcut:
 	mov	eax,DWORD [edi]
 	movzx	esi,dl
 	movzx	ebx,BYTE [esi*1+ebp-128]
@@ -1169,7 +1013,7 @@ L$01314shortcut:
 	xor	eax,DWORD [12+edi]
 	mov	DWORD [44+edi],eax
 	cmp	ecx,6
-	je	NEAR L$01514break
+	je	NEAR L$01414break
 	inc	ecx
 	mov	edx,eax
 	mov	eax,DWORD [16+edi]
@@ -1197,14 +1041,14 @@ L$01314shortcut:
 	xor	eax,DWORD [28+edi]
 	mov	DWORD [60+edi],eax
 	add	edi,32
-	jmp	NEAR L$01414loop
-L$01514break:
+	jmp	NEAR L$01314loop
+L$01414break:
 	mov	DWORD [48+edi],14
 	xor	eax,eax
-	jmp	NEAR L$010exit
-L$006badpointer:
+	jmp	NEAR L$009exit
+L$005badpointer:
 	mov	eax,-1
-L$010exit:
+L$009exit:
 	pop	edi
 	pop	esi
 	pop	ebx

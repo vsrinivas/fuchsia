@@ -7,8 +7,9 @@ use rustls::{
     ServerSession, ClientSession,
     Session, NoClientAuth
 };
+use futures::{ Async, Poll };
+use tokio_io::{ AsyncRead, AsyncWrite };
 use super::Stream;
-
 
 struct Good<'a>(&'a mut Session);
 
@@ -28,6 +29,13 @@ impl<'a> Write for Good<'a> {
 
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+impl<'a> AsyncRead for Good<'a> {}
+impl<'a> AsyncWrite for Good<'a> {
+    fn shutdown(&mut self) -> Poll<(), io::Error> {
+        Ok(Async::Ready(()))
     }
 }
 
@@ -53,6 +61,13 @@ impl Write for Bad {
     }
 }
 
+impl AsyncRead for Bad {}
+impl AsyncWrite for Bad {
+    fn shutdown(&mut self) -> Poll<(), io::Error> {
+        Ok(Async::Ready(()))
+    }
+}
+
 
 #[test]
 fn stream_good() -> io::Result<()> {
@@ -64,12 +79,12 @@ fn stream_good() -> io::Result<()> {
 
     {
         let mut good = Good(&mut server);
-        let mut stream = Stream::new(&mut client, &mut good);
+        let mut stream = Stream::new(&mut good, &mut client);
 
         let mut buf = Vec::new();
         stream.read_to_end(&mut buf)?;
         assert_eq!(buf, FILE);
-        stream.write_all(b"Hello World!")?
+        stream.write_all(b"Hello World!")?;
     }
 
     let mut buf = String::new();
@@ -86,7 +101,7 @@ fn stream_bad() -> io::Result<()> {
     client.set_buffer_limit(1024);
 
     let mut bad = Bad(true);
-    let mut stream = Stream::new(&mut client, &mut bad);
+    let mut stream = Stream::new(&mut bad, &mut client);
     assert_eq!(stream.write(&[0x42; 8])?, 8);
     assert_eq!(stream.write(&[0x42; 8])?, 8);
     let r = stream.write(&[0x00; 1024])?; // fill buffer
@@ -105,7 +120,7 @@ fn stream_handshake() -> io::Result<()> {
 
     {
         let mut good = Good(&mut server);
-        let mut stream = Stream::new(&mut client, &mut good);
+        let mut stream = Stream::new(&mut good, &mut client);
         let (r, w) = stream.complete_io()?;
 
         assert!(r > 0);
@@ -125,11 +140,24 @@ fn stream_handshake_eof() -> io::Result<()> {
     let (_, mut client) = make_pair();
 
     let mut bad = Bad(false);
-    let mut stream = Stream::new(&mut client, &mut bad);
+    let mut stream = Stream::new(&mut bad, &mut client);
     let r = stream.complete_io();
 
     assert_eq!(r.unwrap_err().kind(), io::ErrorKind::UnexpectedEof);
 
+    Ok(())
+}
+
+#[test]
+fn stream_eof() -> io::Result<()> {
+    let (mut server, mut client) = make_pair();
+    do_handshake(&mut client, &mut server);
+    {
+        let mut good = Good(&mut server);
+        let mut stream = Stream::new(&mut good, &mut client).set_eof(true);
+        let (r, _) = stream.complete_io()?;
+        assert!(r == 0);
+    }
     Ok(())
 }
 
@@ -155,7 +183,7 @@ fn make_pair() -> (ServerSession, ClientSession) {
 
 fn do_handshake(client: &mut ClientSession, server: &mut ServerSession) {
     let mut good = Good(server);
-    let mut stream = Stream::new(client, &mut good);
+    let mut stream = Stream::new(&mut good, client);
     stream.complete_io().unwrap();
     stream.complete_io().unwrap();
 }

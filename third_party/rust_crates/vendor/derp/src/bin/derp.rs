@@ -5,7 +5,7 @@ extern crate pem;
 extern crate untrusted;
 
 use clap::{App, Arg, ArgMatches};
-use derp::{Result, Error, Tag};
+use derp::{Error, Result, Tag};
 use std::fs::File;
 use std::io::Read;
 use untrusted::{Input, Reader};
@@ -41,32 +41,23 @@ fn parser<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("path")
                 .takes_value(true)
                 .required(true)
-                .help("The path to the file")
+                .help("The path to the file"),
         )
 }
 
 fn parse_to_bytes(bytes: &[u8]) -> Vec<u8> {
-    data_encoding::BASE64.decode(bytes)
+    data_encoding::BASE64
+        .decode(bytes)
         .map_err(|_| ())
-        .or_else(|_| {
-            data_encoding::HEXUPPER.decode(bytes)
-                .map_err(|_| ())
-        })
-        .or_else(|_| {
-            data_encoding::HEXLOWER.decode(bytes)
-                .map_err(|_| ())
-        })
-        .or_else(|_| {
-            pem::parse(bytes)
-                .map(|p| p.contents)
-                .map_err(|_| ())
-        })
+        .or_else(|_| data_encoding::HEXUPPER.decode(bytes).map_err(|_| ()))
+        .or_else(|_| data_encoding::HEXLOWER.decode(bytes).map_err(|_| ()))
+        .or_else(|_| pem::parse(bytes).map(|p| p.contents).map_err(|_| ()))
         .unwrap_or_else(|_| bytes.to_vec())
 }
 
 fn make_printable_string<'a>(input: &mut Reader<'a>) -> Result<String> {
     if input.at_end() {
-        return Ok("".into())
+        return Ok("".into());
     }
 
     if input.peek(Tag::Sequence as u8) {
@@ -74,34 +65,31 @@ fn make_printable_string<'a>(input: &mut Reader<'a>) -> Result<String> {
             .lines()
             .map(|l| format!("  {}\n", l))
             .collect::<String>();
-        return Ok(format!("{}\n{}", Tag::Sequence, out))
+        return Ok(format!("{}\n{}", Tag::Sequence, out));
     }
 
     if input.peek(Tag::BitString as u8) {
         let out = derp::nested(input, Tag::BitString, make_printable_string)
-            .map(|s| {
-                s.lines()
-                    .map(|l| format!("  {}\n", l))
-                    .collect::<String>()
-            })
+            .map(|s| s.lines().map(|l| format!("  {}\n", l)).collect::<String>())
             .unwrap_or_else(|_| "".into());
-        return Ok(format!("{}\n{}", Tag::BitString, out))
+        return Ok(format!("{}\n{}", Tag::BitString, out));
     }
 
     if input.peek(Tag::OctetString as u8) {
         let out = derp::nested(input, Tag::OctetString, make_printable_string)
-            .map(|s| {
-                s.lines()
-                    .map(|l| format!("  {}\n", l))
-                    .collect::<String>()
-            })
+            .map(|s| s.lines().map(|l| format!("  {}\n", l)).collect::<String>())
             .unwrap_or_else(|_| "".into());
-        return Ok(format!("{}\n{}", Tag::OctetString, out))
+        return Ok(format!("{}\n{}", Tag::OctetString, out));
     }
 
     let mut out = String::new();
     while let Ok((tag, _)) = derp::read_tag_and_get_value(input) {
-        out.push_str(&format!("{}\n", Tag::from_byte(tag).map(|t| format!("{}", t)).unwrap_or_else(|_| format!("0x{:x}", tag))))
+        out.push_str(&format!(
+            "{}\n",
+            Tag::from_byte(tag)
+                .map(|t| format!("{}", t))
+                .unwrap_or_else(|_| format!("0x{:x}", tag))
+        ))
     }
     Ok(out)
 }

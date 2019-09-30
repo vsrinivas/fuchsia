@@ -1,5 +1,4 @@
 use webpki;
-use untrusted;
 use sct;
 use std;
 use std::sync::Arc;
@@ -10,6 +9,7 @@ use crate::msgs::handshake::SCTList;
 use crate::msgs::enums::SignatureScheme;
 use crate::error::TLSError;
 use crate::anchors::{DistinguishedNames, RootCertStore};
+use crate::anchors::OwnedTrustAnchor;
 #[cfg(feature = "logging")]
 use crate::log::{warn, debug};
 
@@ -127,25 +127,24 @@ impl WebPKIVerifier {
 
 fn prepare<'a, 'b>(roots: &'b RootCertStore, presented_certs: &'a [Certificate])
                    -> Result<(webpki::EndEntityCert<'a>,
-                              Vec<untrusted::Input<'a>>,
+                              Vec<&'a [u8]>,
                               Vec<webpki::TrustAnchor<'b>>), TLSError> {
     if presented_certs.is_empty() {
         return Err(TLSError::NoCertificatesPresented);
     }
 
     // EE cert must appear first.
-    let cert_der = untrusted::Input::from(&presented_certs[0].0);
-    let cert =
-        webpki::EndEntityCert::from(cert_der).map_err(TLSError::WebPKIError)?;
+    let cert = webpki::EndEntityCert::from(&presented_certs[0].0)
+        .map_err(TLSError::WebPKIError)?;
 
-    let chain: Vec<untrusted::Input> = presented_certs.iter()
+    let chain: Vec<&'a [u8]> = presented_certs.iter()
         .skip(1)
-        .map(|cert| untrusted::Input::from(&cert.0))
+        .map(|cert| cert.0.as_ref())
         .collect();
 
     let trustroots: Vec<webpki::TrustAnchor> = roots.roots
         .iter()
-        .map(|x| x.to_trust_anchor())
+        .map(OwnedTrustAnchor::to_trust_anchor)
         .collect();
 
     Ok((cert, chain, trustroots))
@@ -166,7 +165,7 @@ impl AllowAnyAuthenticatedClient {
     /// Construct a new `AllowAnyAuthenticatedClient`.
     ///
     /// `roots` is the list of trust anchors to use for certificate validation.
-    pub fn new(roots: RootCertStore) -> Arc<ClientCertVerifier> {
+    pub fn new(roots: RootCertStore) -> Arc<dyn ClientCertVerifier> {
         Arc::new(AllowAnyAuthenticatedClient { roots })
     }
 }
@@ -206,7 +205,7 @@ impl AllowAnyAnonymousOrAuthenticatedClient {
     /// Construct a new `AllowAnyAnonymousOrAuthenticatedClient`.
     ///
     /// `roots` is the list of trust anchors to use for certificate validation.
-    pub fn new(roots: RootCertStore) -> Arc<ClientCertVerifier> {
+    pub fn new(roots: RootCertStore) -> Arc<dyn ClientCertVerifier> {
         Arc::new(AllowAnyAnonymousOrAuthenticatedClient {
             inner: AllowAnyAuthenticatedClient { roots }
         })
@@ -233,7 +232,7 @@ pub struct NoClientAuth;
 
 impl NoClientAuth {
     /// Constructs a `NoClientAuth` and wraps it in an `Arc`.
-    pub fn new() -> Arc<ClientCertVerifier> { Arc::new(NoClientAuth) }
+    pub fn new() -> Arc<dyn ClientCertVerifier> { Arc::new(NoClientAuth) }
 }
 
 impl ClientCertVerifier for NoClientAuth {
@@ -290,9 +289,7 @@ fn verify_sig_using_any_alg(cert: &webpki::EndEntityCert,
     // TLS doesn't itself give us enough info to map to a single webpki::SignatureAlgorithm.
     // Therefore, convert_algs maps to several and we try them all.
     for alg in algs {
-        match cert.verify_signature(alg,
-                                    untrusted::Input::from(message),
-                                    untrusted::Input::from(sig)) {
+        match cert.verify_signature(alg, message, sig) {
             Err(webpki::Error::UnsupportedSignatureAlgorithmForPublicKey) => continue,
             res => return res,
         }
@@ -312,8 +309,7 @@ pub fn verify_signed_struct(message: &[u8],
                             -> Result<HandshakeSignatureValid, TLSError> {
 
     let possible_algs = convert_scheme(dss.scheme)?;
-    let cert_in = untrusted::Input::from(&cert.0);
-    let cert = webpki::EndEntityCert::from(cert_in)
+    let cert = webpki::EndEntityCert::from(&cert.0)
         .map_err(TLSError::WebPKIError)?;
 
     verify_sig_using_any_alg(&cert, possible_algs, message, &dss.sig.0)
@@ -350,13 +346,10 @@ pub fn verify_tls13(cert: &Certificate,
     msg.extend_from_slice(context_string_with_0);
     msg.extend_from_slice(handshake_hash);
 
-    let cert_in = untrusted::Input::from(&cert.0);
-    let cert = webpki::EndEntityCert::from(cert_in)
+    let cert = webpki::EndEntityCert::from(&cert.0)
         .map_err(TLSError::WebPKIError)?;
 
-    cert.verify_signature(alg,
-                          untrusted::Input::from(&msg),
-                          untrusted::Input::from(&dss.sig.0))
+    cert.verify_signature(alg, &msg, &dss.sig.0)
         .map_err(TLSError::WebPKIError)
         .map(|_| HandshakeSignatureValid::assertion())
 }

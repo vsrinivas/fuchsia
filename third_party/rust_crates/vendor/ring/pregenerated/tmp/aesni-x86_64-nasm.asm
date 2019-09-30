@@ -12,6 +12,7 @@ global	GFp_aes_hw_encrypt
 
 ALIGN	16
 GFp_aes_hw_encrypt:
+
 	movups	xmm2,XMMWORD[rcx]
 	mov	eax,DWORD[240+r8]
 	movups	xmm0,XMMWORD[r8]
@@ -32,8 +33,10 @@ DB	102,15,56,221,209
 	DB	0F3h,0C3h		;repret
 
 
+
 ALIGN	16
 _aesni_encrypt2:
+
 	movups	xmm0,XMMWORD[rcx]
 	shl	eax,4
 	movups	xmm1,XMMWORD[16+rcx]
@@ -61,8 +64,10 @@ DB	102,15,56,221,216
 	DB	0F3h,0C3h		;repret
 
 
+
 ALIGN	16
 _aesni_encrypt3:
+
 	movups	xmm0,XMMWORD[rcx]
 	shl	eax,4
 	movups	xmm1,XMMWORD[16+rcx]
@@ -95,8 +100,10 @@ DB	102,15,56,221,224
 	DB	0F3h,0C3h		;repret
 
 
+
 ALIGN	16
 _aesni_encrypt4:
+
 	movups	xmm0,XMMWORD[rcx]
 	shl	eax,4
 	movups	xmm1,XMMWORD[16+rcx]
@@ -135,8 +142,10 @@ DB	102,15,56,221,232
 	DB	0F3h,0C3h		;repret
 
 
+
 ALIGN	16
 _aesni_encrypt6:
+
 	movups	xmm0,XMMWORD[rcx]
 	shl	eax,4
 	movups	xmm1,XMMWORD[16+rcx]
@@ -189,8 +198,10 @@ DB	102,15,56,221,248
 	DB	0F3h,0C3h		;repret
 
 
+
 ALIGN	16
 _aesni_encrypt8:
+
 	movups	xmm0,XMMWORD[rcx]
 	shl	eax,4
 	movups	xmm1,XMMWORD[16+rcx]
@@ -251,6 +262,7 @@ DB	102,15,56,221,248
 DB	102,68,15,56,221,192
 DB	102,68,15,56,221,200
 	DB	0F3h,0C3h		;repret
+
 
 global	GFp_aes_hw_ctr32_encrypt_blocks
 

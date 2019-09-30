@@ -9,7 +9,6 @@ use lazy_static::lazy_static;
 use rustls::Certificate;
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
-use untrusted;
 use webpki;
 use webpki_roots_fuchsia;
 
@@ -76,9 +75,9 @@ impl RecordingVerifier {
             return Err(HttpsDateError::NoCertificatesPresented);
         };
 
-        let untrusted_der: Vec<untrusted::Input> = presented_certs
+        let untrusted_der: Vec<&[u8]> = presented_certs
             .iter()
-            .map(|certificate| untrusted::Input::from(&certificate.0))
+            .map(|certificate| certificate.0.as_slice())
             .collect();
         let leaf = webpki::EndEntityCert::from(untrusted_der[0])
             .map_err(|_| HttpsDateError::CorruptLeafCertificate)?;

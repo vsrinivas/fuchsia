@@ -1,0 +1,3 @@
+steps:
+  - bash: target/release/examples/bench
+    displayName: "run benchmarks"

@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rustls"
-version = "0.15.1"
+version = "0.16.0"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Rustls is a modern TLS library written in Rust."
 homepage = "https://github.com/ctz/rustls"
@@ -35,69 +35,39 @@ path = "examples/internal/trytls_shim.rs"
 name = "bench"
 path = "examples/internal/bench.rs"
 
-[[example]]
-name = "tlsclient"
-path = "examples/tlsclient.rs"
-
-[[example]]
-name = "tlsserver"
-path = "examples/tlsserver.rs"
-
-[[example]]
-name = "simpleclient"
-path = "examples/simpleclient.rs"
-
-[[example]]
-name = "simple_0rtt_client"
-path = "examples/simple_0rtt_client.rs"
-required-features = ["logging"]
+[[bench]]
+name = "benchmarks"
+path = "tests/benchmarks.rs"
+harness = false
 [dependencies.base64]
 version = "0.10"
 
 [dependencies.log]
-version = "0.4.0"
+version = "0.4.4"
 optional = true
 
 [dependencies.ring]
-version = "0.14"
+version = "0.16.5"
 
 [dependencies.sct]
-version = "0.5"
-
-[dependencies.untrusted]
-version = "0.6.2"
+version = "0.6.0"
 
 [dependencies.webpki]
-version = "0.19"
-[dev-dependencies.ct-logs]
-version = "0.5"
-
-[dev-dependencies.docopt]
-version = "1.0"
+version = "0.21.0"
+[dev-dependencies.criterion]
+version = "0.2.11"
 
 [dev-dependencies.env_logger]
-version = "0.6"
+version = "0.6.1"
 
 [dev-dependencies.log]
-version = "0.4"
+version = "0.4.4"
 
-[dev-dependencies.mio]
-version = "0.6"
-
-[dev-dependencies.regex]
-version = "1.0"
-
-[dev-dependencies.serde]
-version = "1.0"
-
-[dev-dependencies.serde_derive]
-version = "1.0"
-
-[dev-dependencies.vecio]
-version = "0.1"
+[dev-dependencies.tempfile]
+version = "3.0"
 
 [dev-dependencies.webpki-roots]
-version = "0.16"
+version = "0.17.0"
 
 [features]
 dangerous_configuration = []

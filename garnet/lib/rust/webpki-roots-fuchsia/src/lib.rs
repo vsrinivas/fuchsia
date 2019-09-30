@@ -1,5 +1,4 @@
 extern crate base64;
-extern crate untrusted;
 extern crate webpki;
 
 #[macro_use]
@@ -47,7 +46,7 @@ lazy_static! {
     };
     static ref ROOTS: Vec<webpki::TrustAnchor<'static>> = {
         CERT_DERS.iter().map(|cert_bytes| {
-            cert_der_as_trust_anchor(untrusted::Input::from(&cert_bytes))
+            cert_der_as_trust_anchor(&cert_bytes)
                 .expect("Parsing root certificate failed")
         }).collect()
     };

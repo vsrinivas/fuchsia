@@ -34,7 +34,8 @@ use super::{
     chacha20_poly1305::derive_poly1305_key,
     poly1305, Nonce, Tag,
 };
-use crate::{constant_time, endian::*, error, polyfill::convert::*};
+use crate::{constant_time, endian::*, error};
+use core::convert::TryInto;
 
 /// A key for sealing packets.
 pub struct SealingKey {
@@ -57,7 +58,9 @@ impl SealingKey {
     /// `encrypted_packet_length||ciphertext`, where `encrypted_packet_length`
     /// is encrypted with `K_1` and `ciphertext` is encrypted by `K_2`.
     pub fn seal_in_place(
-        &self, sequence_number: u32, plaintext_in_ciphertext_out: &mut [u8],
+        &self,
+        sequence_number: u32,
+        plaintext_in_ciphertext_out: &mut [u8],
         tag_out: &mut [u8; TAG_LEN],
     ) {
         let mut counter = make_counter(sequence_number);
@@ -98,7 +101,9 @@ impl OpeningKey {
     /// Importantly, the result won't be authenticated until `open_in_place` is
     /// called.
     pub fn decrypt_packet_length(
-        &self, sequence_number: u32, encrypted_packet_length: [u8; PACKET_LENGTH_LEN],
+        &self,
+        sequence_number: u32,
+        encrypted_packet_length: [u8; PACKET_LENGTH_LEN],
     ) -> [u8; PACKET_LENGTH_LEN] {
         let mut packet_length = encrypted_packet_length;
         let counter = make_counter(sequence_number);
@@ -116,7 +121,10 @@ impl OpeningKey {
     /// otherwise the contents of `ciphertext_in_plaintext_out` are unspecified
     /// and must not be used.
     pub fn open_in_place<'a>(
-        &self, sequence_number: u32, ciphertext_in_plaintext_out: &'a mut [u8], tag: &[u8; TAG_LEN],
+        &self,
+        sequence_number: u32,
+        ciphertext_in_plaintext_out: &'a mut [u8],
+        tag: &[u8; TAG_LEN],
     ) -> Result<&'a [u8], error::Unspecified> {
         let mut counter = make_counter(sequence_number);
 
@@ -143,10 +151,10 @@ struct Key {
 impl Key {
     pub fn new(key_material: &[u8; KEY_LEN]) -> Key {
         // The first half becomes K_2 and the second half becomes K_1.
-        let (k_2, k_1) = key_material.into_();
+        let (k_2, k_1) = key_material.split_at(chacha::KEY_LEN);
         Key {
-            k_1: chacha::Key::from(k_1),
-            k_2: chacha::Key::from(k_2),
+            k_1: chacha::Key::from(k_1.try_into().unwrap()),
+            k_2: chacha::Key::from(k_2.try_into().unwrap()),
         }
     }
 }

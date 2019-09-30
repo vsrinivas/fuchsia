@@ -158,7 +158,7 @@ const SCT_X509_ENTRY: [u8; 2] = [0, 0];
 
 impl<'a> SCT<'a> {
     fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
-        let alg: &ring::signature::VerificationAlgorithm = match self.sig_alg {
+        let alg: &dyn ring::signature::VerificationAlgorithm = match self.sig_alg {
             ECDSA_SHA256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
             ECDSA_SHA384 => &ring::signature::ECDSA_P384_SHA384_ASN1,
             RSA_PKCS1_SHA256 => &ring::signature::RSA_PKCS1_2048_8192_SHA256,
@@ -176,11 +176,9 @@ impl<'a> SCT<'a> {
         write_u16(self.exts.len() as u16, &mut data);
         data.extend_from_slice(self.exts);
 
-        let sig = untrusted::Input::from(self.sig);
-        let data = untrusted::Input::from(&data);
-        let key = untrusted::Input::from(key);
+        let key = ring::signature::UnparsedPublicKey::new(alg, key);
 
-        ring::signature::verify(alg, key, data, sig)
+        key.verify(&data, self.sig)
             .map_err(|_| Error::InvalidSignature)
     }
 
@@ -196,25 +194,25 @@ impl<'a> SCT<'a> {
                     return Err(Error::UnsupportedSCTVersion);
                 }
 
-                let id = rd.skip_and_get_input(32)
+                let id = rd.read_bytes(32)
                     .map_err(|_| Error::MalformedSCT)?;
-                let timestamp = rd.skip_and_get_input(8)
+                let timestamp = rd.read_bytes(8)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u64)?;
 
-                let ext_len = rd.skip_and_get_input(2)
+                let ext_len = rd.read_bytes(2)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u16)?;
-                let exts = rd.skip_and_get_input(ext_len as usize)
+                let exts = rd.read_bytes(ext_len as usize)
                     .map_err(|_| Error::MalformedSCT)?;
 
-                let sig_alg = rd.skip_and_get_input(2)
+                let sig_alg = rd.read_bytes(2)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u16)?;
-                let sig_len = rd.skip_and_get_input(2)
+                let sig_len = rd.read_bytes(2)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u16)?;
-                let sig = rd.skip_and_get_input(sig_len as usize)
+                let sig = rd.read_bytes(sig_len as usize)
                     .map_err(|_| Error::MalformedSCT)?;
 
                 let ret = SCT {

@@ -19,6 +19,7 @@
 
 /// RSA signatures.
 use crate::{
+    arithmetic::bigint,
     bits, error,
     io::{self, der},
     limb,
@@ -29,8 +30,8 @@ mod padding;
 
 // `RSA_PKCS1_SHA1` is intentionally not exposed.
 pub use self::padding::{
-    Encoding, RSA_PKCS1_SHA256, RSA_PKCS1_SHA384, RSA_PKCS1_SHA512, RSA_PSS_SHA256, RSA_PSS_SHA384,
-    RSA_PSS_SHA512,
+    RsaEncoding, RSA_PKCS1_SHA256, RSA_PKCS1_SHA384, RSA_PKCS1_SHA512, RSA_PSS_SHA256,
+    RSA_PSS_SHA384, RSA_PSS_SHA512,
 };
 
 // Maximum RSA modulus size supported for signature verification (in bytes).
@@ -41,8 +42,8 @@ const PRIVATE_KEY_PUBLIC_MODULUS_MAX_BITS: bits::BitLength = bits::BitLength::fr
 
 /// Parameters for RSA verification.
 #[derive(Debug)]
-pub struct Parameters {
-    padding_alg: &'static padding::Verification,
+pub struct RsaParameters {
+    padding_alg: &'static dyn padding::Verification,
     min_bits: bits::BitLength,
 }
 
@@ -63,8 +64,8 @@ fn parse_public_key(
 #[derive(Copy, Clone)]
 pub enum N {}
 
+unsafe impl bigint::PublicModulus for N {}
+
 pub mod verification;
 
 pub mod signing;
-
-mod bigint;

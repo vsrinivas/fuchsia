@@ -18,7 +18,7 @@
 
 #[cfg(feature = "cli")]
 use std::fmt::{self, Display, Formatter};
-use untrusted::{Reader, Input};
+use untrusted::{Input, Reader};
 
 use {Error, Result};
 
@@ -45,6 +45,18 @@ pub enum Tag {
     ContextSpecificConstructed3 = CONTEXT_SPECIFIC | CONSTRUCTED | 3,
 }
 
+impl From<Tag> for usize {
+    fn from(tag: Tag) -> Self {
+        tag as Self
+    }
+}
+
+impl From<Tag> for u8 {
+    fn from(tag: Tag) -> Self {
+        tag as Self
+    } // XXX: narrowing conversion.
+}
+
 #[cfg(feature = "cli")]
 impl Display for Tag {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -64,7 +76,7 @@ impl Display for Tag {
             Tag::ContextSpecificConstructed2 => "CONTEXT SPECIFIC CONSTRUCTED 2",
             Tag::ContextSpecificConstructed3 => "CONTEXT SPECIFIC CONSTRUCTED 3",
         };
-        write!(f, "{}", s)
+        f.write_str(s)
     }
 }
 
@@ -82,32 +94,34 @@ impl Tag {
             x if x == Tag::Sequence as u8 => Ok(Tag::Sequence),
             x if x == Tag::UtcTime as u8 => Ok(Tag::UtcTime),
             x if x == Tag::GeneralizedTime as u8 => Ok(Tag::GeneralizedTime),
-            x if x == Tag::ContextSpecificConstructed0 as u8 => Ok(Tag::ContextSpecificConstructed0),
-            x if x == Tag::ContextSpecificConstructed1 as u8 => Ok(Tag::ContextSpecificConstructed1),
-            x if x == Tag::ContextSpecificConstructed2 as u8 => Ok(Tag::ContextSpecificConstructed2),
-            x if x == Tag::ContextSpecificConstructed3 as u8 => Ok(Tag::ContextSpecificConstructed3),
-            _ => Err(Error::UnknownTag)
+            x if x == Tag::ContextSpecificConstructed0 as u8 => {
+                Ok(Tag::ContextSpecificConstructed0)
+            }
+            x if x == Tag::ContextSpecificConstructed1 as u8 => {
+                Ok(Tag::ContextSpecificConstructed1)
+            }
+            x if x == Tag::ContextSpecificConstructed2 as u8 => {
+                Ok(Tag::ContextSpecificConstructed2)
+            }
+            x if x == Tag::ContextSpecificConstructed3 as u8 => {
+                Ok(Tag::ContextSpecificConstructed3)
+            }
+            _ => Err(Error::UnknownTag),
         }
     }
 }
 
-
 /// Read a tag and return it's value. Errors when the expect and actual tag do not match.
-pub fn expect_tag_and_get_value<'a>(
-    input: &mut Reader<'a>,
-    tag: Tag,
-) -> Result<Input<'a>> {
+pub fn expect_tag_and_get_value<'a>(input: &mut Reader<'a>, tag: Tag) -> Result<Input<'a>> {
     let (actual_tag, inner) = read_tag_and_get_value(input)?;
-    if tag as u8 != actual_tag {
+    if usize::from(tag) != usize::from(actual_tag) {
         return Err(Error::WrongTag);
     }
     Ok(inner)
 }
 
 /// Read the next tag, and return it and its value.
-pub fn read_tag_and_get_value<'a>(
-    input: &mut Reader<'a>,
-) -> Result<(u8, Input<'a>)> {
+pub fn read_tag_and_get_value<'a>(input: &mut Reader<'a>) -> Result<(u8, Input<'a>)> {
     let tag = input.read_byte()?;
     if (tag & 0x1F) == 0x1F {
         return Err(Error::HighTagNumberForm);
@@ -117,17 +131,17 @@ pub fn read_tag_and_get_value<'a>(
     // is encoded in the seven remaining bits of that byte. Otherwise, those
     // seven bits represent the number of bytes used to encode the length.
     let length = match input.read_byte()? {
-        n if (n & 0x80) == 0 => n as usize,
+        n if (n & 0x80) == 0 => usize::from(n),
         0x81 => {
             let second_byte = input.read_byte()?;
             if second_byte < 128 {
                 return Err(Error::NonCanonical);
             }
-            second_byte as usize
+            usize::from(second_byte)
         }
         0x82 => {
-            let second_byte = input.read_byte()? as usize;
-            let third_byte = input.read_byte()? as usize;
+            let second_byte = usize::from(input.read_byte()?);
+            let third_byte = usize::from(input.read_byte()?);
             let combined = (second_byte << 8) | third_byte;
             if combined < 256 {
                 return Err(Error::NonCanonical);
@@ -137,13 +151,12 @@ pub fn read_tag_and_get_value<'a>(
         _ => return Err(Error::LongLengthNotSupported),
     };
 
-    let inner = input.skip_and_get_input(length)?;
+    let inner = input.read_bytes(length)?;
     Ok((tag, inner))
 }
 
 pub fn read_null<'a>(input: &mut Reader<'a>) -> Result<()> {
-    expect_tag_and_get_value(input, Tag::Null)
-        .map(|_| ())
+    expect_tag_and_get_value(input, Tag::Null).map(|_| ())
 }
 
 /// Read a `BIT STRING` with leading byte `0x00` signifying no unused bits.
@@ -164,15 +177,13 @@ pub fn read_null<'a>(input: &mut Reader<'a>) -> Result<()> {
 ///     assert_eq!(bits, Input::from(&[0x01, 0x02, 0x03]));
 /// }
 /// ```
-pub fn bit_string_with_no_unused_bits<'a>(
-    input: &mut Reader<'a>,
-) -> Result<Input<'a>> {
+pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>) -> Result<Input<'a>> {
     nested(input, Tag::BitString, |value| {
         let unused_bits_at_end = value.read_byte()?;
         if unused_bits_at_end != 0 {
             return Err(Error::NonZeroUnusedBits);
         }
-        Ok(value.skip_to_end())
+        Ok(value.read_bytes_to_end())
     })
 }
 
@@ -215,20 +226,17 @@ pub fn bit_string_with_no_unused_bits<'a>(
 // size.
 pub fn nested<'a, F, R>(input: &mut Reader<'a>, tag: Tag, decoder: F) -> Result<R>
 where
-    F: FnOnce(&mut Reader<'a>) -> Result<R>,
+    F: FnOnce(&mut untrusted::Reader<'a>) -> Result<R>,
 {
     let inner = expect_tag_and_get_value(input, tag)?;
     inner.read_all(Error::Read, decoder)
 }
 
 /// Return a non-negative integer.
-pub fn nonnegative_integer<'a>(
-    input: &mut Reader<'a>,
-    min_value: u8,
-) -> Result<Input<'a>> {
+pub fn nonnegative_integer<'a>(input: &mut Reader<'a>, min_value: u8) -> Result<Input<'a>> {
     // Verify that |input|, which has had any leading zero stripped off, is the
     // encoding of a value of at least |min_value|.
-    fn check_minimum(input: Input, min_value: u8) -> Result<()> {
+    fn check_minimum(input: untrusted::Input, min_value: u8) -> Result<()> {
         input.read_all(Error::Read, |input| {
             let first_byte = input.read_byte()?;
             if input.at_end() && first_byte < min_value {
@@ -254,7 +262,7 @@ pub fn nonnegative_integer<'a>(
                 return Ok(value);
             }
 
-            let r = input.skip_to_end();
+            let r = input.read_bytes_to_end();
             r.read_all(Error::Read, |input| {
                 let second_byte = input.read_byte()?;
                 if (second_byte & 0x80) == 0 {
@@ -274,7 +282,7 @@ pub fn nonnegative_integer<'a>(
             return Err(Error::NegativeValue);
         }
 
-        let _ = input.skip_to_end();
+        let _ = input.read_bytes_to_end();
         check_minimum(value, min_value)?;
         Ok(value)
     })
@@ -283,7 +291,7 @@ pub fn nonnegative_integer<'a>(
 /// Parse as integer with a value in the in the range [0, 255], returning its
 /// numeric value. This is typically used for parsing version numbers.
 #[inline]
-pub fn small_nonnegative_integer(input: &mut Reader) -> Result<u8> {
+pub fn small_nonnegative_integer(input: &mut untrusted::Reader) -> Result<u8> {
     let value = nonnegative_integer(input, 0)?;
     value.read_all(Error::Read, |input| {
         let r = input.read_byte()?;
@@ -328,54 +336,49 @@ mod tests {
 
     fn with_good_i<F, R>(value: &[u8], f: F)
     where
-        F: FnOnce(&mut Reader) -> Result<R>,
+        F: FnOnce(&mut untrusted::Reader) -> Result<R>,
     {
-        let r = Input::from(value).read_all(Error::Read, f);
+        let r = untrusted::Input::from(value).read_all(Error::Read, f);
         assert!(r.is_ok());
     }
 
     fn with_bad_i<F, R>(value: &[u8], f: F)
     where
-        F: FnOnce(&mut Reader) -> Result<R>,
+        F: FnOnce(&mut untrusted::Reader) -> Result<R>,
     {
-        let r = Input::from(value).read_all(Error::Read, f);
+        let r = untrusted::Input::from(value).read_all(Error::Read, f);
         assert!(r.is_err());
     }
 
-    static ZERO_INTEGER: &'static [u8] = &[0x02, 0x01, 0x00];
+    static ZERO_INTEGER: &[u8] = &[0x02, 0x01, 0x00];
 
-    static GOOD_POSITIVE_INTEGERS: &'static [(&'static [u8], u8)] =
-        &[
-            (&[0x02, 0x01, 0x01], 0x01),
-            (&[0x02, 0x01, 0x02], 0x02),
-            (&[0x02, 0x01, 0x7e], 0x7e),
-            (&[0x02, 0x01, 0x7f], 0x7f),
+    static GOOD_POSITIVE_INTEGERS: &[(&[u8], u8)] = &[
+        (&[0x02, 0x01, 0x01], 0x01),
+        (&[0x02, 0x01, 0x02], 0x02),
+        (&[0x02, 0x01, 0x7e], 0x7e),
+        (&[0x02, 0x01, 0x7f], 0x7f),
+        // Values that need to have an 0x00 prefix to disambiguate them from
+        // them from negative values.
+        (&[0x02, 0x02, 0x00, 0x80], 0x80),
+        (&[0x02, 0x02, 0x00, 0x81], 0x81),
+        (&[0x02, 0x02, 0x00, 0xfe], 0xfe),
+        (&[0x02, 0x02, 0x00, 0xff], 0xff),
+    ];
 
-            // Values that need to have an 0x00 prefix to disambiguate them from
-            // them from negative values.
-            (&[0x02, 0x02, 0x00, 0x80], 0x80),
-            (&[0x02, 0x02, 0x00, 0x81], 0x81),
-            (&[0x02, 0x02, 0x00, 0xfe], 0xfe),
-            (&[0x02, 0x02, 0x00, 0xff], 0xff),
-        ];
-
-    static BAD_NONNEGATIVE_INTEGERS: &'static [&'static [u8]] = &[
-        &[], // At end of input
-        &[0x02], // Tag only
+    static BAD_NONNEGATIVE_INTEGERS: &[&[u8]] = &[
+        &[],           // At end of input
+        &[0x02],       // Tag only
         &[0x02, 0x00], // Empty value
-
         // Length mismatch
         &[0x02, 0x00, 0x01],
         &[0x02, 0x01],
         &[0x02, 0x01, 0x00, 0x01],
         &[0x02, 0x01, 0x01, 0x00], // Would be valid if last byte is ignored.
         &[0x02, 0x02, 0x01],
-
         // Negative values
         &[0x02, 0x01, 0x80],
         &[0x02, 0x01, 0xfe],
         &[0x02, 0x01, 0xff],
-
         // Values that have an unnecessary leading 0x00
         &[0x02, 0x02, 0x00, 0x00],
         &[0x02, 0x02, 0x00, 0x01],
@@ -390,7 +393,7 @@ mod tests {
             assert_eq!(small_nonnegative_integer(input)?, 0x00);
             Ok(())
         });
-        for &(ref test_in, test_out) in GOOD_POSITIVE_INTEGERS.iter() {
+        for &(test_in, test_out) in GOOD_POSITIVE_INTEGERS.iter() {
             with_good_i(test_in, |input| {
                 assert_eq!(small_nonnegative_integer(input)?, test_out);
                 Ok(())
@@ -410,13 +413,10 @@ mod tests {
             let _ = positive_integer(input)?;
             Ok(())
         });
-        for &(ref test_in, test_out) in GOOD_POSITIVE_INTEGERS.iter() {
+        for &(test_in, test_out) in GOOD_POSITIVE_INTEGERS.iter() {
             with_good_i(test_in, |input| {
                 let test_out = [test_out];
-                assert_eq!(
-                    positive_integer(input)?,
-                    Input::from(&test_out[..])
-                );
+                assert_eq!(positive_integer(input)?, Input::from(&test_out[..]));
                 Ok(())
             });
         }

@@ -9,162 +9,10 @@
 
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
-.type	_x86_64_AES_encrypt,@function
-.align	16
-_x86_64_AES_encrypt:
-	xorl	0(%r15),%eax
-	xorl	4(%r15),%ebx
-	xorl	8(%r15),%ecx
-	xorl	12(%r15),%edx
-
-	movl	240(%r15),%r13d
-	subl	$1,%r13d
-	jmp	.Lenc_loop
-.align	16
-.Lenc_loop:
-
-	movzbl	%al,%esi
-	movzbl	%bl,%edi
-	movzbl	%cl,%ebp
-	movl	0(%r14,%rsi,8),%r10d
-	movl	0(%r14,%rdi,8),%r11d
-	movl	0(%r14,%rbp,8),%r12d
-
-	movzbl	%bh,%esi
-	movzbl	%ch,%edi
-	movzbl	%dl,%ebp
-	xorl	3(%r14,%rsi,8),%r10d
-	xorl	3(%r14,%rdi,8),%r11d
-	movl	0(%r14,%rbp,8),%r8d
-
-	movzbl	%dh,%esi
-	shrl	$16,%ecx
-	movzbl	%ah,%ebp
-	xorl	3(%r14,%rsi,8),%r12d
-	shrl	$16,%edx
-	xorl	3(%r14,%rbp,8),%r8d
-
-	shrl	$16,%ebx
-	leaq	16(%r15),%r15
-	shrl	$16,%eax
-
-	movzbl	%cl,%esi
-	movzbl	%dl,%edi
-	movzbl	%al,%ebp
-	xorl	2(%r14,%rsi,8),%r10d
-	xorl	2(%r14,%rdi,8),%r11d
-	xorl	2(%r14,%rbp,8),%r12d
-
-	movzbl	%dh,%esi
-	movzbl	%ah,%edi
-	movzbl	%bl,%ebp
-	xorl	1(%r14,%rsi,8),%r10d
-	xorl	1(%r14,%rdi,8),%r11d
-	xorl	2(%r14,%rbp,8),%r8d
-
-	movl	12(%r15),%edx
-	movzbl	%bh,%edi
-	movzbl	%ch,%ebp
-	movl	0(%r15),%eax
-	xorl	1(%r14,%rdi,8),%r12d
-	xorl	1(%r14,%rbp,8),%r8d
-
-	movl	4(%r15),%ebx
-	movl	8(%r15),%ecx
-	xorl	%r10d,%eax
-	xorl	%r11d,%ebx
-	xorl	%r12d,%ecx
-	xorl	%r8d,%edx
-	subl	$1,%r13d
-	jnz	.Lenc_loop
-	movzbl	%al,%esi
-	movzbl	%bl,%edi
-	movzbl	%cl,%ebp
-	movzbl	2(%r14,%rsi,8),%r10d
-	movzbl	2(%r14,%rdi,8),%r11d
-	movzbl	2(%r14,%rbp,8),%r12d
-
-	movzbl	%dl,%esi
-	movzbl	%bh,%edi
-	movzbl	%ch,%ebp
-	movzbl	2(%r14,%rsi,8),%r8d
-	movl	0(%r14,%rdi,8),%edi
-	movl	0(%r14,%rbp,8),%ebp
-
-	andl	$0x0000ff00,%edi
-	andl	$0x0000ff00,%ebp
-
-	xorl	%edi,%r10d
-	xorl	%ebp,%r11d
-	shrl	$16,%ecx
-
-	movzbl	%dh,%esi
-	movzbl	%ah,%edi
-	shrl	$16,%edx
-	movl	0(%r14,%rsi,8),%esi
-	movl	0(%r14,%rdi,8),%edi
-
-	andl	$0x0000ff00,%esi
-	andl	$0x0000ff00,%edi
-	shrl	$16,%ebx
-	xorl	%esi,%r12d
-	xorl	%edi,%r8d
-	shrl	$16,%eax
-
-	movzbl	%cl,%esi
-	movzbl	%dl,%edi
-	movzbl	%al,%ebp
-	movl	0(%r14,%rsi,8),%esi
-	movl	0(%r14,%rdi,8),%edi
-	movl	0(%r14,%rbp,8),%ebp
-
-	andl	$0x00ff0000,%esi
-	andl	$0x00ff0000,%edi
-	andl	$0x00ff0000,%ebp
-
-	xorl	%esi,%r10d
-	xorl	%edi,%r11d
-	xorl	%ebp,%r12d
-
-	movzbl	%bl,%esi
-	movzbl	%dh,%edi
-	movzbl	%ah,%ebp
-	movl	0(%r14,%rsi,8),%esi
-	movl	2(%r14,%rdi,8),%edi
-	movl	2(%r14,%rbp,8),%ebp
-
-	andl	$0x00ff0000,%esi
-	andl	$0xff000000,%edi
-	andl	$0xff000000,%ebp
-
-	xorl	%esi,%r8d
-	xorl	%edi,%r10d
-	xorl	%ebp,%r11d
-
-	movzbl	%bh,%esi
-	movzbl	%ch,%edi
-	movl	16+12(%r15),%edx
-	movl	2(%r14,%rsi,8),%esi
-	movl	2(%r14,%rdi,8),%edi
-	movl	16+0(%r15),%eax
-
-	andl	$0xff000000,%esi
-	andl	$0xff000000,%edi
-
-	xorl	%esi,%r12d
-	xorl	%edi,%r8d
-
-	movl	16+4(%r15),%ebx
-	movl	16+8(%r15),%ecx
-	xorl	%r10d,%eax
-	xorl	%r11d,%ebx
-	xorl	%r12d,%ecx
-	xorl	%r8d,%edx
-.byte	0xf3,0xc3
-.size	_x86_64_AES_encrypt,.-_x86_64_AES_encrypt
 .type	_x86_64_AES_encrypt_compact,@function
 .align	16
 _x86_64_AES_encrypt_compact:
+.cfi_startproc	
 	leaq	128(%r14),%r8
 	movl	0-128(%r8),%edi
 	movl	32-128(%r8),%ebp
@@ -334,6 +182,7 @@ _x86_64_AES_encrypt_compact:
 	xorl	8(%r15),%ecx
 	xorl	12(%r15),%edx
 .byte	0xf3,0xc3
+.cfi_endproc	
 .size	_x86_64_AES_encrypt_compact,.-_x86_64_AES_encrypt_compact
 .align	16
 .globl	GFp_aes_nohw_encrypt
@@ -463,6 +312,7 @@ GFp_aes_nohw_set_encrypt_key:
 .type	_x86_64_AES_set_encrypt_key,@function
 .align	16
 _x86_64_AES_set_encrypt_key:
+.cfi_startproc	
 	movl	%esi,%ecx
 	movq	%rdi,%rsi
 	movq	%rdx,%rdi
@@ -635,6 +485,7 @@ _x86_64_AES_set_encrypt_key:
 	movq	$-1,%rax
 .Lexit:
 .byte	0xf3,0xc3
+.cfi_endproc	
 .size	_x86_64_AES_set_encrypt_key,.-_x86_64_AES_set_encrypt_key
 .align	64
 .LAES_Te:

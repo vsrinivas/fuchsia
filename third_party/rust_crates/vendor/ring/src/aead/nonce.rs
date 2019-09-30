@@ -24,7 +24,8 @@
 //!    is incremented, the current value is returned.
 
 use super::Block;
-use crate::{endian::*, error, polyfill::convert::*};
+use crate::{endian::*, error};
+use core::convert::TryInto;
 use core::marker::PhantomData;
 
 /// A nonce for a single AEAD opening or sealing operation.
@@ -42,18 +43,22 @@ impl Nonce {
     /// Fails if `value` isn't `NONCE_LEN` bytes long.
     #[inline]
     pub fn try_assume_unique_for_key(value: &[u8]) -> Result<Self, error::Unspecified> {
-        let value: &[u8; NONCE_LEN] = value.try_into_()?;
+        let value: &[u8; NONCE_LEN] = value.try_into()?;
         Ok(Self::assume_unique_for_key(*value))
     }
 
     /// Constructs a `Nonce` with the given value, assuming that the value is
     /// unique for the lifetime of the key it is being used with.
     #[inline]
-    pub fn assume_unique_for_key(value: [u8; NONCE_LEN]) -> Self { Nonce(value) }
+    pub fn assume_unique_for_key(value: [u8; NONCE_LEN]) -> Self {
+        Self(value)
+    }
 }
 
 impl AsRef<[u8; NONCE_LEN]> for Nonce {
-    fn as_ref(&self) -> &[u8; NONCE_LEN] { &self.0 }
+    fn as_ref(&self) -> &[u8; NONCE_LEN] {
+        &self.0
+    }
 }
 
 /// All the AEADs we support use 96-bit nonces.
@@ -76,8 +81,12 @@ impl<U32: Layout<u32>> Counter<U32>
 where
     u32: From<U32>,
 {
-    pub fn zero(nonce: Nonce) -> Self { Self::new(nonce, 0) }
-    pub fn one(nonce: Nonce) -> Self { Self::new(nonce, 1) }
+    pub fn zero(nonce: Nonce) -> Self {
+        Self::new(nonce, 0)
+    }
+    pub fn one(nonce: Nonce) -> Self {
+        Self::new(nonce, 1)
+    }
 
     // Used by `zero()` and by the tests.
     #[cfg(test)]
@@ -127,15 +136,21 @@ impl<U32: Layout<u32>> From<Counter<U32>> for Iv
 where
     u32: From<U32>,
 {
-    fn from(counter: Counter<U32>) -> Self { Iv(unsafe { counter.block }) }
+    fn from(counter: Counter<U32>) -> Self {
+        Self(unsafe { counter.block })
+    }
 }
 
 impl Iv {
     #[inline]
-    pub fn assume_unique_for_key(a: Block) -> Self { Iv(a) }
+    pub fn assume_unique_for_key(a: Block) -> Self {
+        Self(a)
+    }
 
     #[inline]
-    pub fn into_block_less_safe(self) -> Block { self.0 }
+    pub fn into_block_less_safe(self) -> Block {
+        self.0
+    }
 }
 
 pub trait Layout<T>: Encoding<T>

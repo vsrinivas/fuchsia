@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ct-logs"
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Google's list of Certificate Transparency logs for use with sct crate"
 homepage = "https://github.com/ctz/ct-logs"
@@ -21,4 +21,4 @@ readme = "README.md"
 license = "Apache-2.0/ISC/MIT"
 repository = "https://github.com/ctz/ct-logs"
 [dependencies.sct]
-version = "0.5.0"
+version = "0.6.0"

@@ -5,19 +5,20 @@ use crate::msgs::handshake::{ClientExtension, ServerExtension};
 use crate::msgs::message::{Message, MessagePayload};
 use crate::server::{ServerConfig, ServerSession, ServerSessionImpl};
 use crate::error::TLSError;
-use crate::key_schedule::{KeySchedule, SecretKind};
+use crate::key_schedule;
 use crate::session::{SessionCommon, Protocol};
 
 use std::sync::Arc;
+use ring::hkdf;
 use webpki;
 
 /// Secrets used to encrypt/decrypt traffic
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Secrets {
     /// Secret used to encrypt packets transmitted by the client
-    pub client: Vec<u8>,
+    pub client: hkdf::Prk,
     /// Secret used to encrypt packets transmitted by the server
-    pub server: Vec<u8>,
+    pub server: hkdf::Prk,
 }
 
 /// Generic methods for QUIC sessions
@@ -26,7 +27,7 @@ pub trait QuicExt {
     fn get_quic_transport_parameters(&self) -> Option<&[u8]>;
 
     /// Return the early traffic secret, used to encrypt 0-RTT data.
-    fn get_early_secret(&self) -> Option<&[u8]>;
+    fn get_early_secret(&self) -> Option<&hkdf::Prk>;
 
     /// Consume unencrypted TLS handshake data.
     ///
@@ -45,7 +46,7 @@ pub trait QuicExt {
     fn get_alert(&self) -> Option<AlertDescription>;
 
     /// Compute the secrets to use following a 1-RTT key update from their previous values.
-    fn update_secrets(&self, client: &[u8], server: &[u8]) -> Secrets;
+    fn update_secrets(&self, client: &hkdf::Prk, server: &hkdf::Prk) -> Secrets;
 }
 
 impl QuicExt for ClientSession {
@@ -53,27 +54,19 @@ impl QuicExt for ClientSession {
         self.imp.common.quic.params.as_ref().map(|v| v.as_ref())
     }
 
-    fn get_early_secret(&self) -> Option<&[u8]> {
-        self.imp.common.quic.early_secret.as_ref().map(|x| &x[..])
+    fn get_early_secret(&self) -> Option<&hkdf::Prk> {
+        self.imp.common.quic.early_secret.as_ref()
     }
 
     fn read_hs(&mut self, plaintext: &[u8]) -> Result<(), TLSError> {
-        self.imp.common
-            .handshake_joiner
-            .take_message(Message {
-                typ: ContentType::Handshake,
-                version: ProtocolVersion::TLSv1_3,
-                payload: MessagePayload::new_opaque(plaintext.into()),
-            });
-        self.imp.process_new_handshake_messages()?;
-        Ok(())
+        read_hs(&mut self.imp.common, plaintext)?;
+        self.imp.process_new_handshake_messages()
     }
-
     fn write_hs(&mut self, buf: &mut Vec<u8>) -> Option<Secrets> { write_hs(&mut self.imp.common, buf) }
 
     fn get_alert(&self) -> Option<AlertDescription> { self.imp.common.quic.alert }
 
-    fn update_secrets(&self, client: &[u8], server: &[u8]) -> Secrets { update_secrets(&self.imp.common, client, server) }
+    fn update_secrets(&self, client: &hkdf::Prk, server: &hkdf::Prk) -> Secrets { update_secrets(&self.imp.common, client, server) }
 }
 
 impl QuicExt for ServerSession {
@@ -81,27 +74,34 @@ impl QuicExt for ServerSession {
         self.imp.common.quic.params.as_ref().map(|v| v.as_ref())
     }
 
-    fn get_early_secret(&self) -> Option<&[u8]> {
-        self.imp.common.quic.early_secret.as_ref().map(|x| &x[..])
+    fn get_early_secret(&self) -> Option<&hkdf::Prk> {
+        self.imp.common.quic.early_secret.as_ref()
     }
 
     fn read_hs(&mut self, plaintext: &[u8]) -> Result<(), TLSError> {
-        self.imp.common
-            .handshake_joiner
-            .take_message(Message {
-                typ: ContentType::Handshake,
-                version: ProtocolVersion::TLSv1_3,
-                payload: MessagePayload::new_opaque(plaintext.into()),
-            });
-        self.imp.process_new_handshake_messages()?;
-        Ok(())
+        read_hs(&mut self.imp.common, plaintext)?;
+        self.imp.process_new_handshake_messages()
     }
-    
     fn write_hs(&mut self, buf: &mut Vec<u8>) -> Option<Secrets> { write_hs(&mut self.imp.common, buf) }
 
     fn get_alert(&self) -> Option<AlertDescription> { self.imp.common.quic.alert }
 
-    fn update_secrets(&self, client: &[u8], server: &[u8]) -> Secrets { update_secrets(&self.imp.common, client, server) }
+    fn update_secrets(&self, client: &hkdf::Prk, server: &hkdf::Prk) -> Secrets { update_secrets(&self.imp.common, client, server) }
+}
+
+fn read_hs(this: &mut SessionCommon, plaintext: &[u8]) -> Result<(), TLSError> {
+    if this
+        .handshake_joiner
+        .take_message(Message {
+            typ: ContentType::Handshake,
+            version: ProtocolVersion::TLSv1_3,
+            payload: MessagePayload::new_opaque(plaintext.into()),
+        }).is_none()
+    {
+        this.quic.alert = Some(AlertDescription::DecodeError);
+        return Err(TLSError::CorruptMessage);
+    }
+    Ok(())
 }
 
 fn write_hs(this: &mut SessionCommon, buf: &mut Vec<u8>) -> Option<Secrets> {
@@ -123,15 +123,22 @@ fn write_hs(this: &mut SessionCommon, buf: &mut Vec<u8>) -> Option<Secrets> {
     None
 }
 
-fn update_secrets(this: &SessionCommon, client: &[u8], server: &[u8]) -> Secrets {
-    let suite = this.get_suite_assert();
-    // TODO: Don't clone
-    let mut key_schedule = KeySchedule::new(suite.get_hash());
-    key_schedule.current_client_traffic_secret = client.into();
-    key_schedule.current_server_traffic_secret = server.into();
+fn update_secrets(this: &SessionCommon, client: &hkdf::Prk, server: &hkdf::Prk) -> Secrets {
+    let hkdf_alg= this.get_suite_assert().hkdf_algorithm;
+    let client = key_schedule::hkdf_expand(
+        client,
+        hkdf_alg,
+        b"traffic upd",
+        &[]);
+    let server = key_schedule::hkdf_expand(
+        server,
+        hkdf_alg,
+        b"traffic upd",
+        &[]);
+
     Secrets {
-        client: key_schedule.derive_next(SecretKind::ClientApplicationTrafficSecret),
-        server: key_schedule.derive_next(SecretKind::ServerApplicationTrafficSecret),
+        client,
+        server,
     }
 }
 

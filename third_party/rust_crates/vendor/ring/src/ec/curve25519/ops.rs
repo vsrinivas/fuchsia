@@ -15,6 +15,7 @@
 //! Elliptic curve operations on the birationally equivalent curves Curve25519
 //! and Edwards25519.
 
+pub use super::scalar::{MaskedScalar, Scalar, SCALAR_LEN};
 use crate::{
     bssl, error,
     limb::{Limb, LIMB_BITS},
@@ -62,12 +63,6 @@ impl Elem<T> {
 pub type EncodedPoint = [u8; ELEM_LEN];
 pub const ELEM_LEN: usize = 32;
 
-pub type Scalar = [u8; SCALAR_LEN];
-pub const SCALAR_LEN: usize = 32;
-
-pub type UnreducedScalar = [u8; UNREDUCED_SCALAR_LEN];
-const UNREDUCED_SCALAR_LEN: usize = SCALAR_LEN * 2;
-
 // Keep this in sync with `ge_p3` in curve25519/internal.h.
 #[repr(C)]
 pub struct ExtPoint {
@@ -79,7 +74,7 @@ pub struct ExtPoint {
 
 impl ExtPoint {
     pub fn new_at_infinity() -> Self {
-        ExtPoint {
+        Self {
             x: Elem::zero(),
             y: Elem::zero(),
             z: Elem::zero(),
@@ -94,7 +89,9 @@ impl ExtPoint {
             .map(|()| point)
     }
 
-    pub fn into_encoded_point(self) -> EncodedPoint { encode_point(self.x, self.y, self.z) }
+    pub fn into_encoded_point(self) -> EncodedPoint {
+        encode_point(self.x, self.y, self.z)
+    }
 
     pub fn invert_vartime(&mut self) {
         self.x.negate();
@@ -112,14 +109,16 @@ pub struct Point {
 
 impl Point {
     pub fn new_at_infinity() -> Self {
-        Point {
+        Self {
             x: Elem::zero(),
             y: Elem::zero(),
             z: Elem::zero(),
         }
     }
 
-    pub fn into_encoded_point(self) -> EncodedPoint { encode_point(self.x, self.y, self.z) }
+    pub fn into_encoded_point(self) -> EncodedPoint {
+        encode_point(self.x, self.y, self.z)
+    }
 }
 
 fn encode_point(x: Elem<T>, y: Elem<T>, z: Elem<T>) -> EncodedPoint {

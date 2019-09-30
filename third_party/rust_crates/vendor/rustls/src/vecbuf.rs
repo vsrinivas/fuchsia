@@ -2,6 +2,7 @@ use std::io::Read;
 use std::io;
 use std::cmp;
 use std::collections::VecDeque;
+use std::convert;
 
 /// This trait specifies rustls's precise requirements doing writes with
 /// vectored IO.
@@ -126,7 +127,7 @@ impl ChunkVecBuffer {
     }
 
     /// Read data out of this object, passing it `wr`
-    pub fn write_to(&mut self, wr: &mut io::Write) -> io::Result<usize> {
+    pub fn write_to(&mut self, wr: &mut dyn io::Write) -> io::Result<usize> {
         if self.is_empty() {
             return Ok(0);
         }
@@ -136,14 +137,14 @@ impl ChunkVecBuffer {
         Ok(used)
     }
 
-    pub fn writev_to(&mut self, wr: &mut WriteV) -> io::Result<usize> {
+    pub fn writev_to(&mut self, wr: &mut dyn WriteV) -> io::Result<usize> {
         if self.is_empty() {
             return Ok(0);
         }
 
         let used = {
             let chunks = self.chunks.iter()
-                .map(|ch| ch.as_ref())
+                .map(convert::AsRef::as_ref)
                 .collect::<Vec<&[u8]>>();
 
             wr.writev(&chunks)?

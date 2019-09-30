@@ -14,8 +14,9 @@
 
 //! X25519 Key agreement.
 
-use super::ops;
-use crate::{agreement, constant_time, cpu, ec, error, polyfill::convert::*, rand};
+use super::{ops, scalar::SCALAR_LEN};
+use crate::{agreement, constant_time, cpu, ec, error, rand};
+use core::convert::TryInto;
 use untrusted;
 
 static CURVE25519: ec::Curve = ec::Curve {
@@ -46,59 +47,70 @@ fn x25519_check_private_key_bytes(bytes: &[u8]) -> Result<(), error::Unspecified
 }
 
 fn x25519_generate_private_key(
-    rng: &rand::SecureRandom, out: &mut [u8],
+    rng: &dyn rand::SecureRandom,
+    out: &mut [u8],
 ) -> Result<(), error::Unspecified> {
     rng.fill(out)
 }
 
 fn x25519_public_from_private(
-    public_out: &mut [u8], private_key: &ec::Seed,
+    public_out: &mut [u8],
+    private_key: &ec::Seed,
 ) -> Result<(), error::Unspecified> {
-    let public_out = public_out.try_into_()?;
+    let public_out = public_out.try_into()?;
 
     #[cfg(target_arch = "arm")]
     let cpu_features = private_key.cpu_features;
 
-    let private_key = private_key.bytes_less_safe().try_into_()?;
+    let private_key: &[u8; SCALAR_LEN] = private_key.bytes_less_safe().try_into()?;
+    let private_key = ops::MaskedScalar::from_bytes_masked(*private_key);
 
-    #[cfg(target_arch = "arm")]
+    #[cfg(all(not(target_os = "ios"), target_arch = "arm"))]
     {
         if cpu::arm::NEON.available(cpu_features) {
             static MONTGOMERY_BASE_POINT: [u8; 32] = [
                 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0,
             ];
-            x25519_neon(public_out, private_key, &MONTGOMERY_BASE_POINT);
+            x25519_neon(public_out, &private_key, &MONTGOMERY_BASE_POINT);
             return Ok(());
         }
     }
 
     extern "C" {
-        fn GFp_x25519_public_from_private_generic(
-            public_key_out: &mut PublicKey, private_key: &PrivateKey,
+        fn GFp_x25519_public_from_private_generic_masked(
+            public_key_out: &mut PublicKey,
+            private_key: &PrivateKey,
         );
     }
     unsafe {
-        GFp_x25519_public_from_private_generic(public_out, private_key);
+        GFp_x25519_public_from_private_generic_masked(public_out, &private_key);
     }
 
     Ok(())
 }
 
 fn x25519_ecdh(
-    out: &mut [u8], my_private_key: &ec::Seed, peer_public_key: untrusted::Input,
+    out: &mut [u8],
+    my_private_key: &ec::Seed,
+    peer_public_key: untrusted::Input,
 ) -> Result<(), error::Unspecified> {
     let cpu_features = my_private_key.cpu_features;
-    let my_private_key = my_private_key.bytes_less_safe().try_into_()?;
-    let peer_public_key: &[u8; PUBLIC_KEY_LEN] =
-        peer_public_key.as_slice_less_safe().try_into_()?;
+    let my_private_key: &[u8; SCALAR_LEN] = my_private_key.bytes_less_safe().try_into()?;
+    let my_private_key = ops::MaskedScalar::from_bytes_masked(*my_private_key);
+    let peer_public_key: &[u8; PUBLIC_KEY_LEN] = peer_public_key.as_slice_less_safe().try_into()?;
 
-    #[cfg_attr(not(target_arch = "arm"), allow(unused_variables))]
+    #[cfg_attr(
+        not(all(not(target_os = "ios"), target_arch = "arm")),
+        allow(unused_variables)
+    )]
     fn scalar_mult(
-        out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
+        out: &mut ops::EncodedPoint,
+        scalar: &ops::MaskedScalar,
+        point: &ops::EncodedPoint,
         cpu_features: cpu::Features,
     ) {
-        #[cfg(target_arch = "arm")]
+        #[cfg(all(not(target_os = "ios"), target_arch = "arm"))]
         {
             if cpu::arm::NEON.available(cpu_features) {
                 return x25519_neon(out, scalar, point);
@@ -106,18 +118,20 @@ fn x25519_ecdh(
         }
 
         extern "C" {
-            fn GFp_x25519_scalar_mult_generic(
-                out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
+            fn GFp_x25519_scalar_mult_generic_masked(
+                out: &mut ops::EncodedPoint,
+                scalar: &ops::MaskedScalar,
+                point: &ops::EncodedPoint,
             );
         }
         unsafe {
-            GFp_x25519_scalar_mult_generic(out, scalar, point);
+            GFp_x25519_scalar_mult_generic_masked(out, scalar, point);
         }
     }
 
     scalar_mult(
-        out.try_into_()?,
-        my_private_key,
+        out.try_into()?,
+        &my_private_key,
         peer_public_key,
         cpu_features,
     );
@@ -131,11 +145,13 @@ fn x25519_ecdh(
     Ok(())
 }
 
-#[cfg(target_arch = "arm")]
-fn x25519_neon(out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint) {
+#[cfg(all(not(target_os = "ios"), target_arch = "arm"))]
+fn x25519_neon(out: &mut ops::EncodedPoint, scalar: &ops::MaskedScalar, point: &ops::EncodedPoint) {
     extern "C" {
         fn GFp_x25519_NEON(
-            out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
+            out: &mut ops::EncodedPoint,
+            scalar: &ops::MaskedScalar,
+            point: &ops::EncodedPoint,
         );
     }
     unsafe { GFp_x25519_NEON(out, scalar, point) }
@@ -143,8 +159,7 @@ fn x25519_neon(out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::E
 
 const ELEM_AND_SCALAR_LEN: usize = ops::ELEM_LEN;
 
-// An X25519 private key as an unmasked scalar.
-type PrivateKey = [u8; PRIVATE_KEY_LEN];
+type PrivateKey = ops::MaskedScalar;
 const PRIVATE_KEY_LEN: usize = ELEM_AND_SCALAR_LEN;
 
 // An X25519 public key as an encoded Curve25519 point.

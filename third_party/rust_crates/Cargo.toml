@@ -50,7 +50,7 @@ rand_core = "0.4.0"
 rand_os = "0.1.2"
 rayon = "1.1"
 regex = "1.0.6"
-ring = "0.14"
+ring = "0.16"
 scopeguard = "0.3.3"
 serde = "1.0.99"
 serde_derive = "1.0.99"
@@ -77,10 +77,10 @@ base64 = "0.9"
 bincode = "1"
 bytes = "0.4.7"
 crossbeam = "0.5"
-ct-logs = "0.5.1"
+ct-logs = "0.6"
 data-encoding = "2.1.2"
 derivative = "1.0.2"
-derp = "0.0.11"
+derp = "0.0.13"
 euclid = "0.19"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 freetype = "0.4" # saved for future use
@@ -90,7 +90,7 @@ harfbuzz = { version = "0.3.1", default-features = false } # saved for future us
 hex = "0.3.2"
 http = "0.1"
 hyper = { version = "0.12.13", default-features = false }
-hyper-rustls = { version = "0.16.1", default-features = false }
+hyper-rustls = { version = "0.17.1", default-features = false }
 id_tree = "1.5"
 itoa = "0.4"
 lipsum = "0.6.0"
@@ -112,7 +112,7 @@ rand_xorshift = "0.1.1"
 rental = "0.5.4"
 rouille = "3.0.0"
 rust-crypto = "0.2"
-rustls = { version = "0.15", features = ["dangerous_configuration"] }
+rustls = { version = "0.16", features = ["dangerous_configuration"] }
 rusttype = "0.7.3"
 serde_repr = "0.1.3"
 smallvec = "0.6"
@@ -122,13 +122,13 @@ time = "0.1"
 unicode-normalization = "0.1"
 unicode-segmentation = "1.0"
 unicode-width = "0.1.3"
-untrusted = "0.6.2"
+untrusted = "0.7"
 utf8parse = "0.1"
 vk-sys = "0.4.0"
 void = "1.0.2"
 vte = "0.3"
 walkdir = "2.2.7"
-webpki = "0.19.1"
+webpki = "0.21"
 xi-core-lib = { version = "0.2.0", default-features = false } # disable "notify" crate
 xi-rpc = "0.2.0"
 
@@ -154,6 +154,7 @@ fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
+web-sys = { path = "tiny_mirrors/web-sys" }
 winapi = { path = "tiny_mirrors/winapi" }
 winapi-util = { path = "tiny_mirrors/winapi-util" }
 xi-core-lib = { path = "../rust-mirrors/xi-editor/rust/core-lib" }

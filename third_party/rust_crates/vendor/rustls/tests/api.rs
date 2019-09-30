@@ -2,9 +2,10 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::fs;
 use std::mem;
 use std::fmt;
+use std::env;
+use std::error::Error;
 use std::io::{self, Write, Read};
 
 use rustls;
@@ -17,199 +18,17 @@ use rustls::{ProtocolVersion, SignatureScheme, CipherSuite};
 use rustls::TLSError;
 use rustls::sign;
 use rustls::{ALL_CIPHERSUITES, SupportedCipherSuite};
-use rustls::{Certificate, PrivateKey};
-use rustls::internal::pemfile;
-use rustls::{RootCertStore, NoClientAuth, AllowAnyAuthenticatedClient};
 use rustls::KeyLog;
 #[cfg(feature = "quic")]
 use rustls::quic::{self, QuicExt, ClientQuicExt, ServerQuicExt};
+#[cfg(feature = "quic")]
+use ring::hkdf;
 
 use webpki;
 
-fn transfer(left: &mut dyn Session, right: &mut dyn Session) -> usize {
-    let mut buf = [0u8; 262144];
-    let mut total = 0;
-
-    while left.wants_write() {
-        let sz = left.write_tls(&mut buf.as_mut()).unwrap();
-        total += sz;
-        if sz == 0 {
-            return total;
-        }
-
-        let mut offs = 0;
-        loop {
-            offs += right.read_tls(&mut buf[offs..sz].as_ref()).unwrap();
-            if sz == offs {
-                break;
-            }
-        }
-    }
-
-    total
-}
-
-#[derive(Clone, Copy)]
-enum KeyType {
-    RSA,
-    ECDSA
-}
-
-static ALL_KEY_TYPES: [KeyType; 2] = [ KeyType::RSA, KeyType::ECDSA ];
-
-impl KeyType {
-    fn path_for(&self, part: &str) -> String {
-        match self {
-            KeyType::RSA => format!("test-ca/rsa/{}", part),
-            KeyType::ECDSA => format!("test-ca/ecdsa/{}", part),
-        }
-    }
-
-    fn get_chain(&self) -> Vec<Certificate> {
-        pemfile::certs(&mut io::BufReader::new(fs::File::open(self.path_for("end.fullchain"))
-                                               .unwrap()))
-            .unwrap()
-    }
-
-    fn get_key(&self) -> PrivateKey {
-        pemfile::pkcs8_private_keys(&mut io::BufReader::new(fs::File::open(self.path_for("end.key"))
-                                                            .unwrap()))
-                .unwrap()[0]
-            .clone()
-    }
-
-    fn get_client_chain(&self) -> Vec<Certificate> {
-        pemfile::certs(&mut io::BufReader::new(fs::File::open(self.path_for("client.fullchain"))
-                                               .unwrap()))
-            .unwrap()
-    }
-
-    fn get_client_key(&self) -> PrivateKey {
-        pemfile::pkcs8_private_keys(&mut io::BufReader::new(fs::File::open(self.path_for("client.key"))
-                                                            .unwrap()))
-                .unwrap()[0]
-            .clone()
-    }
-}
-
-fn make_server_config(kt: KeyType) -> ServerConfig {
-    let mut cfg = ServerConfig::new(NoClientAuth::new());
-    cfg.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
-
-    cfg
-}
-
-fn make_server_config_with_mandatory_client_auth(kt: KeyType) -> ServerConfig {
-    let roots = kt.get_chain();
-    let mut client_auth_roots = RootCertStore::empty();
-    for root in roots {
-        client_auth_roots.add(&root).unwrap();
-    }
-
-    let client_auth = AllowAnyAuthenticatedClient::new(client_auth_roots);
-    let mut cfg = ServerConfig::new(client_auth);
-    cfg.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
-
-    cfg
-}
-
-fn make_client_config(kt: KeyType) -> ClientConfig {
-    let mut cfg = ClientConfig::new();
-    let mut rootbuf = io::BufReader::new(fs::File::open(kt.path_for("ca.cert")).unwrap());
-    cfg.root_store.add_pem_file(&mut rootbuf).unwrap();
-
-    cfg
-}
-
-fn make_client_config_with_auth(kt: KeyType) -> ClientConfig {
-    let mut cfg = make_client_config(kt);
-    cfg.set_single_client_cert(kt.get_client_chain(), kt.get_client_key());
-    cfg
-}
-
-fn make_pair(kt: KeyType) -> (ClientSession, ServerSession) {
-    make_pair_for_configs(make_client_config(kt),
-                          make_server_config(kt))
-}
-
-fn make_pair_for_configs(client_config: ClientConfig,
-                         server_config: ServerConfig) -> (ClientSession, ServerSession) {
-    make_pair_for_arc_configs(&Arc::new(client_config),
-                              &Arc::new(server_config))
-}
-
-fn make_pair_for_arc_configs(client_config: &Arc<ClientConfig>,
-                             server_config: &Arc<ServerConfig>) -> (ClientSession, ServerSession) {
-    (
-        ClientSession::new(client_config, dns_name("localhost")),
-        ServerSession::new(server_config)
-    )
-}
-
-fn do_handshake(client: &mut ClientSession, server: &mut ServerSession) -> (usize, usize) {
-    let (mut to_client, mut to_server) = (0, 0);
-    while server.is_handshaking() || client.is_handshaking() {
-        to_server += transfer(client, server);
-        server.process_new_packets().unwrap();
-        to_client += transfer(server, client);
-        client.process_new_packets().unwrap();
-    }
-    (to_server, to_client)
-}
-
-struct AllClientVersions {
-    client_config: ClientConfig,
-    index: usize,
-}
-
-impl AllClientVersions {
-    fn new(client_config: ClientConfig) -> AllClientVersions {
-        AllClientVersions { client_config, index: 0 }
-    }
-}
-
-impl Iterator for AllClientVersions {
-    type Item = ClientConfig;
-
-    fn next(&mut self) -> Option<ClientConfig> {
-        let mut config = self.client_config.clone();
-        self.index += 1;
-
-        match self.index {
-            1 => {
-                config.versions = vec![ProtocolVersion::TLSv1_2];
-                Some(config)
-            },
-            2 => {
-                config.versions = vec![ProtocolVersion::TLSv1_3];
-                Some(config)
-            },
-            _ => None
-        }
-    }
-}
-
-#[derive(PartialEq, Debug)]
-enum TLSErrorFromPeer { Client(TLSError), Server(TLSError) }
-
-fn do_handshake_until_error(client: &mut ClientSession,
-                            server: &mut ServerSession)
-                            -> Result<(), TLSErrorFromPeer> {
-    while server.is_handshaking() || client.is_handshaking() {
-        transfer(client, server);
-        server.process_new_packets()
-            .map_err(|err| TLSErrorFromPeer::Server(err))?;
-        transfer(server, client);
-        client.process_new_packets()
-            .map_err(|err| TLSErrorFromPeer::Client(err))?;
-    }
-
-    Ok(())
-}
-
-fn dns_name(name: &'static str) -> webpki::DNSNameRef<'_> {
-    webpki::DNSNameRef::try_from_ascii_str(name).unwrap()
-}
+#[allow(dead_code)]
+mod common;
+use crate::common::*;
 
 fn alpn_test(server_protos: Vec<Vec<u8>>, client_protos: Vec<Vec<u8>>, agreed: Option<&[u8]>) {
     let mut client_config = make_client_config(KeyType::RSA);
@@ -1130,8 +949,9 @@ fn stream_write_reports_underlying_io_error_before_plaintext_processed() {
     let mut client_stream = Stream::new(&mut client, &mut pipe);
     let rc = client_stream.write(b"world");
     assert!(rc.is_err());
-    assert_eq!(format!("{:?}", rc),
-               "Err(Custom { kind: WouldBlock, error: StringError(\"oops\") })");
+    let err = rc.err().unwrap();
+    assert_eq!(err.kind(), io::ErrorKind::WouldBlock);
+    assert_eq!(err.description(), "oops");
 }
 
 #[test]
@@ -1681,7 +1501,7 @@ fn vectored_write_for_server_handshake() {
         let mut pipe = OtherSession::new(&mut client);
         let wrlen = server.writev_tls(&mut pipe).unwrap();
         // don't assert exact sizes here, to avoid a brittle test
-        assert!(wrlen > 5000); // its pretty big (contains cert chain)
+        assert!(wrlen > 4000); // its pretty big (contains cert chain)
         assert_eq!(pipe.writevs.len(), 1); // only one writev
         assert!(pipe.writevs[0].len() > 3); // at least a server hello/cert/serverkx
     }
@@ -1902,6 +1722,20 @@ fn quic_handshake() {
         Ok(secrets)
     }
 
+    fn equal_prk(x: &ring::hkdf::Prk, y: &ring::hkdf::Prk) -> bool {
+        let mut x_data = [0; 16];
+        let mut y_data = [0; 16];
+        let x_okm = x.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
+        x_okm.fill(&mut x_data[..]).unwrap();
+        let y_okm = y.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
+        y_okm.fill(&mut y_data[..]).unwrap();
+        x_data == y_data
+    }
+
+    fn equal_secrets(x: &quic::Secrets, y: &quic::Secrets) -> bool {
+        equal_prk(&x.client, &y.client) && equal_prk(&x.server, &y.server)
+    }
+
     let kt = KeyType::RSA;
     let mut client_config = make_client_config(kt);
     client_config.versions = vec![ProtocolVersion::TLSv1_3];
@@ -1926,7 +1760,7 @@ fn quic_handshake() {
     let server_hs = step(&mut server, &mut client).unwrap().unwrap();
     assert!(server.get_early_secret().is_none());
     let client_hs = step(&mut client, &mut server).unwrap().unwrap();
-    assert_eq!(server_hs, client_hs);
+    assert!(equal_secrets(&server_hs, &client_hs));
     assert!(client.is_handshaking());
     let server_1rtt = step(&mut server, &mut client).unwrap().unwrap();
     assert!(!client.is_handshaking());
@@ -1934,52 +1768,53 @@ fn quic_handshake() {
     assert!(server.is_handshaking());
     let client_1rtt = step(&mut client, &mut server).unwrap().unwrap();
     assert!(!server.is_handshaking());
-    assert_eq!(server_1rtt, client_1rtt);
-    assert_ne!(server_hs, server_1rtt);
+    assert!(equal_secrets(&server_1rtt, &client_1rtt));
+    assert!(!equal_secrets(&server_hs, &server_1rtt));
     assert!(step(&mut client, &mut server).unwrap().is_none());
     assert!(step(&mut server, &mut client).unwrap().is_none());
 
     // key update
     let initial = quic::Secrets {
         // Constant dummy values for reproducibility
-        client: vec![
+        client: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
             0xb8, 0x76, 0x77, 0x08, 0xf8, 0x77, 0x23, 0x58, 0xa6, 0xea, 0x9f, 0xc4, 0x3e, 0x4a,
             0xdd, 0x2c, 0x96, 0x1b, 0x3f, 0x52, 0x87, 0xa6, 0xd1, 0x46, 0x7e, 0xe0, 0xae, 0xab,
             0x33, 0x72, 0x4d, 0xbf,
-        ],
-        server: vec![
+        ]),
+        server: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
             0x42, 0xdc, 0x97, 0x21, 0x40, 0xe0, 0xf2, 0xe3, 0x98, 0x45, 0xb7, 0x67, 0x61, 0x34,
             0x39, 0xdc, 0x67, 0x58, 0xca, 0x43, 0x25, 0x9b, 0x87, 0x85, 0x06, 0x82, 0x4e, 0xb1,
             0xe4, 0x38, 0xd8, 0x55,
-        ],
+        ]),
     };
     let updated = client.update_secrets(&initial.client, &initial.server);
     // The expected values will need to be updated if the negotiated hash function changes.
-    assert_eq!(
-        updated.client,
-        &[
+    assert!(equal_prk(
+        &updated.client,
+        &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
             101, 250, 130, 179, 97, 208, 160, 166, 213, 90, 196, 212, 96, 49, 190, 24, 237, 225,
             68, 97, 141, 123, 162, 108, 231, 21, 255, 184, 49, 245, 178, 148
-        ]
+        ]))
     );
-    assert_eq!(
-        updated.server,
-        &[
+    assert!(equal_prk(
+        &updated.server,
+        &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
             171, 127, 244, 22, 119, 205, 252, 100, 179, 94, 91, 45, 99, 82, 236, 124, 44, 251, 63,
             57, 94, 215, 175, 138, 178, 161, 97, 80, 51, 250, 107, 85
-        ]
+        ]))
     );
 
     // 0-RTT handshake
     let mut client =
         ClientSession::new_quic(&client_config, dns_name("localhost"), client_params.into());
+    assert!(client.get_negotiated_ciphersuite().is_some());
     let mut server = ServerSession::new_quic(&server_config, server_params.into());
     step(&mut client, &mut server).unwrap();
     assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
     {
         let client_early = client.get_early_secret().unwrap();
         let server_early = server.get_early_secret().unwrap();
-        assert_eq!(client_early, server_early);
+        assert!(equal_prk(client_early, server_early));
     }
     step(&mut server, &mut client).unwrap().unwrap();
     step(&mut client, &mut server).unwrap().unwrap();
@@ -2052,5 +1887,87 @@ fn test_client_does_not_offer_sha1() {
                        "sha1 unexpectedly offered");
         }
     }
+}
 
+#[test]
+fn test_client_mtu_reduction() {
+    fn collect_write_lengths(client: &mut ClientSession) -> Vec<usize> {
+        let mut r = Vec::new();
+        let mut buf = [0u8; 128];
+
+        loop {
+            let sz = client.write_tls(&mut buf.as_mut())
+                .unwrap();
+            r.push(sz);
+            assert!(sz <= 64);
+            if sz < 64 {
+                break;
+            }
+        }
+
+        r
+    }
+
+    for kt in ALL_KEY_TYPES.iter() {
+        let mut client_config = make_client_config(*kt);
+        client_config.set_mtu(&Some(64));
+
+        let mut client = ClientSession::new(&Arc::new(client_config), dns_name("localhost"));
+        let writes = collect_write_lengths(&mut client);
+        assert!(writes.iter().all(|x| *x <= 64));
+        assert!(writes.len() > 1);
+    }
+}
+
+#[test]
+fn exercise_key_log_file_for_client() {
+    let server_config = Arc::new(make_server_config(KeyType::RSA));
+    let mut client_config = make_client_config(KeyType::RSA);
+    env::set_var("SSLKEYLOGFILE", "./sslkeylogfile.txt");
+    client_config.key_log = Arc::new(rustls::KeyLogFile::new());
+
+    for client_config in AllClientVersions::new(client_config) {
+        let (mut client, mut server) = make_pair_for_arc_configs(&Arc::new(client_config),
+                                                                 &server_config);
+
+        assert_eq!(5, client.write(b"hello").unwrap());
+
+        do_handshake(&mut client, &mut server);
+        transfer(&mut client, &mut server);
+        server.process_new_packets().unwrap();
+    }
+}
+
+#[test]
+fn exercise_key_log_file_for_server() {
+    let mut server_config = make_server_config(KeyType::RSA);
+
+    env::set_var("SSLKEYLOGFILE", "./sslkeylogfile.txt");
+    server_config.key_log = Arc::new(rustls::KeyLogFile::new());
+
+    let server_config = Arc::new(server_config);
+
+    for client_config in AllClientVersions::new(make_client_config(KeyType::RSA)) {
+        let (mut client, mut server) = make_pair_for_arc_configs(&Arc::new(client_config),
+                                                                 &server_config);
+
+        assert_eq!(5, client.write(b"hello").unwrap());
+
+        do_handshake(&mut client, &mut server);
+        transfer(&mut client, &mut server);
+        server.process_new_packets().unwrap();
+    }
+}
+
+fn assert_lt(left: usize, right: usize) {
+    if left >= right {
+        panic!("expected {} < {}", left, right);
+    }
+}
+
+#[test]
+fn session_types_are_not_huge() {
+    // Arbitrary sizes
+    assert_lt(mem::size_of::<ServerSession>(), 2300);
+    assert_lt(mem::size_of::<ClientSession>(), 2300);
 }

@@ -19,6 +19,11 @@ No part of untrusted.rs's API will ever panic or cause a crash. It is
 `#![no_std]` and so it works perfectly with both libcore- and libstd- based
 projects. It does not depend on any crates other than libcore.
 
+untrusted.rs is intended to be used with the latest version of Rust Stable.
+It should usually work with the latest Rust Beta and Rust Nightly versions
+too. Using a version of untrusted.rs other than the latest release available
+on crates.io is not recommended.
+
 
 
 Documentation

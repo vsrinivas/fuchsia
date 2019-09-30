@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "derp"
-version = "0.0.11"
+version = "0.0.13"
 authors = ["heartsucker <heartsucker@autistici.org>"]
 description = "DER Parser (and Writer)"
 homepage = "https://github.com/heartsucker/derp"
@@ -36,11 +36,11 @@ version = "2.0.0-rc.1"
 optional = true
 
 [dependencies.pem]
-version = "0.5"
+version = "0.6"
 optional = true
 
 [dependencies.untrusted]
-version = "0.6"
+version = "0.7"
 
 [features]
 cli = ["clap", "data-encoding", "pem"]

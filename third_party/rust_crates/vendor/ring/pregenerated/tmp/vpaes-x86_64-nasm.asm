@@ -26,6 +26,7 @@ section	.text code align=64
 
 ALIGN	16
 _vpaes_encrypt_core:
+
 	mov	r9,rdx
 	mov	r11,16
 	mov	eax,DWORD[240+rdx]
@@ -114,8 +115,10 @@ DB	102,15,56,0,193
 
 
 
+
 ALIGN	16
 _vpaes_schedule_core:
+
 
 
 
@@ -254,8 +257,10 @@ $L$schedule_mangle_last_dec:
 
 
 
+
 ALIGN	16
 _vpaes_schedule_round:
+
 
 	pxor	xmm1,xmm1
 DB	102,65,15,58,15,200,15
@@ -321,8 +326,10 @@ DB	102,15,56,0,195
 
 
 
+
 ALIGN	16
 _vpaes_schedule_transform:
+
 	movdqa	xmm1,xmm9
 	pandn	xmm1,xmm0
 	psrld	xmm1,4
@@ -359,8 +366,10 @@ DB	102,15,56,0,193
 
 
 
+
 ALIGN	16
 _vpaes_schedule_mangle:
+
 	movdqa	xmm4,xmm0
 	movdqa	xmm5,XMMWORD[$L$k_mc_forward]
 
@@ -386,6 +395,7 @@ DB	102,15,56,0,217
 
 
 
+
 global	GFp_vpaes_set_encrypt_key
 
 ALIGN	16
@@ -397,6 +407,8 @@ $L$SEH_begin_GFp_vpaes_set_encrypt_key:
 	mov	rdi,rcx
 	mov	rsi,rdx
 	mov	rdx,r8
+
+
 
 
 	lea	rsp,[((-184))+rsp]
@@ -435,6 +447,7 @@ $L$enc_key_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
 	DB	0F3h,0C3h		;repret
+
 $L$SEH_end_GFp_vpaes_set_encrypt_key:
 
 global	GFp_vpaes_encrypt
@@ -448,6 +461,7 @@ $L$SEH_begin_GFp_vpaes_encrypt:
 	mov	rdi,rcx
 	mov	rsi,rdx
 	mov	rdx,r8
+
 
 
 	lea	rsp,[((-184))+rsp]
@@ -481,6 +495,7 @@ $L$enc_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
 	DB	0F3h,0C3h		;repret
+
 $L$SEH_end_GFp_vpaes_encrypt:
 
 
@@ -491,6 +506,7 @@ $L$SEH_end_GFp_vpaes_encrypt:
 
 ALIGN	16
 _vpaes_preheat:
+
 	lea	r10,[$L$k_s0F]
 	movdqa	xmm10,XMMWORD[((-32))+r10]
 	movdqa	xmm11,XMMWORD[((-16))+r10]
@@ -500,6 +516,7 @@ _vpaes_preheat:
 	movdqa	xmm15,XMMWORD[80+r10]
 	movdqa	xmm14,XMMWORD[96+r10]
 	DB	0F3h,0C3h		;repret
+
 
 
 

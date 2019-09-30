@@ -9,160 +9,8 @@ section	.text code align=64
 
 
 ALIGN	16
-_x86_64_AES_encrypt:
-	xor	eax,DWORD[r15]
-	xor	ebx,DWORD[4+r15]
-	xor	ecx,DWORD[8+r15]
-	xor	edx,DWORD[12+r15]
-
-	mov	r13d,DWORD[240+r15]
-	sub	r13d,1
-	jmp	NEAR $L$enc_loop
-ALIGN	16
-$L$enc_loop:
-
-	movzx	esi,al
-	movzx	edi,bl
-	movzx	ebp,cl
-	mov	r10d,DWORD[rsi*8+r14]
-	mov	r11d,DWORD[rdi*8+r14]
-	mov	r12d,DWORD[rbp*8+r14]
-
-	movzx	esi,bh
-	movzx	edi,ch
-	movzx	ebp,dl
-	xor	r10d,DWORD[3+rsi*8+r14]
-	xor	r11d,DWORD[3+rdi*8+r14]
-	mov	r8d,DWORD[rbp*8+r14]
-
-	movzx	esi,dh
-	shr	ecx,16
-	movzx	ebp,ah
-	xor	r12d,DWORD[3+rsi*8+r14]
-	shr	edx,16
-	xor	r8d,DWORD[3+rbp*8+r14]
-
-	shr	ebx,16
-	lea	r15,[16+r15]
-	shr	eax,16
-
-	movzx	esi,cl
-	movzx	edi,dl
-	movzx	ebp,al
-	xor	r10d,DWORD[2+rsi*8+r14]
-	xor	r11d,DWORD[2+rdi*8+r14]
-	xor	r12d,DWORD[2+rbp*8+r14]
-
-	movzx	esi,dh
-	movzx	edi,ah
-	movzx	ebp,bl
-	xor	r10d,DWORD[1+rsi*8+r14]
-	xor	r11d,DWORD[1+rdi*8+r14]
-	xor	r8d,DWORD[2+rbp*8+r14]
-
-	mov	edx,DWORD[12+r15]
-	movzx	edi,bh
-	movzx	ebp,ch
-	mov	eax,DWORD[r15]
-	xor	r12d,DWORD[1+rdi*8+r14]
-	xor	r8d,DWORD[1+rbp*8+r14]
-
-	mov	ebx,DWORD[4+r15]
-	mov	ecx,DWORD[8+r15]
-	xor	eax,r10d
-	xor	ebx,r11d
-	xor	ecx,r12d
-	xor	edx,r8d
-	sub	r13d,1
-	jnz	NEAR $L$enc_loop
-	movzx	esi,al
-	movzx	edi,bl
-	movzx	ebp,cl
-	movzx	r10d,BYTE[2+rsi*8+r14]
-	movzx	r11d,BYTE[2+rdi*8+r14]
-	movzx	r12d,BYTE[2+rbp*8+r14]
-
-	movzx	esi,dl
-	movzx	edi,bh
-	movzx	ebp,ch
-	movzx	r8d,BYTE[2+rsi*8+r14]
-	mov	edi,DWORD[rdi*8+r14]
-	mov	ebp,DWORD[rbp*8+r14]
-
-	and	edi,0x0000ff00
-	and	ebp,0x0000ff00
-
-	xor	r10d,edi
-	xor	r11d,ebp
-	shr	ecx,16
-
-	movzx	esi,dh
-	movzx	edi,ah
-	shr	edx,16
-	mov	esi,DWORD[rsi*8+r14]
-	mov	edi,DWORD[rdi*8+r14]
-
-	and	esi,0x0000ff00
-	and	edi,0x0000ff00
-	shr	ebx,16
-	xor	r12d,esi
-	xor	r8d,edi
-	shr	eax,16
-
-	movzx	esi,cl
-	movzx	edi,dl
-	movzx	ebp,al
-	mov	esi,DWORD[rsi*8+r14]
-	mov	edi,DWORD[rdi*8+r14]
-	mov	ebp,DWORD[rbp*8+r14]
-
-	and	esi,0x00ff0000
-	and	edi,0x00ff0000
-	and	ebp,0x00ff0000
-
-	xor	r10d,esi
-	xor	r11d,edi
-	xor	r12d,ebp
-
-	movzx	esi,bl
-	movzx	edi,dh
-	movzx	ebp,ah
-	mov	esi,DWORD[rsi*8+r14]
-	mov	edi,DWORD[2+rdi*8+r14]
-	mov	ebp,DWORD[2+rbp*8+r14]
-
-	and	esi,0x00ff0000
-	and	edi,0xff000000
-	and	ebp,0xff000000
-
-	xor	r8d,esi
-	xor	r10d,edi
-	xor	r11d,ebp
-
-	movzx	esi,bh
-	movzx	edi,ch
-	mov	edx,DWORD[((16+12))+r15]
-	mov	esi,DWORD[2+rsi*8+r14]
-	mov	edi,DWORD[2+rdi*8+r14]
-	mov	eax,DWORD[((16+0))+r15]
-
-	and	esi,0xff000000
-	and	edi,0xff000000
-
-	xor	r12d,esi
-	xor	r8d,edi
-
-	mov	ebx,DWORD[((16+4))+r15]
-	mov	ecx,DWORD[((16+8))+r15]
-	xor	eax,r10d
-	xor	ebx,r11d
-	xor	ecx,r12d
-	xor	edx,r8d
-DB	0xf3,0xc3
-
-
-ALIGN	16
 _x86_64_AES_encrypt_compact:
+
 	lea	r8,[128+r14]
 	mov	edi,DWORD[((0-128))+r8]
 	mov	ebp,DWORD[((32-128))+r8]
@@ -333,6 +181,7 @@ $L$enc_compact_done:
 	xor	edx,DWORD[12+r15]
 DB	0xf3,0xc3
 
+
 ALIGN	16
 global	GFp_aes_nohw_encrypt
 
@@ -475,6 +324,7 @@ $L$SEH_end_GFp_aes_nohw_set_encrypt_key:
 
 ALIGN	16
 _x86_64_AES_set_encrypt_key:
+
 	mov	ecx,esi
 	mov	rsi,rdi
 	mov	rdi,rdx
@@ -647,6 +497,7 @@ $L$badpointer:
 	mov	rax,-1
 $L$exit:
 DB	0xf3,0xc3
+
 
 ALIGN	64
 $L$AES_Te:

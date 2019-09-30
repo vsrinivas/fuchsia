@@ -1,705 +1,296 @@
-
-use std::process;
+use std::fs::{self, File};
 use std::str;
-use std::thread;
-use std::time;
-use std::net;
+use tempfile;
 
-use regex;
-use self::regex::Regex;
+use std::sync::Arc;
+use std::io::{self, Write};
 
-// For tests which connect to internet servers, don't go crazy.
-pub fn polite() {
-    thread::sleep(time::Duration::from_secs(1));
-}
+use rustls;
 
-// Wait until we can connect to localhost:port.
-fn wait_for_port(port: u16) -> Option<()> {
-    let mut count = 0;
-    loop {
-        thread::sleep(time::Duration::from_millis(500));
-        if net::TcpStream::connect(("127.0.0.1", port)).is_ok() {
-            return Some(());
-        }
-        count += 1;
-        if count == 10 {
-            return None;
-        }
-    }
-}
+use rustls::{ClientConfig, ClientSession};
+use rustls::{ServerConfig, ServerSession};
+use rustls::Session;
+use rustls::ProtocolVersion;
+use rustls::TLSError;
+use rustls::{Certificate, PrivateKey};
+use rustls::internal::pemfile;
+use rustls::{RootCertStore, NoClientAuth, AllowAnyAuthenticatedClient};
 
-// Find an unused port
-fn unused_port(mut port: u16) -> u16 {
-    loop {
-        if net::TcpStream::connect(("127.0.0.1", port)).is_err() {
-            return port;
-        }
+use webpki;
 
-        port += 1;
-    }
-}
+macro_rules! embed_files {
+    (
+        $(
+            ($name:ident, $keytype:expr, $path:expr);
+        )+
+    ) => {
+        $(
+            const $name: &'static [u8] = include_bytes!(
+                concat!("../../test-ca/", $keytype, "/", $path));
+        )+
 
-// Note we skipped this test.
-pub fn skipped(why: &str) {
-    use std::io::{self, Write};
-    let mut stdout = io::stdout();
-    write!(&mut stdout,
-           "[  SKIPPED  ]        because: {}\n -- UNTESTED: ",
-           why)
-        .unwrap();
-}
-
-pub fn tlsserver_find() -> &'static str {
-    "target/debug/examples/tlsserver"
-}
-
-pub fn tlsclient_find() -> &'static str {
-    "target/debug/examples/tlsclient"
-}
-
-pub fn openssl_find() -> &'static str {
-    // We need a homebrew openssl, because OSX comes with
-    // 0.9.8y or something equally ancient!
-    if cfg!(target_os = "macos") {
-        return "/usr/local/opt/openssl/bin/openssl";
-    }
-
-    "openssl"
-}
-
-fn openssl_supports_option(cmd: &str, opt: &str) -> bool {
-    let output = process::Command::new(openssl_find())
-        .arg(cmd)
-        .arg("-help")
-        .output()
-        .unwrap();
-
-    String::from_utf8(output.stderr)
-        .unwrap()
-        .contains(opt)
-}
-
-// Does openssl s_client support -alpn?
-pub fn openssl_client_supports_alpn() -> bool {
-    openssl_supports_option("s_client", " -alpn ")
-}
-
-// Does openssl s_server support -alpn?
-pub fn openssl_server_supports_alpn() -> bool {
-    openssl_supports_option("s_server", " -alpn ")
-}
-
-// Does openssl s_server support -no_ecdhe?
-pub fn openssl_server_supports_no_echde() -> bool {
-    openssl_supports_option("s_server", " -no_ecdhe ")
-}
-
-pub struct TlsClient {
-    pub hostname: String,
-    pub port: u16,
-    pub http: bool,
-    pub cafile: Option<String>,
-    pub client_auth_key: Option<String>,
-    pub client_auth_certs: Option<String>,
-    pub cache: Option<String>,
-    pub suites: Vec<String>,
-    pub protos: Vec<Vec<u8>>,
-    pub no_tickets: bool,
-    pub no_sni: bool,
-    pub insecure: bool,
-    pub verbose: bool,
-    pub mtu: Option<usize>,
-    pub expect_fails: bool,
-    pub expect_output: Vec<String>,
-    pub expect_log: Vec<String>,
-}
-
-impl TlsClient {
-    pub fn new(hostname: &str) -> TlsClient {
-        TlsClient {
-            hostname: hostname.to_string(),
-            port: 443,
-            http: true,
-            cafile: None,
-            client_auth_key: None,
-            client_auth_certs: None,
-            cache: None,
-            no_tickets: false,
-            no_sni: false,
-            insecure: false,
-            verbose: false,
-            mtu: None,
-            suites: Vec::new(),
-            protos: Vec::new(),
-            expect_fails: false,
-            expect_output: Vec::new(),
-            expect_log: Vec::new(),
-        }
-    }
-
-    pub fn client_auth(&mut self, certs: &str, key: &str) -> &mut Self {
-        self.client_auth_key = Some(key.to_string());
-        self.client_auth_certs = Some(certs.to_string());
-        self
-    }
-
-    pub fn cafile(&mut self, cafile: &str) -> &mut TlsClient {
-        self.cafile = Some(cafile.to_string());
-        self
-    }
-
-    pub fn cache(&mut self, cache: &str) -> &mut TlsClient {
-        self.cache = Some(cache.to_string());
-        self
-    }
-
-    pub fn no_tickets(&mut self) -> &mut TlsClient {
-        self.no_tickets = true;
-        self
-    }
-
-    pub fn no_sni(&mut self) -> &mut TlsClient {
-        self.no_sni = true;
-        self
-    }
-
-    pub fn insecure(&mut self) -> &mut TlsClient {
-        self.insecure = true;
-        self
-    }
-
-    pub fn verbose(&mut self) -> &mut TlsClient {
-        self.verbose = true;
-        self
-    }
-
-    pub fn mtu(&mut self, mtu: usize) -> &mut TlsClient {
-        self.mtu = Some(mtu);
-        self
-    }
-
-    pub fn port(&mut self, port: u16) -> &mut TlsClient {
-        self.port = port;
-        self
-    }
-
-    pub fn expect(&mut self, expect: &str) -> &mut TlsClient {
-        self.expect_output.push(expect.to_string());
-        self
-    }
-
-    pub fn expect_log(&mut self, expect: &str) -> &mut TlsClient {
-        self.verbose = true;
-        self.expect_log.push(expect.to_string());
-        self
-    }
-
-    pub fn suite(&mut self, suite: &str) -> &mut TlsClient {
-        self.suites.push(suite.to_string());
-        self
-    }
-
-    pub fn proto(&mut self, proto: &[u8]) -> &mut TlsClient {
-        self.protos.push(proto.to_vec());
-        self
-    }
-
-    pub fn fails(&mut self) -> &mut TlsClient {
-        self.expect_fails = true;
-        self
-    }
-
-    pub fn go(&mut self) -> Option<()> {
-        let mtustring;
-        let portstring = self.port.to_string();
-        let mut args = Vec::<&str>::new();
-        args.push(&self.hostname);
-
-        args.push("--port");
-        args.push(&portstring);
-
-        if self.http {
-            args.push("--http");
-        }
-
-        if self.cache.is_some() {
-            args.push("--cache");
-            args.push(self.cache.as_ref().unwrap());
-        }
-
-        if self.no_tickets {
-            args.push("--no-tickets");
-        }
-
-        if self.no_sni {
-            args.push("--no-sni");
-        }
-
-        if self.insecure {
-            args.push("--insecure");
-        }
-
-        if self.cafile.is_some() {
-            args.push("--cafile");
-            args.push(self.cafile.as_ref().unwrap());
-        }
-
-        if self.client_auth_key.is_some() {
-            args.push("--auth-key");
-            args.push(self.client_auth_key.as_ref().unwrap());
-        }
-
-        if self.client_auth_certs.is_some() {
-            args.push("--auth-certs");
-            args.push(self.client_auth_certs.as_ref().unwrap());
-        }
-
-        for suite in &self.suites {
-            args.push("--suite");
-            args.push(suite.as_ref());
-        }
-
-        for proto in &self.protos {
-            args.push("--proto");
-            args.push(str::from_utf8(proto.as_ref()).unwrap());
-        }
-
-        if self.verbose {
-            args.push("--verbose");
-        }
-
-        if self.mtu.is_some() {
-            args.push("--mtu");
-            mtustring = self.mtu.unwrap().to_string();
-            args.push(&mtustring);
-        }
-
-        let output = process::Command::new(tlsclient_find())
-            .args(&args)
-            .env("SSLKEYLOGFILE", "./sslkeylogfile.txt")
-            .output()
-            .unwrap_or_else(|e| panic!("failed to execute: {}", e));
-
-        let stdout_str = String::from_utf8(output.stdout.clone())
-            .unwrap();
-        let stderr_str = String::from_utf8(output.stderr.clone())
-            .unwrap();
-
-        for expect in &self.expect_output {
-            let re = Regex::new(expect).unwrap();
-            if re.find(&stdout_str).is_none() {
-                println!("We expected to find '{}' in the following output:", expect);
-                println!("{:?}", output);
-                panic!("Test failed");
+        pub fn bytes_for(keytype: &str, path: &str) -> &'static [u8] {
+            match (keytype, path) {
+                $(
+                    ($keytype, $path) => $name,
+                )+
+                _ => panic!("unknown keytype {} with path {}", keytype, path),
             }
         }
 
-        for expect in &self.expect_log {
-            let re = Regex::new(expect).unwrap();
-            if re.find(&stderr_str).is_none() {
-                println!("We expected to find '{}' in the following output:", expect);
-                println!("{:?}", output);
-                panic!("Test failed");
+        pub fn new_test_ca() -> tempfile::TempDir {
+            let dir = tempfile::TempDir::new().unwrap();
+
+            fs::create_dir(dir.path().join("ecdsa")).unwrap();
+            fs::create_dir(dir.path().join("rsa")).unwrap();
+
+            $(
+                let mut f = File::create(dir.path().join($keytype).join($path)).unwrap();
+                f.write($name).unwrap();
+            )+
+
+            dir
+        }
+    }
+}
+
+embed_files! {
+    (ECDSA_CA_CERT, "ecdsa", "ca.cert");
+    (ECDSA_CA_DER, "ecdsa", "ca.der");
+    (ECDSA_CA_KEY, "ecdsa", "ca.key");
+    (ECDSA_CLIENT_CERT, "ecdsa", "client.cert");
+    (ECDSA_CLIENT_CHAIN, "ecdsa", "client.chain");
+    (ECDSA_CLIENT_FULLCHAIN, "ecdsa", "client.fullchain");
+    (ECDSA_CLIENT_KEY, "ecdsa", "client.key");
+    (ECDSA_CLIENT_REQ, "ecdsa", "client.req");
+    (ECDSA_END_CERT, "ecdsa", "end.cert");
+    (ECDSA_END_CHAIN, "ecdsa", "end.chain");
+    (ECDSA_END_FULLCHAIN, "ecdsa", "end.fullchain");
+    (ECDSA_END_KEY, "ecdsa", "end.key");
+    (ECDSA_END_REQ, "ecdsa", "end.req");
+    (ECDSA_INTER_CERT, "ecdsa", "inter.cert");
+    (ECDSA_INTER_KEY, "ecdsa", "inter.key");
+    (ECDSA_INTER_REQ, "ecdsa", "inter.req");
+    (ECDSA_NISTP256_PEM, "ecdsa", "nistp256.pem");
+    (ECDSA_NISTP384_PEM, "ecdsa", "nistp384.pem");
+
+    (RSA_CA_CERT, "rsa", "ca.cert");
+    (RSA_CA_DER, "rsa", "ca.der");
+    (RSA_CA_KEY, "rsa", "ca.key");
+    (RSA_CLIENT_CERT, "rsa", "client.cert");
+    (RSA_CLIENT_CHAIN, "rsa", "client.chain");
+    (RSA_CLIENT_FULLCHAIN, "rsa", "client.fullchain");
+    (RSA_CLIENT_KEY, "rsa", "client.key");
+    (RSA_CLIENT_REQ, "rsa", "client.req");
+    (RSA_CLIENT_RSA, "rsa", "client.rsa");
+    (RSA_END_CERT, "rsa", "end.cert");
+    (RSA_END_CHAIN, "rsa", "end.chain");
+    (RSA_END_FULLCHAIN, "rsa", "end.fullchain");
+    (RSA_END_KEY, "rsa", "end.key");
+    (RSA_END_REQ, "rsa", "end.req");
+    (RSA_END_RSA, "rsa", "end.rsa");
+    (RSA_INTER_CERT, "rsa", "inter.cert");
+    (RSA_INTER_KEY, "rsa", "inter.key");
+    (RSA_INTER_REQ, "rsa", "inter.req");
+}
+
+pub fn transfer(left: &mut dyn Session, right: &mut dyn Session) -> usize {
+    let mut buf = [0u8; 262144];
+    let mut total = 0;
+
+    while left.wants_write() {
+        let sz = {
+            let into_buf: &mut io::Write = &mut &mut buf[..];
+            left.write_tls(into_buf).unwrap()
+        };
+        total += sz;
+        if sz == 0 {
+            return total;
+        }
+
+        let mut offs = 0;
+        loop {
+            let from_buf: &mut io::Read = &mut &buf[offs..sz];
+            offs += right.read_tls(from_buf).unwrap();
+            if sz == offs {
+                break;
             }
         }
+    }
 
-        if self.expect_fails {
-            assert!(output.status.code().unwrap() != 0);
-        } else {
-            assert!(output.status.success());
+    total
+}
+
+#[derive(Clone, Copy)]
+pub enum KeyType {
+    RSA,
+    ECDSA
+}
+
+pub static ALL_KEY_TYPES: [KeyType; 2] = [ KeyType::RSA, KeyType::ECDSA ];
+
+impl KeyType {
+    fn bytes_for(&self, part: &str) -> &'static [u8] {
+        match self {
+            KeyType::RSA => bytes_for("rsa", part),
+            KeyType::ECDSA => bytes_for("ecdsa", part),
         }
+    }
 
-        Some(())
+    pub fn get_chain(&self) -> Vec<Certificate> {
+        pemfile::certs(&mut io::BufReader::new(self.bytes_for("end.fullchain")))
+            .unwrap()
+    }
+
+    pub fn get_key(&self) -> PrivateKey {
+        pemfile::pkcs8_private_keys(&mut io::BufReader::new(self.bytes_for("end.key")))
+                .unwrap()[0]
+            .clone()
+    }
+
+    fn get_client_chain(&self) -> Vec<Certificate> {
+        pemfile::certs(&mut io::BufReader::new(self.bytes_for("client.fullchain")))
+            .unwrap()
+    }
+
+    fn get_client_key(&self) -> PrivateKey {
+        pemfile::pkcs8_private_keys(&mut io::BufReader::new(self.bytes_for("client.key")))
+                .unwrap()[0]
+            .clone()
     }
 }
 
-pub struct OpenSSLServer {
-    pub port: u16,
-    pub http: bool,
-    pub quiet: bool,
-    pub key: String,
-    pub cert: String,
-    pub chain: String,
-    pub intermediate: String,
-    pub cacert: String,
-    pub extra_args: Vec<&'static str>,
-    pub child: Option<process::Child>,
+pub fn make_server_config(kt: KeyType) -> ServerConfig {
+    let mut cfg = ServerConfig::new(NoClientAuth::new());
+    cfg.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+    cfg
 }
 
-impl OpenSSLServer {
-    pub fn new(keytype: &str, start_port: u16) -> OpenSSLServer {
-        OpenSSLServer {
-            port: unused_port(start_port),
-            http: true,
-            quiet: true,
-            key: format!("test-ca/{}/end.key", keytype),
-            cert: format!("test-ca/{}/end.cert", keytype),
-            chain: format!("test-ca/{}/end.chain", keytype),
-            cacert: format!("test-ca/{}/ca.cert", keytype),
-            intermediate: format!("test-ca/{}/inter.cert", keytype),
-            extra_args: Vec::new(),
-            child: None,
-        }
+pub fn make_server_config_with_mandatory_client_auth(kt: KeyType) -> ServerConfig {
+    let roots = kt.get_chain();
+    let mut client_auth_roots = RootCertStore::empty();
+    for root in roots {
+        client_auth_roots.add(&root).unwrap();
     }
 
-    pub fn new_rsa(start_port: u16) -> OpenSSLServer {
-        OpenSSLServer::new("rsa", start_port)
+    let client_auth = AllowAnyAuthenticatedClient::new(client_auth_roots);
+    let mut cfg = ServerConfig::new(client_auth);
+    cfg.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+    cfg
+}
+
+pub fn make_client_config(kt: KeyType) -> ClientConfig {
+    let mut cfg = ClientConfig::new();
+    let mut rootbuf = io::BufReader::new(kt.bytes_for("ca.cert"));
+    cfg.root_store.add_pem_file(&mut rootbuf).unwrap();
+
+    cfg
+}
+
+pub fn make_client_config_with_auth(kt: KeyType) -> ClientConfig {
+    let mut cfg = make_client_config(kt);
+    cfg.set_single_client_cert(kt.get_client_chain(), kt.get_client_key());
+    cfg
+}
+
+pub fn make_pair(kt: KeyType) -> (ClientSession, ServerSession) {
+    make_pair_for_configs(make_client_config(kt),
+                          make_server_config(kt))
+}
+
+pub fn make_pair_for_configs(client_config: ClientConfig,
+                             server_config: ServerConfig) -> (ClientSession, ServerSession) {
+    make_pair_for_arc_configs(&Arc::new(client_config),
+                              &Arc::new(server_config))
+}
+
+pub fn make_pair_for_arc_configs(client_config: &Arc<ClientConfig>,
+                                 server_config: &Arc<ServerConfig>) -> (ClientSession, ServerSession) {
+    (
+        ClientSession::new(client_config, dns_name("localhost")),
+        ServerSession::new(server_config)
+    )
+}
+
+pub fn do_handshake(client: &mut ClientSession, server: &mut ServerSession) -> (usize, usize) {
+    let (mut to_client, mut to_server) = (0, 0);
+    while server.is_handshaking() || client.is_handshaking() {
+        to_server += transfer(client, server);
+        server.process_new_packets().unwrap();
+        to_client += transfer(server, client);
+        client.process_new_packets().unwrap();
     }
+    (to_server, to_client)
+}
 
-    pub fn new_ecdsa(start_port: u16) -> OpenSSLServer {
-        OpenSSLServer::new("ecdsa", start_port)
-    }
+pub struct AllClientVersions {
+    client_config: ClientConfig,
+    index: usize,
+}
 
-    pub fn partial_chain(&mut self) -> &mut Self {
-        self.chain = self.intermediate.clone();
-        self
-    }
-
-    pub fn arg(&mut self, arg: &'static str) -> &mut Self {
-        self.extra_args.push(arg);
-        self
-    }
-
-    pub fn run(&mut self) -> &mut Self {
-        let mut extra_args = Vec::<&'static str>::new();
-        extra_args.extend(&self.extra_args);
-        if self.http {
-            extra_args.push("-www");
-        }
-
-        let mut subp = process::Command::new(openssl_find());
-        subp.arg("s_server")
-            .arg("-accept")
-            .arg(self.port.to_string())
-            .arg("-key")
-            .arg(&self.key)
-            .arg("-cert")
-            .arg(&self.cert)
-            .arg("-key2")
-            .arg(&self.key)
-            .arg("-cert2")
-            .arg(&self.cert)
-            .arg("-CAfile")
-            .arg(&self.chain)
-            .args(&extra_args);
-
-        if self.quiet {
-            subp.stdout(process::Stdio::null())
-                .stderr(process::Stdio::null());
-        }
-
-        let child = subp.spawn()
-            .expect("cannot run openssl server");
-
-        let port_up = wait_for_port(self.port);
-        port_up.expect("server did not come up");
-        self.child = Some(child);
-
-        self
-    }
-
-    pub fn running(&self) -> bool {
-        self.child.is_some()
-    }
-
-    pub fn kill(&mut self) {
-        self.child.as_mut().unwrap().kill().unwrap();
-        self.child = None;
-    }
-
-    pub fn client(&self) -> TlsClient {
-        let mut c = TlsClient::new("localhost");
-        c.port(self.port);
-        c.cafile(&self.cacert);
-        c
+impl AllClientVersions {
+    pub fn new(client_config: ClientConfig) -> AllClientVersions {
+        AllClientVersions { client_config, index: 0 }
     }
 }
 
-impl Drop for OpenSSLServer {
-    fn drop(&mut self) {
-        if self.running() {
-            self.kill();
-        }
-    }
-}
+impl Iterator for AllClientVersions {
+    type Item = ClientConfig;
 
-pub struct TlsServer {
-    pub port: u16,
-    pub http: bool,
-    pub echo: bool,
-    pub certs: String,
-    pub key: String,
-    pub cafile: String,
-    pub suites: Vec<String>,
-    pub protos: Vec<Vec<u8>>,
-    used_suites: Vec<String>,
-    used_protos: Vec<Vec<u8>>,
-    pub resumes: bool,
-    pub tickets: bool,
-    pub client_auth_roots: String,
-    pub client_auth_required: bool,
-    pub verbose: bool,
-    pub child: Option<process::Child>,
-}
+    fn next(&mut self) -> Option<ClientConfig> {
+        let mut config = self.client_config.clone();
+        self.index += 1;
 
-impl TlsServer {
-    pub fn new(port: u16) -> Self {
-        Self::new_keytype(port, "rsa")
-    }
-
-    pub fn new_keytype(port: u16, keytype: &str) -> Self {
-        TlsServer {
-            port: unused_port(port),
-            http: false,
-            echo: false,
-            key: format!("test-ca/{}/end.key", keytype),
-            certs: format!("test-ca/{}/end.fullchain", keytype),
-            cafile: format!("test-ca/{}/ca.cert", keytype),
-            verbose: false,
-            suites: Vec::new(),
-            protos: Vec::new(),
-            used_suites: Vec::new(),
-            used_protos: Vec::new(),
-            resumes: false,
-            tickets: false,
-            client_auth_roots: String::new(),
-            client_auth_required: false,
-            child: None,
-        }
-    }
-
-    pub fn echo_mode(&mut self) -> &mut Self {
-        self.echo = true;
-        self.http = false;
-        self
-    }
-
-    pub fn http_mode(&mut self) -> &mut Self {
-        self.echo = false;
-        self.http = true;
-        self
-    }
-
-    pub fn verbose(&mut self) -> &mut Self {
-        self.verbose = true;
-        self
-    }
-
-    pub fn port(&mut self, port: u16) -> &mut Self {
-        self.port = port;
-        self
-    }
-
-    pub fn suite(&mut self, suite: &str) -> &mut Self {
-        self.suites.push(suite.to_string());
-        self
-    }
-
-    pub fn proto(&mut self, proto: &[u8]) -> &mut Self {
-        self.protos.push(proto.to_vec());
-        self
-    }
-
-    pub fn resumes(&mut self) -> &mut Self {
-        self.resumes = true;
-        self
-    }
-
-    pub fn tickets(&mut self) -> &mut Self {
-        self.tickets = true;
-        self
-    }
-
-    pub fn client_auth_roots(&mut self, cafile: &str) -> &mut Self {
-        self.client_auth_roots = cafile.to_string();
-        self
-    }
-
-    pub fn client_auth_required(&mut self) -> &mut Self {
-        self.client_auth_required = true;
-        self
-    }
-
-    pub fn run(&mut self) {
-        let portstring = self.port.to_string();
-        let mut args = Vec::<&str>::new();
-        args.push("--port");
-        args.push(&portstring);
-        args.push("--key");
-        args.push(&self.key);
-        args.push("--certs");
-        args.push(&self.certs);
-
-        self.used_suites = self.suites.clone();
-        for suite in &self.used_suites {
-            args.push("--suite");
-            args.push(suite.as_ref());
-        }
-
-        self.used_protos = self.protos.clone();
-        for proto in &self.used_protos {
-            args.push("--proto");
-            args.push(str::from_utf8(proto.as_ref()).unwrap());
-        }
-
-        if self.resumes {
-            args.push("--resumption");
-        }
-
-        if self.tickets {
-            args.push("--tickets");
-        }
-
-        if !self.client_auth_roots.is_empty() {
-            args.push("--auth");
-            args.push(&self.client_auth_roots);
-
-            if self.client_auth_required {
-                args.push("--require-auth");
-            }
-        }
-
-        if self.verbose {
-            args.push("--verbose");
-        }
-
-        if self.http {
-            args.push("http");
-        } else if self.echo {
-            args.push("echo");
-        } else {
-            assert!(false, "specify http/echo mode");
-        }
-
-        println!("args {:?}", args);
-
-        let child = process::Command::new(tlsserver_find())
-            .args(&args)
-            .spawn()
-            .expect("cannot run tlsserver");
-
-        wait_for_port(self.port).expect("tlsserver didn't come up");
-        self.child = Some(child);
-    }
-
-    pub fn kill(&mut self) {
-        self.child.as_mut().unwrap().kill().unwrap();
-        self.child = None;
-    }
-
-    pub fn running(&self) -> bool {
-        self.child.is_some()
-    }
-
-    pub fn client(&self) -> OpenSSLClient {
-        let mut c = OpenSSLClient::new(self.port);
-        c.cafile(&self.cafile);
-        c
-    }
-}
-
-impl Drop for TlsServer {
-    fn drop(&mut self) {
-        if self.running() {
-            self.kill();
+        match self.index {
+            1 => {
+                config.versions = vec![ProtocolVersion::TLSv1_2];
+                Some(config)
+            },
+            2 => {
+                config.versions = vec![ProtocolVersion::TLSv1_3];
+                Some(config)
+            },
+            _ => None
         }
     }
 }
 
-pub struct OpenSSLClient {
-    pub port: u16,
-    pub cafile: String,
-    pub extra_args: Vec<&'static str>,
-    pub expect_fails: bool,
-    pub expect_output: Vec<String>,
-    pub expect_log: Vec<String>,
+#[derive(PartialEq, Debug)]
+pub enum TLSErrorFromPeer { Client(TLSError), Server(TLSError) }
+
+pub fn do_handshake_until_error(client: &mut ClientSession,
+                                server: &mut ServerSession)
+                               -> Result<(), TLSErrorFromPeer> {
+    while server.is_handshaking() || client.is_handshaking() {
+        transfer(client, server);
+        server.process_new_packets()
+            .map_err(|err| TLSErrorFromPeer::Server(err))?;
+        transfer(server, client);
+        client.process_new_packets()
+            .map_err(|err| TLSErrorFromPeer::Client(err))?;
+    }
+
+    Ok(())
 }
 
-impl OpenSSLClient {
-    pub fn new(port: u16) -> OpenSSLClient {
-        OpenSSLClient {
-            port: port,
-            cafile: "".to_string(),
-            extra_args: Vec::new(),
-            expect_fails: false,
-            expect_output: Vec::new(),
-            expect_log: Vec::new(),
-        }
+pub fn dns_name(name: &'static str) -> webpki::DNSNameRef<'_> {
+    webpki::DNSNameRef::try_from_ascii_str(name).unwrap()
+}
+
+pub struct FailsReads {
+    errkind: io::ErrorKind
+}
+
+impl FailsReads {
+    pub fn new(errkind: io::ErrorKind) -> FailsReads {
+        FailsReads { errkind }
     }
+}
 
-    pub fn arg(&mut self, arg: &'static str) -> &mut Self {
-        self.extra_args.push(arg);
-        self
-    }
-
-    pub fn cafile(&mut self, cafile: &str) -> &mut Self {
-        self.cafile = cafile.to_string();
-        self
-    }
-
-    pub fn expect(&mut self, expect: &str) -> &mut Self {
-        self.expect_output.push(expect.to_string());
-        self
-    }
-
-    pub fn expect_log(&mut self, expect: &str) -> &mut Self {
-        self.expect_log.push(expect.to_string());
-        self
-    }
-
-    pub fn fails(&mut self) -> &mut Self {
-        self.expect_fails = true;
-        self
-    }
-
-    pub fn go(&mut self) -> Option<()> {
-        let mut extra_args = Vec::<&'static str>::new();
-        extra_args.extend(&self.extra_args);
-
-        let mut subp = process::Command::new(openssl_find());
-        subp.arg("s_client")
-            .arg("-tls1_2")
-            .arg("-host")
-            .arg("localhost")
-            .arg("-port")
-            .arg(self.port.to_string())
-            .arg("-CAfile")
-            .arg(&self.cafile)
-            .args(&extra_args);
-
-        let output = subp.output()
-            .unwrap_or_else(|e| panic!("failed to execute: {}", e));
-
-        let stdout_str = unsafe { String::from_utf8_unchecked(output.stdout.clone()) };
-        let stderr_str = unsafe { String::from_utf8_unchecked(output.stderr.clone()) };
-
-        print!("{}", stdout_str);
-        print!("{}", stderr_str);
-
-        for expect in &self.expect_output {
-            let re = Regex::new(expect).unwrap();
-            if re.find(&stdout_str).is_none() {
-                println!("We expected to find '{}' in the following output:", expect);
-                println!("{:?}", output);
-                panic!("Test failed");
-            }
-        }
-
-        for expect in &self.expect_log {
-            let re = Regex::new(expect).unwrap();
-            if re.find(&stderr_str).is_none() {
-                println!("We expected to find '{}' in the following output:", expect);
-                println!("{:?}", output);
-                panic!("Test failed");
-            }
-        }
-
-        if self.expect_fails {
-            assert!(output.status.code().unwrap() != 0);
-        } else {
-            assert!(output.status.success());
-        }
-
-        Some(())
+impl io::Read for FailsReads {
+    fn read(&mut self, _b: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::from(self.errkind))
     }
 }
