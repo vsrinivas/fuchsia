@@ -93,10 +93,14 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
-  bool ReadDiffEntry(const cloud_provider::DiffEntry& change, storage::EntryChange* result);
+  void ReadDiffEntry(const cloud_provider::DiffEntry& change,
+                     fit::function<void(ledger::Status, storage::EntryChange)> callback);
 
-  bool DecodeAndParseDiff(const cloud_provider::DiffPack& diff_pack, storage::CommitId* base_commit,
-                          std::vector<storage::EntryChange>* changes);
+  void DecodeAndParseDiff(
+      const cloud_provider::DiffPack& diff_pack,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback);
+
   void HandleGetObjectError(
       storage::ObjectIdentifier object_identifier, bool is_permanent, fxl::StringView error_name,
       fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
@@ -147,6 +151,9 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   DownloadSyncState merged_state_ = DOWNLOAD_NOT_STARTED;
 
   fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<PageDownload> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDownload);
 };

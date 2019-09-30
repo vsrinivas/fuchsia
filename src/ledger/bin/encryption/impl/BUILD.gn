@@ -18,6 +18,7 @@ source_set("impl") {
 
   deps = [
     ":encrypted_commit",
+    ":encrypted_entry",
     ":remote_commit_id",
     "//garnet/public/lib/callback",
     "//src/ledger/bin/cache",
@@ -36,6 +37,14 @@ source_set("impl") {
 flatbuffer("encrypted_commit") {
   sources = [
     "encrypted_commit.fbs",
+  ]
+
+  extra_configs = [ "//src/ledger:ledger_config" ]
+}
+
+flatbuffer("encrypted_entry") {
+  sources = [
+    "encrypted_entry.fbs",
   ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]

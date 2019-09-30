@@ -55,6 +55,15 @@ class EncryptionService {
   // Checks whether the remote commit id mentions the currently used version.
   virtual bool IsSameVersion(convert::ExtendedStringView remote_commit_id) = 0;
 
+  // Encrypts the entry payload (entry name, priority and reference) for storing in the cloud as
+  // part of a diff.
+  virtual void EncryptEntryPayload(std::string entry_payload_storage,
+                                   fit::function<void(Status, std::string)> callback) = 0;
+
+  // Decrypts the entry payload retrieved from the cloud.
+  virtual void DecryptEntryPayload(std::string encrypted_data,
+                                   fit::function<void(Status, std::string)> callback) = 0;
+
   // Returns the obfuscated object name for the given identifier.
   //
   // This method is used to translate a local object identifier to the name that

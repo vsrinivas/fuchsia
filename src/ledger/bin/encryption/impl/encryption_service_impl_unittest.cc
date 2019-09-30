@@ -40,6 +40,24 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
+  void EncryptEntryPayload(std::string entry_storage, Status* status, std::string* result) {
+    bool called;
+    encryption_service_.EncryptEntryPayload(
+        entry_storage, callback::Capture(callback::SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+  }
+
+  void DecryptEntryPayload(std::string encrypted_entry_storage, Status* status,
+                           std::string* result) {
+    bool called;
+    encryption_service_.DecryptEntryPayload(
+        encrypted_entry_storage,
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+  }
+
   void GetObjectName(storage::ObjectIdentifier object_identifier, Status* status,
                      std::string* result) {
     bool called;
@@ -121,6 +139,25 @@ TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
     EncryptCommit(content, &status, &value);
     ASSERT_EQ(status, Status::OK);
     DecryptCommit(value, &status, &value);
+    ASSERT_EQ(status, Status::OK);
+    EXPECT_EQ(value, content);
+  }
+}
+
+TEST_F(EncryptionServiceTest, EncryptDecryptEntryPayload) {
+  std::string contents[] = {
+      "",
+      "SomeEntry",
+      "0123456789012345678901234567890123456789012345678901234567890123456789",
+  };
+
+  for (const auto& content : contents) {
+    Status status;
+    std::string value;
+    EncryptEntryPayload(content, &status, &value);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(value, content);
+    DecryptEntryPayload(value, &status, &value);
     ASSERT_EQ(status, Status::OK);
     EXPECT_EQ(value, content);
   }

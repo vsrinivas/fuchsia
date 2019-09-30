@@ -14,6 +14,7 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
+#include "src/ledger/bin/encryption/impl/encrypted_entry_generated.h"
 #include "src/ledger/bin/encryption/impl/remote_commit_id_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
@@ -40,11 +41,20 @@ constexpr size_t kKeyIndexCacheSize = 10u;
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted commit.
-bool CheckValidSerialization(fxl::StringView storage_bytes) {
+bool CheckValidEncryptedCommitSerialization(fxl::StringView storage_bytes) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(storage_bytes.data()),
                                  storage_bytes.size());
 
   return VerifyEncryptedCommitStorageBuffer(verifier);
+}
+
+// Checks whether the given |storage_bytes| are a valid serialization of an
+// encrypted entry.
+bool CheckValidEncryptedEntrySerialization(fxl::StringView storage_bytes) {
+  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(storage_bytes.data()),
+                                 storage_bytes.size());
+
+  return VerifyEncryptedEntryStorageBuffer(verifier);
 }
 
 }  // namespace
@@ -117,7 +127,7 @@ void EncryptionServiceImpl::GetPageId(std::string page_name,
 
 void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_bytes,
                                           fit::function<void(Status, std::string)> callback) {
-  if (!CheckValidSerialization(storage_bytes)) {
+  if (!CheckValidEncryptedCommitSerialization(storage_bytes)) {
     FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt commit.";
     callback(Status::INVALID_ARGUMENT, "");
     return;
@@ -128,6 +138,44 @@ void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_by
 
   Decrypt(encrypted_commit_storage->key_index(),
           convert::ToString(encrypted_commit_storage->serialized_encrypted_commit_storage()),
+          std::move(callback));
+}
+
+void EncryptionServiceImpl::EncryptEntryPayload(std::string entry_storage,
+                                                fit::function<void(Status, std::string)> callback) {
+  size_t key_index = GetCurrentKeyIndex();
+
+  Encrypt(
+      key_index, std::move(entry_storage),
+      [key_index, callback = std::move(callback)](Status status, std::string encrypted_storage) {
+        if (status != Status::OK) {
+          callback(status, "");
+          return;
+        }
+
+        flatbuffers::FlatBufferBuilder builder;
+
+        auto storage = CreateEncryptedEntryStorage(
+            builder, key_index, convert::ToFlatBufferVector(&builder, encrypted_storage));
+        builder.Finish(storage);
+        callback(Status::OK, std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
+                                         builder.GetSize()));
+      });
+}
+
+void EncryptionServiceImpl::DecryptEntryPayload(std::string encrypted_data,
+                                                fit::function<void(Status, std::string)> callback) {
+  if (!CheckValidEncryptedEntrySerialization(encrypted_data)) {
+    FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt the entry payload.";
+    callback(Status::INVALID_ARGUMENT, "");
+    return;
+  }
+
+  const EncryptedEntryStorage* encrypted_entry_storage =
+      GetEncryptedEntryStorage(encrypted_data.data());
+
+  Decrypt(encrypted_entry_storage->key_index(),
+          convert::ToString(encrypted_entry_storage->serialized_encrypted_entry_storage()),
           std::move(callback));
 }
 

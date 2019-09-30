@@ -41,6 +41,10 @@ class FakeEncryptionService : public EncryptionService {
                      fit::function<void(Status, std::string)> callback) override;
   void DecryptCommit(convert::ExtendedStringView storage_bytes,
                      fit::function<void(Status, std::string)> callback) override;
+  void EncryptEntryPayload(std::string entry_storage,
+                           fit::function<void(Status, std::string)> callback) override;
+  void DecryptEntryPayload(std::string encrypted_data,
+                           fit::function<void(Status, std::string)> callback) override;
   void GetObjectName(storage::ObjectIdentifier object_identifier,
                      fit::function<void(Status, std::string)> callback) override;
   void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
@@ -66,6 +70,12 @@ class FakeEncryptionService : public EncryptionService {
 
   // Synchronously decrypts the given commit.
   std::string DecryptCommitSynchronous(convert::ExtendedStringView storage_bytes);
+
+  // Synchronously encrypts the given entry payload.
+  std::string EncryptEntryPayloadSynchronous(convert::ExtendedStringView entry_storage);
+
+  // Synchronously decrypts the given entry payload.
+  std::string DecryptEntryPayloadSynchronous(convert::ExtendedStringView encrypted_data);
 
   // Synchronously gets the object name.
   std::string GetObjectNameSynchronous(storage::ObjectIdentifier object_identifier);

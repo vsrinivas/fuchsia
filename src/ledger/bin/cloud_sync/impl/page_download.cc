@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
 
+#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 
@@ -108,7 +109,8 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::Pag
       backoff_(std::move(backoff)),
       log_prefix_(
           fxl::Concatenate({"Page ", convert::ToHex(storage->GetId()), " download sync: "})),
-      watcher_binding_(this) {}
+      watcher_binding_(this),
+      weak_factory_(this) {}
 
 PageDownload::~PageDownload() { sync_client_->SetSyncDelegate(nullptr); }
 
@@ -420,51 +422,80 @@ void PageDownload::DecryptObject(
       });
 }
 
-bool PageDownload::ReadDiffEntry(const cloud_provider::DiffEntry& change,
-                                 storage::EntryChange* result) {
+void PageDownload::ReadDiffEntry(
+    const cloud_provider::DiffEntry& change,
+    fit::function<void(ledger::Status, storage::EntryChange)> callback) {
+  storage::EntryChange result;
   if (!change.has_entry_id() || change.entry_id().empty() || !change.has_operation() ||
       !change.has_data()) {
-    return false;
+    callback(ledger::Status::INVALID_ARGUMENT, {});
+    return;
   }
 
-  result->deleted = change.operation() == cloud_provider::Operation::DELETION;
-  return DecodeEntryPayload(change.entry_id(), change.data(),
-                            storage_->GetObjectIdentifierFactory(), &result->entry);
+  result.deleted = change.operation() == cloud_provider::Operation::DELETION;
+
+  encryption_service_->DecryptEntryPayload(
+      convert::ToString(change.data()),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, entry_id = change.entry_id(), result = std::move(result),
+           callback = std::move(callback)](encryption::Status status,
+                                           std::string decrypted_entry_payload) mutable {
+            if (status != encryption::Status::OK) {
+              callback(ledger::Status::INVALID_ARGUMENT, std::move(result));
+              return;
+            }
+            if (!DecodeEntryPayload(std::move(entry_id), std::move(decrypted_entry_payload),
+                                    storage_->GetObjectIdentifierFactory(), &result.entry)) {
+              callback(ledger::Status::INVALID_ARGUMENT, std::move(result));
+              return;
+            }
+            callback(ledger::Status::OK, std::move(result));
+          }));
 }
 
 // TODO(35364): The cloud now sends us remote commit identifiers. We need some way to map them to
 // local commit identifiers for this to work.
-bool PageDownload::DecodeAndParseDiff(const cloud_provider::DiffPack& diff_pack,
-                                      storage::CommitId* base_commit,
-                                      std::vector<storage::EntryChange>* changes) {
+void PageDownload::DecodeAndParseDiff(
+    const cloud_provider::DiffPack& diff_pack,
+    fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+        callback) {
   cloud_provider::Diff diff;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
   if (!cloud_provider::DecodeFromBuffer(diff_pack.buffer, &diff)) {
-    return false;
+    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    return;
   }
 
   if (!diff.has_base_state()) {
-    return false;
+    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    return;
   }
   if (diff.base_state().is_empty_page()) {
-    *base_commit = storage::kFirstPageCommitId.ToString();
+    base_commit = storage::kFirstPageCommitId.ToString();
   } else if (diff.base_state().is_at_commit()) {
-    *base_commit = convert::ToString(diff.base_state().at_commit());
+    base_commit = convert::ToString(diff.base_state().at_commit());
   } else {
-    return false;
+    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    return;
   }
 
   if (!diff.has_changes()) {
-    return false;
+    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    return;
   }
 
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<ledger::Status, storage::EntryChange>>(
+      ledger::Status::OK);
   for (const cloud_provider::DiffEntry& cloud_change : diff.changes()) {
-    storage::EntryChange change;
-    if (!ReadDiffEntry(cloud_change, &change)) {
-      return false;
-    }
-    changes->push_back(std::move(change));
+    ReadDiffEntry(cloud_change, waiter->NewCallback());
   }
-  return true;
+
+  waiter->Finalize([base_commit = std::move(base_commit), callback = std::move(callback)](
+                       ledger::Status status, std::vector<storage::EntryChange> changes) {
+    callback(status, std::move(base_commit), std::move(changes));
+  });
 }
 
 void PageDownload::GetDiff(
@@ -481,54 +512,60 @@ void PageDownload::GetDiff(
   }
 
   (*page_cloud_)
-      ->GetDiff(convert::ToArray(commit_id), std::move(bases_as_bytes),
-                [this, callback = std::move(callback), commit_id = std::move(commit_id),
-                 possible_bases = std::move(possible_bases)](
-                    cloud_provider::Status status,
-                    std::unique_ptr<cloud_provider::DiffPack> diff_pack) mutable {
-                  if (status == cloud_provider::Status::NOT_SUPPORTED) {
-                    // The cloud provider does not support diff. Ask the storage to apply
-                    // an empty diff to the root of the same commit.
-                    // TODO(12356): remove compatibility.
-                    callback(ledger::Status::OK, std::move(commit_id), {});
-                    current_get_calls_--;
-                    UpdateDownloadState();
-                    return;
-                  }
+      ->GetDiff(
+          convert::ToArray(commit_id), std::move(bases_as_bytes),
+          [this, callback = std::move(callback), commit_id = std::move(commit_id),
+           possible_bases = std::move(possible_bases)](
+              cloud_provider::Status status,
+              std::unique_ptr<cloud_provider::DiffPack> diff_pack) mutable {
+            if (status == cloud_provider::Status::NOT_SUPPORTED) {
+              // The cloud provider does not support diff. Ask the storage to apply
+              // an empty diff to the root of the same commit.
+              // TODO(12356): remove compatibility.
+              callback(ledger::Status::OK, std::move(commit_id), {});
+              current_get_calls_--;
+              UpdateDownloadState();
+              return;
+            }
 
-                  if (status != cloud_provider::Status::OK) {
-                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
-                                       IsPermanentError(status), "cloud provider",
-                                       std::move(callback));
-                    return;
-                  }
+            if (status != cloud_provider::Status::OK) {
+              HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                 IsPermanentError(status), "cloud provider", std::move(callback));
+              return;
+            }
 
-                  if (!diff_pack) {
-                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
-                                       /*is_permanent*/ true, "missing diff", std::move(callback));
-                    return;
-                  }
+            if (!diff_pack) {
+              HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                 /*is_permanent*/ true, "missing diff", std::move(callback));
+              return;
+            }
 
-                  storage::CommitId base_commit;
-                  std::vector<storage::EntryChange> changes;
-                  if (!DecodeAndParseDiff(*diff_pack, &base_commit, &changes)) {
-                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
-                                       /*is_permanent*/ true, "invalid diff during decoding",
-                                       std::move(callback));
-                    return;
-                  }
-
-                  if (!NormalizeDiff(&changes)) {
-                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
-                                       /*is_permanent*/ true, "invalid diff during normalization",
-                                       std::move(callback));
-                    return;
-                  }
-
-                  callback(ledger::Status::OK, std::move(base_commit), std::move(changes));
-                  current_get_calls_--;
-                  UpdateDownloadState();
-                });
+            DecodeAndParseDiff(
+                *diff_pack,
+                callback::MakeScoped(
+                    weak_factory_.GetWeakPtr(),
+                    [this, commit_id, possible_bases = std::move(possible_bases),
+                     callback = std::move(callback)](
+                        ledger::Status status, storage::CommitId base_commit,
+                        std::vector<storage::EntryChange> changes) mutable {
+                      if (status != ledger::Status::OK) {
+                        HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                           /*is_permanent*/ true, "invalid diff during decoding",
+                                           std::move(callback));
+                        return;
+                      }
+                      if (!NormalizeDiff(&changes)) {
+                        HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                           /*is_permanent*/ true,
+                                           "invalid diff during normalization",
+                                           std::move(callback));
+                        return;
+                      }
+                      callback(ledger::Status::OK, std::move(base_commit), std::move(changes));
+                      current_get_calls_--;
+                      UpdateDownloadState();
+                    }));
+          });
 }
 
 void PageDownload::HandleGetObjectError(

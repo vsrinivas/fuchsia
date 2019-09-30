@@ -70,6 +70,24 @@ void FakeEncryptionService::DecryptCommit(convert::ExtendedStringView storage_by
                   });
 }
 
+void FakeEncryptionService::EncryptEntryPayload(std::string entry_storage,
+                                                fit::function<void(Status, std::string)> callback) {
+  std::string encrypted_entry = EncryptEntryPayloadSynchronous(entry_storage);
+  async::PostTask(dispatcher_, [encrypted_entry = std::move(encrypted_entry),
+                                callback = std::move(callback)]() mutable {
+    callback(Status::OK, std::move(encrypted_entry));
+  });
+}
+
+void FakeEncryptionService::DecryptEntryPayload(std::string encrypted_data,
+                                                fit::function<void(Status, std::string)> callback) {
+  std::string entry = DecryptEntryPayloadSynchronous(encrypted_data);
+  async::PostTask(dispatcher_,
+                  [entry = std::move(entry), callback = std::move(callback)]() mutable {
+                    callback(Status::OK, std::move(entry));
+                  });
+}
+
 void FakeEncryptionService::GetObjectName(storage::ObjectIdentifier object_identifier,
                                           fit::function<void(Status, std::string)> callback) {
   std::string result = GetObjectNameSynchronous(object_identifier);
@@ -140,6 +158,16 @@ std::string FakeEncryptionService::EncryptCommitSynchronous(
 std::string FakeEncryptionService::DecryptCommitSynchronous(
     convert::ExtendedStringView storage_bytes) {
   return Decode(storage_bytes);
+}
+
+std::string FakeEncryptionService::EncryptEntryPayloadSynchronous(
+    convert::ExtendedStringView entry_storage) {
+  return Encode(entry_storage);
+}
+
+std::string FakeEncryptionService::DecryptEntryPayloadSynchronous(
+    convert::ExtendedStringView encrypted_data) {
+  return Decode(encrypted_data);
 }
 
 std::string FakeEncryptionService::GetObjectNameSynchronous(

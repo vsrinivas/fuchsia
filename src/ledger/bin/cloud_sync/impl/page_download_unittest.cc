@@ -59,14 +59,14 @@ storage::ObjectIdentifier MakeObjectIdentifier() {
   return storage::ObjectIdentifier(1u, storage::ObjectDigest("object_digest"), nullptr);
 }
 
+// Dummy implementation of a backoff policy, which always returns constant backoff
+// time.
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
 std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
   auto result = std::make_unique<backoff::TestBackoff>(kTestBackoffInterval);
   return result;
 }
 
-// Dummy implementation of a backoff policy, which always returns zero backoff
-// time.
 template <typename E>
 class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDownload::Delegate {
  public:
@@ -489,15 +489,16 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   EXPECT_EQ(source, storage::ChangeSource::CLOUD);
 }
 
-class PageDownloadDiffTest
-    : public PageDownloadTest,
+template <typename E>
+class BasePageDownloadDiffTest
+    : public BasePageDownloadTest<E>,
       public ::testing::WithParamInterface<std::function<void(cloud_provider::Diff*)>> {
  public:
   void SetUp() override {
-    page_download_->StartDownload();
-    RunLoopUntilIdle();
-    FXL_DCHECK(states_.back() == DOWNLOAD_IDLE);
-    states_.clear();
+    this->page_download_->StartDownload();
+    this->RunLoopUntilIdle();
+    FXL_DCHECK(this->states_.back() == DOWNLOAD_IDLE);
+    this->states_.clear();
   }
 
   cloud_provider::DiffEntry MakeDiffEntry(const storage::EntryChange& change) {
@@ -505,8 +506,8 @@ class PageDownloadDiffTest
     entry.set_entry_id(convert::ToArray(change.entry.entry_id));
     entry.set_operation(change.deleted ? cloud_provider::Operation::DELETION
                                        : cloud_provider::Operation::INSERTION);
-    entry.set_data(
-        convert::ToArray(EncodeEntryPayload(change.entry, storage_.GetObjectIdentifierFactory())));
+    entry.set_data(convert::ToArray(this->encryption_service_.EncryptEntryPayloadSynchronous(
+        EncodeEntryPayload(change.entry, this->storage_.GetObjectIdentifierFactory()))));
     return entry;
   }
 
@@ -516,7 +517,7 @@ class PageDownloadDiffTest
     std::transform(changes.begin(), changes.end(), std::back_inserter(entries),
                    [this](const storage::EntryChange& change) { return MakeDiffEntry(change); });
     std::shuffle(entries.begin(), entries.end(),
-                 environment_.random()->NewBitGenerator<uint64_t>());
+                 this->environment_.random()->template NewBitGenerator<uint64_t>());
     cloud_provider::Diff diff;
     diff.mutable_base_state()->set_empty_page({});
     diff.set_changes(std::move(entries));
@@ -545,6 +546,8 @@ class PageDownloadDiffTest
     return {std::move(diff), std::move(changes)};
   }
 };
+
+using PageDownloadDiffTest = BasePageDownloadDiffTest<encryption::FakeEncryptionService>;
 
 TEST_F(PageDownloadDiffTest, GetDiff) {
   std::vector<storage::EntryChange> expected_changes;
@@ -921,6 +924,43 @@ TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleDeletions) {
                                                                  convert::ToArray("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
+}
+
+class FailingDecryptEntryPayloadEncryptionService : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingDecryptEntryPayloadEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
+
+  void DecryptEntryPayload(std::string /*encrypted_data*/,
+                           fit::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+using FailingDecryptEntryPayloadPageDownloadDiffTest =
+    BasePageDownloadDiffTest<FailingDecryptEntryPayloadEncryptionService>;
+TEST_F(FailingDecryptEntryPayloadPageDownloadDiffTest, Fail) {
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+
+  page_cloud_.diff_to_return = MakeTestDiff().first;
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(base_commit, "");
+  EXPECT_THAT(changes, IsEmpty());
+
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
 
 }  // namespace

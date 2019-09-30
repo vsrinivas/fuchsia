@@ -334,7 +334,9 @@ TEST_F(BatchUploadTest, DiffFromEmpty) {
   ASSERT_TRUE(changes[0].has_data());
   EXPECT_EQ(changes[0].operation(), cloud_provider::Operation::INSERTION);
   storage::Entry entry0;
-  ASSERT_TRUE(DecodeEntryPayload(changes[0].entry_id(), changes[0].data(),
+  std::string decrypted_entry0_payload =
+      encryption_service_.DecryptEntryPayloadSynchronous(changes[0].data());
+  ASSERT_TRUE(DecodeEntryPayload(changes[0].entry_id(), decrypted_entry0_payload,
                                  storage_.GetObjectIdentifierFactory(), &entry0));
   EXPECT_EQ(entry0, (storage::Entry{"key0", obj_id0, storage::KeyPriority::EAGER, "entry0"}));
 
@@ -344,7 +346,11 @@ TEST_F(BatchUploadTest, DiffFromEmpty) {
   EXPECT_EQ(changes[1].operation(), cloud_provider::Operation::DELETION);
   EXPECT_EQ(changes[1].entry_id(), convert::ToArray("entry1"));
   storage::Entry entry1;
-  ASSERT_TRUE(DecodeEntryPayload(changes[1].entry_id(), changes[1].data(),
+
+  std::string decrypted_entry1_payload =
+      encryption_service_.DecryptEntryPayloadSynchronous(changes[1].data());
+
+  ASSERT_TRUE(DecodeEntryPayload(changes[1].entry_id(), decrypted_entry1_payload,
                                  storage_.GetObjectIdentifierFactory(), &entry1));
   EXPECT_EQ(entry1, (storage::Entry{"key1", obj_id1, storage::KeyPriority::LAZY, "entry1"}));
 
@@ -812,6 +818,17 @@ class FailingEncryptCommitEncryptionService : public encryption::FakeEncryptionS
   }
 };
 
+class FailingEncryptEntryPayloadEncryptionService : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingEncryptEntryPayloadEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
+
+  void EncryptEntryPayload(std::string /*entry_storage*/,
+                           fit::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
 class FailingGetNameEncryptionService : public encryption::FakeEncryptionService {
  public:
   explicit FailingGetNameEncryptionService(async_dispatcher_t* dispatcher)
@@ -838,7 +855,8 @@ template <typename E>
 using FailingBatchUploadTest = BaseBatchUploadTest<E>;
 
 using FailingEncryptionServices =
-    ::testing::Types<FailingEncryptCommitEncryptionService, FailingGetNameEncryptionService,
+    ::testing::Types<FailingEncryptCommitEncryptionService,
+                     FailingEncryptEntryPayloadEncryptionService, FailingGetNameEncryptionService,
                      FailingEncryptObjectEncryptionService>;
 
 TYPED_TEST_SUITE(FailingBatchUploadTest, FailingEncryptionServices);
@@ -848,6 +866,12 @@ TYPED_TEST(FailingBatchUploadTest, Fail) {
   commits.push_back(this->storage_.NewCommit("id", "content", true));
   auto id1 = this->MakeObjectIdentifier("obj_digest1");
   auto id2 = this->MakeObjectIdentifier("obj_digest2");
+
+  this->storage_.diffs_to_return["id"] =
+      std::make_pair(storage::kFirstPageCommitId.ToString(),
+                     std::vector<storage::EntryChange>{
+                         {{"key0", id1, storage::KeyPriority::EAGER, "entry0"}, false},
+                         {{"key1", id2, storage::KeyPriority::LAZY, "entry1"}, true}});
 
   this->storage_.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
   this->storage_.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");

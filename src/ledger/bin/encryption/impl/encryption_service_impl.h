@@ -32,6 +32,10 @@ class EncryptionServiceImpl : public EncryptionService {
                      fit::function<void(Status, std::string)> callback) override;
   void DecryptCommit(convert::ExtendedStringView storage_bytes,
                      fit::function<void(Status, std::string)> callback) override;
+  void EncryptEntryPayload(std::string entry_storage,
+                           fit::function<void(Status, std::string)> callback) override;
+  void DecryptEntryPayload(std::string encrypted_data,
+                           fit::function<void(Status, std::string)> callback) override;
   void GetObjectName(storage::ObjectIdentifier object_identifier,
                      fit::function<void(Status, std::string)> callback) override;
   void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,

@@ -348,9 +348,19 @@ void BatchUpload::EncodeEntry(
   remote_entry.set_entry_id(convert::ToArray(change.entry.entry_id));
   remote_entry.set_operation(change.deleted ? cloud_provider::Operation::DELETION
                                             : cloud_provider::Operation::INSERTION);
-  remote_entry.set_data(
-      convert::ToArray(EncodeEntryPayload(change.entry, storage_->GetObjectIdentifierFactory())));
-  callback(UploadStatus::OK, std::move(remote_entry));
+  std::string entry_payload =
+      EncodeEntryPayload(change.entry, storage_->GetObjectIdentifierFactory());
+  encryption_service_->EncryptEntryPayload(
+      std::move(entry_payload),
+      [remote_entry = std::move(remote_entry), callback = std::move(callback)](
+          encryption::Status status, std::string encrypted_entry_payload) mutable {
+        if (status != encryption::Status::OK) {
+          callback(UploadStatus::PERMANENT_ERROR, {});
+          return;
+        }
+        remote_entry.set_data(convert::ToArray(encrypted_entry_payload));
+        callback(UploadStatus::OK, std::move(remote_entry));
+      });
 }
 
 void BatchUpload::UploadCommits() {
