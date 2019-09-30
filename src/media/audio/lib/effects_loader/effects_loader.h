@@ -34,11 +34,12 @@ class EffectsLoader {
   // Creates a 'null' effects loader. That is a loader that cannot create any effects.
   static std::unique_ptr<EffectsLoader> CreateWithNullModule();
 
-  uint32_t GetNumEffects();
-  zx_status_t GetEffectInfo(uint32_t effect_id, fuchsia_audio_effects_description* effect_desc);
+  uint32_t GetNumEffects() const;
+  zx_status_t GetEffectInfo(uint32_t effect_id,
+                            fuchsia_audio_effects_description* effect_desc) const;
 
   Effect CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
-                      uint16_t channels_out, std::string_view config);
+                      uint16_t channels_out, std::string_view config) const;
 
  private:
   explicit EffectsLoader(EffectsModuleV1 module) : module_(std::move(module)) {}

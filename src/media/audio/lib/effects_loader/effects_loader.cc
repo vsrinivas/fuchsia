@@ -47,13 +47,13 @@ std::unique_ptr<EffectsLoader> EffectsLoader::CreateWithNullModule() {
   return std::unique_ptr<EffectsLoader>(new EffectsLoader(EffectsModuleV1(std::move(module))));
 }
 
-uint32_t EffectsLoader::GetNumEffects() {
+uint32_t EffectsLoader::GetNumEffects() const {
   FXL_DCHECK(module_);
   return module_->num_effects;
 }
 
 zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
-                                         fuchsia_audio_effects_description* desc) {
+                                         fuchsia_audio_effects_description* desc) const {
   TRACE_DURATION("audio", "EffectsLoader::GetEffectInfo");
   FXL_DCHECK(module_);
 
@@ -70,7 +70,7 @@ zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
 }
 
 Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
-                                   uint16_t channels_out, std::string_view config) {
+                                   uint16_t channels_out, std::string_view config) const {
   TRACE_DURATION("audio", "EffectsLoader::CreateEffect");
   FXL_DCHECK(module_);
 
