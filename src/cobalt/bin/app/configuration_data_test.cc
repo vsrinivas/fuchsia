@@ -1,0 +1,60 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/cobalt/bin/app/configuration_data.h"
+
+#include "gtest/gtest.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "third_party/abseil-cpp/absl/strings/match.h"
+
+namespace cobalt::test {
+
+const char kTestDir[] = "/tmp/cobalt_config_test";
+
+bool WriteFile(const std::string& file, const std::string& to_write) {
+  return files::WriteFile(std::string(kTestDir) + std::string("/") + file, to_write.c_str(),
+                          to_write.length());
+}
+
+// Tests behavior when there are no config files.
+TEST(ConfigTest, Empty) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+
+  FuchsiaConfigurationData config_data(kTestDir);
+
+  EXPECT_EQ(config::Environment::DEVEL, config_data.GetEnvironment());
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "devel"));
+}
+
+// Tests behavior when there is one valid config file.
+TEST(ConfigTest, OneValidFile) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("cobalt_environment", "PROD"));
+
+  FuchsiaConfigurationData config_data(kTestDir);
+
+  EXPECT_EQ(config::Environment::PROD, config_data.GetEnvironment());
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "prod"));
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "prod"));
+}
+
+// Tests behavior when there is one invalid config file.
+TEST(ConfigTest, OneInvalidFile) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("cobalt_environment", "INVALID"));
+
+  FuchsiaConfigurationData config_data(kTestDir);
+
+  EXPECT_EQ(config::Environment::DEVEL, config_data.GetEnvironment());
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "devel"));
+}
+
+}  // namespace cobalt::test

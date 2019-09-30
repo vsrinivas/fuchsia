@@ -18,6 +18,7 @@
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
+#include "src/cobalt/bin/app/configuration_data.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
@@ -116,6 +117,7 @@ class CobaltApp {
       ReleaseStage release_stage);
 
   encoder::SystemData system_data_;
+  FuchsiaConfigurationData configuration_data_;
 
   std::unique_ptr<sys::ComponentContext> context_;
 

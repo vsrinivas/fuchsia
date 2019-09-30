@@ -2,9 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
+
+declare_args() {
+  # Selects the Cobalt environment to send data to. Choices:
+  #   "DEVEL" - the non-prod environment for use in testing
+  #   "PROD" - the production environment
+  # TODO(camrdale): change the default to PROD once its pipeline is working.
+  cobalt_environment = "DEVEL"
+}
 
 # Generates the global_metrics_registry.pb file. This may be selectively
 # overriden by callers who supply their own copy of their project's
@@ -19,6 +28,8 @@ source_set("lib") {
     "cobalt_app.h",
     "cobalt_controller_impl.cc",
     "cobalt_controller_impl.h",
+    "configuration_data.cc",
+    "configuration_data.h",
     "logger_factory_impl.cc",
     "logger_factory_impl.h",
     "logger_impl.cc",
@@ -48,6 +59,7 @@ source_set("lib") {
     "//third_party/cobalt/src/logger:project_context_factory",
     "//third_party/cobalt/src/system_data",
     "//third_party/cobalt/src/system_data:client_secret",
+    "//third_party/cobalt/src/system_data:configuration_data",
     "//third_party/cobalt/src/uploader:shipping_manager",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -88,14 +100,37 @@ package("cobalt") {
 
   resources = [
     {
-      # Cobalt 1.0 analyzer public key.
-      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
-      dest = "keys/analyzer_public"
+      # Cobalt 1.0 analyzer public key for devel environment.
+      if (cobalt_environment == "PROD") {
+        path = "configs/prod_environment"
+      } else if (cobalt_environment == "DEVEL") {
+        path = "configs/devel_environment"
+      } else {
+        assert(false, "Unknown cobalt_environment: $cobalt_environment")
+      }
+      dest = "cobalt_environment"
     },
     {
-      # Cobalt 1.0 shuffler public key.
+      # Cobalt 1.0 analyzer public key for devel environment.
+      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
+      dest = "keys/analyzer_devel_public"
+    },
+    {
+      # Cobalt 1.0 shuffler public key for devel environment.
       path = rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key")
-      dest = "keys/shuffler_public"
+      dest = "keys/shuffler_devel_public"
+    },
+    {
+      # Cobalt 1.0 analyzer public key for prod environment.
+      path = rebase_path(
+              "//third_party/cobalt/keys/analyzer_prod_public.cobalt_key")
+      dest = "keys/analyzer_prod_public"
+    },
+    {
+      # Cobalt 1.0 shuffler public key for prod environment.
+      path = rebase_path(
+              "//third_party/cobalt/keys/shuffler_prod_public.cobalt_key")
+      dest = "keys/shuffler_prod_public"
     },
     {
       path = rebase_path(
@@ -110,6 +145,7 @@ executable("cobalt_app_unittests") {
   testonly = true
 
   sources = [
+    "configuration_data_test.cc",
     "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
     "timer_manager_test.cc",

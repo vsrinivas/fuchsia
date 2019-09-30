@@ -37,8 +37,6 @@ const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
 
 constexpr char kClearcutEndpoint[] = "https://jmt17.google.com/log";
 
-constexpr char kAnalyzerTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_public";
-constexpr char kShufflerTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_public";
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
 constexpr char kObservationStorePath[] = "/data/observation_store";
@@ -49,7 +47,7 @@ constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
 namespace {
 std::unique_ptr<ObservationStore> NewObservationStore(
     size_t max_bytes_per_event, size_t max_bytes_per_envelope, size_t max_bytes_total,
-    std::string root_directory, std::string name_prefix, bool use_memory_observation_store) {
+    std::string root_directory, const std::string& name_prefix, bool use_memory_observation_store) {
   std::unique_ptr<ObservationStore> store;
   if (use_memory_observation_store) {
     store.reset(
@@ -100,17 +98,18 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                                              kObservationStorePath, "V1",
                                              use_memory_observation_store)),
       encrypt_to_analyzer_(util::EncryptedMessageMaker::MakeForObservations(
-                               ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
+                               ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()))
                                .ValueOrDie()),
       encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeForEnvelopes(
-                               ReadPublicKeyPem(kShufflerTinkPublicKeyPath))
+                               ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath()))
                                .ValueOrDie()),
 
       clearcut_shipping_manager_(UploadScheduler(target_interval, min_interval, initial_interval),
                                  observation_store_.get(), encrypt_to_shuffler_.get(),
                                  std::make_unique<clearcut::ClearcutUploader>(
                                      kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
-                                                            &network_wrapper_, dispatcher))),
+                                                            &network_wrapper_, dispatcher)),
+                                 configuration_data_.GetLogSourceId()),
       timer_manager_(dispatcher),
       local_aggregate_proto_store_(kLocalAggregateProtoStorePath,
                                    std::make_unique<PosixFileSystem>()),
