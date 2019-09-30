@@ -70,7 +70,7 @@ class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
   void Rxrpc(HookInvocation record, RxrpcCallback callback) override { Fail(__FUNCTION__); }
 
   void AddDeviceDone(uint64_t action_id) final { ZX_ASSERT(false); }
-  void RemoveDeviceDone(uint64_t action_id) final { ZX_ASSERT(false); }
+  void UnbindReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
 
   virtual ~MockDeviceHooks() = default;
 

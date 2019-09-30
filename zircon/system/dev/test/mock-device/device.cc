@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
 #include <stdio.h>
 #include <threads.h>
 
@@ -41,7 +42,7 @@ class MockDevice : public MockDeviceType {
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  void DdkUnbind();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
@@ -107,6 +108,8 @@ struct ProcessActionsContext {
   zx_device_t* device = nullptr;
   // IN: Whether or not this context is running in a separate thread
   bool is_thread = false;
+  // IN: The txn used to reply to the unbind hook.
+  std::optional<ddk::UnbindTxn> pending_unbind_txn = std::nullopt;
 };
 
 // Execute the actions returned by a hook
@@ -238,11 +241,12 @@ zx_status_t MockDevice::DdkClose(uint32_t flags) {
   return ctx.hook_status;
 }
 
-void MockDevice::DdkUnbind() {
+void MockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::Array<const fuchsia_device_mock_Action> actions;
   zx_status_t status = UnbindHook(controller_, ConstructHookInvocation(), &actions);
   ZX_ASSERT(status == ZX_OK);
   ProcessActionsContext ctx(controller_, false, this, zxdev());
+  ctx.pending_unbind_txn = std::move(txn);
   status = ProcessActions(std::move(actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
 }
@@ -369,17 +373,29 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
         ctx->mock_device->CreateThread(std::move(thread_channel));
         break;
       }
-      case fuchsia_device_mock_ActionTag_remove_device: {
-        device_remove(ctx->device);
+      case fuchsia_device_mock_ActionTag_async_remove_device: {
+        if (ctx->mock_device == nullptr) {
+          printf("MockDevice::RemoveDevice: asked to remove device but none populated\n");
+          return ZX_ERR_INVALID_ARGS;
+        }
+        ctx->mock_device->DdkAsyncRemove();
+        break;
+      }
+      case fuchsia_device_mock_ActionTag_unbind_reply: {
+        if (!ctx->pending_unbind_txn) {
+          printf("MockDevice::UnbindReply: asked to reply to unbind but no unbind is pending\n");
+          return ZX_ERR_INVALID_ARGS;
+        }
+        ctx->pending_unbind_txn->Reply();
         // Null out the device pointers, since the release hook might get
         // activated.
         ctx->device = nullptr;
         ctx->mock_device = nullptr;
         zx_status_t status;
         if (ctx->is_thread) {
-          status = SendRemoveDeviceDoneFromThread(*ctx->channel, action.remove_device.action_id);
+          status = SendUnbindReplyDoneFromThread(*ctx->channel, action.unbind_reply.action_id);
         } else {
-          status = SendRemoveDeviceDone(*ctx->channel, action.remove_device.action_id);
+          status = SendUnbindReplyDone(*ctx->channel, action.unbind_reply.action_id);
         }
         ZX_ASSERT(status == ZX_OK);
         break;

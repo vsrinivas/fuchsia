@@ -50,6 +50,60 @@ TEST_F(BasicLifecycleTest, BindThenUnbindAndRemove) {
 
 // This test confirms that after a device has been added:
 // 1) We can open it via devfs, and its open() hook gets called.
+// 2) We can remove the device via device_async_remove() and its unbind() hook gets called
+// 3) We can close the opened connection, and its close() and then release() hook gets called.
+TEST_F(BasicLifecycleTest, BindThenOpenRemoveAndClose) {
+  std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<MockDevice> mock_child_device;
+  fidl::InterfacePtr<fuchsia::io::Node> client;
+
+  auto promise =
+      CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() {
+            // Do the open and wait for acknowledgement that it was successful.
+            auto wait_for_open = DoOpen(mock_child_device->path(), &client);
+            auto expect_open =
+                ExpectOpen(mock_child_device,
+                           [](HookInvocation record, uint32_t flags, Completer<void> completer) {
+                             completer.complete_ok();
+                             ActionList actions;
+                             // Request the child device be removed.
+                             actions.AppendAsyncRemoveDevice();
+                             actions.AppendReturnStatus(ZX_OK);
+                             return actions;
+                           });
+            auto expect_unbind =
+                ExpectUnbind(mock_child_device,
+                             [](HookInvocation record, Completer<void> completer) {
+                               ActionList actions;
+                               actions.AppendUnbindReply(std::move(completer));
+                               return actions;
+                             });
+            return expect_open.and_then(std::move(expect_unbind))
+                .and_then(std::move(wait_for_open));
+          })
+          .and_then([&]() {
+            // Close the newly opened connection
+            client.Unbind();
+            return ExpectClose(mock_child_device, [](HookInvocation record,
+                                                     uint32_t flags, Completer<void> completer) {
+              completer.complete_ok();
+              ActionList actions;
+              actions.AppendReturnStatus(ZX_OK);
+              return actions;
+            });
+          })
+          .and_then([&]() -> Promise<void> {
+            // Since DdkAsyncRemove() has been called and all connections have been closed,
+            // the device should be released.
+            return ExpectRelease(mock_child_device);
+          });
+
+  RunPromise(std::move(promise));
+}
+
+// This test confirms that after a device has been added:
+// 1) We can open it via devfs, and its open() hook gets called.
 // 2) We can close the opened connection, and its close() hook gets called.
 // 3) Invoking device_remove causes the release hook to run.
 TEST_F(BasicLifecycleTest, BindThenOpenCloseAndRemove) {
@@ -122,7 +176,7 @@ TEST_F(BasicLifecycleTest, BindThenOpenRemoveThenClose) {
             return ExpectUnbind(mock_child_device,
                                 [](HookInvocation record, Completer<void> completer) {
                                   ActionList actions;
-                                  actions.AppendRemoveDevice(std::move(completer));
+                                  actions.AppendUnbindReply(std::move(completer));
                                   return actions;
                                 });
           })

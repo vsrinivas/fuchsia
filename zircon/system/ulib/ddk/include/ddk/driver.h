@@ -168,9 +168,9 @@ zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device
 // the "out" pointer point to your device-local structure so callbacks can access
 // it immediately.
 //
-// If this call is successful, but the device needs to be torn down, device_remove() should be
-// called.  If |args->ctx| is backed by memory, it is the programmer's responsibility to not free
-// that memory until the device's |release| hook is called.
+// If this call is successful, but the device needs to be torn down, device_async_remove() should
+// be called.  If |args->ctx| is backed by memory, it is the programmer's responsibility to not
+// free that memory until the device's |release| hook is called.
 static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* args,
                                      zx_device_t** out) {
   return device_add_from_driver(__zircon_driver_rec__.driver, parent, args, out);
@@ -182,10 +182,23 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 // After **device_remove()** returns, it is not possible for further open calls
 // to occur, but io operations, etc may continue until those client connections
 // are closed.
+//
+// DEPRECATED (fxb/34574).
+// To schedule removal of a device, use **device_async_remove()** instead.
+// To signal completion of the device's |unbind| hook, use **device_unbind_reply()** instead.
 zx_status_t device_remove(zx_device_t* device);
 
 zx_status_t device_rebind(zx_device_t* device);
 void device_make_visible(zx_device_t* device);
+
+// Schedules the removal of the given device and all its descendents. When a device is
+// being removed, its |unbind| hook will be invoked.
+// It is safe to call this as long as the device has not completed its |release| hook.
+// Multiple requests to remove the same device will have no effect.
+void device_async_remove(zx_device_t* device);
+// This is used to signal completion of the device's |unbind| hook.
+// This does not necessarily need to be called from within the |unbind| hook.
+void device_unbind_reply(zx_device_t* device);
 
 // Retrieves a profile handle into |out_profile| from the scheduler for the
 // given |priority| and |name|. Ownership of |out_profile| is given to the

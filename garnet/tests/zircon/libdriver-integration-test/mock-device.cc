@@ -74,7 +74,7 @@ void MockDevice::AddDeviceDone(uint64_t action_id) {
   pending_actions_.erase(itr);
 }
 
-void MockDevice::RemoveDeviceDone(uint64_t action_id) { AddDeviceDone(action_id); }
+void MockDevice::UnbindReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
 
 std::vector<ActionList::Action> MockDevice::FinalizeActionList(ActionList action_list) {
   return action_list.FinalizeActionList(&pending_actions_, &next_action_id_);

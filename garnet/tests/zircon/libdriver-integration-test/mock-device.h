@@ -52,7 +52,7 @@ class MockDevice : public fuchsia::device::mock::MockDevice {
   void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
 
   void AddDeviceDone(uint64_t action_id) override;
-  void RemoveDeviceDone(uint64_t action_id) override;
+  void UnbindReplyDone(uint64_t action_id) override;
 
  private:
   // The buffers inside of |msg_out| must be allocated by the caller.

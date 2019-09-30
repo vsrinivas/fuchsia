@@ -156,10 +156,10 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
             auto unbind_promise =
                 ExpectUnbind(child_device1, [](HookInvocation record, Completer<void> completer) {
                   ActionList actions;
-                  // We don't care about when the remove device actually finishes.
+                  // We don't care about when the unbind reply actually finishes.
                   // The ExpectRelease below will serialize against it anyway.
-                  Promise<void> remove_done;
-                  actions.AppendRemoveDevice(&remove_done);
+                  Promise<void> unbind_reply_done;
+                  actions.AppendUnbindReply(&unbind_reply_done);
                   // Complete here instead of in remove device, since the remove
                   // device completion doesn't fire until after we're notified,
                   // which might be after the unbind of the composite begins

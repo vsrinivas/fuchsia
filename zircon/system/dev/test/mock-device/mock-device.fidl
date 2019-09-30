@@ -16,8 +16,8 @@ struct HookInvocation {
     uint64 device_id;
 };
 
-/// Marker struct for remove action
-struct RemoveDeviceAction {
+/// Marker struct for unbind reply action
+struct UnbindReplyAction {
     /// Value that will be echoed back in the completion message
     uint64 action_id;
 };
@@ -59,8 +59,11 @@ union Action {
     /// Create a new thread with a processing loop.
     request<MockDeviceThread> create_thread;
 
-    /// Invoke device_remove() on our device.
-    RemoveDeviceAction remove_device;
+    /// Invoke device_async_remove() on our device.
+    bool async_remove_device;
+
+    /// Signal that the unbind has completed.
+    UnbindReplyAction unbind_reply;
 
     /// Create a new child device
     AddDeviceAction add_device;
@@ -92,7 +95,7 @@ protocol MockDevice {
 
     /// Notification that the requested action was done
     AddDeviceDone(uint64 action_id);
-    RemoveDeviceDone(uint64 action_id);
+    UnbindReplyDone(uint64 action_id);
 };
 
 /// Interface for requesting a mock device thread do something.  The mock device implements
@@ -103,5 +106,5 @@ protocol MockDeviceThread {
 
     /// Notification that the requested action was done
     -> AddDeviceDone(uint64 action_id);
-    -> RemoveDeviceDone(uint64 action_id);
+    -> UnbindReplyDone(uint64 action_id);
 };

@@ -45,8 +45,9 @@ class ActionList {
                            std::string name, std::vector<zx_device_prop_t> props,
                            zx_status_t expect_status, fit::completer<void, std::string> add_done,
                            std::unique_ptr<MockDevice>* new_device_out);
-  void AppendRemoveDevice(fit::promise<void, std::string>* remove_done_out);
-  void AppendRemoveDevice(fit::completer<void, std::string> remove_done);
+  void AppendUnbindReply(fit::promise<void, std::string>* unbind_reply_done_out);
+  void AppendUnbindReply(fit::completer<void, std::string> unbind_reply_done);
+  void AppendAsyncRemoveDevice();
   void AppendCreateThread(async_dispatcher_t* dispatcher, std::unique_ptr<MockDeviceThread>* out);
   void AppendReturnStatus(zx_status_t status);
 

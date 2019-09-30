@@ -440,26 +440,46 @@ static const char* removal_problem(uint32_t flags) {
   return "?";
 }
 
-zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
+                                  bool unbind_self) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
            removal_problem(dev->flags));
     return ZX_ERR_INVALID_ARGS;
   }
-  if (dev->flags & DEV_FLAG_UNBOUND) {
 #if TRACE_ADD_REMOVE
-    printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
+  printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
 #endif
-    // This removal is in response to the unbind hook.
-    devhost_send_unbind_done(dev);
-  } else {
-#if TRACE_ADD_REMOVE
-    printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
-#endif
-    // Ask the devcoordinator to schedule the removal of this device and its children.
-    devhost_schedule_remove(dev, false /* unbind_self */);
-  }
+  // Ask the devcoordinator to schedule the removal of this device and its children.
+  devhost_schedule_remove(dev, unbind_self);
   return ZX_OK;
+
+}
+
+void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+  if (dev->flags & REMOVAL_BAD_FLAGS) {
+    printf("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
+           removal_problem(dev->flags));
+    panic();
+  }
+  if (!(dev->flags & DEV_FLAG_UNBOUND)) {
+    printf("device: %p(%s): cannot reply to unbind, not in unbinding state, flags are 0x%x\n",
+           dev.get(), dev->name, dev->flags);
+    panic();
+  }
+#if TRACE_ADD_REMOVE
+  printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
+#endif
+  devhost_send_unbind_done(dev);
+}
+
+zx_status_t devhost_device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+  // This removal is in response to the unbind hook.
+  if (dev->flags & DEV_FLAG_UNBOUND) {
+    devhost_device_unbind_reply(dev);
+    return ZX_OK;
+  }
+  return devhost_device_remove(dev, false /* unbind_self */);
 }
 
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {

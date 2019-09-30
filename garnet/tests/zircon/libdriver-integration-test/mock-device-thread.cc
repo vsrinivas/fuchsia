@@ -10,7 +10,7 @@ MockDeviceThread::MockDeviceThread(fidl::InterfacePtr<Interface> interface)
     : interface_(std::move(interface)) {
   auto handler = [this](uint64_t action_id) { EventDone(action_id); };
   interface_.events().AddDeviceDone = handler;
-  interface_.events().RemoveDeviceDone = handler;
+  interface_.events().UnbindReplyDone = handler;
 }
 
 void MockDeviceThread::EventDone(uint64_t action_id) {

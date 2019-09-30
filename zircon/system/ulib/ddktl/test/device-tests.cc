@@ -40,8 +40,10 @@ BEGIN_SUCCESS_CASE(Closable)
 zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Unbindable)
-void DdkUnbind() {}
+BEGIN_SUCCESS_CASE(UnbindableNew)
+// As the txn does not contain a valid device pointer, the destructor won't throw an error
+// if we don't reply.
+void DdkUnbindNew(ddk::UnbindTxn txn) {}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Readable)
@@ -104,7 +106,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     return ZX_OK;
   }
 
-  void DdkUnbind() { unbind_called = true; }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { unbind_called = true; }
 
   void DdkRelease() { release_called = true; }
 
@@ -206,7 +208,7 @@ class TestNotReleasable : public ddk::Device<TestNotReleasable> {
 DEFINE_FAIL_CASE(GetProtocolable)
 DEFINE_FAIL_CASE(Openable)
 DEFINE_FAIL_CASE(Closable)
-DEFINE_FAIL_CASE(Unbindable)
+DEFINE_FAIL_CASE(UnbindableNew)
 DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
 DEFINE_FAIL_CASE(IotxnQueueable)
@@ -269,7 +271,7 @@ RUN_NAMED_TEST("No mixins", do_test<TestNone>);
 RUN_NAMED_TEST("ddk::GetProtocolable", do_test<TestGetProtocolable>);
 RUN_NAMED_TEST("ddk::Openable", do_test<TestOpenable>);
 RUN_NAMED_TEST("ddk::Closable", do_test<TestClosable>);
-RUN_NAMED_TEST("ddk::Unbindable", do_test<TestUnbindable>);
+RUN_NAMED_TEST("ddk::UnbindableNew", do_test<TestUnbindableNew>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
 RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
 RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
@@ -283,7 +285,7 @@ RUN_NAMED_TEST("Method dispatch test", test_dispatch);
 RUN_NAMED_TEST("FailNoDdkGetProtocol", do_test<TestNotGetProtocolable>);
 RUN_NAMED_TEST("FailNoDdkOpen", do_test<TestNotOpenable>);
 RUN_NAMED_TEST("FailNoDdkClose", do_test<TestNotClosable>);
-RUN_NAMED_TEST("FailNoDdkUnbind", do_test<TestNotUnbindable>);
+RUN_NAMED_TEST("FailNoDdkUnbindNew", do_test<TestNotUnbindableNew>);
 RUN_NAMED_TEST("FailNoDdkRelease", do_test<TestNotReleasable>);
 RUN_NAMED_TEST("FailNoDdkRead", do_test<TestNotReadable>);
 RUN_NAMED_TEST("FailNoDdkWrite", do_test<TestNotWritable>);

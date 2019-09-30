@@ -444,9 +444,9 @@ zx_status_t SendAddDeviceDone(const zx::channel& c, uint64_t action_id) {
   return msg.Write(c.get(), 0);
 }
 
-zx_status_t SendRemoveDeviceDone(const zx::channel& c, uint64_t action_id) {
-  using RequestType = fuchsia_device_mock_MockDeviceRemoveDeviceDoneRequest;
-  const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceRemoveDeviceDoneOrdinal;
+zx_status_t SendUnbindReplyDone(const zx::channel& c, uint64_t action_id) {
+  using RequestType = fuchsia_device_mock_MockDeviceUnbindReplyDoneRequest;
+  const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceUnbindReplyDoneOrdinal;
 
   FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
   fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
@@ -478,9 +478,9 @@ zx_status_t SendAddDeviceDoneFromThread(const zx::channel& c, uint64_t action_id
   return msg.Write(c.get(), 0);
 }
 
-zx_status_t SendRemoveDeviceDoneFromThread(const zx::channel& c, uint64_t action_id) {
-  using EventType = fuchsia_device_mock_MockDeviceThreadRemoveDeviceDoneEvent;
-  const auto& kEventOrdinal = fuchsia_device_mock_MockDeviceThreadRemoveDeviceDoneOrdinal;
+zx_status_t SendUnbindReplyDoneFromThread(const zx::channel& c, uint64_t action_id) {
+  using EventType = fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEvent;
+  const auto& kEventOrdinal = fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneOrdinal;
 
   FIDL_ALIGNDECL char wr_bytes[sizeof(EventType)];
   fidl::Builder builder(wr_bytes, sizeof(wr_bytes));

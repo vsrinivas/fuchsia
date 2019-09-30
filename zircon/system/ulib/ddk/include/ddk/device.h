@@ -127,34 +127,32 @@ typedef struct zx_protocol_device {
   zx_status_t (*close)(void* ctx, uint32_t flags);
 
   //@ ## unbind
-  // The unbind hook is called when the parent of this device is being removed (due
-  // to hot unplug, fatal error, etc).
+  // The unbind hook is called to begin removal of a device (due to hot unplug, fatal error, etc).
   //
   // The driver should avoid further method calls to its parent device or any
   // protocols obtained from that device, and expect that any further such calls
   // will return with an error.
   //
   // The driver should adjust its state to encourage its client connections to close
-  // (cause IO to error out, etc), and call **device_remove()** on itself when ready.
-  // See the docs for **device_remove()** for important semantics.
+  // (cause IO to error out, etc), and call **device_unbind_reply()** on itself when ready.
+  // See the docs for **device_unbind_reply()** for important semantics.
   //
   // The driver must continue to handle all device hooks until the **release** hook
   // is invoked.
   //
-  // This hook may be called from any thread including the devhost's main
-  // thread.  It will be executed either when **device_remove()** is invoked on
-  // this device's parent, or sometime after a fuchsia.device.Controller/ScheduleUnbind
-  // request is received.
-  // When **device_remove()** is invoked on this device's parent, this hook
-  // will currently execute on the calling thread before **device_remove()**
-  // returns.  This behavior will be removed in the near future, so do not
-  // rely on it.
+  // This is an optional hook. The default implementation will be a hook that replies
+  // immediately with **device_unbind_reply()**.
+  //
+  // This hook will be called from the devhost's main thread. It will be executed sometime
+  // after any of the following events occuring: **device_async_remove()** is invoked on the
+  // device, the device's parent has completed its unbind hook via **device_unbind_reply**,
+  // or a fuchsia.device.Controller/ScheduleUnbind request is received.
   void (*unbind)(void* ctx);
 
   //@ ## release
-  // The release hook is called after this device has been removed by **device_remove()**
-  // and all open client connections have been closed, and all child devices have been
-  // removed and released.
+  // The release hook is called after this device has finished unbinding, all open client
+  // connections of the device have been closed, and all child devices have been unbound and
+  // released.
   //
   // At the point release is invoked, the driver will not receive any further calls
   // and absolutely must not use the underlying **zx_device_t** or any protocols obtained

@@ -60,19 +60,26 @@ void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::
   return AppendAction(std::move(action));
 }
 
-void ActionList::AppendRemoveDevice(fit::promise<void, std::string>* remove_done_out) {
+void ActionList::AppendUnbindReply(fit::promise<void, std::string>* unbind_reply_done_out) {
   fit::bridge<void, std::string> bridge;
-  AppendRemoveDevice(std::move(bridge.completer));
-  *remove_done_out = bridge.consumer.promise_or(::fit::error("remove device abandoned")).box();
+  AppendUnbindReply(std::move(bridge.completer));
+  *unbind_reply_done_out =
+      bridge.consumer.promise_or(::fit::error("unbind reply abandoned")).box();
 }
 
-void ActionList::AppendRemoveDevice(fit::completer<void, std::string> remove_done) {
+void ActionList::AppendUnbindReply(fit::completer<void, std::string> unbind_reply_done) {
   Action action;
-  auto& remove_device = action.remove_device();
-  remove_device.action_id = next_action_id_++;
+  auto& unbind_reply = action.unbind_reply();
+  unbind_reply.action_id = next_action_id_++;
 
   fit::bridge<void, std::string> bridge;
-  local_action_map_[remove_device.action_id] = std::move(remove_done);
+  local_action_map_[unbind_reply.action_id] = std::move(unbind_reply_done);
+  return AppendAction(std::move(action));
+}
+
+void ActionList::AppendAsyncRemoveDevice() {
+  Action action;
+  action.set_async_remove_device(true);
   return AppendAction(std::move(action));
 }
 
@@ -99,8 +106,8 @@ std::vector<ActionList::Action> ActionList::FinalizeActionList(CompleterMap* map
     uint64_t* action_id = nullptr;
     if (action.is_add_device()) {
       action_id = &action.add_device().action_id;
-    } else if (action.is_remove_device()) {
-      action_id = &action.remove_device().action_id;
+    } else if (action.is_unbind_reply()) {
+      action_id = &action.unbind_reply().action_id;
     } else {
       continue;
     }

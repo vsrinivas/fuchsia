@@ -8,6 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
+#include <ddktl/unbind-txn.h>
 #include <type_traits>
 #include <zircon/assert.h>
 
@@ -40,7 +41,7 @@
 // |                      |                                                    |
 // | ddk::Closable        | zx_status_t DdkClose(uint32_t flags)               |
 // |                      |                                                    |
-// | ddk::Unbindable      | void DdkUnbind()                                   |
+// | ddk::UnbindableNew   | void DdkUnbind(ddk::UnbindTxn txn)                 |
 // |                      |                                                    |
 // | ddk::Readable        | zx_status_t DdkRead(void* buf, size_t count,       |
 // |                      |                     zx_off_t off, size_t* actual)  |
@@ -87,7 +88,7 @@
 //     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
 //     zx_status_t DdkClose(uint32_t flags);
 //     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-//     void DdkUnbind();
+//     void DdkUnbindNew(ddk::UnbindTxn txn);
 //     void DdkRelease();
 // };
 //
@@ -171,6 +172,22 @@ class Unbindable : public base_mixin {
 
  private:
   static void Unbind(void* ctx) { static_cast<D*>(ctx)->DdkUnbind(); }
+};
+
+template <typename D>
+class UnbindableNew : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckUnbindableNew<D>();
+    proto->unbind = Unbind_New;
+  }
+
+ private:
+  static void Unbind_New(void* ctx) {
+    auto dev = static_cast<D*>(ctx);
+    UnbindTxn txn(dev->zxdev());
+    dev->DdkUnbindNew(std::move(txn));
+  }
 };
 
 template <typename D>
@@ -350,6 +367,10 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   // Removes the device.
   // This method may have the side-effect of destroying this object if the
   // device's reference count drops to zero.
+  //
+  // DEPRECATED (fxb/34574).
+  // To schedule removal of a device, use DdkAsyncRemove() instead.
+  // To signal completion of the device's DdkUnbind(txn) hook, use txn.Reply() instead.
   zx_status_t DdkRemove() {
     if (this->zxdev_ == nullptr) {
       return ZX_ERR_BAD_STATE;
@@ -360,6 +381,15 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     zx_device_t* dev = this->zxdev_;
     this->zxdev_ = nullptr;
     return device_remove(dev);
+  }
+
+  // Schedules the removal of the device and its descendents.
+  // Each device will evenutally have its unbind hook (if implemented) and release hook invoked.
+  void DdkAsyncRemove() {
+    ZX_ASSERT(this->zxdev_ != nullptr);
+
+    zx_device_t* dev = this->zxdev_;
+    device_async_remove(dev);
   }
 
   zx_status_t DdkGetMetadataSize(uint32_t type, size_t* out_size) {
@@ -425,8 +455,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // Convenience type for implementations that would like to override all
 // zx_protocol_device_t methods.
 template <class D>
-using FullDevice = Device<D, GetProtocolable, Openable, Closable, Unbindable, Readable, Writable,
-                          GetSizable, Suspendable, Resumable, Rxrpcable>;
+using FullDevice = Device<D, GetProtocolable, Openable, Closable, UnbindableNew, Readable,
+                          Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

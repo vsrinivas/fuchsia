@@ -125,15 +125,15 @@ IntegrationTest::Promise<void> IntegrationTest::CreateFirstChild(
 IntegrationTest::Promise<void> IntegrationTest::ExpectUnbindThenRelease(
     const std::unique_ptr<MockDevice>& device) {
   fit::bridge<void, Error> bridge;
-  auto unbind = ExpectUnbind(device, [remove_completer = std::move(bridge.completer)](
+  auto unbind = ExpectUnbind(device, [unbind_reply_completer = std::move(bridge.completer)](
                                          HookInvocation record, Completer<void> completer) mutable {
     completer.complete_ok();
     ActionList actions;
-    actions.AppendRemoveDevice(std::move(remove_completer));
+    actions.AppendUnbindReply(std::move(unbind_reply_completer));
     return actions;
   });
-  auto remove_done = bridge.consumer.promise_or(::fit::error("remove_completer abandoned"));
-  return unbind.and_then(JoinPromises(std::move(remove_done), ExpectRelease(device)));
+  auto reply_done = bridge.consumer.promise_or(::fit::error("unbind_reply_completer abandoned"));
+  return unbind.and_then(JoinPromises(std::move(reply_done), ExpectRelease(device)));
 }
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectBind(

@@ -6,6 +6,7 @@
 #define DDKTL_DEVICE_INTERNAL_H_
 
 #include <ddk/device.h>
+#include <ddktl/unbind-txn.h>
 #include <fbl/macros.h>
 #include <type_traits>
 
@@ -184,6 +185,16 @@ constexpr void CheckUnbindable() {
   static_assert(std::is_same<decltype(&D::DdkUnbind), void (D::*)(void)>::value,
                 "DdkUnbind must be a public non-static member function with signature "
                 "'void DdkUnbind()'.");
+}
+
+DECLARE_HAS_MEMBER_FN(has_ddk_unbind_new, DdkUnbindNew);
+
+template <typename D>
+constexpr void CheckUnbindableNew() {
+  static_assert(has_ddk_unbind_new<D>::value, "UnbindableNew classes must implement DdkUnbindNew");
+  static_assert(std::is_same<decltype(&D::DdkUnbindNew), void (D::*)(UnbindTxn txn)>::value,
+                "DdkUnbindNew must be a public non-static member function with signature "
+                "'void DdkUnbindNew()'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_release, DdkRelease);
