@@ -66,6 +66,15 @@ impl FIDLClone for TimeZone {
     }
 }
 
+impl FIDLClone for AudioSettings {
+    fn clone(&self) -> Self {
+        return AudioSettings {
+            streams: Some(self.streams.as_ref().unwrap().clone()),
+            input: Some(AudioInput { muted: self.input.as_ref().unwrap().muted }),
+        };
+    }
+}
+
 impl FIDLClone for AudioStreamSettings {
     fn clone(&self) -> Self {
         return AudioStreamSettings {
