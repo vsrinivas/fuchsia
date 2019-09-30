@@ -278,6 +278,7 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
   ZX_DEBUG_ASSERT(display_configs);
   fbl::AutoLock lock(&display_lock_);
   auto* config = display_configs[0];
+  pending_config_ = 0;
   if (display_count == 1 && config->layer_count) {
     if (!full_init_done_) {
       zx_status_t status;
@@ -285,13 +286,14 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
         ZX_ASSERT(0);
       }
-      full_init_done_ = true;
     }
 
     // First stop the overlay engine, followed by the DISP RDMA Engine
-    syscfg_->MutexReset();
-    ovl_->Reset();
-    disp_rdma_->Stop();
+    if (!full_init_done_) {
+      syscfg_->MutexReset();
+      ovl_->Reset();
+      disp_rdma_->Stop();
+    }
     for (size_t j = 0; j < config->layer_count; j++) {
       const primary_layer_t& layer = config->layer_list[j]->cfg.primary;
       auto info = reinterpret_cast<ImageInfo*>(layer.image.handle);
@@ -306,12 +308,20 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
       cfg.dest_frame = layer.dest_frame;
       cfg.pitch = info->pitch;
       cfg.transform = layer.transform_mode;
-      ovl_->Config(static_cast<uint8_t>(j), cfg);
+      if (!full_init_done_) {
+        ovl_->Config(static_cast<uint8_t>(j), cfg);
+      } else {
+        ovl_config_[j] = cfg;
+        pending_config_ |= static_cast<uint8_t>(1 << j);
+      }
     }
-    // All configurations are done. Re-start the engine
-    disp_rdma_->Start();
-    ovl_->Start();
-    syscfg_->MutexEnable();
+    if (!full_init_done_) {
+      // All configurations are done. Re-start the engine
+      disp_rdma_->Start();
+      ovl_->Start();
+      syscfg_->MutexEnable();
+    }
+    full_init_done_ = true;
   } else {
     if (full_init_done_) {
       syscfg_->MutexReset();
@@ -408,6 +418,25 @@ int Mt8167sDisplay::VSyncThread() {
       break;
     }
     fbl::AutoLock lock(&display_lock_);
+    // Apply any pending configuration at this point since it is safe to do
+    // so without any visual artifacts
+    if (pending_config_) {
+      syscfg_->MutexReset();
+      ovl_->Reset();
+      disp_rdma_->Stop();
+    }
+    for (size_t i = 0; i < kMaxLayer; i++) {
+      if (pending_config_ & (1 << i)) {
+        ovl_->Config(static_cast<uint8_t>(i), ovl_config_[i]);
+      }
+    }
+    if (pending_config_) {
+      disp_rdma_->Start();
+      ovl_->Start();
+      syscfg_->MutexEnable();
+    }
+    pending_config_ = 0;
+
     if (!ovl_->IsValidIrq()) {
       DISP_SPEW("Spurious Interrupt\n");
       continue;

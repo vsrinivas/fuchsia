@@ -309,6 +309,7 @@ int main(int argc, const char* argv[]) {
   fbl::Vector<fbl::Vector<uint64_t>> display_layers;
   fbl::Vector<fbl::unique_ptr<VirtualLayer>> layers;
   int32_t num_frames = 120;  // default to 120 frames
+  int32_t delay = 0;
   enum Platform {
     SIMPLE,
     INTEL,
@@ -366,6 +367,10 @@ int main(int argc, const char* argv[]) {
       argc--;
     } else if (strcmp(argv[0], "--num-frames") == 0) {
       num_frames = atoi(argv[1]);
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--delay") == 0) {
+      delay = atoi(argv[1]);
       argv += 2;
       argc -= 2;
     } else if (strcmp(argv[0], "--mediatek") == 0) {
@@ -546,6 +551,9 @@ int main(int argc, const char* argv[]) {
       }
     }
 
+    // This delay is used to skew the timing between vsync and ApplyConfiguration
+    // in order to observe any tearing effects
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(delay)));
     if (!apply_config()) {
       return -1;
     }

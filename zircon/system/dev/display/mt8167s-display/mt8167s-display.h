@@ -5,6 +5,17 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
+#include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/listnode.h>
+
+#include <array>
+
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
@@ -17,14 +28,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/interrupt.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/listnode.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "aal.h"
 #include "ccorr.h"
@@ -136,6 +139,9 @@ class Mt8167sDisplay
   const display_setting_t* init_disp_table_ = nullptr;
 
   bool full_init_done_ = false;
+
+  uint8_t pending_config_ TA_GUARDED(display_lock_) = 0;
+  std::array<OvlConfig, kMaxLayer> ovl_config_ TA_GUARDED(display_lock_);
 
   uint8_t panel_type_;
 
