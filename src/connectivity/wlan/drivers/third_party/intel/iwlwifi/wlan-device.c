@@ -169,9 +169,8 @@ static void mac_unbind(void* ctx) {
 
   status = device_remove(mvmvif->zxdev);
   if (status != ZX_OK) {
-    IWL_ERR(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
-            zx_status_get_string(status));
-    return;
+    IWL_WARN(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
+             zx_status_get_string(status));
   }
   mvmvif->zxdev = NULL;
 }
@@ -339,9 +338,8 @@ static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   if (mvmvif->zxdev) {
     ret = device_remove(mvmvif->zxdev);
     if (ret != ZX_OK) {
-      IWL_ERR(mvmvif, "cannot remove the zxdev of interface (%d): %s\n", id,
-              zx_status_get_string(ret));
-      goto unlock;
+      IWL_WARN(mvmvif, "cannot remove the zxdev of interface (%d): %s\n", id,
+               zx_status_get_string(ret));
     }
   }
 

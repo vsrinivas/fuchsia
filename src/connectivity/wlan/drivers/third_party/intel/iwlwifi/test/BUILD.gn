@@ -49,6 +49,7 @@ group("test") {
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
   "//src/lib/fxl/test:gtest_main",
+  "//zircon/public/lib/fake_ddk",
 ]
 
 # The dummy code for developer to start a new test.

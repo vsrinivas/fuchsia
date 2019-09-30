@@ -8,6 +8,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 }
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
@@ -97,6 +98,29 @@ TEST_F(WlanDeviceTest, MacUnbind) {
 
   // Do again and expect not crashed
   device_mac_ops.unbind(mvmvif);
+}
+
+TEST_F(WlanDeviceTest, MacUnbindInvalidZxdev) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+
+  // Create an interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+
+  // To verify the internal state of MVM driver.
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
+
+  // Invalidate the zxdev with whatever value
+  mvmvif->zxdev = fake_ddk::kFakeParent;
+
+  // Expect the unbind still cleans up the internal state.
+  device_mac_ops.unbind(mvmvif);
+  ASSERT_EQ(mvmvif->zxdev, nullptr);
 }
 
 TEST_F(WlanDeviceTest, MacRelease) {
@@ -236,6 +260,31 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
 
   // Remove the 1st interface again and it should fail.
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(mvm->vif_count, 0);
+}
+
+TEST_F(WlanDeviceTest, PhyDestroyInvalidZxdev) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+
+  // To verify the internal state of MVM driver.
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+
+  // Add interface
+  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->vif_count, 1);
+
+  // Replace the zxdev with invalid value
+  mvm->mvmvif[iface_id]->zxdev = fake_ddk::kFakeParent;
+
+  // Remove interface
+  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
+  ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->vif_count, 0);
 }
 
