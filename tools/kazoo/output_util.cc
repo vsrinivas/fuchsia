@@ -4,9 +4,8 @@
 
 #include "tools/kazoo/output_util.h"
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include <zircon/assert.h>
+#include "tools/kazoo/string_util.h"
 
 bool CopyrightHeaderWithCppComments(Writer* writer) {
   return writer->Puts(R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -30,7 +29,7 @@ bool CopyrightHeaderWithHashComments(Writer* writer) {
 
 std::string ToLowerAscii(const std::string& input) {
   std::string ret = input;
-  std::transform(ret.begin(), ret.end(), ret.begin(), fxl::ToLowerASCII);
+  std::transform(ret.begin(), ret.end(), ret.begin(), ToLowerASCII);
   return ret;
 }
 
@@ -46,7 +45,7 @@ std::string CamelToSnake(const std::string& camel_fidl) {
         return Upper;
       if ((c >= '0' && c <= '9') || c == '_')
         return Other;
-      FXL_DCHECK(false);
+      ZX_ASSERT(false);
       return Other;
     };
     auto prev_type = categorize(prev);
@@ -78,7 +77,7 @@ std::string CamelToSnake(const std::string& camel_fidl) {
     parts.push_back(ToLowerAscii(current_word));
   }
 
-  return fxl::JoinStrings(parts, "_");
+  return JoinStrings(parts, "_");
 }
 
 namespace {
@@ -109,16 +108,16 @@ std::string CNameImpl(const Type& type) {
       // add the underlying handle type here like "zx_handle_t /*vmo*/ handle" or similar.
     }
     void operator()(const TypePointer& pointer) {
-      FXL_DCHECK(false) << "pointers should be handled by caller";
+      ZX_ASSERT(false && "pointers should be handled by caller");
       ret = "<!>";
     }
     void operator()(const TypeString&) {
-      FXL_DCHECK(false) << "can't convert string to C directly";
+      ZX_ASSERT(false && "can't convert string to C directly");
       ret = "<!>";
     }
     void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
     void operator()(const TypeVector&) {
-      FXL_DCHECK(false) << "can't convert vector to C directly";
+      ZX_ASSERT(false && "can't convert vector to C directly");
       ret = "<!>";
     }
 
@@ -134,8 +133,8 @@ std::string CNameImpl(const Type& type) {
 
 std::string GetCUserModeName(const Type& type) {
   if (type.IsPointer()) {
-    FXL_CHECK(type.constness() != Constness::kUnspecified)
-        << "Pointer should be explictly const or mutable by output time";
+    ZX_ASSERT(type.constness() != Constness::kUnspecified &&
+              "Pointer should be explictly const or mutable by output time");
     return (type.constness() == Constness::kConst ? "const " : "") +
            GetCUserModeName(type.DataAsPointer().pointed_to_type()) + "*";
   }
@@ -144,19 +143,19 @@ std::string GetCUserModeName(const Type& type) {
 
 std::string GetCKernelModeName(const Type& type) {
   if (type.IsPointer()) {
-    FXL_CHECK(type.constness() != Constness::kUnspecified)
-        << "Pointer should be explictly const or mutable by output time";
+    ZX_ASSERT(type.constness() != Constness::kUnspecified &&
+              "Pointer should be explictly const or mutable by output time");
     std::string pointed_to = GetCKernelModeName(type.DataAsPointer().pointed_to_type());
     if (type.constness() == Constness::kConst) {
-      return fxl::StringPrintf("user_in_ptr<const %s>", pointed_to.c_str());
+      return StringPrintf("user_in_ptr<const %s>", pointed_to.c_str());
     } else if (type.constness() == Constness::kMutable) {
       if (pointed_to == "zx_handle_t" && !type.DataAsPointer().was_vector()) {
         return "user_out_handle*";
       }
       if (type.optionality() == Optionality::kInputArgument) {
-        return fxl::StringPrintf("user_inout_ptr<%s>", pointed_to.c_str());
+        return StringPrintf("user_inout_ptr<%s>", pointed_to.c_str());
       } else {
-        return fxl::StringPrintf("user_out_ptr<%s>", pointed_to.c_str());
+        return StringPrintf("user_out_ptr<%s>", pointed_to.c_str());
       }
     }
   }
@@ -218,7 +217,7 @@ void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name
       }
       if (arg.type().IsPointer() && arg.type().optionality() == Optionality::kOutputNonOptional) {
         if (non_nulls) {
-          non_nulls->push_back(fxl::StringPrintf("%zu", i + 1));
+          non_nulls->push_back(StringPrintf("%zu", i + 1));
         }
       }
     }
@@ -238,7 +237,7 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
   if (!non_nulls.empty()) {
     // TODO(syscall-fidl-transition): abigen only tags non-optional arguments as non-null, but
     // other input pointers could also perhaps be usefully tagged as well.
-    writer->Printf(" __NONNULL((%s))", fxl::JoinStrings(non_nulls, ", ").c_str());
+    writer->Printf(" __NONNULL((%s))", JoinStrings(non_nulls, ", ").c_str());
   }
   writer->Printf(" __LEAF_FN");
   if (syscall.HasAttribute("Const")) {

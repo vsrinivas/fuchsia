@@ -35,9 +35,9 @@ if (current_toolchain == host_toolchain) {
       "output_util.cc",
       "output_util.h",
       "outputs.h",
-      "read_file_to_string.cc",
-      "read_file_to_string.h",
       "rust_output.cc",
+      "string_util.cc",
+      "string_util.h",
       "syscall_library.cc",
       "syscall_library.h",
       "syscall_numbers_output.cc",
@@ -49,11 +49,10 @@ if (current_toolchain == host_toolchain) {
     ]
 
     deps = [
-      "//zircon/public/lib/fbl",
       "//zircon/system/public",
     ]
+
     public_deps = [
-      "//src/lib/fxl",
       "//third_party/rapidjson",
     ]
   }

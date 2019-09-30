@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
+#include "tools/kazoo/string_util.h"
 
 namespace {
 
-// This is almost list fxl::SplitString() on spaces, but punctuation needs to be treated differently
-// as it's broken on, but not discarded (for example, '-' in the middle of words, or '.' attached
-// the last word of a sentence.)
+// This is almost list SplitString() on spaces, but punctuation needs to be treated differently as
+// it's broken on, but not discarded (for example, '-' in the middle of words, or '.' attached the
+// last word of a sentence.)
 //
 // TODO(syscall-fidl-transition): 1) This is probably more particular than consumers of the .json
 // file really are; 2) There may only be one consumer of this field anyway (update-docs-from-abigen)
@@ -56,7 +55,7 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
       writer->Puts(indent.c_str());
       va_list ap;
       va_start(ap, format);
-      std::string result = fxl::StringVPrintf((format + std::string("\n")).c_str(), ap);
+      std::string result = StringVPrintf((format + std::string("\n")).c_str(), ap);
       va_end(ap);
       return writer->Puts(result);
     };
@@ -92,7 +91,7 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
     in();
     const auto doc_split = BreakAsAbigenParser(syscall.short_description());
     if (!doc_split.empty()) {
-      iprintn(("\"" + fxl::JoinStrings(doc_split, "\", \"") + "\"").c_str());
+      iprintn(("\"" + JoinStrings(doc_split, "\", \"") + "\"").c_str());
     } else {
       // TODO(syscall-fidl-transition): This is unnecessary.
       iprintn("");
@@ -105,8 +104,7 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
     for (size_t i = 0; i < syscall.rights_specs().size(); ++i) {
       std::string rights = syscall.rights_specs()[i];
       const bool last_right = i == syscall.rights_specs().size() - 1;
-      iprintn("%s%s",
-              ("\"" + fxl::JoinStrings(BreakAsAbigenParser(rights), "\", \"") + "\"").c_str(),
+      iprintn("%s%s", ("\"" + JoinStrings(BreakAsAbigenParser(rights), "\", \"") + "\"").c_str(),
               last_right ? "" : ",");
     }
     out();

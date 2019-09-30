@@ -4,14 +4,13 @@
 
 #include "tools/kazoo/syscall_library.h"
 
+#include <stdio.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/trim.h"
 #include "tools/kazoo/alias_workaround.h"
 #include "tools/kazoo/output_util.h"
+#include "tools/kazoo/string_util.h"
 
 namespace {
 
@@ -68,17 +67,15 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
 constexpr char kRightsPrefix[] = " Rights: ";
 
 std::string GetShortDescriptionFromDocAttribute(const std::string& full_doc_attribute) {
-  auto lines = fxl::SplitStringCopy(fxl::StringView(full_doc_attribute), "\n", fxl::kKeepWhitespace,
-                                    fxl::kSplitWantAll);
+  auto lines = SplitString(full_doc_attribute, '\n', kKeepWhitespace);
   if (lines.size() < 1 || lines[0].substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
     return std::string();
   }
-  return fxl::TrimString(lines[0], " \t\n").ToString();
+  return TrimString(lines[0], " \t\n");
 }
 
 std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_doc_attribute) {
-  auto lines = fxl::SplitStringCopy(fxl::StringView(full_doc_attribute), "\n", fxl::kKeepWhitespace,
-                                    fxl::kSplitWantAll);
+  auto lines = SplitString(full_doc_attribute, '\n', kKeepWhitespace);
   std::vector<std::string> ret;
   for (const auto& line : lines) {
     if (line.substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
@@ -98,7 +95,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     // the front end (fidlc) and 2) we move various parts of zx.fidl from being built-in to fidlc to
     // actual source level fidl and shared between the syscall definitions and normal FIDL.
     const std::string full_name(type_alias->operator[]("name").GetString());
-    FXL_CHECK(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
+    ZX_ASSERT(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
     const std::string name = full_name.substr(3);
     if (name == "duration" || name == "futex" || name == "koid" || name == "paddr" ||
         name == "rights" || name == "signals" || name == "status" || name == "time" ||
@@ -121,7 +118,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
   }
 
   if (!type.HasMember("kind")) {
-    FXL_LOG(ERROR) << "type has no 'kind'";
+    fprintf(stderr, "type has no 'kind'\n");
     return Type();
   }
 
@@ -143,7 +140,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     } else if (subtype == "bool") {
       return Type(TypeBool{});
     } else {
-      FXL_CHECK(false) << "TODO: primitive subtype=" << subtype;
+      ZX_ASSERT_MSG(false, "TODO: primitive subtype %s", subtype.c_str());
     }
   } else if (kind == "identifier") {
     std::string id = type["identifier"].GetString();
@@ -157,7 +154,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     return Type(TypeString{});
   }
 
-  FXL_CHECK(false) << "TODO: kind=" << kind;
+  ZX_ASSERT_MSG(false, "TODO: kind=%s", kind.c_str());
   return Type();
 }
 
@@ -168,7 +165,7 @@ bool Syscall::HasAttribute(const char* attrib_name) const {
 }
 
 std::string Syscall::GetAttribute(const char* attrib_name) const {
-  FXL_DCHECK(HasAttribute(attrib_name));
+  ZX_ASSERT(HasAttribute(attrib_name));
   return attributes_.find(attrib_name)->second;
 }
 
@@ -178,7 +175,7 @@ std::string Syscall::GetAttribute(const char* attrib_name) const {
 // - structs become pointer-to-struct (const on input, mutable on output)
 // - etc.
 bool Syscall::MapRequestResponseToKernelAbi() {
-  FXL_DCHECK(kernel_arguments_.empty());
+  ZX_ASSERT(kernel_arguments_.empty());
 
   // Used for input arguments, which default to const unless alread specified mutable.
   auto default_to_const = [](Constness constness) {
@@ -286,13 +283,12 @@ bool Syscall::HandleArgReorder() {
   constexpr const char kReorderAttribName[] = "ArgReorder";
   if (HasAttribute(kReorderAttribName)) {
     const std::string& target_order_string = GetAttribute(kReorderAttribName);
-    std::vector<fxl::StringView> target_order =
-        fxl::SplitString(target_order_string, ",", fxl::WhiteSpaceHandling::kTrimWhitespace,
-                         fxl::SplitResult::kSplitWantAll);
+    std::vector<std::string> target_order = SplitString(target_order_string, ',', kTrimWhitespace);
     if (kernel_arguments_.size() != target_order.size()) {
-      FXL_LOG(ERROR) << "Attempting to reorder arguments for '" << name() << "', and there's "
-                     << kernel_arguments_.size() << " kernel arguments, but " << target_order.size()
-                     << " arguments in the reorder spec.";
+      fprintf(stderr,
+              "Attempting to reorder arguments for '%s', and there's %zu kernel arguments, but %zu "
+              "arguments in the reorder spec.\n",
+              name().c_str(), kernel_arguments_.size(), target_order.size());
       return false;
     }
 
@@ -308,8 +304,10 @@ bool Syscall::HandleArgReorder() {
       }
 
       if (!found) {
-        FXL_LOG(ERROR) << "Attempting to reorder arguments for '" << name() << "', but '" << target
-                       << "' wasn't one of the kernel arguments.";
+        fprintf(stderr,
+                "Attempting to reorder arguments for '%s', but '%s' wasn't one of the kernel "
+                "arguments.\n",
+                name().c_str(), target.c_str());
         return false;
       }
     }
@@ -321,7 +319,7 @@ bool Syscall::HandleArgReorder() {
 }
 
 void Enum::AddMember(const std::string& member_name, int value) {
-  FXL_DCHECK(!HasMember(member_name));
+  ZX_ASSERT(!HasMember(member_name));
   members_[member_name] = value;
 }
 
@@ -330,7 +328,7 @@ bool Enum::HasMember(const std::string& member_name) const {
 }
 
 int Enum::ValueForMember(const std::string& member_name) const {
-  FXL_CHECK(HasMember(member_name));
+  ZX_ASSERT(HasMember(member_name));
   return members_.find(member_name)->second;
 }
 
@@ -368,17 +366,17 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   // and general sanity, so probably only in a diagnostic mode.
 
   if (!document.IsObject()) {
-    FXL_LOG(ERROR) << "Root of json wasn't object.";
+    fprintf(stderr, "Root of json wasn't object.\n");
     return false;
   }
 
   library->name_ = document["name"].GetString();
   if (library->name_ != "zz" && library->name_ != "zx") {
-    FXL_LOG(ERROR) << "Library name wasn't zz or zx as expected.";
+    fprintf(stderr, "Library name wasn't zz or zx as expected.\n");
     return false;
   }
 
-  FXL_DCHECK(library->syscalls_.empty());
+  ZX_ASSERT(library->syscalls_.empty());
 
   // The order of these loads is significant. For example, enums must be loaded to be able to be
   // referred to by interface methods.
@@ -417,9 +415,8 @@ std::unique_ptr<Enum> SyscallLibraryLoader::ConvertBitsOrEnumMember(const rapidj
   obj->original_name_ = StripLibraryName(full_name);
   obj->name_ = TypeNameToZirconStyle(obj->original_name_);
   for (const auto& member : json["members"].GetArray()) {
-    FXL_CHECK(member["value"]["kind"] == "literal") << "TODO: More complex value expressions";
-    int member_value = fxl::StringToNumber<int>(
-        fxl::StringView(member["value"]["literal"]["value"].GetString()));
+    ZX_ASSERT_MSG(member["value"]["kind"] == "literal", "TODO: More complex value expressions");
+    int member_value = StringToInt(member["value"]["literal"]["value"].GetString());
     obj->AddMember(member["name"].GetString(), member_value);
   }
   return obj;
@@ -446,7 +443,7 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
                                           SyscallLibrary* library) {
   for (const auto& interface : document["interface_declarations"].GetArray()) {
     if (!ValidateTransport(interface)) {
-      FXL_LOG(ERROR) << "Expected Transport to be Syscall.";
+      fprintf(stderr, "Expected Transport to be Syscall.\n");
       return false;
     }
 
@@ -470,7 +467,7 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
         }
       }
 
-      FXL_CHECK(method["has_request"].GetBool());  // Events are not expected in syscalls.
+      ZX_ASSERT(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
       auto add_struct_members = [&library](Struct* strukt, const rapidjson::Value& arg) {
         const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
@@ -700,8 +697,8 @@ bool SyscallLibraryLoader::MakeSyscallOrderMatchOldDeclarationOrder(SyscallLibra
   };
 
   if (library->syscalls_.size() != countof(kOrderFromOriginalSyscallsAbigen)) {
-    FXL_LOG(ERROR) << "Have " << library->syscalls_.size() << " syscalls, but original has "
-                   << countof(kOrderFromOriginalSyscallsAbigen) << " syscalls.";
+    fprintf(stderr, "Have %zu syscalls, but original has %zu syscalls.\n",
+            library->syscalls_.size(), countof(kOrderFromOriginalSyscallsAbigen));
     return false;
   }
 

@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "rapidjson/document.h"
-#include "src/lib/fxl/macros.h"
+#include "tools/kazoo/macros.h"
 
 class Enum;
 class Struct;
@@ -216,7 +216,7 @@ class Struct {
   std::string name_;                // "zx_handle_info_t"
   std::vector<StructMember> members_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Struct);
+  DISALLOW_COPY_AND_ASSIGN(Struct);
 };
 
 class Syscall {
@@ -263,7 +263,7 @@ class Syscall {
   Type kernel_return_type_;
   std::vector<StructMember> kernel_arguments_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Syscall);
+  DISALLOW_COPY_AND_ASSIGN(Syscall);
 };
 
 class Enum {
@@ -308,7 +308,7 @@ class SyscallLibrary {
   std::vector<std::unique_ptr<Struct>> structs_;
   std::vector<std::unique_ptr<Syscall>> syscalls_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyscallLibrary);
+  DISALLOW_COPY_AND_ASSIGN(SyscallLibrary);
 };
 
 class SyscallLibraryLoader {

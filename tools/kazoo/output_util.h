@@ -5,7 +5,6 @@
 #ifndef TOOLS_KAZOO_OUTPUT_UTIL_H_
 #define TOOLS_KAZOO_OUTPUT_UTIL_H_
 
-#include "src/lib/fxl/strings/ascii.h"
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/writer.h"
 

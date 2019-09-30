@@ -7,8 +7,7 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
-#include "tools/kazoo/read_file_to_string.h"
+#include "tools/kazoo/string_util.h"
 
 namespace {
 

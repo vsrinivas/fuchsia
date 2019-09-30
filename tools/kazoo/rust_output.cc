@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/strings/string_printf.h"
+#include <zircon/assert.h>
+
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
+#include "tools/kazoo/string_util.h"
 
 namespace {
 
@@ -34,16 +36,16 @@ std::string RustName(const Type& type) {
       // add the underlying handle type here like "zx_handle_t /*vmo*/" or similar.
     }
     void operator()(const TypePointer& pointer) {
-      ret = fxl::StringPrintf("*%s %s", constness == Constness::kConst ? "const" : "mut",
-                              RustName(pointer.pointed_to_type()).c_str());
+      ret = StringPrintf("*%s %s", constness == Constness::kConst ? "const" : "mut",
+                         RustName(pointer.pointed_to_type()).c_str());
     }
     void operator()(const TypeString&) {
-      FXL_DCHECK(false) << "can't convert string directly";
+      ZX_ASSERT(false && "can't convert string directly");
       ret = "<!>";
     }
     void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
     void operator()(const TypeVector&) {
-      FXL_DCHECK(false) << "can't convert vector directly";
+      ZX_ASSERT(false && "can't convert vector directly");
       ret = "<!>";
     }
 

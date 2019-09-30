@@ -5,12 +5,12 @@
 #ifndef TOOLS_KAZOO_WRITER_H_
 #define TOOLS_KAZOO_WRITER_H_
 
-#include <fbl/macros.h>
 #include <stdio.h>
+#include <zircon/compiler.h>
 
 #include <string>
 
-#include "src/lib/fxl/compiler_specific.h"
+#include "tools/kazoo/macros.h"
 
 class Writer {
  public:
@@ -23,7 +23,7 @@ class Writer {
 
   // Formatted output to the underlying location. Returns true on success, or
   // false with a message logged.
-  FXL_PRINTF_FORMAT(2, 3) bool Printf(const char* format, ...);
+  __PRINTFLIKE(2, 3) bool Printf(const char* format, ...);
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Writer);
