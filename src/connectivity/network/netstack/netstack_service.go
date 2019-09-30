@@ -10,7 +10,6 @@ import (
 	"net"
 	"sort"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
 	"syslog"
@@ -20,7 +19,6 @@ import (
 	"netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
-	"fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/dhcp"
 	"fidl/fuchsia/netstack"
@@ -37,7 +35,6 @@ const zeroIpAddr = header.IPv4Any
 
 type netstackImpl struct {
 	ns                *Netstack
-	getIO             func() io.Directory
 	dhcpClientService dhcp.ClientService
 }
 
@@ -384,18 +381,6 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, 0, nil
 	}
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
-}
-
-func (ni *netstackImpl) GetAggregateStats(request io.DirectoryInterfaceRequest) error {
-	b := fidl.Binding{
-		Stub:    &io.DirectoryStub{Impl: ni.getIO()},
-		Channel: request.Channel,
-	}
-	return b.Init(func(error) {
-		if err := b.Close(); err != nil {
-			panic(err)
-		}
-	})
 }
 
 func (ni *netstackImpl) GetStats(nicid uint32) (stats netstack.NetInterfaceStats, err error) {

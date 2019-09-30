@@ -173,27 +173,6 @@ async fn read_stat_counter(
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn get_aggregate_stats() -> Result {
-    let name = stringify!(get_aggregate_stats);
-
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let netstack_proxy =
-        connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&managed_environment)
-            .context("failed to connect to netstack")?;
-
-    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-        .context("failed to create node proxy")?;
-    let () = netstack_proxy.get_aggregate_stats(server).context("failed to get aggregate stats")?;
-
-    verify_stats(&client).await
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
 async fn read_stats_from_debug() -> Result {
     let launcher = fuchsia_component::client::launcher().context("failed to create launcher")?;
 

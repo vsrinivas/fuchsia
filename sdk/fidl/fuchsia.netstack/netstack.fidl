@@ -4,7 +4,6 @@
 
 library fuchsia.netstack;
 
-using fuchsia.io;
 using fuchsia.net;
 using fuchsia.net.dhcp;
 using fuchsia.hardware.ethernet;
@@ -146,9 +145,6 @@ protocol Netstack {
 
     // TODO (porce): Separate interfaces.
     GetStats(uint32 nicid) -> (NetInterfaceStats stats);
-
-    /// Get stats for all NICs on the stack.
-    GetAggregateStats(request<fuchsia.io.Directory> object);
 
     /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);

@@ -34,8 +34,6 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Directory> object) override {}
-
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
   void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,

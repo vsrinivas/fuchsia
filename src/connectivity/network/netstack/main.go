@@ -143,19 +143,16 @@ func Main() {
 		},
 	})
 
-	countersDirectory := context.DirectoryWrapper{
+	ctx.OutgoingService.AddDebug(counters, &context.DirectoryWrapper{
 		Directory: &reflectNode{
 			Value: stats,
 		},
-	}
-
-	ctx.OutgoingService.AddDebug(counters, &countersDirectory)
+	})
 
 	ctx.OutgoingService.AddService(
 		netstack.NetstackName,
 		&netstack.NetstackStub{Impl: &netstackImpl{
-			ns:    ns,
-			getIO: countersDirectory.GetDirectory,
+			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
 			k, err := netstackService.BindingSet.Add(s, c, nil)

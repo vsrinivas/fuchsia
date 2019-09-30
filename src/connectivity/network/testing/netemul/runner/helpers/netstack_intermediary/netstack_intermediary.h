@@ -55,8 +55,6 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Directory> object) override {}
-
   void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                               RemoveInterfaceAddressCallback callback) override {}
 
