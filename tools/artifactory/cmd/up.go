@@ -279,10 +279,21 @@ func uploadFilesAt(ctx context.Context, src string, dest dataSink, opts uploadOp
 	if opts.j <= 0 {
 		return fmt.Errorf("Concurrency factor j must be a positive number")
 	}
+
+	if _, err := os.Stat(src); err != nil {
+		// The associated artifacts might not actually have been created, which is valid.
+		if os.IsNotExist(err) {
+			logger.Debugf(ctx, "%s does not exist; skipping upload", src)
+			return nil
+		}
+		return err
+	}
+
 	names := make(chan string, opts.j)
 	errs := make(chan error, opts.j)
 
 	queueNames := func() {
+		defer close(names)
 		entries, err := ioutil.ReadDir(src)
 		if err != nil {
 			errs <- err
@@ -294,7 +305,6 @@ func uploadFilesAt(ctx context.Context, src string, dest dataSink, opts uploadOp
 			}
 			names <- fi.Name()
 		}
-		close(names)
 	}
 
 	var wg sync.WaitGroup

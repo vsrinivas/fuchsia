@@ -204,4 +204,29 @@ func TestUploading(t *testing.T) {
 			t.Fatalf("differing checksum errors found:\nexpected: %q;\nactual: %q\n", expectedChecksumErr, actualChecksumErr)
 		}
 	})
+
+	t.Run("non-existent or empty sources are skipped", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "artifactory")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		sink := newMemSink()
+		ctx := context.Background()
+		opts := uploadOptions{j: 1}
+		nonexistentDir := filepath.Join(dir, "nonexistent")
+		if err = uploadFilesAt(ctx, nonexistentDir, sink, opts); err != nil {
+			t.Fatal(err)
+		}
+		if len(sink.contents) > 0 {
+			t.Fatal("sink should be empty")
+		}
+		// Now check that uploading from the empty `dir` too does not result in an error.
+		if err = uploadFilesAt(ctx, dir, sink, opts); err != nil {
+			t.Fatal(err)
+		}
+		if len(sink.contents) > 0 {
+			t.Fatal("sink should be empty")
+		}
+	})
 }
