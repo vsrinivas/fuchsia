@@ -346,6 +346,11 @@
             "package_name": "regex"
         },
         {
+            "crate_name": "rental",
+            "crate_type": "lib",
+            "package_name": "rental"
+        },
+        {
             "crate_name": "ring",
             "crate_type": "lib",
             "package_name": "ring"
