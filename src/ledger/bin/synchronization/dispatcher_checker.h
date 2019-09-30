@@ -34,7 +34,7 @@ class DispatcherChecker final {
 
   // Returns true if the current default dispatcher is the same as the default dispatcher when this
   // object was created and false otherwise.
-  bool IsCreationDispatcherCurrent() const { return async_get_default_dispatcher() == self_; }
+  bool IsCreationDispatcherCurrent() const;
 
  private:
   async_dispatcher_t* const self_;

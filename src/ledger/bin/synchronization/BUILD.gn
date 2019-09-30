@@ -21,6 +21,7 @@ source_set("lock") {
 
 source_set("dispatcher_checker") {
   sources = [
+    "dispatcher_checker.cc",
     "dispatcher_checker.h",
   ]
 
