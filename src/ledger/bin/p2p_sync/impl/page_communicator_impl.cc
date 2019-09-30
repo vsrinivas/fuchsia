@@ -38,13 +38,18 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
     on_discardable_ = std::move(on_discardable);
   }
 
-  bool IsDiscardable() const { return !requests_.empty(); }
+  bool IsDiscardable() const { return response_ || !requests_.empty(); }
 
-  // Registers this additional callback for the request.
+  // Registers this additional callback for the request, or reply immediately if
+  // |Complete| has already been called and there is a cached response.
   void AddCallback(
       fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) {
+    if (response_) {
+      SendResponse(std::move(callback));
+      return;
+    }
     callbacks_.push_back(std::move(callback));
   }
 
@@ -53,8 +58,13 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
     requests_.emplace(std::move(destination));
   }
 
-  // Processes the response from device |source|.
+  // Processes the response from device |source|. Caches the response in
+  // |response_| and sends it to all registered callbacks.
   void Complete(const p2p_provider::P2PClientId& source, const Object* object) {
+    if (response_) {
+      // Another device already answered, the result is not useful anymore.
+      return;
+    }
     auto it = requests_.find(source);
     if (it == requests_.end()) {
       return;
@@ -65,9 +75,11 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         return;
       }
       // All requests have returned and none is valid: return an error.
-      for (auto& callback : callbacks_) {
-        callback(ledger::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
-                 storage::IsObjectSynced::NO, nullptr);
+      response_ = {ledger::Status::INTERNAL_NOT_FOUND, storage::IsObjectSynced::NO, ""};
+      auto callbacks = std::move(callbacks_);
+      callbacks_.clear();
+      for (auto& callback : callbacks) {
+        SendResponse(std::move(callback));
       }
       if (on_discardable_) {
         on_discardable_();
@@ -84,10 +96,11 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         is_object_synced = storage::IsObjectSynced::YES;
         break;
     }
-    for (auto& callback : callbacks_) {
-      std::unique_ptr<storage::DataSource::DataChunk> chunk =
-          storage::DataSource::DataChunk::Create(convert::ToString(object->data()->bytes()));
-      callback(ledger::Status::OK, storage::ChangeSource::P2P, is_object_synced, std::move(chunk));
+    response_ = {ledger::Status::OK, is_object_synced, convert::ToString(object->data()->bytes())};
+    auto callbacks = std::move(callbacks_);
+    callbacks_.clear();
+    for (auto& callback : callbacks) {
+      SendResponse(std::move(callback));
     }
     if (on_discardable_) {
       on_discardable_();
@@ -95,6 +108,23 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   }
 
  private:
+  struct Response {
+    ledger::Status status;
+    storage::IsObjectSynced is_object_synced;
+    std::string data;
+  };
+
+  void SendResponse(
+      fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                         std::unique_ptr<storage::DataSource::DataChunk>)>
+          callback) {
+    FXL_DCHECK(response_);
+    callback(response_->status, storage::ChangeSource::P2P, response_->is_object_synced,
+             response_->status == ledger::Status::OK
+                 ? storage::DataSource::DataChunk::Create(response_->data)
+                 : nullptr);
+  }
+
   std::vector<fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                  std::unique_ptr<storage::DataSource::DataChunk>)>>
       callbacks_;
@@ -103,6 +133,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   // nothing at all) once we have a timeout on requests.
   std::set<p2p_provider::P2PClientId> requests_;
   fit::closure on_discardable_;
+  std::optional<Response> response_;
 };
 
 // ObjectResponseHolder holds temporary data we collect in order to build
@@ -351,8 +382,7 @@ void PageCommunicatorImpl::GetObject(
     return;
   }
 
-  auto [request_holder, is_new_request] =
-      pending_object_requests_.emplace(object_identifier, PendingObjectRequestHolder());
+  auto [request_holder, is_new_request] = pending_object_requests_.try_emplace(object_identifier);
   request_holder->second.AddCallback(std::move(callback));
 
   if (is_new_request) {
