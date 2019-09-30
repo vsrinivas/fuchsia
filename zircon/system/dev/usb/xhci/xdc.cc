@@ -569,7 +569,7 @@ static void xdc_release_instance(void* ctx) {
 }
 
 static zx_protocol_device_t xdc_instance_ops = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.write = xdc_write_instance;
   device.read = xdc_read_instance;
@@ -939,7 +939,7 @@ out:
 }
 
 static zx_protocol_device_t xdc_device_ops = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.open = xdc_open, device.suspend = xdc_suspend, device.unbind = xdc_unbind,
   device.release = xdc_release;

@@ -205,7 +205,7 @@ static void sata_release(void* ctx) {
 }
 
 static zx_protocol_device_t sata_device_proto = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.get_size = sata_getsize;
   device.release = sata_release;

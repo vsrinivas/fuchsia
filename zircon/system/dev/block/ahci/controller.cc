@@ -178,7 +178,7 @@ int Controller::IrqLoop() {
 // implement device protocol:
 
 zx_protocol_device_t ahci_device_proto = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.release = Controller::Release;
   return device;

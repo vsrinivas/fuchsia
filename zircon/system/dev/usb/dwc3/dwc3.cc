@@ -155,7 +155,7 @@ static void xhci_release(void* ctx) {
 }
 
 static zx_protocol_device_t xhci_device_ops = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.get_protocol = xhci_get_protocol;
   device.release = xhci_release;
@@ -483,7 +483,7 @@ static void dwc3_release(void* ctx) {
 }
 
 static zx_protocol_device_t dwc3_device_ops = []() {
-  zx_protocol_device_t device;
+  zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
   device.get_protocol = dwc3_get_protocol;
   device.release = dwc3_release;
