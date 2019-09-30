@@ -23,7 +23,7 @@ namespace internal {
 template <typename... T>
 class ResultAccumulatorValue {
  public:
-  using  Value = std::tuple<T...>;
+  using Value = std::tuple<T...>;
 
   template <typename... T1>
   static Value Build(T1&&... args) {
@@ -36,9 +36,7 @@ class ResultAccumulatorValue<T> {
  public:
   using Value = T;
 
-  static Value Build(T arg) {
-    return arg;
-  }
+  static Value Build(T arg) { return arg; }
 };
 
 template <typename S, typename... T>
@@ -222,7 +220,12 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     ++pending_callbacks_;
     return [waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
             token = accumulator_.PrepareCall()](Args&&... args) mutable {
-      waiter_ref->ReturnResult(std::move(token), std::forward<Args>(args)...);
+      FXL_DCHECK(waiter_ref) << "Callbacks returned by a Waiter must be called only once.";
+      // Moving ref to the stack to ensure that the callback is not called
+      // inside the finalize callback.
+      auto ref = std::move(waiter_ref);
+      waiter_ref = nullptr;
+      ref->ReturnResult(std::move(token), std::forward<Args>(args)...);
     };
   }
 
