@@ -55,15 +55,7 @@ void FakeCloudProvider::GetPageCloud(std::vector<uint8_t> app_id, std::vector<ui
                                      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
                                      GetPageCloudCallback callback) {
   const std::string key = convert::ToString(app_id) + "_" + convert::ToString(page_id);
-  auto it = page_clouds_.find(key);
-  if (it != page_clouds_.end()) {
-    it->second.Bind(std::move(page_cloud));
-    callback(cloud_provider::Status::OK);
-    return;
-  }
-
-  auto ret = page_clouds_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
-                                  std::forward_as_tuple(dispatcher_, inject_network_error_));
+  auto ret = page_clouds_.try_emplace(std::move(key), dispatcher_, inject_network_error_);
   ret.first->second.Bind(std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }

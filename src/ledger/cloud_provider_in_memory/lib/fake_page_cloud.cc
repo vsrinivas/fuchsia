@@ -126,7 +126,6 @@ FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher,
                              InjectNetworkError inject_network_error)
     : inject_network_error_(inject_network_error), containers_(dispatcher) {
   bindings_.set_empty_set_handler([this] {
-    bindings_.CloseAll();
     if (on_discardable_) {
       on_discardable_();
     }
