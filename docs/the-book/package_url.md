@@ -196,14 +196,17 @@ fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>][?hash=<pkg-hash>][#<re
 ```
 
 **Scheme: (required)**
+
  * The following case-insensitive characters: `fuchsia-pkg://`.
   * Although the canonical form is lower-case, URL scheme encoding is
     case-insensitive therefore the system must handle all cases.
 
 **Repository: (required)**
+
  * The repository hostname encoded as dot-delimited IDNA A-Labels.
 
 **Package: (optional)**
+
  * A single `/` character.
  * The [package name](#package-name).
  * Optionally followed by...
@@ -211,10 +214,12 @@ fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>][?hash=<pkg-hash>][#<re
    * The package variant.
 
 **Package Hash: (optional, only valid if a package was specified)**
+
  * The string `?hash=`.
  * The [package hash](#package-hash).
 
 **Resource Path: (optional, only valid if a package was specified)**
+
  * A single `#` character.
  * The UTF-8 [resource path](#resource-paths), relative to the root of the
    package, percent-encoded as required, per [RFC 3986].
