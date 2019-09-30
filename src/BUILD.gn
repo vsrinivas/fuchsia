@@ -47,8 +47,8 @@ group("tests") {
     "cobalt:tests",
     "connectivity:tests",
     "developer:tests",
-    "diagnostics:tests",
     "devices:tests",
+    "diagnostics:tests",
     "experiences:tests",
     "factory:tests",
     "fonts:tests",
@@ -109,8 +109,8 @@ foreach(entry, zircon_test_specs) {
               install_path = zircon_test.path
             }
 
-            # We only run host tests in x64 environments.
-            if (host_cpu == "x64" == target_cpu) {
+            # We only run host tests from x64 builds to avoid duplication.
+            if (target_cpu == "x64") {
               environments = [ host_env ]
             } else {
               environments = []
