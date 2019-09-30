@@ -4,12 +4,15 @@
 
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
+#include <lib/trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 
 // Insert an effect instance at the end of the chain.
 zx_status_t EffectsProcessor::AddEffect(Effect e) {
+  TRACE_DURATION("audio", "EffectsProcessor::AddEffect");
   FXL_DCHECK(e);
 
   fuchsia_audio_effects_parameters params;
@@ -43,6 +46,7 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
 
 // Aborts if position is out-of-range.
 const Effect& EffectsProcessor::GetEffectAt(size_t position) const {
+  TRACE_DURATION("audio", "EffectsProcessor::GetEffectAt", "position", position);
   FXL_DCHECK(position < effects_chain_.size());
   return effects_chain_[position];
 }
@@ -52,6 +56,8 @@ const Effect& EffectsProcessor::GetEffectAt(size_t position) const {
 // Also, if any instance fails Process, exit without calling the others.
 // TODO(mpuryear): Should we still call the other instances, if one fails?
 zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const {
+  TRACE_DURATION("audio", "EffectsProcessor::ProcessInPlace", "num_frames", num_frames,
+                 "num_effects", effects_chain_.size());
   if (audio_buff_in_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -78,6 +84,7 @@ zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_b
 //
 // Return ZX_OK iff all Effects are successfully flushed.
 zx_status_t EffectsProcessor::Flush() const {
+  TRACE_DURATION("audio", "EffectsProcessor::Flush");
   zx_status_t result = ZX_OK;
   for (const auto& effect : effects_chain_) {
     if (!effect) {

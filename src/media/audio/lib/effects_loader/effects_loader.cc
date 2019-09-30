@@ -5,6 +5,7 @@
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 #include <dlfcn.h>
+#include <lib/trace/event.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -29,6 +30,7 @@ const fuchsia_audio_effects_module_v1 kNullEffectModuleV1 = {
 
 zx_status_t EffectsLoader::CreateWithModule(const char* lib_name,
                                             std::unique_ptr<EffectsLoader>* out) {
+  TRACE_DURATION("audio", "EffectsLoader::CreateWithModule");
   auto module = EffectsModuleV1::Open(lib_name);
   if (!module) {
     return ZX_ERR_UNAVAILABLE;
@@ -52,6 +54,7 @@ uint32_t EffectsLoader::GetNumEffects() {
 
 zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
                                          fuchsia_audio_effects_description* desc) {
+  TRACE_DURATION("audio", "EffectsLoader::GetEffectInfo");
   FXL_DCHECK(module_);
 
   if (desc == nullptr) {
@@ -68,6 +71,7 @@ zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
 
 Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
                                    uint16_t channels_out, std::string_view config) {
+  TRACE_DURATION("audio", "EffectsLoader::CreateEffect");
   FXL_DCHECK(module_);
 
   if (effect_id >= module_->num_effects) {
