@@ -126,6 +126,9 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
 bool HWBreakpointTest() {
   BEGIN_TEST;
 
+  // TODO(35295): This test flakes.
+  END_TEST;
+
 #if defined(__x86_64__)
   // This test crashes QEMU, so for it's disabled for that arch.
   END_TEST;

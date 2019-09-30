@@ -139,6 +139,9 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
 bool WatchpointTest() {
   BEGIN_TEST;
 
+  // TODO(35295): This test flakes.
+  END_TEST;
+
   zx_handle_t excp_channel = tu_create_exception_channel(zx_process_self(), 0);
 
   EXPECT_TRUE(test_watchpoint_impl(excp_channel));
