@@ -167,10 +167,9 @@ TEST(FormatContext, FormatAsmContext) {
 
   // Process setup for mocking the symbol requests.
   ProcessSymbolsTestSetup symbols;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  constexpr uint64_t kModuleLoadAddress = 0x10000;
-  SymbolContext symbol_context(kModuleLoadAddress);
-  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, module_symbols);
+  MockModuleSymbols* module_symbols = symbols.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+
   Session session;
   MockProcess process(&session);
   process.set_symbols(&symbols.process());

@@ -356,13 +356,12 @@ TEST_F(EvalContextImplTest, ExternVariable) {
 
   // Need to have a module for the variable to be relative to and to have an index.
   ProcessSymbolsTestSetup setup;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod1", "1234", kLoadAddress, module_symbols);
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
   // Index the non-extern variable.
-  auto& root = module_symbols->index().root();  // Root of the index for module.
-  TestIndexedSymbol indexed_def(module_symbols.get(), &root, kValName, real_variable);
+  TestIndexedSymbol indexed_def(module_symbols, &module_symbols->index().root(), kValName,
+                                real_variable);
 
   // Set the value for the non-extern variable in the mocked memory.
   constexpr uint64_t kValValue = 0x0102030405060708;
@@ -484,13 +483,8 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
 // Also tests ResolveForwardDefinition().
 TEST_F(EvalContextImplTest, GetConcreteType) {
   ProcessSymbolsTestSetup setup;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-
-  constexpr uint64_t kLoadAddress = 0x1000000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod1", "1234", kLoadAddress, module_symbols);
-
-  auto& root = module_symbols->index().root();  // Root of the index for module 1.
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
   const char kMyStructName[] = "MyStruct";
 
@@ -514,7 +508,8 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
   auto def = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", MakeInt32Type()}});
 
   // Index the declaration of the type.
-  TestIndexedSymbol indexed_def(module_symbols.get(), &root, kMyStructName, def);
+  TestIndexedSymbol indexed_def(module_symbols, &module_symbols->index().root(), kMyStructName,
+                                def);
 
   // Now that the index exists for the type, both the const and non-const declarations should
   // resolve to the full definition.

@@ -26,20 +26,14 @@ namespace zxdb {
 
 namespace {
 
-// Load address for the mock module that's injected.
-constexpr uint64_t kModuleLoadAddress = 0x1000000;
-
 class ResolveCollectionTest : public TestWithLoop {
  public:
-  ResolveCollectionTest() : module_symbol_context_(kModuleLoadAddress) {}
+  ResolveCollectionTest() : module_symbol_context_(ProcessSymbolsTestSetup::kDefaultLoadAddress) {}
 
   void SetUp() override {
     TestWithLoop::SetUp();
 
-    // Need a bunch of symbol stuff to have the index.
-    module_symbols_ = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-
-    process_setup_.InjectModule("mod1", "1234", kModuleLoadAddress, module_symbols_);
+    module_symbols_ = process_setup_.InjectMockModule();
     index_root_ = &module_symbols_->index().root();  // Root of the index for module 1.
 
     data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
@@ -53,7 +47,7 @@ class ResolveCollectionTest : public TestWithLoop {
     index_root_ = nullptr;
     data_provider_.reset();
     eval_context_.reset();
-    module_symbols_.reset();
+    module_symbols_ = nullptr;
 
     TestWithLoop::TearDown();
   }
@@ -62,7 +56,7 @@ class ResolveCollectionTest : public TestWithLoop {
   ProcessSymbolsTestSetup process_setup_;
 
   // Injected module.
-  fxl::RefPtr<MockModuleSymbols> module_symbols_;
+  MockModuleSymbols* module_symbols_;  // Owned by process_setup_.
   SymbolContext module_symbol_context_;
   IndexNode* index_root_ = nullptr;
 
@@ -151,7 +145,7 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   // Make a definition for the type and index it. It has one 32-bit data member.
   auto int32_type = MakeInt32Type();
   auto def = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", int32_type}});
-  TestIndexedSymbol indexed_def(module_symbols_.get(), index_root_, kMyStructName, def);
+  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kMyStructName, def);
 
   // Define the data for the object. It has a 32-bit little-endian value.
   const uint64_t kObjectAddr = 0x12345678;
@@ -201,7 +195,7 @@ TEST_F(ResolveCollectionTest, ForwardDefMember) {
   // Real definition of the type in the index.
   auto int32_type = MakeInt32Type();
   auto def = MakeCollectionType(DwarfTag::kStructureType, kFwdDeclaredName, {{"a", int32_type}});
-  TestIndexedSymbol indexed_def(module_symbols_.get(), index_root_, kFwdDeclaredName, def);
+  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kFwdDeclaredName, def);
 
   // Struct that contains a reference to the forward-declared type as a member.
   const char kMemberName[] = "a";

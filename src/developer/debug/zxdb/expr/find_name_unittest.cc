@@ -47,6 +47,9 @@ namespace zxdb {
 // }  // namespace ns
 TEST(FindName, FindLocalVariable) {
   ProcessSymbolsTestSetup setup;
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  auto& index_root = module_symbols->index().root();
 
   auto int32_type = MakeInt32Type();
 
@@ -54,18 +57,10 @@ TEST(FindName, FindLocalVariable) {
   std::vector<uint8_t> var_loc;
 
   // Set up the module symbols. This creates "ns" and "ns_value" in the symbol index.
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  auto& root = module_symbols->index().root();  // Root of the index for module 1.
-
   const char kNsName[] = "ns";
-  auto ns_node = root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
-
+  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
   const char kNsVarName[] = "ns_value";
-  TestIndexedGlobalVariable ns_value(module_symbols.get(), ns_node, kNsVarName);
-
-  constexpr uint64_t kLoadAddress = 0x1000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod", "1234", kLoadAddress, module_symbols);
+  TestIndexedGlobalVariable ns_value(module_symbols, ns_node, kNsVarName);
 
   // Namespace.
   auto ns = fxl::MakeRefCounted<Namespace>();
@@ -74,8 +69,8 @@ TEST(FindName, FindLocalVariable) {
   // Function inside the namespace.
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("function");
-  uint64_t kFunctionBeginAddr = 0x1000;
-  uint64_t kFunctionEndAddr = 0x2000;
+  uint64_t kFunctionBeginAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1000;
+  uint64_t kFunctionEndAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x2000;
   function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
   function->set_parent(ns);
 
@@ -95,8 +90,8 @@ TEST(FindName, FindLocalVariable) {
   FindNameContext function_context(&setup.process(), symbol_context, function.get());
 
   // Inner block.
-  uint64_t kBlockBeginAddr = 0x1100;
-  uint64_t kBlockEndAddr = 0x1200;
+  uint64_t kBlockBeginAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1100;
+  uint64_t kBlockEndAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1200;
   auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   block->set_code_ranges(AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
   block->set_parent(function);
@@ -186,7 +181,6 @@ TEST(FindName, FindLocalVariable) {
 // This test only tests for finding object members. It doesn't set up the index which might find
 // types, that's tested by FindIndexedName.
 TEST(FindName, FindMember) {
-  ProcessSymbolsTestSetup setup;
   DerivedClassTestSetup d;
 
   FindNameContext context;  // Empty context = local and object vars only.
@@ -318,7 +312,7 @@ TEST(FindName, FindIndexedName) {
 
 TEST(FindName, FindIndexedNameInModule) {
   auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("test.so");
-  auto& root = module_symbols->index().root();  // Root of the index.
+  auto& index_root = module_symbols->index().root();  // Root of the index.
 
   const char kVarName[] = "var";
   const char kNsName[] = "ns";
@@ -327,7 +321,7 @@ TEST(FindName, FindIndexedNameInModule) {
   std::vector<FoundName> found;
 
   // Make a global variable in the toplevel namespace.
-  TestIndexedGlobalVariable global(module_symbols.get(), &root, kVarName);
+  TestIndexedGlobalVariable global(module_symbols.get(), &index_root, kVarName);
 
   ParsedIdentifier var_ident(kVarName);
   FindIndexedNameInModule(all_opts, module_symbols.get(), ParsedIdentifier(), var_ident, true,
@@ -344,7 +338,7 @@ TEST(FindName, FindIndexedNameInModule) {
   EXPECT_EQ(global.var.get(), found[0].variable());
 
   // Add a variable in the nested namespace with the same name.
-  auto ns_node = root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
+  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
   TestIndexedGlobalVariable ns(module_symbols.get(), ns_node, kVarName);
 
   // Re-search for the same name in the nested namespace, it should get the nested one first.
@@ -367,8 +361,9 @@ TEST(FindName, FindIndexedNameInModule) {
 
 TEST(FindName, FindTypeName) {
   ProcessSymbolsTestSetup setup;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  auto& root = module_symbols->index().root();  // Root of the index for module 1.
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  auto& index_root = module_symbols->index().root();
 
   // Note space in "> >" which is how Clang likes to represent this.
   const char kGlobalTypeName[] = "GlobalType<std::char_traits<char> >";
@@ -378,7 +373,7 @@ TEST(FindName, FindTypeName) {
   ParsedIdentifier global_type_name(kGlobalTypeName);
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_assigned_name(kGlobalTypeName);
-  TestIndexedSymbol global_indexed(module_symbols.get(), &root, kGlobalTypeName, global_type);
+  TestIndexedSymbol global_indexed(module_symbols, &index_root, kGlobalTypeName, global_type);
 
   // Child type definition inside the global class name. Currently types don't have child types and
   // everything is found via the index.
@@ -390,7 +385,7 @@ TEST(FindName, FindTypeName) {
   ASSERT_FALSE(err.has_error());
   auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   child_type->set_assigned_name(kChildTypeName);
-  TestIndexedSymbol child_indexed(module_symbols.get(), global_indexed.index_node, kChildTypeName,
+  TestIndexedSymbol child_indexed(module_symbols, global_indexed.index_node, kChildTypeName,
                                   child_type);
 
   // Declares a variable that points to the GlobalType. It will be the "this" pointer for the
@@ -415,10 +410,6 @@ TEST(FindName, FindTypeName) {
   FindNameContext function_context;
   function_context.target_symbols = &setup.target();
   function_context.block = function.get();
-
-  constexpr uint64_t kLoadAddress = 0x1000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod", "1234", kLoadAddress, module_symbols);
 
   // ACTUAL TEST CODE ------------------------------------------------------------------------------
 
@@ -459,8 +450,9 @@ TEST(FindName, FindTypeName) {
 
 TEST(FindName, FindTemplateName) {
   ProcessSymbolsTestSetup setup;
-  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
-  auto& root = module_symbols->index().root();  // Root of the index for module 1.
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  auto& index_root = module_symbols->index().root();
 
   // Declare two functions, one's a template, the other has the same prefix but isn't.
   const char kTemplateIntName[] = "Template<int>";
@@ -471,20 +463,16 @@ TEST(FindName, FindTemplateName) {
 
   auto template_int = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   template_int->set_assigned_name(kTemplateIntName);
-  TestIndexedSymbol template_int_indexed(module_symbols.get(), &root, kTemplateIntName,
+  TestIndexedSymbol template_int_indexed(module_symbols, &index_root, kTemplateIntName,
                                          template_int);
 
   auto template_not = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   template_not->set_assigned_name(kTemplateNotName);
-  TestIndexedSymbol template_not_indexed(module_symbols.get(), &root, kTemplateNotName,
+  TestIndexedSymbol template_not_indexed(module_symbols, &index_root, kTemplateNotName,
                                          template_not);
 
   // Search for names globally within the target.
   FindNameContext context(&setup.target());
-
-  constexpr uint64_t kLoadAddress = 0x1000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod", "1234", kLoadAddress, module_symbols);
 
   FindNameOptions all_types(FindNameOptions::kAllKinds);
 
@@ -531,9 +519,9 @@ TEST(FindName, FindTemplateName) {
 TEST(FindName, FindType) {
   ProcessSymbolsTestSetup setup;
   auto module_symbols1 = fxl::MakeRefCounted<MockModuleSymbols>("mod1.so");
-  auto& root1 = module_symbols1->index().root();  // Root of the index for module 1.
+  auto& index_root1 = module_symbols1->index().root();
   auto module_symbols2 = fxl::MakeRefCounted<MockModuleSymbols>("mod2.so");
-  auto& root2 = module_symbols2->index().root();  // Root of the index for module 2.
+  auto& index_root2 = module_symbols2->index().root();
 
   const char kStructName[] = "Struct";
 
@@ -543,13 +531,13 @@ TEST(FindName, FindType) {
   auto fwd_decl = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   fwd_decl->set_assigned_name(kStructName);
   fwd_decl->set_is_declaration(true);
-  TestIndexedSymbol fwd_decl_indexed(module_symbols1.get(), &root1, kStructName, fwd_decl);
+  TestIndexedSymbol fwd_decl_indexed(module_symbols1.get(), &index_root1, kStructName, fwd_decl);
 
   // Make and index a definition in module 2.
   auto def = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   def->set_assigned_name(kStructName);
   def->set_byte_size(12);
-  TestIndexedSymbol def_indexed(module_symbols2.get(), &root2, kStructName, def);
+  TestIndexedSymbol def_indexed(module_symbols2.get(), &index_root2, kStructName, def);
 
   // Set the modules as loaded.
   constexpr uint64_t kLoadAddress1 = 0x1000;
@@ -592,15 +580,15 @@ TEST(FindName, FindNamespace) {
   ProcessSymbolsTestSetup setup;
   MockModuleSymbols* module_symbols = setup.InjectMockModule();
 
-  auto& root = module_symbols->index().root();
+  auto& index_root = module_symbols->index().root();
   SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
   FindNameContext context(&setup.process(), symbol_context);
 
   const char kStd[] = "std";
-  root.AddChild(IndexNode::Kind::kNamespace, kStd);
+  index_root.AddChild(IndexNode::Kind::kNamespace, kStd);
 
   const char kStar[] = "star";
-  auto* star_ns = root.AddChild(IndexNode::Kind::kNamespace, kStar);
+  auto* star_ns = index_root.AddChild(IndexNode::Kind::kNamespace, kStar);
 
   // star::internal
   const char kInternal[] = "internal";
@@ -642,7 +630,7 @@ TEST(FindName, FindRecursiveNamespace) {
   ProcessSymbolsTestSetup setup;
   MockModuleSymbols* module_symbols = setup.InjectMockModule();
 
-  auto& root = module_symbols->index().root();
+  auto& index_root = module_symbols->index().root();
   SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
   FindNameContext context(&setup.process(), symbol_context);
 
@@ -654,7 +642,7 @@ TEST(FindName, FindRecursiveNamespace) {
 
   const char kStdName[] = "std";
   auto std_ns_symbol = fxl::MakeRefCounted<Namespace>(kStdName);
-  auto std_ns = root.AddChild(IndexNode::Kind::kNamespace, kStdName);
+  auto std_ns = index_root.AddChild(IndexNode::Kind::kNamespace, kStdName);
 
   const char kBarName[] = "bar";
   auto std_bar_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, kBarName);
@@ -663,7 +651,7 @@ TEST(FindName, FindRecursiveNamespace) {
   const char kFooName[] = "Foo";
   auto foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   foo->set_assigned_name(kFooName);
-  TestIndexedSymbol foo_indexed(module_symbols, &root, kFooName, foo);
+  TestIndexedSymbol foo_indexed(module_symbols, &index_root, kFooName, foo);
 
   // ::std::Foo(). Note this symbol and the next don't have a parent so their reported full name
   // won't have the namespace qualification. But this test needs only that they're indexed in the
