@@ -36,12 +36,12 @@ use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
 
-use crate::device::ethernet::EthernetNdpDevice;
+use crate::context::{CounterContext, InstantContext, RngContext, StateContext, TimerContext};
+use crate::device::link::{LinkAddress, LinkDevice};
 use crate::device::{
-    AddressConfigurationType, AddressEntry, AddressError, AddressState, DeviceId,
-    DeviceLayerTimerId, DeviceProtocol, Tentative,
+    AddressConfigurationType, AddressEntry, AddressError, AddressState, DeviceIdContext, Tentative,
 };
-use crate::ip::{IpDeviceIdContext, IpProto};
+use crate::ip::IpProto;
 use crate::wire::icmp::ndp::options::{NdpOption, PrefixInformation};
 use crate::wire::icmp::ndp::{
     self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
@@ -49,7 +49,7 @@ use crate::wire::icmp::ndp::{
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
-use crate::{Context, EventDispatcher, Instant, StackState, TimerId, TimerIdInner};
+use crate::Instant;
 
 const ZERO_DURATION: Duration = Duration::from_secs(0);
 
@@ -225,59 +225,28 @@ const MAX_RA_DELAY_TIME: Duration = Duration::from_millis(500);
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 const MIN_DELAY_BETWEEN_RAS: Duration = Duration::from_secs(3);
 
-/// A link layer address that can be discovered using NDP.
-pub(crate) trait LinkLayerAddress: Copy + Clone + Debug + PartialEq {
-    /// The length, in bytes, expected for the `LinkLayerAddress`
-    const BYTES_LENGTH: usize;
-
-    /// Returns the underlying bytes of a `LinkLayerAddress`
-    fn bytes(&self) -> &[u8];
-
-    /// Attempts to construct a `LinkLayerAddress` from the provided bytes.
-    ///
-    /// `bytes` is guaranteed to be **exactly** `BYTES_LENGTH` long.
-    fn from_bytes(bytes: &[u8]) -> Self;
-}
-
-/// A device layer protocol which can support NDP.
-///
-/// An `NdpDevice` is a device layer protocol which can support NDP.
-pub(crate) trait NdpDevice: Sized {
-    /// The link-layer address type used by this device.
-    type LinkAddress: LinkLayerAddress + for<'a> From<&'a MulticastAddr<Ipv6Addr>>;
-
-    /// Get a reference to a device's NDP state.
-    fn get_ndp_state<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> &NdpState<Self, D>;
-
-    /// Get a mutable reference to a device's NDP state.
-    fn get_ndp_state_mut<D: EventDispatcher>(
-        state: &mut StackState<D>,
-        device_id: usize,
-    ) -> &mut NdpState<Self, D>;
-
+/// The execution context for an NDP device.
+pub(crate) trait NdpContext<D: LinkDevice>:
+    Sized
+    + DeviceIdContext<D>
+    + RngContext
+    + CounterContext
+    + StateContext<
+        <Self as DeviceIdContext<D>>::DeviceId,
+        NdpState<D::Address, <Self as InstantContext>::Instant>,
+    > + TimerContext<NdpTimerId<<Self as DeviceIdContext<D>>::DeviceId>>
+{
     /// Get the link layer address for a device.
-    fn get_link_layer_addr<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> Self::LinkAddress;
+    fn get_link_layer_addr(&self, device_id: Self::DeviceId) -> D::Address;
 
     /// Get the interface identifier for a device as defined by RFC 4291 section 2.5.1.
-    fn get_interface_identifier<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> [u8; 8];
+    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8];
 
     /// Get the link-local address for a device.
     ///
     /// If no link-local address is assigned for `device_id`, `None` will be returned. Otherwise,
     /// a `Some(a)` will be returned.
-    fn get_link_local_addr<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> Option<Tentative<Ipv6Addr>>;
+    fn get_link_local_addr(&self, device_id: Self::DeviceId) -> Option<Tentative<Ipv6Addr>>;
 
     /// Get a non-tentative IPv6 address for this device.
     ///
@@ -286,30 +255,29 @@ pub(crate) trait NdpDevice: Sized {
     ///
     /// `get_ipv6_addr` may return a non-tentative link-local address if `device_id` deosn't have
     /// any non-tentative global addresses.
-    fn get_ipv6_addr<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> Option<Ipv6Addr>;
+    fn get_ipv6_addr(&self, device_id: Self::DeviceId) -> Option<Ipv6Addr>;
 
     /// Get all global IPv6 addresses and associated data for this device.
     ///
     /// `get_ipv6_addr_entries` MUST return all **unicast** IPv6 addresses associated with
     /// `device_id`. This will include Tentative, Deprecated and Assigned addresses configured
     /// manually or via SLAAC. Violating this rule may result in incorrect IP packets being sent.
-    fn get_ipv6_addr_entries<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> Iter<AddressEntry<Ipv6Addr, D::Instant>>;
+    fn get_ipv6_addr_entries(
+        &self,
+        device_id: Self::DeviceId,
+    ) -> Iter<AddressEntry<Ipv6Addr, Self::Instant>>;
 
     /// Returns the state of `address` on the device identified
     /// by `device_id` if it exists.
     ///
     /// `address` is guaranteed to be a valid unicast address.
-    fn ipv6_addr_state<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
+    fn ipv6_addr_state(
+        &self,
+        device_id: Self::DeviceId,
         address: &Ipv6Addr,
     ) -> Option<AddressState>;
+
+    // TODO(joshlf): Use `FrameContext` instead.
 
     /// Send a packet in a device layer frame.
     ///
@@ -321,43 +289,32 @@ pub(crate) trait NdpDevice: Sized {
     ///
     /// May panic if `device_id` is not intialized. See [`crate::device::initialize_device`]
     /// for more information.
-    fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
-        ctx: &mut Context<D>,
-        device_id: usize,
+    fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        device_id: Self::DeviceId,
         next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), S>;
-
-    /// Retrieves the complete `DeviceId` for a given `id`.
-    fn get_device_id(id: usize) -> DeviceId;
 
     /// Notifies device layer that the link-layer address for the neighbor in
     /// `address` has been resolved to `link_address`.
     ///
     /// Implementers may use this signal to dispatch any packets that
     /// were queued waiting for address resolution.
-    fn address_resolved<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
+    fn address_resolved(
+        &mut self,
+        device_id: Self::DeviceId,
         address: &Ipv6Addr,
-        link_address: Self::LinkAddress,
+        link_address: D::Address,
     );
 
     /// Notifies the device layer that the link-layer address resolution for
     /// the neighbor in `address` failed.
-    fn address_resolution_failed<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        address: &Ipv6Addr,
-    );
+    fn address_resolution_failed(&mut self, device_id: Self::DeviceId, address: &Ipv6Addr);
 
     /// Notifies the device layer that a duplicate address has been detected. The
     /// device should want to remove the address.
-    fn duplicate_address_detected<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        addr: Ipv6Addr,
-    );
+    fn duplicate_address_detected(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr);
 
     /// Notifies the device layer that the address is very likely (because DAD
     /// is not reliable) to be unique, it is time to mark it to be permanent.
@@ -365,11 +322,7 @@ pub(crate) trait NdpDevice: Sized {
     /// # Panics
     ///
     /// Panics if `addr` is not tentative on the devide identified by `device_id`.
-    fn unique_address_determined<D: EventDispatcher>(
-        state: &mut StackState<D>,
-        device_id: usize,
-        addr: Ipv6Addr,
-    );
+    fn unique_address_determined(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr);
 
     /// Set Link MTU.
     ///
@@ -387,25 +340,21 @@ pub(crate) trait NdpDevice: Sized {
     ///
     /// [`IPV6_MIN_MTU`]: crate::ip::path_mtu::IPV6_MIN_MTU
     /// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
-    fn set_mtu<D: EventDispatcher>(ctx: &mut StackState<D>, device_id: usize, mtu: u32);
+    fn set_mtu(&mut self, device_id: Self::DeviceId, mtu: u32);
 
     /// Set default hop limit for IP packets sent from `device_id`.
     ///
     /// # Panics
     ///
     /// Panics if the new hop limit is `0`.
-    fn set_hop_limit<D: EventDispatcher>(
-        state: &mut StackState<D>,
-        device_id: usize,
-        hop_limit: NonZeroU8,
-    );
+    fn set_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8);
 
     /// Add a new IPv6 Global Address configured via SLAAC.
-    fn add_slaac_addr_sub<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
+    fn add_slaac_addr_sub(
+        &mut self,
+        device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr>,
-        valid_until: D::Instant,
+        valid_until: Self::Instant,
     ) -> Result<(), AddressError>;
 
     /// Deprecate the use of an address previously configured via SLAAC.
@@ -417,33 +366,25 @@ pub(crate) trait NdpDevice: Sized {
     /// # Panics
     ///
     /// May panic if `addr` is not an address configured via SLAAC on `device_id`.
-    fn deprecate_slaac_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        addr: &Ipv6Addr,
-    );
+    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr);
 
     /// Completely invalidate an address previously configured via SLAAC.
     ///
     /// # Panics
     ///
     /// May panic if `addr` is not an address configured via SLAAC on `device_id`.
-    fn invalidate_slaac_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        addr: &Ipv6Addr,
-    );
+    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr);
 
     /// Update the instant when an address configured via SLAAC is valid until.
     ///
     /// # Panics
     ///
     /// May panic if `addr` is not an address configured via SLAAC on `device_id`.
-    fn update_slaac_addr_valid_until<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
+    fn update_slaac_addr_valid_until(
+        &mut self,
+        device_id: Self::DeviceId,
         addr: &Ipv6Addr,
-        valid_until: D::Instant,
+        valid_until: Self::Instant,
     );
 
     /// Can `device_id` route IP packets not destined for it?
@@ -451,14 +392,13 @@ pub(crate) trait NdpDevice: Sized {
     /// If `is_router` returns `true`, we know that both the `device_id` and the netstack (`ctx`)
     /// have routing enabled; if `is_router` returns false, either `device_id` or the netstack
     /// (`ctx`) has routing disabled.
-    fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool {
-        crate::device::is_router_device::<_, Ipv6>(ctx, Self::get_device_id(device_id))
-    }
+    fn is_router(&self, device_id: Self::DeviceId) -> bool;
 
     /// Is `device_id` an advertising interface?
-    fn is_advertising_interface<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool {
-        Self::is_router(ctx, device_id)
-            && Self::get_ndp_state(ctx.state(), device_id)
+    fn is_advertising_interface(&self, device_id: Self::DeviceId) -> bool {
+        self.is_router(device_id)
+            && self
+                .get_state(device_id)
                 .configs
                 .get_router_configurations()
                 .get_should_send_advertisements()
@@ -468,16 +408,14 @@ pub(crate) trait NdpDevice: Sized {
     ///
     /// `link_local_resolved` will start sending periodic router advertisements if `device_id` is
     /// configured to be an advertising interface.
-    fn link_local_resolved<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
-        trace!(
-            "link_local_resolved: link-local address on device {:?} resolved",
-            Self::get_device_id(device_id)
-        );
+    fn link_local_resolved(&mut self, device_id: Self::DeviceId) {
+        trace!("link_local_resolved: link-local address on device {:?} resolved", device_id);
 
-        if Self::is_router(ctx, device_id) {
+        if self.is_router(device_id) {
             // If the device is operating as a router, and it is configured to be an advertising
             // interface, start sending periodic router advertisements.
-            if Self::get_ndp_state(ctx.state(), device_id)
+            if self
+                .get_state(device_id)
                 .configs
                 .get_router_configurations()
                 .get_should_send_advertisements()
@@ -485,7 +423,7 @@ pub(crate) trait NdpDevice: Sized {
                 // At this point, we know that `devie_id` is an advertising interface and
                 // has an assigned link-local address. Given this, we know that
                 // `start_advertising_interface` will not panic.
-                start_advertising_interface::<_, Self>(ctx, device_id);
+                start_advertising_interface(self, device_id);
             }
         }
     }
@@ -499,21 +437,17 @@ pub(crate) trait NdpDevice: Sized {
     /// # Panics
     ///
     /// Panics if `addr` is not tentative on the devide identified by `device_id`.
-    fn unique_address_determined_wrapper<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        addr: Ipv6Addr,
-    ) {
+    fn unique_address_determined_wrapper(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr) {
         // Let the device-layer know that `addr` is most likely not already used
         // on the link.
-        Self::unique_address_determined(ctx.state_mut(), device_id, addr);
+        self.unique_address_determined(device_id, addr);
 
         if addr.is_linklocal() {
             // Here know know that we just resolved a link-local address becuase
             // we just checked that `addr` is link-local and we know that
             // `unique_address_determined` would have paniced if `addr` was not
             // tentative on `device_id`.
-            Self::link_local_resolved(ctx, device_id);
+            self.link_local_resolved(device_id);
         }
     }
 }
@@ -522,17 +456,9 @@ pub(crate) trait NdpDevice: Sized {
 ///
 /// The contract is that after deinitialize is called, nothing else should be done
 /// with the state.
-pub(crate) fn deinitialize<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
+pub(crate) fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
     // Remove all timers associated with the device
-    // TODO(rheacock): this logic can be removed when NDP becomes contextified.
-    ctx.dispatcher_mut().cancel_timeouts_with(|timer_id| match timer_id {
-        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp(inner_id))) => {
-            let timer_device_id = inner_id.get_device_id();
-            (timer_device_id.protocol == DeviceProtocol::Ethernet)
-                && (timer_device_id.id == device_id)
-        }
-        _ => false,
-    });
+    ctx.cancel_timers_with(|timer_id| timer_id.get_device_id() == device_id);
     // TODO(rheacock): Send any immediate packets, and potentially flag the state as uninitialized?
 }
 
@@ -1015,12 +941,12 @@ impl NdpRouterConfigurations {
 ///
 /// Each device will contain an `NdpState` object to keep track of discovery
 /// operations.
-pub(crate) struct NdpState<ND: NdpDevice, D: EventDispatcher> {
+pub(crate) struct NdpState<LinkAddr, Instant> {
     //
     // NDP operation data structures.
     //
     /// List of neighbors.
-    neighbors: NeighborTable<ND::LinkAddress>,
+    neighbors: NeighborTable<LinkAddr>,
 
     /// List of default routers, indexed by their link-local address.
     default_routers: HashSet<LinkLocalAddr<Ipv6Addr>>,
@@ -1048,7 +974,7 @@ pub(crate) struct NdpState<ND: NdpDevice, D: EventDispatcher> {
     all_nodes_transmited_router_advertisements: u64,
 
     /// Instant when the last Router Advertisement to the all-nodes multicast address was sent.
-    last_router_advertisement_instant: Option<D::Instant>,
+    last_router_advertisement_instant: Option<Instant>,
 
     //
     // Interace parameters learned from Router Advertisements.
@@ -1096,7 +1022,7 @@ pub(crate) struct NdpState<ND: NdpDevice, D: EventDispatcher> {
     configs: NdpConfigurations,
 }
 
-impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
+impl<LinkAddr, Instant> NdpState<LinkAddr, Instant> {
     pub(crate) fn new(configs: NdpConfigurations) -> Self {
         let mut ret = Self {
             neighbors: NeighborTable::default(),
@@ -1266,8 +1192,8 @@ impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
 
 /// The identifier for timer events in NDP operations.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
-pub(crate) struct NdpTimerId {
-    device_id: DeviceId,
+pub(crate) struct NdpTimerId<D> {
+    device_id: D,
     inner: InnerNdpTimerId,
 }
 
@@ -1297,125 +1223,77 @@ pub(crate) enum InnerNdpTimerId {
     // want one for that.
 }
 
-impl NdpTimerId {
+impl<D: Copy> NdpTimerId<D> {
     /// Creates a new `NdpTimerId` wrapped inside a `TimerId` with the provided
     /// `device_id` and `neighbor_addr`.
-    pub(crate) fn new_link_address_resolution_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_link_address_resolution_timer_id(
+        device_id: D,
         neighbor_addr: Ipv6Addr,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::LinkAddressResolution { neighbor_addr },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::LinkAddressResolution { neighbor_addr } }
     }
 
-    pub(crate) fn new_dad_ns_transmission_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_dad_ns_transmission_timer_id(
+        device_id: D,
         tentative_addr: Ipv6Addr,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::DadNsTransmit { addr: tentative_addr },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::DadNsTransmit { addr: tentative_addr } }
     }
 
-    pub(crate) fn new_router_solicitation_timer_id<ND: NdpDevice>(device_id: usize) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::RouterSolicitationTransmit,
-        }
-        .into()
+    pub(crate) fn new_router_solicitation_timer_id(device_id: D) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::RouterSolicitationTransmit }
     }
 
-    pub(crate) fn new_router_invalidation_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_router_invalidation_timer_id(
+        device_id: D,
         ip: LinkLocalAddr<Ipv6Addr>,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::RouterInvalidation { ip },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::RouterInvalidation { ip } }
     }
 
-    pub(crate) fn new_prefix_invalidation_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_prefix_invalidation_timer_id(
+        device_id: D,
         addr_subnet: AddrSubnet<Ipv6Addr>,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::PrefixInvalidation { addr_subnet },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::PrefixInvalidation { addr_subnet } }
     }
 
-    pub(crate) fn new_router_advertisement_transmit_timer_id<ND: NdpDevice>(
-        device_id: usize,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::RouterAdvertisementTransmit,
-        }
-        .into()
+    pub(crate) fn new_router_advertisement_transmit_timer_id(device_id: D) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::RouterAdvertisementTransmit }
     }
 
-    pub(crate) fn new_deprecate_slaac_address_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_deprecate_slaac_address_timer_id(
+        device_id: D,
         addr: Ipv6Addr,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::DeprecateSlaacAddress { addr },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::DeprecateSlaacAddress { addr } }
     }
 
-    pub(crate) fn new_invalidate_slaac_address_timer_id<ND: NdpDevice>(
-        device_id: usize,
+    pub(crate) fn new_invalidate_slaac_address_timer_id(
+        device_id: D,
         addr: Ipv6Addr,
-    ) -> TimerId {
-        NdpTimerId {
-            device_id: ND::get_device_id(device_id),
-            inner: InnerNdpTimerId::InvalidateSlaacAddress { addr },
-        }
-        .into()
+    ) -> NdpTimerId<D> {
+        NdpTimerId { device_id, inner: InnerNdpTimerId::InvalidateSlaacAddress { addr } }
     }
 
-    pub(crate) fn get_device_id(&self) -> DeviceId {
+    pub(crate) fn get_device_id(&self) -> D {
         self.device_id
     }
-}
 
-impl From<NdpTimerId> for TimerId {
-    fn from(v: NdpTimerId) -> Self {
-        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp(v)))
+    pub(crate) fn into_device<DD: From<D>>(self) -> NdpTimerId<DD> {
+        let NdpTimerId { device_id, inner } = self;
+        NdpTimerId { device_id: device_id.into(), inner }
     }
 }
 
-/// Handles a timeout event.
-///
-/// This currently only supports Ethernet NDP, since we know that that is
-/// the only case that the netstack currently handles. In the future, this may
-/// be extended to support other hardware types.
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: NdpTimerId) {
-    match id.device_id.protocol() {
-        DeviceProtocol::Ethernet => {
-            handle_timeout_inner::<_, EthernetNdpDevice>(ctx, id.device_id.id(), id.inner)
-        }
-    }
-}
-
-fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
-    inner_id: InnerNdpTimerId,
+/// Handles a timer firing.
+pub(crate) fn handle_timer<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    id: NdpTimerId<C::DeviceId>,
 ) {
-    match inner_id {
+    match id.inner {
         InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(id.device_id);
             if let Some(NeighborState {
                 state: NeighborEntryState::Incomplete { transmit_counter },
                 ..
@@ -1426,24 +1304,25 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
 
                     // Increase the transmit counter and send the solicitation again
                     *transmit_counter += 1;
-                    send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
-                    ctx.dispatcher.schedule_timeout(
+                    send_neighbor_solicitation(ctx, id.device_id, neighbor_addr);
+                    ctx.schedule_timer(
                         retrans_timer,
-                        NdpTimerId::new_link_address_resolution_timer_id::<ND>(
-                            device_id,
+                        NdpTimerId::new_link_address_resolution_timer_id(
+                            id.device_id,
                             neighbor_addr,
-                        ),
+                        )
+                        .into(),
                     );
                 } else {
                     // To make sure we don't get stuck in this neighbor unreachable
                     // state forever, remove the neighbor from the database:
                     ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
-                    increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
+                    ctx.increment_counter("ndp::neighbor_solicitation_timer");
 
-                    ND::address_resolution_failed(ctx, device_id, &neighbor_addr);
+                    ctx.address_resolution_failed(id.device_id, &neighbor_addr);
                 }
             } else {
-                unreachable!("handle_timeout_inner: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
+                unreachable!("handle_timer: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
             }
         }
         InnerNdpTimerId::DadNsTransmit { addr } => {
@@ -1452,7 +1331,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // We know this call to unwrap will not fail because we will only reach here
             // if DAD has been started for some device - address pair. When we start DAD,
             // we setup the `NdpState` so we should have a valid entry.
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(id.device_id);
             let remaining = *ndp_state.dad_transmits_remaining.get(&addr).unwrap();
 
             // We have finished.
@@ -1461,18 +1340,17 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
                 // called `get` then `unwrap` earlier.
                 ndp_state.dad_transmits_remaining.remove(&addr).unwrap();
 
-                // `unique_address_determined` may panic if we attempt to resolve an `addr`
-                // that is not tentative on the device with id `device_id`. However, we
-                // can only reach here if `addr` was tentative on `device_id` and we are
-                // performing DAD so we know `unique_address_determined` will not panic.
-                ND::unique_address_determined_wrapper(ctx, device_id, addr);
+                // `unique_address_determined` may panic if we attempt to
+                // resolve an `addr` that is not tentative on the device with id
+                // `id.device_id`. However, we can only reach here if `addr` was
+                // tentative on `id.device_id` and we are performing DAD so we
+                // know `unique_address_determined` will not panic.
+                ctx.unique_address_determined_wrapper(id.device_id, addr);
             } else {
-                do_duplicate_address_detection::<D, ND>(ctx, device_id, addr);
+                do_duplicate_address_detection(ctx, id.device_id, addr);
             }
         }
-        InnerNdpTimerId::RouterSolicitationTransmit => {
-            do_router_solicitation::<_, ND>(ctx, device_id)
-        }
+        InnerNdpTimerId::RouterSolicitationTransmit => do_router_solicitation(ctx, id.device_id),
         InnerNdpTimerId::RouterInvalidation { ip } => {
             // Invalidate the router.
             //
@@ -1481,7 +1359,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // Advertisement from a router with a valid lifetime > 0, at which point this timeout.
             // would have been set. Givem this, we know that `invalidate_default_router` will not
             // panic.
-            ND::get_ndp_state_mut(ctx.state_mut(), device_id).invalidate_default_router(&ip)
+            ctx.get_state_mut(id.device_id).invalidate_default_router(&ip)
         }
         InnerNdpTimerId::PrefixInvalidation { addr_subnet } => {
             // Invalidate the prefix.
@@ -1491,26 +1369,26 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // an NDP Router Advertisement with the prefix option with the on-link flag
             // set. Given this we know that `addr_subnet` must exist if this timer was
             // fired so `invalidate_prefix` will not panic.
-            ND::get_ndp_state_mut(ctx.state_mut(), device_id).invalidate_prefix(addr_subnet);
+            ctx.get_state_mut(id.device_id).invalidate_prefix(addr_subnet);
         }
         InnerNdpTimerId::RouterAdvertisementTransmit => {
             // Send the router advertisement to the IPv6 all-nodes multicast address.
-            send_router_advertisement::<_, ND>(ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+            send_router_advertisement(ctx, id.device_id, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
 
-            // Schedule the next Router Advertisement if `device_id` is an advertising interface or
-            // it is sending its final Router Advertisements, as per RFC 4861 section 6.2.5.
-            if ND::is_advertising_interface(ctx, device_id)
-                || ND::get_ndp_state(ctx.state(), device_id).final_router_advertisements_remaining
-                    != 0
+            // Schedule the next Router Advertisement if `id.device_id` is an
+            // advertising interface or it is sending its final Router
+            // Advertisements, as per RFC 4861 section 6.2.5.
+            if ctx.is_advertising_interface(id.device_id)
+                || ctx.get_state(id.device_id).final_router_advertisements_remaining != 0
             {
-                schedule_next_router_advertisement::<_, ND>(ctx, device_id);
+                schedule_next_router_advertisement(ctx, id.device_id);
             }
         }
         InnerNdpTimerId::DeprecateSlaacAddress { addr } => {
-            ND::deprecate_slaac_addr(ctx, device_id, &addr);
+            ctx.deprecate_slaac_addr(id.device_id, &addr);
         }
         InnerNdpTimerId::InvalidateSlaacAddress { addr } => {
-            ND::invalidate_slaac_addr(ctx, device_id, &addr);
+            ctx.invalidate_slaac_addr(id.device_id, &addr);
         }
     }
 }
@@ -1527,15 +1405,15 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
 ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
 ///    time routers are explicitly solicited. Current router solicitation will continue using the
 ///    old value.
-pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     configs: NdpConfigurations,
 ) {
-    let existing_configs = get_ndp_configurations::<_, ND>(ctx, device_id).clone();
+    let existing_configs = get_ndp_configurations(ctx, device_id).clone();
 
     // Update the configurations.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id).configs = configs;
+    ctx.get_state_mut(device_id).configs = configs;
 
     // If the device was not a router before, then it won't be a router after any NDP configuration
     // change so we only check router-specific configuration changes if the device is a router.
@@ -1543,13 +1421,11 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
     // We also check to make sure the device has a non-tentative link-local address because
     // if we didn't have a link-local address, we would not have started any router advertisements
     // to update.
-    if ND::is_router(ctx, device_id)
-        && ND::get_link_local_addr(ctx.state(), device_id)
-            .map(|a| !a.is_tentative())
-            .unwrap_or(false)
+    if ctx.is_router(device_id)
+        && ctx.get_link_local_addr(device_id).map(|a| !a.is_tentative()).unwrap_or(false)
     {
         let old_rc = existing_configs.get_router_configurations();
-        let new_rc = get_ndp_configurations::<_, ND>(ctx, device_id).get_router_configurations();
+        let new_rc = get_ndp_configurations(ctx, device_id).get_router_configurations();
 
         //
         // Check if device changes advertising interfacee status (should/should't send Router
@@ -1559,14 +1435,14 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
         if !old_rc.get_should_send_advertisements() && new_rc.get_should_send_advertisements() {
             // If the device is now an advertising interface, start sending Router
             // Advertisements.
-            start_advertising_interface::<_, ND>(ctx, device_id);
+            start_advertising_interface(ctx, device_id);
         } else if old_rc.get_should_send_advertisements()
             && !new_rc.get_should_send_advertisements()
         {
             // If the device is now not an advertising interface, stop sending Router
             // Advertisements after the final batch of Router Advertisements with Router Lifetime
             // set to 0 (to inform hosts to not use this node as a default router).
-            stop_advertising_interface::<_, ND>(ctx, device_id);
+            stop_advertising_interface(ctx, device_id);
         }
 
         //
@@ -1581,24 +1457,24 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
         //
 
         let old_interval = old_rc.get_router_advertisements_interval();
-        let new_interval = get_ndp_configurations::<_, ND>(ctx, device_id)
+        let new_interval = get_ndp_configurations(ctx, device_id)
             .get_router_configurations()
             .get_router_advertisements_interval();
 
         if old_interval != new_interval {
             // If a Router Advertisement is scheduled, make sure the time it will fire is not
             // more than MaxRtrAdvInterval from now.
-            if let Some(next_instant) = ctx.dispatcher().scheduled_instant(
-                NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id),
+            if let Some(next_instant) = ctx.scheduled_instant(
+                NdpTimerId::new_router_advertisement_transmit_timer_id(device_id).into(),
             ) {
-                let now = ctx.dispatcher().now();
+                let now = ctx.now();
                 let max_instant = now
                     .checked_add(Duration::from_secs((*new_interval.end()).into()))
                     .expect("Failed to calculate new max delay before NDP RA transmission");
 
                 if next_instant > max_instant {
                     // Next RA will be sent too far from now. Reschedule it.
-                    schedule_next_router_advertisement::<_, ND>(ctx, device_id);
+                    schedule_next_router_advertisement(ctx, device_id);
                 }
             }
         }
@@ -1606,32 +1482,35 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
 }
 
 /// Gets the NDP Configurations for a `device_id`.
-pub(crate) fn get_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static>(
-    ctx: &Context<D>,
-    device_id: usize,
+pub(crate) fn get_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> &NdpConfigurations {
-    &ND::get_ndp_state(ctx.state(), device_id).configs
+    &ctx.get_state(device_id).configs
 }
 
 /// Look up the link layer address.
 ///
 /// Begins the address resolution process if the link layer address
 /// for `lookup_addr` is not already known.
-pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn lookup<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     lookup_addr: Ipv6Addr,
-) -> Option<ND::LinkAddress> {
+) -> Option<D::Address>
+where
+    D::Address: for<'a> From<&'a MulticastAddr<Ipv6Addr>>,
+{
     trace!("ndp::lookup: {:?}", lookup_addr);
 
     // If `lookup_addr` is a multicast address, get the corresponding
     // destination multicast mac address.
     if let Some(multicast_addr) = MulticastAddr::new(lookup_addr) {
-        return Some(ND::LinkAddress::from(&multicast_addr));
+        return Some(D::Address::from(&multicast_addr));
     }
 
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
-    let ndpstate = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndpstate = ctx.get_state_mut(device_id);
     let result = ndpstate.neighbors.get_neighbor_state(&lookup_addr);
 
     match result {
@@ -1656,13 +1535,13 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
             // also setting the transmission count to 1.
             ndpstate.neighbors.add_incomplete_neighbor_state(lookup_addr);
 
-            send_neighbor_solicitation::<_, ND>(ctx, device_id, lookup_addr);
+            send_neighbor_solicitation(ctx, device_id, lookup_addr);
 
             // Also schedule a timer to retransmit in case we don't get
             // neighbor advertisements back.
-            ctx.dispatcher.schedule_timeout(
+            ctx.schedule_timer(
                 retrans_timer,
-                NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, lookup_addr),
+                NdpTimerId::new_link_address_resolution_timer_id(device_id, lookup_addr).into(),
             );
 
             // Returning `None` as we do not have a link-layer address
@@ -1691,14 +1570,14 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
 /// so link address lookups completes immediately without doing
 /// address resolution.
 #[cfg(test)]
-pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     net: Ipv6Addr,
-    hw: ND::LinkAddress,
+    hw: D::Address,
 ) {
     // Neighbor `net` should be marked as reachable.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id).neighbors.set_link_address(net, hw, true)
+    ctx.get_state_mut(device_id).neighbors.set_link_address(net, hw, true)
 }
 
 /// `NeighborState` keeps all state that NDP may want to keep about neighbors,
@@ -1869,22 +1748,22 @@ impl<H> Default for NeighborTable<H> {
 ///
 /// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
 /// not configured to be an advertising interface.
-pub(crate) fn start_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn start_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     trace!(
         "start_advertising_interface: making device {:?} an advertising advertising interface",
-        ND::get_device_id(device_id)
+        device_id
     );
 
     // Reset the number of final Router Advertisements to send before ending Router Advertisements.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id).final_router_advertisements_remaining = 0;
+    ctx.get_state_mut(device_id).final_router_advertisements_remaining = 0;
 
     // Start sending periodic router advertisements. May panic if `device_id` does not have an
     // assigned (non-tentative) link-local address or if it is not configured to be an advertising
     // interface.
-    start_periodic_router_advertisements::<_, ND>(ctx, device_id);
+    start_periodic_router_advertisements(ctx, device_id);
 }
 
 /// Handle `device_id` ceasing to be an advertising interface.
@@ -1892,23 +1771,22 @@ pub(crate) fn start_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
 /// # Panics
 ///
 /// Panics if `device_id` is not operating as an advertising interface.
-pub(crate) fn stop_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn stop_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     trace!(
         "stop_advertising_interface: making device {:?} a non-advertising advertising interface",
-        ND::get_device_id(device_id)
+        device_id
     );
 
     // Not having a scheduled router advertisement implies `device_id` is already not an
     // advertising interface.
     assert!(ctx
-        .dispatcher()
-        .scheduled_instant(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id))
+        .scheduled_instant(NdpTimerId::new_router_advertisement_transmit_timer_id(device_id).into())
         .is_some());
 
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
 
     // If `final_router_advertisements_remaining` is non-zero, that means that `device_id`
     // already ceased to be an advertising interface, meaning it isn't an advertising interface.
@@ -1919,7 +1797,7 @@ pub(crate) fn stop_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
 
         trace!(
             "stop_advertising_interface: device {:?} is configured to send {:?} final Router Advertisements",
-            ND::get_device_id(device_id),
+            device_id,
             final_ras,
         );
 
@@ -1930,12 +1808,12 @@ pub(crate) fn stop_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
     } else {
         trace!(
             "stop_advertising_interface: device {:?} is not configured to send any final Router Advertisements, stopping periodic Router Advertisement transmissions",
-            ND::get_device_id(device_id),
+            device_id,
         );
 
         // Stop sending periodic Router Advertisements. Will panic if `device_id` is not currently
         // sending periodic Router Advertisements, implying it is not an advertising interface.
-        stop_periodic_router_advertisements::<_, ND>(ctx, device_id);
+        stop_periodic_router_advertisements(ctx, device_id);
     }
 }
 
@@ -1945,20 +1823,19 @@ pub(crate) fn stop_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
 /// not configured to be an advertising interface.
-fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn start_periodic_router_advertisements<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     trace!(
         "ndp::start_periodic_router_advertisements: start sending router advertisements from device: {:?}",
-        ND::get_device_id(device_id)
+        device_id
     );
 
     // Reset the number of Router Advertisements transmited to the all-nodes multicast address.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id).all_nodes_transmited_router_advertisements =
-        0;
+    ctx.get_state_mut(device_id).all_nodes_transmited_router_advertisements = 0;
 
-    schedule_next_router_advertisement::<_, ND>(ctx, device_id);
+    schedule_next_router_advertisement(ctx, device_id);
 }
 
 /// Stop sending periodic router advertisements.
@@ -1966,15 +1843,14 @@ fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
 /// # Panics
 ///
 /// Panics if `device_id` is not currently sending periodic Router Advertisements.
-fn stop_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn stop_periodic_router_advertisements<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     // Cancel the next periodic router advertisement timeout.
     //
     // May panic if we are not currently scheduled to send a periodic router advertisements.
-    ctx.dispatcher_mut()
-        .cancel_timeout(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id))
+    ctx.cancel_timer(NdpTimerId::new_router_advertisement_transmit_timer_id(device_id).into())
         .unwrap();
 }
 
@@ -1987,25 +1863,25 @@ fn stop_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// Panics if `device_id` is not operating as a router, if it is not configured to send Router
 /// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
-pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     trace!(
         "ndp::schedule_next_router_advertisement: scheduling the next router advertisement for device {:?}",
-        ND::get_device_id(device_id)
+        device_id
     );
 
     // Calculate a random time from the interface's MinRtrAdvInterval and MaxRtrAdvInterval, as per
     // RFC 4861 section 6.2.4.
-    let tx_range = ND::get_ndp_state(ctx.state_mut(), device_id)
+    let tx_range = ctx
+        .get_state(device_id)
         .configs
         .get_router_configurations()
         .get_router_advertisements_interval();
 
-    let mut delay = Duration::from_secs(
-        ctx.dispatcher_mut().rng().gen_range(tx_range.start(), tx_range.end()).into(),
-    );
+    let mut delay =
+        Duration::from_secs(ctx.rng().gen_range(tx_range.start(), tx_range.end()).into());
 
     // As per RFC 6.2.4, for the first few advertisements (up to `MAX_INITIAL_RTR_ADVERTISEMENTS`)
     // sent from an interface when it becomes an advertising interface, if the randomly chosen
@@ -2015,7 +1891,7 @@ pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevi
     // becomes available, in the presence of possible packet loss.
     //
     // TODO(ghanan): Make the choice to limit the delay of the first few advertisements configurable
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
     if (ndp_state.all_nodes_transmited_router_advertisements < MAX_INITIAL_RTR_ADVERTISEMENTS)
         && (delay > MAX_INITIAL_RTR_ADVERT_INTERVAL)
     {
@@ -2025,12 +1901,9 @@ pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevi
     }
 
     // Schedule the timout to send the router advertisement.
-    let instant = ctx
-        .dispatcher
-        .now()
-        .checked_add(delay)
-        .expect("Failed to calculate next NDP RA transmit instant");
-    schedule_next_router_advertisement_instant::<_, ND>(ctx, device_id, instant);
+    let instant =
+        ctx.now().checked_add(delay).expect("Failed to calculate next NDP RA transmit instant");
+    schedule_next_router_advertisement_instant(ctx, device_id, instant);
 }
 
 /// Schedule next unsolicited Router Advertisement message at a specific instant in time.
@@ -2045,44 +1918,44 @@ pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevi
 /// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
 /// not either an advertising interface or sending the final Router Advertisements after ceasing to
 /// be an advertising interface.
-fn schedule_next_router_advertisement_instant<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
-    instant: D::Instant,
+fn schedule_next_router_advertisement_instant<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    instant: C::Instant,
 ) {
     // If we are attempting to send a router advertisement, we need to have a valid
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
     // but this is documented for this method.
     let _our_link_local_addr =
-        ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
+        ctx.get_link_local_addr(device_id).unwrap().try_into_permanent().unwrap();
 
     // Device MUST be in one of two scenarios if we are trying to schedule a Router Advertisement.
     // 1) Is an advertising interface.
     // 2) Sending the final Router Advertisements after ceasing to be an advertising interface.
-    let is_advertising_interface = ND::is_advertising_interface(ctx, device_id);
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let is_advertising_interface = ctx.is_advertising_interface(device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
     let is_final_ra_batch = ndp_state.final_router_advertisements_remaining != 0;
     assert!(is_final_ra_batch || is_advertising_interface);
 
-    let timer_id = NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id);
+    let timer_id = NdpTimerId::new_router_advertisement_transmit_timer_id(device_id).into();
 
     // If no existing Router Advertisement transmission is scheduled, scheduled the timer at
     // `instant`. If we already have a scheduled Router Advertisement, overwrite the timer if
     // `instant` is at a time before the existing timer, `next_instant`.
-    let next_instant = ctx.dispatcher().scheduled_instant(timer_id);
+    let next_instant = ctx.scheduled_instant(timer_id);
     if next_instant.map_or(true, |i| i > instant) {
         trace!(
             "ndp::schedule_next_router_advertisement: scheduling the next router advertisement for device {:?} at {:?}, overwriting potentially existing timer that would have fired at {:?}",
-            ND::get_device_id(device_id), instant, next_instant,
+            device_id, instant, next_instant,
         );
 
         // Schedule the timeout to send the router advertisement.
-        ctx.dispatcher_mut().schedule_timeout_instant(instant, timer_id);
+        ctx.schedule_timer_instant(instant, timer_id);
     } else {
         trace!(
             "ndp::schedule_next_router_advertisement: the next router advertisement for device {:?} at {:?}, is before the new one at {:?}, so doing nothing",
-            ND::get_device_id(device_id), next_instant, instant,
+            device_id, next_instant, instant,
         );
     }
 }
@@ -2095,14 +1968,14 @@ fn schedule_next_router_advertisement_instant<D: EventDispatcher, ND: NdpDevice>
 ///
 /// Panics if we attempt to start router solicitation as a router, or if
 /// the device is already soliciting routers.
-pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
     // MUST NOT be a router.
-    assert!(!ND::is_router(ctx, device_id));
+    assert!(!ctx.is_router(device_id));
 
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
 
     // MUST NOT already be performing router solicitation.
     assert_eq!(ndp_state.router_solicitations_remaining, 0);
@@ -2110,7 +1983,7 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
     if let Some(v) = ndp_state.configs.max_router_solicitations {
         trace!(
             "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
-            ND::get_device_id(device_id)
+            device_id
         );
 
         ndp_state.router_solicitations_remaining = v.get();
@@ -2118,16 +1991,14 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
         // As per RFC 4861 section 6.3.7, delay the first transmission for a random amount of time
         // between 0 and `MAX_RTR_SOLICITATION_DELAY` to alleviate congestion when many hosts start
         // up on a link at the same time.
-        let delay =
-            ctx.dispatcher_mut().rng().gen_range(Duration::new(0, 0), MAX_RTR_SOLICITATION_DELAY);
+        let delay = ctx.rng().gen_range(Duration::new(0, 0), MAX_RTR_SOLICITATION_DELAY);
 
         // MUST NOT already be performing router solicitation.
         assert!(ctx
-            .dispatcher_mut()
-            .schedule_timeout(delay, NdpTimerId::new_router_solicitation_timer_id::<ND>(device_id))
+            .schedule_timer(delay, NdpTimerId::new_router_solicitation_timer_id(device_id).into())
             .is_none());
     } else {
-        trace!("ndp::start_soliciting_routers: device {:?} not configured to send any router solicitations", ND::get_device_id(device_id));
+        trace!("ndp::start_soliciting_routers: device {:?} not configured to send any router solicitations", device_id);
     }
 }
 
@@ -2139,22 +2010,18 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// Panics if we attempt to stop router solicitations on a router (this should never happen
 /// as routers should not be soliciting other routers).
-pub(crate) fn stop_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn stop_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
 ) {
-    trace!(
-        "ndp::stop_soliciting_routers: stop soliciting routers for device: {:?}",
-        ND::get_device_id(device_id)
-    );
+    trace!("ndp::stop_soliciting_routers: stop soliciting routers for device: {:?}", device_id);
 
-    assert!(!ND::is_router(ctx, device_id));
+    assert!(!ctx.is_router(device_id));
 
-    ctx.dispatcher_mut()
-        .cancel_timeout(NdpTimerId::new_router_solicitation_timer_id::<ND>(device_id));
+    ctx.cancel_timer(NdpTimerId::new_router_solicitation_timer_id(device_id).into());
 
     // No more router solicitations remaining since we are cancelling.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id).router_solicitations_remaining = 0;
+    ctx.get_state_mut(device_id).router_solicitations_remaining = 0;
 }
 
 /// Solicit routers once amd schedule next message.
@@ -2163,20 +2030,17 @@ pub(crate) fn stop_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// Panics if we attempt to do router solicitation as a router or if
 /// we are already done soliciting routers.
-fn do_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
-) {
-    assert!(!ND::is_router(ctx, device_id));
+fn do_router_solicitation<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
+    assert!(!ctx.is_router(device_id));
 
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
     let remaining = &mut ndp_state.router_solicitations_remaining;
 
     assert!(*remaining > 0);
     *remaining -= 1;
     let remaining = *remaining;
 
-    let src_ip = ND::get_ipv6_addr(ctx.state(), device_id);
+    let src_ip = ctx.get_ipv6_addr(device_id);
 
     trace!(
         "do_router_solicitation: soliciting routers for device {:?} using src_ip {:?}",
@@ -2184,7 +2048,7 @@ fn do_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
         src_ip
     );
 
-    send_router_solicitation::<_, ND>(ctx, device_id, src_ip);
+    send_router_solicitation(ctx, device_id, src_ip);
 
     if remaining == 0 {
         trace!(
@@ -2194,9 +2058,9 @@ fn do_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
         return;
     } else {
         // TODO(ghanan): Make the interval between messages configurable.
-        ctx.dispatcher_mut().schedule_timeout(
+        ctx.schedule_timer(
             RTR_SOLICITATION_INTERVAL,
-            NdpTimerId::new_router_solicitation_timer_id::<ND>(device_id),
+            NdpTimerId::new_router_solicitation_timer_id(device_id).into(),
         );
     }
 }
@@ -2206,12 +2070,12 @@ fn do_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
 /// # Panics
 ///
 /// Panics if we attempt to send a router solicitation as a router.
-fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     src_ip: Option<Ipv6Addr>,
 ) {
-    assert!(!ND::is_router(ctx, device_id));
+    assert!(!ctx.is_router(device_id));
 
     let src_ip = src_ip.unwrap_or(Ipv6::UNSPECIFIED_ADDRESS);
 
@@ -2220,7 +2084,7 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
     if !src_ip.is_specified() {
         // Must not include the source link layer address if the source address
         // is unspecified as per RFC 4861 section 4.1.
-        send_ndp_packet::<_, ND, &[u8], _>(
+        send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2229,8 +2093,8 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
             &[],
         );
     } else {
-        let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
-        send_ndp_packet::<_, ND, &[u8], _>(
+        let src_ll = ctx.get_link_layer_addr(device_id);
+        send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2249,12 +2113,12 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
 /// # Panics
 ///
 /// Panics if DAD is already being performed on this address.
-pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     tentative_addr: Ipv6Addr,
 ) {
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
 
     let transmits = ndp_state.configs.dup_addr_detect_transmits;
 
@@ -2265,18 +2129,18 @@ pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevic
             .insert(tentative_addr, transmits.get())
             .is_none());
 
-        trace!("ndp::start_duplicate_address_detection: starting duplicate address detection for address {:?} on device {:?}", tentative_addr, ND::get_device_id(device_id));
+        trace!("ndp::start_duplicate_address_detection: starting duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
 
-        do_duplicate_address_detection::<D, ND>(ctx, device_id, tentative_addr);
+        do_duplicate_address_detection(ctx, device_id, tentative_addr);
     } else {
         // Must not already be performing DAD on the device.
         assert!(!ndp_state.dad_transmits_remaining.contains_key(&tentative_addr));
 
         // DAD is turned off since the interface's DUP_ADDR_DETECT_TRANSMIT parameter
         // is `None`.
-        trace!("ndp::start_duplicate_address_detection: assigning address {:?} on device {:?} immediately because duplicate address detection is disabled", tentative_addr, ND::get_device_id(device_id));
+        trace!("ndp::start_duplicate_address_detection: assigning address {:?} on device {:?} immediately because duplicate address detection is disabled", tentative_addr, device_id);
 
-        ND::unique_address_determined_wrapper(ctx, device_id, tentative_addr);
+        ctx.unique_address_determined_wrapper(device_id, tentative_addr);
     }
 }
 
@@ -2291,25 +2155,21 @@ pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevic
 /// # Panics
 ///
 /// Panics if we are not currently performing DAD for `tentative_addr` on `device_id`.
-pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     tentative_addr: Ipv6Addr,
 ) {
-    trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, ND::get_device_id(device_id));
+    trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
 
-    ctx.dispatcher_mut().cancel_timeout(NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(
-        device_id,
-        tentative_addr,
-    ));
+    ctx.cancel_timer(
+        NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr).into(),
+    );
 
     // `unwrap` may panic if we have no entry in `dad_transmits_remaining` for
     // `tentative_addr` which means that we are not performing DAD on
     // `tentative_add`. This case is documented as a panic condition.
-    ND::get_ndp_state_mut(ctx.state_mut(), device_id)
-        .dad_transmits_remaining
-        .remove(&tentative_addr)
-        .unwrap();
+    ctx.get_state_mut(device_id).dad_transmits_remaining.remove(&tentative_addr).unwrap();
 }
 
 /// Send another DAD message (Neighbor Solicitation).
@@ -2317,14 +2177,14 @@ pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevi
 /// # Panics
 ///
 /// Panics if the DAD process has not been started for `tentative_addr` on `device_id`.
-fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     tentative_addr: Ipv6Addr,
 ) {
     trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
 
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
 
     // We MUST have already started the DAD process if we reach this point.
     let remaining = ndp_state.dad_transmits_remaining.get_mut(&tentative_addr).unwrap();
@@ -2334,8 +2194,8 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
     // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
     let retrans_timer = ndp_state.retrans_timer;
 
-    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
-    send_ndp_packet::<_, ND, &[u8], _>(
+    let src_ll = ctx.get_link_layer_addr(device_id);
+    send_ndp_packet::<_, _, &[u8], _>(
         ctx,
         device_id,
         Ipv6::UNSPECIFIED_ADDRESS,
@@ -2344,15 +2204,15 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
         &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
     );
 
-    ctx.dispatcher_mut().schedule_timeout(
+    ctx.schedule_timer(
         retrans_timer,
-        NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(device_id, tentative_addr),
+        NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr).into(),
     );
 }
 
-fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     lookup_addr: Ipv6Addr,
 ) {
     trace!("send_neighbor_solicitation: lookip_addr {:?}", lookup_addr);
@@ -2361,11 +2221,11 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     //  the source IP to the same IP as the packet that triggered the
     //  solicitation, so that when we hit the neighbor they'll have us in their
     //  cache, reducing overall burden on the network.
-    if let Some(src_ip) = ND::get_ipv6_addr(ctx.state(), device_id) {
+    if let Some(src_ip) = ctx.get_ipv6_addr(device_id) {
         assert!(src_ip.is_valid_unicast());
-        let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
+        let src_ll = ctx.get_link_layer_addr(device_id);
         let dst_ip = lookup_addr.to_solicited_node_address().get();
-        send_ndp_packet::<_, ND, &[u8], _>(
+        send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
@@ -2380,9 +2240,9 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     }
 }
 
-fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     solicited: bool,
     device_addr: Ipv6Addr,
     dst_ip: Ipv6Addr,
@@ -2402,14 +2262,14 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     // information, but it is not necessary. So it is perfectly valid that
     // trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
-    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
+    let src_ll = ctx.get_link_layer_addr(device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
-    send_ndp_packet::<_, ND, &[u8], _>(
+    send_ndp_packet::<_, _, &[u8], _>(
         ctx,
         device_id,
         device_addr,
         dst_ip,
-        NeighborAdvertisement::new(ND::is_router(ctx, device_id), solicited, false, device_addr),
+        NeighborAdvertisement::new(ctx.is_router(device_id), solicited, false, device_addr),
         &options[..],
     );
 }
@@ -2427,25 +2287,23 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 /// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
 /// not either an advertising interface or sending the final Router Advertisements after ceasing to
 /// be an advertising interface.
-fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     dst_ip: Ipv6Addr,
 ) {
     // If we are attempting to send a router advertisement, we need to have a valid
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
     // but this is documented for this function.
-    let src_ip =
-        ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
+    let src_ip = ctx.get_link_local_addr(device_id).unwrap().try_into_permanent().unwrap();
 
-    let is_final_ra_batch =
-        ND::get_ndp_state(ctx.state(), device_id).final_router_advertisements_remaining != 0;
+    let is_final_ra_batch = ctx.get_state(device_id).final_router_advertisements_remaining != 0;
 
     // Device MUST be in one of two scenarios if we reach this point:
     // 1) Is an advertising interface.
     // 2) Sending the final Router Advertisements after ceasing to be an advertising interface.
-    assert!(is_final_ra_batch || ND::is_advertising_interface(ctx, device_id));
+    assert!(is_final_ra_batch || ctx.is_advertising_interface(device_id));
 
     let ra_type = if is_final_ra_batch { "final batch" } else { "normal" };
 
@@ -2453,14 +2311,14 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
         "send_router_advertisement: sending {:?} router advertisement from {:?} (dev = {:?}) to {:?}",
         ra_type,
         src_ip,
-        ND::get_device_id(device_id),
+        device_id,
         dst_ip
     );
 
-    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
+    let src_ll = ctx.get_link_layer_addr(device_id);
     let mut options = vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
 
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let ndp_state = ctx.get_state_mut(device_id);
 
     let router_configurations = ndp_state.configs.get_router_configurations();
 
@@ -2489,12 +2347,12 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     }
 
     // Attempt to send the router advertisement message.
-    if send_ndp_packet::<_, ND, &[u8], _>(ctx, device_id, src_ip, dst_ip, message, &options[..])
+    if send_ndp_packet::<_, _, &[u8], _>(ctx, device_id, src_ip, dst_ip, message, &options[..])
         .is_ok()
     {
         if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
-            let now = ctx.dispatcher().now();
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let now = ctx.now();
+            let ndp_state = ctx.get_state_mut(device_id);
 
             // Sent the frame successfully so update NDP state's `last_router_advertisement_instant`.
             ndp_state.last_router_advertisement_instant = Some(now);
@@ -2509,9 +2367,9 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
 }
 
 /// Helper function to send ndp packet over an NdpDevice to `dst_ip`.
-fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
     message: M,
@@ -2522,8 +2380,7 @@ where
 {
     trace!("send_ndp_packet: src_ip={:?} dst_ip={:?}", src_ip, dst_ip);
 
-    ND::send_ipv6_frame(
-        ctx,
+    ctx.send_ipv6_frame(
         device_id,
         dst_ip,
         ndp::OptionsSerializer::<_>::new(options.iter())
@@ -2546,9 +2403,10 @@ where
 
 /// A handler for incoming NDP packets.
 ///
-/// `NdpPacketHandler` is implemented by any `Context<D>` where `D:
-/// EventDispatcher`, and it can also be mocked for use in testing.
-pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
+/// An implementation of `NdpPacketHandler` is provided by the device layer (see
+/// the `crate::device` module) to the IP layer so that it can pass incoming NDP
+/// packets. It can also be mocked for use in testing.
+pub(crate) trait NdpPacketHandler<DeviceId> {
     /// Receive an NDP packet.
     ///
     /// # Panics
@@ -2558,7 +2416,7 @@ pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
     /// `NeighborAdvertisement`, or `Redirect`.
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
-        device: Option<Self::DeviceId>,
+        device: DeviceId,
         src_ip: Ipv6Addr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
@@ -2566,50 +2424,20 @@ pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
     }
 }
 
-impl<D: EventDispatcher> NdpPacketHandler for Context<D> {
-    fn receive_ndp_packet<B: ByteSlice>(
-        &mut self,
-        device: Option<DeviceId>,
-        src_ip: Ipv6Addr,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: Icmpv6Packet<B>,
-    ) {
-        trace!("receive_ndp_packet");
-
-        match device {
-            Some(d) => {
-                // TODO(brunodalbo) we're assuming the device Id is for an ethernet
-                //  device, but it could be for another protocol.
-                receive_ndp_packet_inner::<_, EthernetNdpDevice, _>(
-                    self,
-                    d.id(),
-                    src_ip,
-                    dst_ip,
-                    packet,
-                );
-            }
-            None => {
-                // NDP needs a device identifier context to operate on.
-                debug!("Got NDP packet without device identifier. Ignoring it.");
-            }
-        }
-    }
-}
-
-fn duplicate_address_detected<D: EventDispatcher, ND: NdpDevice>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr: Ipv6Addr,
 ) {
-    cancel_duplicate_address_detection::<_, ND>(ctx, device_id, addr);
+    cancel_duplicate_address_detection(ctx, device_id, addr);
 
     // let's notify our device
-    ND::duplicate_address_detected(ctx, device_id, addr);
+    ctx.duplicate_address_detected(device_id, addr);
 }
 
-fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
-    ctx: &mut Context<D>,
-    device_id: usize,
+pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: Icmpv6Packet<B>,
@@ -2623,19 +2451,19 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
         Icmpv6Packet::RouterSolicitation(p) => {
             trace!("receive_ndp_packet_inner: Received NDP RS");
 
-            if !ND::is_router(ctx, device_id) {
+            if !ctx.is_router(device_id) {
                 // Hosts MUST silently discard Router Solicitation messages
                 // as per RFC 4861 section 6.1.1.
                 trace!(
                     "receive_ndp_packet_inner: device {:?} is not a router, discarding NDP RS",
-                    ND::get_device_id(device_id)
+                    device_id
                 );
                 return;
             }
 
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC 4861 section 6.1.1.
 
-            let source_link_layer_option = get_source_link_layer_option::<ND, _>(p.body());
+            let source_link_layer_option = get_source_link_layer_option(p.body());
 
             if !src_ip.is_specified() && source_link_layer_option.is_some() {
                 // If the IP source address is the unspecified address and there is a
@@ -2645,15 +2473,15 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 return;
             }
 
-            increment_counter!(ctx, "ndp::rx_router_solicitation");
+            ctx.increment_counter("ndp::rx_router_solicitation");
 
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(device_id);
 
             if !ndp_state.configs.get_router_configurations().get_should_send_advertisements() {
                 // If a router's AdvSendAdvertisements flag is set to false, it doesn't send
                 // Router Advertisements - even in response to Router Solicitations. See
                 // AdvSendAdvertisements in RFC 4861 section 6.2.1 for more details.
-                trace!("receive_ndp_packet_inner: device {:?} is not configured to send Router Advertisements, ignoring NDP RS", ND::get_device_id(device_id));
+                trace!("receive_ndp_packet_inner: device {:?} is not configured to send Router Advertisements, ignoring NDP RS", device_id);
                 return;
             }
 
@@ -2705,27 +2533,26 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             //               all nodes multicast address should be configurable at run-time.
 
             // Calculate random delay between `MIN_RA_DELAY_TIME` and `MAX_RA_DELAY_TIME`.
-            let now = ctx.dispatcher().now();
-            let delay = ctx.dispatcher_mut().rng().gen_range(MIN_RA_DELAY_TIME, MAX_RA_DELAY_TIME);
+            let now = ctx.now();
+            let delay = ctx.rng().gen_range(MIN_RA_DELAY_TIME, MAX_RA_DELAY_TIME);
             let send_instant = now
                 .checked_add(delay)
                 .expect("Failed to calculate instant to reply to Router Solicitation");
 
             if ctx
-                .dispatcher()
-                .scheduled_instant(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(
-                    device_id,
-                ))
+                .scheduled_instant(
+                    NdpTimerId::new_router_advertisement_transmit_timer_id(device_id).into(),
+                )
                 .map_or(false, |i| i < send_instant)
             {
                 // Next scheduled Router Advertisement will be sent before `delay` time from
                 // `now` so let the scheduled Router Advertisement be the reply to this
                 // Router Solicitation message.
-                trace!("receive_ndp_packet_inner: next scheduled RA will be the response this NDP RS from {:?} on device {:?}", src_ip, ND::get_device_id(device_id));
+                trace!("receive_ndp_packet_inner: next scheduled RA will be the response this NDP RS from {:?} on device {:?}", src_ip, device_id);
                 return;
             }
 
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(device_id);
 
             if let Some(last_instant) = ndp_state.last_router_advertisement_instant {
                 if now.duration_since(last_instant) <= MIN_DELAY_BETWEEN_RAS {
@@ -2740,22 +2567,18 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                             "Failed to calculate instant to send the next Router Advertisement",
                         );
 
-                    trace!("receive_ndp_packet_inner: already sent an RA within MIN_DELAY_BETWEEN_RAS ({:?}), scheduling RA reply for RS from {:?} to be sent at {:?} from device {:?}", MIN_DELAY_BETWEEN_RAS, src_ip, next_instant, ND::get_device_id(device_id));
+                    trace!("receive_ndp_packet_inner: already sent an RA within MIN_DELAY_BETWEEN_RAS ({:?}), scheduling RA reply for RS from {:?} to be sent at {:?} from device {:?}", MIN_DELAY_BETWEEN_RAS, src_ip, next_instant, device_id);
 
-                    schedule_next_router_advertisement_instant::<_, ND>(
-                        ctx,
-                        device_id,
-                        next_instant,
-                    );
+                    schedule_next_router_advertisement_instant(ctx, device_id, next_instant);
                     return;
                 }
             }
 
             // If we haven't scheduled the RA response yet, or an already scheduled RA transmission
             // is too far from now, schedule an RA transmission for after `delay` time.
-            trace!("receive_ndp_packet_inner: scheduling an RA reply for RS from {:?} to be sent at {:?} from device {:?}", src_ip, send_instant, ND::get_device_id(device_id));
+            trace!("receive_ndp_packet_inner: scheduling an RA reply for RS from {:?} to be sent at {:?} from device {:?}", src_ip, send_instant, device_id);
 
-            schedule_next_router_advertisement_instant::<_, ND>(ctx, device_id, send_instant);
+            schedule_next_router_advertisement_instant(ctx, device_id, send_instant);
         }
         Icmpv6Packet::RouterAdvertisement(p) => {
             trace!("receive_ndp_packet_inner: Received NDP RA from router: {:?}", src_ip);
@@ -2773,34 +2596,34 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC 4861 section 6.1.2.
 
-            increment_counter!(ctx, "ndp::rx_router_advertisement");
+            ctx.increment_counter("ndp::rx_router_advertisement");
 
-            if ND::is_router(ctx, device_id) {
+            if ctx.is_router(device_id) {
                 // TODO(ghanan): Handle receiving Router Advertisements when this node is a router.
                 trace!("receive_ndp_packet_inner: received NDP RA as a router, discarding NDP RA");
                 return;
             }
 
-            let (state, dispatcher) = ctx.state_and_dispatcher();
-            let ndp_state = ND::get_ndp_state_mut(state, device_id);
+            // let (state, dispatcher) = ctx.state_and_dispatcher();
+            let ndp_state = ctx.get_state_mut(device_id);
             let ra = p.message();
 
-            let timer_id = NdpTimerId::new_router_invalidation_timer_id::<ND>(device_id, src_ip);
+            let timer_id = NdpTimerId::new_router_invalidation_timer_id(device_id, src_ip).into();
 
             if ra.router_lifetime() == 0 {
                 if ndp_state.has_default_router(&src_ip) {
                     trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
 
-                    // As per RFC 4861 section 6.3.4, immediately timeout the entry as specified in
-                    // RFC 4861 section 6.3.5.
-
-                    assert!(dispatcher.cancel_timeout(timer_id).is_some());
-
-                    // `invalidate_default_router` may panic if `src_ip` does not reference a known
-                    // default router, but we will only reach here if the router is already in our
-                    // list of default routers, so we know `invalidate_default_router` will not
-                    // panic.
+                    // `invalidate_default_router` may panic if `src_ip` does
+                    // not reference a known default router, but we will only
+                    // reach here if the router is already in our list of
+                    // default routers, so we know `invalidate_default_router`
+                    // will not panic.
                     ndp_state.invalidate_default_router(&src_ip);
+
+                    // As per RFC 4861 section 6.3.4, immediately timeout the
+                    // entry as specified in RFC 4861 section 6.3.5.
+                    assert!(ctx.cancel_timer(timer_id).is_some());
                 } else {
                     trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
@@ -2827,8 +2650,15 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                 trace!("receive_ndp_packet_inner: NDP RA: updating invalidation timer to {:?} for router: {:?}", timer_duration, src_ip);
                 // Reset invalidation timeout.
-                dispatcher.schedule_timeout(timer_duration, timer_id);
+                ctx.schedule_timer(timer_duration, timer_id);
             }
+
+            // Borrow again so that a) we shadow the original `ndp_state` and
+            // thus, b) the original is dropped before `ctx` is used mutably in
+            // various code above (namely, to schedule timers). Now that all of
+            // that mutation has happened, we can borrow `ctx` mutably again and
+            // not run afoul of the borrow checker.
+            let ndp_state = ctx.get_state_mut(device_id);
 
             // As per RFC 4861 section 6.3.4:
             // If the received Reachable Time value is non-zero, the host SHOULD set
@@ -2878,7 +2708,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             if let Some(hop_limit) = NonZeroU8::new(ra.current_hop_limit()) {
                 trace!("receive_ndp_packet_inner: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
 
-                ND::set_hop_limit(state, device_id, hop_limit);
+                ctx.set_hop_limit(device_id, hop_limit);
             }
 
             for option in p.body().iter() {
@@ -2892,9 +2722,8 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // TODO(ghanan): Mark NDP state as STALE as per the RFC once we implement
                     //               the RFC compliant states.
                     NdpOption::SourceLinkLayerAddress(a) => {
-                        let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
-                        let link_addr =
-                            ND::LinkAddress::from_bytes(&a[..ND::LinkAddress::BYTES_LENGTH]);
+                        let ndp_state = ctx.get_state_mut(device_id);
+                        let link_addr = D::Address::from_bytes(&a[..D::Address::BYTES_LENGTH]);
 
                         trace!("receive_ndp_packet_inner: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
 
@@ -2910,13 +2739,13 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                             // `set_mtu` may panic if `mtu` is less than `IPV6_MIN_MTU` but we just
                             // checked to make sure that `mtu` is at least `IPV6_MIN_MTU` so we know
                             // `set_mtu` will not panic.
-                            ND::set_mtu(ctx.state_mut(), device_id, mtu);
+                            ctx.set_mtu(device_id, mtu);
                         } else {
                             trace!("receive_ndp_packet_inner: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than IPV6_MIN_MTU", src_ip, mtu);
                         }
                     }
                     NdpOption::PrefixInformation(prefix_info) => {
-                        let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+                        let ndp_state = ctx.get_state_mut(device_id);
 
                         trace!("receive_ndp_packet_inner: prefix information option with prefix = {:?}", prefix_info);
 
@@ -2937,9 +2766,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                             }
 
                             // Timer ID for this prefix's invalidation.
-                            let timer_id = NdpTimerId::new_prefix_invalidation_timer_id::<ND>(
-                                device_id, addr_sub,
-                            );
+                            let timer_id =
+                                NdpTimerId::new_prefix_invalidation_timer_id(device_id, addr_sub)
+                                    .into();
 
                             if prefix_info.valid_lifetime() == 0 {
                                 if ndp_state.has_prefix(&addr_sub) {
@@ -2950,10 +2779,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     // prefix immediately, as per RFC 4861 section 6.3.4.
 
                                     // Cancel the prefix invalidation timeout if it exists.
-                                    ctx.dispatcher_mut().cancel_timeout(timer_id);
+                                    ctx.cancel_timer(timer_id);
 
-                                    let ndp_state =
-                                        ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+                                    let ndp_state = ctx.get_state_mut(device_id);
                                     ndp_state.invalidate_prefix(addr_sub);
                                 } else {
                                     // If the on-link flag is set, the valid lifetime is 0 and the
@@ -2977,9 +2805,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                 // A valid lifetime of all 1 bits (== `std::u32::MAX`) represents
                                 // infinity, as per RFC 4861 section 4.6.2. Given this, we do not
                                 // need a timer to mark the prefix as invalid.
-                                ctx.dispatcher_mut().cancel_timeout(timer_id);
+                                ctx.cancel_timer(timer_id);
                             } else {
-                                ctx.dispatcher_mut().schedule_timeout(
+                                ctx.schedule_timer(
                                     Duration::from_secs(prefix_info.valid_lifetime().into()),
                                     timer_id,
                                 );
@@ -3012,7 +2840,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                 continue;
                             };
 
-                            let now = ctx.dispatcher().now();
+                            let now = ctx.now();
                             let preferred_until = now
                                 .checked_add(Duration::from_secs(
                                     prefix_info.preferred_lifetime().into(),
@@ -3024,16 +2852,14 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                             // Before configuring a SLAAC address, check to see if we already have
                             // a SLAAC address for the given prefix.
-                            if let Some(entry) = ND::get_ipv6_addr_entries(ctx.state(), device_id)
-                                .find(|a| {
-                                    a.addr_sub().subnet() == subnet
-                                        && a.configuration_type() == AddressConfigurationType::Slaac
-                                })
-                            {
+                            if let Some(entry) = ctx.get_ipv6_addr_entries(device_id).find(|a| {
+                                a.addr_sub().subnet() == subnet
+                                    && a.configuration_type() == AddressConfigurationType::Slaac
+                            }) {
                                 let addr_sub = entry.addr_sub();
                                 let addr = addr_sub.addr();
 
-                                trace!("receive_ndp_packet_inner: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, ND::get_device_id(device_id));
+                                trace!("receive_ndp_packet_inner: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, device_id);
 
                                 // We know the call to `unwrap` will not panic because `entry` will
                                 // be an `AddressEntry` configured via SLAAC. All SLAAC addresses
@@ -3051,20 +2877,20 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                 // autoconfiguration in the list, the preferred lifetime of the
                                 // address is reset to the Preferred Lifetime in the received
                                 // advertisement.
-                                trace!("receive_ndp_packet_inner: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, ND::get_device_id(device_id));
+                                trace!("receive_ndp_packet_inner: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, device_id);
 
                                 // Update the preferred lifetime for this address.
                                 //
                                 // Must not have reached this point if the address was not already
                                 // assigned to a device.
                                 assert!(ctx
-                                    .dispatcher_mut()
-                                    .schedule_timeout_instant(
+                                    .schedule_timer_instant(
                                         preferred_until,
-                                        NdpTimerId::new_deprecate_slaac_address_timer_id::<ND>(
+                                        NdpTimerId::new_deprecate_slaac_address_timer_id(
                                             device_id,
                                             addr.get(),
-                                        ),
+                                        )
+                                        .into(),
                                     )
                                     .is_some());
 
@@ -3079,11 +2905,10 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     // If the received Valid Lifetime is greater than 2 hours or
                                     // greater than RemainingLifetime, set the valid lifetime of the
                                     // corresponding address to the advertised Valid Lifetime.
-                                    trace!("receive_ndp_packet_inner: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, ND::get_device_id(device_id));
+                                    trace!("receive_ndp_packet_inner: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
 
                                     // Set the valid lifetime for this address.
-                                    ND::update_slaac_addr_valid_until(
-                                        ctx,
+                                    ctx.update_slaac_addr_valid_until(
                                         device_id,
                                         &addr,
                                         valid_until,
@@ -3092,13 +2917,13 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     // Must not have reached this point if the address was already
                                     // assigned to a device.
                                     assert!(ctx
-                                        .dispatcher_mut()
-                                        .schedule_timeout_instant(
+                                        .schedule_timer_instant(
                                             valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address_timer_id::<ND>(
+                                            NdpTimerId::new_invalidate_slaac_address_timer_id(
                                                 device_id,
                                                 addr.get()
-                                            ),
+                                            )
+                                            .into(),
                                         )
                                         .is_some());
                                 } else if remaining_lifetime
@@ -3118,19 +2943,18 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     //               the address to the valid lifetime in the
                                     //               received option, as per RFC 4862 section
                                     //               5.5.3.e.
-                                    trace!("receive_ndp_packet_inner: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, ND::get_device_id(device_id), valid_for);
+                                    trace!("receive_ndp_packet_inner: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for);
                                 } else {
                                     // Otherwise, reset the valid lifetime of the corresponding
                                     // address to 2 hours.
-                                    trace!("receive_ndp_packet_inner: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, ND::get_device_id(device_id));
+                                    trace!("receive_ndp_packet_inner: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, device_id);
 
                                     // Update the valid lifetime for this address.
                                     let valid_until = now
                                         .checked_add(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
                                         .unwrap();
 
-                                    ND::update_slaac_addr_valid_until(
-                                        ctx,
+                                    ctx.update_slaac_addr_valid_until(
                                         device_id,
                                         &addr,
                                         valid_until,
@@ -3139,13 +2963,13 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     // Must not have reached this point if the address was not
                                     // already assigned to a device.
                                     assert!(ctx
-                                        .dispatcher_mut()
-                                        .schedule_timeout_instant(
+                                        .schedule_timer_instant(
                                             valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address_timer_id::<ND>(
+                                            NdpTimerId::new_invalidate_slaac_address_timer_id(
                                                 device_id,
                                                 addr.get()
-                                            ),
+                                            )
+                                            .into(),
                                         )
                                         .is_some());
                                 }
@@ -3178,7 +3002,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                 // 5.5.3.d.
                                 let address = generate_global_address(
                                     &subnet,
-                                    &ND::get_interface_identifier(ctx.state(), device_id)[..],
+                                    &ctx.get_interface_identifier(device_id)[..],
                                 );
 
                                 // TODO(ghanan): Should bindings be the one to actually assign the
@@ -3186,24 +3010,24 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                                 // Attempt to add the address to the device.
                                 if let Err(err) =
-                                    ND::add_slaac_addr_sub(ctx, device_id, address, valid_until)
+                                    ctx.add_slaac_addr_sub(device_id, address, valid_until)
                                 {
-                                    error!("receive_ndp_packet_inner: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, ND::get_device_id(device_id), err);
+                                    error!("receive_ndp_packet_inner: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
                                 } else {
-                                    trace!("receive_ndp_packet_inner: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, ND::get_device_id(device_id));
+                                    trace!("receive_ndp_packet_inner: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
 
                                     // Set the preferred lifetime for this address.
                                     //
                                     // Must not have reached this point if the address was already
                                     // assigned to a device.
                                     assert!(ctx
-                                        .dispatcher_mut()
-                                        .schedule_timeout_instant(
+                                        .schedule_timer_instant(
                                             preferred_until,
-                                            NdpTimerId::new_deprecate_slaac_address_timer_id::<ND>(
+                                            NdpTimerId::new_deprecate_slaac_address_timer_id(
                                                 device_id,
                                                 address.addr().get()
-                                            ),
+                                            )
+                                            .into(),
                                         )
                                         .is_none());
 
@@ -3212,13 +3036,13 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                                     // Must not have reached this point if the address was already
                                     // assigned to a device.
                                     assert!(ctx
-                                        .dispatcher_mut()
-                                        .schedule_timeout_instant(
+                                        .schedule_timer_instant(
                                             valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address_timer_id::<ND>(
+                                            NdpTimerId::new_invalidate_slaac_address_timer_id(
                                                 device_id,
                                                 address.addr().get()
-                                            ),
+                                            )
+                                            .into(),
                                         )
                                         .is_none());
                                 }
@@ -3231,7 +3055,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             // If the router exists in our router table, make sure it is marked as a router as
             // per RFC 4861 section 6.3.4.
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(device_id);
             if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
                 state.is_router = true;
             }
@@ -3244,7 +3068,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             // Is `target_address` a valid unicast address, and if so, is it associated with
             // our device? If not, drop the packet.
             if !target_address.is_valid_unicast()
-                || ND::ipv6_addr_state(ctx.state(), device_id, target_address).is_none()
+                || ctx.ipv6_addr_state(device_id, target_address).is_none()
             {
                 // just ignore packet, either it was not really meant for us or
                 // is malformed.
@@ -3254,17 +3078,17 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             // We know the call to `unwrap` will not panic because we just checked to make sure
             // that `target_address` is associated with `device_id`.
-            let state = ND::ipv6_addr_state(ctx.state_mut(), device_id, target_address).unwrap();
+            let state = ctx.ipv6_addr_state(device_id, target_address).unwrap();
             if state.is_tentative() {
                 if !src_ip.is_specified() {
                     // If the source address of the packet is the unspecified address,
                     // the source of the packet is performing DAD for the same target
                     // address as our `my_addr`. A duplicate address has been detected.
                     trace!(
-                        "receive_ndp_packet_inner: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, ND::get_device_id(device_id)
+                        "receive_ndp_packet_inner: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
                     );
 
-                    duplicate_address_detected::<_, ND>(ctx, device_id, *target_address);
+                    duplicate_address_detected(ctx, device_id, *target_address);
                 }
 
                 // `target_address` is tentative on `device_id` so we do not continue processing
@@ -3280,22 +3104,20 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             //   3) The target address is not tentative.
             //
 
-            increment_counter!(ctx, "ndp::rx_neighbor_solicitation");
+            ctx.increment_counter("ndp::rx_neighbor_solicitation");
 
             // If we have a source link layer address option, we take it and
             // save to our cache.
             if src_ip.is_specified() {
                 // We only update the cache if it is not from an unspecified address,
                 // i.e., it is not a DAD message. (RFC 4861)
-                if let Some(ll) = get_source_link_layer_option::<ND, _>(p.body()) {
+                if let Some(ll) = get_source_link_layer_option(p.body()) {
                     trace!("receive_ndp_packet_inner: Received NDP NS from {:?} has source link layer option w/ link address {:?}", src_ip, ll);
 
                     // Set the link address and mark it as stale if we either create
                     // the neighbor entry, or updated an existing one, as per RFC 4861
                     // section 7.2.3.
-                    ND::get_ndp_state_mut(ctx.state_mut(), device_id)
-                        .neighbors
-                        .set_link_address(src_ip, ll, false);
+                    ctx.get_state_mut(device_id).neighbors.set_link_address(src_ip, ll, false);
                 }
 
                 trace!(
@@ -3305,7 +3127,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
-                send_neighbor_advertisement::<_, ND>(ctx, device_id, true, *target_address, src_ip);
+                send_neighbor_advertisement(ctx, device_id, true, *target_address, src_ip);
             } else {
                 trace!(
                     "receive_ndp_packet_inner: Received NDP NS: sending NA to all nodes multicast"
@@ -3313,7 +3135,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                 // Send out Unsolicited Advertisement in response to neighbor who's
                 // performing DAD, as described in RFC 4861 and 4862
-                send_neighbor_advertisement::<_, ND>(
+                send_neighbor_advertisement(
                     ctx,
                     device_id,
                     false,
@@ -3327,10 +3149,10 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             let message = p.message();
             let target_address = message.target_address();
-            match ND::ipv6_addr_state(ctx.state(), device_id, target_address) {
+            match ctx.ipv6_addr_state(device_id, target_address) {
                 Some(AddressState::Tentative) => {
-                    trace!("receive_ndp_packet_inner: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, ND::get_device_id(device_id));
-                    duplicate_address_detected::<_, ND>(ctx, device_id, *target_address);
+                    trace!("receive_ndp_packet_inner: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, device_id);
+                    duplicate_address_detected(ctx, device_id, *target_address);
                     return;
                 }
                 Some(AddressState::Assigned) | Some(AddressState::Deprecated) => {
@@ -3338,16 +3160,16 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // just log out the situation for now.
                     //
                     // TODO(ghanan): Signal to bindings that a duplicate address is detected?
-                    error!("receive_ndp_packet_inner: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, ND::get_device_id(device_id));
+                    error!("receive_ndp_packet_inner: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, device_id);
                     return;
                 }
                 // Do nothing.
                 None => {}
             }
 
-            increment_counter!(ctx, "ndp::rx_neighbor_advertisement");
+            ctx.increment_counter("ndp::rx_neighbor_advertisement");
 
-            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+            let ndp_state = ctx.get_state_mut(device_id);
 
             let neighbor_state = if let Some(state) =
                 ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
@@ -3361,7 +3183,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 return;
             };
 
-            let target_ll = get_target_link_layer_option::<ND, _>(p.body());
+            let target_ll = get_target_link_layer_option(p.body());
 
             if neighbor_state.is_incomplete() {
                 // If we are in the Incomplete state, we should not have ever learned about a
@@ -3394,12 +3216,12 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
 
                     // Cancel the resolution timeout.
-                    ctx.dispatcher.cancel_timeout(
-                        NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, src_ip),
+                    ctx.cancel_timer(
+                        NdpTimerId::new_link_address_resolution_timer_id(device_id, src_ip).into(),
                     );
 
                     // Send any packets queued for the neighbor awaiting address resolution.
-                    ND::address_resolved(ctx, device_id, &src_ip, address);
+                    ctx.address_resolved(device_id, &src_ip, address);
                 } else {
                     trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     return;
@@ -3489,14 +3311,14 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
     }
 }
 
-fn get_source_link_layer_option<ND: NdpDevice, B>(options: &Options<B>) -> Option<ND::LinkAddress>
+fn get_source_link_layer_option<L: LinkAddress, B>(options: &Options<B>) -> Option<L>
 where
     B: ByteSlice,
 {
     options.iter().find_map(|o| match o {
         NdpOption::SourceLinkLayerAddress(a) => {
-            if a.len() >= ND::LinkAddress::BYTES_LENGTH {
-                Some(ND::LinkAddress::from_bytes(&a[..ND::LinkAddress::BYTES_LENGTH]))
+            if a.len() >= L::BYTES_LENGTH {
+                Some(L::from_bytes(&a[..L::BYTES_LENGTH]))
             } else {
                 None
             }
@@ -3505,14 +3327,14 @@ where
     })
 }
 
-fn get_target_link_layer_option<ND: NdpDevice, B>(options: &Options<B>) -> Option<ND::LinkAddress>
+fn get_target_link_layer_option<L: LinkAddress, B>(options: &Options<B>) -> Option<L>
 where
     B: ByteSlice,
 {
     options.iter().find_map(|o| match o {
         NdpOption::TargetLinkLayerAddress(a) => {
-            if a.len() >= ND::LinkAddress::BYTES_LENGTH {
-                Some(ND::LinkAddress::from_bytes(&a[..ND::LinkAddress::BYTES_LENGTH]))
+            if a.len() >= L::BYTES_LENGTH {
+                Some(L::from_bytes(&a[..L::BYTES_LENGTH]))
             } else {
                 None
             }
@@ -3563,9 +3385,9 @@ mod tests {
     use packet::{Buf, GrowBuffer, ParseBuffer};
 
     use crate::device::{
-        add_ip_addr_subnet, del_ip_addr, ethernet::EthernetNdpDevice, get_ip_addr_state,
+        add_ip_addr_subnet, del_ip_addr, ethernet::EthernetLinkDevice, get_ip_addr_state,
         get_ip_addr_subnets, get_ipv6_hop_limit, get_mtu, is_in_ip_multicast, is_routing_enabled,
-        set_routing_enabled,
+        set_routing_enabled, DeviceId, DeviceLayerTimerId, DeviceProtocol, EthernetDeviceId,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
@@ -3578,7 +3400,17 @@ mod tests {
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
     };
     use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
-    use crate::{Instant, StackStateBuilder, TimerId};
+    use crate::{Context, Instant, StackStateBuilder, TimerId, TimerIdInner};
+
+    // We assume Ethernet since that's what all of our tests use.
+    impl From<NdpTimerId<EthernetDeviceId>> for TimerId {
+        fn from(id: NdpTimerId<EthernetDeviceId>) -> Self {
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp {
+                id,
+                protocol: DeviceProtocol::Ethernet,
+            }))
+        }
+    }
 
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
@@ -3688,15 +3520,16 @@ mod tests {
         // `MAX_INITIAL_RTR_ADVERT_INTERVAL`
         for i in 0..MAX_INITIAL_RTR_ADVERTISEMENTS {
             assert_eq!(ctx.dispatcher().frames_sent().len(), offset + usize::try_from(i).unwrap());
-            let now = ctx.dispatcher().now();
+            let now = ctx.now();
             assert_eq!(
                 ctx.dispatcher()
                     .timer_events()
                     .filter(|x| (*x.0 <= (now + MAX_INITIAL_RTR_ADVERT_INTERVAL))
                         && (*x.1
-                            == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                                EthernetNdpDevice,
-                            >(device.id())))
+                            == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                                device.id().into()
+                            )
+                            .into()))
                     .count(),
                 1
             );
@@ -3716,16 +3549,17 @@ mod tests {
 
         // Should still have the timer set, but now the time must be between the valid interval
         let interval = ndp_configs.get_router_configurations().get_router_advertisements_interval();
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0 >= (now + Duration::from_secs((*interval.start()).into())))
                     && (*x.0 <= (now + Duration::from_secs((*interval.end()).into())))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -3757,9 +3591,8 @@ mod tests {
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| *x.1
-                    == NdpTimerId::new_router_advertisement_transmit_timer_id::<EthernetNdpDevice>(
-                        device.id()
-                    ))
+                    == NdpTimerId::new_router_advertisement_transmit_timer_id(device.id().into())
+                        .into())
                 .count(),
             0
         );
@@ -4158,14 +3991,14 @@ mod tests {
     #[test]
     fn test_send_neighbor_solicitation_on_cache_miss() {
         set_logger_for_test();
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
-        // Now we have to manually assign the ip addresses, see `EthernetNdpDevice::get_ipv6_addr`
+        // Now we have to manually assign the ip addresses, see `EthernetLinkDevice::get_ipv6_addr`
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
 
-        lookup::<DummyEventDispatcher, EthernetNdpDevice>(&mut ctx, dev_id.id(), remote_ip().get());
+        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip().get());
 
         // Check that we send the original neighbor solicitation,
         // then resend a few times if we don't receive a response.
@@ -4176,7 +4009,7 @@ mod tests {
         }
         // check that we hit the timeout after MAX_MULTICAST_SOLICIT
         assert_eq!(
-            *ctx.state().test_counters.get("ndp::neighbor_solicitation_timeout"),
+            *ctx.state().test_counters.get("ndp::neighbor_solicitation_timer"),
             1,
             "timeout counter at zero"
         );
@@ -4242,9 +4075,9 @@ mod tests {
         net.step();
         // Neighbor entry for remote should be marked as Incomplete.
         assert_eq!(
-            EthernetNdpDevice::get_ndp_state_mut::<_>(
-                net.context("local").state_mut(),
-                device_id.id()
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+                net.context("local"),
+                device_id.id().into()
             )
             .neighbors
             .get_neighbor_state(&remote_ip())
@@ -4271,9 +4104,9 @@ mod tests {
 
         // at the end of the exchange, both sides should have each other on
         // their ndp tables:
-        let local_neighbor = EthernetNdpDevice::get_ndp_state_mut::<_>(
-            net.context("local").state_mut(),
-            device_id.id(),
+        let local_neighbor = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            net.context("local"),
+            device_id.id().into(),
         )
         .neighbors
         .get_neighbor_state(&remote_ip())
@@ -4283,9 +4116,9 @@ mod tests {
         // an NA message with the solicited flag set.
         assert_eq!(local_neighbor.state, NeighborEntryState::Reachable,);
 
-        let remote_neighbor = EthernetNdpDevice::get_ndp_state_mut::<_>(
-            net.context("remote").state_mut(),
-            device_id.id(),
+        let remote_neighbor = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            net.context("remote"),
+            device_id.id().into(),
         )
         .neighbors
         .get_neighbor_state(&local_ip())
@@ -4319,23 +4152,23 @@ mod tests {
         // is deinitialized.
 
         set_logger_for_test();
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
-        // Now we have to manually assign the IP addresses, see `EthernetNdpDevice::get_ipv6_addr`
+        // Now we have to manually assign the IP addresses, see `EthernetLinkDevice::get_ipv6_addr`
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap());
 
-        lookup::<DummyEventDispatcher, EthernetNdpDevice>(&mut ctx, dev_id.id(), remote_ip().get());
+        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip().get());
 
         // This should have scheduled a timer
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Deinitializing a different ID should not impact the current timer
-        deinitialize(&mut ctx, dev_id.id + 1);
+        deinitialize(&mut ctx, (dev_id.id + 1).into());
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut ctx, dev_id.id);
+        deinitialize(&mut ctx, dev_id.id.into());
         assert_eq!(ctx.dispatcher.timer_events().count(), 0);
     }
 
@@ -4460,9 +4293,9 @@ mod tests {
         assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
         assert!(testutil::trigger_next_timer(net.context("local")));
 
-        assert!(EthernetNdpDevice::ipv6_addr_state(
-            net.context("local").state(),
-            device_id.id(),
+        assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+            net.context("local"),
+            device_id.id().into(),
             &local_ip()
         )
         .unwrap()
@@ -4482,9 +4315,9 @@ mod tests {
             0
         );
         // let's make sure that our local node still can use that address
-        assert!(EthernetNdpDevice::ipv6_addr_state(
-            net.context("local").state(),
-            device_id.id(),
+        assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+            net.context("local"),
+            device_id.id().into(),
             &local_ip()
         )
         .unwrap()
@@ -4510,14 +4343,17 @@ mod tests {
         let addr = local_ip();
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), dev_id.id(), &addr).unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(&ctx, dev_id.id().into(), &addr)
+                .unwrap(),
             AddressState::Tentative,
         );
         let addr = remote_ip();
-        assert!(EthernetNdpDevice::ipv6_addr_state(ctx.state(), dev_id.id(), &addr).is_none(),);
+        assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(&ctx, dev_id.id().into(), &addr)
+            .is_none(),);
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), dev_id.id(), &addr).unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(&ctx, dev_id.id().into(), &addr)
+                .unwrap(),
             AddressState::Tentative,
         );
     }
@@ -4534,16 +4370,20 @@ mod tests {
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        EthernetNdpDevice::get_ndp_state_mut(&mut ctx.state_mut(), dev_id.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, dev_id.id().into())
             .set_dad_transmits(NonZeroU8::new(3));
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
         for i in 0..3 {
             assert!(testutil::trigger_next_timer(&mut ctx));
         }
-        assert!(EthernetNdpDevice::ipv6_addr_state(ctx.state(), dev_id.id(), &local_ip())
-            .unwrap()
-            .is_assigned());
+        assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+            &ctx,
+            dev_id.id().into(),
+            &local_ip()
+        )
+        .unwrap()
+        .is_assigned());
     }
 
     #[test]
@@ -4568,11 +4408,14 @@ mod tests {
             },
         );
 
-        EthernetNdpDevice::get_ndp_state_mut(&mut net.context("local").state_mut(), device_id.id())
-            .set_dad_transmits(NonZeroU8::new(3));
-        EthernetNdpDevice::get_ndp_state_mut(
-            &mut net.context("remote").state_mut(),
-            device_id.id(),
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            net.context("local"),
+            device_id.id().into(),
+        )
+        .set_dad_transmits(NonZeroU8::new(3));
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            net.context("remote"),
+            device_id.id().into(),
         )
         .set_dad_transmits(NonZeroU8::new(3));
 
@@ -4728,7 +4571,7 @@ mod tests {
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
-        let device = Some(DeviceId::new_ethernet(0));
+        let device_id = DeviceId::new_ethernet(0);
 
         let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
             .into_serializer()
@@ -4744,7 +4587,7 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
 
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 0);
 
         //
@@ -4760,7 +4603,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
 
         //
@@ -4785,7 +4628,7 @@ mod tests {
                 config.local_ip,
             ))
             .unwrap();
-        ctx.receive_ndp_packet(device, unspecified_source, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, unspecified_source, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
     }
 
@@ -4796,7 +4639,7 @@ mod tests {
         let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
-        let device = Some(DeviceId::new_ethernet(0));
+        let device_id = DeviceId::new_ethernet(0);
 
         //
         // Test receiving NDP RA where source ip is not a link local address (should not receive)
@@ -4807,7 +4650,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 0);
 
         //
@@ -4820,7 +4663,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
     }
 
@@ -4829,8 +4672,7 @@ mod tests {
         let config = get_dummy_config::<Ipv6Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
-        let device = Some(DeviceId::new_ethernet(0));
-        let device_id = device.map(|x| x.id()).unwrap();
+        let device_id = DeviceId::new_ethernet(0);
         let src_ip = config.remote_mac.to_ipv6_link_local();
 
         //
@@ -4850,11 +4692,17 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        assert!(!EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id)
-            .has_default_router(&src_ip));
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert!(!StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        )
+        .has_default_router(&src_ip));
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         // We should have the new router in our list with our NDP parameters updated.
         assert!(ndp_state.has_default_router(&src_ip));
         let base = Duration::from_millis(4);
@@ -4865,7 +4713,7 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(5));
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 1);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 1);
 
         //
         // Receive a new router advertisement for the same router with a valid lifetime.
@@ -4884,9 +4732,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(ndp_state.has_default_router(&src_ip));
         let base = Duration::from_millis(10);
         let min_reachable = base / 2;
@@ -4897,7 +4748,7 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(11));
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 7);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 7);
 
         //
         // Receive a new router advertisement for the same router with a valid lifetime and
@@ -4919,9 +4770,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should be the same value as before.
         assert_eq!(ndp_state.base_reachable_time, base);
@@ -4930,7 +4784,7 @@ mod tests {
         // Should update to new value.
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
         // Should update to new value.
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 13);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 13);
 
         // Zero value for Retransmit Time should not update our retrans_time.
         // Other non zero values should update.
@@ -4947,9 +4801,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should update to new value.
         let base = Duration::from_millis(22);
@@ -4962,7 +4819,7 @@ mod tests {
         // Should be the same value as before.
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
         // Should update to new value.
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 19);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 19);
 
         // Zero value for CurrHopLimit should not update our hop_limit.
         // Other non zero values should update.
@@ -4979,9 +4836,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 5);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should update to new value.
         let base = Duration::from_millis(28);
@@ -4994,7 +4854,7 @@ mod tests {
         // Should update to new value.
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(29));
         // Should be the same value as before.
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 19);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 19);
 
         //
         // Receive new router advertisement with 0 router lifetime, but new parameters.
@@ -5013,9 +4873,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         // Router should no longer be in our list.
         assert!(!ndp_state.has_default_router(&src_ip));
         let base = Duration::from_millis(34);
@@ -5027,7 +4890,7 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(35));
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 31);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 31);
 
         // Router invalidation timeout must have been cleared since we invalided with the
         // received router advertisement with lifetime 0.
@@ -5050,9 +4913,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 7);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         // Router should be re-added.
         assert!(ndp_state.has_default_router(&src_ip));
         let base = Duration::from_millis(40);
@@ -5064,11 +4930,14 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(41));
-        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 37);
+        assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 37);
 
         // Invaldate the router by triggering the timeout.
         assert!(trigger_next_timer(&mut ctx));
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(!ndp_state.has_default_router(&src_ip));
 
         // No more timers.
@@ -5082,8 +4951,7 @@ mod tests {
         // the new hop limit.
         fn inner_test(ctx: &mut Context<DummyEventDispatcher>, hop_limit: u8, frame_offset: usize) {
             let config = get_dummy_config::<Ipv6Addr>();
-            let device = Some(DeviceId::new_ethernet(0));
-            let device_id = device.map(|x| x.id()).unwrap();
+            let device_id = DeviceId::new_ethernet(0);
             let src_ip = config.remote_mac.to_ipv6_link_local();
 
             let mut icmpv6_packet_buf = router_advertisement_message(
@@ -5099,13 +4967,16 @@ mod tests {
             let icmpv6_packet = icmpv6_packet_buf
                 .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
                 .unwrap();
-            assert!(!EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id)
-                .has_default_router(&src_ip));
-            ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
-            assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), hop_limit);
+            assert!(!StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+                ctx,
+                device_id.id().into()
+            )
+            .has_default_router(&src_ip));
+            ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
+            assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), hop_limit);
             crate::ip::send_ip_packet_from_device(
                 ctx,
-                device.unwrap(),
+                device_id,
                 config.local_ip.get(),
                 config.remote_ip.get(),
                 config.remote_ip,
@@ -5135,8 +5006,7 @@ mod tests {
         let config = get_dummy_config::<Ipv6Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
-        let device = Some(DeviceId::new_ethernet(0));
-        let device_id = device.map(|x| x.id()).unwrap();
+        let device_id = DeviceId::new_ethernet(0);
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local();
         let src_mac_bytes = src_mac.bytes();
@@ -5160,12 +5030,18 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(!ndp_state.has_default_router(&src_ip));
         assert!(ndp_state.neighbors.get_neighbor_state(&src_ip).is_none());
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         // We should have the new router in our list with our NDP parameters updated.
         assert!(ndp_state.has_default_router(&src_ip));
         // Should still not have a neighbor added.
@@ -5188,9 +5064,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device_id, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(ndp_state.has_default_router(&src_ip));
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
         assert_eq!(neighbor.link_address.unwrap(), src_mac);
@@ -5202,7 +5081,10 @@ mod tests {
         assert!(trigger_next_timer(&mut ctx));
 
         // Neighbor entry shouldn't change except for `is_router` which should now be `false`.
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device_id.id().into(),
+        );
         assert!(!ndp_state.has_default_router(&src_ip));
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
         assert_eq!(neighbor.link_address.unwrap(), src_mac);
@@ -5231,7 +5113,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let hw_mtu = 5000;
         let device = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, hw_mtu);
-        let device_id = device.id();
+        let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local();
 
@@ -5246,9 +5128,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         assert!(ndp_state.has_default_router(&src_ip));
         assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
 
@@ -5261,9 +5144,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         assert!(ndp_state.has_default_router(&src_ip));
         assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
 
@@ -5276,9 +5160,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         assert!(ndp_state.has_default_router(&src_ip));
         assert_eq!(get_mtu(ctx.state(), device), crate::ip::path_mtu::IPV6_MIN_MTU);
     }
@@ -5321,7 +5206,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
-        let device_id = device.id();
+        let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().get();
         let prefix = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
@@ -5337,9 +5222,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be set.
@@ -5354,9 +5240,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         // Should remove the prefix from our list now.
         assert!(!ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be unset.
@@ -5372,9 +5259,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be set.
@@ -5389,9 +5277,10 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         // Prefix should be in our list still.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should still be set.
@@ -5404,7 +5293,8 @@ mod tests {
         assert!(trigger_next_timer(&mut ctx));
 
         // Prefix should no longer be in our list.
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        let ndp_state =
+            StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device_id);
         assert!(!ndp_state.has_prefix(&addr_subnet));
 
         // No more timers.
@@ -5444,11 +5334,11 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        let time = ctx.dispatcher().now();
+        let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
-        assert!(ctx.dispatcher().now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
+        assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
@@ -5459,9 +5349,9 @@ mod tests {
         validate_params(src_mac, src_ip, message, code);
 
         // Should get 2 more router solicitation messages
-        let time = ctx.dispatcher().now();
+        let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
-        assert_eq!(ctx.dispatcher().now().duration_since(time), RTR_SOLICITATION_INTERVAL);
+        assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[1].1,
@@ -5479,9 +5369,9 @@ mod tests {
             AddrSubnet::new(dummy_config.local_ip.get(), 128).unwrap(),
         )
         .unwrap();
-        let time = ctx.dispatcher().now();
+        let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
-        assert_eq!(ctx.dispatcher().now().duration_since(time), RTR_SOLICITATION_INTERVAL);
+        assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[2].1,
@@ -5489,8 +5379,7 @@ mod tests {
                     // We should have a source link layer option now because we have a
                     // source ip address set.
                     assert_eq!(p.body().iter().count(), 1);
-                    if let Some(ll) = get_source_link_layer_option::<EthernetNdpDevice, _>(p.body())
-                    {
+                    if let Some(ll) = get_source_link_layer_option::<Mac, _>(p.body()) {
                         assert_eq!(ll, dummy_config.local_mac);
                     } else {
                         panic!("Should have a source link layer option");
@@ -5524,17 +5413,17 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        let time = ctx.dispatcher().now();
+        let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
-        assert!(ctx.dispatcher().now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
+        assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Should trigger 1 more router solicitations
-        let time = ctx.dispatcher().now();
+        let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
-        assert_eq!(ctx.dispatcher().now().duration_since(time), RTR_SOLICITATION_INTERVAL);
+        assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
 
         // Each packet would be the same.
@@ -5580,8 +5469,7 @@ mod tests {
 
         let device = ctx.state.add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
-        let timer_id =
-            NdpTimerId::new_router_solicitation_timer_id::<EthernetNdpDevice>(device.id());
+        let timer_id = NdpTimerId::new_router_solicitation_timer_id(device.id().into()).into();
 
         // Send the first router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
@@ -5634,8 +5522,7 @@ mod tests {
 
         let device = ctx.state.add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
-        let timer_id =
-            NdpTimerId::new_router_solicitation_timer_id::<EthernetNdpDevice>(device.id());
+        let timer_id = NdpTimerId::new_router_solicitation_timer_id(device.id().into()).into();
 
         // Send the first router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
@@ -5708,8 +5595,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.local_ip
+            )
+            .unwrap(),
             AddressState::Assigned
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
@@ -5728,13 +5619,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.local_ip
+            )
+            .unwrap(),
             AddressState::Assigned
         );
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.remote_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.remote_ip
+            )
+            .unwrap(),
             AddressState::Tentative
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -5752,8 +5651,12 @@ mod tests {
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.remote_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.remote_ip
+            )
+            .unwrap(),
             AddressState::Assigned
         );
 
@@ -5761,17 +5664,26 @@ mod tests {
         let new_ip = get_other_ip_address::<Ipv6Addr>(3);
         add_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(new_ip.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.local_ip
+            )
+            .unwrap(),
             AddressState::Assigned
         );
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.remote_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &dummy_config.remote_ip
+            )
+            .unwrap(),
             AddressState::Assigned
         );
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &new_ip).unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(&ctx, device.id().into(), &new_ip)
+                .unwrap(),
             AddressState::Assigned
         );
     }
@@ -5795,15 +5707,15 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         // Enable sending router advertisements (`device`) is still not a router though.
-        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device.id().into())
             .configs
             .router_configurations
             .set_should_send_advertisements(true);
 
         // Should panic since `device` is not a router.
-        send_router_advertisement::<_, EthernetNdpDevice>(
+        send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
-            device.id(),
+            device.id().into(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
     }
@@ -5829,15 +5741,15 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Enable sending router advertisements (`device`) is still not a router though.
-        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device.id().into())
             .configs
             .router_configurations
             .set_should_send_advertisements(true);
 
         // Should panic since `device` is not a router.
-        send_router_advertisement::<_, EthernetNdpDevice>(
+        send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
-            device.id(),
+            device.id().into(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
     }
@@ -5865,9 +5777,9 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Should panic since sending router advertisements is disabled.
-        send_router_advertisement::<_, EthernetNdpDevice>(
+        send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
-            device.id(),
+            device.id().into(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
     }
@@ -5894,16 +5806,16 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Enable sending router advertisements (`device`) is still not a router though.
-        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device.id().into())
             .configs
             .router_configurations
             .set_should_send_advertisements(true);
 
         // Finish up DAD.
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(
-                ctx.state(),
-                device.id(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
                 &TEST_LOCAL_MAC.to_ipv6_link_local().get()
             )
             .unwrap(),
@@ -5911,9 +5823,9 @@ mod tests {
         );
         assert_eq!(run_for(&mut ctx, Duration::from_secs(3)), 3);
         assert_eq!(
-            EthernetNdpDevice::ipv6_addr_state(
-                ctx.state(),
-                device.id(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
                 &TEST_LOCAL_MAC.to_ipv6_link_local().get()
             )
             .unwrap(),
@@ -5948,13 +5860,13 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Enable and send router advertisements.
-        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device.id().into())
             .configs
             .router_configurations
             .set_should_send_advertisements(true);
-        send_router_advertisement::<_, EthernetNdpDevice>(
+        send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
-            device.id(),
+            device.id().into(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -5977,9 +5889,12 @@ mod tests {
 
         // Set new values for a new router advertisement.
         let mut router_configs =
-            &mut EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
-                .configs
-                .router_configurations;
+            &mut StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+                &mut ctx,
+                device.id().into(),
+            )
+            .configs
+            .router_configurations;
         router_configs.set_advertised_managed_flag(true);
         router_configs.set_advertised_link_mtu(NonZeroU32::new(1500));
         router_configs.set_advertised_reachable_time(50);
@@ -6003,9 +5918,9 @@ mod tests {
             Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 59, 0, 0, 0, 0, 0, 0, 0, 0]),
         );
         router_configs.set_advertised_prefix_list(vec![prefix1.clone(), prefix2.clone()]);
-        send_router_advertisement::<_, EthernetNdpDevice>(
+        send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
-            device.id(),
+            device.id().into(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
@@ -6063,10 +5978,11 @@ mod tests {
             assert_eq!(ctx.dispatcher().timer_events().count(), 1);
             assert_eq!(
                 *ctx.dispatcher().timer_events().last().unwrap().1,
-                NdpTimerId::new_dad_ns_transmission_timer_id::<EthernetNdpDevice>(
-                    device.id(),
+                NdpTimerId::new_dad_ns_transmission_timer_id(
+                    device.id().into(),
                     TEST_LOCAL_MAC.to_ipv6_link_local().get()
                 )
+                .into()
             );
         }
 
@@ -6192,16 +6108,17 @@ mod tests {
         // Make device a router so it will start sending router advertisements
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 0);
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0 >= (now + Duration::from_secs(200)))
                     && (*x.0 <= (now + Duration::from_secs(300)))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6217,9 +6134,10 @@ mod tests {
                 .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
                     && (*x.0 <= (now + Duration::from_secs(100)))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6235,9 +6153,10 @@ mod tests {
                 .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
                     && (*x.0 <= (now + Duration::from_secs(100)))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6253,9 +6172,10 @@ mod tests {
                 .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
                     && (*x.0 <= (now + Duration::from_secs(150)))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6266,16 +6186,17 @@ mod tests {
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0 >= (now + Duration::from_secs(500)))
                     && (*x.0 <= (now + Duration::from_secs(1000)))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6328,7 +6249,7 @@ mod tests {
         // Should not have sent anything yet.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         // First `MAX_INITIAL_RTR_ADVERTISEMENTS` will have an interval of
         // `MAX_INITIAL_RTR_ADVERT_INTERVAL` because (3 left).
         assert_eq!(
@@ -6336,9 +6257,10 @@ mod tests {
                 .timer_events()
                 .filter(|x| (*x.0 == now.checked_add(MAX_INITIAL_RTR_ADVERT_INTERVAL).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6354,15 +6276,16 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, dummy_config.local_ip, rs);
+        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs);
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0 <= now.checked_add(MAX_RA_DELAY_TIME).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6378,7 +6301,7 @@ mod tests {
         // transmission should not reschedule the router advertisement.
         //
 
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         // First `MAX_INITIAL_RTR_ADVERTISEMENTS` will have an interval of
         // `MAX_INITIAL_RTR_ADVERT_INTERVAL` because (2 left).
         assert_eq!(
@@ -6386,24 +6309,26 @@ mod tests {
                 .timer_events()
                 .filter(|x| (*x.0 == now.checked_add(MAX_INITIAL_RTR_ADVERT_INTERVAL).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
 
         // Skip time to right before the next Router Advertisement transmission.
         run_for(&mut ctx, MAX_INITIAL_RTR_ADVERT_INTERVAL - MIN_RA_DELAY_TIME);
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (x.0.duration_since(now) == MIN_RA_DELAY_TIME)
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6413,16 +6338,17 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, dummy_config.local_ip, rs);
+        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs);
         // Timer should not have been updated.
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (x.0.duration_since(now) == MIN_RA_DELAY_TIME)
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6441,20 +6367,21 @@ mod tests {
         //
 
         // Time the last router advertisement was sent.
-        let last_instant = ctx.dispatcher.now();
+        let last_instant = ctx.now();
 
         // Skip time by 1s (less than `MIN_DELAY_BETWEEN_RAS`).
         run_for(&mut ctx, MIN_DELAY_BETWEEN_RAS - Duration::from_secs(1));
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0
                     == last_instant.checked_add(MAX_INITIAL_RTR_ADVERT_INTERVAL).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6464,7 +6391,7 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, dummy_config.local_ip, rs);
+        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs);
         // Timer should be updated to be at max `MIN_DELAY_BETWEEN_RAS` + `MAX_RA_DELAY_TIME` from
         // the time the last Router Advertisement was sent.
         assert_eq!(
@@ -6473,9 +6400,10 @@ mod tests {
                 .filter(|x| (x.0.duration_since(last_instant)
                     <= (MIN_DELAY_BETWEEN_RAS + MAX_RA_DELAY_TIME))
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6537,7 +6465,7 @@ mod tests {
         // Should not have sent anything yet.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         // First `MAX_INITIAL_RTR_ADVERTISEMENTS` will have an interval of
         // `MAX_INITIAL_RTR_ADVERT_INTERVAL` because (3 left).
         assert_eq!(
@@ -6545,9 +6473,10 @@ mod tests {
                 .timer_events()
                 .filter(|x| (*x.0 == now.checked_add(MAX_INITIAL_RTR_ADVERT_INTERVAL).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
-                            EthernetNdpDevice,
-                        >(device.id())))
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id(
+                            device.id().into()
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -6568,12 +6497,7 @@ mod tests {
                 dummy_config.local_ip,
             ))
             .unwrap();
-        ctx.receive_ndp_packet(
-            Some(device),
-            dummy_config.remote_ip.get(),
-            dummy_config.local_ip,
-            rs,
-        );
+        ctx.receive_ndp_packet(device, dummy_config.remote_ip.get(), dummy_config.local_ip, rs);
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
@@ -6582,7 +6506,10 @@ mod tests {
         validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1, 1800);
 
         // source should be in our neighbor cache.
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
         let neighbor = ndp_state.neighbors.get_neighbor_state_mut(&dummy_config.remote_ip).unwrap();
         assert_eq!(neighbor.link_address.unwrap(), dummy_config.remote_mac);
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
@@ -6609,12 +6536,7 @@ mod tests {
                 dummy_config.local_ip,
             ))
             .unwrap();
-        ctx.receive_ndp_packet(
-            Some(device),
-            dummy_config.remote_ip.get(),
-            dummy_config.local_ip,
-            rs,
-        );
+        ctx.receive_ndp_packet(device, dummy_config.remote_ip.get(), dummy_config.local_ip, rs);
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -6623,7 +6545,10 @@ mod tests {
         validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1, 1800);
 
         // Source's neighbor entry should be updated.
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
         let neighbor = ndp_state.neighbors.get_neighbor_state(&dummy_config.remote_ip).unwrap();
         assert_eq!(neighbor.link_address.unwrap(), dummy_config.remote_mac);
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
@@ -6682,15 +6607,21 @@ mod tests {
 
         // Host should not know about the router yet.
         let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
-        assert!(!EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
-            .has_default_router(&router_ll));
+        assert!(!StateContext::<_, NdpState<Mac, DummyInstant>>::get_state(
+            net.context("host"),
+            device.id().into()
+        )
+        .has_default_router(&router_ll));
 
         // Run the network for `MAX_RA_DELAY_TIME`.
         net.run_for(MAX_RA_DELAY_TIME);
 
         // Host should now know about the router
-        assert!(EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
-            .has_default_router(&router_ll));
+        assert!(StateContext::<_, NdpState<Mac, DummyInstant>>::get_state(
+            net.context("host"),
+            device.id().into()
+        )
+        .has_default_router(&router_ll));
 
         // Making the router a non-advertising interface should make host remove it from its default
         // router list.
@@ -6705,8 +6636,11 @@ mod tests {
 
         // Host should not know about the router anymore.
         let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
-        assert!(!EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
-            .has_default_router(&router_ll));
+        assert!(!StateContext::<_, NdpState<Mac, DummyInstant>>::get_state(
+            net.context("host"),
+            device.id().into()
+        )
+        .has_default_router(&router_ll));
     }
 
     #[test]
@@ -6734,12 +6668,15 @@ mod tests {
             );
             let packet =
                 buf.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
-            ctx.receive_ndp_packet(Some(device), src_ip, dst_ip, packet);
+            ctx.receive_ndp_packet(device, src_ip, dst_ip, packet);
 
-            let neighbor_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
-                .neighbors
-                .get_neighbor_state(&src_ip)
-                .unwrap();
+            let neighbor_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+                ctx,
+                device.id().into(),
+            )
+            .neighbors
+            .get_neighbor_state(&src_ip)
+            .unwrap();
             assert_eq!(neighbor_state.state, expected_state);
             assert_eq!(neighbor_state.is_router, expected_router);
             assert_eq!(neighbor_state.link_address, expected_link_addr);
@@ -6755,10 +6692,13 @@ mod tests {
         let all_nodes_addr = SpecifiedAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap();
 
         // Should not know about the neighbor yet.
-        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
-            .neighbors
-            .get_neighbor_state(&neighbor_ip)
-            .is_none());
+        assert!(StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into()
+        )
+        .neighbors
+        .get_neighbor_state(&neighbor_ip)
+        .is_none());
 
         //
         // Receiving unsolicited NA from a neighbor we don't care about yet should do nothing.
@@ -6776,14 +6716,17 @@ mod tests {
         let packet = buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), neighbor_ip, all_nodes_addr, packet);
+        ctx.receive_ndp_packet(device, neighbor_ip, all_nodes_addr, packet);
 
         // We still do not know about the neighbor since the NA was unsolicited and we never were
         // interested in the neighbor yet.
-        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
-            .neighbors
-            .get_neighbor_state(&neighbor_ip)
-            .is_none());
+        assert!(StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into()
+        )
+        .neighbors
+        .get_neighbor_state(&neighbor_ip)
+        .is_none());
 
         //
         // Receiving solicited NA from a neighbor we don't care about yet should do nothing (should
@@ -6802,14 +6745,17 @@ mod tests {
         let packet = buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), neighbor_ip, all_nodes_addr, packet);
+        ctx.receive_ndp_packet(device, neighbor_ip, all_nodes_addr, packet);
 
         // We still do not know about the neighbor since the NA was unsolicited and we never were
         // interested in the neighbor yet.
-        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
-            .neighbors
-            .get_neighbor_state(&neighbor_ip)
-            .is_none());
+        assert!(StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into()
+        )
+        .neighbors
+        .get_neighbor_state(&neighbor_ip)
+        .is_none());
 
         //
         // Receiving solicited NA from a neighbor we are trying to resolve, but no target link addr.
@@ -6818,8 +6764,11 @@ mod tests {
         //
 
         // Create incomplete neighbor entry.
-        let neighbors =
-            &mut EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id()).neighbors;
+        let neighbors = &mut StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        )
+        .neighbors;
         neighbors.add_incomplete_neighbor_state(neighbor_ip);
 
         test_receiving_na_from_known_neighbor(
@@ -7098,9 +7047,16 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         // No timers.
         assert!(!trigger_next_timer(&mut ctx));
@@ -7145,12 +7101,19 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // No new address should be formed.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         //
         // Receive a new RA with new prefix (autonomous).
@@ -7174,30 +7137,40 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
         assert!(ndp_state.has_prefix(&addr_subnet));
 
         // Should have gotten a new ip.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Tentative);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_deprecate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_deprecate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7207,10 +7180,11 @@ mod tests {
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_invalidate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_invalidate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7218,7 +7192,9 @@ mod tests {
         // Complete DAD
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), 1);
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
@@ -7242,30 +7218,40 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        let ndp_state = StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(
+            &mut ctx,
+            device.id().into(),
+        );
         assert!(ndp_state.has_prefix(&addr_subnet));
 
         // Should not have changed.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
 
         // Timers should have been reset.
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_deprecate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_deprecate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7275,10 +7261,11 @@ mod tests {
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_invalidate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_invalidate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7291,7 +7278,9 @@ mod tests {
 
         run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into()));
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(entry.state(), AddressState::Deprecated);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
 
@@ -7302,7 +7291,11 @@ mod tests {
         //
 
         run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into()));
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         // No more timers.
         assert!(!trigger_next_timer(&mut ctx));
@@ -7332,9 +7325,15 @@ mod tests {
 
         // Manually give the device the expected address/subnet
         add_ip_addr_subnet(&mut ctx, device, expected_addr_sub).unwrap();
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
@@ -7358,12 +7357,18 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
 
         // Address state and configuration type should not have changed.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
@@ -7395,9 +7400,15 @@ mod tests {
         let manual_addr_sub = AddrSubnet::new(manual_addr_sub, prefix_length + 10).unwrap();
         // Manually give the device the expected address but with a different prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub).unwrap();
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
@@ -7422,10 +7433,16 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
@@ -7461,9 +7478,15 @@ mod tests {
         let slaac_addr_sub = AddrSubnet::new(slaac_addr, prefix_length).unwrap();
         // Manually give the device the expected address with the same prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub).unwrap();
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
@@ -7487,16 +7510,24 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 2);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            2
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).nth(0).unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .nth(0)
+                .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), slaac_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
@@ -7519,7 +7550,11 @@ mod tests {
         let prefix_length = 64;
         let addr_subnet = AddrSubnet::<_, SpecifiedAddr<_>>::new(prefix, prefix_length).unwrap();
 
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         //
         // Receive a new RA with new prefix (autonomous), but preferred lifetime is greater than
@@ -7541,8 +7576,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         // Address invalidation timers were added.
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
@@ -7570,7 +7609,11 @@ mod tests {
         let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -7579,7 +7622,7 @@ mod tests {
 
         // Set the retransmit timer between neighbor solicitations to be greater than the preferred
         // lifetime of the prefix.
-        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+        StateContext::<_, NdpState<Mac, DummyInstant>>::get_state_mut(&mut ctx, device.id().into())
             .set_retrans_timer(Duration::from_secs(10));
 
         //
@@ -7604,28 +7647,35 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
 
         // Should have gotten a new ip.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 1);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            1
+        );
         let entry =
-            EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .last()
+                .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Tentative);
         assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
-        let now = ctx.dispatcher().now();
+        let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_deprecate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_deprecate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7635,10 +7685,11 @@ mod tests {
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
-                        == NdpTimerId::new_invalidate_slaac_address_timer_id::<EthernetNdpDevice>(
-                            device.id(),
+                        == NdpTimerId::new_invalidate_slaac_address_timer_id(
+                            device.id().into(),
                             expected_addr
-                        )))
+                        )
+                        .into()))
                 .count(),
             1
         );
@@ -7648,7 +7699,11 @@ mod tests {
 
         // At this point, the address (that was tentative) should just be invalidated (removed)
         // since we should not have any existing connections using the tentative address.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         // No more timers.
         assert!(!trigger_next_timer(&mut ctx));
@@ -7689,17 +7744,20 @@ mod tests {
             let icmpv6_packet = icmpv6_packet_buf
                 .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip))
                 .unwrap();
-            ctx.receive_ndp_packet(Some(device), src_ip, dst_ip, icmpv6_packet);
+            ctx.receive_ndp_packet(device, src_ip, dst_ip, icmpv6_packet);
 
             assert_eq!(
-                EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(),
+                NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(ctx, device.id().into())
+                    .count(),
                 1
             );
-            let now = ctx.dispatcher().now();
+            let now = ctx.now();
             let valid_until =
                 now.checked_add(Duration::from_secs(expected_valid_lifetime.into())).unwrap();
             let entry =
-                EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).last().unwrap();
+                NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(ctx, device.id().into())
+                    .last()
+                    .unwrap();
             assert_eq!(*entry.addr_sub(), addr_sub);
             assert_eq!(entry.state(), AddressState::Assigned);
             assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
@@ -7708,12 +7766,15 @@ mod tests {
                 ctx.dispatcher()
                     .timer_events()
                     .filter(|x| (*x.0
-                                 == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
-                            && (*x.1
-                                == NdpTimerId::new_deprecate_slaac_address_timer_id::<EthernetNdpDevice>(
-                                    device.id(),
-                                    addr_sub.addr().get()
-                                )))
+                        == now
+                            .checked_add(Duration::from_secs(preferred_lifetime.into()))
+                            .unwrap())
+                        && (*x.1
+                            == NdpTimerId::new_deprecate_slaac_address_timer_id(
+                                device.id().into(),
+                                addr_sub.addr().get()
+                            )
+                            .into()))
                     .count(),
                 1
             );
@@ -7722,9 +7783,11 @@ mod tests {
                     .timer_events()
                     .filter(|x| (*x.0 == valid_until)
                         && (*x.1
-                            == NdpTimerId::new_invalidate_slaac_address_timer_id::<
-                                EthernetNdpDevice,
-                            >(device.id(), addr_sub.addr().get())))
+                            == NdpTimerId::new_invalidate_slaac_address_timer_id(
+                                device.id().into(),
+                                addr_sub.addr().get()
+                            )
+                            .into()))
                     .count(),
                 1
             );
@@ -7747,7 +7810,11 @@ mod tests {
         let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_eq!(EthernetNdpDevice::get_ipv6_addr_entries(ctx.state(), device.id()).count(), 0);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
+                .count(),
+            0
+        );
 
         //
         // Receive a new RA with new prefix (autonomous).

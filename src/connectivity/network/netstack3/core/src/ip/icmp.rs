@@ -598,7 +598,10 @@ fn receive_icmpv4_error<
 /// Receive an ICMPv6 packet.
 pub(crate) fn receive_icmpv6_packet<
     B: BufferMut,
-    C: Icmpv6Context<B> + PmtuHandler<Ipv6> + MldHandler + NdpPacketHandler,
+    C: Icmpv6Context<B>
+        + PmtuHandler<Ipv6>
+        + MldHandler
+        + NdpPacketHandler<<C as IpDeviceIdContext>::DeviceId>,
 >(
     ctx: &mut C,
     device: Option<C::DeviceId>,
@@ -649,7 +652,12 @@ pub(crate) fn receive_icmpv6_packet<
         | Icmpv6Packet::NeighborSolicitation(_)
         | Icmpv6Packet::NeighborAdvertisement(_)
         | Icmpv6Packet::Redirect(_) => {
-            ctx.receive_ndp_packet(device, src_ip, dst_ip, packet);
+            ctx.receive_ndp_packet(
+                device.expect("received NDP packet from localhost"),
+                src_ip,
+                dst_ip,
+                packet,
+            );
         }
         Icmpv6Packet::PacketTooBig(packet_too_big) => {
             ctx.increment_counter("receive_icmpv6_packet::packet_too_big");
