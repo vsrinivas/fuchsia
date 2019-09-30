@@ -10,9 +10,12 @@
 use std::fmt::Debug;
 
 use net_types::ethernet::Mac;
+use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 /// The type of address used by a link device.
-pub(crate) trait LinkAddress: 'static + Copy + Clone + Debug + PartialEq {
+pub(crate) trait LinkAddress:
+    'static + FromBytes + AsBytes + Unaligned + Copy + Clone + Debug + Eq
+{
     /// The length of the address in bytes.
     const BYTES_LENGTH: usize;
 
@@ -26,6 +29,19 @@ pub(crate) trait LinkAddress: 'static + Copy + Clone + Debug + PartialEq {
     /// `from_bytes` may panic if `bytes` is not **exactly** [`BYTES_LENGTH`]
     /// long.
     fn from_bytes(bytes: &[u8]) -> Self;
+}
+
+/// A [`LinkAddress`] with a broadcast value.
+///
+/// A `BroadcastLinkAddress` is a `LinkAddress` for which at least one address
+/// is a "broadcast" address, indicating that a frame should be received by all
+/// hosts on a link.
+pub(crate) trait BroadcastLinkAddress: LinkAddress {
+    /// The broadcast address.
+    ///
+    /// If the addressing scheme supports multiple broadcast addresses, then
+    /// there is no requirement as to which one is chosen for this constant.
+    const BROADCAST: Self;
 }
 
 impl LinkAddress for Mac {
@@ -42,6 +58,10 @@ impl LinkAddress for Mac {
         b.copy_from_slice(bytes);
         Self::new(b)
     }
+}
+
+impl BroadcastLinkAddress for Mac {
+    const BROADCAST: Mac = Mac::BROADCAST;
 }
 
 /// A link device.

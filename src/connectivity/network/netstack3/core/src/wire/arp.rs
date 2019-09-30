@@ -8,7 +8,6 @@
 
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
-use std::hash::Hash;
 use std::mem;
 
 use net_types::ethernet::Mac;
@@ -16,7 +15,7 @@ use net_types::ip::Ipv4Addr;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::device::arp::{ArpHardwareType, ArpOp};
+use crate::device::arp::{ArpHardwareType, ArpOp, HType, PType};
 use crate::device::ethernet::EtherType;
 use crate::error::{ParseError, ParseResult};
 use crate::wire::U16;
@@ -79,10 +78,10 @@ pub(crate) fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardware
     ))?;
     let proto = EtherType::from(header.ptype.get());
     let hlen = match hw {
-        ArpHardwareType::Ethernet => <Mac as HType>::hlen(),
+        ArpHardwareType::Ethernet => <Mac as HType>::HLEN,
     };
     let plen = match proto {
-        EtherType::Ipv4 => <Ipv4Addr as PType>::plen(),
+        EtherType::Ipv4 => <Ipv4Addr as PType>::PLEN,
         _ => {
             return debug_err!(
                 Err(ParseError::NotSupported),
@@ -150,55 +149,6 @@ impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
     }
 }
 
-/// A trait to represent a ARP hardware type.
-pub(crate) trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
-    const BROADCAST: Self;
-
-    /// The hardware type.
-    fn htype() -> ArpHardwareType;
-    /// The in-memory size of an instance of the type.
-    fn hlen() -> u8;
-}
-
-/// A trait to represent a ARP protocol type.
-pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
-    /// The protocol type.
-    fn ptype() -> EtherType;
-    /// The in-memory size of an instance of the type.
-    fn plen() -> u8;
-    /// Returns a concrete instance of the protocol address
-    ///
-    /// This is a hack, since we only support Ipv4 - if we support more
-    /// protocols in the future, we'll need to change this to return an enum of
-    /// all the possible protocol addresses.
-    fn addr(self) -> Ipv4Addr;
-}
-
-impl HType for Mac {
-    const BROADCAST: Mac = Mac::BROADCAST;
-
-    fn htype() -> ArpHardwareType {
-        ArpHardwareType::Ethernet
-    }
-    fn hlen() -> u8 {
-        use std::convert::TryFrom;
-        u8::try_from(mem::size_of::<Mac>()).unwrap()
-    }
-}
-
-impl PType for Ipv4Addr {
-    fn ptype() -> EtherType {
-        EtherType::Ipv4
-    }
-    fn plen() -> u8 {
-        use std::convert::TryFrom;
-        u8::try_from(mem::size_of::<Ipv4Addr>()).unwrap()
-    }
-    fn addr(self) -> Ipv4Addr {
-        self
-    }
-}
-
 /// An ARP packet.
 ///
 /// A `ArpPacket` shares its underlying memory with the byte slice it was parsed
@@ -230,15 +180,15 @@ where
         // Consume any padding bytes added by the previous layer.
         buffer.take_rest_front();
 
-        if header.htype.get() != <HwAddr as HType>::htype() as u16
-            || header.ptype.get() != <ProtoAddr as PType>::ptype().into()
+        if header.htype.get() != <HwAddr as HType>::HTYPE as u16
+            || header.ptype.get() != <ProtoAddr as PType>::PTYPE.into()
         {
             return debug_err!(
                 Err(ParseError::NotExpected),
                 "unexpected hardware or network protocols"
             );
         }
-        if header.hlen != <HwAddr as HType>::hlen() || header.plen != <ProtoAddr as PType>::plen() {
+        if header.hlen != <HwAddr as HType>::HLEN || header.plen != <ProtoAddr as PType>::PLEN {
             return debug_err!(
                 Err(ParseError::Format),
                 "unexpected hardware or protocol address length"
@@ -350,8 +300,8 @@ where
             .take_obj_front_zero::<Body<HwAddr, ProtoAddr>>()
             .expect("not enough bytes for an ARP packet");
         header
-            .set_htype(<HwAddr as HType>::htype(), <HwAddr as HType>::hlen())
-            .set_ptype(<ProtoAddr as PType>::ptype(), <ProtoAddr as PType>::plen())
+            .set_htype(<HwAddr as HType>::HTYPE, <HwAddr as HType>::HLEN)
+            .set_ptype(<ProtoAddr as PType>::PTYPE, <ProtoAddr as PType>::PLEN)
             .set_op(self.op);
         body.set_sha(self.sha).set_spa(self.spa).set_tha(self.tha).set_tpa(self.tpa);
     }
@@ -416,8 +366,8 @@ mod tests {
     fn new_header() -> Header {
         let mut header = Header::default();
         header
-            .set_htype(<Mac as HType>::htype(), <Mac as HType>::hlen())
-            .set_ptype(<Ipv4Addr as PType>::ptype(), <Ipv4Addr as PType>::plen())
+            .set_htype(<Mac as HType>::HTYPE, <Mac as HType>::HLEN)
+            .set_ptype(<Ipv4Addr as PType>::PTYPE, <Ipv4Addr as PType>::PLEN)
             .set_op(ArpOp::Request);
         header
     }

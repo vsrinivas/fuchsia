@@ -7,16 +7,21 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::mem;
 use std::time::Duration;
 
 use log::{debug, error};
+use net_types::{ethernet::Mac, ip::Ipv4Addr};
 use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
+use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::context::{
     CounterContext, FrameContext, FrameHandler, StateContext, TimerContext, TimerHandler,
 };
-use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
+use crate::device::ethernet::EtherType;
+use crate::device::link::BroadcastLinkAddress;
+use crate::wire::arp::{ArpPacket, ArpPacketBuilder};
 
 /// The type of an ARP operation.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -42,6 +47,32 @@ impl ArpOp {
             _ => None,
         }
     }
+}
+
+/// A trait to represent an ARP hardware type.
+pub(crate) trait HType: BroadcastLinkAddress + Hash + Eq {
+    /// The hardware type.
+    const HTYPE: ArpHardwareType;
+    /// The in-memory size of an instance of the type.
+    const HLEN: u8;
+}
+
+/// A trait to represent an ARP protocol type.
+pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
+    /// The protocol type.
+    const PTYPE: EtherType;
+    /// The in-memory size of an instance of the type.
+    const PLEN: u8;
+}
+
+impl HType for Mac {
+    const HTYPE: ArpHardwareType = ArpHardwareType::Ethernet;
+    const HLEN: u8 = mem::size_of::<Mac>() as u8;
+}
+
+impl PType for Ipv4Addr {
+    const PTYPE: EtherType = EtherType::Ipv4;
+    const PLEN: u8 = mem::size_of::<Ipv4Addr>() as u8;
 }
 
 /// An ARP hardware protocol.
