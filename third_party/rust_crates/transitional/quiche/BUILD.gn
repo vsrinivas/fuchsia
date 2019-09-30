@@ -14,5 +14,5 @@ rustc_library("quiche") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:ring",
   ]
-  non_rust_deps = [ "//third_party/boringssl:ssl" ]
+  non_rust_deps = [ "//third_party/boringssl" ]
 }
