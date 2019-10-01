@@ -13,7 +13,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
 
 namespace media::audio {
 

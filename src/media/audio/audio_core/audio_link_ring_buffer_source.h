@@ -8,14 +8,9 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
 
 namespace media::audio {
 
-class AudioDevice;
-
-// TODO(johngro): docs
-//
 class AudioLinkRingBufferSource : public AudioLink {
  public:
   static fbl::RefPtr<AudioLinkRingBufferSource> Create(fbl::RefPtr<AudioDevice> source,

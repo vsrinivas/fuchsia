@@ -14,7 +14,6 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {

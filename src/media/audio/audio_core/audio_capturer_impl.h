@@ -28,8 +28,9 @@
 
 namespace media::audio {
 
-class AudioCoreImpl;
 class AudioAdmin;
+class AudioCoreImpl;
+class AudioDeviceManager;
 
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,

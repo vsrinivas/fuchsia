@@ -19,7 +19,6 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/object_registry.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"

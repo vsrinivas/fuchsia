@@ -15,13 +15,10 @@
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_packet_ref.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
 namespace media::audio {
 
-// TODO(johngro): docs
-//
 class AudioLinkPacketSource : public AudioLink {
  public:
   static fbl::RefPtr<AudioLinkPacketSource> Create(fbl::RefPtr<AudioObject> source,

@@ -28,6 +28,7 @@ constexpr bool kEnableRendererWavWriters = false;
 
 class AudioAdmin;
 class AudioCoreImpl;
+class AudioDeviceManager;
 
 class AudioRendererImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
