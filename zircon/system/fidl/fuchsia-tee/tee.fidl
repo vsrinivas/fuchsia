@@ -39,7 +39,8 @@ enum Direction : uint32 {
 
 // An empty parameter type is used as a placeholder for elements in the parameter set that are not
 // used.
-struct Empty {};
+struct Empty {
+};
 
 struct Buffer {
     Direction direction;
@@ -97,12 +98,12 @@ protocol Device {
 
     // Initiates a communication session with the specified trusted application.
     OpenSession(Uuid trusted_app, ParameterSet parameter_set)
-        -> (uint32 session_id, OpResult OpResult);
+        -> (uint32 session_id, OpResult op_result);
 
     // Requests the trusted application perform the provided command. The command is unique to the
     // trusted application.
     InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
-        -> (OpResult OpResult);
+        -> (OpResult op_result);
 
     // Closes an established session.
     CloseSession(uint32 session_id) -> ();

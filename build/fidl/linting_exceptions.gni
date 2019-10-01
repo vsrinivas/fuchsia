@@ -43,6 +43,5 @@ unlinted_libraries = [
   "fuchsia.posix.socket",
   "fuchsia.process",
   "fuchsia.sysmem",
-  "fuchsia.tee",
   "fuchsia.tee.manager",
 ]
