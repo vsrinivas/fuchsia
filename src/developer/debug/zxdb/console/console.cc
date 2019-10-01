@@ -63,4 +63,9 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
   }
 }
 
+void Console::PromptOptions(const std::vector<std::string>& options,
+                            line_input::OptionsCallback callback) {
+  FXL_NOTREACHED() << "Console implementations should override this call.";
+}
+
 }  // namespace zxdb

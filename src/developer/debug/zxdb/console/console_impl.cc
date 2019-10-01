@@ -83,7 +83,11 @@ void PreserveStdoutTermios() {}
 
 }  // namespace
 
-ConsoleImpl::ConsoleImpl(Session* session) : Console(session), line_input_("[zxdb] ") {
+ConsoleImpl::ConsoleImpl(Session* session)
+    : Console(session),
+      line_input_("[zxdb] "),
+      options_line_input_("> "),
+      impl_weak_factory_(this) {
   // Set the line input completion callback that can know about our context.
   // OK to bind |this| since we own the line_input object.
   FillCommandContextCallback fill_command_context([this](Command* cmd) {
@@ -96,12 +100,16 @@ ConsoleImpl::ConsoleImpl(Session* session) : Console(session), line_input_("[zxd
 
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
+
+  current_line_input_ = &line_input_;
 }
 
 ConsoleImpl::~ConsoleImpl() {
   if (!SaveHistoryFile())
     Console::Output(Err("Could not save history file to $HOME/%s.\n", kHistoryFilename));
 }
+
+fxl::WeakPtr<ConsoleImpl> ConsoleImpl::GetImplWeakPtr() { return impl_weak_factory_.GetWeakPtr(); }
 
 void ConsoleImpl::Init() {
   PreserveStdoutTermios();
@@ -236,22 +244,52 @@ void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {
 
   char ch;
   while (read(STDIN_FILENO, &ch, 1) > 0) {
-    if (line_input_.OnInput(ch)) {
-      // EOF (ctrl-d) should exit gracefully.
-      if (line_input_.eof()) {
-        line_input_.EnsureNoRawMode();
-        Console::Output("\n");
-        debug_ipc::MessageLoop::Current()->QuitNow();
-        return;
-      }
+    bool reading_options = options_line_input_.is_active();
+    if (!current_line_input_->OnInput(ch))
+      continue;
 
-      std::string line = line_input_.line();
-      Result result = ProcessInputLine(line);
-      if (result == Result::kQuit)
-        return;
-      line_input_.BeginReadLine();
+    // Getting here means that there is a line to be processed. Options line input would've
+    // triggered the callback by now, so the line is already handled. This means that there is no
+    // need to actually process the line.
+    if (reading_options) {
+      current_line_input_->BeginReadLine();
+      continue;
     }
+
+    // EOF (ctrl-d) should exit gracefully.
+    if (current_line_input_->eof()) {
+      current_line_input_->EnsureNoRawMode();
+      Console::Output("\n");
+      debug_ipc::MessageLoop::Current()->QuitNow();
+      return;
+    }
+
+    std::string line = current_line_input_->line();
+    Result result = ProcessInputLine(line);
+    if (result == Result::kQuit)
+      return;
+
+    current_line_input_->BeginReadLine();
   }
+}
+
+void ConsoleImpl::PromptOptions(const std::vector<std::string>& options,
+                                line_input::OptionsCallback callback) {
+  FXL_DCHECK(!options_line_input_.is_active());
+
+  options_line_input_.PromptOptions(
+      options, [console = GetImplWeakPtr(), callback = std::move(callback)](
+                   fit::result<void, std::string> result, std::vector<int> chosen_options) mutable {
+        if (!console)
+          return;
+
+        // Switch back to the normal mode. If the user wants to go back to the options mode, it
+        // can re-ask for options immediatelly.
+        console->current_line_input_ = &console->line_input_;
+        callback(std::move(result), std::move(chosen_options));
+      });
+
+  current_line_input_ = &options_line_input_;
 }
 
 }  // namespace zxdb

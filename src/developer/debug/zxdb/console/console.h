@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/line_input/options_line_input.h"
 
 namespace zxdb {
 
@@ -54,15 +55,18 @@ class Console {
   // commands.
   virtual Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
 
+  virtual void PromptOptions(const std::vector<std::string>& options,
+                             line_input::OptionsCallback callback);
+
  protected:
   static Console* singleton_;
+  ConsoleContext context_;
 
+ private:
   // Track all asynchronous output pending. We want to store a reference and
   // lookup by pointer, so the object is duplicated here (RefPtr doesn't like
   // to be put in a set).
   std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
-
-  ConsoleContext context_;
 
   fxl::WeakPtrFactory<Console> weak_factory_;
 

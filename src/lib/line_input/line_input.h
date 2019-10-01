@@ -85,7 +85,7 @@ class LineInputBase {
 
   // Provides one character of input to the editor. Returns true if the line
   // is complete (the user has pressed enter).
-  bool OnInput(char c);
+  virtual bool OnInput(char c);
 
   // Adds the given line to history. If the history is longer than
   // max_history_, the oldest thing will be deleted.
@@ -103,20 +103,23 @@ class LineInputBase {
   void Hide();
   void Show();
 
+  // Enables and disables raw mode if applicable.
+  virtual void EnsureRawMode() {}
+  virtual void EnsureNoRawMode() {}
+
  protected:
   // Abstract output function, overridden by a derived class to output to
   // screen.
   virtual void Write(const std::string& data) = 0;
-
-  // Enables and disables raw mode if applicable.
-  virtual void EnsureRawMode() {}
-  virtual void EnsureNoRawMode() {}
 
   // Helper to return the current line of text.
   std::string& cur_line() { return history_[history_index_]; }
 
   // Useful for testing.
   void set_pos(size_t pos) { pos_ = pos; }
+
+  const std::string& prompt() const { return prompt_; }
+  void set_prompt(std::string prompt) { prompt_ = std::move(prompt); }
 
  private:
   void HandleEscapedInput(char c);
@@ -147,7 +150,7 @@ class LineInputBase {
   void RepaintLine();
   void ResetLineState();
 
-  const std::string prompt_;
+  std::string prompt_;
   size_t max_cols_ = 0;
   CompletionCallback completion_callback_;
 

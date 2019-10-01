@@ -14,6 +14,8 @@
 #include "src/developer/debug/zxdb/console/command_group.h"
 #include "src/developer/debug/zxdb/console/switch_record.h"
 
+#define REMOVE_ME
+
 namespace zxdb {
 
 class Command;
@@ -87,6 +89,10 @@ enum class Verb {
   kSysInfo,
   kUntil,
   kUp,
+
+#ifdef REMOVE_ME
+  kOptions,
+#endif
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.
   kLast  // Not a real verb, keep last.

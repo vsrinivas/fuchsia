@@ -7,6 +7,8 @@ static_library("line_input") {
   sources = [
     "line_input.cc",
     "line_input.h",
+    "options_line_input.cc",
+    "options_line_input.h",
   ]
 
   deps = []

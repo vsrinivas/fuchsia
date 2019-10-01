@@ -25,6 +25,8 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
   explicit ConsoleImpl(Session* session);
   virtual ~ConsoleImpl();
 
+  fxl::WeakPtr<ConsoleImpl> GetImplWeakPtr();
+
   // Console implementation
   void Init() override;
   void Output(const OutputBuffer& output) override;
@@ -32,7 +34,10 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
   Console::Result ProcessInputLine(const std::string& line,
                                    CommandCallback callback = nullptr) override;
 
- protected:
+  void PromptOptions(const std::vector<std::string>& options,
+                     line_input::OptionsCallback callback) override;
+
+ private:
   Result DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
 
   // FDWatcher implementation.
@@ -44,12 +49,19 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
 
   debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
+  // Which line input is active right now. Will always be valid.
+  line_input::LineInputBase* current_line_input_ = nullptr;
+
   line_input::LineInputStdout line_input_;
+  // Will only be valid while the console is in "options" mode.
+  line_input::OptionsLineInputStdout options_line_input_;
 
   // Saves the last nonempty input line for re-running when the user just
   // presses "Enter" with no parameters. This must be re-parsed each time
   // because the context can be different.
   std::string previous_line_;
+
+  fxl::WeakPtrFactory<ConsoleImpl> impl_weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ConsoleImpl);
 };

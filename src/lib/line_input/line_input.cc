@@ -438,6 +438,7 @@ void LineInputBase::RepaintLine() {
 void LineInputBase::ResetLineState() {
   editing_ = true;
   pos_ = 0;
+  eof_ = false;
   history_index_ = 0;
   completion_mode_ = false;
 
