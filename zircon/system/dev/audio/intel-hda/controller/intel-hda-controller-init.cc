@@ -13,6 +13,7 @@
 #include <intel-hda/utils/status.h>
 
 #include "debug-logging.h"
+#include "device-ids.h"
 #include "intel-dsp.h"
 #include "intel-hda-controller.h"
 #include "intel-hda-stream.h"

@@ -25,6 +25,7 @@
 
 #include "codec-connection.h"
 #include "debug-logging.h"
+#include "device-ids.h"
 #include "utils.h"
 
 namespace audio {

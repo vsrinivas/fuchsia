@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_BINDING_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_BINDING_H_
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEVICE_IDS_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEVICE_IDS_H_
 
-// The following are used in binding.c and must be #define's
+// PCI Vendor IDs.
+#define INTEL_HDA_PCI_VID 0x8086  // Intel
 
-#define INTEL_HDA_PCI_VID 0x8086
-#define INTEL_HDA_PCI_DID_STANDARD 0x2668   // Standard (Spec Rev 1.0a; 6/17/2010)
+// PCI Device IDs.
+#define INTEL_HDA_PCI_DID_STANDARD 0x2668   // Standard (Spec Rev 1.0a; 2010-06-17)
 #define INTEL_HDA_PCI_DID_BROADWELL 0x9CA0  // Intel Broadwell PCH
 #define INTEL_HDA_PCI_DID_100_C230 0xA170   // Intel 100/C230 PCH Spec
 #define INTEL_HDA_PCI_DID_200_C400 0xA1F0   // Intel 200/C400 PCH Spec
 #define INTEL_HDA_PCI_DID_SKYLAKE 0x9D70    // Intel 6th Gen (Skylake) PCH-U/Y I/O Datasheet
 #define INTEL_HDA_PCI_DID_KABYLAKE 0x9D71   // Intel 7th Gen (Kabylake) PCH-U/Y I/O Datasheet
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_BINDING_H_
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEVICE_IDS_H_
