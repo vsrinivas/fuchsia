@@ -116,13 +116,13 @@ size_t DmaFormat::GetImageSize() const {
   // lines are aligned to kIspLineAlignment bytes
   uint32_t line_offset = fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
   // Start with the size of the primary buffer:
-  size_t image_size = fbl::round_up(line_offset * height_, ZX_PAGE_SIZE);
+  size_t image_size = line_offset * height_;
   // If we have a secondary channel:
   if (base_mode_ == PixelType::NV12) {
-    image_size += fbl::round_up(height_ * line_offset / 2, ZX_PAGE_SIZE);
+    image_size += height_ * line_offset / 2;
   }
   if (base_mode_ == PixelType::YV12) {
-    image_size += fbl::round_up(height_ * line_offset, ZX_PAGE_SIZE);
+    image_size += height_ * line_offset;
   }
   return image_size;
 }
