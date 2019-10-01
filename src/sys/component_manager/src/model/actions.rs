@@ -293,7 +293,8 @@ async fn do_delete_child(
         let mut state = realm.lock_state().await;
         state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
     }
-    child_realm.hooks.on_destroy_instance(child_realm.clone()).await?;
+    let event = Event::DestroyInstance { realm: child_realm.clone() };
+    child_realm.hooks.dispatch(&event).await?;
     Ok(())
 }
 
@@ -334,6 +335,7 @@ mod tests {
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
         crate::startup::{Arguments, BuiltinRootServices},
+        async_trait::*,
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
@@ -421,7 +423,7 @@ mod tests {
             root_component: &'static str,
             components: Vec<(&'static str, ComponentDecl)>,
             realm_moniker: Option<AbsoluteMoniker>,
-            extra_hooks: Vec<Hook>,
+            extra_hooks: Vec<HookRegistration>,
         ) -> Self {
             // Ensure that kernel logging has been set up
             let _ = klog::KernelLogger::init();
@@ -831,13 +833,21 @@ mod tests {
                 Ok(())
             }
 
-            fn hooks(hook: Arc<StopErrorHook>) -> Vec<Hook> {
-                vec![Hook::StopInstance(hook.clone())]
+            fn hooks(hook: Arc<StopErrorHook>) -> Vec<HookRegistration> {
+                vec![HookRegistration {
+                    event_type: EventType::StopInstance,
+                    callback: hook.clone(),
+                }]
             }
         }
-        impl StopInstanceHook for StopErrorHook {
-            fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-                Box::pin(self.on_shutdown_instance_async(realm))
+
+        #[async_trait]
+        impl Hook for StopErrorHook {
+            async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+                if let Event::StopInstance { realm } = event {
+                    self.on_shutdown_instance_async(realm.clone()).await?;
+                }
+                Ok(())
             }
         }
 
@@ -1323,13 +1333,21 @@ mod tests {
                 Ok(())
             }
 
-            fn hooks(hook: Arc<DestroyErrorHook>) -> Vec<Hook> {
-                vec![Hook::DestroyInstance(hook.clone())]
+            fn hooks(hook: Arc<DestroyErrorHook>) -> Vec<HookRegistration> {
+                vec![HookRegistration {
+                    event_type: EventType::DestroyInstance,
+                    callback: hook.clone(),
+                }]
             }
         }
-        impl DestroyInstanceHook for DestroyErrorHook {
-            fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-                Box::pin(self.on_destroy_instance_async(realm))
+
+        #[async_trait]
+        impl Hook for DestroyErrorHook {
+            async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+                if let Event::DestroyInstance { realm } = event {
+                    self.on_destroy_instance_async(realm.clone()).await?;
+                }
+                Ok(())
             }
         }
 

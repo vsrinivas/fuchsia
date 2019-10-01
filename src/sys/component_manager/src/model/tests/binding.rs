@@ -19,7 +19,7 @@ async fn new_model(mock_resolver: MockResolver, mock_runner: MockRunner) -> Mode
 async fn new_model_with(
     mock_resolver: MockResolver,
     mock_runner: MockRunner,
-    additional_hooks: Vec<Hook>,
+    additional_hooks: Vec<HookRegistration>,
 ) -> Model {
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));

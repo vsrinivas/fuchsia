@@ -173,7 +173,8 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        self.hooks.on_add_dynamic_child(child_realm.clone()).await?;
+        let event = Event::AddDynamicChild { realm: child_realm.clone() };
+        self.hooks.dispatch(&event).await?;
         Ok(())
     }
 
@@ -207,7 +208,8 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        realm.hooks.on_remove_dynamic_child(child_realm.clone()).await?;
+        let event = Event::RemoveDynamicChild { realm: child_realm.clone() };
+        realm.hooks.dispatch(&event).await?;
         Ok(())
     }
 
@@ -238,7 +240,8 @@ impl Realm {
         };
         nf.await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         if was_running {
-            realm.hooks.on_stop_instance(realm.clone()).await?;
+            let event = Event::StopInstance { realm: realm.clone() };
+            realm.hooks.dispatch(&event).await?;
         }
         Ok(())
     }

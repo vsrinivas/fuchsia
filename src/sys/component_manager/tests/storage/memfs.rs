@@ -26,10 +26,9 @@ async fn main() -> Result<(), Error> {
 
     let memfs_proxy = m.clone_root_handle();
 
-    let out_dir_handle = fuchsia_runtime::take_startup_handle(
-        fuchsia_runtime::HandleType::DirectoryRequest.into(),
-    )
-    .ok_or(format_err!("missing startup handle"))?;
+    let out_dir_handle =
+        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
+            .ok_or(format_err!("missing startup handle"))?;
 
     let mut out_dir = pseudo_directory! {
         "memfs" =>

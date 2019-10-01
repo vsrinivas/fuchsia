@@ -13,6 +13,7 @@ use {
             hooks::*,
         },
     },
+    async_trait::*,
     cm_rust::FrameworkCapabilityDecl,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -104,15 +105,27 @@ impl Hub {
         Ok(Hub { inner: Arc::new(HubInner::new(component_url)?) })
     }
 
-    pub fn hooks(&self) -> Vec<Hook> {
+    pub fn hooks(&self) -> Vec<HookRegistration> {
         // List the hooks the Hub implements here.
         vec![
-            Hook::AddDynamicChild(self.inner.clone()),
-            Hook::RemoveDynamicChild(self.inner.clone()),
-            Hook::BindInstance(self.inner.clone()),
-            Hook::RouteFrameworkCapability(Arc::new(self.clone())),
-            Hook::StopInstance(self.inner.clone()),
-            Hook::DestroyInstance(self.inner.clone()),
+            HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: self.inner.clone(),
+            },
+            HookRegistration {
+                event_type: EventType::RemoveDynamicChild,
+                callback: self.inner.clone(),
+            },
+            HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
+            HookRegistration {
+                event_type: EventType::RouteFrameworkCapability,
+                callback: Arc::new(self.clone()),
+            },
+            HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
+            HookRegistration {
+                event_type: EventType::DestroyInstance,
+                callback: self.inner.clone(),
+            },
         ]
     }
 
@@ -463,51 +476,40 @@ impl HubInner {
     }
 }
 
-impl model::BindInstanceHook for HubInner {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<model::Realm>,
-        realm_state: &'a model::RealmState,
-        routing_facade: model::RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, realm_state, routing_facade))
+#[async_trait]
+impl model::Hook for HubInner {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        match event {
+            Event::BindInstance { realm, realm_state, routing_facade } => {
+                self.on_bind_instance_async(realm.clone(), *realm_state, routing_facade.clone())
+                    .await?;
+            }
+            Event::AddDynamicChild { realm } => {
+                self.on_add_dynamic_child_async(realm.clone()).await?;
+            }
+            Event::RemoveDynamicChild { realm } => {
+                self.on_remove_dynamic_child_async(realm.clone()).await?;
+            }
+            _ => (),
+        };
+        Ok(())
     }
 }
 
-impl model::AddDynamicChildHook for HubInner {
-    fn on(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_add_dynamic_child_async(realm))
-    }
-}
-
-impl model::RemoveDynamicChildHook for HubInner {
-    fn on(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_remove_dynamic_child_async(realm))
-    }
-}
-
-impl model::RouteFrameworkCapabilityHook for Hub {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<model::Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
-    }
-}
-
-impl model::StopInstanceHook for HubInner {
-    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub to reflect that the component is no longer running
-        Box::pin(async { Ok(()) })
-    }
-}
-
-impl model::DestroyInstanceHook for HubInner {
-    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub to reflect that the instance no longer exists
-        Box::pin(async { Ok(()) })
+#[async_trait]
+impl model::Hook for Hub {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+            let mut capability = capability.lock().await;
+            *capability = self
+                .on_route_framework_capability_async(
+                    realm.clone(),
+                    capability_decl,
+                    capability.take(),
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 
@@ -616,7 +618,7 @@ mod tests {
     async fn start_component_manager_with_hub_and_hooks(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-        additional_hooks: Vec<Hook>,
+        additional_hooks: Vec<HookRegistration>,
     ) -> (Arc<model::Model>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
@@ -780,7 +782,10 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![Hook::RouteFrameworkCapability(Arc::new(HubInjectionTestHook::new()))],
+            vec![HookRegistration {
+                event_type: EventType::RouteFrameworkCapability,
+                callback: Arc::new(HubInjectionTestHook::new()),
+            }],
         )
         .await;
 

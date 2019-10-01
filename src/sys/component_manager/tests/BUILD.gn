@@ -268,12 +268,12 @@ group("tests") {
 
   deps = [
     ":elf_runner_test",
-    "hub:hub_integration_test",
     ":no_pkg_resolver_test",
     ":routing_integration_test",
     ":shutdown_integration_test",
     "collections:collections_integration_test",
     "destruction:destruction_integration_test",
+    "hub:hub_integration_test",
     "storage:storage_integration_test",
   ]
 }

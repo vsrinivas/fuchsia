@@ -6,12 +6,13 @@ use {
     component_manager_lib::{
         framework::RealmServiceHost,
         model::{
+            hooks::*,
             moniker::AbsoluteMoniker,
             testing::{
                 test_helpers::{self, DestroyHook},
                 test_hook::TestHook,
             },
-            Hook, Model,
+            Model,
         },
         startup,
     },
@@ -89,7 +90,14 @@ async fn storage_from_collection() -> Result<(), Error> {
     let test_hook = TestHook::new();
     let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(vec!["coll:storage_user:1"].into());
     model.root_realm.hooks.install(test_hook.hooks()).await;
-    model.root_realm.hooks.install(vec![Hook::DestroyInstance(destroy_hook.clone())]).await;
+    model
+        .root_realm
+        .hooks
+        .install(vec![HookRegistration {
+            event_type: EventType::DestroyInstance,
+            callback: destroy_hook.clone(),
+        }])
+        .await;
     model
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await

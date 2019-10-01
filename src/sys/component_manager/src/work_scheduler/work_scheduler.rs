@@ -7,6 +7,7 @@ use {
         framework::FrameworkCapability,
         model::{error::ModelError, hooks::*, AbsoluteMoniker, Realm},
     },
+    async_trait::*,
     cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
@@ -124,8 +125,11 @@ impl WorkScheduler {
         Self { state: Arc::new(Mutex::new(WorkSchedulerState::new())) }
     }
 
-    pub fn hooks(&self) -> Vec<Hook> {
-        vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        vec![HookRegistration {
+            event_type: EventType::RouteFrameworkCapability,
+            callback: Arc::new(self.clone()),
+        }]
     }
 
     pub async fn schedule_work(
@@ -261,14 +265,16 @@ impl WorkScheduler {
     }
 }
 
-impl RouteFrameworkCapabilityHook for WorkScheduler {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_capability_async(realm, capability_decl, capability))
+#[async_trait]
+impl Hook for WorkScheduler {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+            let mut capability = capability.lock().await;
+            *capability = self
+                .on_route_capability_async(realm.clone(), capability_decl, capability.take())
+                .await?;
+        }
+        Ok(())
     }
 }
 

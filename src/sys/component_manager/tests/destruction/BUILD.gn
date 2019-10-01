@@ -19,6 +19,7 @@ rustc_test("destruction_integration_test_bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests:test_utils",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
@@ -62,8 +63,8 @@ rustc_binary("destruction_trigger_bin") {
 
 test_package("destruction_integration_test") {
   deps = [
-    ":destruction_integration_test_bin",
     ":destruction_collection_realm_bin",
+    ":destruction_integration_test_bin",
     ":destruction_trigger_bin",
     "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
@@ -104,8 +105,6 @@ test_package("destruction_integration_test") {
   tests = [
     {
       name = "destruction_integration_test"
-    }
+    },
   ]
 }
-
-

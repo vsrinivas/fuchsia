@@ -12,13 +12,13 @@ rustc_binary("hub_client_bin") {
   edition = "2018"
   source_root = "hub_client.rs"
   deps = [
-    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//examples/components/routing/fidl:echo-rustc",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -39,16 +39,16 @@ rustc_binary("hub_collection_realm_bin") {
   edition = "2018"
   source_root = "hub_collection_realm.rs"
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -57,15 +57,15 @@ rustc_binary("parent_bin") {
   edition = "2018"
   source_root = "parent.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -84,6 +84,7 @@ rustc_library("hub_test_hook") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
   ]
@@ -130,18 +131,19 @@ rustc_test("hub_integration_test_bin") {
 
 test_package("hub_integration_test") {
   deps = [
-    ":hub_integration_test_bin",
-    ":hub_collection_realm_bin",
-    ":simple_bin",
-    ":parent_bin",
     ":hub_client_bin",
+    ":hub_collection_realm_bin",
+    ":hub_integration_test_bin",
+    ":parent_bin",
+    ":simple_bin",
     "//examples/components/routing/echo_server",
     "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
   meta = [
     {
-      path = rebase_path("//src/sys/component_manager/tests/meta/mock_pkg_resolver_for_hub_integration_test.cmx")
+      path = rebase_path(
+              "//src/sys/component_manager/tests/meta/mock_pkg_resolver_for_hub_integration_test.cmx")
       dest = "mock_pkg_resolver.cmx"
     },
     {
@@ -153,7 +155,8 @@ test_package("hub_integration_test") {
       dest = "hub_client.cm"
     },
     {
-      path = rebase_path("//src/sys/component_manager/tests/meta/echo_realm_for_hub_integration.cml")
+      path = rebase_path(
+              "//src/sys/component_manager/tests/meta/echo_realm_for_hub_integration.cml")
       dest = "echo_realm.cm"
     },
     {

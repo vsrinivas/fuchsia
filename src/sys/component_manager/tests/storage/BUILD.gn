@@ -139,5 +139,3 @@ test_package("storage_integration_test") {
     },
   ]
 }
-
-

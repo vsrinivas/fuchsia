@@ -11,6 +11,7 @@ use {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
+    async_trait::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget,
@@ -80,14 +81,20 @@ async fn use_framework_service() {
         }
     }
 
-    impl RouteFrameworkCapabilityHook for MockRealmServiceHost {
-        fn on<'a>(
-            &'a self,
-            realm: Arc<Realm>,
-            capability_decl: &'a FrameworkCapabilityDecl,
-            capability: Option<Box<dyn FrameworkCapability>>,
-        ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-            Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
+    #[async_trait]
+    impl Hook for MockRealmServiceHost {
+        async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+            if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+                let mut capability = capability.lock().await;
+                *capability = self
+                    .on_route_framework_capability_async(
+                        realm.clone(),
+                        capability_decl,
+                        capability.take(),
+                    )
+                    .await?;
+            }
+            Ok(())
         }
     }
 
@@ -102,9 +109,11 @@ async fn use_framework_service() {
             Self { bind_calls: Arc::new(Mutex::new(vec![])) }
         }
 
-        pub fn hooks(&self) -> Vec<Hook> {
-            // List the hooks the Hub implements here.
-            vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+        pub fn hooks(&self) -> Vec<HookRegistration> {
+            vec![HookRegistration {
+                event_type: EventType::RouteFrameworkCapability,
+                callback: Arc::new(self.clone()),
+            }]
         }
 
         pub fn bind_calls(&self) -> Arc<Mutex<Vec<String>>> {

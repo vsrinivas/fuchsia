@@ -4,14 +4,14 @@
 
 use {
     crate::model::*,
+    async_trait::*,
     cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative, FrameworkCapabilityDecl},
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
     log::*,
     std::{cmp, convert::TryInto, sync::Arc},
@@ -100,9 +100,11 @@ impl RealmServiceHost {
         Self { inner: Arc::new(RealmServiceHostInner::new(model)) }
     }
 
-    pub fn hooks(&self) -> Vec<Hook> {
-        // List the hooks the Hub implements here.
-        vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        vec![HookRegistration {
+            event_type: EventType::RouteFrameworkCapability,
+            callback: Arc::new(self.clone()),
+        }]
     }
 
     pub async fn serve(
@@ -135,14 +137,20 @@ impl RealmServiceHost {
     }
 }
 
-impl RouteFrameworkCapabilityHook for RealmServiceHost {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
+#[async_trait]
+impl Hook for RealmServiceHost {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+            let mut capability = capability.lock().await;
+            *capability = self
+                .on_route_framework_capability_async(
+                    realm.clone(),
+                    capability_decl,
+                    capability.take(),
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 
@@ -371,7 +379,7 @@ mod tests {
             mock_resolver: MockResolver,
             mock_runner: MockRunner,
             realm_moniker: AbsoluteMoniker,
-            hooks: Vec<Hook>,
+            hooks: Vec<HookRegistration>,
         ) -> Self {
             // Init model.
             let mut resolver = ResolverRegistry::new();
@@ -616,8 +624,14 @@ mod tests {
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
         hooks.append(&mut vec![
-            Hook::StopInstance(destroy_hook.clone()),
-            Hook::DestroyInstance(destroy_hook.clone()),
+            HookRegistration {
+                event_type: EventType::StopInstance,
+                callback: destroy_hook.clone(),
+            },
+            HookRegistration {
+                event_type: EventType::DestroyInstance,
+                callback: destroy_hook.clone(),
+            },
         ]);
         let test =
             RealmServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks).await;

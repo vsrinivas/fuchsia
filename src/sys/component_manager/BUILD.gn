@@ -40,6 +40,7 @@ rustc_library("lib") {
     "//src/lib/process_builder",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//src/sys/lib/library_loader:library_loader",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

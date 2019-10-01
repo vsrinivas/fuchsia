@@ -8,6 +8,7 @@ use {
         framework::FrameworkCapability,
         model::{addable_directory::AddableDirectory, *},
     },
+    async_trait::*,
     cm_rust::FrameworkCapabilityDecl,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
@@ -118,13 +119,22 @@ impl TestHook {
     }
 
     /// Returns the set of hooks into the component manager that TestHook is interested in.
-    pub fn hooks(&self) -> Vec<Hook> {
+    pub fn hooks(&self) -> Vec<HookRegistration> {
         vec![
-            Hook::AddDynamicChild(self.inner.clone()),
-            Hook::RemoveDynamicChild(self.inner.clone()),
-            Hook::BindInstance(self.inner.clone()),
-            Hook::StopInstance(self.inner.clone()),
-            Hook::DestroyInstance(self.inner.clone()),
+            HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: self.inner.clone(),
+            },
+            HookRegistration {
+                event_type: EventType::RemoveDynamicChild,
+                callback: self.inner.clone(),
+            },
+            HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
+            HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
+            HookRegistration {
+                event_type: EventType::DestroyInstance,
+                callback: self.inner.clone(),
+            },
         ]
     }
 
@@ -244,38 +254,29 @@ impl TestHookInner {
     }
 }
 
-impl BindInstanceHook for TestHookInner {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        realm_state: &'a RealmState,
-        routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, &realm_state, routing_facade))
-    }
-}
-
-impl AddDynamicChildHook for TestHookInner {
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
-    }
-}
-
-impl RemoveDynamicChildHook for TestHookInner {
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.remove_instance(realm.abs_moniker.clone()))
-    }
-}
-
-impl StopInstanceHook for TestHookInner {
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_stop_instance_async(realm))
-    }
-}
-
-impl DestroyInstanceHook for TestHookInner {
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_destroy_instance_async(realm))
+#[async_trait]
+impl Hook for TestHookInner {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        match event {
+            Event::BindInstance { realm, realm_state, routing_facade } => {
+                self.on_bind_instance_async(realm.clone(), *realm_state, routing_facade.clone())
+                    .await?;
+            }
+            Event::AddDynamicChild { realm } => {
+                self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
+            }
+            Event::RemoveDynamicChild { realm } => {
+                self.remove_instance(realm.abs_moniker.clone()).await?;
+            }
+            Event::StopInstance { realm } => {
+                self.on_stop_instance_async(realm.clone()).await?;
+            }
+            Event::DestroyInstance { realm } => {
+                self.on_destroy_instance_async(realm.clone()).await?;
+            }
+            _ => (),
+        };
+        Ok(())
     }
 }
 
@@ -311,14 +312,20 @@ impl HubInjectionTestHook {
     }
 }
 
-impl RouteFrameworkCapabilityHook for HubInjectionTestHook {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
+#[async_trait]
+impl Hook for HubInjectionTestHook {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+            let mut capability = capability.lock().await;
+            *capability = self
+                .on_route_framework_capability_async(
+                    realm.clone(),
+                    capability_decl,
+                    capability.take(),
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 

@@ -4,73 +4,72 @@
 
 use {
     crate::{framework::FrameworkCapability, model::*},
+    async_trait::*,
     by_addr::ByAddr,
     cm_rust::FrameworkCapabilityDecl,
     futures::{future::BoxFuture, lock::Mutex},
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
 };
 
-pub trait AddDynamicChildHook {
-    // Called when a dynamic instance is added with `realm`.
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+#[async_trait]
+pub trait Hook {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError>;
 }
-pub type AddDynamicChildHookRef = Arc<dyn AddDynamicChildHook + Send + Sync>;
-pub type AddDynamicChildHookInternalRef = ByAddr<dyn AddDynamicChildHook + Send + Sync>;
 
-pub trait RemoveDynamicChildHook {
-    // Called when a dynamic instance is removed from `realm`.
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub enum EventType {
+    AddDynamicChild,
+    RemoveDynamicChild,
+    BindInstance,
+    RouteFrameworkCapability,
+    StopInstance,
+    DestroyInstance,
 }
-pub type RemoveDynamicChildHookRef = Arc<dyn RemoveDynamicChildHook + Send + Sync>;
-pub type RemoveDynamicChildHookInternalRef = ByAddr<dyn RemoveDynamicChildHook + Send + Sync>;
 
-pub trait BindInstanceHook {
-    // Called when a component instance is bound to the given `realm`.
-    fn on<'a>(
-        &'a self,
+pub struct HookRegistration {
+    pub event_type: EventType,
+    pub callback: Arc<dyn Hook + Send + Sync>,
+}
+
+pub enum Event<'a> {
+    AddDynamicChild {
+        realm: Arc<Realm>,
+    },
+    RemoveDynamicChild {
+        realm: Arc<Realm>,
+    },
+    BindInstance {
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
         routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>>;
-}
-pub type BindInstanceHookRef = Arc<dyn BindInstanceHook + Send + Sync>;
-pub type BindInstanceHookInternalRef = ByAddr<dyn BindInstanceHook + Send + Sync>;
-
-pub trait RouteFrameworkCapabilityHook {
-    // Called when the component specified by |abs_moniker| requests a capability provided
-    // by the framework.
-    fn on<'a>(
-        &'a self,
+    },
+    RouteFrameworkCapability {
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>>;
+        // Events are passed to hooks as immutable borrows. In order to mutate,
+        // a field within an Event, interior mutability is employed here with
+        // a Mutex.
+        capability: Mutex<Option<Box<dyn FrameworkCapability>>>,
+    },
+    StopInstance {
+        realm: Arc<Realm>,
+    },
+    DestroyInstance {
+        realm: Arc<Realm>,
+    },
 }
-pub type RouteFrameworkCapabilityHookRef = Arc<dyn RouteFrameworkCapabilityHook + Send + Sync>;
-pub type RouteFrameworkCapabilityHookInternalRef =
-    ByAddr<dyn RouteFrameworkCapabilityHook + Send + Sync>;
 
-pub trait StopInstanceHook {
-    // Called when a component instance is stopped.
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-}
-pub type StopInstanceHookRef = Arc<dyn StopInstanceHook + Send + Sync>;
-pub type StopInstanceHookInternalRef = ByAddr<dyn StopInstanceHook + Send + Sync>;
-
-pub trait DestroyInstanceHook {
-    // Called when component manager destroys an instance (including cleanup).
-    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-}
-pub type DestroyInstanceHookRef = Arc<dyn DestroyInstanceHook + Send + Sync>;
-pub type DestroyInstanceHookInternalRef = ByAddr<dyn DestroyInstanceHook + Send + Sync>;
-
-pub enum Hook {
-    AddDynamicChild(AddDynamicChildHookRef),
-    RemoveDynamicChild(RemoveDynamicChildHookRef),
-    BindInstance(BindInstanceHookRef),
-    RouteFrameworkCapability(RouteFrameworkCapabilityHookRef),
-    StopInstance(StopInstanceHookRef),
-    DestroyInstance(DestroyInstanceHookRef),
+impl Event<'_> {
+    pub fn type_(&self) -> EventType {
+        match self {
+            Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
+            Event::RemoveDynamicChild { .. } => EventType::RemoveDynamicChild,
+            Event::BindInstance { .. } => EventType::BindInstance,
+            Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
+            Event::StopInstance { .. } => EventType::StopInstance,
+            Event::DestroyInstance { .. } => EventType::DestroyInstance,
+        }
+    }
 }
 
 /// This is a collection of hooks to component manager events.
@@ -98,126 +97,29 @@ impl Hooks {
         }
     }
 
-    pub async fn install(&self, hooks: Vec<Hook>) {
-        for hook in hooks.into_iter() {
-            let mut inner = self.inner.lock().await;
-            match hook {
-                Hook::AddDynamicChild(hook) => {
-                    install_hook(&mut inner.add_dynamic_child_hooks, ByAddr::new(hook));
-                }
-                Hook::RemoveDynamicChild(hook) => {
-                    install_hook(&mut inner.remove_dynamic_child_hooks, ByAddr::new(hook));
-                }
-                Hook::BindInstance(hook) => {
-                    install_hook(&mut inner.bind_instance_hooks, ByAddr::new(hook));
-                }
-                Hook::RouteFrameworkCapability(hook) => {
-                    install_hook(&mut inner.capability_routing_hooks, ByAddr::new(hook));
-                }
-                Hook::StopInstance(hook) => {
-                    install_hook(&mut inner.stop_instance_hooks, ByAddr::new(hook));
-                }
-                Hook::DestroyInstance(hook) => {
-                    install_hook(&mut inner.destroy_instance_hooks, ByAddr::new(hook));
-                }
-            }
+    pub async fn install(&self, hooks: Vec<HookRegistration>) {
+        let mut inner = self.inner.lock().await;
+        for hook in hooks {
+            install_hook(
+                &mut inner.hooks.entry(hook.event_type).or_insert(vec![]),
+                ByAddr::new(hook.callback),
+            );
         }
     }
 
-    pub fn on_route_framework_capability<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        mut capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+    pub fn dispatch<'a>(&'a self, event: &'a Event<'a>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            let hooks = { self.inner.lock().await.capability_routing_hooks.clone() };
-            for hook in hooks.iter() {
-                capability = hook.0.on(realm.clone(), &capability_decl, capability).await?;
+            let hooks = {
+                let inner = self.inner.lock().await;
+                inner.hooks.get(&event.type_()).cloned()
+            };
+            if let Some(hooks) = hooks {
+                for hook in hooks.iter() {
+                    hook.0.on(event).await?;
+                }
             }
             if let Some(parent) = &self.parent {
-                capability = parent
-                    .on_route_framework_capability(realm, capability_decl, capability)
-                    .await?;
-            }
-            Ok(capability)
-        })
-    }
-
-    pub fn on_bind_instance<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        realm_state: &'a RealmState,
-        routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            let hooks = { self.inner.lock().await.bind_instance_hooks.clone() };
-            for hook in hooks.iter() {
-                hook.0.on(realm.clone(), &realm_state, routing_facade.clone()).await?;
-            }
-            if let Some(parent) = &self.parent {
-                parent.on_bind_instance(realm, realm_state, routing_facade).await?;
-            }
-            Ok(())
-        })
-    }
-
-    pub fn on_add_dynamic_child<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            let hooks = { self.inner.lock().await.add_dynamic_child_hooks.clone() };
-            for hook in hooks.iter() {
-                hook.0.on(realm.clone()).await?;
-            }
-            if let Some(parent) = &self.parent {
-                parent.on_add_dynamic_child(realm).await?;
-            }
-            Ok(())
-        })
-    }
-
-    pub fn on_remove_dynamic_child<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            let hooks = { self.inner.lock().await.remove_dynamic_child_hooks.clone() };
-            for hook in hooks.iter() {
-                hook.0.on(realm.clone()).await?;
-            }
-            if let Some(parent) = &self.parent {
-                parent.on_remove_dynamic_child(realm).await?;
-            }
-            Ok(())
-        })
-    }
-
-    pub fn on_stop_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            let hooks = { self.inner.lock().await.stop_instance_hooks.clone() };
-            for hook in hooks.iter() {
-                hook.0.on(realm.clone()).await?;
-            }
-            if let Some(parent) = &self.parent {
-                parent.on_stop_instance(realm).await?;
-            }
-            Ok(())
-        })
-    }
-
-    pub fn on_destroy_instance<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            let hooks = { self.inner.lock().await.destroy_instance_hooks.clone() };
-            for hook in hooks.iter() {
-                hook.0.on(realm.clone()).await?;
-            }
-            if let Some(parent) = &self.parent {
-                parent.on_destroy_instance(realm).await?;
+                parent.dispatch(event).await?;
             }
             Ok(())
         })
@@ -225,24 +127,12 @@ impl Hooks {
 }
 
 pub struct HooksInner {
-    add_dynamic_child_hooks: Vec<AddDynamicChildHookInternalRef>,
-    remove_dynamic_child_hooks: Vec<RemoveDynamicChildHookInternalRef>,
-    bind_instance_hooks: Vec<BindInstanceHookInternalRef>,
-    capability_routing_hooks: Vec<RouteFrameworkCapabilityHookInternalRef>,
-    stop_instance_hooks: Vec<StopInstanceHookInternalRef>,
-    destroy_instance_hooks: Vec<DestroyInstanceHookInternalRef>,
+    hooks: HashMap<EventType, Vec<ByAddr<dyn Hook + Send + Sync>>>,
 }
 
 impl HooksInner {
     pub fn new() -> Self {
-        Self {
-            add_dynamic_child_hooks: vec![],
-            remove_dynamic_child_hooks: vec![],
-            bind_instance_hooks: vec![],
-            capability_routing_hooks: vec![],
-            stop_instance_hooks: vec![],
-            destroy_instance_hooks: vec![],
-        }
+        Self { hooks: HashMap::new() }
     }
 }
 
@@ -295,9 +185,13 @@ mod tests {
         }
     }
 
-    impl AddDynamicChildHook for CallCounter {
-        fn on(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(self.on_add_dynamic_child_async())
+    #[async_trait]
+    impl Hook for CallCounter {
+        async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+            if let Event::AddDynamicChild { .. } = event {
+                self.on_add_dynamic_child_async().await?;
+            }
+            Ok(())
         }
     }
 
@@ -314,8 +208,18 @@ mod tests {
         let hooks = Hooks::new(None);
 
         // Attempt to install CallCounter twice.
-        hooks.install(vec![Hook::AddDynamicChild(call_counter.clone())]).await;
-        hooks.install(vec![Hook::AddDynamicChild(call_counter.clone())]).await;
+        hooks
+            .install(vec![HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: call_counter.clone(),
+            }])
+            .await;
+        hooks
+            .install(vec![HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: call_counter.clone(),
+            }])
+            .await;
 
         let realm = {
             let resolver = ResolverRegistry::new();
@@ -323,7 +227,8 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
         };
-        hooks.on_add_dynamic_child(realm.clone()).await.expect("Unable to call hooks.");
+        let event = Event::AddDynamicChild { realm: realm.clone() };
+        hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
     }
 
@@ -335,10 +240,20 @@ mod tests {
 
         let event_log = EventLog::new();
         let parent_call_counter = CallCounter::new("ParentCallCounter", Some(event_log.clone()));
-        parent_hooks.install(vec![Hook::AddDynamicChild(parent_call_counter.clone())]).await;
+        parent_hooks
+            .install(vec![HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: parent_call_counter.clone(),
+            }])
+            .await;
 
         let child_call_counter = CallCounter::new("ChildCallCounter", Some(event_log.clone()));
-        child_hooks.install(vec![Hook::AddDynamicChild(child_call_counter.clone())]).await;
+        child_hooks
+            .install(vec![HookRegistration {
+                event_type: EventType::AddDynamicChild,
+                callback: child_call_counter.clone(),
+            }])
+            .await;
 
         let realm = {
             let resolver = ResolverRegistry::new();
@@ -346,7 +261,8 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
         };
-        child_hooks.on_add_dynamic_child(realm.clone()).await.expect("Unable to call hooks.");
+        let event = Event::AddDynamicChild { realm: realm.clone() };
+        child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
         // been installed on parent_hooks.
         assert_eq!(1, parent_call_counter.count().await);

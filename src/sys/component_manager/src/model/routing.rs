@@ -13,6 +13,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon as zx,
+    futures::lock::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
 const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
@@ -151,15 +152,20 @@ async fn open_framework_capability<'a>(
     capability_decl: &'a FrameworkCapabilityDecl,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let mut capability = None;
+    let event = Event::RouteFrameworkCapability {
+        realm: realm.clone(),
+        capability_decl: &capability_decl,
+        capability: Mutex::new(None),
+    };
+    realm.hooks.dispatch(&event).await?;
 
-    capability = realm
-        .hooks
-        .on_route_framework_capability(realm.clone(), &capability_decl, capability)
-        .await?;
-
-    if let Some(capability) = capability {
-        capability.open(flags, open_mode, relative_path, server_chan).await?;
+    if let Event::RouteFrameworkCapability { realm: _, capability_decl: _, capability } = event {
+        let capability = capability.lock().await.take();
+        if let Some(capability) = capability {
+            capability.open(flags, open_mode, relative_path, server_chan).await?;
+        }
+    } else {
+        panic!("Unexpected event type.");
     }
 
     Ok(())

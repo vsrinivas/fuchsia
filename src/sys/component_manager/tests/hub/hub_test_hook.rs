@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    async_trait::*,
     cm_rust::FrameworkCapabilityDecl,
     component_manager_lib::{framework::FrameworkCapability, model::*},
     fidl::endpoints::ServerEnd,
@@ -77,14 +78,16 @@ impl HubTestHook {
     }
 }
 
-impl RouteFrameworkCapabilityHook for HubTestHook {
-    fn on<'a>(
-        &'a self,
-        _realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(capability_decl, capability))
+#[async_trait]
+impl Hook for HubTestHook {
+    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
+        if let Event::RouteFrameworkCapability { realm: _, capability_decl, capability } = event {
+            let mut capability = capability.lock().await;
+            *capability = self
+                .on_route_framework_capability_async(capability_decl, capability.take())
+                .await?;
+        }
+        Ok(())
     }
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error},
+    failure::Error,
     fdio,
     fidl_fuchsia_sys::FileDescriptor,
     fuchsia_component::client::{self, App, LaunchOptions},
@@ -42,7 +42,9 @@ fn make_pipe() -> (std::fs::File, FileDescriptor) {
     }
 }
 
-pub fn launch_test_component(component_to_launch: String, args: Option<Vec<String>>
+pub fn launch_test_component(
+    component_to_launch: String,
+    args: Option<Vec<String>>,
 ) -> Result<App, Error> {
     let launcher = client::launcher().expect("failed to connect to launcher");
     let options = LaunchOptions::new();

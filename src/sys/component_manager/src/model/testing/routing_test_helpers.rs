@@ -94,7 +94,7 @@ impl RoutingTest {
     pub async fn new_with_hooks<F>(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        additional_hooks: Vec<Hook>,
+        additional_hooks: Vec<HookRegistration>,
         builtin_service_fs: F,
     ) -> Self
     where
@@ -196,7 +196,14 @@ impl RoutingTest {
             instance.clone(),
         ));
         let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(instance_moniker.clone());
-        self.model.root_realm.hooks.install(vec![Hook::DestroyInstance(destroy_hook)]).await;
+        self.model
+            .root_realm
+            .hooks
+            .install(vec![HookRegistration {
+                event_type: EventType::DestroyInstance,
+                callback: destroy_hook,
+            }])
+            .await;
         capability_util::call_destroy_child(
             component_resolved_url,
             self.namespaces.clone(),

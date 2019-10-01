@@ -230,7 +230,12 @@ impl Model {
             // TODO: Don't hold the lock while calling the hooks.
             let mut state = realm.lock_state().await;
             let mut state = state.as_mut().expect("bind_single_instance: not resolved");
-            realm.hooks.on_bind_instance(realm.clone(), &mut state, routing_facade.clone()).await?;
+            let event = Event::BindInstance {
+                realm: realm.clone(),
+                realm_state: &mut state,
+                routing_facade: routing_facade.clone(),
+            };
+            realm.hooks.dispatch(&event).await?;
             eager_children
         };
         Ok(eager_children)

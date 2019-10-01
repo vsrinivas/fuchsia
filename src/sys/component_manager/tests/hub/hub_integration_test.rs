@@ -52,7 +52,10 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
     model
         .root_realm
         .hooks
-        .install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())])
+        .install(vec![HookRegistration {
+            event_type: EventType::RouteFrameworkCapability,
+            callback: hub_test_hook.clone(),
+        }])
         .await;
     hub_test_hook
 }
