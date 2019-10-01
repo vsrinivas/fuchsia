@@ -10,11 +10,14 @@ use {
     failure::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy,
-        FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin, Service,
+        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin,
+        Service,
     },
     fuchsia_async::run_until_stalled,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
+    fuchsia_vfs_pseudo_fs::{
+        directory::entry::DirectoryEntry, file::simple::read_only_static, pseudo_directory,
+    },
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, FutureExt, StreamExt},
     std::future::Future,
@@ -27,10 +30,9 @@ async fn complete_with_no_clients() {
 
 fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, DirectoryProxy) {
     let mut fs = ServiceFs::new();
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()
-        .expect("Unable to create directory proxy");
-    fs.serve_connection(dir_server_end.into_channel())
-        .expect("unable to serve main dir proxy");
+    let (dir_proxy, dir_server_end) =
+        create_proxy::<DirectoryMarker>().expect("Unable to create directory proxy");
+    fs.serve_connection(dir_server_end.into_channel()).expect("unable to serve main dir proxy");
     (fs, dir_proxy)
 }
 
@@ -45,7 +47,8 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
     }
 
     fn assert_peer_closed(chan: zx::Channel) {
-        let err = chan.read_raw(&mut vec![], &mut vec![])
+        let err = chan
+            .read_raw(&mut vec![], &mut vec![])
             .expect("unexpected too small buffer")
             .expect_err("should've been a PEER_CLOSED error");
         assert_eq!(err, zx::Status::PEER_CLOSED);
@@ -222,6 +225,46 @@ async fn open_remote_directory_files() -> Result<(), Error> {
     // Check that we can read the contents of the file.
     assert_read(&file_proxy, data.len() as u64, data).await.expect("read data did not match");
     top_proxy.read_dirents(128).await.expect("failed to read top directory entries");
+
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
+    let data = "test";
+    let mut root = pseudo_directory! {
+        "test.txt" => read_only_static(data)
+    };
+    let mut fs = ServiceFs::new();
+    let (remote_proxy, remote_server_end) = create_proxy::<DirectoryMarker>()?;
+
+    root.open(
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        0,
+        &mut vec![].into_iter(),
+        fidl::endpoints::ServerEnd::<NodeMarker>::from(remote_server_end.into_channel()),
+    );
+
+    // Add the remote as "test"
+    fs.add_remote("test", remote_proxy);
+    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    fs.serve_connection(dir_server_end.into_channel())?;
+
+    fuchsia_async::spawn(async move {
+        root.await;
+    });
+    fuchsia_async::spawn(fs.collect::<()>());
+
+    // Open the test file
+    let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
+    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    dir_proxy.open(flags, mode, "test/test.txt", file_server_end.into_channel().into())?;
+
+    // Check that we can read the contents of the file.
+    assert_read(&file_proxy, data.len() as u64, data.as_bytes())
+        .await
+        .expect("could not read expected data");
 
     Ok(())
 }

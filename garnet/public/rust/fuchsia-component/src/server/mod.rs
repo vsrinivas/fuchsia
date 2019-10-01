@@ -986,7 +986,11 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         }
                     }
                     DescendResult::RemoteDir((proxy, remaining_path)) => {
-                        let remaining_path = vec![remaining_path, end_segment.to_owned()].join("/");
+                        let remaining_path = vec![remaining_path, end_segment.to_owned()]
+                            .into_iter()
+                            .filter(|x| x.len() > 0)
+                            .collect::<Vec<_>>()
+                            .join("/");
                         proxy.open(flags, mode, &remaining_path, object)?;
                         return Ok((None, ConnectionState::Open));
                     }
