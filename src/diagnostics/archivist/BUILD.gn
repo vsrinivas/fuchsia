@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-inspect",
     "//garnet/public/rust/fuchsia-inspect-contrib",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-watch",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",

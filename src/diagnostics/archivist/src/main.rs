@@ -6,6 +6,8 @@
 
 use {
     failure::Error,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{component, health::Reporter},
@@ -55,6 +57,16 @@ fn main() -> Result<(), Error> {
             ARCHIVE_PATH,
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )?,
+    );
+
+    // Publish stats on global storage.
+    fs.add_remote(
+        "global_data",
+        storage_inspect_proxy("global_data".to_string(), PathBuf::from("/global_data"))?,
+    );
+    fs.add_remote(
+        "global_tmp",
+        storage_inspect_proxy("global_tmp".to_string(), PathBuf::from("/global_tmp"))?,
     );
 
     // The repository that will serve as the data transfer between the archivist server
@@ -335,4 +347,17 @@ async fn process_event(
             return populate_inspect_repo(&mut state, data)
         }
     };
+}
+
+// Returns a DirectoryProxy that contains a dynamic inspect file with stats on files stored under
+// `path`.
+fn storage_inspect_proxy(name: String, path: PathBuf) -> Result<DirectoryProxy, Error> {
+    let (proxy, server) =
+        create_proxy::<DirectoryMarker>().expect("failed to create directoryproxy");
+
+    fasync::spawn(async move {
+        diagnostics::publish_data_directory_stats(name, path, server.into_channel().into()).await;
+    });
+
+    Ok(proxy)
 }

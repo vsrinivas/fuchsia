@@ -1,9 +1,18 @@
 use {
     crate::archive::{EventFileGroupStats, EventFileGroupStatsMap},
+    core::future::Future,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{NodeMarker, OPEN_RIGHT_READABLE},
+    files_async,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
-    fuchsia_inspect::{component, Node, NumericProperty, Property, UintProperty},
+    fuchsia_inspect::{self as inspect, component, Node, NumericProperty, Property, UintProperty},
+    fuchsia_vfs_pseudo_fs::{
+        directory::entry::DirectoryEntry, file::asynchronous::read_only, pseudo_directory,
+    },
+    fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    std::path::Path,
+    std::collections::BTreeMap,
+    std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
 };
 
@@ -18,6 +27,8 @@ lazy_static! {
         component::inspector().root().create_child("current_group");
     static ref CURRENT_GROUP: Arc<Mutex<Option<Stats>>> = Arc::new(Mutex::new(None));
 }
+
+const STORAGE_INSPECT_FILE_NAME: &'static str = "storage_stats.inspect";
 
 enum GroupData {
     Node(Node),
@@ -111,13 +122,102 @@ pub fn update_current_group(stats: &EventFileGroupStats) {
     }
 }
 
+async fn get_data_directory_stats(name: String, path: PathBuf) -> Result<Vec<u8>, zx::Status> {
+    let inspector = inspect::Inspector::new_with_size(1024 * 1024); // 1MB buffer.
+
+    let proxy = io_util::open_directory_in_namespace(
+        &path.to_string_lossy(),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+    )
+    .or(Err(zx::Status::INTERNAL))?;
+
+    let mut file_and_size = files_async::readdir_recursive(&proxy)
+        .await
+        .or(Err(zx::Status::INTERNAL))?
+        .into_iter()
+        .map(|val| {
+            let pb = PathBuf::from(val.name);
+            let meta = path.join(&pb).metadata().ok();
+            (pb, meta)
+        })
+        .filter_map(|entry| match entry {
+            (pb, Some(meta)) => {
+                if meta.is_file() {
+                    Some((pb, meta.len()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    file_and_size.sort_by(|a, b| a.0.cmp(&b.0));
+
+    struct Entry {
+        node: Node,
+        size_property: UintProperty,
+        children: BTreeMap<String, Box<Entry>>,
+    }
+
+    let node = inspector.root().create_child(name);
+    let size_property = node.create_uint("size", 0);
+    let mut top = Box::new(Entry { node, size_property, children: BTreeMap::new() });
+
+    for val in file_and_size.iter() {
+        let (pb, size) = val;
+
+        top.size_property.add(*size);
+
+        let mut cur = &mut top;
+        for next in pb {
+            let next = next.to_string_lossy().into_owned();
+            if !cur.children.contains_key(&next) {
+                let node = cur.node.create_child(&next);
+                let size_property = node.create_uint("size", 0);
+                cur.children.insert(
+                    next.clone(),
+                    Box::new(Entry { node, size_property, children: BTreeMap::new() }),
+                );
+            }
+            cur = cur.children.get_mut(&next).expect("find just inserted value");
+            cur.size_property.add(*size);
+        }
+    }
+
+    inspector.copy_vmo_data().ok_or(zx::Status::INTERNAL)
+}
+
+pub fn publish_data_directory_stats(
+    name: String,
+    path: PathBuf,
+    server_end: ServerEnd<NodeMarker>,
+) -> impl Future {
+    let mut dir = pseudo_directory! {
+        STORAGE_INSPECT_FILE_NAME => read_only(
+            move || get_data_directory_stats(name.clone(), path.clone()))
+    };
+
+    dir.open(OPEN_RIGHT_READABLE, 0, &mut std::iter::empty(), server_end);
+
+    dir
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_io::DirectoryMarker;
+    use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect::health::Reporter;
+    use fuchsia_inspect::reader::NodeHierarchy;
+    use io_util;
+    use std::convert::TryFrom;
+    use std::fs::File;
+    use std::io::prelude::*;
     use std::iter::FromIterator;
-    use std::path::PathBuf;
+    use tempfile::TempDir;
 
     #[test]
     fn health() {
@@ -234,5 +334,104 @@ mod test {
                 size_in_bytes: 20u64,
             }
         });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_data_directory_stats_test() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        File::create(tempdir.path().join("my_file.txt"))
+            .expect("create file")
+            .write_all(b"Hello")
+            .expect("writing test file");
+        std::fs::create_dir_all(tempdir.path().join("data/a/b")).expect("make data/a/b");
+        std::fs::create_dir_all(tempdir.path().join("data/a/c/d")).expect("make data/a/c/d");
+
+        for f in
+            ["data/top.txt", "data/a/a.txt", "data/a/b/b.txt", "data/a/c/c.txt", "data/a/c/d/d.txt"]
+                .into_iter()
+        {
+            File::create(tempdir.path().join(f))
+                .expect(format!("create file {}", f).as_ref())
+                .write_all(f.as_bytes())
+                .expect(format!("writing {}", f).as_ref());
+        }
+
+        let val = get_data_directory_stats("test_data".to_string(), tempdir.path().join("data"))
+            .await
+            .expect("get data");
+        assert_inspect_tree!(NodeHierarchy::try_from(val).expect("data is not an inspect file"),
+        root: {
+            test_data: {
+                size: 68u64,
+                "top.txt": {
+                    size: 12u64
+                },
+                a: {
+                    size: 56u64,
+                    "a.txt": {
+                        size: 12u64
+                    },
+                    b: {
+                        size: 14u64,
+                        "b.txt": {
+                            size: 14u64,
+                        }
+                    },
+                    c: {
+                        size: 30u64,
+                        "c.txt": {
+                            size: 14u64
+                        },
+                        d: {
+                            size: 16u64,
+                            "d.txt": {
+                                size: 16u64
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn publish_data_directory_stats_test() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        File::create(tempdir.path().join("test.txt")).expect("make file");
+
+        let (proxy, server) =
+            create_proxy::<DirectoryMarker>().expect("failed to create directoryproxy");
+
+        let path_clone = tempdir.path().to_path_buf();
+        fasync::spawn(async move {
+            publish_data_directory_stats(
+                "test_data".to_string(),
+                path_clone,
+                server.into_channel().into(),
+            )
+            .await;
+        });
+
+        let f = io_util::open_file(
+            &proxy,
+            &PathBuf::from(STORAGE_INSPECT_FILE_NAME),
+            OPEN_RIGHT_READABLE,
+        )
+        .expect("failed to open storage inspect file");
+
+        let bytes = io_util::read_file_bytes(&f).await.expect("failed to read file");
+        assert_inspect_tree!(
+            NodeHierarchy::try_from(bytes).expect("file is not an inspect file"),
+        root: {
+            test_data: contains {
+                size:0u64,
+                "test.txt": {
+                    size: 0u64
+                }
+            }
+        });
+
+        assert!(proxy.describe().await.is_ok());
+        assert!(f.describe().await.is_ok());
     }
 }
