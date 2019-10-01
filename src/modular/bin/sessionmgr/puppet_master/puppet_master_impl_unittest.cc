@@ -772,7 +772,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataAllVariants) {
   RunLoopUntil([&]() { return add_mod_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Create some annotations, one for each variant of AnnotationValue.
   auto text_annotation_value = fuchsia::modular::AnnotationValue{};
@@ -868,7 +868,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataWithoutWaiting) {
   RunLoopUntil([&] { return add_mod_done && annotate_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Get the matching module and confirm it has the annotations we added
   bool read_done = false;
@@ -927,7 +927,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataBeforeAddMod) {
   RunLoopUntil([&] { return add_mod_done && annotate_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Get the matching module and confirm it has the annotations we added
   bool read_done = false;
@@ -996,7 +996,7 @@ TEST_F(PuppetMasterTest, AnnotateMergeInModuleData) {
   RunLoopUntil([&]() { return add_mod_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Create the initial set of annotations.
   auto first_annotation_value = fuchsia::modular::AnnotationValue{};
@@ -1093,7 +1093,7 @@ TEST_F(PuppetMasterTest, AnnotateModuleBufferValueTooBig) {
   RunLoopUntil([&]() { return add_mod_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Create an annotation with a large buffer value.
   fuchsia::mem::Buffer buffer{};
@@ -1147,7 +1147,7 @@ TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
   RunLoopUntil([&]() { return add_mod_done; });
   EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(story_name, executor_.last_story_id());
+  EXPECT_EQ(story_name, executor_.last_story_id().value_or(""));
 
   // Annotate the story repeatedly, in batches of MAX_ANNOTATIONS_PER_UPDATE items, in order
   // to reach, but not exceed the MAX_ANNOTATIONS_PER_MODULE limit.

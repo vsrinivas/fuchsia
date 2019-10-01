@@ -77,7 +77,7 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
                                  std::string expected_param_data) {
     for (const auto& parameter : *intent->parameters) {
       if (parameter.data.is_json()) {
-        if (parameter.name == expected_param_name) {
+        if (parameter.name.value_or("") == expected_param_name) {
           std::string parameter_data;
           FXL_CHECK(fsl::StringFromVmo(parameter.data.json(), &parameter_data));
           if (expected_param_data == parameter_data) {

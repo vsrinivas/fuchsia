@@ -485,8 +485,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   AtEnd(Reset(&local_module_resolver_));
 
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, kSessionShellComponentNamespace, session_shell_url,
-      session_shell_url);
+      component_context_info, kSessionShellComponentNamespace, session_shell_url.value_or(""),
+      session_shell_url.value_or(""));
 
   AtEnd(Reset(&session_shell_component_context_impl_));
 

@@ -115,7 +115,8 @@ TEST_F(ServiceTest, CanOpenAsAService) {
 
       fidl::StringPtr ans;
       ptr->EchoString("hello", &ans);
-      EXPECT_EQ(answer(), ans);
+      ASSERT_TRUE(ans.has_value());
+      EXPECT_EQ(answer(), ans.value());
     }
   }
 }

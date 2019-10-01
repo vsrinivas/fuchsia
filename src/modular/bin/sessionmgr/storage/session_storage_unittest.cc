@@ -83,7 +83,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
 
     EXPECT_EQ("story_name", data->story_name());
     EXPECT_TRUE(data->story_options().kind_of_proto_story);
-    EXPECT_EQ(story_name, data->story_info().id());
+    ASSERT_TRUE(story_name.has_value());
+    EXPECT_EQ(story_name.value(), data->story_info().id());
 
     EXPECT_TRUE(data->story_info().has_annotations());
     EXPECT_EQ(1u, data->story_info().annotations().size());
@@ -315,7 +316,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   auto created_story_name = CreateStory(storage.get());
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
+  ASSERT_TRUE(created_story_name.has_value());
+  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
 
   // Update something and see a new notification.
   updated = false;
@@ -331,7 +333,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   storage->UpdateStoryOptions(created_story_name, std::move(story_options));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
+  ASSERT_TRUE(created_story_name.has_value());
+  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
   EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
 
   // Delete the story and expect to see a notification.
@@ -367,7 +370,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   auto created_story_name = CreateStory(remote_storage.get());
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
+  ASSERT_TRUE(created_story_name.has_value());
+  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
 
   // Update something and see a new notification.
   updated = false;
@@ -383,7 +387,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   remote_storage->UpdateStoryOptions(created_story_name, std::move(story_options));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
+  ASSERT_TRUE(created_story_name.has_value());
+  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
   EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
 
   // Delete the story and expect to see a notification.

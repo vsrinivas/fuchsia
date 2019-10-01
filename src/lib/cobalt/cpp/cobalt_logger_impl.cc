@@ -13,9 +13,10 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/macros.h>
 
 #include <set>
+
+#include <src/lib/fxl/macros.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
@@ -90,7 +91,7 @@ void BaseCobaltLoggerImpl::LogIntHistogram(
     std::vector<fuchsia::cobalt::HistogramBucket> histogram) {
   LogEvent(std::make_unique<IntHistogramEvent>(
       metric_id, event_code, component,
-      fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>(std::move(histogram))));
+      std::vector<fuchsia::cobalt::HistogramBucket>(std::move(histogram))));
 }
 
 void BaseCobaltLoggerImpl::LogCustomEvent(

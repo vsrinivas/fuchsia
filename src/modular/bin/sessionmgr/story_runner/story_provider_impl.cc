@@ -133,8 +133,9 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
             .storage = std::move(story_storage), .current_data = std::move(story_data),
           };
 
-          container.model_owner = std::make_unique<StoryModelOwner>(
-              story_id_, container.executor.get(), std::make_unique<NoopStoryModelStorage>());
+          container.model_owner =
+              std::make_unique<StoryModelOwner>(story_id_.value_or(""), container.executor.get(),
+                                                std::make_unique<NoopStoryModelStorage>());
           container.model_observer = container.model_owner->NewObserver();
           container.InitializeInspect(story_id_, session_inspect_node_);
 
@@ -152,7 +153,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
                 story_provider->NotifyStoryStateChange(id);
               });
 
-          auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_,
+          auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_.value_or(""),
                                                                             std::move(container));
 
           story_runtime_container_ = &it.first->second;

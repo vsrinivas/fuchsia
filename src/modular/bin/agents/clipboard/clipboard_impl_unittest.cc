@@ -54,7 +54,8 @@ TEST_F(ClipboardImplTest, PushAndPeek) {
   std::string expected_value = "a test string";
   Push(expected_value);
   Peek([&callback_called, expected_value](const fidl::StringPtr& text) {
-    EXPECT_EQ(expected_value, text);
+    ASSERT_TRUE(text.has_value());
+    EXPECT_EQ(expected_value, text.value());
     callback_called = true;
   });
 
@@ -66,11 +67,13 @@ TEST_F(ClipboardImplTest, PushAndPeekTwice) {
   std::string expected_value = "a test string";
   Push(expected_value);
   Peek([&callback_called, expected_value](const fidl::StringPtr& text) {
-    EXPECT_EQ(expected_value, text);
+    ASSERT_TRUE(text.has_value());
+    EXPECT_EQ(expected_value, text.value());
     callback_called++;
   });
   Peek([&callback_called, expected_value](const fidl::StringPtr& text) {
-    EXPECT_EQ(expected_value, text);
+    ASSERT_TRUE(text.has_value());
+    EXPECT_EQ(expected_value, text.value());
     callback_called++;
   });
 

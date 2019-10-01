@@ -48,7 +48,7 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsService) {
   // enclosing_environment_.CreateComponent(..).
   enclosing_environment_->ConnectToService(echo_ptr.NewRequest());
   echo_ptr->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return message == answer_; }, kTimeout));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return message.value_or("") == answer_; }, kTimeout));
 }
 
 // Demonstrates use adding fake service as component to EnclosingEnvironment.
@@ -70,7 +70,7 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsServiceComponent) {
   // enclosing_environment_.CreateComponent(..).
   enclosing_environment_->ConnectToService(echo_ptr.NewRequest());
   echo_ptr->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return message == answer_; }, kTimeout));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return message.value_or("") == answer_; }, kTimeout));
 }
 
 }  // namespace

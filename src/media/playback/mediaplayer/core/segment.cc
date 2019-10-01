@@ -43,7 +43,7 @@ void Segment::NotifyUpdate() const {
 }
 
 void Segment::ReportProblem(const std::string& type, const std::string& details) {
-  if (problem_ && problem_->type == type && problem_->details == details) {
+  if (problem_ && problem_->type == type && problem_->details.value_or("") == details) {
     // No change.
     return;
   }

@@ -48,7 +48,7 @@ bool ApplySetOp(fidl::StringPtr* value_str, const fidl::VectorPtr<std::string>& 
   auto apply_fn = [&new_value_at_path](CrtJsonDoc& doc, CrtJsonPointer& p) {
     p.Set(doc, std::move(new_value_at_path));
   };
-  ApplyOp(value_str, path.value_or({}), apply_fn);
+  ApplyOp(value_str, path.value_or(std::vector<std::string>{}), apply_fn);
   return true;
 }
 

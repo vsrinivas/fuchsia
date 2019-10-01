@@ -30,9 +30,7 @@ Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
   debugfn();
 }
 
-Device::~Device() {
-  debugfn();
-}
+Device::~Device() { debugfn(); }
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t eth_device_ops = {
@@ -164,8 +162,7 @@ zx_status_t Device::Bind() {
   // The MLME interface has no start/stop commands, so we will start the wlanif_impl
   // device immediately
   zx_handle_t sme_channel = ZX_HANDLE_INVALID;
-  zx_status_t status =
-  wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &sme_channel);
+  zx_status_t status = wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &sme_channel);
   ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
     errorf("wlanif: call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
@@ -432,7 +429,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   impl_req.channel = req.channel;
 
   // rsne
-  CopyRSNE(req.rsne.value_or({}), impl_req.rsne, &impl_req.rsne_len);
+  CopyRSNE(req.rsne.value_or(std::vector<uint8_t>{}), impl_req.rsne, &impl_req.rsne_len);
 
   wlanif_impl_start_req(&wlanif_impl_, &impl_req);
 }

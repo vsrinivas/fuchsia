@@ -61,7 +61,8 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneId) {
   timezone_ptr->GetTimezoneId(
       [&actual_timezone](fidl::StringPtr retval) { actual_timezone = retval; });
   RunLoopUntilIdle();
-  ASSERT_EQ(expected_timezone, actual_timezone);
+  ASSERT_TRUE(actual_timezone.has_value());
+  ASSERT_EQ(expected_timezone, actual_timezone.value());
 }
 
 TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {

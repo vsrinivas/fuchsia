@@ -34,7 +34,9 @@ void AddModCommandRunner::Execute(fidl::StringPtr story_id, StoryStorage* const 
   }
 
   AddModParams params;
-  params.parent_mod_path = std::move(add_mod.surface_parent_mod_name.value_or({}));
+  if (add_mod.surface_parent_mod_name.has_value()) {
+    params.parent_mod_path = std::move(add_mod.surface_parent_mod_name.value());
+  }
   if (add_mod.mod_name_transitional.has_value()) {
     params.mod_name = add_mod.mod_name_transitional.value();
   } else if (add_mod.mod_name.size() == 1) {

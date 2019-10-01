@@ -158,9 +158,11 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
                                        [&](fuchsia::sys::StartupInfo startup_info,
                                            std::unique_ptr<sys::testing::InterceptedComponent> c) {
                                          intercepted_url = true;
-                                         for (const auto& metadata :
-                                              startup_info.program_metadata.value_or({})) {
-                                           program_metadata[metadata.key] = metadata.value;
+                                         if (startup_info.program_metadata.has_value()) {
+                                           for (const auto& metadata :
+                                                startup_info.program_metadata.value()) {
+                                             program_metadata[metadata.key] = metadata.value;
+                                           }
                                          }
                                        }));
 

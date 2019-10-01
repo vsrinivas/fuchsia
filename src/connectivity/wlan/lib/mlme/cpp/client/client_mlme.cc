@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/zx/time.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
+
 #include <cinttypes>
 #include <cstring>
 #include <sstream>
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
@@ -22,8 +25,6 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/mlme/wlan.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 namespace wlan {
 
@@ -157,7 +158,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
     return sta_->Deauthenticate(deauth_req->body()->reason_code);
   } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
-    return sta_->Associate(assoc_req->body()->rsn.value_or({}));
+    return sta_->Associate(assoc_req->body()->rsn.value_or(std::vector<uint8_t>{}));
   } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
     auto body = eapol_req->body();
     return sta_->SendEapolFrame(body->data, common::MacAddr(body->src_addr),

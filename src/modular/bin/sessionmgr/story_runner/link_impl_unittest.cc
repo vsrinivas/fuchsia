@@ -189,7 +189,8 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
 
   const std::string expected_value = R"({"one":1,"two":"two","three":3})";
   EXPECT_EQ(4, notified_count);  // initial, 3x Set
-  EXPECT_EQ(expected_value, notified_value);
+  ASSERT_TRUE(notified_value.has_value());
+  EXPECT_EQ(expected_value, notified_value.value());
 
   bool get_done{};
   link->Get(nullptr /* path */, [&](std::unique_ptr<fuchsia::mem::Buffer> value) {

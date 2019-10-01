@@ -4,8 +4,9 @@
 
 #include "garnet/bin/trace_manager/tracee.h"
 
-#include <fbl/algorithm.h>
 #include <lib/async/default.h>
+
+#include <fbl/algorithm.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
@@ -106,7 +107,9 @@ bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
   provider_config.buffering_mode = buffering_mode;
   provider_config.buffer = std::move(buffer_vmo_for_provider);
   provider_config.fifo = std::move(fifo_for_provider);
-  provider_config.categories = std::move(categories.value_or({}));
+  if (categories.has_value()) {
+    provider_config.categories = std::move(categories.value());
+  }
   bundle_->provider->Initialize(std::move(provider_config));
 
   provider::StartOptions start_options;

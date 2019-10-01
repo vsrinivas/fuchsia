@@ -4,15 +4,16 @@
 
 #include "convert.h"
 
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <net/ethernet.h>
+
+#include <algorithm>
+#include <bitset>
+
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
-
-#include <algorithm>
-#include <bitset>
 
 namespace wlanif {
 
@@ -149,7 +150,8 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
   ConvertRateSets(wlanif_desc, fidl_desc);
 
   // rsne
-  CopyRSNE(fidl_desc.rsn.value_or({}), wlanif_desc->rsne, &wlanif_desc->rsne_len);
+  CopyRSNE(fidl_desc.rsn.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
+           &wlanif_desc->rsne_len);
 
   // chan
   ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);

@@ -256,7 +256,7 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ(mod_hash, story_data->story_name());
   EXPECT_EQ(mod_package_name,
-            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional.value_or(""));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -291,7 +291,7 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ(mod_package_name,
-            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional.value_or(""));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 

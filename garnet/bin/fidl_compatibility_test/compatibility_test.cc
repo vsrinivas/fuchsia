@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -15,6 +14,8 @@
 #include <cstdlib>
 #include <random>
 #include <vector>
+
+#include <fidl/test/compatibility/cpp/fidl.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 #include "gtest/gtest.h"
@@ -710,19 +711,13 @@ void InitializeStruct(Struct* s) {
 
   s->vectors.b_sized_0 = std::vector<bool>{bool_distribution(rand_engine)};
   s->vectors.i8_sized_0 = std::vector<int8_t>{int8_distribution(rand_engine)};
-  s->vectors.i16_sized_0 =
-      std::vector<int16_t>{int16_distribution(rand_engine)};
-  s->vectors.i32_sized_0 =
-      std::vector<int32_t>{int32_distribution(rand_engine)};
-  s->vectors.i64_sized_0 =
-      std::vector<int64_t>{int64_distribution(rand_engine)};
+  s->vectors.i16_sized_0 = std::vector<int16_t>{int16_distribution(rand_engine)};
+  s->vectors.i32_sized_0 = std::vector<int32_t>{int32_distribution(rand_engine)};
+  s->vectors.i64_sized_0 = std::vector<int64_t>{int64_distribution(rand_engine)};
   s->vectors.u8_sized_0 = std::vector<uint8_t>{uint8_distribution(rand_engine)};
-  s->vectors.u16_sized_0 =
-      std::vector<uint16_t>{uint16_distribution(rand_engine)};
-  s->vectors.u32_sized_0 =
-      std::vector<uint32_t>{uint32_distribution(rand_engine)};
-  s->vectors.u64_sized_0 =
-      std::vector<uint64_t>{uint64_distribution(rand_engine)};
+  s->vectors.u16_sized_0 = std::vector<uint16_t>{uint16_distribution(rand_engine)};
+  s->vectors.u32_sized_0 = std::vector<uint32_t>{uint32_distribution(rand_engine)};
+  s->vectors.u64_sized_0 = std::vector<uint64_t>{uint64_distribution(rand_engine)};
   s->vectors.f32_sized_0 = std::vector<float>{float_distribution(rand_engine)};
   s->vectors.f64_sized_0 = std::vector<double>{double_distribution(rand_engine)};
 
@@ -732,28 +727,28 @@ void InitializeStruct(Struct* s) {
     s->vectors.handle_sized_0 = std::vector<zx::handle>(std::move(underlying_vec));
   }
 
-  s->vectors.b_sized_1 = 
+  s->vectors.b_sized_1 =
       std::vector<bool>(fidl::test::compatibility::vectors_size, bool_distribution(rand_engine));
-  s->vectors.i8_sized_1 = 
+  s->vectors.i8_sized_1 =
       std::vector<int8_t>(fidl::test::compatibility::vectors_size, int8_distribution(rand_engine));
-  s->vectors.i16_sized_1 = std::vector<int16_t>(
-      fidl::test::compatibility::vectors_size, int16_distribution(rand_engine));
-  s->vectors.i32_sized_1 = std::vector<int32_t>(
-      fidl::test::compatibility::vectors_size, int32_distribution(rand_engine));
-  s->vectors.i64_sized_1 = std::vector<int64_t>(
-      fidl::test::compatibility::vectors_size, int64_distribution(rand_engine));
-  s->vectors.u8_sized_1 = std::vector<uint8_t>(
-      fidl::test::compatibility::vectors_size, uint8_distribution(rand_engine));
-  s->vectors.u16_sized_1 = std::vector<uint16_t>(
-      fidl::test::compatibility::vectors_size, uint16_distribution(rand_engine));
-  s->vectors.u32_sized_1 = std::vector<uint32_t>(
-      fidl::test::compatibility::vectors_size, uint32_distribution(rand_engine));
-  s->vectors.u64_sized_1 = std::vector<uint64_t>(
-      fidl::test::compatibility::vectors_size, uint64_distribution(rand_engine));
-  s->vectors.f32_sized_1 = 
+  s->vectors.i16_sized_1 = std::vector<int16_t>(fidl::test::compatibility::vectors_size,
+                                                int16_distribution(rand_engine));
+  s->vectors.i32_sized_1 = std::vector<int32_t>(fidl::test::compatibility::vectors_size,
+                                                int32_distribution(rand_engine));
+  s->vectors.i64_sized_1 = std::vector<int64_t>(fidl::test::compatibility::vectors_size,
+                                                int64_distribution(rand_engine));
+  s->vectors.u8_sized_1 = std::vector<uint8_t>(fidl::test::compatibility::vectors_size,
+                                               uint8_distribution(rand_engine));
+  s->vectors.u16_sized_1 = std::vector<uint16_t>(fidl::test::compatibility::vectors_size,
+                                                 uint16_distribution(rand_engine));
+  s->vectors.u32_sized_1 = std::vector<uint32_t>(fidl::test::compatibility::vectors_size,
+                                                 uint32_distribution(rand_engine));
+  s->vectors.u64_sized_1 = std::vector<uint64_t>(fidl::test::compatibility::vectors_size,
+                                                 uint64_distribution(rand_engine));
+  s->vectors.f32_sized_1 =
       std::vector<float>(fidl::test::compatibility::vectors_size, float_distribution(rand_engine));
-  s->vectors.f64_sized_1 = std::vector<double>(
-      fidl::test::compatibility::vectors_size, double_distribution(rand_engine));
+  s->vectors.f64_sized_1 = std::vector<double>(fidl::test::compatibility::vectors_size,
+                                               double_distribution(rand_engine));
   {
     std::vector<zx::handle> underlying_vec;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
@@ -824,7 +819,7 @@ void InitializeStruct(Struct* s) {
   {
     std::vector<std::vector<int8_t>> int8_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-      int8_outer_vector.emplace_back(VectorPtr<int8_t>(
+      int8_outer_vector.emplace_back(std::vector<int8_t>(
           std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
     }
     s->vectors.i8_nullable_1 = VectorPtr<std::vector<int8_t>>(std::move(int8_outer_vector));

@@ -86,7 +86,8 @@ TEST_F(ComposedServiceDirectorySimpleTest, ConnectToServices) {
     service_directory.Connect(s, ptr.NewRequest().TakeChannel());
     fidl::StringPtr ans;
     ptr->EchoString("hello", &ans);
-    EXPECT_EQ(s, ans);
+    ASSERT_TRUE(ans.has_value());
+    EXPECT_EQ(s, ans.value());
   }
 
   std::string fallback_services[] = {"echo4", "echo5"};
@@ -96,7 +97,8 @@ TEST_F(ComposedServiceDirectorySimpleTest, ConnectToServices) {
     service_directory.Connect(s, ptr.NewRequest().TakeChannel());
     fidl::StringPtr ans;
     ptr->EchoString("hello", &ans);
-    EXPECT_EQ("fallback_" + s, ans);
+    ASSERT_TRUE(ans.has_value());
+    EXPECT_EQ("fallback_" + s, ans.value());
   }
 }
 
