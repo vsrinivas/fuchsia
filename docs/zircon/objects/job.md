@@ -33,8 +33,8 @@ controlled as a single entity.
  - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running.
 
-[`zx_job_create()`]: ../syscalls/job_create.md
-[`zx_job_set_policy()`]: ../syscalls/job_set_policy.md
-[`zx_process_create()`]: ../syscalls/process_create.md
-[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
-[`zx_task_kill()`]: ../syscalls/task_kill.md
+[`zx_job_create()`]: /docs/reference/syscalls/job_create.md
+[`zx_job_set_policy()`]: /docs/reference/syscalls/job_set_policy.md
+[`zx_process_create()`]: /docs/reference/syscalls/process_create.md
+[`zx_task_create_exception_channel()`]: /docs/reference/syscalls/task_create_exception_channel.md
+[`zx_task_kill()`]: /docs/reference/syscalls/task_kill.md

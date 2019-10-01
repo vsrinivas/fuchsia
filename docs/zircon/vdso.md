@@ -1,6 +1,7 @@
 # Zircon vDSO
 
-The Zircon vDSO is the sole means of access to [system calls](syscalls.md)
+The Zircon vDSO is the sole means of access to [system
+calls](/docs/reference/syscalls/README.md)
 in Zircon.  vDSO stands for *virtual Dynamic Shared Object*.  (*Dynamic
 Shared Object* is a term used for a shared library in the ELF format.)
 It's *virtual* because it's not loaded from an ELF file that sits in a
@@ -29,7 +30,7 @@ makes it easier to use the system call ABI without implementing a
 general-purpose ELF loader and full ELF dynamic linking semantics.
 
 ELF symbol names are the same as C identifiers with external linkage.
-Each [system call](syscalls.md) corresponds to an ELF symbol in the vDSO,
+Each [system call](/docs/reference/syscalls/README.md) corresponds to an ELF symbol in the vDSO,
 and has the ABI of a C function.  The vDSO functions use only the basic
 machine-specific C calling conventions governing the use of machine
 registers and the stack, which is common across many systems that use ELF,
@@ -101,7 +102,7 @@ info entry* `PA_HND(PA_VMO_VDSO, 0)`.
 ### **abigen** tool
 
 The [`abigen` tool](/zircon/tools/abigen/) generates both C/C++ function
-declarations that form the public [system call](syscalls.md) API, and some
+declarations that form the public [system call](/docs/reference/syscalls/README.md) API, and some
 C++ and assembly code used in the implementation of the vDSO.  Both the
 public API and the private interface between the kernel and the vDSO code
 are specified by
@@ -279,8 +280,8 @@ subset of the full vDSO system call interface.  For example, system
 calls intended only for use by device drivers might be elided from the
 vDSO variant used for normal application code.
 
-[`zx_process_start()]: syscalls/process_start.md
-[`zx_system_get_num_cpus()`]: syscalls/system_get_num_cpus.md
-[`zx_system_get_version()`]: syscalls/system_get_version.md
-[`zx_ticks_per_second()`]: syscalls/ticks_per_second.md
-[`zx_vmar_map()`]: syscalls/vmar_map.md
+[`zx_process_start()]: /docs/reference/syscalls/process_start.md
+[`zx_system_get_num_cpus()`]: /docs/reference/syscalls/system_get_num_cpus.md
+[`zx_system_get_version()`]: /docs/reference/syscalls/system_get_version.md
+[`zx_ticks_per_second()`]: /docs/reference/syscalls/ticks_per_second.md
+[`zx_vmar_map()`]: /docs/reference/syscalls/vmar_map.md

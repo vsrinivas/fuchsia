@@ -44,9 +44,9 @@ TODO(teisenbe): Add details about failed transaction notification.
  - [`zx_bti_release_quarantine()`] - release quarantined PMTs
  - [`zx_pmt_unpin()`] - revoke access and unpin memory
 
-[`zx_bti_create()`]: /docs/zircon/syscalls/bti_create.md
+[`zx_bti_create()`]: /docs/reference/syscalls/bti_create.md
 
-[`zx_bti_pin()`]: /docs/zircon/syscalls/bti_pin.md
-[`zx_bti_release_quarantine()`]: /docs/zircon/syscalls/bti_release_quarantine.md
-[`zx_pmt_unpin()`]: /docs/zircon/syscalls/pmt_unpin.md
+[`zx_bti_pin()`]: /docs/reference/syscalls/bti_pin.md
+[`zx_bti_release_quarantine()`]: /docs/reference/syscalls/bti_release_quarantine.md
+[`zx_pmt_unpin()`]: /docs/reference/syscalls/pmt_unpin.md
 

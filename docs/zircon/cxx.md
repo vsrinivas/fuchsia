@@ -288,7 +288,7 @@ FBL not available outside the Platform Source Tree.
 ## ZX
 
 ZX contains C++ wrappers for the Zircon [objects](objects) and
-[syscalls](syscalls.md).  These wrappers provide type safety and move semantics
+[syscalls](/docs/reference/syscalls/README.md).  These wrappers provide type safety and move semantics
 for handles but offer no opinion beyond what's in syscalls.abigen.  At some
 point in the future, we might autogenerate ZX from syscalls.abigen, similar to
 how we autogenerate the syscall wrappers in other languages.

@@ -75,7 +75,7 @@ the write threshold.
  - [`zx_socket_shutdown()`] - prevent reading or writing
  - [`zx_socket_write()`] - write data to a socket
 
-[`zx_socket_create()`]: ../syscalls/socket_create.md
-[`zx_socket_read()`]: ../syscalls/socket_read.md
-[`zx_socket_shutdown()`]: ../syscalls/socket_shutdown.md
-[`zx_socket_write()`]: ../syscalls/socket_write.md
+[`zx_socket_create()`]: /docs/reference/syscalls/socket_create.md
+[`zx_socket_read()`]: /docs/reference/syscalls/socket_read.md
+[`zx_socket_shutdown()`]: /docs/reference/syscalls/socket_shutdown.md
+[`zx_socket_write()`]: /docs/reference/syscalls/socket_write.md

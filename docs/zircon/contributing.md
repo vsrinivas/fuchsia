@@ -38,10 +38,10 @@ incomplete and will be expanded over time.
     - Documentation should be in Markdown files. Zircon documentation is located in [/docs/zircon][googlesource-docs].
       Please check how your docs are rendered.
 
-    - Some notable docs: there's a list of syscalls in [/docs/zircon/syscalls.md][syscall-doc] and a list of
+    - Some notable docs: there's a list of syscalls in [/docs/reference/syscalls/README.md][syscall-doc] and a list of
       kernel cmdline options in [/docs/reference/kernel/kernel_cmdline.md][cmdline-doc].  When editing or adding
       syscalls or cmdlines, update the docs!
 
 [googlesource-docs]: /docs/zircon/
-[syscall-doc]: /docs/zircon/syscalls.md
+[syscall-doc]: /docs/reference/syscalls/README.md
 [cmdline-doc]: /docs/reference/kernel/kernel_cmdline.md

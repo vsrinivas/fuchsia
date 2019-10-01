@@ -16,10 +16,10 @@ The standard Zircon userspace environment uses
 the [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)
 format for machine-code executable files, and provides a dynamic linker and
 C/C++ execution environment that are based on ELF.  Zircon processes can
-use [system calls](syscalls.md) only via the [vDSO](vdso.md), which is
+use [system calls](/docs/reference/syscalls/README.md) only via the [vDSO](vdso.md), which is
 provided by the kernel in ELF format and uses the C/C++ calling conventions
 common to ELF-based systems for the machine.  Userspace code (given the
-appropriate capabilities) can use the [system call](syscalls.md) building
+appropriate capabilities) can use the [system call](/docs/reference/syscalls/README.md) building
 blocks directly to create processes and load programs into them without
 using ELF.  But Zircon's standard ABI for machine code uses ELF as
 described here.
@@ -240,7 +240,7 @@ get fully random placement to maximize the benefits of ASLR.
 [`<zircon/processargs.h>`](/zircon/system/public/zircon/processargs.h) defines
 the protocol for the *bootstrap message* sent on the *bootstrap channel* by
 the program loader.  When a process starts up, it has a handle to this
-bootstrap channel and it has access to [system calls](syscalls.md) via
+bootstrap channel and it has access to [system calls](/docs/reference/syscalls/README.md) via
 the [vDSO](vdso.md).  The process has only this one handle and so it can
 see only global system information and its own memory until it gets more
 information and handles via the bootstrap channel.
@@ -271,7 +271,7 @@ A bootstrap message conveys:
 {#handle-info-entry}
 The handles serve many purposes, indicated by the *handle info entry* type:
 
- * essential handles for the process to make [system calls](syscalls.md):
+ * essential handles for the process to make [system calls](/docs/reference/syscalls/README.md):
    [process](objects/process.md), [VMAR](objects/vm_address_region.md),
    [thread](objects/thread.md), [job](objects/job.md)
  * [channel](objects/channel.md) to the [loader service](#the-loader-service)
@@ -380,7 +380,7 @@ the [`processargs`](#the-processargs-protocol)
 and [loader service](#the-loader-service) protocols are the permanent
 system ABI for program loading.  Programs can use any implementation of a
 machine code executable that meets the basic ELF format conventions.  The
-implementation can use the [vDSO](vdso.md) [system call](syscalls.md)
+implementation can use the [vDSO](vdso.md) [system call](/docs/reference/syscalls/README.md)
 ABI, the `processargs` data, and the loader service facilities as it sees
 fit.  The exact details of what handles and data they will receive via
 these protocols depend on the higher-layer program environment.  Zircon's
@@ -416,6 +416,6 @@ When [SanitizerCoverage](https://clang.llvm.org/docs/SanitizerCoverage.html)
 is enabled, it publishes a VMO to the *data sink* name `sancov` and uses a
 VMO name including the process KOID.
 
-[`zx_channel_call()`]: syscalls/channel_call.md
-[`zx_process_start()`]: syscalls/process_start.md
-[`zx_thread_create()`]: syscalls/thread_create.md
+[`zx_channel_call()`]: /docs/reference/syscalls/channel_call.md
+[`zx_process_start()`]: /docs/reference/syscalls/process_start.md
+[`zx_thread_create()`]: /docs/reference/syscalls/thread_create.md

@@ -101,9 +101,9 @@ zx_status_t map_with_guard(zx_handle_t vmar, size_t before, size_t after,
  - [`zx_vmar_protect()`] - adjust memory access permissions
  - [`zx_vmar_destroy()`] - destroy a VMAR and all of its children
 
-[`zx_process_create()`]: ../syscalls/process_create.md
-[`zx_vmar_allocate()`]: ../syscalls/vmar_allocate.md
-[`zx_vmar_destroy()`]: ../syscalls/vmar_destroy.md
-[`zx_vmar_map()`]: ../syscalls/vmar_map.md
-[`zx_vmar_protect()`]: ../syscalls/vmar_protect.md
-[`zx_vmar_unmap()`]: ../syscalls/vmar_unmap.md
+[`zx_process_create()`]: /docs/reference/syscalls/process_create.md
+[`zx_vmar_allocate()`]: /docs/reference/syscalls/vmar_allocate.md
+[`zx_vmar_destroy()`]: /docs/reference/syscalls/vmar_destroy.md
+[`zx_vmar_map()`]: /docs/reference/syscalls/vmar_map.md
+[`zx_vmar_protect()`]: /docs/reference/syscalls/vmar_protect.md
+[`zx_vmar_unmap()`]: /docs/reference/syscalls/vmar_unmap.md

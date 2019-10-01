@@ -48,16 +48,16 @@ These four rights are referred to as **ZX_RIGHTS_BASIC** when used together.
 [Handles](handles.md)
 
 
-[`zx_channel_write()`]: syscalls/channel_write.md
-[`zx_handle_duplicate()`]: syscalls/handle_duplicate.md
-[`zx_job_get_policy()`]: syscalls/job_get_policy.md
-[`zx_job_set_policy()`]: syscalls/job_set_policy.md
-[`zx_object_get_child()`]: syscalls/object_get_child.md
-[`zx_object_get_info()`]: syscalls/object_get_info.md
-[`zx_object_get_property()`]: syscalls/object_get_property.md
-[`zx_object_set_property()`]: syscalls/object_set_property.md
-[`zx_object_signal()`]: syscalls/object_signal.md
-[`zx_object_signal_peer()`]: syscalls/object_signal_peer.md
-[`zx_object_wait_many()`]: syscalls/object_wait_many.md
-[`zx_object_wait_one()`]: syscalls/object_wait_one.md
-[`zx_task_kill()`]: syscalls/task_kill.md
+[`zx_channel_write()`]: /docs/reference/syscalls/channel_write.md
+[`zx_handle_duplicate()`]: /docs/reference/syscalls/handle_duplicate.md
+[`zx_job_get_policy()`]: /docs/reference/syscalls/job_get_policy.md
+[`zx_job_set_policy()`]: /docs/reference/syscalls/job_set_policy.md
+[`zx_object_get_child()`]: /docs/reference/syscalls/object_get_child.md
+[`zx_object_get_info()`]: /docs/reference/syscalls/object_get_info.md
+[`zx_object_get_property()`]: /docs/reference/syscalls/object_get_property.md
+[`zx_object_set_property()`]: /docs/reference/syscalls/object_set_property.md
+[`zx_object_signal()`]: /docs/reference/syscalls/object_signal.md
+[`zx_object_signal_peer()`]: /docs/reference/syscalls/object_signal_peer.md
+[`zx_object_wait_many()`]: /docs/reference/syscalls/object_wait_many.md
+[`zx_object_wait_one()`]: /docs/reference/syscalls/object_wait_one.md
+[`zx_task_kill()`]: /docs/reference/syscalls/task_kill.md

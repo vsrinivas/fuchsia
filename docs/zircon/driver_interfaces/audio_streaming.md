@@ -96,7 +96,7 @@ Generally, the operations conducted over the ring buffer channel include:
     bus transaction failure, etc.
 *   Receiving clock recovery information in the case that the audio output clock
     is based on a different oscillator than the oscillator which backs
-    [ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md)
+    [ZX_CLOCK_MONOTONIC](/docs/reference/syscalls/clock_get.md)
 
 ## Operational Details
 
@@ -157,7 +157,7 @@ zx_handle_t OpenStream(const char* dev_node_path) {
 ### Client side termination of the stream channel
 
 Clients **may** terminate the connection to the stream at any time simply by
-calling [zx_handle_close(...)](../syscalls/handle_close.md) on the stream
+calling [zx_handle_close(...)](/docs/reference/syscalls/handle_close.md) on the stream
 channel. Drivers **must** close any active ring-buffer channels established
 using this stream channel and **must** make every attempt to gracefully quiesce
 any on-going streaming operations in the process.
@@ -168,13 +168,13 @@ All of the messages and message payloads which may be sent or received over
 stream and ring buffer channels are defined in the
 [audio](/zircon/system/public/zircon/device/audio.h) protocol header. Messages
 may be sent to the driver using the
-[zx_channel_write(...)](../syscalls/channel_write.md) syscall. If a response is
+[zx_channel_write(...)](/docs/reference/syscalls/channel_write.md) syscall. If a response is
 expected, it may be read using the
-[zx_channel_read(...)](../syscalls/channel_read.md) syscall. Best practice,
+[zx_channel_read(...)](/docs/reference/syscalls/channel_read.md) syscall. Best practice,
 however, is to queue packets for your [channel(s)](../objects/channel.md)
 [port](../objects/port.md) using the
-[zx_port_queue(...)](../syscalls/port_queue.md) syscall, and use the
-[zx_port_wait(...)](../syscalls/port_wait.md) syscall to determine when your set
+[zx_port_queue(...)](/docs/reference/syscalls/port_queue.md) syscall, and use the
+[zx_port_wait(...)](/docs/reference/syscalls/port_wait.md) syscall to determine when your set
 of channels have messages (either expected responses or asynchronous
 notifications) to be read.
 
@@ -194,7 +194,7 @@ asynchronous notification to the application, the driver **must** use
 `AUDIO_INVALID_TRANSACTION_ID` as the transaction ID for the message.
 Transaction IDs may be used by clients for whatever purpose they desire, however
 if the IDs are kept unique across all transactions in-flight, the
-[zx_channel_call(...)](../syscalls/channel_call.md) may be used to implement a
+[zx_channel_call(...)](/docs/reference/syscalls/channel_call.md) may be used to implement a
 simple synchronous calling interface.
 
 ### Validation requirements
@@ -716,13 +716,13 @@ buffer is now gone.
 
 If the request succeeds, the driver **must** return a handle to a
 [VMO](../objects/vm_object.md) with permissions which allow applications to map
-the VMO into their address space using [zx_vmar_map](../syscalls/vmar_map.md),
+the VMO into their address space using [zx_vmar_map](/docs/reference/syscalls/vmar_map.md),
 and to read/write data in the buffer in the case of playback, or simply to read
 the data in the buffer in the case of capture. Additionally, the driver **must**
 report the actual number of frames of audio it will use in the buffer via the
 `num_ring_buffer_frames` field of the `audio_rb_cmd_get_buffer_resp_t` message.
 The size of the VMO returned (as reported by
-[zx_vmo_get_size()](../syscalls/vmo_get_size.md)) **must not** be larger than
+[zx_vmo_get_size()](/docs/reference/syscalls/vmo_get_size.md)) **must not** be larger than
 this number of frames (when converted to bytes). This number **may** be larger
 than the `min_ring_buffer_frames` request from the client but **must not** be
 smaller than this number.
@@ -741,14 +741,14 @@ Upon successfully starting a stream, drivers **must** provide their best
 estimate of the time at which their hardware began to transmit or capture the
 stream in the `start_time` field of the response. This time stamp **must** be
 taken from the clock exposed via the
-[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) syscall. Along with the FIFO
+[ZX_CLOCK_MONOTONIC](/docs/reference/syscalls/clock_get.md) syscall. Along with the FIFO
 depth property of the ring buffer, this timestamp allows applications to send or
 receive stream data without the need for periodic position updates from the
 driver. Along with the outboard latency estimate provided by the stream channel,
 this timestamp allows applications to synchronize presentation of audio
 information across multiple streams, or even multiple devices (provided that an
 external time synchronization protocol is used to synchronize the
-[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) timelines across the cohort of
+[ZX_CLOCK_MONOTONIC](/docs/reference/syscalls/clock_get.md) timelines across the cohort of
 synchronized devices).
 
 > TODO: Redefine `start_time` to allow it to be an arbitrary 'audio stream
@@ -794,7 +794,7 @@ indicated by the most recent position notification sent by the driver.
 Driver playback/capture position **must** *always* begin at ring buffer byte 0,
 immediately following a successful `AUDIO_RB_CMD_START` command. When the ring
 buffer position reaches the end of the VMO (as indicated by
-[zx_vmo_get_size(...)](../syscalls/vmo_get_size.md)), the ring buffer position
+[zx_vmo_get_size(...)](/docs/reference/syscalls/vmo_get_size.md)), the ring buffer position
 wraps back to zero. Drivers are not required to consume or produce data in
 integral numbers of audio frames. Clients whose notion of stream position
 depends on position notifications should take care to request that a sufficient

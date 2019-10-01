@@ -39,5 +39,5 @@ construct a profile object with a custom scheduler priority.
  - [`zx_profile_create()`] - create a new profile object
  - [`zx_object_set_profile()`] - apply a profile to a thread
 
-[`zx_profile_create()`]: ../syscalls/profile_create.md
-[`zx_object_set_profile()`]: ../syscalls/object_set_profile.md
+[`zx_profile_create()`]: /docs/reference/syscalls/profile_create.md
+[`zx_object_set_profile()`]: /docs/reference/syscalls/object_set_profile.md

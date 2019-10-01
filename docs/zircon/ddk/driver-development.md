@@ -177,7 +177,7 @@ driver should spawn a thread to wait on the interrupt handle.
 The kernel will automatically handle masking and unmasking the
 interrupt as appropriate, depending on whether the interrupt is edge-triggered
 or level-triggered. For level-triggered hardware interrupts,
-[zx_interrupt_wait()](../syscalls/interrupt_wait.md) will mask the interrupt
+[zx_interrupt_wait()](/docs/reference/syscalls/interrupt_wait.md) will mask the interrupt
 before returning and unmask the interrupt when it is called again the next
 time. For edge-triggered interrupts, the interrupt remains unmasked.
 
@@ -185,7 +185,7 @@ The interrupt thread should not perform any long-running tasks. For drivers
 that perform lengthy tasks, use a worker thread.
 
 You can signal an interrupt handle with
-[zx_interrupt_trigger()](../syscalls/interrupt_trigger.md) on slot
+[zx_interrupt_trigger()](/docs/reference/syscalls/interrupt_trigger.md) on slot
 **ZX_INTERRUPT_SLOT_USER** to return from `zx_interrupt_wait()`. This is
 necessary to shut down the interrupt thread during driver clean up.
 
@@ -298,7 +298,7 @@ instead. For example, the virtual console is implemented by the
 [virtcon](/zircon/system/core/virtcon) service.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and
-[zx_interrupt_create](../syscalls/interrupt_create.md) require a root resource
+[zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a root resource
 handle. This handle is not available to drivers other than the system driver
 ([ACPI](/zircon/system/dev/board/x86) on x86 systems and
 [platform](/zircon/system/dev/bus/platform) on ARM systems). A device should

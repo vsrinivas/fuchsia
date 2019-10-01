@@ -245,7 +245,7 @@ You now have an interrupt handle.
 
 ## Waiting for the interrupt
 
-In your IHT, you call [**zx_interrupt_wait()**](../syscalls/interrupt_wait.md)
+In your IHT, you call [**zx_interrupt_wait()**](/docs/reference/syscalls/interrupt_wait.md)
 to wait for the interrupt.
 The following prototype applies:
 
@@ -294,7 +294,7 @@ interrupt to remain active until *all* devices have de-asserted their request li
 
 The Zircon kernel automatically masks and unmasks the interrupt as appropriate.
 For level-triggered hardware interrupts,
-[**zx_interrupt_wait()**](../syscalls/interrupt_wait.md)
+[**zx_interrupt_wait()**](/docs/reference/syscalls/interrupt_wait.md)
 masks the interrupt before returning, and unmasks it when called the next time.
 For edge-triggered interrupts, the interrupt remains unmasked.
 
@@ -304,9 +304,9 @@ For edge-triggered interrupts, the interrupt remains unmasked.
 ## Shutting down a driver that uses interrupts
 
 In order to cleanly shut down a driver that uses interrupts, you can use
-[**zx_interrupt_destroy()**](../syscalls/interrupt_destroy.md)
+[**zx_interrupt_destroy()**](/docs/reference/syscalls/interrupt_destroy.md)
 to abort the
-[**zx_interrupt_wait()**](../syscalls/interrupt_wait.md)
+[**zx_interrupt_wait()**](/docs/reference/syscalls/interrupt_wait.md)
 call.
 
 The idea is that when the foreground thread determines that the driver should be
@@ -342,7 +342,7 @@ static int irq_thread(void* arg) {
 
 The main thread, when requested to shut down, destroys the interrupt handle.
 This causes the IHT's
-[**zx_interrupt_wait()**](../syscalls/interrupt_wait.md)
+[**zx_interrupt_wait()**](/docs/reference/syscalls/interrupt_wait.md)
 call to wake up with an error code.
 The IHT looks at the error code (in this case, `ZX_ERR_CANCELED`) and makes
 the decision to end.
@@ -354,10 +354,10 @@ thread can finish its processing.
 The advanced reader is invited to look at some of the other interrupt related
 functions available:
 
-*   [**zx_interrupt_ack()**](../syscalls/interrupt_ack.md)
-*   [**zx_interrupt_bind()**](../syscalls/interrupt_bind.md)
-*   [**zx_interrupt_create()**](../syscalls/interrupt_create.md)
-*   [**zx_interrupt_trigger()**](../syscalls/interrupt_trigger.md)
+*   [**zx_interrupt_ack()**](/docs/reference/syscalls/interrupt_ack.md)
+*   [**zx_interrupt_bind()**](/docs/reference/syscalls/interrupt_bind.md)
+*   [**zx_interrupt_create()**](/docs/reference/syscalls/interrupt_create.md)
+*   [**zx_interrupt_trigger()**](/docs/reference/syscalls/interrupt_trigger.md)
 
 # DMA
 
@@ -547,9 +547,9 @@ which can be mapped into the virtual address space of the driver process.
 Ultimately, these pages serve as the source or destination of the DMA transfer.
 
 There are two functions,
-[**zx_vmo_create()**](../syscalls/vmo_create.md)
+[**zx_vmo_create()**](/docs/reference/syscalls/vmo_create.md)
 and
-[**zx_vmo_create_contiguous()**](../syscalls/vmo_create_contiguous.md)
+[**zx_vmo_create_contiguous()**](/docs/reference/syscalls/vmo_create_contiguous.md)
 that allocate memory and bind it to a [VMO](../objects/vm_object.md):
 
 ```c
@@ -575,9 +575,9 @@ They both allocate virtually contiguous pages, for a given size.
 > creation functions will always allocate memory starting with a *new* page.
 
 The
-[**zx_vmo_create_contiguous()**](../syscalls/vmo_create_contiguous.md)
+[**zx_vmo_create_contiguous()**](/docs/reference/syscalls/vmo_create_contiguous.md)
 function does what
-[**zx_vmo_create()**](../syscalls/vmo_create.md)
+[**zx_vmo_create()**](/docs/reference/syscalls/vmo_create.md)
 does, *and* ensures that the pages are suitably
 organized for use with the specified [BTI](../objects/bus_transaction_initiator.md)
 (which is why it needs the [BTI](../objects/bus_transaction_initiator.md) handle).
@@ -600,7 +600,7 @@ You will also need the addresses of the pages (from the point of view of the dev
 so that you can program the DMA controller on your device to access them.
 
 The
-[**zx_bti_pin()**](../syscalls/bti_pin.md)
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md)
 function is used to do all that:
 
 ```c
@@ -629,14 +629,14 @@ The `addrs` parameter is a pointer to an array of `zx_paddr_t` that you supply.
 This is where the peripheral addresses for each page are returned into.
 The array is `addrs_count` elements long, and must match the count of
 elements expected from
-[**zx_bti_pin()**](../syscalls/bti_pin.md).
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md).
 
 > The values written into `addrs` are suitable for programming the peripheral's
 > DMA controller &mdash; that is, they take into account any translations that
 > may be performed by an IOMMU, if present.
 
 On a technical note, the other effect of
-[**zx_bti_pin()**](../syscalls/bti_pin.md)
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md)
 is that the kernel will ensure those pages are not decommitted
 (i.e., moved or reused) while pinned.
 
@@ -668,23 +668,23 @@ Larger chunks may be requested by setting the `ZX_BTI_COMPRESS` option
 in the `options` argument.
 In that case, the length of each entry returned corresponds to the "minimum contiguity" property.
 While you can't set this property, you can read it via
-[**zx_object_get_info()**](../syscalls/object_get_info.md).
+[**zx_object_get_info()**](/docs/reference/syscalls/object_get_info.md).
 Effectively, the minimum contiguity property is a guarantee that
-[**zx_bti_pin()**](../syscalls/bti_pin.md)
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md)
 will always be able to return addresses that are contiguous for at least that many bytes.
 
 For example, if the property had the value 1MB, then a call to
-[**zx_bti_pin()**](../syscalls/bti_pin.md)
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md)
 with a requested size of 2MB would return at most two physically-contiguous runs.
 If the requested size was 2.5MB, it would return at most three physically-contiguous runs,
 and so on.
 
 ### Pinned Memory Token (**PMT**)
 
-[**zx_bti_pin()**](../syscalls/bti_pin.md) returns a Pinned Memory Token
+[**zx_bti_pin()**](/docs/reference/syscalls/bti_pin.md) returns a Pinned Memory Token
 (**[PMT](../objects/pinned_memory_token.md)**)
 upon success in the *pmt* argument.
-The driver must call [**zx_pmt_unpin()**](../syscalls/pmt_unpin.md) when the device is done with
+The driver must call [**zx_pmt_unpin()**](/docs/reference/syscalls/pmt_unpin.md) when the device is done with
 the memory transaction to unpin and revoke access to the memory pages by the device.
 
 ## Advanced topics
@@ -698,7 +698,7 @@ invoking appropriate cache operations on the memory range before performing DMA 
 so that no stale data will be accessed.
 
 To invoke cache operations on the memory represented by [VMO](../objects/vm_object.md)s, use the
-[**zx_vmo_op_range()**](../syscalls/vmo_op_range.md)
+[**zx_vmo_op_range()**](/docs/reference/syscalls/vmo_op_range.md)
 syscall.
 Prior to a peripheral-read
 (driver-write) operation, clean the cache using `ZX_VMO_OP_CACHE_CLEAN` to write out dirty

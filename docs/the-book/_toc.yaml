@@ -9,7 +9,7 @@ toc:
   - title: "Concepts"
     path: /docs/zircon/concepts.md
   - title: "System calls"
-    path: /docs/zircon/syscalls.md
+    path: /docs/reference/syscalls/README.md
   - title: "vDSO (libzircon)"
     path: /docs/zircon/vdso.md
 - title: "Zircon core"

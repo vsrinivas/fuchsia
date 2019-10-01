@@ -61,13 +61,13 @@ be added to a process that was started and then its last thread has exited.
  - [`zx_vmar_protect()`] - Change permissions on an address space range
  - [`zx_vmar_unmap()`] - Unmap memory from an address space range
 
-[`zx_job_create()`]: ../syscalls/job_create.md
-[`zx_process_create()`]: ../syscalls/process_create.md
-[`zx_process_exit()`]: ../syscalls/process_exit.md
-[`zx_process_read_memory()`]: ../syscalls/process_read_memory.md
-[`zx_process_start()`]: ../syscalls/process_start.md
-[`zx_process_write_memory()`]: ../syscalls/process_write_memory.md
-[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
-[`zx_vmar_map()`]: ../syscalls/vmar_map.md
-[`zx_vmar_protect()`]: ../syscalls/vmar_protect.md
-[`zx_vmar_unmap()`]: ../syscalls/vmar_unmap.md
+[`zx_job_create()`]: /docs/reference/syscalls/job_create.md
+[`zx_process_create()`]: /docs/reference/syscalls/process_create.md
+[`zx_process_exit()`]: /docs/reference/syscalls/process_exit.md
+[`zx_process_read_memory()`]: /docs/reference/syscalls/process_read_memory.md
+[`zx_process_start()`]: /docs/reference/syscalls/process_start.md
+[`zx_process_write_memory()`]: /docs/reference/syscalls/process_write_memory.md
+[`zx_task_create_exception_channel()`]: /docs/reference/syscalls/task_create_exception_channel.md
+[`zx_vmar_map()`]: /docs/reference/syscalls/vmar_map.md
+[`zx_vmar_protect()`]: /docs/reference/syscalls/vmar_protect.md
+[`zx_vmar_unmap()`]: /docs/reference/syscalls/vmar_unmap.md

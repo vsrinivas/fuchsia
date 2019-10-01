@@ -8,7 +8,7 @@ Dispatcher interface. These are implemented in
 [kernel/object](/zircon/kernel/object). Many are self-contained higher-level Objects.
 Some wrap lower-level [lk](/docs/glossary.md#lk) primitives.
 
-## [System Calls](syscalls.md)
+## [System Calls](/docs/reference/syscalls/README.md)
 
 Userspace code interacts with kernel objects via system calls, and almost
 exclusively via [Handles](handles.md).  In userspace, a Handle is represented as
@@ -22,14 +22,14 @@ requested operation.
 System calls fall into three broad categories, from an access standpoint:
 
 1. Calls which have no limitations, of which there are only a very few, for
-example [`zx_clock_get()`](syscalls/clock_get.md)
-and [`zx_nanosleep()`](syscalls/nanosleep.md) may be called by any thread.
+example [`zx_clock_get()`](/docs/reference/syscalls/clock_get.md)
+and [`zx_nanosleep()`](/docs/reference/syscalls/nanosleep.md) may be called by any thread.
 2. Calls which take a Handle as the first parameter, denoting the Object they act upon,
-which are the vast majority, for example [`zx_channel_write()`](syscalls/channel_write.md)
-and [`zx_port_queue()`](syscalls/port_queue.md).
+which are the vast majority, for example [`zx_channel_write()`](/docs/reference/syscalls/channel_write.md)
+and [`zx_port_queue()`](/docs/reference/syscalls/port_queue.md).
 3. Calls which create new Objects but do not take a Handle, such as
-[`zx_event_create()`](syscalls/event_create.md) and
-[`zx_channel_create()`](syscalls/channel_create.md).  Access to these (and limitations
+[`zx_event_create()`](/docs/reference/syscalls/event_create.md) and
+[`zx_channel_create()`](/docs/reference/syscalls/channel_create.md).  Access to these (and limitations
 upon them) is controlled by the Job in which the calling Process is contained.
 
 System calls are provided by libzircon.so, which is a "virtual" shared
@@ -51,20 +51,20 @@ For almost all Objects, when the last open Handle that refers to an Object is cl
 the Object is either destroyed, or put into a final state that may not be undone.
 
 Handles may be moved from one Process to another by writing them into a Channel
-(using [`zx_channel_write()`](syscalls/channel_write.md)), or by using
-[`zx_process_start()`](syscalls/process_start.md) to pass a Handle as the argument
+(using [`zx_channel_write()`](/docs/reference/syscalls/channel_write.md)), or by using
+[`zx_process_start()`](/docs/reference/syscalls/process_start.md) to pass a Handle as the argument
 of the first thread in a new Process.
 
 The actions which may be taken on a Handle or the Object it refers to are governed
 by the Rights associated with that Handle.  Two Handles that refer to the same Object
 may have different Rights.
 
-The [`zx_handle_duplicate()`](syscalls/handle_duplicate.md) and
-[`zx_handle_replace()`](syscalls/handle_replace.md) system calls may be used to
+The [`zx_handle_duplicate()`](/docs/reference/syscalls/handle_duplicate.md) and
+[`zx_handle_replace()`](/docs/reference/syscalls/handle_replace.md) system calls may be used to
 obtain additional Handles referring to the same Object as the Handle passed in,
-optionally with reduced Rights.  The [`zx_handle_close()`](syscalls/handle_close.md)
+optionally with reduced Rights.  The [`zx_handle_close()`](/docs/reference/syscalls/handle_close.md)
 system call closes a Handle, releasing the Object it refers to, if that Handle is
-the last one for that Object. The [`zx_handle_close_many()`](syscalls/handle_close_many.md)
+the last one for that Object. The [`zx_handle_close_many()`](/docs/reference/syscalls/handle_close_many.md)
 system call similarly closes an array of handles.
 
 
@@ -106,10 +106,10 @@ Process or another Job.
 [Program loading](program_loading.md) is provided by userspace facilities and
 protocols above the kernel layer.
 
-See: [`zx_process_create()`](syscalls/process_create.md),
-[`zx_process_start()`](syscalls/process_start.md),
-[`zx_thread_create()`](syscalls/thread_create.md),
-and [`zx_thread_start()`](syscalls/thread_start.md).
+See: [`zx_process_create()`](/docs/reference/syscalls/process_create.md),
+[`zx_process_start()`](/docs/reference/syscalls/process_start.md),
+[`zx_thread_create()`](/docs/reference/syscalls/thread_create.md),
+and [`zx_thread_start()`](/docs/reference/syscalls/thread_start.md).
 
 
 ## Message Passing: Sockets and Channels
@@ -133,13 +133,13 @@ they refer to continue to exist), unless the end of the Channel which they have 
 towards is closed -- at which point messages in flight to that endpoint are discarded and
 any Handles they contained are closed.
 
-See: [`zx_channel_create()`](syscalls/channel_create.md),
-[`zx_channel_read()`](syscalls/channel_read.md),
-[`zx_channel_write()`](syscalls/channel_write.md),
-[`zx_channel_call()`](syscalls/channel_call.md),
-[`zx_socket_create()`](syscalls/socket_create.md),
-[`zx_socket_read()`](syscalls/socket_read.md),
-and [`zx_socket_write()`](syscalls/socket_write.md).
+See: [`zx_channel_create()`](/docs/reference/syscalls/channel_create.md),
+[`zx_channel_read()`](/docs/reference/syscalls/channel_read.md),
+[`zx_channel_write()`](/docs/reference/syscalls/channel_write.md),
+[`zx_channel_call()`](/docs/reference/syscalls/channel_call.md),
+[`zx_socket_create()`](/docs/reference/syscalls/socket_create.md),
+[`zx_socket_read()`](/docs/reference/syscalls/socket_read.md),
+and [`zx_socket_write()`](/docs/reference/syscalls/socket_write.md).
 
 ## Objects and Signals
 
@@ -153,9 +153,9 @@ See [signals](signals.md) for more information.
 
 ## Waiting: Wait One, Wait Many, and Ports
 
-A Thread may use [`zx_object_wait_one()`](syscalls/object_wait_one.md)
+A Thread may use [`zx_object_wait_one()`](/docs/reference/syscalls/object_wait_one.md)
 to wait for a signal to be active on a single handle or
-[`zx_object_wait_many()`](syscalls/object_wait_many.md) to wait for
+[`zx_object_wait_many()`](/docs/reference/syscalls/object_wait_many.md) to wait for
 signals on multiple handles.  Both calls allow for a timeout after
 which they'll return even if no signals are pending.
 
@@ -167,10 +167,10 @@ a Port, which is an Object that other Objects may be bound to such that when sig
 are asserted on them, the Port receives a packet containing information about the
 pending Signals.
 
-See: [`zx_port_create()`](syscalls/port_create.md),
-[`zx_port_queue()`](syscalls/port_queue.md),
-[`zx_port_wait()`](syscalls/port_wait.md),
-and [`zx_port_cancel()`](syscalls/port_cancel.md).
+See: [`zx_port_create()`](/docs/reference/syscalls/port_create.md),
+[`zx_port_queue()`](/docs/reference/syscalls/port_queue.md),
+[`zx_port_wait()`](/docs/reference/syscalls/port_wait.md),
+and [`zx_port_cancel()`](/docs/reference/syscalls/port_cancel.md).
 
 
 ## Events, Event Pairs.
@@ -181,8 +181,8 @@ An Event Pair is one of a pair of Events that may signal each other.  A useful p
 Event Pairs is that when one side of a pair goes away (all Handles to it have been
 closed), the PEER_CLOSED signal is asserted on the other side.
 
-See: [`zx_event_create()`](syscalls/event_create.md),
-and [`zx_eventpair_create()`](syscalls/eventpair_create.md).
+See: [`zx_event_create()`](/docs/reference/syscalls/event_create.md),
+and [`zx_eventpair_create()`](/docs/reference/syscalls/eventpair_create.md).
 
 
 ## Shared Memory: Virtual Memory Objects (VMOs)
@@ -191,12 +191,12 @@ Virtual Memory Objects represent a set of physical pages of memory, or the *pote
 for pages (which will be created/filled lazily, on-demand).
 
 They may be mapped into the address space of a Process with
-[`zx_vmar_map()`](syscalls/vmar_map.md) and unmapped with
-[`zx_vmar_unmap()`](syscalls/vmar_unmap.md).  Permissions of
-mapped pages may be adjusted with [`zx_vmar_protect()`](syscalls/vmar_protect.md).
+[`zx_vmar_map()`](/docs/reference/syscalls/vmar_map.md) and unmapped with
+[`zx_vmar_unmap()`](/docs/reference/syscalls/vmar_unmap.md).  Permissions of
+mapped pages may be adjusted with [`zx_vmar_protect()`](/docs/reference/syscalls/vmar_protect.md).
 
 VMOs may also be read from and written to directly with
-[`zx_vmo_read()`](syscalls/vmo_read.md) and [`zx_vmo_write()`](syscalls/vmo_write.md).
+[`zx_vmo_read()`](/docs/reference/syscalls/vmo_read.md) and [`zx_vmo_write()`](/docs/reference/syscalls/vmo_write.md).
 Thus the cost of mapping them into an address space may be avoided for one-shot operations
 like "create a VMO, write a dataset into it, and hand it to another Process to use."
 
@@ -206,17 +206,17 @@ Virtual Memory Address Regions (VMARs) provide an abstraction for managing a
 process's address space.  At process creation time, a handle to the root VMAR
 is given to the process creator.  That handle refers to a VMAR that spans the
 entire address space.  This space can be carved up via the
-[`zx_vmar_map()`](syscalls/vmar_map.md) and
-[`zx_vmar_allocate()`](syscalls/vmar_allocate.md) interfaces.
-[`zx_vmar_allocate()`](syscalls/vmar_allocate.md) can be used to generate new
+[`zx_vmar_map()`](/docs/reference/syscalls/vmar_map.md) and
+[`zx_vmar_allocate()`](/docs/reference/syscalls/vmar_allocate.md) interfaces.
+[`zx_vmar_allocate()`](/docs/reference/syscalls/vmar_allocate.md) can be used to generate new
 VMARs (called subregions or children) which can be used to group together
 parts of the address space.
 
-See: [`zx_vmar_map()`](syscalls/vmar_map.md),
-[`zx_vmar_allocate()`](syscalls/vmar_allocate.md),
-[`zx_vmar_protect()`](syscalls/vmar_protect.md),
-[`zx_vmar_unmap()`](syscalls/vmar_unmap.md),
-and [`zx_vmar_destroy()`](syscalls/vmar_destroy.md),
+See: [`zx_vmar_map()`](/docs/reference/syscalls/vmar_map.md),
+[`zx_vmar_allocate()`](/docs/reference/syscalls/vmar_allocate.md),
+[`zx_vmar_protect()`](/docs/reference/syscalls/vmar_protect.md),
+[`zx_vmar_unmap()`](/docs/reference/syscalls/vmar_unmap.md),
+and [`zx_vmar_destroy()`](/docs/reference/syscalls/vmar_destroy.md),
 
 ## Futexes
 
@@ -226,6 +226,6 @@ a syscall in the contended case.  Usually they are only of interest to implement
 standard libraries.  Zircon's libc and libc++ provide C11, C++, and pthread APIs for
 mutexes, condition variables, etc, implemented in terms of Futexes.
 
-See: [`zx_futex_wait()`](syscalls/futex_wait.md),
-[`zx_futex_wake()`](syscalls/futex_wake.md),
-and [`zx_futex_requeue()`](syscalls/futex_requeue.md).
+See: [`zx_futex_wait()`](/docs/reference/syscalls/futex_wait.md),
+[`zx_futex_wake()`](/docs/reference/syscalls/futex_wake.md),
+and [`zx_futex_requeue()`](/docs/reference/syscalls/futex_requeue.md).

@@ -92,7 +92,7 @@ toc:
 
 - title: "System calls"
   section:
-  - include: /docs/zircon/syscalls/_toc.yaml
+  - include: /docs/reference/syscalls/_toc.yaml
 
 - title: "abigen file grammar"
   path: /docs/zircon/abigen/grammar.md

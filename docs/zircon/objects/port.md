@@ -21,6 +21,6 @@ TODO
  - [`zx_port_queue()`] - send a packet to a port
  - [`zx_port_wait()`] - wait for packets to arrive on a port
 
-[`zx_port_create()`]: ../syscalls/port_create.md
-[`zx_port_queue()`]: ../syscalls/port_queue.md
-[`zx_port_wait()`]: ../syscalls/port_wait.md
+[`zx_port_create()`]: /docs/reference/syscalls/port_create.md
+[`zx_port_queue()`]: /docs/reference/syscalls/port_queue.md
+[`zx_port_wait()`]: /docs/reference/syscalls/port_wait.md

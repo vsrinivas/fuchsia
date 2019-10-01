@@ -32,5 +32,5 @@ timers. For other syscalls that take a deadline, but no slack
 parameters, the slack type and amount are specified by the job's
 policy. See [`zx_job_set_policy()`].
 
-[`zx_job_set_policy()`]: syscalls/job_set_policy.md
-[`zx_nanosleep()`]: syscalls/nanosleep.md
+[`zx_job_set_policy()`]: /docs/reference/syscalls/job_set_policy.md
+[`zx_nanosleep()`]: /docs/reference/syscalls/nanosleep.md

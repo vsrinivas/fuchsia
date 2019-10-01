@@ -18,4 +18,4 @@ To get the current time since boot, use:
 lk_time_t current_time(void);
 ```
 
-[`zx_clock_get()`]: syscalls/clock_get.md
+[`zx_clock_get()`]: /docs/reference/syscalls/clock_get.md

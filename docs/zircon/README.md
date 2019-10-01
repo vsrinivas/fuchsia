@@ -44,7 +44,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Thread annotations](thread_annotations.md)
 + [Handles](handles.md)
 + [Lock validation](lockdep.md)
-+ [System Calls](syscalls.md)
++ [System Calls](/docs/reference/syscalls/README.md)
 + [zxcrypt](zxcrypt.md)
 
 + [Driver Development Kit](ddk/overview.md)

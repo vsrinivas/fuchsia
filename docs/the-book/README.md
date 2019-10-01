@@ -100,7 +100,7 @@ also provides core drivers and Fuchsia's libc implementation.
  - Updater
 
 [zircon-concepts]: /docs/zircon/concepts.md
-[zircon-syscalls]: /docs/zircon/syscalls.md
+[zircon-syscalls]: /docs/reference/syscalls/README.md
 [zircon-vdso]: /docs/zircon/vdso.md
 [zircon-ddk]: /docs/zircon/ddk/overview.md
 [FIDL]: ../development/languages/fidl/README.md

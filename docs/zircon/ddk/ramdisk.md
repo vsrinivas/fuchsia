@@ -95,11 +95,11 @@ The binding function, **ramdisk_driver_bind()**, does the following:
     bytes long.
     This chunk of memory **is** the RAM-disk &mdash; that's where the data is stored.
     The [VMO](../objects/vm_object.md)
-    creation call, [**zx_vmo_create()**](../syscalls/vmo_create.md),
+    creation call, [**zx_vmo_create()**](/docs/reference/syscalls/vmo_create.md),
     returns the [VMO](../objects/vm_object.md) handle through
     its third argument, which is a member in our context block.
 3.  Maps the [VMO](../objects/vm_object.md) into our address space via
-    [**zx_vmar_map()**](../syscalls/vmar_map.md).
+    [**zx_vmar_map()**](/docs/reference/syscalls/vmar_map.md).
     This function returns a pointer to a
     [VMAR](../objects/vm_address_region.md)
     that points to the entire
@@ -217,9 +217,9 @@ to indicate unbinding is complete.
 Sometime after **device_unbind_reply()** is called,
 the driver's **ramdisk_release()** will be called.
 Here we unmap the [VMAR](../objects/vm_address_region.md),
-via [**zx_vmar_unmap()**](../syscalls/vmar_unmap.md), and close the
+via [**zx_vmar_unmap()**](/docs/reference/syscalls/vmar_unmap.md), and close the
 [VMO](../objects/vm_object.md),
-via [**zx_handle_close()**](../syscalls/handle_close.md).
+via [**zx_handle_close()**](/docs/reference/syscalls/handle_close.md).
 As our final act, we release the device context block.
 At this point, the device is finished.
 
@@ -382,8 +382,8 @@ Similarly, in step (4) we compute the device address (that is, we establish a
 pointer to our [VMAR](../objects/vm_address_region.md)
 that's offset by the appropriate number of blocks as per the request).
 
-In step (5) we perform either a [**zx_vmo_read()**](../syscalls/vmo_read.md)
-or a [**zx_vmo_write()**](../syscalls/vmo_write.md), depending
+In step (5) we perform either a [**zx_vmo_read()**](/docs/reference/syscalls/vmo_read.md)
+or a [**zx_vmo_write()**](/docs/reference/syscalls/vmo_write.md), depending
 on the command.
 This is what transfers data between a pointer within our
 [VMAR](../objects/vm_address_region.md) (`addr`)

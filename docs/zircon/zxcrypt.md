@@ -92,7 +92,7 @@ As shadow requests are needed, they are allocated backed sequentially by pages i
 worker needs to transform the data it either encrypts data from the original, encapsulated write
 request into the shadow request, or decrypts data from the shadow request into the original,
 encapsulated read request.  As soon as the original request can be handed back to the original
-requester, the shadow request is deallocated and its page [decommitted](syscalls/vmo_op_range.md).
+requester, the shadow request is deallocated and its page [decommitted](/docs/reference/syscalls/vmo_op_range.md).
 This ensures no more memory is used than is needed for outstanding I/O requests.
 
 ### Superblock Format
