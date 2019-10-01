@@ -21,7 +21,52 @@ namespace fidl {
 #if defined(FIDL_USE_FIT_OPTIONAL)
 
 template <typename T>
-using VectorPtr = fit::optional<std::vector<T>>;
+class VectorPtr : public fit::optional<std::vector<T>> {
+ public:
+  constexpr VectorPtr() = default;
+
+  constexpr VectorPtr(fit::nullopt_t) noexcept {}
+  FIDL_FIT_OPTIONAL_DEPRECATED("Use fit::nullopt instead of nullptr")
+  constexpr VectorPtr(std::nullptr_t) noexcept {}
+
+  VectorPtr(const VectorPtr&) = default;
+  VectorPtr& operator=(const VectorPtr&) = default;
+
+  VectorPtr(VectorPtr&&) noexcept = default;
+  VectorPtr& operator=(VectorPtr&&) noexcept = default;
+
+  // Move construct and move assignment from the value type
+  constexpr VectorPtr(std::vector<T>&& value) : fit::optional<std::vector<T>>(std::move(value)) {}
+  constexpr VectorPtr& operator=(std::vector<T>&& value) {
+    fit::optional<std::vector<T>>::operator=(std::move(value));
+    return *this;
+  }
+
+  // Copy construct and copy assignment from the value type
+  constexpr VectorPtr(const std::vector<T>& value) : fit::optional<std::vector<T>>(value) {}
+  constexpr VectorPtr& operator=(const std::vector<T>& value) {
+    fit::optional<std::vector<T>>::operator=(value);
+    return *this;
+  }
+
+  FIDL_FIT_OPTIONAL_DEPRECATED("Assign an empty std::vector")
+  VectorPtr& emplace() {
+    *this = std::move(std::vector<T>());
+    return *this;
+  }
+
+  FIDL_FIT_OPTIONAL_DEPRECATED("Assign an std::vector")
+  VectorPtr& emplace(std::initializer_list<std::vector<T>>&& ilist) {
+    *this = (std::move(std::vector(ilist)));
+    return *this;
+  }
+
+  FIDL_FIT_OPTIONAL_DEPRECATED("Assign an std::vector")
+  VectorPtr& emplace(std::vector<T>&& value) {
+    *this = std::move(value);
+    return *this;
+  }
+};
 
 #else
 

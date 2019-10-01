@@ -21,7 +21,53 @@ namespace fidl {
 
 #if defined(FIDL_USE_FIT_OPTIONAL)
 
-using StringPtr = fit::optional<std::string>;
+class StringPtr final : public fit::optional<std::string> {
+ public:
+  constexpr StringPtr() = default;
+
+  constexpr StringPtr(fit::nullopt_t) noexcept {}
+  FIDL_FIT_OPTIONAL_DEPRECATED("Use fit::nullopt instead of nullptr")
+  constexpr StringPtr(std::nullptr_t) noexcept {}
+
+  StringPtr(const StringPtr&) = default;
+  StringPtr& operator=(const StringPtr&) = default;
+
+  StringPtr(StringPtr&&) = default;
+  StringPtr& operator=(StringPtr&&) = default;
+
+  // Move construct and move assignment from the value type
+  constexpr StringPtr(std::string&& value) : fit::optional<std::string>(std::move(value)) {}
+  constexpr StringPtr& operator=(std::string&& value) {
+    fit::optional<std::string>::operator=(std::move(value));
+    return *this;
+  }
+
+  // Copy construct and copy assignment from the value type
+  constexpr StringPtr(const std::string& value) : fit::optional<std::string>(value) {}
+  constexpr StringPtr& operator=(const std::string& value) {
+    fit::optional<std::string>::operator=(value);
+    return *this;
+  }
+
+  // Construct from string literals
+  template <size_t N>
+  constexpr StringPtr(const char (&literal)[N]) : fit::optional<std::string>(literal) {}
+  template <size_t N>
+  constexpr StringPtr& operator=(const char (&literal)[N]) {
+    fit::optional<std::string>::operator=(literal);
+    return *this;
+  }
+
+  // Construct from string pointers
+  StringPtr(const char* value) : fit::optional<std::string>(value) {}
+  StringPtr& operator=(const char* value) {
+    fit::optional<std::string>::operator=(value);
+    return *this;
+  }
+
+  // Destructor.
+  ~StringPtr() = default;
+};
 
 #else
 
@@ -212,11 +258,12 @@ inline bool operator>=(const char* a, const StringPtr& b) { return !(a < b); }
 
 inline bool operator>=(const StringPtr& a, const char* b) { return !(a < b); }
 
-#if !defined(FIDL_USE_FIT_OPTIONAL)
+#if defined(FIDL_USE_FIT_OPTIONAL)
+FIDL_FIT_OPTIONAL_DEPRECATED("Use value_or(\"\")")
+#endif
 inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
   return out << str.value_or("");
 }
-#endif
 
 template <>
 struct CodingTraits<::std::string> {
