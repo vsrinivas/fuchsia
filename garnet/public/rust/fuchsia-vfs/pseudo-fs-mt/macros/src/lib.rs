@@ -139,7 +139,9 @@ impl Parse for DirectoryEntry {
                     "Entry name is too long: '{}'\n\
                      Max entry name is {} bytes.\n\
                      This entry is {} bytes.",
-                    name, name.len(), MAX_FILENAME
+                    name,
+                    name.len(),
+                    MAX_FILENAME
                 );
                 return Err(syn::Error::new(span, message));
             }
@@ -179,7 +181,7 @@ impl Parse for DirectoryEntry {
                 }
             } else {
                 match input.parse::<Expr>() {
-                    Ok(name) => quote_spanned! {name.span()=> #name.to_str() },
+                    Ok(name) => name.into_token_stream(),
                     Err(err) => {
                         return Err(input.error(format!(
                             "Failed to parse as a string, a byte string or an expression. \

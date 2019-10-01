@@ -107,3 +107,22 @@ fn assign_to() {
          }"
     );
 }
+
+#[test]
+#[rustfmt::skip]
+fn entry_has_name_from_ref() {
+    check_pseudo_directory_impl!(
+        indoc!(
+            r#"
+            test_name => read_only_static("content"),
+        "#
+        ),
+        "{ \
+             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+                 test_name , \"Span\" , \
+                 __dir . clone ( ) . add_entry ( test_name , read_only_static ( \"content\" ) ) ) ; \
+             __dir \
+         }"
+    );
+}

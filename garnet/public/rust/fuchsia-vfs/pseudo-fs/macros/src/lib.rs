@@ -116,9 +116,11 @@ impl Parse for DirectoryEntry {
                 return Ok(());
             }
 
-            let message = format!("Duplicate literal entry name '{}'. There is another literal \
-                                   before this one with the same value.",
-                                  name);
+            let message = format!(
+                "Duplicate literal entry name '{}'. There is another literal \
+                 before this one with the same value.",
+                name
+            );
             Err(syn::Error::new(span, message))
         };
 
@@ -143,7 +145,7 @@ impl Parse for DirectoryEntry {
                 }
             } else {
                 match input.parse::<Expr>() {
-                    Ok(name) => quote_spanned! {name.span()=> #name.to_str() },
+                    Ok(name) => name.into_token_stream(),
                     Err(err) => {
                         return Err(input.error(format!(
                             "Failed to parse as a string, a byte string or an expression. \
