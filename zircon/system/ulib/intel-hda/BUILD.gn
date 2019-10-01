@@ -8,6 +8,7 @@ library("intel-hda") {
   sources = [
     "codec-utils/codec-driver-base.cc",
     "codec-utils/stream-base.cc",
+    "utils/clock.cc",
     "utils/codec-caps.cc",
     "utils/status.cc",
     "utils/utils.cc",
@@ -18,12 +19,13 @@ library("intel-hda") {
     "$zx/system/fidl/fuchsia-hardware-audio:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/zx",
   ]
   deps = [
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zx",
+    "$zx/system/ulib/sync",
   ]
 }
 
@@ -37,6 +39,7 @@ group("test") {
 test("intel-hda-utils-test") {
   testonly = true
   sources = [
+    "utils/clock_test.cc",
     "utils/status_or_test.cc",
     "utils/status_test.cc",
   ]
@@ -44,6 +47,7 @@ test("intel-hda-utils-test") {
     ":intel-hda",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
