@@ -256,7 +256,7 @@ zx_status_t CodecConnection::GetChannel(fidl_txn_t* txn) {
   dispatcher::Channel::ProcessHandler phandler(
       [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
-        return codec->ProcessClientRequest(channel, false);
+        return codec->ProcessUserRequest(channel);
       });
 
   zx::channel remote_endpoint_out;
@@ -270,35 +270,77 @@ zx_status_t CodecConnection::GetChannel(fidl_txn_t* txn) {
   return fuchsia_hardware_intel_hda_CodecDeviceGetChannel_reply(txn, remote_endpoint_out.release());
 }
 
-#define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)    \
-  case _ioctl:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                    \
-      LOG(TRACE, "Bad " #_payload " request length (%u != %zu)\n", req_size,   \
-          sizeof(req._payload));                                               \
-      return ZX_ERR_INVALID_ARGS;                                              \
-    }                                                                          \
-    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                       \
-      LOG(TRACE, "Cmd " #_payload                                              \
-                 " requires acknowledgement, but the "                         \
-                 "NOACK flag was set!\n");                                     \
-      return ZX_ERR_INVALID_ARGS;                                              \
-    }                                                                          \
-    if ((_req_driver_chan) && !is_driver_channel) {                            \
-      LOG(TRACE, "Cmd " #_payload " requires a privileged driver channel.\n"); \
-      return ZX_ERR_ACCESS_DENIED;                                             \
-    }                                                                          \
+#define PROCESS_CMD(_req_ack, _ioctl, _payload, _handler)                    \
+  case _ioctl:                                                               \
+    if (req_size != sizeof(req._payload)) {                                  \
+      LOG(TRACE, "Bad " #_payload " request length (%u != %zu)\n", req_size, \
+          sizeof(req._payload));                                             \
+      return ZX_ERR_INVALID_ARGS;                                            \
+    }                                                                        \
+    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                     \
+      LOG(TRACE, "Cmd " #_payload                                            \
+                 " requires acknowledgement, but the "                       \
+                 "NOACK flag was set!\n");                                   \
+      return ZX_ERR_INVALID_ARGS;                                            \
+    }                                                                        \
     return _handler(channel, req._payload)
-zx_status_t CodecConnection::ProcessClientRequest(dispatcher::Channel* channel,
-                                                  bool is_driver_channel) {
+
+zx_status_t CodecConnection::ProcessCodecRequest(dispatcher::Channel* channel) {
+  zx_status_t res;
+  uint32_t req_size;
+  union {
+    ihda_proto::CmdHdr hdr;
+    ihda_proto::SendCORBCmdReq corb_cmd;
+    ihda_proto::RequestStreamReq request_stream;
+    ihda_proto::ReleaseStreamReq release_stream;
+    ihda_proto::SetStreamFmtReq set_stream_fmt;
+  } req;
+  // TODO(johngro) : How large is too large?
+  static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
+
+  // Read the user request.
+  ZX_DEBUG_ASSERT(channel != nullptr);
+  res = channel->Read(&req, sizeof(req), &req_size);
+  if (res != ZX_OK) {
+    LOG(TRACE, "Failed to read user request (res %d)\n", res);
+    return res;
+  }
+
+  // Sanity checks.
+  if (req_size < sizeof(req.hdr)) {
+    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+        sizeof(req.hdr));
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
+  if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
+    LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Dispatch
+  LOG(SPEW, "Codec Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+      req_size);
+
+  switch (cmd_id) {
+    PROCESS_CMD(true, IHDA_CODEC_REQUEST_STREAM, request_stream, ProcessRequestStream);
+    PROCESS_CMD(false, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
+    PROCESS_CMD(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
+    default:
+      LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      return ZX_ERR_INVALID_ARGS;
+  }
+}
+
+zx_status_t CodecConnection::ProcessUserRequest(dispatcher::Channel* channel) {
   zx_status_t res;
   uint32_t req_size;
   union {
     ihda_proto::CmdHdr hdr;
     ihda_proto::GetIDsReq get_ids;
     ihda_proto::SendCORBCmdReq corb_cmd;
-    ihda_proto::RequestStreamReq request_stream;
-    ihda_proto::ReleaseStreamReq release_stream;
-    ihda_proto::SetStreamFmtReq set_stream_fmt;
   } req;
   // TODO(johngro) : How large is too large?
   static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
@@ -325,16 +367,18 @@ zx_status_t CodecConnection::ProcessClientRequest(dispatcher::Channel* channel,
   }
 
   // Dispatch
-  LOG(SPEW, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(SPEW, "User Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
+  // We only allow CORB "get" requests.
+  if (cmd_id == IHDA_CODEC_SEND_CORB_CMD && CodecVerb(req.corb_cmd.verb).is_set()) {
+    LOG(TRACE, "User attempted to perform privileged command.\n");
+    return ZX_ERR_ACCESS_DENIED;
+  }
+
   switch (cmd_id) {
-    PROCESS_CMD(true, false, IHDA_CMD_GET_IDS, get_ids, ProcessGetIDs);
-    PROCESS_CMD(true, true, IHDA_CODEC_REQUEST_STREAM, request_stream, ProcessRequestStream);
-    PROCESS_CMD(false, true, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
-    PROCESS_CMD(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
-    PROCESS_CMD(false, CodecVerb(req.corb_cmd.verb).is_set(), IHDA_CODEC_SEND_CORB_CMD, corb_cmd,
-                ProcessSendCORBCmd);
+    PROCESS_CMD(true, IHDA_CMD_GET_IDS, get_ids, ProcessGetIDs);
+    PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
       LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
@@ -343,7 +387,7 @@ zx_status_t CodecConnection::ProcessClientRequest(dispatcher::Channel* channel,
 
 #undef PROCESS_CMD
 
-void CodecConnection::ProcessClientDeactivate(const dispatcher::Channel* channel) {
+void CodecConnection::ProcessCodecDeactivate(const dispatcher::Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   // This should be the driver channel (client channels created with IOCTL do
@@ -528,13 +572,13 @@ zx_status_t CodecConnection::CodecGetDispatcherChannel(zx_handle_t* remote_endpo
   dispatcher::Channel::ProcessHandler phandler(
       [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
-        return codec->ProcessClientRequest(channel, true);
+        return codec->ProcessCodecRequest(channel);
       });
 
   dispatcher::Channel::ChannelClosedHandler chandler(
       [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
-        codec->ProcessClientDeactivate(channel);
+        codec->ProcessCodecDeactivate(channel);
       });
 
   // Enter the driver channel lock.  If we have already connected to a codec

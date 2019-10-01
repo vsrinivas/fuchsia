@@ -108,8 +108,9 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
 
   // Thunks for interacting with clients and codec drivers.
   zx_status_t GetChannel(fidl_txn_t* txn);
-  zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel);
-  void ProcessClientDeactivate(const dispatcher::Channel* channel);
+  zx_status_t ProcessUserRequest(dispatcher::Channel* channel);
+  zx_status_t ProcessCodecRequest(dispatcher::Channel* channel);
+  void ProcessCodecDeactivate(const dispatcher::Channel* channel);
   zx_status_t ProcessGetIDs(dispatcher::Channel* channel, const ihda_proto::GetIDsReq& req);
   zx_status_t ProcessSendCORBCmd(dispatcher::Channel* channel,
                                  const ihda_proto::SendCORBCmdReq& req);
