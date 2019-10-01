@@ -248,7 +248,12 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::System) {
         registry_handle
             .write()
-            .register(switchboard::base::SettingType::System, spawn_system_controller())
+            .register(
+                switchboard::base::SettingType::System,
+                spawn_system_controller(
+                    unboxed_storage_factory.get_store::<switchboard::base::SystemInfo>(),
+                ),
+            )
             .unwrap();
 
         let switchboard_handle_clone = switchboard_handle.clone();

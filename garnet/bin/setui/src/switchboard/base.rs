@@ -177,14 +177,14 @@ pub struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SystemLoginOverrideMode {
     None,
     AutologinGuest,
     AuthProvider,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SystemInfo {
     pub login_override_mode: SystemLoginOverrideMode,
 }
