@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/driver_ring_buffer.h"
+#include "src/media/audio/audio_core/ring_buffer.h"
 
 #include <trace/event.h>
 
@@ -11,10 +11,10 @@
 namespace media::audio {
 
 // static
-fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo, uint32_t frame_size,
-                                                       uint32_t frame_count, bool input) {
-  TRACE_DURATION("audio", "DriverRingBuffer::Create");
-  auto ret = fbl::AdoptRef(new DriverRingBuffer());
+fbl::RefPtr<RingBuffer> RingBuffer::Create(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
+                                           bool input) {
+  TRACE_DURATION("audio", "RingBuffer::Create");
+  auto ret = fbl::AdoptRef(new RingBuffer());
 
   if (ret->Init(std::move(vmo), frame_size, frame_count, input) != ZX_OK) {
     return nullptr;
@@ -23,9 +23,8 @@ fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo, uint32_t fra
   return ret;
 }
 
-zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
-                                   bool input) {
-  TRACE_DURATION("audio", "DriverRingBuffer::Init");
+zx_status_t RingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count, bool input) {
+  TRACE_DURATION("audio", "RingBuffer::Init");
   if (!vmo.is_valid()) {
     FXL_LOG(ERROR) << "Invalid VMO!";
     return ZX_ERR_INVALID_ARGS;

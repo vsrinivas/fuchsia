@@ -27,7 +27,7 @@
 namespace media::audio {
 
 class AudioDriver;
-class DriverRingBuffer;
+class RingBuffer;
 
 class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDevice>> {
  public:
@@ -196,7 +196,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   bool UpdatePlugState(bool plugged, zx_time_t plug_time);
 
   // AudioDriver accessors.
-  const fbl::RefPtr<DriverRingBuffer>& driver_ring_buffer() const
+  const fbl::RefPtr<RingBuffer>& driver_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   const TimelineFunction& driver_clock_mono_to_ring_pos_bytes() const

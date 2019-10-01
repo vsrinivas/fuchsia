@@ -210,7 +210,7 @@ bool AudioDevice::UpdatePlugState(bool plugged, zx_time_t plug_time) {
   return false;
 }
 
-const fbl::RefPtr<DriverRingBuffer>& AudioDevice::driver_ring_buffer() const {
+const fbl::RefPtr<RingBuffer>& AudioDevice::driver_ring_buffer() const {
   return driver_->ring_buffer();
 };
 

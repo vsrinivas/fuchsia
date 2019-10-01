@@ -87,7 +87,7 @@ void AudioDriver::Cleanup() {
   TRACE_DURATION("audio", "AudioDriver::Cleanup");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-  fbl::RefPtr<DriverRingBuffer> ring_buffer;
+  fbl::RefPtr<RingBuffer> ring_buffer;
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     ring_buffer = std::move(ring_buffer_);
@@ -859,8 +859,8 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
 
-    ring_buffer_ = DriverRingBuffer::Create(std::move(rb_vmo), bytes_per_frame_,
-                                            resp.num_ring_buffer_frames, owner_->is_input());
+    ring_buffer_ = RingBuffer::Create(std::move(rb_vmo), bytes_per_frame_,
+                                      resp.num_ring_buffer_frames, owner_->is_input());
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;

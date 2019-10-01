@@ -20,7 +20,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
-#include "src/media/audio/audio_core/driver_ring_buffer.h"
+#include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -58,7 +58,7 @@ class AudioDriver {
   };
 
   struct RingBufferSnapshot {
-    fbl::RefPtr<DriverRingBuffer> ring_buffer;
+    fbl::RefPtr<RingBuffer> ring_buffer;
     TimelineFunction clock_mono_to_ring_pos_bytes;
     uint32_t position_to_end_fence_frames;
     uint32_t end_fence_to_start_fence_frames;
@@ -205,7 +205,7 @@ class AudioDriver {
   // 3) Expose protected accessors in AudioDevice which demand that we execute in the mix domain.
   //
   // This should be a strong enough guarantee to warrant disabling the thread safety analysis here.
-  const fbl::RefPtr<DriverRingBuffer>& ring_buffer() const FXL_NO_THREAD_SAFETY_ANALYSIS {
+  const fbl::RefPtr<RingBuffer>& ring_buffer() const FXL_NO_THREAD_SAFETY_ANALYSIS {
     return ring_buffer_;
   };
 
@@ -264,7 +264,7 @@ class AudioDriver {
   // Ring buffer state. Details are lock-protected and changes tracked with generation counter,
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
-  fbl::RefPtr<DriverRingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  fbl::RefPtr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   TimelineFunction clock_mono_to_ring_pos_bytes_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   uint32_t end_fence_to_start_fence_frames_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
   GenerationId ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_);

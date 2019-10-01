@@ -172,9 +172,7 @@ void AudioCapturerImpl::Shutdown() {
     // It's important that we don't release the buffer until the mix thread cleanup has run as
     // the mixer could still be accessing the memory backing the buffer.
     //
-    // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
-    // class (and perhaps rename DriverRingBuffer to something more generic like
-    // RingBufferHelper, since this would be a use which is not driver specific).
+    // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
     if (self->payload_buf_virt_ != nullptr) {
       FXL_DCHECK(self->payload_buf_size_ != 0);
       zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),

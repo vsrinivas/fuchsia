@@ -16,7 +16,7 @@
 
 namespace media::audio {
 
-class DriverRingBuffer;
+class RingBuffer;
 
 class AudioPacketRef;
 
