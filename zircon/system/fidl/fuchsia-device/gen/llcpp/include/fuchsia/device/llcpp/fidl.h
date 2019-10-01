@@ -53,7 +53,7 @@ struct NameProvider_GetDeviceName_Response {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 256;
 
   ::fidl::StringView name = {};
 };
@@ -140,7 +140,7 @@ struct NameProvider_GetDeviceName_Result {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 256;
 
  private:
   void Destroy();
@@ -169,7 +169,7 @@ class NameProvider final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_NameProviderGetDeviceNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 256;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -240,7 +240,7 @@ class NameProvider final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Return the name of this Fuchsia device.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDeviceName GetDeviceName();
 
     // Return the name of this Fuchsia device.
@@ -257,7 +257,7 @@ class NameProvider final {
    public:
 
     // Return the name of this Fuchsia device.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
 
     // Return the name of this Fuchsia device.
@@ -722,6 +722,10 @@ constexpr uint32_t DEVICE_SIGNAL_HANGUP = 268435456u;
 // Signal that will be active on a device event handle if the device has encountered an error.
 // This is primarily used by the PTY support.
 constexpr uint32_t DEVICE_SIGNAL_ERROR = 134217728u;
+
+// Maximum length of a device name (without a null byte), based on
+// HOST_NAME_MAX as defined by <limits.h>.
+constexpr uint32_t DEVICE_NAME_MAX = 255u;
 
 extern const char DEFAULT_DEVICE_NAME[];
 
@@ -1885,44 +1889,20 @@ class Controller final {
     UnownedResultOf::GetPowerStateMapping GetPowerStateMapping(::fidl::BytePart _response_buffer);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    // In a future change, this api will result in suspend hook being called on all the children and
-    // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Suspend Suspend(DevicePowerState requested_state);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    // In a future change, this api will result in suspend hook being called on all the children and
-    // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    // In a future change, this api will result in resume hook being called on all the children
-    // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Resume Resume(DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
-    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    // In a future change, this api will result in resume hook being called on all the children
-    // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
@@ -2066,44 +2046,20 @@ class Controller final {
     static UnownedResultOf::GetPowerStateMapping GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    // In a future change, this api will result in suspend hook being called on all the children and
-    // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, DevicePowerState requested_state);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    // In a future change, this api will result in suspend hook being called on all the children and
-    // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    // In a future change, this api will result in resume hook being called on all the children
-    // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Resume Resume(zx::unowned_channel _client_end, DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
-    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    // In a future change, this api will result in resume hook being called on all the children
-    // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
@@ -2167,22 +2123,10 @@ class Controller final {
     static ::fidl::DecodeResult<GetPowerStateMappingResponse> GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    // In a future change, this api will result in suspend hook being called on all the children and
-    // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // state.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    // In a future change, this api will result in resume hook being called on all the children
-    // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
     static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
 
   };

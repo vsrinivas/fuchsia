@@ -8,9 +8,13 @@ using zx;
 
 const string DEFAULT_DEVICE_NAME = "fuchsia";
 
+/// Maximum length of a device name (without a null byte), based on
+/// HOST_NAME_MAX as defined by <limits.h>.
+const uint32 DEVICE_NAME_MAX = 255;
+
 /// Interface for getting device names.
 [Discoverable]
 protocol NameProvider {
     /// Return the name of this Fuchsia device.
-    GetDeviceName() -> (string name) error zx.status;
+    GetDeviceName() -> (string:DEVICE_NAME_MAX name) error zx.status;
 };

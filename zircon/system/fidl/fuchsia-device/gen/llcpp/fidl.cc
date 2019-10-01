@@ -177,8 +177,7 @@ bool NameProvider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(NameProvider_GetDeviceName_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDeviceNameResponse _response = {};
   _response._hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
   _response.result = std::move(result);

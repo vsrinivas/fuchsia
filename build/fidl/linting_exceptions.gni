@@ -10,9 +10,6 @@
 unlinted_libraries = [
   "fuchsia.camera.common",
   "fuchsia.cobalt",
-  "fuchsia.device",
-  "fuchsia.device.manager",
-  "fuchsia.device.manager.test",
   "fuchsia.exception",
   "fuchsia.hardware.block",
   "fuchsia.hardware.block.partition",

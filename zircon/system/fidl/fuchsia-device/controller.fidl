@@ -37,76 +37,74 @@ const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
 /// This is primarily used by the PTY support.
 const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
-
 enum DevicePowerState : uint8 {
-  /// Mandatory Working state. Device is fully functional, can take I/O,
-  /// issue interrrupts. This state is mandatory for all devices
-  /// The device enters into this state by default, when powered on.
-  DEVICE_POWER_STATE_D0 = 0;
-  /// [OPTIONAL] Device is not working when in this state. It cannot process
-  /// I/O nor issue interrupts, unless it is armed for some special interrupts
-  /// that can wake up the system/device. When in this state, the restore time
-  /// of getting back to working state is less than other low-power states
-  /// Power savings in this state are lesser than other low power states.
-  /// Device may retain some hardware context and full initialization
-  /// may not be needed when resuming from this state.
-  DEVICE_POWER_STATE_D1 = 1;
-  /// [OPTIONAL] Device is not working when in this state. It cannot process
-  /// I/O nor issue interrupts, unless it is armed for some special interrupts
-  /// that can wake up the system/device. When in this state, the restore time
-  /// of getting back to working state is more than DEVICE_POWER_STATE_D1 and
-  /// less than restore time of getting back from DEVICE_POWER_STATE_D3HOT,
-  /// DEVICE_POWER_STATE_D3COLD. Power savings in this state are lesser
-  /// than DEVICE_POWER_STATE_D3COLD, DEVICE_POWER_STATE_D3HOT.
-  /// Device may retain some hardware context and full initialization
-  /// may not be needed when resuming from this state.
-  DEVICE_POWER_STATE_D2 = 2;
-  /// [OPTIONAL] Device is not working when in this state. It cannot process
-  /// I/O nor issue interrupts, unless it is armed for some special interrupts
-  /// that can wake up the system/device. When in this state, the restore time
-  /// of getting back to working state is more than DEVICE_POWER_STATE_D1,
-  /// DEVICE_POWER_STATE_D3HOT and less than restore time of getting back from
-  /// DEVICE_POWER_STATE_D3COLD. Power savings in this state are lesser
-  /// than DEVICE_POWER_STATE_D3COLD. Device has no context and full initialization
-  /// by the device driver when resuming from this state.
-  /// Although the device is completely off, it is still powered on and is enumerable.
-  DEVICE_POWER_STATE_D3HOT = 3;
-  /// [MANDATORY] Device is not working when in this state. It cannot process
-  /// I/O nor issue interrupts, unless it is armed for some special interrupts
-  /// that can wake up the system/device. When in this state, the restore time
-  /// of getting back to working state is more than all other low power states.
-  /// Power savings are more compared to all other low-power states.
-  /// Device has no context and full initialization by the device driver when
-  /// resuming from this state. In this state, the power to this device is turned off.
-  /// Device may be powered by other auxiliary supplies to support wake capability.
-  DEVICE_POWER_STATE_D3COLD = 4;
+    /// Mandatory Working state. Device is fully functional, can take I/O,
+    /// issue interrrupts. This state is mandatory for all devices
+    /// The device enters into this state by default, when powered on.
+    DEVICE_POWER_STATE_D0 = 0;
+    /// [OPTIONAL] Device is not working when in this state. It cannot process
+    /// I/O nor issue interrupts, unless it is armed for some special interrupts
+    /// that can wake up the system/device. When in this state, the restore time
+    /// of getting back to working state is less than other low-power states
+    /// Power savings in this state are lesser than other low power states.
+    /// Device may retain some hardware context and full initialization
+    /// may not be needed when resuming from this state.
+    DEVICE_POWER_STATE_D1 = 1;
+    /// [OPTIONAL] Device is not working when in this state. It cannot process
+    /// I/O nor issue interrupts, unless it is armed for some special interrupts
+    /// that can wake up the system/device. When in this state, the restore time
+    /// of getting back to working state is more than DEVICE_POWER_STATE_D1 and
+    /// less than restore time of getting back from DEVICE_POWER_STATE_D3HOT,
+    /// DEVICE_POWER_STATE_D3COLD. Power savings in this state are lesser
+    /// than DEVICE_POWER_STATE_D3COLD, DEVICE_POWER_STATE_D3HOT.
+    /// Device may retain some hardware context and full initialization
+    /// may not be needed when resuming from this state.
+    DEVICE_POWER_STATE_D2 = 2;
+    /// [OPTIONAL] Device is not working when in this state. It cannot process
+    /// I/O nor issue interrupts, unless it is armed for some special interrupts
+    /// that can wake up the system/device. When in this state, the restore time
+    /// of getting back to working state is more than DEVICE_POWER_STATE_D1,
+    /// DEVICE_POWER_STATE_D3HOT and less than restore time of getting back from
+    /// DEVICE_POWER_STATE_D3COLD. Power savings in this state are lesser
+    /// than DEVICE_POWER_STATE_D3COLD. Device has no context and full initialization
+    /// by the device driver when resuming from this state.
+    /// Although the device is completely off, it is still powered on and is enumerable.
+    DEVICE_POWER_STATE_D3HOT = 3;
+    /// [MANDATORY] Device is not working when in this state. It cannot process
+    /// I/O nor issue interrupts, unless it is armed for some special interrupts
+    /// that can wake up the system/device. When in this state, the restore time
+    /// of getting back to working state is more than all other low power states.
+    /// Power savings are more compared to all other low-power states.
+    /// Device has no context and full initialization by the device driver when
+    /// resuming from this state. In this state, the power to this device is turned off.
+    /// Device may be powered by other auxiliary supplies to support wake capability.
+    DEVICE_POWER_STATE_D3COLD = 4;
 };
 
-//TODO(ravoorir): This should be table when the Controller protocol moves off of
-//simple layout.
+// TODO(ravoorir): This should be table when the Controller protocol moves off of simple layout.
 struct DevicePowerStateInfo {
-  DevicePowerState state_id;
+    DevicePowerState state_id;
 
-  /// Is this state supported?
-  bool is_supported;
+    /// Is this state supported?
+    bool is_supported;
 
-  /// Restore time for coming out of this state to working D0 state.
-  int64 restore_latency;
+    /// Restore time for coming out of this state to working D0 state.
+    int64 restore_latency;
 
-  /// Is this device wakeup_capable?
-  bool wakeup_capable;
+    /// Is this device wakeup_capable?
+    bool wakeup_capable;
 
-  /// Deepest system system sleep state that the device can wake the system from.
-  int32 system_wake_state;
+    /// Deepest system system sleep state that the device can wake the system from.
+    int32 system_wake_state;
 };
 
 struct SystemPowerStateInfo {
-  uint32 suspend_flag;
-  /// Should wakeup be enabled from this system state?
-  bool wakeup_enable;
+    uint32 suspend_flag;
+    /// Should wakeup be enabled from this system state?
+    bool wakeup_enable;
 
-  /// Device power state that the device should be in for this system power state.
-  DevicePowerState dev_state;
+    /// Device power state that the device should be in for this system power state.
+    DevicePowerState dev_state;
 };
 
 /// Interface for manipulating a device in a devhost
@@ -157,25 +155,26 @@ protocol Controller {
 
     /// Get the mapping between system power states to device power states. Used by the system
     /// wide power manager to manage power for this device.
-    GetPowerStateMapping()->(array<SystemPowerStateInfo>:fuchsia.device.manager.MAX_SYSTEM_POWER_STATES mapping) error zx.status;
+    GetPowerStateMapping() -> (array<SystemPowerStateInfo>:fuchsia.device.manager.MAX_SYSTEM_POWER_STATES mapping) error zx.status;
 
     /// Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
-    /// state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
-    /// In a future change, this api will result in suspend hook being called on all the children and
-    /// descendants before transitioning this device.
-    /// On success, the out_state is same as requested_state.
-    /// On failure, the out_state is the state the device can go into at this point, depending
-    /// on the configuration of its children. For example, a device cannot go into the
-    /// requested_state, if the requested_state does not support a descendant's wake configuration.
+    /// state.
+    // TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
     Suspend(DevicePowerState requested_state) -> (zx.status status, DevicePowerState out_state);
     /// Transition this device from a sleep state to a working state.
-    /// TODO(ravoorir): At the moment, this will call the resume hook only on this device.
-    /// In a future change, this api will result in resume hook being called on all the children
-    /// after the current device is transitioned.
-    /// On success, the out_state has the actual state of the device. The out_state could be
-    /// different from the requested_state, if the device could not resume to the requested
-    /// performant state, but the device could resume to a working state.
-    //  Just because the device is not able to transition to a particular performant state,
-    //  we do not want to suspend the device back.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    // Just because the device is not able to transition to a particular performant state,
+    // we do not want to suspend the device back.
     Resume(DevicePowerState requested_state) -> (DevicePowerState out_state) error zx.status;
 };

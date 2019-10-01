@@ -807,7 +807,7 @@ class DevhostController final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 96;
+    static constexpr uint32_t MaxOutOfLine = 160;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -979,7 +979,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
-    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateCompositeDevice CreateCompositeDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
@@ -1056,7 +1056,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
-    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
@@ -3361,7 +3361,7 @@ class DeviceController final {
 };
 
 // Maximum number of components that a composite device can have
-constexpr uint32_t COMPONENTS_MAX = 8u;
+constexpr uint32_t COMPONENTS_MAX = 16u;
 
 
 
@@ -3781,7 +3781,7 @@ class Coordinator final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 68704;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4508,15 +4508,11 @@ class Coordinator final {
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::BindDevice BindDevice(::fidl::StringView driver_path);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::BindDevice BindDevice(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer);
 
@@ -4553,16 +4549,10 @@ class Coordinator final {
     UnownedResultOf::GetMetadataSize GetMetadataSize(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer);
 
     // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddMetadata AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::AddMetadata AddMetadata(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
@@ -4706,15 +4696,11 @@ class Coordinator final {
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::BindDevice BindDevice(zx::unowned_channel _client_end, ::fidl::StringView driver_path);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::BindDevice BindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer);
 
@@ -4751,16 +4737,10 @@ class Coordinator final {
     static UnownedResultOf::GetMetadataSize GetMetadataSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer);
 
     // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddMetadata AddMetadata(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::AddMetadata AddMetadata(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
@@ -4861,8 +4841,6 @@ class Coordinator final {
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
     static ::fidl::DecodeResult<BindDeviceResponse> BindDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDeviceRequest> params, ::fidl::BytePart response_buffer);
 
     // Returns the topological path of this device.
@@ -4878,9 +4856,6 @@ class Coordinator final {
     static ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataSizeRequest> params, ::fidl::BytePart response_buffer);
 
     // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
     static ::fidl::DecodeResult<AddMetadataResponse> AddMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddMetadataRequest> params, ::fidl::BytePart response_buffer);
 
     // Behaves like AddMetadata, but instead of associating it with the
