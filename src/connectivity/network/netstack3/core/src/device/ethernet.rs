@@ -229,7 +229,7 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     link_multicast_groups: HashMap<MulticastAddr<Mac>, usize>,
 
     /// IPv4 ARP state.
-    ipv4_arp: ArpState<Ipv4Addr, Mac>,
+    ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
 
     /// (IPv6) NDP state.
     ndp: ndp::NdpState<Mac, D::Instant>,
@@ -339,7 +339,7 @@ impl EthernetIpExt for Ipv6 {
 ///
 /// `D` is the type of device ID that identifies different Ethernet devices.
 pub(super) enum EthernetTimerId<D> {
-    Arp(ArpTimerId<D, Ipv4Addr>),
+    Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<D>),
 }
 
@@ -1168,51 +1168,66 @@ fn get_device_state<D: EventDispatcher>(
         .device()
 }
 
-impl<D: EventDispatcher> StateContext<EthernetDeviceId, ArpState<Ipv4Addr, Mac>> for Context<D> {
-    fn get_state(&self, id: EthernetDeviceId) -> &ArpState<Ipv4Addr, Mac> {
+impl<D: EventDispatcher> StateContext<EthernetDeviceId, ArpState<EthernetLinkDevice, Ipv4Addr>>
+    for Context<D>
+{
+    fn get_state(&self, id: EthernetDeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
         &get_device_state(self.state(), id).ipv4_arp
     }
 
-    fn get_state_mut(&mut self, id: EthernetDeviceId) -> &mut ArpState<Ipv4Addr, Mac> {
+    fn get_state_mut(
+        &mut self,
+        id: EthernetDeviceId,
+    ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
         &mut get_device_state_mut(self.state_mut(), id).ipv4_arp
     }
 }
 
-impl<D: EventDispatcher> TimerContext<ArpTimerId<EthernetDeviceId, Ipv4Addr>> for Context<D> {
+impl<D: EventDispatcher> TimerContext<ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>>
+    for Context<D>
+{
     fn schedule_timer_instant(
         &mut self,
         time: D::Instant,
-        id: ArpTimerId<EthernetDeviceId, Ipv4Addr>,
+        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
     ) -> Option<D::Instant> {
         self.dispatcher_mut()
-            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::from(id)))
+            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
     }
 
-    fn cancel_timer(&mut self, id: ArpTimerId<EthernetDeviceId, Ipv4Addr>) -> Option<D::Instant> {
-        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::from(id.clone())))
+    fn cancel_timer(
+        &mut self,
+        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
+    ) -> Option<D::Instant> {
+        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
     }
 
-    fn cancel_timers_with<F: FnMut(&ArpTimerId<EthernetDeviceId, Ipv4Addr>) -> bool>(
+    fn cancel_timers_with<
+        F: FnMut(&ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>) -> bool,
+    >(
         &mut self,
         mut f: F,
     ) {
         self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(id))) => f(id),
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpEthernetIpv4(id))) => f(id),
             _ => false,
         })
     }
 
-    fn scheduled_instant(&self, id: ArpTimerId<EthernetDeviceId, Ipv4Addr>) -> Option<D::Instant> {
-        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::from(id)))
+    fn scheduled_instant(
+        &self,
+        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
+    ) -> Option<D::Instant> {
+        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, ArpFrameMetadata<EthernetDeviceId, Mac>>
-    for Context<D>
+impl<B: BufferMut, D: BufferDispatcher<B>>
+    FrameContext<B, ArpFrameMetadata<EthernetLinkDevice, EthernetDeviceId>> for Context<D>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        meta: ArpFrameMetadata<EthernetDeviceId, Mac>,
+        meta: ArpFrameMetadata<EthernetLinkDevice, EthernetDeviceId>,
         body: S,
     ) -> Result<(), S> {
         let src = get_device_state(self.state(), meta.device_id).mac;
@@ -1225,7 +1240,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, ArpFrameMetadata<Ethe
     }
 }
 
-impl<D: EventDispatcher> ArpContext<Ipv4Addr, Mac> for Context<D> {
+impl<D: EventDispatcher> ArpContext<EthernetLinkDevice, Ipv4Addr> for Context<D> {
     type DeviceId = EthernetDeviceId;
 
     fn get_protocol_addr(&self, device_id: EthernetDeviceId) -> Option<Ipv4Addr> {
@@ -1565,6 +1580,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
 }
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct EthernetLinkDevice;
 
 impl LinkDevice for EthernetLinkDevice {

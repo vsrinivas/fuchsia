@@ -318,18 +318,12 @@ impl<D> DeviceState<D> {
 /// The identifier for timer events in the device layer.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum DeviceLayerTimerId {
-    /// A timer event in the ARP layer with a protocol type of IPv4
-    ArpIpv4(arp::ArpTimerId<EthernetDeviceId, Ipv4Addr>),
+    ArpEthernetIpv4(arp::ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>),
+    /// A timer event in the NDP layer.
     Ndp {
         id: ndp::NdpTimerId<EthernetDeviceId>,
         protocol: DeviceProtocol,
     },
-}
-
-impl From<arp::ArpTimerId<EthernetDeviceId, Ipv4Addr>> for DeviceLayerTimerId {
-    fn from(id: arp::ArpTimerId<EthernetDeviceId, Ipv4Addr>) -> DeviceLayerTimerId {
-        DeviceLayerTimerId::ArpIpv4(id)
-    }
 }
 
 /// The various states an IP address can be on an interface.
@@ -434,7 +428,9 @@ pub enum AddressError {
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     match id {
-        DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timer(ctx, inner_id),
+        DeviceLayerTimerId::ArpEthernetIpv4(id) => {
+            arp::handle_timer::<EthernetLinkDevice, _, _>(ctx, id)
+        }
         DeviceLayerTimerId::Ndp { id, protocol } => match protocol {
             DeviceProtocol::Ethernet => ndp::handle_timer::<EthernetLinkDevice, _>(ctx, id),
         },
