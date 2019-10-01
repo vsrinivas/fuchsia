@@ -27,7 +27,7 @@ use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpState, NdpTimerId};
 use crate::device::{
     is_device_usable, AddressConfigurationType, AddressEntry, AddressError, AddressState,
-    DeviceLayerTimerId, DeviceProtocol, EthernetDeviceId, FrameDestination, Tentative,
+    DeviceLayerTimerId, EthernetDeviceId, FrameDestination, Tentative,
 };
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
@@ -232,7 +232,7 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
 
     /// (IPv6) NDP state.
-    ndp: ndp::NdpState<Mac, D::Instant>,
+    ndp: ndp::NdpState<EthernetLinkDevice, D::Instant>,
 
     /// A flag indicating whether routing of IPv4 packets not destined for this device is
     /// enabled.
@@ -340,7 +340,7 @@ impl EthernetIpExt for Ipv6 {
 /// `D` is the type of device ID that identifies different Ethernet devices.
 pub(super) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
-    Ndp(NdpTimerId<D>),
+    Ndp(NdpTimerId<EthernetLinkDevice, D>),
 }
 
 /// Initialize a device.
@@ -1269,49 +1269,55 @@ impl<D: EventDispatcher> ArpContext<EthernetLinkDevice, Ipv4Addr> for Context<D>
     }
 }
 
-impl<D: EventDispatcher> StateContext<EthernetDeviceId, NdpState<Mac, D::Instant>> for Context<D> {
-    fn get_state(&self, id: EthernetDeviceId) -> &NdpState<Mac, D::Instant> {
+impl<D: EventDispatcher> StateContext<EthernetDeviceId, NdpState<EthernetLinkDevice, D::Instant>>
+    for Context<D>
+{
+    fn get_state(&self, id: EthernetDeviceId) -> &NdpState<EthernetLinkDevice, D::Instant> {
         &self.state().device.ethernet.get(id.0).unwrap().device().ndp
     }
 
-    fn get_state_mut(&mut self, id: EthernetDeviceId) -> &mut NdpState<Mac, D::Instant> {
+    fn get_state_mut(
+        &mut self,
+        id: EthernetDeviceId,
+    ) -> &mut NdpState<EthernetLinkDevice, D::Instant> {
         &mut self.state_mut().device.ethernet.get_mut(id.0).unwrap().device_mut().ndp
     }
 }
 
-impl<D: EventDispatcher> TimerContext<NdpTimerId<EthernetDeviceId>> for Context<D> {
+impl<D: EventDispatcher> TimerContext<NdpTimerId<EthernetLinkDevice, EthernetDeviceId>>
+    for Context<D>
+{
     fn schedule_timer_instant(
         &mut self,
         time: D::Instant,
-        id: NdpTimerId<EthernetDeviceId>,
+        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
     ) -> Option<D::Instant> {
-        self.dispatcher_mut().schedule_timeout_instant(
-            time,
-            TimerId::from(DeviceLayerTimerId::Ndp { id, protocol: DeviceProtocol::Ethernet }),
-        )
+        self.dispatcher_mut()
+            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
     }
 
-    fn cancel_timer(&mut self, id: NdpTimerId<EthernetDeviceId>) -> Option<D::Instant> {
-        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::Ndp {
-            id,
-            protocol: DeviceProtocol::Ethernet,
-        }))
+    fn cancel_timer(
+        &mut self,
+        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
+    ) -> Option<D::Instant> {
+        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
     }
 
-    fn cancel_timers_with<F: FnMut(&NdpTimerId<EthernetDeviceId>) -> bool>(&mut self, mut f: F) {
+    fn cancel_timers_with<F: FnMut(&NdpTimerId<EthernetLinkDevice, EthernetDeviceId>) -> bool>(
+        &mut self,
+        mut f: F,
+    ) {
         self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp { id, protocol })) => {
-                *protocol == DeviceProtocol::Ethernet && f(id)
-            }
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::NdpEthernet(id))) => f(id),
             _ => false,
         })
     }
 
-    fn scheduled_instant(&self, id: NdpTimerId<EthernetDeviceId>) -> Option<D::Instant> {
-        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::Ndp {
-            id,
-            protocol: DeviceProtocol::Ethernet,
-        }))
+    fn scheduled_instant(
+        &self,
+        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
+    ) -> Option<D::Instant> {
+        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
     }
 }
 
@@ -1506,12 +1512,9 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
                     // We must have had an invalidation timeout if we just attempted to deprecate.
                     assert!(self
                         .dispatcher_mut()
-                        .cancel_timeout(TimerId::from(DeviceLayerTimerId::Ndp {
-                            id: ndp::NdpTimerId::new_invalidate_slaac_address_timer_id(
-                                device_id, *addr
-                            ),
-                            protocol: DeviceProtocol::Ethernet
-                        }))
+                        .cancel_timeout(TimerId::from(DeviceLayerTimerId::NdpEthernet(
+                            ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr)
+                        )))
                         .is_some());
 
                     Self::invalidate_slaac_addr(self, device_id, addr);
