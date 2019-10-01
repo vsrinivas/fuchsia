@@ -12,6 +12,8 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/pixelformat.h>
 
+#include <thread>
+
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
@@ -21,7 +23,7 @@ namespace sysmem = ::llcpp::fuchsia::sysmem;
 zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
                                  zx::channel dc_client_channel);
 
-TEST(Framebuffer, SingleBuffer) {
+void RunSingleBufferTest() {
   fbl::unique_fd dc_fd(open("/dev/class/display-controller/000", O_RDWR));
   if (!dc_fd) {
     fprintf(stdout, "Skipping test because of no display controller\n");
@@ -54,6 +56,24 @@ TEST(Framebuffer, SingleBuffer) {
     EXPECT_LE(linear_stride_px * ZX_PIXEL_FORMAT_BYTES(format) * height, buffer_size);
 
     fb_release();
+  }
+}
+
+TEST(Framebuffer, SingleBuffer) {
+  zx::event finished;
+  zx::event::create(0, &finished);
+  std::thread execute_thread([&finished]() {
+    RunSingleBufferTest();
+    finished.signal(0, ZX_USER_SIGNAL_0);
+  });
+  zx_status_t status =
+      finished.wait_one(ZX_USER_SIGNAL_0, zx::deadline_after(zx::sec(60)), nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Test timed out. Maybe no display is connected to device.\n");
+    execute_thread.detach();
+  } else {
+    execute_thread.join();
   }
 }
 
