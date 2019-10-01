@@ -110,6 +110,10 @@ pub enum Opt {
     #[structopt(name = "mesh")]
     /// commands for mesh stations
     Mesh(MeshCmd),
+
+    #[structopt(name = "rsn")]
+    /// commands for verifying RSN behavior
+    Rsn(RsnCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -304,5 +308,16 @@ pub enum MeshCmd {
     Paths {
         #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
+    },
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum RsnCmd {
+    #[structopt(name = "generate-psk")]
+    GeneratePsk {
+        #[structopt(short = "p", long = "passphrase")]
+        passphrase: String,
+        #[structopt(short = "s", long = "ssid")]
+        ssid: String,
     },
 }

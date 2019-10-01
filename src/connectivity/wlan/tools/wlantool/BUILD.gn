@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

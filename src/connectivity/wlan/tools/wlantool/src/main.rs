@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use hex::FromHex;
+use hex::{FromHex, ToHex};
 use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
@@ -24,6 +24,7 @@ use wlan_common::{
     channel::{Cbw, Phy},
     RadioConfig,
 };
+use wlan_rsn::psk;
 
 mod opts;
 use crate::opts::*;
@@ -58,6 +59,7 @@ fn main() -> Result<(), Error> {
             }
             Opt::Ap(cmd) => do_ap(cmd, wlan_svc).await,
             Opt::Mesh(cmd) => do_mesh(cmd, wlan_svc).await,
+            Opt::Rsn(cmd) => do_rsn(cmd).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -351,6 +353,22 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+async fn do_rsn(cmd: opts::RsnCmd) -> Result<(), Error> {
+    match cmd {
+        opts::RsnCmd::GeneratePsk { passphrase, ssid } => {
+            println!("{}", generate_psk(&passphrase, &ssid)?);
+        }
+    }
+    Ok(())
+}
+
+fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
+    let psk = psk::compute(passphrase.as_bytes(), ssid.as_bytes())?;
+    let mut psk_hex = String::new();
+    psk.write_hex(&mut psk_hex)?;
+    return Ok(psk_hex);
 }
 
 fn make_credential(
@@ -756,5 +774,14 @@ mod tests {
                 responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
             }
         );
+    }
+
+    #[test]
+    fn test_generate_psk() {
+        assert_eq!(
+            generate_psk("12345678", "coolnet").unwrap(),
+            "1ec9ee30fdff1961a9abd083f571464cc0fe27f62f9f59992bd39f8e625e9f52"
+        );
+        assert!(generate_psk("short", "coolnet").is_err());
     }
 }
