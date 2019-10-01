@@ -42,6 +42,7 @@ const (
 	kernelNetsvcName         = "<<netboot>>kernel.bin"
 	vbmetaANetsvcName        = "<<image>>vbmetaa.img"
 	vbmetaBNetsvcName        = "<<image>>vbmetab.img"
+	vbmetaRNetsvcName        = "<<image>>vbmetar.img"
 	zirconANetsvcName        = "<<image>>zircona.img"
 	zirconBNetsvcName        = "<<image>>zirconb.img"
 	zirconRNetsvcName        = "<<image>>zirconr.img"
@@ -56,6 +57,7 @@ var bootserverArgToName = map[string]string{
 	"--kernc":      kerncNetsvcName,
 	"--vbmetaa":    vbmetaANetsvcName,
 	"--vbmetab":    vbmetaBNetsvcName,
+	"--vbmetar":    vbmetaRNetsvcName,
 	"--zircona":    zirconANetsvcName,
 	"--zirconb":    zirconBNetsvcName,
 	"--zirconr":    zirconRNetsvcName,
@@ -75,8 +77,9 @@ var transferOrder = map[string]int{
 	zirconRNetsvcName:        8,
 	vbmetaANetsvcName:        9,
 	vbmetaBNetsvcName:        10,
-	authorizedKeysNetsvcName: 11,
-	kernelNetsvcName:         12,
+	vbmetaRNetsvcName:        11,
+	authorizedKeysNetsvcName: 12,
+	kernelNetsvcName:         13,
 }
 
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
