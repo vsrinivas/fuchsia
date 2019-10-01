@@ -14,6 +14,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -272,8 +273,7 @@ static zx_status_t intel_serialio_i2c_remove_subordinate(intel_serialio_i2c_devi
   }
 
   status = device_remove(subordinate->zxdev);
-  if (status < 0)
-    goto remove_subordinate_finish;
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 
   list_delete(&subordinate->subordinate_list_node);
   free(subordinate);
