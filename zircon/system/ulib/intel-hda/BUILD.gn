@@ -42,6 +42,7 @@ test("intel-hda-utils-test") {
     "utils/clock_test.cc",
     "utils/status_or_test.cc",
     "utils/status_test.cc",
+    "utils/utils_test.cc",
   ]
   deps = [
     ":intel-hda",

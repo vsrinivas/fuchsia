@@ -19,6 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <intel-hda/utils/clock.h>
 #include <intel-hda/utils/codec-caps.h>
 
 namespace audio {
@@ -26,7 +27,8 @@ namespace intel_hda {
 
 static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
 using WaitConditionFn = fbl::InlineFunction<bool(), MAX_HANDLER_CAPTURE_SIZE>;
-zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval, WaitConditionFn cond);
+zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval, WaitConditionFn cond,
+                          Clock* clock = RealClock::Get());
 
 template <typename E>
 constexpr typename std::underlying_type<E>::type to_underlying(E e) {

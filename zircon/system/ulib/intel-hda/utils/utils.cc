@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "intel-hda/utils/utils.h"
+
+#include <lib/zx/time.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -9,29 +12,31 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <intel-hda/utils/utils.h>
+
+#include "intel-hda/utils/clock.h"
 
 namespace audio {
 namespace intel_hda {
 
-zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval,
-                          WaitConditionFn cond) {
+zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval, WaitConditionFn cond,
+                          Clock* clock) {
   ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
   ZX_DEBUG_ASSERT(cond);
 
-  zx_time_t now = zx_clock_get_monotonic();
-  zx_time_t deadline = zx_time_add_duration(now, timeout);
+  zx::time now = clock->Now();
+  zx::time deadline = now + zx::duration(timeout);
 
   while (!cond()) {
-    now = zx_clock_get_monotonic();
-    if (now >= deadline)
+    // If we have passed our deadline, give up.
+    if (now >= deadline) {
       return ZX_ERR_TIMED_OUT;
+    }
 
-    zx_duration_t sleep_time = zx_time_sub_time(deadline, now);
-    if (poll_interval < sleep_time)
-      sleep_time = poll_interval;
+    // Sleep until the next poll interval (or the deadline, if it is sooner).
+    zx::time next_poll_time = std::min(deadline, now + zx::duration(poll_interval));
+    clock->SleepUntil(next_poll_time);
 
-    zx_nanosleep(zx_deadline_after(sleep_time));
+    now = clock->Now();
   }
 
   return ZX_OK;
