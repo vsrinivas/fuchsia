@@ -20,18 +20,25 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
  public:
   class Delegate {
    public:
+    // Holds the information necessary to create an overnet::Peer.
+    struct FakePeer {
+      fuchsia::overnet::protocol::NodeId id;
+      std::vector<std::string> services;
+    };
+
     virtual ~Delegate() {}
 
     // Returns the list of known devices. See Overnet::GetKnownDeviceNames
     // for more details.
-    virtual void ListPeers(
-        uint64_t last_version,
-        fit::function<void(uint64_t, std::vector<fuchsia::overnet::protocol::NodeId>)>
-            callback) = 0;
+    virtual void ListPeers(uint64_t last_version,
+                           fit::function<void(uint64_t, std::vector<FakePeer>)> callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToService(fuchsia::overnet::protocol::NodeId device_name,
                                   std::string service_name, zx::channel channel) = 0;
+
+    // Called when a service was registered to this Overnet.
+    virtual void ServiceWasRegistered() = 0;
   };
 
   explicit FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate);
@@ -39,6 +46,9 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
 
   // Connects to the service provider of this (virtual) host
   void GetService(std::string service_name, zx::channel chan);
+
+  // Returns the list of services registered to this Overnet.
+  std::vector<std::string> GetAllServices() const;
 
  private:
   class ServiceProviderHolder {

@@ -37,20 +37,26 @@ class OvernetFactory : public FakeOvernet::Delegate {
   // notifications to waiting clients as necessary.
   void UpdatedHostList();
 
+  // Returns the list of hosts.
+  std::vector<FakeOvernet::Delegate::FakePeer> MakeHostList();
+
   // FakeOvernet::Delegate:
   void ListPeers(uint64_t last_version,
-                 fit::function<void(uint64_t, std::vector<fuchsia::overnet::protocol::NodeId>)>
+                 fit::function<void(uint64_t, std::vector<FakeOvernet::Delegate::FakePeer>)>
                      callback) override;
   void ConnectToService(fuchsia::overnet::protocol::NodeId device_name, std::string service_name,
                         zx::channel channel) override;
 
   async_dispatcher_t* dispatcher_;
+
+  void ServiceWasRegistered() override;
+
   // If set to true, host lists of one host are not returned at all. This is a workaround for OV-8.
   const bool return_one_host_list_;
   // Counter incremented each time a Overnet is added or removed; denotes
   // the version of the current device list.
   uint64_t current_version_ = 0;
-  std::vector<fit::function<void(uint64_t, std::vector<fuchsia::overnet::protocol::NodeId>)>>
+  std::vector<fit::function<void(uint64_t, std::vector<FakeOvernet::Delegate::FakePeer>)>>
       pending_device_list_callbacks_;
   callback::AutoCleanableMap<uint64_t, Holder> net_connectors_;
 

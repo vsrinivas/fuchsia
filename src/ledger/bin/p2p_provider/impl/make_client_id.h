@@ -7,11 +7,12 @@
 
 #include <fuchsia/overnet/protocol/cpp/fidl.h>
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 
 namespace p2p_provider {
-// Makes a P2PClientId from a NodeId;
-p2p_provider::P2PClientId MakeP2PClientId(fuchsia::overnet::protocol::NodeId node_id);
+
+p2p_provider::P2PClientId MakeRandomP2PClientId(rng::Random* random);
 
 }  // namespace p2p_provider
 

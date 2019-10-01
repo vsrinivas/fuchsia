@@ -68,21 +68,16 @@ void OvernetFactory::UpdatedHostList() {
   if (pending_device_list_callbacks_.empty()) {
     return;
   }
-  std::vector<fuchsia::overnet::protocol::NodeId> device_names;
-  for (const auto& holder_pair : net_connectors_) {
-    fuchsia::overnet::protocol::NodeId node;
-    node.id = holder_pair.first;
-    device_names.push_back(std::move(node));
-  }
+  std::vector<FakeOvernet::Delegate::FakePeer> peers = MakeHostList();
   for (const auto& callback : pending_device_list_callbacks_) {
-    callback(current_version_, device_names);
+    callback(current_version_, peers);
   }
   pending_device_list_callbacks_.clear();
 }
 
 void OvernetFactory::ListPeers(
     uint64_t last_version,
-    fit::function<void(uint64_t, std::vector<fuchsia::overnet::protocol::NodeId>)> callback) {
+    fit::function<void(uint64_t, std::vector<FakeOvernet::Delegate::FakePeer>)> callback) {
   FXL_CHECK(last_version <= current_version_)
       << "Last seen version (" << last_version << ") is more recent than current version ("
       << current_version_ << "). Something is wrong here.";
@@ -90,17 +85,12 @@ void OvernetFactory::ListPeers(
     pending_device_list_callbacks_.push_back(std::move(callback));
     return;
   }
-  std::vector<fuchsia::overnet::protocol::NodeId> device_names;
   if (return_one_host_list_ && net_connectors_.size() == 1) {
     callback(current_version_, {});
     return;
   }
-  for (const auto& holder_pair : net_connectors_) {
-    fuchsia::overnet::protocol::NodeId node;
-    node.id = holder_pair.first;
-    device_names.push_back(std::move(node));
-  }
-  callback(current_version_, std::move(device_names));
+  std::vector<FakeOvernet::Delegate::FakePeer> peers = MakeHostList();
+  callback(current_version_, std::move(peers));
 }
 
 void OvernetFactory::ConnectToService(fuchsia::overnet::protocol::NodeId device_name,
@@ -110,6 +100,19 @@ void OvernetFactory::ConnectToService(fuchsia::overnet::protocol::NodeId device_
     return;
   }
   (*it).second.impl()->GetService(std::move(service_name), std::move(channel));
+}
+
+void OvernetFactory::ServiceWasRegistered() { UpdatedHostList(); }
+
+std::vector<FakeOvernet::Delegate::FakePeer> OvernetFactory::MakeHostList() {
+  std::vector<FakeOvernet::Delegate::FakePeer> peers;
+  for (auto& holder_pair : net_connectors_) {
+    fuchsia::overnet::protocol::NodeId node;
+    node.id = holder_pair.first;
+    auto services = holder_pair.second.impl()->GetAllServices();
+    peers.push_back({node, services});
+  }
+  return peers;
 }
 
 }  // namespace ledger

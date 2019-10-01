@@ -24,35 +24,15 @@ const uint16_t kCurrentVersion = 1;
 // Initial version of the list of peers, when starting Overnet.
 const uint64_t kInitialOvernetVersion = 0;
 
-bool ValidateHandshake(const Envelope* envelope, const Handshake** message) {
-  if (envelope->message_type() != EnvelopeMessage_Handshake) {
-    FXL_LOG(ERROR) << "Incorrect message type: " << envelope->message_type();
-    return false;
-  }
-  *message = static_cast<const Handshake*>(envelope->message());
-  return true;
-}
-
-std::unique_ptr<flatbuffers::FlatBufferBuilder> BuildBufferContainingHandshake(
-    const P2PClientId& client_id) {
-  auto buffer = std::make_unique<flatbuffers::FlatBufferBuilder>();
-  flatbuffers::Offset<Handshake> request =
-      CreateHandshake(*buffer, convert::ToFlatBufferVector(buffer.get(), client_id.GetData()));
-  flatbuffers::Offset<Envelope> envelope =
-      CreateEnvelope(*buffer, EnvelopeMessage_Handshake, request.Union());
-  buffer->Finish(envelope);
-  return buffer;
-}
-
 }  // namespace
 
-P2PProviderImpl::P2PProviderImpl(async_dispatcher_t* dispatcher,
-                                 fuchsia::overnet::OvernetPtr overnet,
-                                 std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider)
-    : connections_(dispatcher),
-      service_binding_(this),
+P2PProviderImpl::P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
+                                 std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider,
+                                 rng::Random* random)
+    : service_binding_(this),
       overnet_(std::move(overnet)),
-      user_id_provider_(std::move(user_id_provider)) {}
+      user_id_provider_(std::move(user_id_provider)),
+      random_(random) {}
 
 P2PProviderImpl::~P2PProviderImpl() = default;
 
@@ -81,11 +61,11 @@ bool P2PProviderImpl::SendMessage(const P2PClientId& destination, fxl::StringVie
 
   char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
   size_t size = buffer.GetSize();
-  auto it = connection_map_.find(destination);
-  if (it == connection_map_.end()) {
+  auto it = connections_.find(destination);
+  if (it == connections_.end()) {
     return false;
   }
-  it->second->SendMessage(fxl::StringView(buf, size));
+  it->second.SendMessage(fxl::StringView(buf, size));
   return true;
 }
 
@@ -97,160 +77,88 @@ void P2PProviderImpl::StartService() {
 }
 
 void P2PProviderImpl::ConnectToService(zx::channel chan) {
-  if (!self_client_id_) {
-    // We don't know who we are yet, so we won't be able to handshake properly.
-    // Let's wait until we have more information.
-    pending_requests_.push_back(std::move(chan));
-    return;
-  }
-  RemoteConnection& connection = connections_.emplace();
-  connection.set_on_message([this, &connection](std::vector<uint8_t> data) {
-    ProcessHandshake(&connection, std::move(data), true, std::optional<P2PClientId>());
-  });
-  connection.Start(std::move(chan));
+  AddConnectionFromChannel(std::move(chan), std::nullopt);
 }
 
-void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection, std::vector<uint8_t> data,
-                                       bool should_send_handshake,
-                                       std::optional<P2PClientId> network_remote_node) {
-  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
-  if (!VerifyEnvelopeBuffer(verifier)) {
-    // Wrong serialization, abort.
-    FXL_LOG(ERROR) << "The message received is malformed.";
-    connection->Disconnect();
-    return;
-  };
-  const Envelope* envelope = GetEnvelope(data.data());
-  const Handshake* message;
-  if (!ValidateHandshake(envelope, &message)) {
-    FXL_LOG(ERROR) << "The message received is not valid.";
-    connection->Disconnect();
-    return;
+void P2PProviderImpl::AddConnectionFromChannel(
+    zx::channel chan, std::optional<fuchsia::overnet::protocol::NodeId> overnet_id) {
+  if (overnet_id) {
+    FXL_DCHECK(contacted_peers_.find(*overnet_id) == contacted_peers_.end())
+        << "Connecting to an already contacted peer.";
+    contacted_peers_.emplace(*overnet_id);
   }
 
-  P2PClientId remote_node = P2PClientId(convert::ToArray(message->client_id()));
+  p2p_provider::P2PClientId id = MakeRandomP2PClientId(random_);
+  auto& connection = connections_[id];
 
-  if (network_remote_node && *network_remote_node != remote_node) {
-    // The name of the remote device as given by the network is different from
-    // the self-declared name. Something is wrong here, let's abort.
-    FXL_LOG(ERROR) << "Network name " << *network_remote_node << " different from declared name "
-                   << remote_node << ", aborting.";
-    connection->Disconnect();
-    return;
-  }
-  bool existed_before = false;
-  auto it = connection_map_.find(remote_node);
-  if (it != connection_map_.end()) {
-    it->second->Disconnect();
-    connection_map_.erase(it);
-    existed_before = true;
-  }
-
-  connection->set_on_message(
-      [this, remote_node](std::vector<uint8_t> data) { Dispatch(remote_node, std::move(data)); });
-
-  bool connection_closed = false;
-  if (should_send_handshake) {
-    // We send an handshake to signal to the other side the connection is
-    // indeed established.
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> buffer =
-        BuildBufferContainingHandshake(self_client_id_.value());
-    char* buf = reinterpret_cast<char*>(buffer->GetBufferPointer());
-    size_t size = buffer->GetSize();
-
-    // SendMessage may detect that the pipe is disconnected. We detect this case to exit early and
-    // avoid a use-after-free.
-    connection->set_on_close(callback::SetWhenCalled(&connection_closed));
-
-    connection->SendMessage(fxl::StringView(buf, size));
-  }
-
-  if (connection_closed) {
-    return;
-  }
-
-  connection_map_[remote_node] = connection;
-
-  connection->set_on_close([this, remote_node]() {
-    connection_map_.erase(remote_node);
-    OnDeviceChange(remote_node, DeviceChangeType::DELETED);
+  connection.set_on_close([this, id, overnet_id]() {
+    connections_.erase(id);
+    if (overnet_id) {
+      contacted_peers_.erase(*overnet_id);
+    }
+    OnDeviceChange(id, DeviceChangeType::DELETED);
   });
 
-  if (!existed_before) {
-    // If the connection existed before, we don't need to notify again.
-    OnDeviceChange(remote_node, DeviceChangeType::NEW);
-  }
+  connection.set_on_message(
+      [this, id](std::vector<uint8_t> data) { Dispatch(id, std::move(data)); });
+
+  connection.Start(std::move(chan));
+  OnDeviceChange(id, DeviceChangeType::NEW);
 }
 
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
-  overnet_->ListPeers(version, [this](uint64_t new_version,
-                                      std::vector<fuchsia::overnet::Peer> peers) {
-    if (!self_client_id_) {
-      // We are starting and we don't know who we are yet. Let's find out
-      // first so we can connect and respond to peers correctly.
-      for (auto& peer : peers) {
-        if (!peer.is_self) {
-          continue;
+  overnet_->ListPeers(
+      version, [this](uint64_t new_version, std::vector<fuchsia::overnet::Peer> peers) {
+        if (!self_client_id_) {
+          // We are starting and we don't know who we are yet. Let's find out
+          // first so we can connect to peers correctly.
+          for (auto& peer : peers) {
+            if (!peer.is_self) {
+              continue;
+            }
+            self_client_id_ = peer.id;
+            break;
+          }
         }
-        self_client_id_ = MakeP2PClientId(peer.id);
-        for (zx::channel& chan : pending_requests_) {
-          ConnectToService(std::move(chan));
+        if (!self_client_id_) {
+          ListenForNewDevices(new_version);
+          return;
         }
-        pending_requests_.clear();
-        break;
-      }
-    }
-    if (!self_client_id_) {
-      ListenForNewDevices(new_version);
-      return;
-    }
-    std::vector<P2PClientId> seen_devices;
-    for (auto& peer : peers) {
-      auto client_id = MakeP2PClientId(peer.id);
-      seen_devices.push_back(client_id);
-      if (contacted_hosts_.find(client_id) != contacted_hosts_.end()) {
-        continue;
-      }
-      if (peer.is_self) {
-        continue;
-      }
-      if (client_id < *self_client_id_) {
-        // The other side will connect to us, no need to duplicate
-        // connections.
-        continue;
-      }
+        for (auto& peer : peers) {
+          if (peer.is_self) {
+            continue;
+          }
+          if (peer.id.id < self_client_id_->id) {
+            // The other side will connect to us, no need to duplicate
+            // connections.
+            continue;
+          }
 
-      zx::channel local;
-      zx::channel remote;
-      zx_status_t status = zx::channel::create(0u, &local, &remote);
+          if (contacted_peers_.find(peer.id) != contacted_peers_.end()) {
+            // Already connected to the peer.
+            continue;
+          }
 
-      FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
+          const fuchsia::overnet::protocol::PeerDescription& description = peer.description;
+          if (!description.has_services()) {
+            continue;
+          }
+          const std::vector<std::string>& services = description.services();
+          bool ledger_service_is_present_on_other_side =
+              std::find(services.begin(), services.end(), OvernetServiceName()) != services.end();
+          if (!ledger_service_is_present_on_other_side) {
+            continue;
+          }
 
-      overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
-
-      RemoteConnection& connection = connections_.emplace();
-      connection.set_on_message([this, &connection, node_id = peer.id](std::vector<uint8_t> data) {
-        ProcessHandshake(&connection, std::move(data), false, MakeP2PClientId(node_id));
+          zx::channel local;
+          zx::channel remote;
+          zx_status_t status = zx::channel::create(0u, &local, &remote);
+          FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
+          overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
+          AddConnectionFromChannel(std::move(local), peer.id);
+        }
+        ListenForNewDevices(new_version);
       });
-      connection.Start(std::move(local));
-
-      std::unique_ptr<flatbuffers::FlatBufferBuilder> buffer =
-          BuildBufferContainingHandshake(self_client_id_.value());
-      char* buf = reinterpret_cast<char*>(buffer->GetBufferPointer());
-      size_t size = buffer->GetSize();
-      connection.SendMessage(fxl::StringView(buf, size));
-      contacted_hosts_.insert(MakeP2PClientId(peer.id));
-    }
-    // Devices that disappeared can be recontacted again later as they might
-    // have changed.
-    std::vector<P2PClientId> to_be_removed;
-    std::set_difference(contacted_hosts_.begin(), contacted_hosts_.end(), seen_devices.begin(),
-                        seen_devices.end(), std::back_inserter(to_be_removed));
-    for (const P2PClientId& host : to_be_removed) {
-      contacted_hosts_.erase(contacted_hosts_.find(host));
-    }
-    ListenForNewDevices(new_version);
-  });
 }
 
 void P2PProviderImpl::Dispatch(P2PClientId source, std::vector<uint8_t> data) {

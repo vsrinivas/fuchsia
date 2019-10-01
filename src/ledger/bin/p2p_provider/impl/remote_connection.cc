@@ -6,10 +6,7 @@
 
 #include <lib/fit/function.h>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
 #include "src/lib/fxl/logging.h"
 
 namespace p2p_provider {
@@ -52,11 +49,13 @@ void RemoteConnection::set_on_message(fit::function<void(std::vector<uint8_t>)> 
 }
 
 void RemoteConnection::OnChannelClosed() {
-  if (on_close_) {
-    on_close_();
+  auto on_close = std::move(on_close_);
+  auto on_discardable = std::move(on_discardable_);
+
+  if (on_close) {
+    on_close();
   }
-  if (on_discardable_) {
-    auto on_discardable = std::move(on_discardable_);
+  if (on_discardable) {
     on_discardable();
   }
 }

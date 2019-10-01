@@ -40,6 +40,14 @@ void FakeOvernet::GetService(std::string service_name, zx::channel chan) {
   it->second->ConnectToService(std::move(chan));
 }
 
+std::vector<std::string> FakeOvernet::GetAllServices() const {
+  std::vector<std::string> services;
+  for (auto& it : service_providers_) {
+    services.push_back(it.first);
+  }
+  return services;
+}
+
 void FakeOvernet::ConnectToService(fuchsia::overnet::protocol::NodeId node,
                                    std::string service_name, zx::channel channel) {
   delegate_->ConnectToService(std::move(node), std::move(service_name), std::move(channel));
@@ -48,25 +56,32 @@ void FakeOvernet::ConnectToService(fuchsia::overnet::protocol::NodeId node,
 void FakeOvernet::RegisterService(
     std::string name, fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> service_provider) {
   service_providers_.emplace(name, std::move(service_provider));
+  delegate_->ServiceWasRegistered();
 }
 
 void FakeOvernet::ListPeers(uint64_t version_last_seen, ListPeersCallback callback) {
-  delegate_->ListPeers(
-      version_last_seen,
-      [callback = std::move(callback), self_id = self_id_](
-          uint64_t version, std::vector<fuchsia::overnet::protocol::NodeId> nodes) {
-        std::vector<fuchsia::overnet::Peer> peers;
-        for (auto& node : nodes) {
-          fuchsia::overnet::Peer& peer = peers.emplace_back();
-          peer.id = std::move(node);
-          if (peer.id.id == self_id) {
-            peer.is_self = true;
-          } else {
-            peer.is_self = false;
-          }
-        }
-        callback(version, std::move(peers));
-      });
+  delegate_->ListPeers(version_last_seen,
+                       [callback = std::move(callback), self_id = self_id_](
+                           uint64_t version, std::vector<Delegate::FakePeer> fake_peers) {
+                         std::vector<fuchsia::overnet::Peer> overnet_peers;
+                         for (auto& fake_peer : fake_peers) {
+                           fuchsia::overnet::Peer& overnet_peer = overnet_peers.emplace_back();
+
+                           // Set the id and is_self.
+                           overnet_peer.id = std::move(fake_peer.id);
+                           if (overnet_peer.id.id == self_id) {
+                             overnet_peer.is_self = true;
+                           } else {
+                             overnet_peer.is_self = false;
+                           }
+
+                           // Set the description.
+                           fuchsia::overnet::protocol::PeerDescription description;
+                           description.set_services(fake_peer.services);
+                           overnet_peer.description = std::move(description);
+                         }
+                         callback(version, std::move(overnet_peers));
+                       });
 }
 
 }  // namespace ledger

@@ -222,7 +222,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                                          }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
-            environment_->dispatcher(), std::move(overnet), std::move(user_id_provider));
+            std::move(overnet), std::move(user_id_provider), environment_->random());
     return std::make_unique<p2p_sync::UserCommunicatorImpl>(environment_, std::move(provider));
   }
 

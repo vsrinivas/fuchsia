@@ -18,7 +18,6 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
-#include "src/ledger/bin/p2p_provider/testing/make_client_id.h"
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
@@ -75,8 +74,8 @@ class UserCommunicatorImplTest : public ledger::TestWithEnvironment {
     overnet_factory_.AddBinding(node_id, overnet.NewRequest());
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
-            dispatcher(), std::move(overnet),
-            std::make_unique<FakeUserIdProvider>(std::move(user_name)));
+            std::move(overnet), std::make_unique<FakeUserIdProvider>(std::move(user_name)),
+            environment_.random());
     return std::make_unique<UserCommunicatorImpl>(&environment_, std::move(provider));
   }
 
@@ -106,6 +105,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   page1->Start();
   RunLoopUntilIdle();
 
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
+              testing::SizeIs(0));
+
   std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator(2);
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 = user_communicator2->GetLedgerCommunicator("app");
@@ -115,9 +117,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(2)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
 
   std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
   user_communicator3->Start();
@@ -128,21 +130,19 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(2),
-                                            p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(2));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1),
-                                            p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(2));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1),
-                                            p2p_provider::MakeP2PClientId(2)));
+              testing::SizeIs(2));
 
   page2.reset();
   RunLoopUntilIdle();
+
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
 }
 
 TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
@@ -159,6 +159,11 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   page1_2->Start();
   RunLoopUntilIdle();
 
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_1),
+              testing::SizeIs(0));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_2),
+              testing::SizeIs(0));
+
   std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator(2);
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 = user_communicator2->GetLedgerCommunicator("app");
@@ -167,6 +172,13 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
       ledger2->GetPageCommunicator(&storage2_1, &storage2_1);
   page2_1->Start();
   RunLoopUntilIdle();
+
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_1),
+              testing::SizeIs(1));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_2),
+              testing::SizeIs(0));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2_1),
+              testing::SizeIs(1));
 
   std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
   user_communicator3->Start();
@@ -178,13 +190,23 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(2)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2_1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3_2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
+
+  page1_1.reset();
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_2),
+              testing::SizeIs(1));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2_1),
+              testing::SizeIs(0));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3_2),
+              testing::SizeIs(1));
 }
 
 // This test adds some delay (ie. runs the loop until idle) between the time a
@@ -211,9 +233,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(2)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
 
   std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
   user_communicator3->Start();
@@ -225,21 +247,19 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(2),
-                                            p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(2));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1),
-                                            p2p_provider::MakeP2PClientId(3)));
-  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1),
-                                            p2p_provider::MakeP2PClientId(2)));
+              testing::SizeIs(2));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
+              testing::SizeIs(2));
 
   page2.reset();
   RunLoopUntilIdle();
+
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(3)));
+              testing::SizeIs(1));
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
-              testing::UnorderedElementsAre(p2p_provider::MakeP2PClientId(1)));
+              testing::SizeIs(1));
 }
 
 }  // namespace

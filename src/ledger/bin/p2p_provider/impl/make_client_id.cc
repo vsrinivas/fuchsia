@@ -6,15 +6,14 @@
 
 #include <fuchsia/overnet/protocol/c/fidl.h>
 
+#include "peridot/lib/rng/random.h"
+
 namespace p2p_provider {
 
-p2p_provider::P2PClientId MakeP2PClientId(fuchsia::overnet::protocol::NodeId node_id) {
-  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-  // We need to preallocate the size of the structure in the encoder, the rest
-  // is allocated when the vector is encoded.
-  encoder.Alloc(sizeof(fuchsia_overnet_protocol_NodeId));
-  fidl::Encode(&encoder, &node_id, 0);
-  return p2p_provider::P2PClientId(encoder.TakeBytes());
+p2p_provider::P2PClientId MakeRandomP2PClientId(rng::Random* random) {
+  std::string random_string = random->RandomUniqueBytes();
+  std::vector<uint8_t> random_vector(random_string.begin(), random_string.end());
+  return p2p_provider::P2PClientId(std::move(random_vector));
 }
 
 }  // namespace p2p_provider

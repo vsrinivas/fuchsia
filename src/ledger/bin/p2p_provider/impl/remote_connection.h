@@ -10,8 +10,6 @@
 
 #include <string>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 #include "src/lib/fxl/strings/string_view.h"
 

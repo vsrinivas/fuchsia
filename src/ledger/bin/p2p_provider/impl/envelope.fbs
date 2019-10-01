@@ -4,18 +4,13 @@
 
 namespace p2p_provider;
 
-// Handshake. Gives the client_id of the device. Will be the first message
-// once a connection is established.
-table Handshake {
-  client_id: [ubyte];
-}
-
 table Message {
   data: [ubyte];
 }
 
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=37034):
+// Remove union.
 union EnvelopeMessage {
-  Handshake,
   Message,
 }
 

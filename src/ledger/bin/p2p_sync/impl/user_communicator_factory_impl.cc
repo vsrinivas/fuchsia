@@ -23,9 +23,8 @@ std::unique_ptr<UserCommunicator> UserCommunicatorFactoryImpl::GetUserCommunicat
       environment_->component_context()->svc()->Connect<fuchsia::overnet::Overnet>();
 
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
-      environment_,
-      std::make_unique<p2p_provider::P2PProviderImpl>(
-          environment_->dispatcher(), std::move(overnet), std::move(user_id_provider)));
+      environment_, std::make_unique<p2p_provider::P2PProviderImpl>(
+                        std::move(overnet), std::move(user_id_provider), environment_->random()));
 }
 
 }  // namespace p2p_sync

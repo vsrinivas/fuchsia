@@ -7,7 +7,6 @@
 #include <fuchsia/overnet/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <algorithm>
 #include <ostream>
@@ -22,17 +21,11 @@
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {
 namespace {
-
-// Makes a P2PClientId from a raw node identifier. Used for testing.
-p2p_provider::P2PClientId MakeP2PClientId(uint64_t id) {
-  fuchsia::overnet::protocol::NodeId node_id;
-  node_id.id = id;
-  return p2p_provider::MakeP2PClientId(std::move(node_id));
-}
 
 class RecordingClient : public P2PProvider::Client {
  public:
@@ -53,34 +46,53 @@ class RecordingClient : public P2PProvider::Client {
   };
 
   void OnDeviceChange(const P2PClientId& device_name, DeviceChangeType change_type) override {
-    device_changes.push_back(DeviceChange{device_name, change_type});
+    switch (change_type) {
+      case DeviceChangeType::NEW:
+        device_change_new.push_back(device_name);
+        break;
+      case DeviceChangeType::DELETED:
+        device_change_deleted.push_back(device_name);
+        break;
+    }
   }
 
   void OnNewMessage(const P2PClientId& device_name, fxl::StringView message) override {
     messages.push_back(Message{device_name, message.ToString()});
   }
-  std::vector<DeviceChange> device_changes;
+
+  FXL_WARN_UNUSED_RESULT bool HasDevicesChanges(size_t new_device_count,
+                                                size_t deleted_device_count) {
+    std::cout << device_change_new.size() << " " << device_change_deleted.size() << "\n";
+    return device_change_new.size() == new_device_count &&
+           device_change_deleted.size() == deleted_device_count;
+  }
+
+  std::vector<P2PClientId> device_change_new;
+  std::vector<P2PClientId> device_change_deleted;
+
   std::vector<Message> messages;
 };
 
-std::ostream& operator<<(std::ostream& os, const RecordingClient::DeviceChange& d) {
-  return os << "DeviceChange{" << d.device << ", " << bool(d.change) << "}";
-}
-
-std::ostream& operator<<(std::ostream& os, const RecordingClient::Message& m) {
-  return os << "Message{" << m.source << ", " << m.data << "}";
-}
-
-class P2PProviderImplTest : public gtest::TestLoopFixture {
+// This test is templated with a boolean:
+// In P2P, different code paths are taken depending on whether their overnet peer ID is greater or
+// smaller than an other overnet peer ID.
+// In order to test both code paths, the tests are also run with the IDs having their bits flipped.
+class P2PProviderImplTest : public ledger::TestWithEnvironment,
+                            public ::testing::WithParamInterface<bool> {
  public:
   P2PProviderImplTest() : overnet_factory_(dispatcher()) {}
+  ~P2PProviderImplTest() override = default;
 
   std::unique_ptr<P2PProvider> GetProvider(uint64_t host_id, std::string user_name) {
+    if (GetParam()) {
+      host_id = ~host_id;
+    }
+
     fuchsia::overnet::OvernetPtr overnet;
     overnet_factory_.AddBinding(host_id, overnet.NewRequest());
     return std::make_unique<p2p_provider::P2PProviderImpl>(
-        dispatcher(), std::move(overnet),
-        std::make_unique<StaticUserIdProvider>(std::move(user_name)));
+        std::move(overnet), std::make_unique<StaticUserIdProvider>(std::move(user_name)),
+        environment_.random());
   }
 
  protected:
@@ -92,69 +104,48 @@ class P2PProviderImplTest : public gtest::TestLoopFixture {
   FXL_DISALLOW_COPY_AND_ASSIGN(P2PProviderImplTest);
 };
 
-TEST_F(P2PProviderImplTest, NoSelfPeerNoCrash) {
+TEST_P(P2PProviderImplTest, NoSelfPeerNoCrash) {
   std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
   provider1->Start(&client1);
   RunLoopUntilIdle();
-  EXPECT_TRUE(client1.device_changes.empty());
+  EXPECT_TRUE(client1.HasDevicesChanges(0, 0));
 }
 
-TEST_F(P2PProviderImplTest, ThreeHosts_SameUser) {
+TEST_P(P2PProviderImplTest, ThreeHosts_SameUser) {
   std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
   provider1->Start(&client1);
   RunLoopUntilIdle();
-  EXPECT_TRUE(client1.device_changes.empty());
+  EXPECT_TRUE(client1.HasDevicesChanges(0, 0));
 
   std::unique_ptr<P2PProvider> provider2 = GetProvider(2, "user1");
   RecordingClient client2;
   provider2->Start(&client2);
   RunLoopUntilIdle();
 
-  EXPECT_THAT(client1.device_changes, testing::UnorderedElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(2), DeviceChangeType::NEW}));
-  EXPECT_THAT(client2.device_changes, testing::UnorderedElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(1), DeviceChangeType::NEW}));
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client2.HasDevicesChanges(1, 0));
 
   std::unique_ptr<P2PProvider> provider3 = GetProvider(3, "user1");
   RecordingClient client3;
   provider3->Start(&client3);
   RunLoopUntilIdle();
 
-  EXPECT_THAT(client1.device_changes,
-              testing::ElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(3), DeviceChangeType::NEW}));
-
-  EXPECT_THAT(client2.device_changes,
-              testing::ElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(1), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(3), DeviceChangeType::NEW}));
-
-  EXPECT_THAT(client3.device_changes,
-              testing::UnorderedElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(1), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::NEW}));
+  EXPECT_TRUE(client1.HasDevicesChanges(2, 0));
+  EXPECT_TRUE(client2.HasDevicesChanges(2, 0));
+  EXPECT_TRUE(client3.HasDevicesChanges(2, 0));
 
   // Disconnect one host, and verify disconnection notices are sent.
   provider2.reset();
   RunLoopUntilIdle();
 
-  EXPECT_THAT(client1.device_changes,
-              testing::ElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(3), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::DELETED}));
-
-  EXPECT_THAT(client3.device_changes,
-              testing::UnorderedElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(1), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(2), DeviceChangeType::DELETED}));
+  EXPECT_TRUE(client1.HasDevicesChanges(2, 1));
+  EXPECT_TRUE(client2.HasDevicesChanges(2, 0));
+  EXPECT_TRUE(client3.HasDevicesChanges(2, 1));
 }
 
-TEST_F(P2PProviderImplTest, FourHosts_TwoUsers) {
+TEST_P(P2PProviderImplTest, FourHosts_TwoUsers) {
   std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
   provider1->Start(&client1);
@@ -169,30 +160,23 @@ TEST_F(P2PProviderImplTest, FourHosts_TwoUsers) {
   provider4->Start(&client4);
   RunLoopUntilIdle();
 
-  // Verify that only devices with the same user connect together.
-  EXPECT_THAT(client1.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(4), DeviceChangeType::NEW}));
-  EXPECT_THAT(client2.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(3), DeviceChangeType::NEW}));
-  EXPECT_THAT(client3.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(2), DeviceChangeType::NEW}));
-  EXPECT_THAT(client4.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(1), DeviceChangeType::NEW}));
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client2.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client3.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client4.HasDevicesChanges(1, 0));
 
   provider4.reset();
   RunLoopUntilIdle();
 
-  EXPECT_THAT(client1.device_changes,
-              testing::ElementsAre(
-                  RecordingClient::DeviceChange{MakeP2PClientId(4), DeviceChangeType::NEW},
-                  RecordingClient::DeviceChange{MakeP2PClientId(4), DeviceChangeType::DELETED}));
-  EXPECT_THAT(client2.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(3), DeviceChangeType::NEW}));
-  EXPECT_THAT(client3.device_changes, testing::ElementsAre(RecordingClient::DeviceChange{
-                                          MakeP2PClientId(2), DeviceChangeType::NEW}));
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 1));
+  EXPECT_TRUE(client2.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client3.HasDevicesChanges(1, 0));
+  // |client4| should not be notified of any change because |provider4| was
+  // reset.
+  EXPECT_TRUE(client4.HasDevicesChanges(1, 0));
 }
 
-TEST_F(P2PProviderImplTest, TwoHosts_Messages) {
+TEST_P(P2PProviderImplTest, TwoHosts_Messages) {
   std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
   provider1->Start(&client1);
@@ -202,207 +186,69 @@ TEST_F(P2PProviderImplTest, TwoHosts_Messages) {
 
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(provider1->SendMessage(MakeP2PClientId(2), "datagram"));
-  RunLoopUntilIdle();
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client2.HasDevicesChanges(1, 0));
+  P2PClientId client1_id_from_pov_of_client2 = client2.device_change_new[0];
+  P2PClientId client2_id_from_pov_of_client1 = client1.device_change_new[0];
 
+  // Send message
+  EXPECT_TRUE(provider1->SendMessage(client2_id_from_pov_of_client1, "foobar"));
+  RunLoopUntilIdle();
   EXPECT_THAT(client1.messages, testing::ElementsAre());
-  EXPECT_THAT(client2.messages,
-              testing::ElementsAre(RecordingClient::Message{MakeP2PClientId(1), "datagram"}));
+  EXPECT_THAT(client2.messages, testing::ElementsAre(RecordingClient::Message{
+                                    client1_id_from_pov_of_client2, "foobar"}));
 }
 
-class MockOvernet : public fuchsia::overnet::Overnet {
- public:
-  explicit MockOvernet(fidl::InterfaceRequest<fuchsia::overnet::Overnet> request)
-      : binding_(this, std::move(request)) {}
-
-  void RegisterService(
-      std::string service_name,
-      fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> service_provider) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void ConnectToService(fuchsia::overnet::protocol::NodeId node_id, std::string service_name,
-                        zx::channel channel) override {
-    device_requests.push_back(p2p_provider::MakeP2PClientId(node_id));
-  }
-
-  void ListPeers(uint64_t version_last_seen, ListPeersCallback callback) override {
-    device_names_callbacks.emplace_back(version_last_seen, std::move(callback));
-  }
-
-  std::vector<P2PClientId> device_requests;
-  std::vector<std::pair<uint64_t, ListPeersCallback>> device_names_callbacks;
-
- private:
-  fidl::Binding<fuchsia::overnet::Overnet> binding_;
-};
-
-// Verifies that P2PProviderImpl does not do symmetrical connections
-TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
-  fuchsia::overnet::OvernetPtr overnet_ptr_0;
-  MockOvernet overnet_impl_0(overnet_ptr_0.NewRequest());
-  auto p2p_provider_0 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      dispatcher(), std::move(overnet_ptr_0), std::make_unique<StaticUserIdProvider>("user"));
-
+TEST_P(P2PProviderImplTest, TwoHosts_MessagesThenDisconnect) {
+  std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
-  p2p_provider_0->Start(&client1);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(overnet_impl_0.device_names_callbacks.size(), 1U);
-
-  auto request1 = std::move(overnet_impl_0.device_names_callbacks[0]);
-  fuchsia::overnet::protocol::NodeId node_0;
-  node_0.id = 0;
-  fuchsia::overnet::protocol::NodeId node_1;
-  node_1.id = 1;
-
-  fuchsia::overnet::Peer peer_0_0;
-  peer_0_0.id = node_0;
-  peer_0_0.is_self = true;
-  fuchsia::overnet::Peer peer_0_1;
-  peer_0_1.id = node_1;
-  peer_0_1.is_self = false;
-  std::vector<fuchsia::overnet::Peer> peers_0;
-  peers_0.push_back(std::move(peer_0_0));
-  peers_0.push_back(std::move(peer_0_1));
-  request1.second(1, std::move(peers_0));
-
-  RunLoopUntilIdle();
-
-  fuchsia::overnet::OvernetPtr overnet_ptr_1;
-  MockOvernet overnet_impl_1(overnet_ptr_1.NewRequest());
-  auto p2p_provider_1 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      dispatcher(), std::move(overnet_ptr_1), std::make_unique<StaticUserIdProvider>("user"));
-
+  provider1->Start(&client1);
+  std::unique_ptr<P2PProvider> provider2 = GetProvider(2, "user1");
   RecordingClient client2;
-  p2p_provider_1->Start(&client2);
+  provider2->Start(&client2);
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(overnet_impl_1.device_names_callbacks.size(), 1U);
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 0));
+  EXPECT_TRUE(client2.HasDevicesChanges(1, 0));
+  P2PClientId client1_id_from_pov_of_client2 = client2.device_change_new[0];
+  P2PClientId client2_id_from_pov_of_client1 = client1.device_change_new[0];
 
-  auto request2 = std::move(overnet_impl_1.device_names_callbacks[0]);
-  fuchsia::overnet::Peer peer_1_0;
-  peer_1_0.id = node_0;
-  peer_1_0.is_self = false;
-  fuchsia::overnet::Peer peer_1_1;
-  peer_1_1.id = node_1;
-  peer_1_1.is_self = true;
-  std::vector<fuchsia::overnet::Peer> peers_1;
-  peers_1.push_back(std::move(peer_1_0));
-  peers_1.push_back(std::move(peer_1_1));
-  request1.second(1, std::move(peers_1));
-
+  // Send message from client that got its peer from ListPeers
+  EXPECT_TRUE(provider1->SendMessage(client2_id_from_pov_of_client1, "foobar"));
+  provider1.reset();
   RunLoopUntilIdle();
 
-  // Only one device should initiate the connection. We don't really care which
-  // one, as long as it is reliably correct.
-  EXPECT_EQ(overnet_impl_0.device_requests.size() + overnet_impl_1.device_requests.size(), 1U);
+  EXPECT_THAT(client2.messages, testing::ElementsAre(RecordingClient::Message{
+                                    client1_id_from_pov_of_client2, "foobar"}));
 }
 
-// Verifies that P2PProviderImpl does not crash when a connection is immediately broken after
-// receiving a handshake.
-TEST_F(P2PProviderImplTest, DisconnectBeforeHandshake) {
-  std::unique_ptr<P2PProvider> provider1 = GetProvider(10, "user1");
+TEST_P(P2PProviderImplTest, TwoHosts_DisconnectThenReconnect) {
+  std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
   RecordingClient client1;
   provider1->Start(&client1);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(client1.device_changes.empty());
-
-  fuchsia::overnet::OvernetPtr overnet;
-  // We use a lower host ID to ensure we are the one establishing a connection.
-  overnet_factory_.AddBinding(2, overnet.NewRequest());
-
-  zx::channel local;
-  zx::channel remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  ASSERT_EQ(status, ZX_OK);
-
-  fuchsia::overnet::protocol::NodeId node{10};
-  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote));
-
-  // Send handshake
-  flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<Handshake> request =
-      CreateHandshake(buffer, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
-  flatbuffers::Offset<Envelope> envelope =
-      CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
-  buffer.Finish(envelope);
-  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-  size_t size = buffer.GetSize();
-  status = local.write(0, buf, size, nullptr, 0);
-  EXPECT_EQ(status, ZX_OK);
-  local.reset();
+  std::unique_ptr<P2PProvider> provider2 = GetProvider(2, "user1");
+  RecordingClient client2;
+  provider2->Start(&client2);
 
   RunLoopUntilIdle();
 
-  // Test does not crash under ASAN.
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 0));
 
-  EXPECT_THAT(client1.device_changes, testing::IsEmpty());
+  provider2.reset();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(client1.HasDevicesChanges(1, 1));
+
+  std::unique_ptr<P2PProvider> provider2_bis = GetProvider(2, "user1");
+  RecordingClient client2_bis;
+  provider2_bis->Start(&client2_bis);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(client1.HasDevicesChanges(2, 1));
 }
 
-// Verifies that P2PProviderImpl does not crash when connected multiple times (for example, on an
-// unreliable network).
-TEST_F(P2PProviderImplTest, TripleConnection) {
-  std::unique_ptr<P2PProvider> provider1 = GetProvider(10, "user1");
-  RecordingClient client1;
-  provider1->Start(&client1);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(client1.device_changes.empty());
-
-  fuchsia::overnet::OvernetPtr overnet;
-  // We use a lower host ID to ensure we are the one establishing a connection.
-  overnet_factory_.AddBinding(2, overnet.NewRequest());
-
-  zx::channel local;
-  zx::channel remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  ASSERT_EQ(status, ZX_OK);
-
-  fuchsia::overnet::protocol::NodeId node{10};
-  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote));
-
-  // Send handshake
-  flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<Handshake> request =
-      CreateHandshake(buffer, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
-  flatbuffers::Offset<Envelope> envelope =
-      CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
-  buffer.Finish(envelope);
-  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-  size_t size = buffer.GetSize();
-  status = local.write(0, buf, size, nullptr, 0);
-  EXPECT_EQ(status, ZX_OK);
-
-  RunLoopUntilIdle();
-
-  zx::channel local2;
-  zx::channel remote2;
-  status = zx::channel::create(0u, &local2, &remote2);
-  ASSERT_EQ(status, ZX_OK);
-
-  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote2));
-  // Send handshake
-  status = local2.write(0, buf, size, nullptr, 0);
-  EXPECT_EQ(status, ZX_OK);
-  local2.reset();
-
-  RunLoopUntilIdle();
-
-  zx::channel local3;
-  zx::channel remote3;
-  status = zx::channel::create(0u, &local3, &remote3);
-  ASSERT_EQ(status, ZX_OK);
-
-  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote3));
-  // Send handshake
-  status = local3.write(0, buf, size, nullptr, 0);
-  EXPECT_EQ(status, ZX_OK);
-  RunLoopUntilIdle();
-
-  // Does not crash under ASAN.
-}
+INSTANTIATE_TEST_SUITE_P(P2PProviderImplTest, P2PProviderImplTest, testing::Values(false, true));
 
 }  // namespace
 }  // namespace p2p_provider
