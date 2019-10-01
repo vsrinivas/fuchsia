@@ -30,6 +30,7 @@ A process is created via [`zx_process_create()`] and its execution begins with
 [`zx_process_start()`].
 
 The process stops execution when:
+
 + the last thread is terminated or exits
 + the process calls [`zx_process_exit()`]
 + the parent job terminates the process
