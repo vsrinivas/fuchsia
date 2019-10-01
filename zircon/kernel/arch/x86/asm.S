@@ -51,3 +51,18 @@ FUNCTION(load_startup_idt)
     lidt -16(%rsp)
     ret
 END_FUNCTION(load_startup_idt)
+
+// void mds_buff_overwrite(void)
+// When MD_CLEAR is enumerated, clear hardware structures that may transiently leak inflight data.
+// Callers will need a speculation barrier after executing mds_buff_overwrite:
+// . LFENCE
+// . Change of CPL
+// . VM Entry or Exit
+// . Architecturally serializing instructions
+FUNCTION(mds_buff_overwrite)
+    subq    $8, %rsp
+    movw    %ds, (%rsp)
+    verw    (%rsp)
+    addq    $8, %rsp
+    ret
+END_FUNCTION(mds_buff_overwrite)

@@ -164,6 +164,7 @@ source_set("syscall") {
     "syscall.S",
   ]
   deps = [
+    "$zx/kernel/lib/code_patching",
     "$zx/kernel/syscalls:syscall-abi",
   ]
 }

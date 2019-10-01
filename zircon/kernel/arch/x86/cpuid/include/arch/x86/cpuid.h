@@ -215,6 +215,7 @@ class Features {
   static constexpr Feature SGX_LC = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 30};
   static constexpr Feature AVX512_4VNNIW = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 2};
   static constexpr Feature AVX512_4FMAPS = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 3};
+  static constexpr Feature MD_CLEAR = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 10};
   static constexpr Feature PCONFIG = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 18};
   static constexpr Feature CLFLUSH = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 19};
   static constexpr Feature SPEC_CTRL = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 26};

@@ -13,6 +13,7 @@
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
+#include <lib/code_patching.h>
 
 static SpinLock g_microcode_lock;
 
@@ -179,5 +180,17 @@ void x86_intel_init_percpu(void) {
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR) && x86_get_microarch_config()->disable_c1e) {
     uint64_t power_ctl_msr = read_msr(X86_MSR_POWER_CTL);
     write_msr(0x1fc, power_ctl_msr & ~0x2);
+  }
+}
+
+extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {
+  const size_t kSize = 5;
+  DEBUG_ASSERT(patch->dest_size == kSize);
+
+  extern bool g_md_clear_on_user_return;
+  if (!g_md_clear_on_user_return) {
+     memset(patch->dest_addr, 0x90, kSize);
+  } else {
+     // Keep the call to mds_buf_overwrite in place.
   }
 }
