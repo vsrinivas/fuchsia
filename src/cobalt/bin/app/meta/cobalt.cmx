@@ -9,7 +9,8 @@
         "features": [
             "root-ssl-certificates",
             "isolated-persistent-storage",
-            "build-info"
+            "build-info",
+            "config-data"
         ],
         "pkgfs": [
             "packages"
