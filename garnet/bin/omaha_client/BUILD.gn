@@ -115,3 +115,13 @@ config_data("omaha_client_test_config") {
     rebase_path("test_data/omaha_test_app_id"),
   ]
 }
+
+config_data("omaha_client_sysmgr_config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "omaha_client.config",
+  ]
+  sources = [
+    "sysmgr.config",
+  ]
+}
