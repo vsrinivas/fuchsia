@@ -137,6 +137,8 @@ source_set("audio_core_lib") {
     "audio_renderer_impl.h",
     "command_line_options.cc",
     "command_line_options.h",
+    "config_loader.cc",
+    "config_loader.h",
     "driver_output.cc",
     "driver_output.h",
     "driver_utils.cc",
@@ -165,8 +167,6 @@ source_set("audio_core_lib") {
     "volume_control.h",
     "volume_curve.cc",
     "volume_curve.h",
-    "config_loader.cc",
-    "config_loader.h",
     "wakeup_event.cc",
     "wakeup_event.h",
   ]
@@ -235,6 +235,7 @@ executable("unittest_bin") {
     "audio_link_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",
     "command_line_options_unittest.cc",
+    "config_loader_unittest.cc",
     "driver_output_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
@@ -245,7 +246,6 @@ executable("unittest_bin") {
     "usage_settings_unittest.cc",
     "utils_unittest.cc",
     "volume_control_unittest.cc",
-    "config_loader_unittest.cc",
     "volume_curve_unittest.cc",
     "wakeup_event_unittest.cc",
   ]
