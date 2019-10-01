@@ -175,6 +175,18 @@ class Unbindable : public base_mixin {
 };
 
 template <typename D>
+class UnbindableDeprecated : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckUnbindableDeprecated<D>();
+    proto->unbind = Unbind_Deprecated;
+  }
+
+ private:
+  static void Unbind_Deprecated(void* ctx) { static_cast<D*>(ctx)->DdkUnbindDeprecated(); }
+};
+
+template <typename D>
 class UnbindableNew : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
@@ -371,7 +383,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   // DEPRECATED (fxb/34574).
   // To schedule removal of a device, use DdkAsyncRemove() instead.
   // To signal completion of the device's DdkUnbind(txn) hook, use txn.Reply() instead.
-  zx_status_t DdkRemove() {
+  zx_status_t DdkRemoveDeprecated() {
     if (this->zxdev_ == nullptr) {
       return ZX_ERR_BAD_STATE;
     }
@@ -381,6 +393,12 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     zx_device_t* dev = this->zxdev_;
     this->zxdev_ = nullptr;
     return device_remove(dev);
+  }
+
+  // DEPRECATED (fxb/34574).
+  // This is being renamed to DdkRemoveDeprecated.
+  zx_status_t DdkRemove() {
+    return DdkRemoveDeprecated();
   }
 
   // Schedules the removal of the device and its descendents.

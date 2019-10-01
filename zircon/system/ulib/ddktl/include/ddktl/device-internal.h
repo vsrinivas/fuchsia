@@ -187,6 +187,17 @@ constexpr void CheckUnbindable() {
                 "'void DdkUnbind()'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_unbind_deprecated, DdkUnbindDeprecated);
+
+template <typename D>
+constexpr void CheckUnbindableDeprecated() {
+  static_assert(has_ddk_unbind_deprecated<D>::value,
+                "UnbindableDeprecated classes must implement DdkUnbindDeprecated");
+  static_assert(std::is_same<decltype(&D::DdkUnbindDeprecated), void (D::*)(void)>::value,
+                "DdkUnbindDeprecated must be a public non-static member function with signature "
+                "'void DdkUnbindDeprecated()'.");
+}
+
 DECLARE_HAS_MEMBER_FN(has_ddk_unbind_new, DdkUnbindNew);
 
 template <typename D>

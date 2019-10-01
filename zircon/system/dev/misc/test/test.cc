@@ -23,7 +23,7 @@
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::Unbindable>;
+using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
@@ -32,7 +32,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   // Methods required by the TestProtocol mixin
   void TestSetOutputSocket(zx::socket socket);
@@ -55,7 +55,8 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::Unbindable>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable,
+                                       ddk::UnbindableDeprecated>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:
@@ -66,7 +67,7 @@ class TestRootDevice : public TestRootDeviceType {
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
   static zx_status_t FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
                                       fidl_txn_t* txn);
@@ -97,7 +98,7 @@ zx_status_t TestDevice::TestRunTests(test_report_t* report) {
 void TestDevice::TestDestroy() {
   fbl::AutoLock guard(&remove_lock_);
   if (!has_been_removed_) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     has_been_removed_ = true;
   }
 }
@@ -150,7 +151,7 @@ zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void TestDevice::DdkRelease() { delete this; }
 
-void TestDevice::DdkUnbind() { TestDestroy(); }
+void TestDevice::DdkUnbindDeprecated() { TestDestroy(); }
 
 zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, char* path_out,
                                          size_t path_size, size_t* path_actual) {

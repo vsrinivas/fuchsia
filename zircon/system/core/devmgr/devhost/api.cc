@@ -152,13 +152,17 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   return r;
 }
 
-__EXPORT zx_status_t device_remove(zx_device_t* dev) {
+__EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when
   // devhost_remove() completes. We can't drop it here as we may just be
   // scheduling a removal, and do not know when that will happen.
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   return devhost_device_remove_deprecated(dev_ref);
+}
+
+__EXPORT zx_status_t device_remove(zx_device_t* dev) {
+  return device_remove_deprecated(dev);
 }
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {

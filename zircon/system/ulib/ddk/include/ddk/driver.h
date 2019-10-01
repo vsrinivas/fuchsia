@@ -186,6 +186,9 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 // DEPRECATED (fxb/34574).
 // To schedule removal of a device, use **device_async_remove()** instead.
 // To signal completion of the device's |unbind| hook, use **device_unbind_reply()** instead.
+zx_status_t device_remove_deprecated(zx_device_t* device);
+// DEPRECATED (fxb/34574).
+// This is being renamed to device_remove_deprecated.
 zx_status_t device_remove(zx_device_t* device);
 
 zx_status_t device_rebind(zx_device_t* device);
