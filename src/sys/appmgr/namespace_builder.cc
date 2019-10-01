@@ -19,11 +19,15 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/sys/appmgr/allowlist.h"
 
 namespace component {
 
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
+
+constexpr char kGlobalDataAllowlist[] =
+    "/pkgfs/packages/config-data/0/data/appmgr/allowlist/global_data.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
@@ -172,6 +176,20 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       AddHub(hub_directory_factory);
     }
   }
+
+  if (sandbox.HasInternalFeature("global-data")) {
+    Allowlist global_data_allowlist(kGlobalDataAllowlist);
+    if (global_data_allowlist.IsAllowed(ns_id)) {
+      PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
+                                             O_DIRECTORY | O_RDONLY | O_ADMIN);
+      PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
+                                             O_DIRECTORY | O_RDONLY | O_ADMIN);
+    } else {
+      FXL_LOG(WARNING) << "Component " << ns_id
+                       << " is not allowed to use global-data. Blocked by allowlist.";
+    }
+  }
+
   for (const auto& path : sandbox.boot())
     PushDirectoryFromPath("/boot/" + path);
 }
@@ -181,9 +199,16 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
+  PushDirectoryFromPathAsWithPermissions(std::move(src_path), std::move(dst_path),
+                                         O_DIRECTORY | O_RDONLY);
+}
+
+void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_path,
+                                                              std::string dst_path,
+                                                              uint64_t flags) {
   if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
     return;
-  fbl::unique_fd dir(open(src_path.c_str(), O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd dir(open(src_path.c_str(), flags));
   if (!dir.is_valid())
     return;
   zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());

@@ -447,6 +447,7 @@ template("package") {
                                "deprecated_shell",
                                "deprecated_system_image",
                                "deps",
+                               "global_data",
                                "public_deps",
                                "drivers",
                                "extra",
@@ -623,6 +624,22 @@ template("package") {
             sources = [
               rebase_path(meta.path),
               rebase_path("//build/config/sanitizers/debugdata.cmx"),
+            ]
+            deps = pkg.deps
+          }
+          manifest_deps += [ ":${merge_target}" ]
+          merged_outputs = []
+          merged_outputs = get_target_outputs(":${merge_target}")
+          manifest_path = merged_outputs[0]
+        }
+
+        if (defined(pkg.global_data)) {
+          merge_target = "global_data_" + pkg_target_name + "_" +
+                         get_path_info(meta.dest, "file")
+          cmx_merge(merge_target) {
+            sources = [
+              rebase_path(meta.path),
+              rebase_path("//build/cmx/internal_allow_global_data.cmx"),
             ]
             deps = pkg.deps
           }
@@ -975,6 +992,9 @@ template("package") {
         }
         if (defined(pkg.deprecated_shell)) {
           deps += [ "${pkg.deprecated_shell}:deprecated_shell_allowlist" ]
+        }
+        if (defined(pkg.global_data)) {
+          deps += [ "${pkg.global_data}:global_data_allowlist" ]
         }
         if (defined(pkg.rootjob_svc)) {
           deps += [ "${pkg.rootjob_svc}:rootjob_svc_allowlist" ]

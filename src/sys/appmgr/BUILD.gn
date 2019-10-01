@@ -9,6 +9,8 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
+    "allowlist.cc",
+    "allowlist.h",
     "cache_control.cc",
     "cache_control.h",
     "component_controller_impl.cc",
@@ -133,6 +135,7 @@ executable("unittest_bin") {
   output_name = "appmgr_unittests"
 
   sources = [
+    "allowlist_unittest.cc",
     "component_controller_unittest.cc",
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
@@ -179,6 +182,16 @@ config_data("appmgr_scheme_config") {
   ]
   outputs = [
     "scheme_map/default.config",
+  ]
+}
+
+config_data("appmgr_global_data_allowlist") {
+  for_pkg = "appmgr"
+  sources = [
+    "global_data_allowlist.txt",
+  ]
+  outputs = [
+    "allowlist/global_data.txt",
   ]
 }
 

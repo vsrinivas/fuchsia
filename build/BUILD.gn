@@ -47,6 +47,19 @@ group("deprecated_bare_tests_allowlist") {
   ]
 }
 
+group("global_data_allowlist") {
+  # !DANGER!
+  # Only Archivist may use this feature, it's use case will be ported to component_manager.
+  # We use this to obtain storage stats in the archive output.
+  # Note that there is a secondary allow-list to trigger this behavior at
+  # //src/sys/appmgr/global_data_allowlist.txt
+  visibility = [
+    "//src/diagnostics/archivist:archivist",
+    "//src/sys/appmgr/integration_tests/sandbox/features/global-data:has_global_data",
+    "//src/sys/appmgr/integration_tests/sandbox/features/global-data:restricted_global_data",
+  ]
+}
+
 group("deprecated_shell_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \

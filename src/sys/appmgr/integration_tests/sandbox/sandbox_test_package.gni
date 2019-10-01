@@ -25,6 +25,7 @@ template("sandbox_test_package") {
                            "*",
                            [
                              "deprecated_shell",
+                             "global_data",
                              "environments",
                              "output_name",
                              "target_name",
@@ -33,7 +34,11 @@ template("sandbox_test_package") {
   }
 
   package(target_name) {
-    forward_variables_from(invoker, [ "deprecated_shell" ])
+    forward_variables_from(invoker,
+                           [
+                             "deprecated_shell",
+                             "global_data",
+                           ])
     testonly = true
     meta = [
       {
