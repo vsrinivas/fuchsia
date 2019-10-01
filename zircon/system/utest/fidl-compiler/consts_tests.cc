@@ -312,6 +312,38 @@ const string:5 d = c;
   END_TEST;
 }
 
+// TODO(fxb/37314): Both declarations should have the same type.
+bool GoodConstTestStringShouldHaveInferredBounds() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const string INFERRED = "four";
+const string:4 EXPLICIT = "four";
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto inferred_const = library.LookupConstant("INFERRED");
+  ASSERT_NOT_NULL(inferred_const->type_ctor->type);
+  ASSERT_EQ(inferred_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
+  auto inferred_string_type =
+    static_cast<const fidl::flat::StringType*>(inferred_const->type_ctor->type);
+  ASSERT_NOT_NULL(inferred_string_type->max_size);
+  ASSERT_EQ(static_cast<uint32_t>(*inferred_string_type->max_size), 4294967295u);
+
+  auto explicit_const = library.LookupConstant("EXPLICIT");
+  ASSERT_NOT_NULL(explicit_const->type_ctor->type);
+  ASSERT_EQ(explicit_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
+  auto explicit_string_type =
+    static_cast<const fidl::flat::StringType*>(explicit_const->type_ctor->type);
+  ASSERT_NOT_NULL(explicit_string_type->max_size);
+  ASSERT_EQ(static_cast<uint32_t>(*explicit_string_type->max_size), 4u);
+
+  END_TEST;
+}
+
 bool BadConstTestStringWithNumeric() {
   BEGIN_TEST;
 
@@ -609,6 +641,7 @@ RUN_TEST(BadConstTestFloat32LowLimit)
 
 RUN_TEST(GoodConstTestString)
 RUN_TEST(GoodConstTestStringFromOtherConst)
+RUN_TEST(GoodConstTestStringShouldHaveInferredBounds)
 RUN_TEST(BadConstTestStringWithNumeric)
 RUN_TEST(BadConstTestStringWithBool)
 RUN_TEST(BadConstTestStringWithStringTooLong)
