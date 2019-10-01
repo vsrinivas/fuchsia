@@ -27,6 +27,7 @@ pub enum SettingType {
     DoNotDisturb,
     Intl,
     LightSensor,
+    Power,
     Privacy,
     Setup,
     System,
@@ -73,6 +74,9 @@ pub enum SettingRequest {
 
     // Intl requests.
     SetTimeZone(String),
+
+    // Power requests.
+    Reboot,
 
     // Privacy requests.
     SetUserDataSharingConsent(Option<bool>),

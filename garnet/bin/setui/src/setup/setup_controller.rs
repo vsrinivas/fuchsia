@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::system_util;
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::registry::service_context::ServiceContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
     SettingType, SetupInfo,
@@ -27,12 +25,10 @@ pub struct SetupController {
     info: SetupInfo,
     listen_notifier: Arc<RwLock<Option<Notifier>>>,
     storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
-    service_context_handle: Arc<RwLock<ServiceContext>>,
 }
 
 impl SetupController {
     pub fn spawn(
-        service_context: Arc<RwLock<ServiceContext>>,
         storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
     ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -48,7 +44,6 @@ impl SetupController {
                 info: stored_value,
                 listen_notifier: Arc::new(RwLock::new(None)),
                 storage: storage,
-                service_context_handle: service_context,
             }));
 
             while let Some(command) = ctrl_rx.next().await {
@@ -98,14 +93,12 @@ impl SetupController {
 
         let storage_clone = self.storage.clone();
         let info = self.info;
-        let service_context_clone = self.service_context_handle.clone();
 
         let optional_notifier = (*self.listen_notifier.read()).clone();
 
         fasync::spawn(async move {
             let mut storage_lock = storage_clone.lock().await;
             storage_lock.write(info, true).await.unwrap();
-            system_util::reboot(service_context_clone).await;
 
             responder.send(Ok(None)).ok();
 

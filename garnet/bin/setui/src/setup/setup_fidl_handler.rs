@@ -12,7 +12,6 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use futures::TryFutureExt;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
 use std::convert::TryFrom;
@@ -98,6 +97,31 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
+fn reboot(
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    responder: SetupSetResponder,
+) {
+    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
+    let mut switchboard = switchboard_handle.write();
+
+    if switchboard.request(SettingType::Power, SettingRequest::Reboot, response_tx).is_err() {
+        // Respond immediately with an error if request was not possible.
+        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+        return;
+    }
+
+    fasync::spawn(async move {
+        // Return success if we get a Ok result from the
+        // switchboard.
+        if let Ok(Ok(_)) = response_rx.await {
+            responder.send(&mut Ok(())).ok();
+            return;
+        }
+
+        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+    });
+}
+
 impl SetupFidlHandler {
     fn set(&self, settings: SetupSettings, responder: SetupSetResponder) {
         if let Ok(request) = SettingRequest::try_from(settings) {
@@ -112,20 +136,17 @@ impl SetupFidlHandler {
                 return;
             }
 
-            fasync::spawn(
-                async move {
-                    // Return success if we get a Ok result from the
-                    // switchboard.
-                    if let Ok(Ok(_)) = response_rx.await {
-                        responder.send(&mut Ok(())).ok();
-                        return Ok(());
-                    }
-
-                    responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-                    Ok(())
+            let switchboard_clone = self.switchboard_handle.clone();
+            fasync::spawn(async move {
+                // Return success if we get a Ok result from the
+                // switchboard.
+                if let Ok(Ok(_)) = response_rx.await {
+                    reboot(switchboard_clone, responder);
+                    return;
                 }
-                    .unwrap_or_else(|_e: failure::Error| {}),
-            );
+
+                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            });
         }
     }
 

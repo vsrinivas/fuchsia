@@ -6,8 +6,6 @@ use failure::Error;
 use fidl_fuchsia_setui::*;
 use futures::channel::oneshot::Sender;
 
-pub mod system_util;
-
 pub type ProcessMutation = dyn Fn(&Mutation) -> Result<Option<SettingData>, Error> + Send + Sync;
 pub type CheckSync = dyn Fn(&Mutation) -> bool + Send + Sync;
 

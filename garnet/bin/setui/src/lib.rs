@@ -19,6 +19,7 @@ use {
     crate::intl::intl_fidl_handler::IntlFidlHandler,
     crate::json_codec::JsonCodec,
     crate::mutation::*,
+    crate::power::spawn_power_controller,
     crate::privacy::privacy_controller::PrivacyController,
     crate::privacy::privacy_fidl_handler::PrivacyFidlHandler,
     crate::registry::base::Registry,
@@ -54,6 +55,7 @@ mod fidl_clone;
 mod intl;
 mod json_codec;
 mod mutation;
+mod power;
 mod privacy;
 mod setting_adapter;
 mod setui_handler;
@@ -119,6 +121,14 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
     });
+
+    registry_handle
+        .write()
+        .register(
+            switchboard::base::SettingType::Power,
+            spawn_power_controller(service_context_handle.clone()),
+        )
+        .unwrap();
 
     if components.contains(&SettingType::Accessibility) {
         registry_handle
@@ -268,7 +278,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Setup,
                 SetupController::spawn(
-                    service_context_handle.clone(),
                     unboxed_storage_factory.get_store::<switchboard::base::SetupInfo>(),
                 )
                 .unwrap(),
