@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 
@@ -17,8 +18,12 @@ extern const char kStubServerReportId[];
 
 class StubCrashServer : public CrashServer {
  public:
-  StubCrashServer(bool request_return_value)
-      : CrashServer(kStubCrashServerUrl), request_return_value_(request_return_value) {}
+  StubCrashServer(const std::vector<bool>& request_return_values)
+      : CrashServer(kStubCrashServerUrl), request_return_values_(request_return_values) {
+    next_return_value_ = request_return_values_.cbegin();
+  }
+
+  ~StubCrashServer();
 
   bool MakeRequest(const std::map<std::string, std::string>& annotations,
                    const std::map<std::string, crashpad::FileReader*>& attachments,
@@ -27,9 +32,9 @@ class StubCrashServer : public CrashServer {
   const std::map<std::string, std::string>& annotations() { return annotations_; }
 
  private:
-  const bool request_return_value_;
+  const std::vector<bool> request_return_values_;
+  std::vector<bool>::const_iterator next_return_value_;
 
-  std::string stream_;
   std::map<std::string, std::string> annotations_;
 };
 

@@ -4,7 +4,8 @@
 
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 
-#include "src/developer/feedback/crashpad_agent/crash_report_util.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
 
@@ -12,12 +13,24 @@ const char kStubCrashServerUrl[] = "localhost:1234";
 
 const char kStubServerReportId[] = "server-report-id";
 
+StubCrashServer::~StubCrashServer() {
+  FXL_CHECK(next_return_value_ == request_return_values_.end())
+      << fxl::StringPrintf("expected %ld more calls to MakeRequest() (%ld/%lu calls made)",
+                           std::distance(next_return_value_, request_return_values_.cend()),
+                           std::distance(request_return_values_.cbegin(), next_return_value_),
+                           request_return_values_.size());
+}
+
 bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& annotations,
                                   const std::map<std::string, crashpad::FileReader*>& attachments,
                                   std::string* server_report_id) {
   annotations_ = annotations;
-  *server_report_id = kStubServerReportId;
-  return request_return_value_;
+  FXL_CHECK(next_return_value_ != request_return_values_.cend())
+      << fxl::StringPrintf("no more calls to MakeRequest() expected (%lu/%lu calls made)",
+                           request_return_values_.size(), request_return_values_.size());
+  if (*next_return_value_) {
+    *server_report_id = kStubServerReportId;
+  }
+  return *next_return_value_++;
 }
-
 }  // namespace feedback
