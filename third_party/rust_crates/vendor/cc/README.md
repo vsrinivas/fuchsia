@@ -2,9 +2,6 @@
 
 A library to compile C/C++/assembly into a Rust library/application.
 
-[![Build Status](https://travis-ci.com/alexcrichton/cc-rs.svg?branch=master)](https://travis-ci.com/alexcrichton/cc-rs)
-[![Build status](https://ci.appveyor.com/api/projects/status/onu270iw98h81nwv?svg=true)](https://ci.appveyor.com/project/alexcrichton/cc-rs)
-
 [Documentation](https://docs.rs/cc)
 
 A simple library meant to be used as a build dependency with Cargo packages in
@@ -28,8 +25,6 @@ Next up, you'll want to write a build script like so:
 
 ```rust,no_run
 // build.rs
-
-extern crate cc;
 
 fn main() {
     cc::Build::new()
@@ -77,6 +72,7 @@ number of different environment variables.
          certain `TARGET`s, it also is assumed to know about other flags (most
          common is `-fPIC`).
 * `AR` - the `ar` (archiver) executable to use to build the static library.
+* `CRATE_CC_NO_DEFAULTS` - the default compiler flags may cause conflicts in some cross compiling scenarios. Setting this variable will disable the generation of default compiler flags.
 
 Each of these variables can also be supplied with certain prefixes and suffixes,
 in the following prioritized order:
@@ -88,7 +84,7 @@ in the following prioritized order:
 
 If none of these variables exist, cc-rs uses built-in defaults
 
-In addition to the the above optional environment variables, `cc-rs` has some
+In addition to the above optional environment variables, `cc-rs` has some
 functions with hard requirements on some variables supplied by [cargo's
 build-script driver][cargo] that it has the `TARGET`, `OUT_DIR`, `OPT_LEVEL`,
 and `HOST` variables.
@@ -143,8 +139,6 @@ required varies per platform, but there are three broad categories:
 `Build`:
 
 ```rust,no_run
-extern crate cc;
-
 fn main() {
     cc::Build::new()
         .cpp(true) // Switch to C++ library compilation.
@@ -163,8 +157,6 @@ linked to the crate target.
 on `Build` (currently for GNU/Clang toolchains only):
 
 ```rust,no_run
-extern crate cc;
-
 fn main() {
     cc::Build::new()
         // Switch to CUDA C++ library compilation using NVCC.
