@@ -173,21 +173,22 @@ instance tree:
 
 ![Capability routing example](capability_routing_example.png)
 
-In this example, the *echo* component instance provides an `/svc/echo` service
+In this example, the `echo` component instance provides an `/svc/echo` service
 in its outgoing directory. This service is routed to the `echo_tool` component
 instance, which uses it. It is necessary for each component instance in the
 routing path to propagate `/svc/echo` to the next component instance.
 
 The routing sequence is:
 
-- *echo* hosts the `/svc/echo` service in its outgoing directory. Also, it
+- `echo` hosts the `/svc/echo` service in its outgoing directory. Also, it
   exposes `/svc/echo` from `self` so the service is visible to its parent,
-  *system*.
-- *system* exposes `/svc/echo` from its child `echo` to its parent, *root*.
-- *root* offers `/svc/echo` from its child `system` to its other child *shell*.
-- *shell* offers `/svc/echo` from `realm` (i.e., its parent) to its child
-  *echo_tool*.
-- *echo_tool* uses `/svc/echo`. When `echo_tool` runs, it will find `/svc/echo`
+  `services`.
+- `services` exposes `/svc/echo` from its child `echo` to its parent, `shell`.
+- `system` offers `/svc/echo` from its child `services` to its other child
+  `tools`.
+- `tools` offers `/svc/echo` from `realm` (i.e., its parent) to its child
+  `echo_tool`.
+- `echo_tool` uses `/svc/echo`. When `echo_tool` runs, it will find `/svc/echo`
   in its namespace.
 
 A working example of capability routing can be found at

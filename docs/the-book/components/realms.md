@@ -25,8 +25,6 @@ Realms play a special role in the component framework. A realm is an
   component instance this looks the same as long as the sub-realm
   [exposes][expose] the same set of capabilities.
 
-TODO: Sample diagram of a realm
-
 ## Definitions
 
 This section contains definitions for basic terminology about realms.
@@ -38,11 +36,36 @@ This section contains definitions for basic terminology about realms.
 - A *containing realm* is the realm corresponding to the parent of a component
   instance.
 
+## Example
+
+Here is an example of a realm with a capability routed through it:
+
+![Realm example](realm_example.png)
+
+In this example, the `shell` component has two children: `tools` and `services`.
+`services` has two children, `logger` and `echo`, while `tools` has one child
+`echo_tool`. Components encapsulate their children, so while the `shell`
+component sees its own children, it has no direct knowledge of its grandchildren
+`echo_tool`, `logger`, or `echo`. Nevertheless, all of these component instances
+are considered part of the `shell` realm.
+
+The red arrows illustrate the path of an `/svc/echo` service capability that is
+routed through the realm from `echo` to `echo_tool`. The upward arrows
+correspond to [`expose`][expose] declarations, while the downward arrows
+represent [`offer`][offer] declarations. The `expose` declarations cause
+`/svc/echo` to be exposed outside of the capability boundary of the
+corresponding realms.  For example, if `services` did not expose `/svc/echo`,
+`shell` would not be aware that `/svc/echo` exists, and could not offer the
+service to its children or access it at runtime.
+
+For a more detailed walkthrough of capability routing with this example, see
+the [component manifest capability routing example][component-manifest-examples].
+
 ## Child component instances
 
 Component instances may contain children. Child component instances are
 considered part of the parent instance's definition and are wholly owned by the
-parent.  This has the following implications:
+parent. This has the following implications:
 
 - A component instance decides what children it contains, and when its children
   are created and destroyed.
@@ -59,8 +82,6 @@ parent.  This has the following implications:
 
 There are two varieties of child component instances, [static](#static-children)
 and [dynamic](#dynamic-children).
-
-TODO: Diagram of a realm showing static and dynamic children
 
 ### Static children
 
@@ -133,19 +154,42 @@ the collection.
 
 TODO: service directories as an example
 
+#### Example
+
+The following diagram illustrates a realm with a collection:
+
+![Collection example](collection_example.png)
+
+In this example, the `shell` component declares a static child `console` and a
+collection `(tools)`, highlighted by the dashed blue rectangle (the `()`
+notation denotes a collection). `(tools)` contains two dynamic instances, `ls`
+and `grep`. These instances are dynamic children of `shell`, scoped to
+`(tools)`. The use of a collection implies that the existence of `ls` and `grep`
+is not known in advance. This is plausible if you imagine that `ls` and `grep`
+are command-line tools that are instantiated on demand as the user requests
+them.
+
+The example also illustrates a capability routing path with the red arrows.
+First, `console` [exposes][expose] `/svc/console` to its containing realm
+`shell`, which [offers][offer] it to `(tools)`. `/svc/console` then becomes
+available for any component instance in the collection to [use][use] -- it does
+not need to be routed to the dynamic instances independently.
+
 ## The Realm framework service
 
 There is a [framework service][framework-services] available to every component,
-[`fuchsia.sys2.Realm`][realm]. The `Realm` service provides APIs for a component
-instance to manage the children in its realm, such as binding to children and
-creating dynamic children. See the linked FIDL definitions for full
+[`fuchsia.sys2.Realm`][realm.fidl]. The `Realm` service provides APIs for a
+component instance to manage the children in its realm, such as binding to
+children and creating dynamic children. See the linked FIDL definitions for full
 documentation.
 
 [children]: ./component_manifests.md#children
 [collections]: ./component_manifests.md#collections
 [component-manifests]: ./component_manifests.md
+[component-manifest-examples]: ./component_manifests.md#examples
 [expose]: ./component_manifests.md#expose
 [framework-services]: ./component_manifests.md#framework-services
 [glossary-storage]: /docs/glossary.md#storage-capability
 [offer]: ./component_manifests.md#offer
-[realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[use]: ./component_manifests.md#use
