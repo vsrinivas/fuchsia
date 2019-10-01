@@ -66,10 +66,11 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
   bool UploadReport(const crashpad::UUID& local_report_id,
                     const std::map<std::string, std::string>& annotations, bool has_minidump);
 
-  // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|.
+  // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|,
+  // returning the number of pruned reports.
   //
   // Report age is defined by their crashpad::CrashReportDatabase::Report::creation_time.
-  void PruneDatabase();
+  size_t PruneDatabase();
 
   // Removes expired lockfiles, metadata without report files, report files without
   // metadata from the database, and orphaned attachments.

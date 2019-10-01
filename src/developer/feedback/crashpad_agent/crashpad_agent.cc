@@ -277,12 +277,16 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
   return true;
 }
 
-void CrashpadAgent::PruneDatabase() {
+size_t CrashpadAgent::PruneDatabase() {
   // We need to create a new condition every time we prune as it internally maintains a cumulated
   // total size as it iterates over the reports in the database and we want to reset that cumulated
   // total size every time we prune.
   crashpad::DatabaseSizePruneCondition pruning_condition(config_.crashpad_database.max_size_in_kb);
-  crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
+  const size_t num_pruned = crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
+  if (num_pruned > 0) {
+    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s)", num_pruned);
+  }
+  return num_pruned;
 }
 
 size_t CrashpadAgent::CleanDatabase() {
