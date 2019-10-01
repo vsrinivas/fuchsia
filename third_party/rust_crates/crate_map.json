@@ -553,6 +553,11 @@
             "package_name": "byteorder"
         },
         {
+            "crate_name": "chrono",
+            "crate_type": "lib",
+            "package_name": "chrono"
+        },
+        {
             "crate_name": "clap",
             "crate_type": "lib",
             "package_name": "clap"

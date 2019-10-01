@@ -20,6 +20,7 @@ authors = ["cramertj <cramertj@google.com>"]
 bitfield = "0.13"
 bitflags = "1"
 byteorder = { version = "1", features = ["i128"] }
+chrono = "0.4.2"
 clap = "2.33"
 crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
@@ -75,7 +76,6 @@ async-trait = "0.1.11"
 base64 = "0.9"
 bincode = "1"
 bytes = "0.4.7"
-chrono = "0.4.2"
 crossbeam = "0.5"
 ct-logs = "0.5.1"
 data-encoding = "2.1.2"
