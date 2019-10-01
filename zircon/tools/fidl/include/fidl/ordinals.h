@@ -41,6 +41,18 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
                                      const std::string_view& xunion_declaration_name,
                                      const raw::XUnionMember& xunion_member);
 
+// Computes the 32bits ordinal for this |union_member| as if it were a union member.
+// This is used for the union to xunion migration to produce the xunion_ordinal field for unions.
+raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
+                                     const std::string_view& union_declaration_name,
+                                     const raw::UnionMember& union_member);
+
+// Computes the 32bits ordinal from components.
+raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
+                                     const std::string_view container_name,
+                                     const std::string union_member_name,
+                                     const raw::SourceElement& source_element);
+
 // Computes the 64bits ordinal for this |method|.
 //
 // The ordinal value is equal to

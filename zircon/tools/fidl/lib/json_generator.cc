@@ -460,8 +460,9 @@ void JSONGenerator::Generate(const flat::Union& value) {
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
-    GenerateObjectMember("name", value.name);
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor);
+    GenerateObjectMember("xunion_ordinal", value.xunion_ordinal);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
@@ -489,9 +490,9 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
+    GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateTypeAndFromTypeAlias(*value.type_ctor);
-    GenerateObjectMember("name", value.name);
+    GenerateObjectMember("ordinal", value.ordinal);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);

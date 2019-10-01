@@ -869,11 +869,14 @@ struct Table final : public TypeDecl {
 
 struct Union final : public TypeDecl {
   struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
-    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+    Member(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
+           std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<raw::AttributeList> attributes)
-        : type_ctor(std::move(type_ctor)),
+        : xunion_ordinal(std::move(xunion_ordinal)),
+          type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
+    std::unique_ptr<raw::Ordinal32> xunion_ordinal;
     std::unique_ptr<TypeConstructor> type_ctor;
     SourceLocation name;
     std::unique_ptr<raw::AttributeList> attributes;

@@ -126,9 +126,87 @@ xunion Foo {};
   END_TEST;
 }
 
+bool union_xunion_same_ordinals() {
+  BEGIN_TEST;
+
+  TestLibrary xunion_library(R"FIDL(
+library example;
+
+xunion Foo {
+  int8 bar;
+};
+
+)FIDL");
+  ASSERT_TRUE(xunion_library.Compile());
+
+  TestLibrary union_library(R"FIDL(
+library example;
+
+union Foo {
+  int8 bar;
+};
+
+)FIDL");
+  ASSERT_TRUE(union_library.Compile());
+
+  const fidl::flat::XUnion* ex_xunion = xunion_library.LookupXUnion("Foo");
+  const fidl::flat::Union* ex_union = union_library.LookupUnion("Foo");
+
+  ASSERT_NOT_NULL(ex_xunion);
+  ASSERT_NOT_NULL(ex_union);
+
+  ASSERT_EQ(ex_union->members.front().xunion_ordinal->value,
+            ex_xunion->members.front().ordinal->value);
+
+  END_TEST;
+}
+
+bool error_syntax_sugar_same_ordinals() {
+  BEGIN_TEST;
+
+  TestLibrary sugar_library(R"FIDL(
+library example;
+
+protocol Example {
+  Method() -> () error int32;
+};
+
+)FIDL");
+  ASSERT_TRUE(sugar_library.Compile());
+
+  TestLibrary desugared_library(R"FIDL(
+library example;
+
+xunion Example_Method_Result {
+  int32 Response;
+  int32 Err;
+};
+
+protocol Example {
+  Method() -> (Example_Method_Result res);
+};
+
+)FIDL");
+  ASSERT_TRUE(desugared_library.Compile());
+
+  const fidl::flat::Union* sugar_union = sugar_library.LookupUnion("Example_Method_Result");
+  const fidl::flat::XUnion* desugared_xunion =
+      desugared_library.LookupXUnion("Example_Method_Result");
+
+  ASSERT_NOT_NULL(sugar_union);
+  ASSERT_NOT_NULL(desugared_xunion);
+
+  ASSERT_EQ(sugar_union->members.front().xunion_ordinal->value,
+            desugared_xunion->members.front().ordinal->value);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(xunion_tests)
 RUN_TEST(compiling)
-RUN_TEST(invalid_empty_xunions);
+RUN_TEST(invalid_empty_xunions)
+RUN_TEST(union_xunion_same_ordinals)
+RUN_TEST(error_syntax_sugar_same_ordinals)
 END_TEST_CASE(xunion_tests)

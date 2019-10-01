@@ -1764,12 +1764,20 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
 
   // Make the Result union containing the response struct and the
   // error type.
-  Union::Member response_member{
-      IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
-      GeneratedSimpleName("response"), nullptr};
-  Union::Member error_member{std::move(error_type_ctor), GeneratedSimpleName("err"), nullptr};
   SourceLocation method_name = method->identifier->location();
   Name result_name = DerivedName({protocol_name.name_part(), method_name.data(), "Result"});
+  raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
+  auto response_ordinal = std::make_unique<raw::Ordinal32>(fidl::ordinals::GetGeneratedOrdinal32(
+      library_name_, result_name.name_part(), std::string("Response"), sourceElement));
+  Union::Member response_member{
+      std::move(response_ordinal),
+      IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
+      GeneratedSimpleName("response"), nullptr};
+
+  auto err_ordinal = std::make_unique<raw::Ordinal32>(fidl::ordinals::GetGeneratedOrdinal32(
+      library_name_, result_name.name_part(), "Err", sourceElement));
+  Union::Member error_member{std::move(err_ordinal), std::move(error_type_ctor),
+                             GeneratedSimpleName("err"), nullptr};
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(response_member));
   result_members.push_back(std::move(error_member));
@@ -1963,18 +1971,22 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
+  auto name = Name(this, union_declaration->identifier->location());
+
   std::vector<Union::Member> members;
   for (auto& member : union_declaration->members) {
+    auto xunion_ordinal = std::make_unique<raw::Ordinal32>(
+        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
     auto location = member->identifier->location();
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
       return false;
     auto attributes = std::move(member->attributes);
-    members.emplace_back(std::move(type_ctor), location, std::move(attributes));
+    members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), location,
+                         std::move(attributes));
   }
 
   auto attributes = std::move(union_declaration->attributes);
-  auto name = Name(this, union_declaration->identifier->location());
 
   return RegisterDecl(
       std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));

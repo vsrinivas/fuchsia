@@ -19,6 +19,7 @@
       },
       "members": [
         {
+          "xunion_ordinal": 910042901,
           "type": {
             "kind": "primitive",
             "subtype": "int32"
@@ -35,6 +36,7 @@
           "offset": 8
         },
         {
+          "xunion_ordinal": 891204917,
           "type": {
             "kind": "string",
             "nullable": false
@@ -51,6 +53,7 @@
           "offset": 8
         },
         {
+          "xunion_ordinal": 1452916587,
           "type": {
             "kind": "vector",
             "element_type": {
@@ -85,6 +88,7 @@
       },
       "members": [
         {
+          "xunion_ordinal": 1574011787,
           "type": {
             "kind": "primitive",
             "subtype": "int32"

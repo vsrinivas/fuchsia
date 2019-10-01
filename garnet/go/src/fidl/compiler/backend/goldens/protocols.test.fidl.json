@@ -737,6 +737,7 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 3968580,
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
@@ -754,6 +755,7 @@
           "offset": 4
         },
         {
+          "xunion_ordinal": 598382991,
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
@@ -790,6 +792,7 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 3968580,
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
@@ -807,6 +810,7 @@
           "offset": 4
         },
         {
+          "xunion_ordinal": 598382991,
           "type": {
             "kind": "identifier",
             "identifier": "test.name/ErrorEnun",

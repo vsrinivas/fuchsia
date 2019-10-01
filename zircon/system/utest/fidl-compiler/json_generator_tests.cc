@@ -685,12 +685,13 @@ union PizzaOrPasta {
       },
       "members": [
         {
+          "name": "pizza",
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.json/Pizza",
             "nullable": false
           },
-          "name": "pizza",
+          "xunion_ordinal": 1190453503,
           "location": {
             "filename": "json.fidl",
             "line": 13,
@@ -702,12 +703,13 @@ union PizzaOrPasta {
           "offset": 8
         },
         {
+          "name": "pasta",
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.json/Pasta",
             "nullable": false
           },
-          "name": "pasta",
+          "xunion_ordinal": 1864396309,
           "location": {
             "filename": "json.fidl",
             "line": 14,
@@ -785,12 +787,12 @@ strict xunion StrictFoo {
       },
       "members": [
         {
-          "ordinal": 1056421836,
+          "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "name": "s",
+          "ordinal": 1056421836,
           "location": {
             "filename": "json.fidl",
             "line": 5,
@@ -802,12 +804,12 @@ strict xunion StrictFoo {
           "offset": 0
         },
         {
-          "ordinal": 1911600824,
+          "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "name": "i",
+          "ordinal": 1911600824,
           "location": {
             "filename": "json.fidl",
             "line": 6,
@@ -834,12 +836,12 @@ strict xunion StrictFoo {
       },
       "members": [
         {
-          "ordinal": 215696753,
+          "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "name": "s",
+          "ordinal": 215696753,
           "location": {
             "filename": "json.fidl",
             "line": 10,
@@ -851,12 +853,12 @@ strict xunion StrictFoo {
           "offset": 0
         },
         {
-          "ordinal": 2063855467,
+          "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "name": "i",
+          "ordinal": 2063855467,
           "location": {
             "filename": "json.fidl",
             "line": 11,
@@ -1070,12 +1072,12 @@ protocol Protocol {
       },
       "members": [
         {
-          "ordinal": 1056421836,
+          "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "name": "s",
+          "ordinal": 1056421836,
           "location": {
             "filename": "json.fidl",
             "line": 5,
@@ -1087,12 +1089,12 @@ protocol Protocol {
           "offset": 0
         },
         {
-          "ordinal": 1911600824,
+          "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "name": "i",
+          "ordinal": 1911600824,
           "location": {
             "filename": "json.fidl",
             "line": 6,
@@ -1119,12 +1121,12 @@ protocol Protocol {
       },
       "members": [
         {
-          "ordinal": 215696753,
+          "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "name": "s",
+          "ordinal": 215696753,
           "location": {
             "filename": "json.fidl",
             "line": 10,
@@ -1136,12 +1138,12 @@ protocol Protocol {
           "offset": 0
         },
         {
-          "ordinal": 2063855467,
+          "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "name": "i",
+          "ordinal": 2063855467,
           "location": {
             "filename": "json.fidl",
             "line": 11,
@@ -1687,7 +1689,7 @@ protocol Example {
       "name": "fidl.test.json/Example_foo_Result",
       "location": {
         "filename": "generated",
-        "line": 5,
+        "line": 3,
         "column": 1
       },
       "maybe_attributes": [
@@ -1698,15 +1700,16 @@ protocol Example {
       ],
       "members": [
         {
+          "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.json/Example_foo_Response",
             "nullable": false
           },
-          "name": "response",
+          "xunion_ordinal": 204524336,
           "location": {
             "filename": "generated",
-            "line": 3,
+            "line": 4,
             "column": 1
           },
           "size": 8,
@@ -1715,14 +1718,15 @@ protocol Example {
           "offset": 8
         },
         {
+          "name": "err",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "name": "err",
+          "xunion_ordinal": 5397661,
           "location": {
             "filename": "generated",
-            "line": 4,
+            "line": 5,
             "column": 1
           },
           "size": 4,
@@ -3509,11 +3513,12 @@ xunion ExampleXUnion {
       ],
       "members": [
         {
+          "name": "variant",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "name": "variant",
+          "xunion_ordinal": 1629839502,
           "location": {
             "filename": "example.fidl",
             "line": 47,
@@ -3553,12 +3558,12 @@ xunion ExampleXUnion {
       ],
       "members": [
         {
-          "ordinal": 1300389554,
+          "name": "variant",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "name": "variant",
+          "ordinal": 1300389554,
           "location": {
             "filename": "example.fidl",
             "line": 53,
