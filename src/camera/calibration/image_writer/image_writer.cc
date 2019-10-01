@@ -4,13 +4,10 @@
 
 #include "image_writer.h"
 
-#include <zircon/assert.h>
 #include <zircon/status.h>
-#include <zircon/types.h>
 
 #include <array>
 #include <memory>
-#include <tuple>
 #include <vector>
 
 #include <src/lib/fxl/logging.h>
@@ -25,20 +22,20 @@ std::unique_ptr<ImageWriter> ImageWriter::Init(uint32_t width, uint32_t height,
   FXL_CHECK(width > 0 && height > 0) << "Invalid dimensions passed in.";
 
   // TODO(nzo): is there a way to incorporate the height from DmaFormat instead of using a manual
-  // calculation?
+  //            calculation?
   const size_t kSize = width * height * kBytesPerDoublePixel;
   const camera::DmaFormat kDmaFormat = camera::DmaFormat(width, height, pixel_format, false);
   return std::make_unique<ImageWriter>(kDmaFormat, kSize);
 }
 
-zx_status_t ImageWriter::Write(zx::vmo* vmo) {
+zx_status_t ImageWriter::Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) {
   zx_status_t status = zx::vmo::create(vmo_size_, 0, vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create VMO: %s\n", zx_status_get_string(status);
     return status;
   }
 
-  FillRAW12(vmo);
+  FillRAW12(vmo, r, g, b);
 
   return ZX_OK;
 }
@@ -52,15 +49,15 @@ std::array<uint8_t, kBytesPerDoublePixel> ImageWriter::PixelValuesToDoublePixel(
                              (first_pixel_val & kLowHalfByteMask)))});
 }
 
-std::tuple<uint16_t, uint16_t> ImageWriter::DoublePixelToPixelValues(
+std::pair<uint16_t, uint16_t> ImageWriter::DoublePixelToPixelValues(
     std::array<uint8_t, kBytesPerDoublePixel> double_pixel) {
-  return std::tuple(
+  return std::pair(
       (double_pixel[0] << kHalfByteShift) | (double_pixel[2] & kLowHalfByteMask),
       (double_pixel[1] << kHalfByteShift) | ((double_pixel[2] & kHighByteMask) >> kHalfByteShift));
 }
 
-void ImageWriter::FillRAW12(zx::vmo* vmo) {
-  ZX_DEBUG_ASSERT(*vmo);
+void ImageWriter::FillRAW12(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) {
+  FXL_CHECK(*vmo) << "VMO must have been created.";
 
   std::array<uint8_t, kBytesPerDoublePixel> double_pixel_val;
 
@@ -68,10 +65,8 @@ void ImageWriter::FillRAW12(zx::vmo* vmo) {
 
   // Value for colors on the first column/row will be zero, increase by constant factor up to
   // maximum value for every column/row after that.
-  const float_t kGreenStepFactor =
-      (dma_format_.height() == 1) ? 0 : kMaxVal / (dma_format_.height() - 1);
-  const float_t kBlueStepFactor =
-      (dma_format_.width() == 1) ? 0 : kMaxVal / (dma_format_.width() - 1);
+  const float_t kGreenStepFactor = (dma_format_.height() == 1) ? 0 : b / (dma_format_.height() - 1);
+  const float_t kBlueStepFactor = (dma_format_.width() == 1) ? 0 : g / (dma_format_.width() - 1);
   uint16_t green_pixel = 0;
   uint16_t blue_pixel = 0;
 
@@ -84,7 +79,7 @@ void ImageWriter::FillRAW12(zx::vmo* vmo) {
       blue_pixel = 0;
     }
 
-    double_pixel_val = (row_num % 2 == 0) ? PixelValuesToDoublePixel(kRedPixel, green_pixel)
+    double_pixel_val = (row_num % 2 == 0) ? PixelValuesToDoublePixel(r, green_pixel)
                                           : PixelValuesToDoublePixel(green_pixel, blue_pixel);
     buf[i] = double_pixel_val[0];
     buf[i + 1] = double_pixel_val[1];

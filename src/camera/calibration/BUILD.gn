@@ -5,6 +5,7 @@
 group("calibration") {
   testonly = true
   deps = [
+    "blc",
     "image_writer",
   ]
 }

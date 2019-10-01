@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("image_writer_test") {
+executable("blc_test") {
   testonly = true
   sources = [
     "//src/camera/calibration/image_writer/image_writer.cc",
-    "image_writer_test.cc",
+    "//src/camera/calibration/blc/blc.cc",
+    "blc_test.cc",
   ]
   deps = [
     "//src/camera/drivers/test_utils",

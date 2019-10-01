@@ -39,16 +39,21 @@ class ImageWriter {
   //  |pixel_format| Intended byte representation for each pixel in the images to be written.
   // Returns:
   //  An object ImageWriter that writes images to vmos.
-  static std::unique_ptr<ImageWriter> Init(uint32_t width, uint32_t height,
-                                           camera::DmaFormat::PixelType pixel_format);
+  static std::unique_ptr<ImageWriter> Init(
+      uint32_t width, uint32_t height, camera::DmaFormat::PixelType pixel_format = kPixelTypeRaw12);
 
   // Creates a vmo of appropriate size (depending on DmaFormat image size) and passes it to be
   // filled by specified format handler.
   // Args:
-  //  |vmo| Pointer to memory where the image will be written to.
+  //  |vmo| Memory object handle to which the image will be written. This function will create a new
+  //        vmo.
+  //  |r| Red pixel value; default is set to kRedPixel.
+  //  |g| Green pixel values in the image will range from 0 to g; default is set to kMaxPixelVal.
+  //  |b| Blue pixel values in the image will range from 0 to b; default is set to kMaxPixelVal.
   // Returns:
   //  Whether vmo creation succeeded.
-  zx_status_t Write(zx::vmo* vmo);
+  zx_status_t Write(zx::vmo* vmo, uint16_t r = kRedPixel, uint16_t g = kMaxVal,
+                    uint16_t b = kMaxVal);
 
   // Helper method that organizes two individual pixel values into the appropriate RAW12
   // double-pixel format.
@@ -63,8 +68,8 @@ class ImageWriter {
   // Args:
   //  |double_pixel| An array of bytes arranged in RAW12 pixel format (represents two pixels).
   // Returns:
-  //  A tuple of each of the two 12-bit pixel values that comprised the original double-pixel.
-  static std::tuple<uint16_t, uint16_t> DoublePixelToPixelValues(
+  //  A pair of each of the two 12-bit pixel values that comprised the original double-pixel.
+  static std::pair<uint16_t, uint16_t> DoublePixelToPixelValues(
       std::array<uint8_t, kBytesPerDoublePixel> double_pixel);
 
   // Getter methods
@@ -74,9 +79,9 @@ class ImageWriter {
  private:
   // Fills a provided vmo with default data in the RAW12 image format. Only a RGGB layout is used at
   // the moment.
-  // The red pixel value stays consistent at a value of 2048 throughout the image.
-  // The blue pixel value increases from 0 to a maximum of 4095 across individual columns.
-  // The green pixels value increases from 0 to a maximum of 4095 across individual rows.
+  // The red pixel value stays consistent at a value of r throughout the image.
+  // The green pixels value increases from 0 to a maximum of g across individual rows.
+  // The blue pixel value increases from 0 to a maximum of b across individual columns.
   //
   // Each double-pixel is laid out like so:
   //  Bits  ->  7        6        5        4        3        2        1        0
@@ -88,9 +93,18 @@ class ImageWriter {
   //  R0[11:4], G0[11:4], G0[3:0]R0[3:0], R1[11:4], G1[11:4], G1[3:0]R1[3:0]
   // A GB row with two double pixels (six bytes) looks like:
   //  G0[11:4], B0[11:4], B0[3:0]G0[3:0], G1[11:4], B1[11:4], B1[3:0]G1[3:0]
+  //
   // Args:
-  //  |vmo| Pointer to memory where the image will be written to.
-  void FillRAW12(zx::vmo* vmo);
+  //  |vmo| Memory object handle to which the image will be written. The vmo must have been created
+  //        before passing it in.
+  //  |r| Red pixel value; default is set to kRedPixel.
+  //  |g| Green pixel values in the image will range from 0 to g; default is set to kMaxPixelVal.
+  //  |b| Blue pixel values in the image will range from 0 to b; default is set to kMaxPixelVal.
+  //
+  // TODO(nzo): split g into gr and gb.
+  // TODO(nzo): use a more straightforward filling method; scaling with step functions causes a few
+  //            issues downstream of image creation.
+  void FillRAW12(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b);
 
   const camera::DmaFormat dma_format_;
   const size_t vmo_size_;

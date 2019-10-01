@@ -4,15 +4,11 @@
 
 #include "../image_writer.h"
 
-#include <zircon/types.h>
-
 #include <array>
-#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
-
-#include "src/camera/drivers/isp/modules/dma-format.h"
+#include <src/camera/drivers/isp/modules/dma-format.h>
 
 namespace camera {
 namespace {
@@ -57,7 +53,7 @@ TEST(ImageWriterTest, ConstructorCheckFailsWithZeroHeight) {
 }
 
 // Helper method to initialize an ImageWriter and write an image of specified width/height.
-zx_status_t ReadImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
+zx_status_t ReadTestImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
   std::unique_ptr<ImageWriter> image_writer = ImageWriter::Init(width, height, kPixelTypeRaw12);
 
   zx_status_t status;
@@ -97,7 +93,7 @@ void CopyDoublePixel(uint8_t* target, const uint8_t* source, uint32_t target_ind
 
 TEST(ImageWriterTest, WriteSquareImage) {
   std::vector<uint8_t> buf(kSquareImageSize);
-  zx_status_t status = ReadImage(&buf, kWidth, kHeight);
+  zx_status_t status = ReadTestImage(&buf, kWidth, kHeight);
   ASSERT_EQ(status, ZX_OK);
 
   auto expected_buf = std::vector<uint8_t>(kSquareImage.begin(), kSquareImage.end());
@@ -107,7 +103,7 @@ TEST(ImageWriterTest, WriteSquareImage) {
 
 TEST(ImageWriterTest, WriteLongImage) {
   std::vector<uint8_t> buf(kLongImageSize);
-  zx_status_t status = ReadImage(&buf, kHalfWidth, kDoubleHeight);
+  zx_status_t status = ReadTestImage(&buf, kHalfWidth, kDoubleHeight);
   ASSERT_EQ(status, ZX_OK);
 
   auto expected_buf = std::vector<uint8_t>(kLongImage.begin(), kLongImage.end());
@@ -117,7 +113,7 @@ TEST(ImageWriterTest, WriteLongImage) {
 
 TEST(ImageWriterTest, WriteWideImage) {
   std::vector<uint8_t> buf(kWideImageSize);
-  zx_status_t status = ReadImage(&buf, kDoubleWidth, kHalfHeight);
+  zx_status_t status = ReadTestImage(&buf, kDoubleWidth, kHalfHeight);
   ASSERT_EQ(status, ZX_OK);
 
   auto expected_buf = std::vector<uint8_t>(kWideImage.begin(), kWideImage.end());
@@ -127,7 +123,7 @@ TEST(ImageWriterTest, WriteWideImage) {
 
 TEST(ImageWriterTest, WriteExhaustiveImage) {
   std::vector<uint8_t> buf(kExhaustiveImageSize);
-  zx_status_t status = ReadImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
+  zx_status_t status = ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
   ASSERT_EQ(status, ZX_OK);
 
   // Test byte value at the center.
@@ -188,7 +184,7 @@ TEST(ImageWriterTest, WriteExhaustiveImage) {
 TEST(ImageWriterTest, WriteDoesNotOverwriteBytesPastImage) {
   // Add some padding to the buffer (after the image).
   std::vector<uint8_t> buf(kExhaustiveImageSize + kPadding);
-  zx_status_t status = ReadImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
+  zx_status_t status = ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
   ASSERT_EQ(status, ZX_OK);
 
   // Compare it to a buffer of zeroes of equal length to the padding.
@@ -197,7 +193,8 @@ TEST(ImageWriterTest, WriteDoesNotOverwriteBytesPastImage) {
   // Check that the last byte in the image is not 0.
   EXPECT_NE(0x0, buf[kExhaustiveImageSize - 1]);
   // Compares kExpectedBuf to end of buf + size of kExpectedBuf.
-  EXPECT_TRUE(std::equal(kExpectedBuf.begin(), kExpectedBuf.end(), buf.begin() + kExhaustiveImageSize));
+  EXPECT_TRUE(
+      std::equal(kExpectedBuf.begin(), kExpectedBuf.end(), buf.begin() + kExhaustiveImageSize));
 }
 
 TEST(ImageWriterTest, PixelValuesToDoublePixelWorksCorrectly) {
@@ -214,13 +211,13 @@ TEST(ImageWriterTest, DoublePixelToPixelValuesWorksCorrectly) {
   const std::array<uint8_t, kBytesPerDoublePixel> kZeroBuf = {};
   const std::array<uint8_t, kBytesPerDoublePixel> kFullBuf = {0xFF, 0xFF, 0xFF};
   const std::array<uint8_t, kBytesPerDoublePixel> kRandomBuf = {0x3C, 0x09, 0xD1};
-  const std::tuple<uint16_t, uint16_t> kExpectedZeroTuple(0x0, 0x0);
-  const std::tuple<uint16_t, uint16_t> kExpectedFullTuple(0xFFF, 0xFFF);
-  const std::tuple<uint16_t, uint16_t> kExpectedRandomTuple(0x3C1, 0x09D);
+  const std::pair<uint16_t, uint16_t> kExpectedZeroPair(0x0, 0x0);
+  const std::pair<uint16_t, uint16_t> kExpectedFullPair(0xFFF, 0xFFF);
+  const std::pair<uint16_t, uint16_t> kExpectedRandomPair(0x3C1, 0x09D);
 
-  EXPECT_EQ(kExpectedZeroTuple, ImageWriter::DoublePixelToPixelValues(kZeroBuf));
-  EXPECT_EQ(kExpectedFullTuple, ImageWriter::DoublePixelToPixelValues(kFullBuf));
-  EXPECT_EQ(kExpectedRandomTuple, ImageWriter::DoublePixelToPixelValues(kRandomBuf));
+  EXPECT_EQ(kExpectedZeroPair, ImageWriter::DoublePixelToPixelValues(kZeroBuf));
+  EXPECT_EQ(kExpectedFullPair, ImageWriter::DoublePixelToPixelValues(kFullBuf));
+  EXPECT_EQ(kExpectedRandomPair, ImageWriter::DoublePixelToPixelValues(kRandomBuf));
 }
 
 }  // namespace

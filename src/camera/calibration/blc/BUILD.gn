@@ -4,24 +4,22 @@
 
 import("//build/package.gni")
 
-executable("image_writer_bin") {
-  output_name = "image_writer"
+executable("blc_bin") {
+  output_name = "blc"
 
   sources = [
-    "image_writer.cc",
+    "blc.cc",
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
-    "//zircon/public/lib/fzl",
+    "//src/camera/calibration/image_writer:image_writer",
   ]
 }
 
-package("image_writer") {
+package("blc") {
   deps = [
-    ":image_writer_bin",
+    ":blc_bin",
   ]
 
-  binary = "image_writer"
+  binary = "blc"
 }

@@ -30,6 +30,7 @@ group("tests") {
 
 test_package("camera_full_test") {
   deps = [
+    "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/calibration/image_writer/test:image_writer_test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
@@ -99,6 +100,11 @@ test_package("camera_full_test") {
     {
       name = "image_writer_test"
       manifest = "calibration/image_writer/test/meta/image_writer_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "blc_test"
+      manifest = "calibration/blc/test/meta/blc_test.cmx"
       environments = basic_envs
     },
 
