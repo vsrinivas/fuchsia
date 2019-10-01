@@ -8,6 +8,7 @@ library("hwreg") {
   sdk = "source"
   sdk_headers = [
     "hwreg/bitfields.h",
+    "hwreg/indirect.h",
     "hwreg/internal.h",
     "hwreg/mmio.h",
   ]
@@ -40,6 +41,7 @@ library("hwreg-i2c") {
   sdk = "source"
   sdk_headers = [
     "hwreg/bitfields.h",
+    "hwreg/indirect.h",
     "hwreg/internal.h",
     "hwreg/i2c.h",
   ]
