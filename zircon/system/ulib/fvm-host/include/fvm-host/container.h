@@ -122,7 +122,7 @@ class FvmContainer final : public Container {
 
   // Verifies that the size of the existing file is valid based on the provided disk offset and
   // length. Optionally returns the file size as |size_out|.
-  zx_status_t VerifyFileSize(uint64_t* size_out = nullptr);
+  zx_status_t VerifyFileSize(uint64_t* size_out = nullptr, bool allow_resize = false);
 
   // Write the |part_index|th partition to disk
   zx_status_t WritePartition(unsigned part_index);

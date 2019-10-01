@@ -4,11 +4,12 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
+#include <sys/ioctl.h>
+
 #include <utility>
 
 #include <fvm/format.h>
-#include <lib/fit/defer.h>
-#include <sys/ioctl.h>
 
 #include "fvm-host/container.h"
 
@@ -92,7 +93,7 @@ zx_status_t FvmContainer::InitNew() {
   return info_.Reset(disk_size_, slice_size_);
 }
 
-zx_status_t FvmContainer::VerifyFileSize(uint64_t* size_out) {
+zx_status_t FvmContainer::VerifyFileSize(uint64_t* size_out, bool allow_resize) {
   struct stat stats;
   if (fstat(fd_.get(), &stats) < 0) {
     fprintf(stderr, "Failed to stat %s\n", path_.data());
@@ -108,7 +109,14 @@ zx_status_t FvmContainer::VerifyFileSize(uint64_t* size_out) {
     }
   }
 
-  if (disk_size_ > 0 && size < disk_offset_ + disk_size_) {
+  if (allow_resize) {
+    uint64_t minimum_disk_size = CalculateDiskSize();
+    if (size < minimum_disk_size) {
+      fprintf(stderr, "Invalid file size %" PRIu64 " for minimum disk size %" PRIu64 "\n", size,
+              minimum_disk_size);
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else if (disk_size_ > 0 && size < disk_offset_ + disk_size_) {
     fprintf(stderr, "Invalid file size %" PRIu64 " for specified offset+length\n", size);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -142,14 +150,9 @@ zx_status_t FvmContainer::InitExisting() {
 
   disk_size_ = fvm_superblock.fvm_partition_size;
 
-  zx_status_t status = VerifyFileSize();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Attempt to load metadata from disk
   fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd_.get());
-  status = info_.Load(&wrapper, disk_offset_, disk_size_);
+  zx_status_t status = info_.Load(&wrapper, disk_offset_, disk_size_);
   if (status != ZX_OK) {
     return status;
   }
@@ -160,6 +163,15 @@ zx_status_t FvmContainer::InitExisting() {
   }
 
   slice_size_ = info_.SliceSize();
+
+  // For an existing file, ensure the metadata is internally consistent.
+  // This includes accounting for the possibility the FVM may resize even if the
+  // container is smaller than we expect.
+  status = VerifyFileSize(nullptr, true /* allow_resize */);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   return ZX_OK;
 }
 

@@ -923,6 +923,35 @@ bool TestCreatePreallocatedSparseImageExceedMaxSize() {
   END_TEST;
 }
 
+bool TestPavePreallocatedSparseImage() {
+  BEGIN_TEST;
+  constexpr uint64_t kMaxSize = 2ull << 30;
+  ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true /* should_pass */, false /* enable_data */,
+                           kMaxSize));
+  fbl::unique_ptr<SparseContainer> sparse_container;
+  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
+
+  fbl::unique_ptr<fvm::host::UniqueFdWrapper> pave_wrapper;
+  ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &pave_wrapper),
+            ZX_OK);
+  pave_wrapper->Truncate(kMaxSize);
+
+  ASSERT_EQ(sparse_container->Pave(std::move(pave_wrapper), 0, 0), ZX_OK);
+  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
+  ASSERT_TRUE(DestroySparse(0));
+
+  fbl::unique_ptr<FvmContainer> fvmContainer;
+  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
+
+  // The amount of space needed by the FVM should be smaller than its max disk size.
+  // kMaxSize == actual disk size > minimum disk size
+  ASSERT_EQ(fvmContainer->GetDiskSize(), kMaxSize);
+  ASSERT_GT(fvmContainer->GetDiskSize(), fvmContainer->CalculateDiskSize());
+
+  ASSERT_TRUE(DestroyFvm());
+  END_TEST;
+}
+
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
   BEGIN_HELPER;
   ASSERT_LT(partition_count, MAX_PARTITIONS);
@@ -1064,6 +1093,7 @@ RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, true, 10000, 1024 * 10, 0
 
 RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImage)
 RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImageExceedMaxSize)
+RUN_TEST_MEDIUM(TestPavePreallocatedSparseImage)
 
 END_TEST_CASE(fvm_host_tests)
 

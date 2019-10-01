@@ -452,31 +452,35 @@ zx_status_t SparseContainer::Commit() {
 
 zx_status_t SparseContainer::Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrapper,
                                   size_t disk_offset, size_t disk_size) {
+  uint64_t minimum_disk_size = CalculateDiskSize();
+  uint64_t target_size = disk_size;
+
   if (disk_size == 0) {
-    if (disk_offset > 0) {
-      fprintf(stderr, "Cannot specify offset without length\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
+    disk_size = minimum_disk_size;
+    target_size = disk_size;
+  }
 
-    disk_size = CalculateDiskSize();
+  // Prefer using the sparse container's maximum disk size if available.
+  if (image_.maximum_disk_size > 0) {
+    target_size = image_.maximum_disk_size;
+  }
 
-    // Truncate file to size we expect. Some files wrapped by FileWrapper may not support
-    // truncate, e.g. block devices.
-    zx_status_t status = wrapper->Truncate(disk_size);
-    if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
-      return status;
-    }
+  // Truncate file to size the caller expects. Some files wrapped by FileWrapper may not support
+  // truncate, e.g. block devices.
+  zx_status_t status = wrapper->Truncate(disk_offset + disk_size);
+  if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
+    return status;
+  }
 
-    if (wrapper->Size() < static_cast<ssize_t>(disk_size)) {
-      fprintf(stderr, "FileWrapper reported size as %ld bytes. Expected at least %lu bytes",
-              wrapper->Size(), disk_size);
-      return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+  uint64_t wrapper_size = static_cast<uint64_t>(wrapper->Size());
+  if (wrapper_size < disk_offset + minimum_disk_size) {
+    fprintf(stderr, "Cannot pave %lu bytes at offset %lu to FileWrapper of size %lu bytes\n",
+            minimum_disk_size, disk_offset, wrapper_size);
+    return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::unique_ptr<SparsePaver> paver;
-  zx_status_t status =
-      SparsePaver::Create(std::move(wrapper), slice_size_, disk_offset, disk_size, &paver);
+  status = SparsePaver::Create(std::move(wrapper), slice_size_, disk_offset, target_size, &paver);
 
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create SparsePaver\n");
