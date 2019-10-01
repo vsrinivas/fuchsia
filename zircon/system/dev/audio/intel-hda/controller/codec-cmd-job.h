@@ -19,7 +19,7 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelHDACodec;
+class CodecConnection;
 
 class CodecCmdJob;
 using CodecCmdJobAllocTraits = fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<CodecCmdJob>>;

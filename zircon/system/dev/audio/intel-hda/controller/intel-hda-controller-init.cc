@@ -256,7 +256,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
 
   ZX_DEBUG_ASSERT(irq_ != nullptr);
   auto irq_handler = [controller = fbl::RefPtr(this)](const dispatcher::Interrupt* irq,
-                                                          zx_time_t timestamp) -> zx_status_t {
+                                                      zx_time_t timestamp) -> zx_status_t {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
     LOG_EX(SPEW, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
     return controller->HandleIrq();

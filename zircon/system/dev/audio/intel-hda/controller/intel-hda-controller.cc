@@ -23,8 +23,8 @@
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 
+#include "codec-connection.h"
 #include "debug-logging.h"
-#include "intel-hda-codec.h"
 #include "utils.h"
 
 namespace audio {

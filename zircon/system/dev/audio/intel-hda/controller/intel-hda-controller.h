@@ -31,9 +31,9 @@
 #include <intel-hda/utils/utils.h>
 
 #include "codec-cmd-job.h"
+#include "codec-connection.h"
 #include "debug-logging.h"
 #include "intel-dsp.h"
-#include "intel-hda-codec.h"
 #include "utils.h"
 
 #define INTEL_HDA_PCI_VID 0x8086
@@ -110,7 +110,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   State GetState() { return state_.load(); }
 
   // Codec lifetime maanagement
-  fbl::RefPtr<IntelHDACodec> GetCodec(uint id);
+  fbl::RefPtr<CodecConnection> GetCodec(uint id);
 
   // Methods used during initialization
   zx_status_t InitInternal(zx_device_t* pci_dev);
@@ -210,7 +210,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   fbl::DoublyLinkedList<fbl::unique_ptr<CodecCmdJob>> pending_corb_jobs_ TA_GUARDED(corb_lock_);
 
   fbl::Mutex codec_lock_;
-  fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
+  fbl::RefPtr<CodecConnection> codecs_[HDA_MAX_CODECS];
 
   fbl::RefPtr<IntelDsp> dsp_;
 

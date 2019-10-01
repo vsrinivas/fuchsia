@@ -27,7 +27,7 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelHDACodec;
+class CodecConnection;
 
 class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
                        public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>> {

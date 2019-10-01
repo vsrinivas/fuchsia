@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CODEC_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CODEC_H_
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -34,7 +34,8 @@ namespace intel_hda {
 class IntelHDAController;
 struct CodecResponse;
 
-class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
+// CodecConnection manages a connection to a child codec driver.
+class CodecConnection : public fbl::RefCounted<CodecConnection> {
  public:
   enum class State {
     PROBING,
@@ -45,7 +46,7 @@ class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
     FATAL_ERROR,
   };
 
-  static fbl::RefPtr<IntelHDACodec> Create(IntelHDAController& controller, uint8_t codec_id);
+  static fbl::RefPtr<CodecConnection> Create(IntelHDAController& controller, uint8_t codec_id);
 
   zx_status_t Startup();
   void ProcessSolicitedResponse(const CodecResponse& resp, fbl::unique_ptr<CodecCmdJob>&& job);
@@ -69,9 +70,9 @@ class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
   void DumpState();
 
  private:
-  friend class fbl::RefPtr<IntelHDACodec>;
+  friend class fbl::RefPtr<CodecConnection>;
 
-  using ProbeParseCbk = zx_status_t (IntelHDACodec::*)(const CodecResponse& resp);
+  using ProbeParseCbk = zx_status_t (CodecConnection::*)(const CodecResponse& resp);
   struct ProbeCommandListEntry {
     CodecVerb verb;
     ProbeParseCbk parse;
@@ -90,8 +91,8 @@ class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
   static zx_protocol_device_t CODEC_DEVICE_THUNKS;
   static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 
-  IntelHDACodec(IntelHDAController& controller, uint8_t codec_id);
-  virtual ~IntelHDACodec() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
+  CodecConnection(IntelHDAController& controller, uint8_t codec_id);
+  virtual ~CodecConnection() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
 
   zx_status_t PublishDevice();
 
@@ -159,4 +160,4 @@ class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CODEC_H_
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
