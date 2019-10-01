@@ -517,6 +517,25 @@ async fn download_blob(
     expected_len: Option<u64>,
     dest: FileProxy,
 ) -> Result<(), FetchError> {
+    // If dest is not `Close`d after a partial write or a write of corrupted bytes,
+    // subsequent attempts to re-open the blob for writing (e.g. if the package resolve
+    // is re-tried) will fail. Suspected that pkgfs is not closing its channel to blobfs
+    // for the given blob when the resolver's channel to pkgfs is closed,
+    // and keeping the channel open causes blobfs to fail attempts to open the same blob
+    // again for writing.
+    struct FileProxyCloserGuard<'a> {
+        f: &'a FileProxy,
+    }
+
+    impl Drop for FileProxyCloserGuard<'_> {
+        fn drop(&mut self) {
+            // Sending the Close message is synchronous, only waiting for the response is async.
+            let _f = self.f.close();
+        }
+    }
+
+    let _fpc = FileProxyCloserGuard { f: &dest };
+
     let request = Request::get(url.to_string()).body(Body::empty())?;
     let response = client.request(request).compat().await?;
 

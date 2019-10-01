@@ -10,7 +10,12 @@ use {
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
     fuchsia_url::pkg_url::RepoUrl,
-    futures::{compat::Future01CompatExt, future::RemoteHandle, prelude::*, task::SpawnExt},
+    futures::{
+        compat::Future01CompatExt,
+        future::{ready, BoxFuture, RemoteHandle},
+        prelude::*,
+        task::SpawnExt,
+    },
     hyper::{service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     std::{
         net::{Ipv4Addr, SocketAddr},
@@ -22,14 +27,33 @@ use {
 /// A builder to construct a test repository server.
 pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
+    uri_path_override_handler: Option<Arc<dyn UriPathHandler>>,
+}
+
+/// Override how a `ServedRepository` responds to GET requests on valid URI paths.
+/// Useful for injecting failures.
+pub trait UriPathHandler: 'static + Send + Sync {
+    /// `response` is what the server would have responded with.
+    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>>;
+}
+
+struct PassThroughUriPathHandler;
+impl UriPathHandler for PassThroughUriPathHandler {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        ready(response).boxed()
+    }
 }
 
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
-        ServedRepositoryBuilder { repo }
+        ServedRepositoryBuilder { repo, uri_path_override_handler: None }
     }
 
-    // TODO(22777) all the fault injection
+    /// Override how the `ServedRepositoryBuilder` responds to some URI paths.
+    pub fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
+        self.uri_path_override_handler = Some(Arc::new(handler));
+        self
+    }
 
     /// Spawn the server on the current executor, returning a handle to manage the server.
     pub fn start(self) -> Result<ServedRepository, Error> {
@@ -42,12 +66,21 @@ impl ServedRepositoryBuilder {
         };
 
         let root = self.repo.path();
+        let uri_path_override_handler =
+            self.uri_path_override_handler.unwrap_or(Arc::new(PassThroughUriPathHandler));
 
         let service = move || {
             let root = root.clone();
+            let uri_path_override_handler = uri_path_override_handler.clone();
 
             service_fn(move |req| {
-                ServedRepository::handle_tuf_repo_request(root.clone(), req).boxed().compat()
+                ServedRepository::handle_tuf_repo_request(
+                    root.clone(),
+                    uri_path_override_handler.clone(),
+                    req,
+                )
+                .boxed()
+                .compat()
             })
         };
 
@@ -101,6 +134,7 @@ impl ServedRepository {
 
     async fn handle_tuf_repo_request(
         repo: PathBuf,
+        uri_path_override_handler: Arc<dyn UriPathHandler>,
         req: Request<Body>,
     ) -> Result<Response<Body>, hyper::Error> {
         let fail =
@@ -112,16 +146,16 @@ impl ServedRepository {
             return Ok(fail(StatusCode::BAD_REQUEST));
         }
 
-        let path = Path::new(req.uri().path());
+        let uri_path = Path::new(req.uri().path());
 
         // don't let queries escape the repo root.
-        if path.components().any(|component| component == std::path::Component::ParentDir) {
+        if uri_path.components().any(|component| component == std::path::Component::ParentDir) {
             return Ok(fail(StatusCode::NOT_FOUND));
         }
 
-        let path = repo.join(path.strip_prefix("/").unwrap_or(path));
+        let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
         // FIXME synchronous IO in an async context.
-        let data = match std::fs::read(path) {
+        let data = match std::fs::read(fs_path) {
             Ok(data) => data,
             Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(fail(StatusCode::NOT_FOUND));
@@ -132,7 +166,12 @@ impl ServedRepository {
             }
         };
 
-        Ok(Response::builder().status(StatusCode::OK).body(Body::from(data)).unwrap())
+        Ok(uri_path_override_handler
+            .handle(
+                uri_path,
+                Response::builder().status(StatusCode::OK).body(Body::from(data)).unwrap(),
+            )
+            .await)
     }
 }
 

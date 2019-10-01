@@ -28,16 +28,26 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_merkle::{Hash, MerkleTree},
+    fuchsia_pkg_testing::serve::UriPathHandler,
     fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_vfs_pseudo_fs::{
         directory::entry::DirectoryEntry, directory::entry::EntryInfo, pseudo_directory,
     },
     fuchsia_zircon::Status,
-    futures::{future::FusedFuture, prelude::*},
+    futures::{
+        compat::Stream01CompatExt,
+        future::{ready, BoxFuture, FusedFuture},
+        prelude::*,
+        task::{Context, Poll},
+    },
+    hyper::{header::CONTENT_LENGTH, Body, Response},
     matches::assert_matches,
+    parking_lot::Mutex,
     std::{
         fs::File,
         io::{self, Read},
+        path::{Path, PathBuf},
+        pin::Pin,
         sync::{atomic::AtomicU64, Arc},
     },
 };
@@ -651,11 +661,8 @@ impl<StreamHandler> FakeFile<StreamHandler> {
 // don't need the advantages provided, so FakeFile has dummy impls.
 impl<StreamHandler> Future for FakeFile<StreamHandler> {
     type Output = void::Void;
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut futures::task::Context<'_>,
-    ) -> fuchsia_async::futures::Poll<Self::Output> {
-        fuchsia_async::futures::Poll::Pending
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Poll::Pending
     }
 }
 
@@ -762,6 +769,10 @@ async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: FileRequ
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(Status::NO_MEMORY.into_raw()).expect("send truncate response");
         }
+        FileRequest::Close { responder } => {
+            // cache.rs download_blob sends Close then immediately closes the channel.
+            let _ = responder.send(Status::OK.into_raw());
+        }
         req => panic!("should only receive truncate requests: {:?}", req),
     }
 }
@@ -771,6 +782,10 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest
         // PkgFs receives truncate before write, as it's writing through to BlobFs
         FileRequest::Truncate { length: _length, responder } => {
             responder.send(Status::OK.into_raw()).expect("send truncate response");
+        }
+        FileRequest::Close { responder } => {
+            // cache.rs download_blob sends Close then immediately closes the channel.
+            let _ = responder.send(Status::OK.into_raw());
         }
         FileRequest::Write { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -787,6 +802,10 @@ async fn handle_file_req_success(req: FileRequest) {
         }
         FileRequest::Write { data, responder } => {
             responder.send(Status::OK.into_raw(), data.len() as u64).expect("send write response");
+        }
+        FileRequest::Close { responder } => {
+            // cache.rs download_blob sends Close then immediately closes the channel.
+            let _ = responder.send(Status::OK.into_raw());
         }
         req => panic!("should only receive write and truncate requests: {:?}", req),
     }
@@ -972,4 +991,281 @@ async fn test_fails_write_blob_in_install_blob() -> Result<(), Error> {
         make_mock_pkgfs_with_failing_install_blob(handle_file_stream_fail_write).await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
+}
+
+struct OverrideOnceUriPathHandler {
+    already_overridden: Mutex<bool>,
+    path_to_override: PathBuf,
+    path_handler: Box<dyn UriPathHandler>,
+}
+
+impl OverrideOnceUriPathHandler {
+    fn new(path_to_override: impl Into<PathBuf>, path_handler: impl UriPathHandler) -> Self {
+        Self {
+            already_overridden: Mutex::new(false),
+            path_to_override: path_to_override.into(),
+            path_handler: Box::new(path_handler),
+        }
+    }
+}
+
+impl UriPathHandler for OverrideOnceUriPathHandler {
+    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        if uri_path != self.path_to_override {
+            return ready(response).boxed();
+        }
+        let mut already_overridden = self.already_overridden.lock();
+        if *already_overridden {
+            return ready(response).boxed();
+        }
+        *already_overridden = true;
+        self.path_handler.handle(uri_path, response)
+    }
+}
+
+async fn verify_resolve_fails_then_succeeds(
+    pkg: Package,
+    uri_handler: OverrideOnceUriPathHandler,
+    failure_status: Status,
+) -> Result<(), Error> {
+    let env = TestEnv::new();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?,
+    );
+    let served_repository = repo.build_server().uri_path_override_handler(uri_handler).start()?;
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let repo_config = served_repository.make_repo_config(repo_url);
+    env.proxies.repo_manager.add(repo_config.into()).await?;
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(status) if status == failure_status);
+    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+
+    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    env.stop().await;
+    Ok(())
+}
+
+struct NotFoundUriPathHandler;
+impl UriPathHandler for NotFoundUriPathHandler {
+    fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<Response<Body>> {
+        ready(
+            Response::builder()
+                .status(hyper::StatusCode::NOT_FOUND)
+                .body(Body::empty())
+                .expect("valid response"),
+        )
+        .boxed()
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_far_404() -> Result<(), Error> {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+    let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, NotFoundUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_blob_404() -> Result<(), Error> {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+    let path_to_override = format!(
+        "/blobs/{}",
+        MerkleTree::from_reader(extra_blob_contents(0).as_slice()).expect("merkle slice").root()
+    );
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, NotFoundUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+async fn body_to_bytes(body: Body) -> Vec<u8> {
+    body.compat().try_concat().await.expect("body stream to complete").to_vec()
+}
+
+struct OneByteShortThenErrorUriPathHandler;
+impl UriPathHandler for OneByteShortThenErrorUriPathHandler {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        async {
+            let mut bytes = body_to_bytes(response.into_body()).await;
+            if let None = bytes.pop() {
+                panic!("can't short 0 bytes");
+            }
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .header(CONTENT_LENGTH, bytes.len() + 1)
+                .body(Body::wrap_stream(
+                    futures::stream::iter(vec![
+                        Ok(bytes),
+                        Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
+                    ])
+                    .compat(),
+                ))
+                .expect("valid response")
+        }
+            .boxed()
+    }
+}
+
+// If the body of an https response is not large enough, hyper will download the body
+// along with the header in the initial fuchsia_hyper::HttpsClient.request(). This means
+// that even if the body is implemented with a stream that fails before the transfer is
+// complete, the failure will occur during the initial request and before the batch loop
+// that writes to pkgfs/blobfs. Value was found experimentally.
+const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 1_000_000;
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_far_errors_mid_download() -> Result<(), Error> {
+    let pkg = PackageBuilder::new("large_meta_far")
+        .add_resource_at(
+            "meta/large_file",
+            vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
+        )?
+        .build()
+        .await?;
+    let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_blob_errors_mid_download() -> Result<(), Error> {
+    let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
+    let pkg = PackageBuilder::new("large_blob")
+        .add_resource_at("blobbity/blob", blob.as_slice())?
+        .build()
+        .await?;
+    let path_to_override = format!(
+        "/blobs/{}",
+        MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()
+    );
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+struct OneByteShortThenDisconnectUriPathHandler;
+impl UriPathHandler for OneByteShortThenDisconnectUriPathHandler {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        async {
+            let mut bytes = body_to_bytes(response.into_body()).await;
+            if let None = bytes.pop() {
+                panic!("can't short 0 bytes");
+            }
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .header(CONTENT_LENGTH, bytes.len() + 1)
+                .body(Body::wrap_stream(
+                    futures::stream::iter(vec![Result::<Vec<u8>, String>::Ok(bytes)]).compat(),
+                ))
+                .expect("valid response")
+        }
+            .boxed()
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_disconnect_before_far_complete() -> Result<(), Error> {
+    let pkg = PackageBuilder::new("large_meta_far")
+        .add_resource_at(
+            "meta/large_file",
+            vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
+        )?
+        .build()
+        .await?;
+    let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_disconnect_before_blob_complete() -> Result<(), Error> {
+    let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
+    let pkg = PackageBuilder::new("large_blob")
+        .add_resource_at("blobbity/blob", blob.as_slice())?
+        .build()
+        .await?;
+    let path_to_override = format!(
+        "/blobs/{}",
+        MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()
+    );
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        Status::UNAVAILABLE,
+    )
+    .await
+}
+
+struct OneByteFlippedUriPathHandler;
+impl UriPathHandler for OneByteFlippedUriPathHandler {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        async {
+            let mut bytes = body_to_bytes(response.into_body()).await;
+            if bytes.is_empty() {
+                panic!("can't flip 0 bytes");
+            }
+            bytes[0] = !bytes[0];
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .body(bytes.into())
+                .expect("valid response")
+        }
+            .boxed()
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_far_corrupted() -> Result<(), Error> {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+    let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteFlippedUriPathHandler),
+        Status::IO,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_second_resolve_succeeds_when_blob_corrupted() -> Result<(), Error> {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+    let blob = extra_blob_contents(0);
+    let path_to_override = format!(
+        "/blobs/{}",
+        MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()
+    );
+
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        OverrideOnceUriPathHandler::new(path_to_override, OneByteFlippedUriPathHandler),
+        Status::IO,
+    )
+    .await
 }
