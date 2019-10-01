@@ -118,19 +118,24 @@ zx_status_t IntelHDAController::Enumerate() {
   return ZX_OK;
 }
 
-zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
-  zx_status_t res = Connect();
+zx_status_t IntelHDAController::Probe(IntelHDADevice* result) {
+  return ProbeIntelHdaDevice(&device_, result);
+}
 
-  if (res != ZX_OK)
+zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
+  zx_status_t res = device_.Connect();
+  if (res != ZX_OK) {
     return res;
+  }
 
   ihda_controller_snapshot_regs_req_t req;
   ihda_controller_snapshot_regs_resp_t resp;
 
-  InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
-  res = CallDevice(req, &resp);
-  if (res != ZX_OK)
+  ZirconDevice::InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
+  res = device_.CallDevice(req, &resp);
+  if (res != ZX_OK) {
     return res;
+  }
 
   const auto regs_ptr = reinterpret_cast<hda_registers_t*>(resp.snapshot);
   const auto& regs = *regs_ptr;

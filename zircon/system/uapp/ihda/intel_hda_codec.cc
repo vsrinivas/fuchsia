@@ -463,10 +463,14 @@ zx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {
   if (res != ZX_OK)
     return res;
 
-  printf("Codec ID %u :: %s\n", codec_id_, dev_name_);
+  printf("Codec ID %u :: %s\n", codec_id_, dev_name_.c_str());
   print_codec_state(codec_state_);
 
   return ZX_OK;
+}
+
+zx_status_t IntelHDACodec::Probe(IntelHDADevice* result) {
+  return ProbeIntelHdaDevice(&device_, result);
 }
 
 #define RUN_COMMAND_LIST(_tgt, _nid, _list, _fail_msg, ...)        \
@@ -479,10 +483,10 @@ zx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {
   }
 
 zx_status_t IntelHDACodec::ReadCodecState() {
-  zx_status_t res = Connect();
-
-  if (res != ZX_OK)
+  zx_status_t res = device_.Connect();
+  if (res != ZX_OK) {
     return res;
+  }
 
   codec_state_.reset();
 
@@ -859,11 +863,11 @@ zx_status_t IntelHDACodec::DoCodecCmd(uint16_t nid, const CodecVerb& verb,
   ihda_codec_send_corb_cmd_req_t req;
   ihda_codec_send_corb_cmd_resp_t resp;
 
-  InitRequest(&req, IHDA_CODEC_SEND_CORB_CMD);
+  device_.InitRequest(&req, IHDA_CODEC_SEND_CORB_CMD);
   req.nid = nid;
   req.verb = verb.val;
 
-  zx_status_t res = CallDevice(req, &resp);
+  zx_status_t res = device_.CallDevice(req, &resp);
   if (res != ZX_OK) {
     printf("Codec command failed; [nid, verb] = [%2u, 0x%05x] (res %d)\n", nid, verb.val, res);
     return res;

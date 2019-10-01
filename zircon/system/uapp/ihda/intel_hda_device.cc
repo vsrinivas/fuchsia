@@ -7,28 +7,32 @@
 #include <lib/fdio/io.h>
 #include <zircon/device/intel-hda.h>
 
+#include "zircon_device.h"
+
 namespace audio {
 namespace intel_hda {
 
-zx_status_t IntelHDADevice::Probe() {
-  zx_status_t res = ZirconDevice::Connect();
-  if (res != ZX_OK)
+zx_status_t ProbeIntelHdaDevice(ZirconDevice* device, IntelHDADevice* result) {
+  zx_status_t res = device->Connect();
+  if (res != ZX_OK) {
     return res;
+  }
 
   ihda_get_ids_req_t req;
   ihda_get_ids_resp_t resp;
 
-  InitRequest(&req, IHDA_CMD_GET_IDS);
-  res = CallDevice(req, &resp);
-  if (res != ZX_OK)
+  ZirconDevice::InitRequest(&req, IHDA_CMD_GET_IDS);
+  res = device->CallDevice(req, &resp);
+  if (res != ZX_OK) {
     return res;
+  }
 
-  vid_ = resp.vid;
-  did_ = resp.did;
-  ihda_vmaj_ = resp.ihda_vmaj;
-  ihda_vmin_ = resp.ihda_vmin;
-  rev_id_ = resp.rev_id;
-  step_id_ = resp.step_id;
+  result->vid = resp.vid;
+  result->did = resp.did;
+  result->ihda_vmaj = resp.ihda_vmaj;
+  result->ihda_vmin = resp.ihda_vmin;
+  result->rev_id = resp.rev_id;
+  result->step_id = resp.step_id;
 
   return ZX_OK;
 }

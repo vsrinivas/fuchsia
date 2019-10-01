@@ -62,31 +62,32 @@ int main(int argc, const char** argv) {
   if (!strcmp("list", argv[arg])) {
     printf("Found %zu Intel HDA Controllers\n", IntelHDAController::controllers().size());
     for (auto& controller : IntelHDAController::controllers()) {
-      res = controller.Probe();
-
+      IntelHDADevice device;
+      res = controller.Probe(&device);
       if (res != ZX_OK) {
-        printf("Failed to probe controller at \"%s\" (res %d)\n", controller.dev_name(), res);
+        printf("Failed to probe controller at \"%s\" (res %d)\n", controller.dev_name().c_str(),
+               res);
         return res;
       }
 
       controller.Disconnect();
 
-      printf("Controller %u [%04hx:%04hx %u.%u] : %s\n", controller.id(), controller.vid(),
-             controller.did(), controller.ihda_vmaj(), controller.ihda_vmin(),
-             controller.dev_name());
+      printf("device %u [%04hx:%04hx %u.%u] : %s\n", controller.id(), device.vid, device.did,
+             device.ihda_vmaj, device.ihda_vmin, controller.dev_name().c_str());
     }
 
     printf("Found %zu Intel HDA Codecs\n", IntelHDACodec::codecs().size());
     for (auto& codec : IntelHDACodec::codecs()) {
-      res = codec.Probe();
+      IntelHDADevice device;
+      res = codec.Probe(&device);
 
       if (res != ZX_OK) {
-        printf("Failed to probe codec at \"%s\" (res %d)\n", codec.dev_name(), res);
+        printf("Failed to probe codec at \"%s\" (res %d)\n", codec.dev_name().c_str(), res);
         return res;
       }
 
-      printf("  Codec %u [%04hx:%04hx] : %s\n", codec.id(), codec.vid(), codec.did(),
-             codec.dev_name());
+      printf("  Codec %u [%04hx:%04hx] : %s\n", codec.id(), device.vid, device.did,
+             codec.dev_name().c_str());
 
       codec.Disconnect();
     }

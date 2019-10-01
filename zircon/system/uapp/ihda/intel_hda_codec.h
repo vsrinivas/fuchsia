@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_
 
 #include <fbl/intrusive_wavl_tree.h>
+#include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 
@@ -18,8 +19,7 @@ namespace intel_hda {
 struct CodecVerb;
 struct CodecResponse;
 
-class IntelHDACodec : public IntelHDADevice,
-                      public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDACodec>> {
+class IntelHDACodec : public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDACodec>> {
  public:
   using CodecTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDACodec>>;
 
@@ -33,9 +33,14 @@ class IntelHDACodec : public IntelHDADevice,
 
   uint32_t id() const { return codec_id_; }
   uint32_t GetKey() const { return id(); }
+  fbl::String dev_name() const { return dev_name_; }
 
   static zx_status_t Enumerate();
   static CodecTree& codecs() { return codecs_; }
+
+  zx_status_t Probe(IntelHDADevice* result);
+
+  void Disconnect() { device_.Disconnect(); }
 
  private:
   friend class std::default_delete<IntelHDACodec>;
@@ -54,12 +59,15 @@ class IntelHDACodec : public IntelHDADevice,
                              size_t cmd_count);
 
   IntelHDACodec(uint32_t codec_id, const char* const dev_name)
-      : IntelHDADevice(dev_name, Type::Codec), codec_id_(codec_id) {}
+      : device_(dev_name, ZirconDevice::Type::Codec), codec_id_(codec_id), dev_name_(dev_name) {}
 
   ~IntelHDACodec() {}
 
+  ZirconDevice device_;
+
   const uint32_t codec_id_;
   CodecState codec_state_;
+  const fbl::String dev_name_;
 
   static CodecTree codecs_;
 };

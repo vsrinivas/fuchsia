@@ -27,7 +27,6 @@ class ZirconDevice {
   using EnumerateCbk = zx_status_t (*)(void* ctx, uint32_t id, const char* const str);
   static zx_status_t Enumerate(void* ctx, const char* const dev_path, EnumerateCbk cbk);
 
- protected:
   enum class Type { Controller, Codec };
 
   explicit ZirconDevice(const char* const dev_name, Type type)
@@ -70,11 +69,11 @@ class ZirconDevice {
     req->hdr.cmd = cmd;
   }
 
+ private:
   const Type type_;
   char* dev_name_;
   zx::channel dev_channel_;
 
- private:
   zx_status_t CallDevice(const zx_channel_call_args_t& args, zx::duration timeout);
   static uint32_t transaction_id_;
 };
