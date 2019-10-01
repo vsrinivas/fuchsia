@@ -73,7 +73,8 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
+		{{- range $index, $ordinal := .Ordinals.Reads -}}, {{ $ordinal.Name }}{{- end -}})
 		{{- else }}
 	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
 		{{- end }}
