@@ -2,7 +2,9 @@
 
 use core::marker;
 use core::mem;
-use core::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use core::sync::atomic::AtomicUsize;
+#[allow(deprecated)]
+use core::sync::atomic::ATOMIC_USIZE_INIT;
 use core::sync::atomic::Ordering::{SeqCst, Relaxed};
 
 use super::{BorrowedTask, NotifyHandle};
@@ -84,7 +86,9 @@ impl Drop for TaskUnpark {
     }
 }
 
+#[allow(deprecated)]
 static GET: AtomicUsize = ATOMIC_USIZE_INIT;
+#[allow(deprecated)]
 static SET: AtomicUsize = ATOMIC_USIZE_INIT;
 
 /// Initialize the `futures` task system.
@@ -131,6 +135,15 @@ pub unsafe fn init(get: fn() -> *mut u8, set: fn(*mut u8)) -> bool {
     if GET.compare_exchange(0, get as usize, SeqCst, SeqCst).is_ok() {
         SET.store(set as usize, SeqCst);
         true
+    } else {
+        false
+    }
+}
+
+/// Return whether the caller is running in a task (and so can use task_local!).
+pub fn is_in_task() -> bool {
+    if let Some(ptr) = get_ptr() {
+        !ptr.is_null()
     } else {
         false
     }
