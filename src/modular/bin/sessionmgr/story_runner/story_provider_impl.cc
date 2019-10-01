@@ -136,12 +136,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
           container.model_owner = std::make_unique<StoryModelOwner>(
               story_id_, container.executor.get(), std::make_unique<NoopStoryModelStorage>());
           container.model_observer = container.model_owner->NewObserver();
-
-          container.story_node = std::make_unique<inspect::Node>(
-              session_inspect_node_->CreateChild(story_id_.value_or("")));
-
-          container.last_focus_time_inspect_property = container.story_node->CreateInt(
-              "last_focus_time", container.current_data->story_info().last_focus_time());
+          container.InitializeInspect(story_id_, session_inspect_node_);
 
           container.controller_impl = std::make_unique<StoryControllerImpl>(
               session_storage_, container.storage.get(), container.model_owner->NewMutator(),
@@ -609,8 +604,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
     runtime_state = container.model_observer->model().runtime_state();
     visibility_state = container.model_observer->model().visibility_state();
     container.current_data = CloneOptional(story_data);
-    container.last_focus_time_inspect_property.Set(
-        container.current_data->story_info().last_focus_time());
+    container.ResetInspect();
   } else {
     fuchsia::modular::StoryControllerPtr story_controller;
     GetController(story_id.value_or(""), story_controller.NewRequest());
@@ -766,6 +760,54 @@ fuchsia::modular::StoryInfo StoryProviderImpl::StoryInfo2ToStoryInfo(
   story_info.last_focus_time = story_info_2.last_focus_time();
 
   return story_info;
+}
+
+std::string AnnotationTranslation(const fuchsia::modular::AnnotationValue* value) {
+  std::string text;
+  switch (value->Which()) {
+    case fuchsia::modular::AnnotationValue::Tag::kText:
+      text = value->text();
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kBytes:
+      // TODO: translate this data to an inspect property format
+      text = "bytes";
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kBuffer:
+      // TODO: translate this data to an inspect property format
+      text = "buffer";
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kUnknown:
+      text = "unknown";
+      break;
+  }
+  return text;
+}
+
+void StoryProviderImpl::StoryRuntimeContainer::InitializeInspect(
+    fidl::StringPtr story_id, inspect::Node* session_inspect_node) {
+  story_node =
+      std::make_unique<inspect::Node>(session_inspect_node->CreateChild(story_id.value_or("")));
+  last_focus_time_inspect_property = story_node->CreateInt("last_focus_time", 0);
+  ResetInspect();
+}
+
+void StoryProviderImpl::StoryRuntimeContainer::ResetInspect() {
+  last_focus_time_inspect_property.Set(current_data->story_info().last_focus_time());
+
+  if (current_data->story_info().has_annotations()) {
+    for (const fuchsia::modular::Annotation& annotation :
+         current_data->story_info().annotations()) {
+      std::string value_str = AnnotationTranslation(annotation.value.get());
+      std::string key_with_prefix = "annotation: " + annotation.key;
+      if (annotation_inspect_properties.find(key_with_prefix) !=
+          annotation_inspect_properties.end()) {
+        annotation_inspect_properties[key_with_prefix].Set(value_str);
+      } else {
+        annotation_inspect_properties.insert(std::pair<const std::string, inspect::StringProperty>(
+            annotation.key, story_node->CreateString(key_with_prefix, value_str)));
+      }
+    }
+  }
 }
 
 }  // namespace modular

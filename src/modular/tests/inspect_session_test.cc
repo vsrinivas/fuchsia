@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <zircon/device/vfs.h>
@@ -182,6 +184,22 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
 
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_text("test_value");
+
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+  bool done{false};
+  story_master->Annotate(std::move(annotations),
+                         [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                           EXPECT_FALSE(result.is_err());
+                           done = true;
+                         });
+  RunLoopUntil([&] { return done; });
+
   // Watch for changes to the session.
   TestStoryProviderWatcher story_provider_watcher;
   story_provider_watcher.Watch(fake_session_shell_.story_provider());
@@ -222,7 +240,8 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   EXPECT_THAT(child.size(), 1);
   EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
   EXPECT_THAT(child.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                               IntIs("last_focus_time", last_focus_timestamps.back()))))));
+                               IntIs("last_focus_time", last_focus_timestamps.back()),
+                               StringIs("annotation: test_key", "test_value"))))));
 
   const auto& grandchild = child.at(0).children();
 
