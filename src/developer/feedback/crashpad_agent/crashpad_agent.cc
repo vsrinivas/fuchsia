@@ -139,6 +139,9 @@ void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
                                               OnManagedRuntimeExceptionCallback callback) {
   // This is a legacy flow using the old protocol. We convert its input arguments to the ones of the
   // new protocol so the rest of this class only needs to know about the new protocol.
+  FX_LOGS(WARNING) << "fuchsia.crash.Analyzer.OnManagedRuntimeException() is a legacy flow. Please "
+                      "switch to fuchsia.feedback.CrashReporter.File()";
+
   fuchsia::feedback::RuntimeCrashReport dart_report;
   dart_report.set_exception_type(
       std::string(reinterpret_cast<const char*>(exception.dart().type.data())));
