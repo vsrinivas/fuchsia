@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
+#include "src/lib/inspect_deprecated/query/source.h"
 
 namespace feedback {
 
@@ -95,12 +96,14 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
     }
 
     return fit::join_promise_vector(std::move(sources))
-        .and_then([](std::vector<fit::result<::inspect_deprecated::Source, std::string>>& sources)
+        .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
                       -> fit::result<fuchsia::mem::Buffer> {
-          std::vector<::inspect_deprecated::Source> ok_sources;
+          std::vector<inspect_deprecated::Source> ok_sources;
           for (auto& source : sources) {
             if (source.is_ok()) {
-              ok_sources.emplace_back(source.take_value());
+              inspect_deprecated::Source ok_source = source.take_value();
+              ok_source.SortHierarchy();
+              ok_sources.push_back(std::move(ok_source));
             } else {
               FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
             }
