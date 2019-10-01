@@ -379,16 +379,6 @@ group("default") {
 ###
 
 if (current_toolchain == default_toolchain) {
-  copied_files_dir("legacy-host_tests") {
-    testonly = true
-    output_dir = "$root_build_dir/host_tests"
-    data_keys = [ "link_output" ]
-    walk_keys = [ "link_barrier" ]
-    deps = [
-      "system/utest:host",
-    ]
-  }
-
   build_api_module("legacy_dirs") {
     testonly = true
     data_keys = [ "legacy_dirs" ]
@@ -400,22 +390,10 @@ if (current_toolchain == default_toolchain) {
   }
 
   foreach(cpu, standard_fuchsia_cpus) {
-    # TODO(mcgrathr): This target name is used directly by the zircon.py
-    # recipe.  The actual ZBI file is now built via zbi_test() and is deep
-    # down the deps tree from here.  Remove this when the target name is no
-    # longer being used directly.
-    group("core-tests-$cpu") {
-      testonly = true
-      public_deps = [
-        ":legacy-$cpu",
-      ]
-    }
-
     group("legacy-$cpu") {
       testonly = true
       deps = [
         ":legacy-aux-$cpu",
-        ":legacy-host_tests",
         ":legacy-image-$cpu",
         ":legacy-tests-$cpu",
         ":legacy_targets-$cpu",
