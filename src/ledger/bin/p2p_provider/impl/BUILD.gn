@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/flatbuffers/flatbuffer.gni")
-
 visibility = [ "//src/ledger/*" ]
 
 source_set("impl") {
@@ -31,7 +29,6 @@ source_set("impl") {
   ]
 
   deps = [
-    ":envelope",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/component/cpp:deprecated_service_provider",
@@ -39,12 +36,6 @@ source_set("impl") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
     "//src/ledger/lib/firebase_auth",
-  ]
-}
-
-flatbuffer("envelope") {
-  sources = [
-    "envelope.fbs",
   ]
 }
 
@@ -56,7 +47,6 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":envelope",
     ":impl",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",

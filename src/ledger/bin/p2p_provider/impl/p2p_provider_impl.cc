@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 
@@ -52,20 +51,11 @@ void P2PProviderImpl::Start(Client* client) {
 }
 
 bool P2PProviderImpl::SendMessage(const P2PClientId& destination, fxl::StringView data) {
-  flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<Message> message =
-      CreateMessage(buffer, convert::ToFlatBufferVector(&buffer, data));
-  flatbuffers::Offset<Envelope> envelope =
-      CreateEnvelope(buffer, EnvelopeMessage_Message, message.Union());
-  buffer.Finish(envelope);
-
-  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-  size_t size = buffer.GetSize();
   auto it = connections_.find(destination);
   if (it == connections_.end()) {
     return false;
   }
-  it->second.SendMessage(fxl::StringView(buf, size));
+  it->second.SendMessage(data);
   return true;
 }
 
@@ -163,22 +153,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
 
 void P2PProviderImpl::Dispatch(P2PClientId source, std::vector<uint8_t> data) {
   FXL_DCHECK(client_);
-  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
-  if (!VerifyEnvelopeBuffer(verifier)) {
-    // Wrong serialization, abort.
-    FXL_LOG(ERROR) << "The message received is malformed.";
-    return;
-  };
-  const Envelope* envelope = GetEnvelope(data.data());
-  if (envelope->message_type() != EnvelopeMessage_Message) {
-    FXL_LOG(ERROR) << "The message received is unexpected at this point.";
-    return;
-  }
-
-  const Message* message = static_cast<const Message*>(envelope->message());
-
-  fxl::StringView data_view(reinterpret_cast<const char*>(message->data()->data()),
-                            message->data()->size());
+  fxl::StringView data_view(reinterpret_cast<const char*>(data.data()), data.size());
   client_->OnNewMessage(source, data_view);
 }
 
