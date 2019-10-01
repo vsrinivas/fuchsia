@@ -1943,17 +1943,17 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
       return false;
     }
 
-    // So far, there's little reason to avoid doing the Init() part under the
+    // So far, there's little reason to avoid doing the Map() part under the
     // lock, even if it can be a bit more time consuming, since there's no data
     // processing happening at this point anyway, and there wouldn't be any
     // happening in any other code location where we could potentially move the
-    // Init() either.
+    // Map() either.
 
     std::unique_ptr<CodecBuffer> local_buffer =
         std::unique_ptr<CodecBuffer>(new CodecBuffer(this, port, std::move(buffer)));
-    if (!local_buffer->Init()) {
+    if (IsCoreCodecMappedBufferNeeded(port) && !local_buffer->Map()) {
       FailLocked(
-          "AddOutputBuffer()/AddInputBuffer() couldn't Init() new buffer - "
+          "AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - "
           "port: %d",
           port);
       return false;
