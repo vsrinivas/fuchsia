@@ -76,7 +76,7 @@ std::string ModifiedType::ComputeFullName() const {
   // Typedefs are special and just use the assigned name. Every other modifier below is based on the
   // underlying type name.
   if (tag() == DwarfTag::kTypedef)
-    return GetIdentifier().GetFullName();
+    return GetIdentifier().GetFullNameNoQual();
 
   const Type* modified_type = nullptr;
   std::string modified_name;

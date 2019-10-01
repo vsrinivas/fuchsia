@@ -138,11 +138,11 @@ TEST(CommandUtils, ReadUint64Arg) {
 
 TEST(CommandUtils, FormatIdentifier) {
   // Regular name.
-  OutputBuffer output = FormatIdentifier(Identifier("ThisIsAName"), false);
+  OutputBuffer output = FormatIdentifier(Identifier("ThisIsAName"), true, false);
   EXPECT_EQ("kNormal \"ThisIsAName\"", output.GetDebugString());
 
   // Regular name with bolding.
-  output = FormatIdentifier(Identifier("ThisIsAName"), true);
+  output = FormatIdentifier(Identifier("ThisIsAName"), true, true);
   EXPECT_EQ("kHeading \"ThisIsAName\"", output.GetDebugString());
 
   // Hierarchical name.
@@ -155,7 +155,10 @@ TEST(CommandUtils, FormatIdentifier) {
       "kNormal \"::\", "
       "kHeading \"Bar\", "
       "kComment \"<Baz>\"",
-      FormatIdentifier(ident, true).GetDebugString());
+      FormatIdentifier(ident, true, true).GetDebugString());
+
+  // Hide global qualification.
+  EXPECT_EQ("Foo<int, char*>::Bar<Baz>", FormatIdentifier(ident, false, true).AsString());
 }
 
 TEST(CommandUtils, FormatInputLocation) {

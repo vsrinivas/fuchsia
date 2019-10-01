@@ -72,7 +72,7 @@ bool FormatRustClosure(const Function* function, OutputBuffer* out) {
 OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
   OutputBuffer result;
   if (!FormatClangLambda(function, &result) && !FormatRustClosure(function, &result))
-    result = FormatIdentifier(function->GetIdentifier(), true);
+    result = FormatIdentifier(function->GetIdentifier(), false, true);
 
   const auto& params = function->parameters();
   std::string params_str;

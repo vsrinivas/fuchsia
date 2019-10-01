@@ -13,11 +13,11 @@ namespace zxdb {
 
 Identifier GetSymbolScopePrefix(const Symbol* symbol) {
   if (!symbol->parent().is_valid())
-    return Identifier();  // No prefix
+    return Identifier(IdentifierQualification::kGlobal);  // No prefix
 
   const Symbol* parent = symbol->parent().Get();
   if (parent->tag() == DwarfTag::kCompileUnit)
-    return Identifier();  // Don't go above compilation units.
+    return Identifier(IdentifierQualification::kGlobal);  // Don't go above compilation units.
 
   if (parent->AsNamespace() || parent->AsCollection() || parent->AsFunction()) {
     // These are the types that get qualified.

@@ -219,7 +219,7 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
   ASSERT_TRUE(err.ok());
   ASSERT_EQ(2u, results.size());
   EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
-  EXPECT_EQ(R"("MyClass"; ::"Foo")", results[0].symbol.GetDebugName());
+  EXPECT_EQ(R"(::"MyClass"; ::"Foo")", results[0].symbol.GetDebugName());
   EXPECT_EQ(InputLocation::Type::kSymbol, results[1].type);
   EXPECT_EQ(R"("Foo")", results[1].symbol.GetDebugName());
 
@@ -291,7 +291,7 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   CompleteInputLocation(command, "a", &found);
   ASSERT_EQ(2u, found.size());
   EXPECT_EQ("aNamespace::", found[0]);  // Namespaces get "::" appended.
-  EXPECT_EQ(kGlobalName, found[1]);
+  EXPECT_EQ(std::string("::") + kGlobalName, found[1]);
 
   // "aNamespace::" doesn't complete to anything. It might be nice to have this complete to all
   // functions in the namespace, but we don't implement that yet. In the meantime, at least test
@@ -304,13 +304,13 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   found.clear();
   CompleteInputLocation(command, "aNamespace::Cl", &found);
   ASSERT_EQ(1u, found.size());
-  EXPECT_EQ("aNamespace::Class::", found[0]);  // Classes get "::" appended.
+  EXPECT_EQ("::aNamespace::Class::", found[0]);  // Classes get "::" appended.
 
   // Completing class member functions.
   found.clear();
   CompleteInputLocation(command, "aNamespace::Class::M", &found);
   ASSERT_EQ(1u, found.size());
-  EXPECT_EQ("aNamespace::Class::MemberFunction", found[0]);
+  EXPECT_EQ("::aNamespace::Class::MemberFunction", found[0]);
 
   // Cleanup. Prevent reference cycles.
   member_func->set_parent(LazySymbol());

@@ -89,10 +89,18 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
 OutputBuffer FormatInputLocation(const InputLocation& location);
 OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);
 
-// Formats the given string as an identifier, with any template annotations
-// dimmed. If bold_last is set, the last identifier component will be bolded.
-OutputBuffer FormatIdentifier(const Identifier& str, bool bold_last);
-OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool bold_last);
+// Formats the given string as an identifier, with any template annotations dimmed.
+//
+// If |show_global_qual| is set, the output will be preceeded with "::" if it's globally qualified.
+// Otherwise, global qualifications on the identifier will be ignored. Callers may want to ignore
+// the global qualifiers in cases where it's clear in context whether the name is global or not.
+// For example, function names in backtraces are always global and adding "::" to everything adds
+// noise.
+//
+// If |bold_last| is set, the last identifier component will be bolded. This is best when printing
+// function names.
+OutputBuffer FormatIdentifier(const Identifier& str, bool show_global_qual, bool bold_last);
+OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool show_global_qual, bool bold_last);
 
 // Formats the location. Normally if a function name is present the code
 // address will be omitted, but always_show_address will override this.

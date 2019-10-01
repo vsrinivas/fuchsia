@@ -160,7 +160,8 @@ Err ParseLocalInputLocation(const Frame* frame, const std::string& input,
     for (const auto& matched_ident :
          GetIdentifierMatchesOnThis(frame, ToParsedIdentifier(global.symbol))) {
       Identifier ident = ToIdentifier(matched_ident);
-      if (ident != global.symbol)  // Don't add duplicates, the global will always be added.
+      // Don't duplicate the global one which will always be added below.
+      if (!ident.EqualsIgnoringQualification(global.symbol))
         locations->emplace_back(std::move(ident));
     }
   }
@@ -365,8 +366,10 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   options.max_results = kMaxFunctions;
   found_names.clear();
   FindName(*find_context, options, prefix_identifier, &found_names);
-  for (const FoundName& found : found_names)
-    completions->push_back(found.function()->GetFullName());
+  for (const FoundName& found : found_names) {
+    // When completing names, globally qualify the names to prevent ambiguity.
+    completions->push_back(found.function()->GetIdentifier().GetFullName());
+  }
   options.find_functions = false;
 }
 

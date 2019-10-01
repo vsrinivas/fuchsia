@@ -55,8 +55,13 @@ class IdentifierBase {
   IdentifierBase(Qualification qual, InputIterator first, InputIterator last)
       : qualification_(qual), components_(first, last) {}
 
+  // Comparisons. "==" compares everything for exact equality, "EqualsIgnoringQualification"
+  // checks that everything is equal except the global/relative qualification flag.
+  bool EqualsIgnoringQualification(const IdentifierBase<ComponentType>& other) const {
+    return components_ == other.components_;
+  }
   bool operator==(const IdentifierBase<ComponentType>& other) const {
-    return qualification_ == other.qualification_ && components_ == other.components_;
+    return qualification_ == other.qualification_ && EqualsIgnoringQualification(other);
   }
   bool operator!=(const IdentifierBase<ComponentType>& other) const { return !operator==(other); }
 
@@ -95,11 +100,13 @@ class IdentifierBase {
                                          components_.end() - 1);
   }
 
-  // Returns the full name with all components concatenated together.
-  std::string GetFullName() const { return GetName(false); }
+  // Returns the full name with all components concatenated together, including or omitting the
+  // global qualifier (leading "::"), if any.
+  std::string GetFullName() const { return GetName(true, false); }
+  std::string GetFullNameNoQual() const { return GetName(false, false); }
 
   // Returns a form for debugging where the parsing is more visible.
-  std::string GetDebugName() const { return GetName(true); }
+  std::string GetDebugName() const { return GetName(true, true); }
 
   // Returns the separator string for components. This is currently always "::" but is exposed here
   // as a getter to avoid hardcoding it everywhere and to allow us to do language-specific
@@ -108,10 +115,13 @@ class IdentifierBase {
 
  private:
   // Backend for the name getters.
-  std::string GetName(bool include_debug) const {
+  //
+  // A leading "::" will be included for globally qualified identifiers only when
+  // include_global_qual is set.
+  std::string GetName(bool include_global_qual, bool include_debug) const {
     std::string result;
 
-    if (qualification_ == Qualification::kGlobal)
+    if (include_global_qual && qualification_ == Qualification::kGlobal)
       result += GetSeparator();
 
     bool first = true;

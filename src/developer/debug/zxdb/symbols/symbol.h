@@ -93,9 +93,11 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // Most callers will want to use GetFullName().
   virtual const std::string& GetAssignedName() const;
 
-  // Returns the fully-qualified user-visible name for this symbol. This will include all namespace
-  // and struct qualifications, and will include things like const and "*" qualifiers on modified
-  // types.
+  // Returns the full user-visible name for this symbol. This will include all namespace and struct
+  // qualifications, and will include things like const and "*" qualifiers on modified types.
+  //
+  // It will not include a global qualifier ("::" at the beginning) because that's not desired in
+  // most uses. If your use-case cares about controlling this, use GetIdentifier().
   //
   // This implements caching. Derived classes override ComputeFullName() to control how the full
   // name is presented.
@@ -217,6 +219,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // implementation of ComputeIdentifier() returns the scope prefix (namespaces, structs) + the
   // assigned name. The default implementation of ComputeFullName() returns the stringified version
   // of the identifier.
+  //
+  // The returned Identifier should be globally qualified.
   virtual std::string ComputeFullName() const;
   virtual Identifier ComputeIdentifier() const;
 

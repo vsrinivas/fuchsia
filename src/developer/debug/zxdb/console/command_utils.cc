@@ -282,7 +282,7 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
       // location object). It is surprising if the debugger deletes some input.
       return OutputBuffer(DescribeFileLine(nullptr, location.line));
     case InputLocation::Type::kSymbol:
-      return FormatIdentifier(location.symbol, true);
+      return FormatIdentifier(location.symbol, true, true);
     case InputLocation::Type::kAddress:
       return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, location.address));
   }
@@ -307,15 +307,16 @@ OutputBuffer FormatInputLocations(const std::vector<InputLocation>& locations) {
   return result;
 }
 
-OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
-  return FormatIdentifier(ToParsedIdentifier(identifier), bold_last);
+OutputBuffer FormatIdentifier(const Identifier& identifier, bool show_global_qual, bool bold_last) {
+  return FormatIdentifier(ToParsedIdentifier(identifier), show_global_qual, bold_last);
 }
 
-// This annoyingly duplicates Identifier::GetName but is required to get
-// syntax highlighting for all the components.
-OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool bold_last) {
+// This annoyingly duplicates Identifier::GetName but is required to get syntax highlighting for all
+// the components.
+OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool show_global_qual,
+                              bool bold_last) {
   OutputBuffer result;
-  if (identifier.qualification() == IdentifierQualification::kGlobal)
+  if (show_global_qual && identifier.qualification() == IdentifierQualification::kGlobal)
     result.Append(identifier.GetSeparator());
 
   const auto& comps = identifier.components();

@@ -119,7 +119,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(function_context, all_kinds, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found.variable());
-  EXPECT_EQ(var_value->GetAssignedName(), found.GetName().GetFullName());
+  EXPECT_EQ(var_value->GetAssignedName(), found.GetName().GetFullNameNoQual());
 
   // Find "::value" should match nothing.
   ParsedIdentifier value_global_ident(IdentifierQualification::kGlobal,
@@ -147,7 +147,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, all_kinds, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
-  EXPECT_EQ(block_other->GetAssignedName(), found.GetName().GetFullName());
+  EXPECT_EQ(block_other->GetAssignedName(), found.GetName().GetFullNameNoQual());
   found = FindName(function_context, all_kinds, block_local_ident);
   EXPECT_FALSE(found);
 
@@ -164,7 +164,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, all_kinds, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
-  EXPECT_EQ(kNsVarName, found.GetName().GetFullName());
+  EXPECT_EQ(kNsVarName, found.GetName().GetFullNameNoQual());
 
   // Loop up the global "ns_value" var with no global symbol context. This should fail and not
   // crash.
@@ -196,7 +196,7 @@ TEST(FindName, FindMember) {
   ASSERT_EQ(1u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
-  EXPECT_EQ("b", results[0].GetName().GetFullName());
+  EXPECT_EQ("b", results[0].GetName().GetFullNameNoQual());
 
   // Increase the limit, it should find both in order of Base1, Base2.
   results.clear();
@@ -356,7 +356,7 @@ TEST(FindName, FindIndexedNameInModule) {
                           &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
-  EXPECT_EQ(kVarName, found[0].GetName().GetFullName());
+  EXPECT_EQ(kVarName, found[0].GetName().GetFullNameNoQual());
 }
 
 TEST(FindName, FindTypeName) {
@@ -422,7 +422,7 @@ TEST(FindName, FindTypeName) {
   EXPECT_EQ(global_type.get(), found.type().get());
   // This has gone through our ParsedIdentifier template canonicalization so doesn't have the
   // space between the ">>" like the input had.
-  EXPECT_EQ("GlobalType<std::char_traits<char>>", found.GetName().GetFullName());
+  EXPECT_EQ("::GlobalType<std::char_traits<char>>", found.GetName().GetFullName());
 
   // Prefix search same as above.
   FindNameOptions prefix_opts(FindNameOptions::kAllKinds);
