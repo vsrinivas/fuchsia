@@ -25,7 +25,7 @@
                   << (static_cast<double>(zx::clock::get_monotonic().get()) / zx::msec(1).get()) \
                   << " " << std::setw(25) << __func__ << " "
 #define AUD_VLOG_OBJ(level, object) \
-  AUD_VLOG(level) << "for " << reinterpret_cast<void*>(object) << " "
+  AUD_VLOG(level) << "for " << reinterpret_cast<const void*>(object) << " "
 
 namespace media::audio {
 

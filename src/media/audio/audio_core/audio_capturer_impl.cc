@@ -695,10 +695,11 @@ void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
 
 // Display a ring-buffer snapshot.
 void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
-  AUD_VLOG_OBJ(SPEW, const_cast<AudioDriver::RingBufferSnapshot*>(&rb_snap))
-      << "(RBSnapshot) position_to_end_fence_frames " << rb_snap.position_to_end_fence_frames
-      << ", end_fence_to_start_fence_frames " << rb_snap.end_fence_to_start_fence_frames
-      << ", gen_id " << rb_snap.gen_id;
+  AUD_VLOG_OBJ(SPEW, &rb_snap) << "(RBSnapshot) position_to_end_fence_frames "
+                               << rb_snap.position_to_end_fence_frames
+                               << ", end_fence_to_start_fence_frames "
+                               << rb_snap.end_fence_to_start_fence_frames << ", gen_id "
+                               << rb_snap.gen_id;
 
   FXL_VLOG(SPEW) << "rb_snap.clock_mono_to_ring_pos_bytes:";
   DumpTimelineFunction(rb_snap.clock_mono_to_ring_pos_bytes);
@@ -711,11 +712,12 @@ void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
 
 // Display a mixer bookkeeping struct.
 void DumpBookkeeping(const Bookkeeping& info) {
-  AUD_VLOG_OBJ(SPEW, const_cast<Bookkeeping*>(&info))
-      << "(Bookkeep) mixer " << info.mixer.get() << " gain " << &info.gain << ", step_size x"
-      << std::hex << info.step_size << ", rate_mod/den " << std::dec << info.rate_modulo << "/"
-      << info.denominator << " src_pos_mod " << info.src_pos_modulo << ", src_trans_gen "
-      << info.source_trans_gen_id << ", dest_trans_gen " << info.dest_trans_gen_id;
+  AUD_VLOG_OBJ(SPEW, &info) << "(Bookkeep) mixer " << info.mixer.get() << " gain " << &info.gain
+                            << ", step_size x" << std::hex << info.step_size << ", rate_mod/den "
+                            << std::dec << info.rate_modulo << "/" << info.denominator
+                            << " src_pos_mod " << info.src_pos_modulo << ", src_trans_gen "
+                            << info.source_trans_gen_id << ", dest_trans_gen "
+                            << info.dest_trans_gen_id;
 
   FXL_VLOG(SPEW) << "info.dest_frames_to_frac_source_frames:";
   DumpTimelineFunction(info.dest_frames_to_frac_source_frames);
