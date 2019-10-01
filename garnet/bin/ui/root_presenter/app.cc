@@ -31,11 +31,17 @@ App::App(const fxl::CommandLine& command_line)
   input_reader_.Start();
 
   startup_context_->outgoing().AddPublicService(presenter_bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService(device_listener_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(input_receiver_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(a11y_pointer_event_bindings_.GetHandler(this));
 }
 
 App::~App() {}
+
+void App::RegisterMediaButtonsListener(
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {
+  media_buttons_handler_.RegisterListener(std::move(listener));
+}
 
 void App::PresentView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
@@ -58,13 +64,15 @@ void App::PresentView(
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
       std::move(presentation_request), shortcut_manager, ime_service_.get(), renderer_params_,
-      display_startup_rotation_adjustment, [this](bool yield_to_next) {
+      display_startup_rotation_adjustment,
+      [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
         } else {
           SwitchToPreviousPresentation();
         }
-      });
+      },
+      &media_buttons_handler_);
 
   AddPresentation(std::move(presentation));
 }
@@ -160,8 +168,13 @@ void App::RegisterDevice(
       std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
                                                   std::move(input_device_request), this);
 
-  for (auto& presentation : presentations_) {
-    presentation->OnDeviceAdded(input_device.get());
+  // Media button processing is done exclusively in root_presenter::App.
+  // Dependent components inside presentations register with the handler (passed
+  // at construction) to receive such events.
+  if (!media_buttons_handler_.OnDeviceAdded(input_device.get())) {
+    for (auto& presentation : presentations_) {
+      presentation->OnDeviceAdded(input_device.get());
+    }
   }
 
   devices_by_id_.emplace(device_id, std::move(input_device));
@@ -173,9 +186,12 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
 
   FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
 
-  for (auto& presentation : presentations_) {
-    presentation->OnDeviceRemoved(input_device->id());
+  if (!media_buttons_handler_.OnDeviceRemoved(input_device->id())) {
+    for (auto& presentation : presentations_) {
+      presentation->OnDeviceRemoved(input_device->id());
+    }
   }
+
   devices_by_id_.erase(input_device->id());
 }
 
@@ -185,17 +201,27 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);
 
   FXL_VLOG(3) << "OnReport from " << input_device->id() << " " << report;
-  if (devices_by_id_.count(input_device->id()) == 0 || presentations_.size() == 0)
+
+  if (devices_by_id_.count(input_device->id()) == 0) {
     return;
+  }
+
+  // TODO(fxb/36217): Do not clone once presentation stops needing input.
+  fuchsia::ui::input::InputReport cloned_report;
+  report.Clone(&cloned_report);
+
+  if (report.media_buttons) {
+    media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
+    fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()));
+    return;
+  }
+
+  if (presentations_.size() == 0) {
+    return;
+  }
 
   FXL_DCHECK(active_presentation_idx_ < presentations_.size());
   FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
-
-  if (report.media_buttons) {
-    if (fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()))) {
-      return;
-    }
-  }
 
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);
@@ -292,13 +318,9 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
           ShutdownPresentation(idx);
           break;
         }
-        default: {
-          break;
-        }
+        default: { break; }
       }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 }
 

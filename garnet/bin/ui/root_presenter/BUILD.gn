@@ -28,6 +28,8 @@ source_set("lib") {
     "display_size_switcher.h",
     "display_usage_switcher.cc",
     "display_usage_switcher.h",
+    "media_buttons_handler.cc",
+    "media_buttons_handler.h",
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
     "presentation.cc",

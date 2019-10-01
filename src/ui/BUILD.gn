@@ -6,6 +6,7 @@ group("ui") {
   deps = [
     "a11y",
     "bin",
+    "policy",
   ]
 }
 

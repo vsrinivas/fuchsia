@@ -1,0 +1,5 @@
+To run tests, make sure to include the following tests package in your build:
+//garnet/packages/tests:scenic
+
+After building, presenter tests can be run as follows:
+fx run-test scenic_tests -t root_presenter_tests

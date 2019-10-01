@@ -28,6 +28,7 @@
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/a11y_settings_watcher.h"
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
+#include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
 namespace root_presenter {
@@ -39,6 +40,7 @@ namespace root_presenter {
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
 class App : public fuchsia::ui::policy::Presenter,
+            public fuchsia::ui::policy::DeviceListenerRegistry,
             public fuchsia::ui::input::InputDeviceRegistry,
             public fuchsia::ui::input::accessibility::PointerEventRegistry,
             public ui_input::InputDeviceImpl::Listener {
@@ -63,6 +65,10 @@ class App : public fuchsia::ui::policy::Presenter,
   void HACK_SetRendererParams(bool enable_clipping,
                               std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
+  // |DeviceListenerRegistry|
+  void RegisterMediaButtonsListener(
+      fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
+
   // |InputDeviceRegistry|
   void RegisterDevice(
       fuchsia::ui::input::DeviceDescriptor descriptor,
@@ -83,6 +89,7 @@ class App : public fuchsia::ui::policy::Presenter,
 
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
+  fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventRegistry>
       a11y_pointer_event_bindings_;
@@ -118,6 +125,14 @@ class App : public fuchsia::ui::policy::Presenter,
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
+
+  // The media button handler manages processing input from devices with media
+  // buttons and propagating them to listeners.
+  //
+  // This processing is done at the global level through root presenter but
+  // also supports registering listeners at the presentation level for legacy
+  // support.
+  MediaButtonsHandler media_buttons_handler_;
 
   std::unique_ptr<A11ySettingsWatcher> a11y_settings_watchers_;
 

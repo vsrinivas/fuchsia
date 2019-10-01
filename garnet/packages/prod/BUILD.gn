@@ -72,6 +72,7 @@ group("scenic") {
     "//garnet/bin/ui:root_presenter",
     "//garnet/bin/ui:scenic",
     "//garnet/packages/prod:factory_reset",
+    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
     "//src/ui/bin/ime:ime_service",
@@ -195,6 +196,7 @@ group("all") {
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
+    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:fortune",
     "//garnet/packages/prod:guest_runner",
@@ -1044,3 +1046,11 @@ group("factory_reset") {
     "//src/recovery/factory_reset:configs",
   ]
 }
+
+group("ui_policy") {
+  testonly = true
+  public_deps = [
+    "//src/ui/policy:configs",
+  ]
+}
+

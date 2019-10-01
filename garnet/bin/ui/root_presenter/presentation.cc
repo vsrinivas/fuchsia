@@ -42,22 +42,6 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 // Light intensities.
 constexpr float kAmbient = 0.3f;
 constexpr float kNonAmbient = 1.f - kAmbient;
-
-void SendMediaButtonReportToListener(const fuchsia::ui::input::InputReport& report,
-                                     fuchsia::ui::policy::MediaButtonsListener* listener) {
-  fuchsia::ui::input::MediaButtonsEvent event;
-  int8_t volume_gain = 0;
-  if (report.media_buttons->volume_up) {
-    volume_gain++;
-  }
-  if (report.media_buttons->volume_down) {
-    volume_gain--;
-  }
-  event.set_volume(volume_gain);
-  event.set_mic_mute(report.media_buttons->mic_mute);
-  listener->OnMediaButtonsEvent(std::move(event));
-}
-
 }  // namespace
 
 Presentation::Presentation(
@@ -66,7 +50,7 @@ Presentation::Presentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     fuchsia::ui::shortcut::Manager* shortcut_manager, fuchsia::ui::input::ImeService* ime_service,
     RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
-    YieldCallback yield_callback)
+    YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -89,8 +73,10 @@ Presentation::Presentation(
       yield_callback_(std::move(yield_callback)),
       presentation_binding_(this),
       renderer_params_override_(renderer_params),
+      media_buttons_handler_(media_buttons_handler),
       weak_factory_(this) {
   FXL_DCHECK(compositor_id != 0);
+  FXL_DCHECK(media_buttons_handler_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
@@ -406,17 +392,12 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
 
   std::unique_ptr<ui_input::DeviceState> state;
+
   if (input_device->descriptor()->sensor) {
     ui_input::OnSensorEventCallback callback = [this](uint32_t device_id,
                                                       fuchsia::ui::input::InputReport event) {
       OnSensorEvent(device_id, std::move(event));
     };
-    state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
-                                                    std::move(callback));
-  } else if (input_device->descriptor()->media_buttons) {
-    media_buttons_ids_.push_back(input_device->id());
-    ui_input::OnMediaButtonsEventCallback callback =
-        [this](fuchsia::ui::input::InputReport report) { OnMediaButtonsEvent(std::move(report)); };
     state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
                                                     std::move(callback));
   } else {
@@ -435,12 +416,7 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
   FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
-  for (size_t i = 0; i < media_buttons_ids_.size(); i++) {
-    if (media_buttons_ids_[i] == device_id) {
-      media_buttons_ids_.erase(media_buttons_ids_.begin() + i);
-      break;
-    }
-  }
+
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
     auto it = cursors_.find(device_id);
@@ -454,6 +430,8 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 }
 
 void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport input_report) {
+  // Media buttons should be processed by MediaButtonsHandler.
+  FXL_DCHECK(!input_report.media_buttons);
   TRACE_DURATION("input", "presentation_on_report", "id", input_report.trace_id);
   TRACE_FLOW_END("input", "report_to_presentation", input_report.trace_id);
 
@@ -534,35 +512,11 @@ void Presentation::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
-// TODO(SCN-1405) Eventually pull this out from Presentation into something
+// TODO(fxb/36217) Eventually pull this out from Presentation into something
 // else.
 void Presentation::RegisterMediaButtonsListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle) {
-  MediaButtonsListenerPtr listener;
-  listener.Bind(std::move(listener_handle));
-
-  // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()](zx_status_t status) {
-    media_buttons_listeners_.erase(
-        std::remove_if(media_buttons_listeners_.begin(), media_buttons_listeners_.end(),
-                       [listener](const MediaButtonsListenerPtr& item) -> bool {
-                         return item.get() == listener;
-                       }),
-        media_buttons_listeners_.end());
-  });
-
-  // Send the last seen report to the listener so they have the information
-  // about the media button's state.
-  for (uint32_t media_buttons_id : media_buttons_ids_) {
-    const ui_input::InputDeviceImpl* device_impl =
-        std::get<0>(device_states_by_id_[media_buttons_id]);
-    const fuchsia::ui::input::InputReport* report = device_impl->LastReport();
-    if (report != nullptr) {
-      SendMediaButtonReportToListener(*report, listener.get());
-    }
-  }
-
-  media_buttons_listeners_.push_back(std::move(listener));
+  media_buttons_handler_->RegisterListener(std::move(listener_handle));
 }
 
 void Presentation::InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) {
@@ -758,16 +712,6 @@ void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputRe
       presentation_mode_ = update.second;
       presentation_mode_listener_->OnModeChanged();
     }
-  }
-}
-
-// TODO(SCN-1405) Eventually pull this out from Presentation into something
-// else.
-void Presentation::OnMediaButtonsEvent(fuchsia::ui::input::InputReport report) {
-  FXL_CHECK(report.media_buttons);
-
-  for (auto& listener : media_buttons_listeners_) {
-    SendMediaButtonReportToListener(report, listener.get());
   }
 }
 

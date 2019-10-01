@@ -15,6 +15,7 @@ fidl("fuchsia.ui.policy") {
   sdk_category = "partner"
 
   sources = [
+    "device_listener.fidl",
     "display_usage.fidl",
     "presentation.fidl",
     "presenter.fidl",

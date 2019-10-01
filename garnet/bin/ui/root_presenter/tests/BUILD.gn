@@ -21,6 +21,7 @@ executable("root_presenter_tests") {
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
     "input_util_unittest.cc",
+    "media_buttons_handler_unittest.cc",
   ]
 
   deps = [
@@ -33,6 +34,7 @@ executable("root_presenter_tests") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/tests/mocks",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",

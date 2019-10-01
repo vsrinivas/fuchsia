@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.policy;
+
+/// Service for exposing state and events of devices, such as media buttons.
+[Discoverable]
+protocol DeviceListenerRegistry {
+    /// Registers a listener to receive media button related events, such as
+    /// changes from volume buttons and mute switches.
+    RegisterMediaButtonsListener(MediaButtonsListener listener);
+};

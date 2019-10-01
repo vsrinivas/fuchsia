@@ -27,6 +27,7 @@
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
+#include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "garnet/bin/ui/root_presenter/presentation_switcher.h"
@@ -61,7 +62,8 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                fuchsia::ui::shortcut::Manager* shortcut_manager,
                fuchsia::ui::input::ImeService* ime_service, RendererParams renderer_params,
-               int32_t display_startup_rotation_adjustment, YieldCallback yield_callback);
+               int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
+               MediaButtonsHandler* media_buttons_handler);
   ~Presentation();
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
@@ -124,7 +126,6 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
-  void OnMediaButtonsEvent(fuchsia::ui::input::InputReport event);
 
   // When no shadows, ambient light needs to be full brightness.  Otherwise,
   // ambient needs to be dimmed so that other lights don't "overbrighten".
@@ -242,11 +243,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
-  // TODO(SCN-1405) Pull these out of a presentation since this should probably
-  // be global state.
-  std::vector<uint32_t> media_buttons_ids_;
-  // A registry of listeners for media button events.
-  std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr> media_buttons_listeners_;
+  MediaButtonsHandler* media_buttons_handler_ = nullptr;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 
