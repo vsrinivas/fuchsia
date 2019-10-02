@@ -22,6 +22,11 @@ import("//build/testing/platforms.gni")
 #     [list of strings]: Command to invoke to run the test. If unset, install_path
 #     will be invoked upon execution.
 #
+#   package_url (optional)
+#     [string] In the case of a fuchsia test, this describes the packaged test
+#     via a fuchsia package URL. See //docs/the-book/package_url.md for more
+#     details.
+#
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
 #
@@ -229,6 +234,7 @@ template("test_spec") {
                              [
                                "command",
                                "install_path",
+                               "package_url",
                              ])
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
       if ((defined(install_path) && is_linux) || is_mac) {

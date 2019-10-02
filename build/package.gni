@@ -732,6 +732,31 @@ template("package") {
       } else {
         dest = test.name
       }
+      if (is_disabled) {
+        dest = "disabled/${dest}"
+      }
+
+      if (bootfs_only) {
+        url_scheme_and_host = "fuchsia-boot://"
+        url_pkg_name = ""
+        dest = "test/sys/$dest"
+        install_path = "/boot/$dest"
+      } else {
+        url_scheme_and_host = "fuchsia-pkg://fuchsia.com"
+        dest = "test/$dest"
+        if (pkg.deprecated_system_image) {
+          url_pkg_name = "system"
+          install_path = "/system/$dest"
+        } else {
+          url_pkg_name = pkg.package_name
+          install_path =
+              "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+        }
+      }
+
+      url_resource_path = dest
+      dest_name = get_path_info(dest, "name")
+      not_needed([ "dest_name" ])
 
       # Check that all tests are components with cmx files at the expected path.
       if (!pkg.deprecated_system_image && !bootfs_only && !is_disabled &&
@@ -741,42 +766,31 @@ template("package") {
         foreach(meta, pkg.meta) {
           if (get_path_info(meta.dest, "extension") == "cmx") {
             meta_name = get_path_info(meta.dest, "name")
-            if (dest == meta_name) {
+            if (dest_name == meta_name) {
               require_bare_tests_allowlist = false
+              url_resource_path = "meta/${meta.dest}"
             }
           }
         }
       }
 
-      if (is_disabled) {
-        dest = "disabled/${dest}"
-      }
-
-      if (bootfs_only) {
-        dest = "test/sys/$dest"
-        install_path = "/boot/$dest"
-      } else {
-        dest = "test/$dest"
-        if (pkg.deprecated_system_image) {
-          install_path = "/system/$dest"
-        } else {
-          install_path =
-              "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
-        }
-      }
+      url = "${url_scheme_and_host}/${url_pkg_name}#${url_resource_path}"
 
       if (!is_disabled) {
         test_spec_name = "${pkg.package_name}_${dest}_test_spec"
-
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
           name = test.name
           install_path = install_path
+          package_url = url
           forward_variables_from(test, [ "environments" ])
         }
       } else {
-        not_needed([ "install_path" ])
+        not_needed([
+                     "install_path",
+                     "url",
+                   ])
       }
 
       pkg_manifest += [
