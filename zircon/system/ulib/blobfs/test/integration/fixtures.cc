@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 
@@ -46,12 +45,22 @@ void FilesystemTest::Remount() {
   Mount();
 }
 
+void FilesystemTest::GetFsInfo(fuchsia_io_FilesystemInfo* info) {
+  fbl::unique_fd fd(open(mount_path(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
+
+  zx_status_t status;
+  fzl::FdioCaller caller(std::move(fd));
+  ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info));
+  ASSERT_OK(status);
+}
+
 void FilesystemTest::Mount() {
   ASSERT_FALSE(mounted_);
   int flags = read_only_ ? O_RDONLY : O_RDWR;
 
   fbl::unique_fd fd(open(device_path_.c_str(), flags));
-  ASSERT_TRUE(fd, "Could not open ramdisk");
+  ASSERT_TRUE(fd);
 
   mount_options_t options = default_mount_options;
   options.enable_journal = environment_->use_journal();

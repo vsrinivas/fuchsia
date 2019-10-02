@@ -6,39 +6,14 @@
 
 #include <fcntl.h>
 
-#include <fbl/unique_fd.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/fzl/fdio.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-bool GetFsInfo(fuchsia_io_FilesystemInfo* info) {
-  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
-  if (!fd) {
-    return false;
-  }
-
-  zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
-  zx_status_t io_status =
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info);
-  if (io_status != ZX_OK) {
-    status = io_status;
-  }
-
-  if (status != ZX_OK) {
-    printf("Could not query block FS info: %s\n", zx_status_get_string(status));
-    return false;
-  }
-  return true;
-}
-
-void CheckBlobfsInfo() {
+void CheckBlobfsInfo(FilesystemTest* test) {
   fuchsia_io_FilesystemInfo info;
-  ASSERT_TRUE(GetFsInfo(&info));
+  ASSERT_NO_FAILURES(test->GetFsInfo(&info));
 
   const char kFsName[] = "blobfs";
   const char* name = reinterpret_cast<const char*>(info.name);
@@ -50,15 +25,15 @@ void CheckBlobfsInfo() {
 }  // namespace
 
 void BlobfsTest::CheckInfo() {
-  CheckBlobfsInfo();
+  CheckBlobfsInfo(this);
 }
 
 void BlobfsFixedDiskSizeTest::CheckInfo() {
-  CheckBlobfsInfo();
+  CheckBlobfsInfo(this);
 }
 
 void BlobfsTestWithFvm::CheckInfo() {
-  CheckBlobfsInfo();
+  CheckBlobfsInfo(this);
 }
 
 void BlobfsTestWithFvm::CheckPartitionSize() {
@@ -70,7 +45,7 @@ void BlobfsTestWithFvm::CheckPartitionSize() {
 }
 
 void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() {
-  CheckBlobfsInfo();
+  CheckBlobfsInfo(this);
 }
 
 void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {

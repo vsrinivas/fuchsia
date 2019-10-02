@@ -10,6 +10,7 @@
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <utime.h>
 #include <zircon/device/vfs.h>
 
@@ -1869,100 +1870,102 @@ static bool TestCreateFailure(void) {
     END_TEST;
 }
 
-static bool TestExtendFailure(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(FsTestType::kFvm);
-    blobfsTest.SetStdio(false);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+*/
 
-    BlobfsUsage original_usage;
-    blobfsTest.CheckInfo(&original_usage);
-
-    // Create a blob of the maximum size possible without causing an FVM extension.
-    fbl::unique_ptr<fs_test_utils::BlobInfo> old_info;
-    ASSERT_TRUE(
-        fs_test_utils::GenerateRandomBlob(MOUNT_PATH,
-                                          original_usage.total_bytes - blobfs::kBlobfsBlockSize,
-                                          &old_info));
-
-    fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(old_info.get(), &fd));
-    ASSERT_EQ(syncfs(fd.get()), 0);
-    ASSERT_EQ(close(fd.release()), 0);
-
-    // Ensure that an FVM extension did not occur.
-    BlobfsUsage current_usage;
-    blobfsTest.CheckInfo(&current_usage);
-    ASSERT_EQ(current_usage.total_bytes, original_usage.total_bytes);
-
-    // Generate another blob of the smallest size possible.
-    fbl::unique_ptr<fs_test_utils::BlobInfo> new_info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blobfs::kBlobfsBlockSize,
-                                                  &new_info));
-
-    // Since the FVM metadata covers a large range of blocks, it will take a while to test a
-    // ramdisk failure after each individual block. Since we mostly care about what happens with
-    // blobfs after the extension succeeds on the FVM side, test a maximum of |metadata_failures|
-    // failures within the FVM metadata write itself.
-    size_t metadata_size = fvm::MetadataSize(blobfsTest.GetDiskSize(), kTestFvmSliceSize);
-    size_t metadata_blocks = metadata_size / blobfsTest.GetBlockSize();
-    size_t metadata_failures = 16;
-    size_t increment = metadata_blocks / fbl::min(metadata_failures, metadata_blocks);
-
-    // Round down the metadata block count so we don't miss testing the transaction immediately
-    // after the metadata write succeeds.
-    metadata_blocks = fbl::round_down(metadata_blocks, increment);
-    size_t blocks = 0;
-
-    while (true) {
-        ASSERT_TRUE(blobfsTest.ToggleSleep(blocks));
-        unittest_set_output_function(silent_printf, nullptr);
-
-        // Blob creation may or may not succeed - as long as fsck passes, it doesn't matter.
-        MakeBlob(new_info.get(), &fd);
-        current_test_info->all_ok = true;
-
-        // Resolve all transactions before waking the ramdisk.
-        syncfs(fd.get());
-
-        unittest_restore_output_function();
-        ASSERT_TRUE(blobfsTest.ToggleSleep());
-
-        // Force remount so journal will replay.
-        ASSERT_TRUE(blobfsTest.ForceRemount());
-
-        // Remount again to check fsck results.
-        ASSERT_TRUE(blobfsTest.Remount());
-
-        // Check that the original blob still exists.
-        fd.reset(open(old_info->path, O_RDONLY));
-        ASSERT_TRUE(fd);
-
-        // Once file creation is successful, break out of the loop.
-        fd.reset(open(new_info->path, O_RDONLY));
-        if (fd) {
-            struct stat stats;
-            ASSERT_EQ(fstat(fd.get(), &stats), 0);
-            ASSERT_EQ(static_cast<uint64_t>(stats.st_size), old_info->size_data);
-            break;
-        }
-
-        if (blocks >= metadata_blocks) {
-            blocks++;
-        } else {
-            blocks += increment;
-        }
-    }
-
-    // Ensure that an FVM extension occurred.
-    blobfsTest.CheckInfo(&current_usage);
-    ASSERT_GT(current_usage.total_bytes, original_usage.total_bytes);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
-    END_TEST;
+// Creates a new blob but (mostly) without complaining about failures.
+void RelaxedMakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
+  fd->reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(*fd);
+  if (ftruncate(fd->get(), info->size_data) < 0) {
+    return;
+  }
+  fs_test_utils::StreamAll(write, fd->get(), info->data.get(), info->size_data);
 }
 
-*/
+TEST_F(BlobfsTestWithFvm, ExtendFailure) {
+  const RamDisk* ramdisk = environment_->ramdisk();
+  if (!ramdisk) {
+    return;
+  }
+
+  fuchsia_io_FilesystemInfo original_usage;
+  ASSERT_NO_FAILURES(GetFsInfo(&original_usage));
+
+  // Create a blob of the maximum size possible without causing an FVM extension.
+  std::unique_ptr<fs_test_utils::BlobInfo> old_info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(
+      kMountPath, original_usage.total_bytes - blobfs::kBlobfsBlockSize, &old_info));
+
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(old_info.get(), &fd));
+  ASSERT_EQ(syncfs(fd.get()), 0);
+  fd.reset();
+
+  // Ensure that an FVM extension did not occur.
+  fuchsia_io_FilesystemInfo current_usage;
+  ASSERT_NO_FAILURES(GetFsInfo(&current_usage));
+  ASSERT_EQ(current_usage.total_bytes, original_usage.total_bytes);
+
+  // Generate another blob of the smallest size possible.
+  std::unique_ptr<fs_test_utils::BlobInfo> new_info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &new_info));
+
+  // Since the FVM metadata covers a large range of blocks, it will take a while to test a
+  // ramdisk failure after each individual block. Since we mostly care about what happens with
+  // blobfs after the extension succeeds on the FVM side, test a maximum of |metadata_failures|
+  // failures within the FVM metadata write itself.
+  size_t metadata_size = fvm::MetadataSize(environment_->disk_size(), kTestFvmSliceSize);
+  uint32_t metadata_blocks = static_cast<uint32_t>(metadata_size / ramdisk->page_size());
+  uint32_t metadata_failures = 16;
+  uint32_t increment = metadata_blocks / fbl::min(metadata_failures, metadata_blocks);
+
+  // Round down the metadata block count so we don't miss testing the transaction immediately
+  // after the metadata write succeeds.
+  metadata_blocks = fbl::round_down(metadata_blocks, increment);
+  uint32_t blocks = 0;
+
+  while (true) {
+    ASSERT_OK(ramdisk->SleepAfter(blocks));
+
+    // Blob creation may or may not succeed - as long as fsck passes, it doesn't matter.
+    RelaxedMakeBlob(new_info.get(), &fd);
+
+    // Resolve all transactions before waking the ramdisk.
+    syncfs(fd.get());
+
+    ASSERT_OK(ramdisk->WakeUp());
+
+    // Replay the journal.
+    Unmount();
+    ASSERT_NO_FAILURES(Mount());
+
+    // Remount again to verify integrity.
+    ASSERT_NO_FAILURES(Remount());
+
+    // Check that the original blob still exists.
+    fd.reset(open(old_info->path, O_RDONLY));
+    ASSERT_TRUE(fd);
+
+    // Once file creation is successful, break out of the loop.
+    fd.reset(open(new_info->path, O_RDONLY));
+    if (fd) {
+      struct stat stats;
+      ASSERT_EQ(fstat(fd.get(), &stats), 0);
+      ASSERT_EQ(static_cast<uint64_t>(stats.st_size), old_info->size_data);
+      break;
+    }
+
+    if (blocks >= metadata_blocks) {
+      blocks++;
+    } else {
+      blocks += increment;
+    }
+  }
+
+  // Ensure that an FVM extension occurred.
+  ASSERT_NO_FAILURES(GetFsInfo(&current_usage));
+  ASSERT_GT(current_usage.total_bytes, original_usage.total_bytes);
+}
 
 void RunFailedWriteTest(const RamDisk* disk) {
   if (!disk) {
@@ -2083,7 +2086,6 @@ RUN_TESTS(LARGE, TestFragmentation)
 RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST_MEDIUM(TestCreateFailure)
-RUN_TEST_MEDIUM(TestExtendFailure)
 END_TEST_CASE(blobfs_tests)
 
 */

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <fuchsia/io/c/fidl.h>
+
 #include <string>
 
 #include <fbl/macros.h>
@@ -32,8 +34,11 @@ class FilesystemTest : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
 
-  // Unmounts and remounts the filesystem.
+  // Unmounts and remounts the filesystem, verifying integrity in between.
   void Remount();
+
+  // Queries the filesystem for generic info.
+  void GetFsInfo(fuchsia_io_FilesystemInfo* info);
 
   void set_read_only(bool read_only) { read_only_ = read_only; }
   const std::string& device_path() const { return device_path_; }
