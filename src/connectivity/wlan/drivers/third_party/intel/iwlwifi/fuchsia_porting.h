@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -81,7 +82,7 @@ typedef char* acpi_string;
   } while (0)
 #define WARN_ON(x) (!!(x))
 #define WARN_ON_ONCE(x) (!!(x))
-#define BUILD_BUG_ON(x) (!!(x))
+#define BUILD_BUG_ON(x) ZX_ASSERT(!(x))
 
 #define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
@@ -140,7 +141,7 @@ struct ewma_rate {
 struct inet6_dev;
 
 struct mac_address {
-  char dummy;
+  uint8_t addr[ETH_ALEN];
 };
 
 struct napi_struct {

@@ -489,6 +489,7 @@ enum iwl_scan_status {
 
   IWL_MVM_SCAN_STOPPING_MASK = 0xff << IWL_MVM_SCAN_STOPPING_SHIFT,
   IWL_MVM_SCAN_MASK = 0xff,
+  IWL_MVM_SCAN_MASK_HWEIGHT32 = 8,  // '0xff' has 8-bit asserted.
 };
 
 enum iwl_mvm_scan_type {
@@ -1177,7 +1178,6 @@ struct iwl_mvm {
 #endif
 
   uint32_t ciphers[IWL_MVM_NUM_CIPHERS];
-  struct ieee80211_cipher_scheme cs[IWL_UCODE_MAX_CS];
   struct iwl_mvm_tof_data tof_data;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
@@ -1603,7 +1603,7 @@ static inline uint32_t iwl_mvm_get_phy_config(struct iwl_mvm* mvm) {
 zx_status_t iwl_mvm_up(struct iwl_mvm* mvm);
 int iwl_mvm_load_d3_fw(struct iwl_mvm* mvm);
 
-int iwl_mvm_mac_setup_register(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm);
 bool iwl_mvm_bcast_filter_build_cmd(struct iwl_mvm* mvm, struct iwl_bcast_filter_cmd* cmd);
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 void iwl_mvm_tx_latency_wk(struct work_struct* wk);

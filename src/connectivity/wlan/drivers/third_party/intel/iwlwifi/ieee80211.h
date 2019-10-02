@@ -31,6 +31,8 @@
 
 #define IEEE80211_NUM_TIDS 16
 
+#define IEEE80211_MAX_RTS_THRESHOLD 2353
+
 enum nl80211_band {
   NL80211_BAND_2GHZ,
   NL80211_BAND_5GHZ,
@@ -141,10 +143,6 @@ struct ieee80211_channel {
   char dummy;
 };
 
-struct ieee80211_cipher_scheme {
-  char dummy;
-};
-
 struct ieee80211_hdr {
   char dummy;
 };
@@ -167,11 +165,6 @@ struct ieee80211_tx_queue_params {
 
 struct ieee80211_tx_rate {
   char dummy;
-};
-
-// dummy structs
-struct ieee80211_hw {
-  void* priv;
 };
 
 struct ieee80211_txq;

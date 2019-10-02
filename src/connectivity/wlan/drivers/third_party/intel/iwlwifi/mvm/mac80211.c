@@ -407,80 +407,7 @@ const static struct wiphy_iftype_ext_capab he_iftypes_ext_capa[] = {
 #endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
-  return ZX_OK;
-#if 0  // NEEDS_PORTING
-    struct ieee80211_hw* hw = mvm->hw;
-    int num_mac, ret, i;
-    static const uint32_t mvm_ciphers[] = {
-        WLAN_CIPHER_SUITE_WEP40,
-        WLAN_CIPHER_SUITE_WEP104,
-        WLAN_CIPHER_SUITE_TKIP,
-        WLAN_CIPHER_SUITE_CCMP,
-    };
-
-    /* Tell mac80211 our characteristics */
-    ieee80211_hw_set(hw, SIGNAL_DBM);
-    ieee80211_hw_set(hw, SPECTRUM_MGMT);
-    ieee80211_hw_set(hw, REPORTS_TX_ACK_STATUS);
-    ieee80211_hw_set(hw, WANT_MONITOR_VIF);
-    ieee80211_hw_set(hw, SUPPORTS_PS);
-    ieee80211_hw_set(hw, SUPPORTS_DYNAMIC_PS);
-    ieee80211_hw_set(hw, AMPDU_AGGREGATION);
-    ieee80211_hw_set(hw, TIMING_BEACON_ONLY);
-    ieee80211_hw_set(hw, CONNECTION_MONITOR);
-    ieee80211_hw_set(hw, CHANCTX_STA_CSA);
-    ieee80211_hw_set(hw, SUPPORT_FAST_XMIT);
-    ieee80211_hw_set(hw, SUPPORTS_CLONED_SKBS);
-    ieee80211_hw_set(hw, SUPPORTS_AMSDU_IN_AMPDU);
-    ieee80211_hw_set(hw, NEEDS_UNIQUE_STA_ADDR);
-    ieee80211_hw_set(hw, DEAUTH_NEED_MGD_TX_PREP);
-    ieee80211_hw_set(hw, SUPPORTS_VHT_EXT_NSS_BW);
-    ieee80211_hw_set(hw, BUFF_MMPDU_TXQ);
-    ieee80211_hw_set(hw, STA_MMPDU_TXQ);
-    ieee80211_hw_set(hw, TX_AMSDU);
-    ieee80211_hw_set(hw, TX_FRAG_LIST);
-
-    if (iwl_mvm_has_tlc_offload(mvm)) {
-        ieee80211_hw_set(hw, TX_AMPDU_SETUP_IN_HW);
-        ieee80211_hw_set(hw, HAS_RATE_CONTROL);
-    }
-
-    if (iwl_mvm_has_new_rx_api(mvm)) { ieee80211_hw_set(hw, SUPPORTS_REORDERING_BUFFER); }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_STA_PM_NOTIF)) {
-        ieee80211_hw_set(hw, AP_LINK_PS);
-    } else if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
-        /*
-         * we absolutely need this for the new TX API since that comes
-         * with many more queues than the current code can deal with
-         * for station powersave
-         */
-        return -EINVAL;
-    }
-
-    if (mvm->trans->num_rx_queues > 1) { ieee80211_hw_set(hw, USES_RSS); }
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-    if (mvm->trans->max_skb_frags) { hw->netdev_features = NETIF_F_HIGHDMA | NETIF_F_SG; }
-#endif
-
-    hw->queues = IEEE80211_MAX_QUEUES;
-    hw->offchannel_tx_hw_queue = IWL_MVM_OFFCHANNEL_QUEUE;
-    hw->radiotap_mcs_details |= IEEE80211_RADIOTAP_MCS_HAVE_FEC | IEEE80211_RADIOTAP_MCS_HAVE_STBC;
-    hw->radiotap_vht_details |=
-        IEEE80211_RADIOTAP_VHT_KNOWN_STBC | IEEE80211_RADIOTAP_VHT_KNOWN_BEAMFORMED;
-
-    hw->radiotap_timestamp.units_pos =
-        IEEE80211_RADIOTAP_TIMESTAMP_UNIT_US | IEEE80211_RADIOTAP_TIMESTAMP_SPOS_PLCP_SIG_ACQ;
-    /* this is the case for CCK frames, it's better (only 8) for OFDM */
-    hw->radiotap_timestamp.accuracy = 22;
-
-    if (!iwl_mvm_has_tlc_offload(mvm)) { hw->rate_control_algorithm = RS_NAME; }
-
-    hw->uapsd_queues = IWL_MVM_UAPSD_QUEUES;
-    hw->uapsd_max_sp_len = IWL_UAPSD_MAX_SP;
-    hw->max_tx_fragments = mvm->trans->max_skb_frags;
-
+#if 0   // NEEDS_PORTING: for cipher
     BUILD_BUG_ON(ARRAY_SIZE(mvm->ciphers) < ARRAY_SIZE(mvm_ciphers) + 6);
     memcpy(mvm->ciphers, mvm_ciphers, sizeof(mvm_ciphers));
     hw->wiphy->n_cipher_suites = ARRAY_SIZE(mvm_ciphers);
@@ -530,222 +457,76 @@ zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
         mvm->ciphers[hw->wiphy->n_cipher_suites] = cs->cipher;
         hw->wiphy->n_cipher_suites++;
     }
+#endif  // NEEDS_PORTING
 
-    ieee80211_hw_set(hw, SINGLE_SCAN_ON_ALL_BANDS);
-    hw->wiphy->features |= NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR |
-                           NL80211_FEATURE_SCAN_RANDOM_MAC_ADDR |
-                           NL80211_FEATURE_ND_RANDOM_MAC_ADDR;
-
-    hw->sta_data_size = sizeof(struct iwl_mvm_sta);
-    hw->vif_data_size = sizeof(struct iwl_mvm_vif);
-    hw->chanctx_data_size = sizeof(uint16_t);
-    hw->txq_data_size = sizeof(struct iwl_mvm_txq);
-
-    hw->wiphy->interface_modes = BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_P2P_CLIENT) |
-                                 BIT(NL80211_IFTYPE_AP) | BIT(NL80211_IFTYPE_P2P_GO) |
-                                 BIT(NL80211_IFTYPE_P2P_DEVICE) | BIT(NL80211_IFTYPE_ADHOC);
-
-    hw->wiphy->flags |= WIPHY_FLAG_IBSS_RSN;
-    hw->wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
-    if (iwl_mvm_is_lar_supported(mvm)) {
-        hw->wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
-    } else {
-        hw->wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG | REGULATORY_DISABLE_BEACON_HINTS;
-    }
-
-    hw->wiphy->flags |= WIPHY_FLAG_AP_UAPSD;
-    hw->wiphy->flags |= WIPHY_FLAG_HAS_CHANNEL_SWITCH;
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_NAN_SUPPORT)) {
-        hw->wiphy->interface_modes |= BIT(NL80211_IFTYPE_NAN);
-        hw->wiphy->iface_combinations = iwl_mvm_iface_combinations_nan;
-        hw->wiphy->n_iface_combinations = ARRAY_SIZE(iwl_mvm_iface_combinations_nan);
-        hw->wiphy->nan_supported_bands = BIT(NL80211_BAND_2GHZ);
-        if (mvm->nvm_data->bands[NL80211_BAND_5GHZ].n_channels) {
-            hw->wiphy->nan_supported_bands |= BIT(NL80211_BAND_5GHZ);
-        }
-        hw->max_nan_de_entries = NAN_MAX_SUPPORTED_DE_ENTRIES;
-    } else {
-        hw->wiphy->iface_combinations = iwl_mvm_iface_combinations;
-        hw->wiphy->n_iface_combinations = ARRAY_SIZE(iwl_mvm_iface_combinations);
-    }
-
-    hw->wiphy->max_remain_on_channel_duration = 10000;
-    hw->max_listen_interval = IWL_CONN_MAX_LISTEN_INTERVAL;
-
+#if 0  // TODO(fxb/36682): We need nvm.c porting iwl_nvm_init()
     /* Extract MAC address */
     memcpy(mvm->addresses[0].addr, mvm->nvm_data->hw_addr, ETH_ALEN);
-    hw->wiphy->addresses = mvm->addresses;
-    hw->wiphy->n_addresses = 1;
 
     /* Extract additional MAC addresses if available */
-    num_mac =
-        (mvm->nvm_data->n_hw_addrs > 1) ? min(IWL_MVM_MAX_ADDRESSES, mvm->nvm_data->n_hw_addrs) : 1;
+    size_t num_mac =
+        (mvm->nvm_data->n_hw_addrs > 1) ? MIN(IWL_MVM_MAX_ADDRESSES, mvm->nvm_data->n_hw_addrs) : 1;
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-    if (mvm->trans->dbg_cfg.hw_address.len) { num_mac = IWL_MVM_MAX_ADDRESSES; }
-#endif
-
-    for (i = 1; i < num_mac; i++) {
+    for (size_t i = 1; i < num_mac; i++) {
         memcpy(mvm->addresses[i].addr, mvm->addresses[i - 1].addr, ETH_ALEN);
         mvm->addresses[i].addr[5]++;
-        hw->wiphy->n_addresses++;
     }
+#endif
 
-    iwl_mvm_reset_phy_ctxts(mvm);
+  iwl_mvm_reset_phy_ctxts(mvm);
 
-    hw->wiphy->max_scan_ie_len = iwl_mvm_max_scan_ie_len(mvm);
+  BUILD_BUG_ON(IWL_MVM_SCAN_STOPPING_MASK & IWL_MVM_SCAN_MASK);
+  BUILD_BUG_ON(IWL_MVM_MAX_UMAC_SCANS > IWL_MVM_SCAN_MASK_HWEIGHT32 ||
+               IWL_MVM_MAX_LMAC_SCANS > IWL_MVM_SCAN_MASK_HWEIGHT32);
 
-    hw->wiphy->max_scan_ssids = PROBE_OPTION_MAX;
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+    mvm->max_scans = IWL_MVM_MAX_UMAC_SCANS;
+  } else {
+    mvm->max_scans = IWL_MVM_MAX_LMAC_SCANS;
+  }
 
-    BUILD_BUG_ON(IWL_MVM_SCAN_STOPPING_MASK & IWL_MVM_SCAN_MASK);
-    BUILD_BUG_ON(IWL_MVM_MAX_UMAC_SCANS > HWEIGHT32(IWL_MVM_SCAN_MASK) ||
-                 IWL_MVM_MAX_LMAC_SCANS > HWEIGHT32(IWL_MVM_SCAN_MASK));
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
-        mvm->max_scans = IWL_MVM_MAX_UMAC_SCANS;
-    } else {
-        mvm->max_scans = IWL_MVM_MAX_LMAC_SCANS;
-    }
-
-    if (mvm->nvm_data->bands[NL80211_BAND_2GHZ].n_channels) {
-        hw->wiphy->bands[NL80211_BAND_2GHZ] = &mvm->nvm_data->bands[NL80211_BAND_2GHZ];
-    }
-    if (mvm->nvm_data->bands[NL80211_BAND_5GHZ].n_channels) {
-        hw->wiphy->bands[NL80211_BAND_5GHZ] = &mvm->nvm_data->bands[NL80211_BAND_5GHZ];
-
-        if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BEAMFORMER) &&
-            fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_LQ_SS_PARAMS))
-            hw->wiphy->bands[NL80211_BAND_5GHZ]->vht_cap.cap |=
-                IEEE80211_VHT_CAP_SU_BEAMFORMER_CAPABLE;
-    }
-
-    hw->wiphy->hw_version = mvm->trans->hw_id;
-
-    if (iwlmvm_mod_params.power_scheme != IWL_POWER_SCHEME_CAM) {
-        hw->wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
-    } else {
-        hw->wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
-    }
-
-    hw->wiphy->max_sched_scan_reqs = 1;
-    hw->wiphy->max_sched_scan_ssids = PROBE_OPTION_MAX;
-    hw->wiphy->max_match_sets = IWL_SCAN_MAX_PROFILES;
-    /* we create the 802.11 header and zero length SSID IE. */
-    hw->wiphy->max_sched_scan_ie_len = SCAN_OFFLOAD_PROBE_REQ_SIZE - 24 - 2;
-    hw->wiphy->max_sched_scan_plans = IWL_MAX_SCHED_SCAN_PLANS;
-    hw->wiphy->max_sched_scan_plan_interval = U16_MAX;
-
-    /*
-     * the firmware uses uint8_t for num of iterations, but 0xff is saved for
-     * infinite loop, so the maximum number of iterations is actually 254.
-     */
-    hw->wiphy->max_sched_scan_plan_iterations = 254;
-
-    hw->wiphy->features |= NL80211_FEATURE_P2P_GO_CTWIN | NL80211_FEATURE_LOW_PRIORITY_SCAN |
-                           NL80211_FEATURE_P2P_GO_OPPPS |
-                           NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE |
-                           NL80211_FEATURE_DYNAMIC_SMPS | NL80211_FEATURE_STATIC_SMPS |
-                           NL80211_FEATURE_SUPPORTS_WMM_ADMISSION;
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT)) {
-        hw->wiphy->features |= NL80211_FEATURE_TX_POWER_INSERTION;
-    }
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT)) {
-        hw->wiphy->features |= NL80211_FEATURE_QUIET;
-    }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT)) {
-        hw->wiphy->features |= NL80211_FEATURE_DS_PARAM_SET_IE_IN_PROBES;
-    }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT)) {
-        hw->wiphy->features |= NL80211_FEATURE_WFA_TPC_IE_IN_PROBES;
-    }
-
-    if (fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_SCAN_TSF_REPORT)) {
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_SCAN_START_TIME);
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_BSS_PARENT_TSF);
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_SET_SCAN_DWELL);
-    }
-
-    if (iwl_mvm_is_oce_supported(mvm)) {
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_ACCEPT_BCAST_PROBE_RESP);
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_FILS_MAX_CHANNEL_TIME);
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_OCE_PROBE_REQ_DEFERRAL_SUPPRESSION);
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_OCE_PROBE_REQ_HIGH_TX_RATE);
-    }
-
-    if (mvm->nvm_data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
-        hw->wiphy->iftype_ext_capab = he_iftypes_ext_capa;
-        hw->wiphy->num_iftype_ext_capab = ARRAY_SIZE(he_iftypes_ext_capa);
-    }
-
-    mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
+  mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
 
 #ifdef CONFIG_PM_SLEEP
-    if (iwl_mvm_is_d0i3_supported(mvm) && device_can_wakeup(mvm->trans->dev)) {
-        mvm->wowlan.flags = WIPHY_WOWLAN_ANY;
-        hw->wiphy->wowlan = &mvm->wowlan;
-    }
+  if (iwl_mvm_is_d0i3_supported(mvm) && device_can_wakeup(mvm->trans->dev)) {
+    mvm->wowlan.flags = WIPHY_WOWLAN_ANY;
+    hw->wiphy->wowlan = &mvm->wowlan;
+  }
 
-    if (mvm->fw->img[IWL_UCODE_WOWLAN].num_sec && mvm->trans->ops->d3_suspend &&
-        mvm->trans->ops->d3_resume && device_can_wakeup(mvm->trans->dev)) {
-        mvm->wowlan.flags |= WIPHY_WOWLAN_MAGIC_PKT | WIPHY_WOWLAN_DISCONNECT |
-                             WIPHY_WOWLAN_EAP_IDENTITY_REQ | WIPHY_WOWLAN_RFKILL_RELEASE |
-                             WIPHY_WOWLAN_NET_DETECT;
-        if (!iwlwifi_mod_params.swcrypto)
-            mvm->wowlan.flags |= WIPHY_WOWLAN_SUPPORTS_GTK_REKEY | WIPHY_WOWLAN_GTK_REKEY_FAILURE |
-                                 WIPHY_WOWLAN_4WAY_HANDSHAKE;
+  if (mvm->fw->img[IWL_UCODE_WOWLAN].num_sec && mvm->trans->ops->d3_suspend &&
+      mvm->trans->ops->d3_resume && device_can_wakeup(mvm->trans->dev)) {
+    mvm->wowlan.flags |= WIPHY_WOWLAN_MAGIC_PKT | WIPHY_WOWLAN_DISCONNECT |
+                         WIPHY_WOWLAN_EAP_IDENTITY_REQ | WIPHY_WOWLAN_RFKILL_RELEASE |
+                         WIPHY_WOWLAN_NET_DETECT;
+    if (!iwlwifi_mod_params.swcrypto)
+      mvm->wowlan.flags |= WIPHY_WOWLAN_SUPPORTS_GTK_REKEY | WIPHY_WOWLAN_GTK_REKEY_FAILURE |
+                           WIPHY_WOWLAN_4WAY_HANDSHAKE;
 
-        mvm->wowlan.n_patterns = IWL_WOWLAN_MAX_PATTERNS;
-        mvm->wowlan.pattern_min_len = IWL_WOWLAN_MIN_PATTERN_LEN;
-        mvm->wowlan.pattern_max_len = IWL_WOWLAN_MAX_PATTERN_LEN;
-        mvm->wowlan.max_nd_match_sets = IWL_SCAN_MAX_PROFILES;
-        hw->wiphy->wowlan = &mvm->wowlan;
-    }
+    mvm->wowlan.n_patterns = IWL_WOWLAN_MAX_PATTERNS;
+    mvm->wowlan.pattern_min_len = IWL_WOWLAN_MIN_PATTERN_LEN;
+    mvm->wowlan.pattern_max_len = IWL_WOWLAN_MAX_PATTERN_LEN;
+    mvm->wowlan.max_nd_match_sets = IWL_SCAN_MAX_PROFILES;
+    hw->wiphy->wowlan = &mvm->wowlan;
+  }
 #endif
 
 #ifdef CPTCFG_IWLWIFI_BCAST_FILTERING
-    /* assign default bcast filtering configuration */
-    mvm->bcast_filters = iwl_mvm_default_bcast_filters;
+  /* assign default bcast filtering configuration */
+  mvm->bcast_filters = iwl_mvm_default_bcast_filters;
 #endif
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    iwl_mvm_set_wiphy_vendor_commands(hw->wiphy);
+  iwl_mvm_set_wiphy_vendor_commands(hw->wiphy);
 #endif
 
-    ret = iwl_mvm_leds_init(mvm);
-    if (ret) { return ret; }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TDLS_SUPPORT)) {
-        IWL_DEBUG_TDLS(mvm, "TDLS supported\n");
-        hw->wiphy->flags |= WIPHY_FLAG_SUPPORTS_TDLS;
-        ieee80211_hw_set(hw, TDLS_WIDER_BW);
-    }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TDLS_CHANNEL_SWITCH)) {
-        IWL_DEBUG_TDLS(mvm, "TDLS channel switch supported\n");
-        hw->wiphy->features |= NL80211_FEATURE_TDLS_CHANNEL_SWITCH;
-    }
-
-    hw->netdev_features |= mvm->cfg->features;
-    if (!iwl_mvm_is_csum_supported(mvm)) {
-        hw->netdev_features &= ~(IWL_TX_CSUM_NETIF_FLAGS | NETIF_F_RXCSUM);
-        /* We may support SW TX CSUM */
-        if (IWL_MVM_SW_TX_CSUM_OFFLOAD) { hw->netdev_features |= IWL_TX_CSUM_NETIF_FLAGS; }
-    }
-
-    ret = ieee80211_register_hw(mvm->hw);
-    if (ret) { iwl_mvm_leds_exit(mvm); }
-    mvm->init_status |= IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE;
-
-    if (mvm->cfg->vht_mu_mimo_supported) {
-        wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_MU_MIMO_AIR_SNIFFER);
-    }
-
+  zx_status_t ret = iwl_mvm_leds_init(mvm);
+  if (ret) {
     return ret;
-#endif  // NEEDS_PORTING
+  }
+
+  mvm->init_status |= IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE;
+
+  return ZX_OK;
 }
 
 #if 0   // NEEDS_PORTING
