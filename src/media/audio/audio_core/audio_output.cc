@@ -204,7 +204,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioRenderer);
     auto packet_link = fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
-    auto audio_renderer = fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
+    auto source = link->GetSource();
 
     // It would be nice to be able to use a dynamic cast for this, but currently we are building
     // with no-rtti
@@ -212,14 +212,14 @@ void AudioOutput::ForEachLink(TaskType task_type) {
     auto& info = *packet_link->bookkeeping();
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
-    UpdateSourceTrans(audio_renderer, &info);
+    UpdateSourceTrans(source, &info);
 
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
-    bool release_audio_renderer_packet;
+    bool release_packet;
     while (true) {
-      release_audio_renderer_packet = false;
+      release_packet = false;
       // Try to grab the packet queue's front. If it has been flushed since the last time we grabbed
       // it, reset our mixer's internal filter state.
       bool was_flushed;
@@ -245,9 +245,8 @@ void AudioOutput::ForEachLink(TaskType task_type) {
 
       // Now process the packet at the front of the renderer's queue. If the packet has been
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-      release_audio_renderer_packet = (task_type == TaskType::Mix)
-                                          ? ProcessMix(audio_renderer, &info, pkt_ref)
-                                          : ProcessTrim(&info, pkt_ref);
+      release_packet = (task_type == TaskType::Mix) ? ProcessMix(source, &info, pkt_ref)
+                                                    : ProcessTrim(&info, pkt_ref);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
       // we should now do with the source packet.
@@ -257,17 +256,17 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       }
       // If we still need to produce more destination data, but could not complete this source
       // packet (we're paused, or the packet is in the future), then we are done.
-      if (!release_audio_renderer_packet) {
+      if (!release_packet) {
         break;
       }
       // We did consume this entire source packet, and we should keep mixing.
       pkt_ref.reset();
-      packet_link->UnlockPendingQueueFront(release_audio_renderer_packet);
+      packet_link->UnlockPendingQueueFront(release_packet);
     }
 
     // Unlock queue (completing packet if needed) and proceed to the next source.
     pkt_ref.reset();
-    packet_link->UnlockPendingQueueFront(release_audio_renderer_packet);
+    packet_link->UnlockPendingQueueFront(release_packet);
 
     // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
     // easier than adding another function to ForEachLink to run after each renderer is processed,
@@ -287,8 +286,8 @@ bool AudioOutput::SetupMix(Bookkeeping* info) {
   return true;
 }
 
-bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                             Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& packet) {
+bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping* info,
+                             const fbl::RefPtr<AudioPacketRef>& packet) {
   TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
@@ -334,7 +333,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
-    AUD_VLOG_OBJ(TRACE, audio_renderer.get()) << " skipping an empty packet!";
+    AUD_VLOG_OBJ(TRACE, source.get()) << " skipping an empty packet!";
     return true;
   }
 
@@ -354,8 +353,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
         frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
         frac_source_for_first_packet_frame);
 
-    audio_renderer->UnderflowOccurred(frac_source_for_first_packet_frame,
-                                      frac_source_for_first_mix_job_frame, clock_mono_late);
+    source->UnderflowOccurred(frac_source_for_first_packet_frame,
+                              frac_source_for_first_mix_job_frame, clock_mono_late);
 
     return true;
   }
@@ -398,7 +397,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
 
     frac_source_offset_64 += dest_to_src.Scale(dest_offset_64);
 
-    audio_renderer->PartialUnderflowOccurred(frac_source_offset_64, dest_offset_64);
+    source->PartialUnderflowOccurred(frac_source_offset_64, dest_offset_64);
   }
 
   FXL_DCHECK(dest_offset_64 >= 0);
@@ -511,22 +510,21 @@ bool AudioOutput::ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRe
   return true;
 }
 
-void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                                    Bookkeeping* bk) {
+void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Bookkeeping* bk) {
   TRACE_DURATION("audio", "AudioOutput::UpdateSourceTrans");
-  FXL_DCHECK(audio_renderer != nullptr);
-  uint32_t gen = bk->source_trans_gen_id;
+  FXL_DCHECK(source != nullptr);
 
-  audio_renderer->SnapshotCurrentTimelineFunction(zx::clock::get_monotonic().get(),
-                                                  &bk->clock_mono_to_frac_source_frames, &gen);
+  auto func = source->SnapshotCurrentTimelineFunction(zx::clock::get_monotonic().get());
+  FXL_DCHECK(func);
+  bk->clock_mono_to_frac_source_frames = func->first;
 
   // If local->media transformation hasn't changed since last time, we're done.
-  if (bk->source_trans_gen_id == gen) {
+  if (bk->source_trans_gen_id == func->second) {
     return;
   }
 
   // Transformation has changed. Update gen; invalidate dest-to-src generation.
-  bk->source_trans_gen_id = gen;
+  bk->source_trans_gen_id = func->second;
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
 

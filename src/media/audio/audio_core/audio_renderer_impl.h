@@ -42,8 +42,6 @@ class AudioRendererImpl : public AudioObject,
 
   void Shutdown();
   void OnRenderRange(int64_t presentation_time, uint32_t duration){};
-  void SnapshotCurrentTimelineFunction(int64_t reference_time, TimelineFunction* out,
-                                       uint32_t* generation);
 
   void SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> throttle_output_link);
 
@@ -52,20 +50,7 @@ class AudioRendererImpl : public AudioObject,
   // requirement, report it to our users (if they care).
   void RecomputeMinClockLeadTime();
 
-  // Note: format_info() is subject to change and must only be accessed from the
-  // main message loop thread.  Outputs which are running on mixer threads
-  // should never access format_info() directly from an AudioRenderer.  Instead,
-  // they should use the format_info which was assigned to the AudioLink at the
-  // time the link was created.
-  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const { return format_info_; }
-  bool format_info_valid() const { return (format_info_ != nullptr); }
-
-  // We track the number of packets that could not be mixed on time, per packet timestamp.
-  void UnderflowOccurred(int64_t source_start, int64_t mix_point, zx_duration_t underflow_duration);
-  // We also track the number of times PART of a packet had to be skipped, per timestamp.
-  void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset);
-
-  // AudioRenderer interface
+  // |fuchsia::media::AudioRenderer|
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetStreamType(fuchsia::media::StreamType format) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
@@ -89,7 +74,7 @@ class AudioRendererImpl : public AudioObject,
   void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
   fuchsia::media::AudioRenderUsage GetUsage() { return usage_; };
 
-  // GainControl interface.
+  // |media::audio::GainControl|
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final;
@@ -154,10 +139,16 @@ class AudioRendererImpl : public AudioObject,
   void ReportStart();
   void ReportStop();
 
-  // AudioObject overrides.
+  // |media::audio::AudioObject|
   void OnLinkAdded() override;
+  void UnderflowOccurred(int64_t source_start, int64_t mix_point,
+                         zx_duration_t underflow_duration) final;
+  void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) final;
+  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const final { return format_info_; }
+  std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
+      int64_t reference_time) final;
 
-  // StreamVolume interface.
+  // |media::audio::StreamVolume|
   bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;

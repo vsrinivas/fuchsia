@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
+#include "src/media/audio/audio_core/audio_renderer_format_info.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -60,6 +61,27 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   // The VolumeCurve for the object, representing its mapping from volume to gain.
   virtual std::optional<VolumeCurve> GetVolumeCurve() const { return std::nullopt; }
+
+  // Note: format_info() is subject to change and must only be accessed from the main message loop
+  // thread. Outputs which are running on mixer threads should never access format_info() directly
+  // from a mix thread. Instead, they should use the format_info which was assigned to the AudioLink
+  // at the time the link was created.
+  virtual const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
+    static fbl::RefPtr<AudioRendererFormatInfo> null_info;
+    return null_info;
+  }
+
+  bool format_info_valid() const { return format_info() != nullptr; }
+
+  virtual std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
+      int64_t reference_time) {
+    return std::nullopt;
+  }
+
+  // Hooks to add logging or metrics for [Partial]Underflow events.
+  virtual void UnderflowOccurred(int64_t source_start, int64_t mix_point,
+                                 zx_duration_t underflow_duration) {}
+  virtual void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {}
 
   Type type() const { return type_; }
   bool is_output() const { return type() == Type::Output; }

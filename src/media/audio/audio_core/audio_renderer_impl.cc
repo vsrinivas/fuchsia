@@ -136,16 +136,12 @@ void AudioRendererImpl::Shutdown() {
   }
 }
 
-void AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time,
-                                                        TimelineFunction* out,
-                                                        uint32_t* generation) {
+std::optional<std::pair<TimelineFunction, uint32_t>>
+AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time) {
   TRACE_DURATION("audio", "AudioRendererImpl::SnapshotCurrentTimelineFunction");
-  FXL_DCHECK(out != nullptr);
-  FXL_DCHECK(generation != nullptr);
 
   fbl::AutoLock lock(&ref_to_ff_lock_);
-  *out = ref_clock_to_frac_frames_;
-  *generation = ref_clock_to_frac_frames_gen_.get();
+  return {std::make_pair(ref_clock_to_frac_frames_, ref_clock_to_frac_frames_gen_.get())};
 }
 
 void AudioRendererImpl::SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> throttle_output_link) {
