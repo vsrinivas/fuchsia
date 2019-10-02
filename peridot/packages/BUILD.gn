@@ -18,7 +18,7 @@ group("all") {
     "//peridot/examples/swap_cpp:swap_module2",
     "//peridot/examples/swap_cpp:swap_recipe",
     "//peridot/examples/todo_cpp:todo_cpp",
-    "//peridot/packages/tests:all",
+    "//peridot:tests",
     "//peridot/tests/benchmarks:fuchsia_benchmarks",
     "//src/ledger/bin",
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",

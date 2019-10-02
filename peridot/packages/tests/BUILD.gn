@@ -5,13 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("re2") {
-  testonly = true
-  public_deps = [
-    "//third_party/re2:re2_tests",
-  ]
-}
-
 # WARNING: Known to infrastructure.
 # WARNING: Known to //topaz.
 group("ledger") {
@@ -28,35 +21,11 @@ group("ledger") {
   ]
 }
 
-group("voila") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/voila:voila_tests",
-  ]
-}
-
 # WARNING: Known to infrastructure.
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/packages/testing:run_test_component",
-    "//peridot/packages/tests:bup",
-    "//peridot/packages/tests:ledger",
-    "//peridot/packages/tests:leveldb",
-    "//peridot/packages/tests:maxwell_unittests",
-    "//peridot/packages/tests:modular_integration_tests",
-    "//peridot/packages/tests:modular_unittests",
-    "//peridot/packages/tests:peridot_tests",
-    "//peridot/packages/tests:re2",
-    "//peridot/packages/tests:voila",
-  ]
-}
-
-group("maxwell_unittests") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/module_resolver:module_resolver_unittests",
-    "//src/stories/bin/discovermgr:discovermgr_tests",
+    "//peridot:tests",
   ]
 }
 
@@ -67,58 +36,5 @@ group("modular_test_harness") {
     "//garnet/packages/testing:environment_delegating_runner",
     "//src/modular/bin/modular_test_harness:tests",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
-  ]
-}
-
-group("modular_integration_tests") {
-  testonly = true
-  public_deps = [
-    ":modular_test_harness",
-    "//garnet/packages/prod:test_runner",
-    "//src/modular/bin/basemgr:auto_login_base_shell_test",
-    "//src/modular/bundles:integration_testing",
-    "//src/modular/tests/modular_config:test_config",
-  ]
-}
-
-group("leveldb") {
-  testonly = true
-  public_deps = [
-    "//third_party/leveldb:leveldb_benchmarks",
-    "//third_party/leveldb:leveldb_tests",
-  ]
-}
-
-group("bup") {
-  testonly = true
-  public_deps = [
-    "//src/ledger/third_party/bup:bup_tests",
-  ]
-}
-
-group("modular_unittests") {
-  testonly = true
-  public_deps = [
-    "//peridot/lib/sequential_futures:sequential_futures_tests",
-    "//src/ledger/bin",
-    "//src/modular/bin/agents/clipboard:clipboard_unittests",
-    "//src/modular/bin/basemgr:basemgr_unittests",
-    "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
-    "//src/modular/bin/module_resolver_rs:module_resolver_rs_tests",
-    "//src/modular/bin/sessionctl:sessionctl_unittests",
-    "//src/modular/bin/sessionmgr:sessionmgr_unittests",
-    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
-    "//src/modular/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
-    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
-    "//src/modular/bin/sessionmgr/storage:storage_unittests",
-    "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
-    "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
-  ]
-}
-
-group("peridot_tests") {
-  testonly = true
-  public_deps = [
-    "//peridot:peridot_tests",
   ]
 }
