@@ -49,6 +49,6 @@ protocol Controller {
     // Returns a vector whose k-th element is the number of observations
     // generated for the k-th element of |report_ids|. If |report_ids|
     // is the empty vector, then an empty vector is returned.
-    GenerateAggregatedObservations(uint32 day_index, vector<uint32> report_ids)
-    -> (vector<uint64> num_obs);
+    GenerateAggregatedObservations(uint32 day_index, vector<uint32>:MAX report_ids)
+        -> (vector<uint64>:MAX num_obs);
 };

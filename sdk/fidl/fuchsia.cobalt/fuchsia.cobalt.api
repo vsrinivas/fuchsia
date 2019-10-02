@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.cobalt/cobalt.fidl": "74561917e57fc7deb328595d303ad790",
-  "fidl/fuchsia.cobalt/cobalt_controller.fidl": "d6f2216a578f643ff0db506ff73a835f"
+  "fidl/fuchsia.cobalt/cobalt.fidl": "b5b256a015e620ea23f0a2469325e1cd",
+  "fidl/fuchsia.cobalt/cobalt_controller.fidl": "910a4bbf86a22fad438936d4f18ac74d"
 }
